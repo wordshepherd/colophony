@@ -30,8 +30,8 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
-    "@aws-sdk/client-s3": "^3.980.0",
-    "@aws-sdk/s3-request-presigner": "^3.980.0",
+    "@aws-sdk/client-s3": "^3.987.0",
+    "@aws-sdk/s3-request-presigner": "^3.987.0",
     "@nestjs/bullmq": "^10.2.0",
     "@nestjs/common": "^10.4.0",
     "@nestjs/config": "^3.3.0",
@@ -45,7 +45,7 @@
     "@trpc/server": "^10.45.0",
     "archiver": "^7.0.1",
     "bcrypt": "^5.1.0",
-    "bullmq": "^5.0.0",
+    "bullmq": "^5.67.3",
     "helmet": "^8.1.0",
     "ioredis": "^5.4.0",
     "nodemailer": "^7.0.13",
@@ -54,7 +54,7 @@
     "passport-local": "^1.0.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
-    "stripe": "^20.3.0",
+    "stripe": "^20.3.1",
     "zod": "^3.23.0"
   },
   "devDependencies": {
@@ -88,7 +88,7 @@
     "ts-node": "^10.9.0",
     "tsconfig-paths": "^4.2.0",
     "typescript": "^5.6.0",
-    "typescript-eslint": "^8.54.0"
+    "typescript-eslint": "^8.55.0"
   },
   "jest": {
     "moduleFileExtensions": [
