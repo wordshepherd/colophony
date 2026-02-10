@@ -1,9 +1,9 @@
-'use client';
+"use client";
 
-import { Suspense } from 'react';
-import { useSearchParams } from 'next/navigation';
-import Link from 'next/link';
-import { Button } from '@/components/ui/button';
+import { Suspense } from "react";
+import { useSearchParams } from "next/navigation";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -11,13 +11,13 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from '@/components/ui/card';
-import { Skeleton } from '@/components/ui/skeleton';
-import { XCircle } from 'lucide-react';
+} from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { XCircle } from "lucide-react";
 
 function PaymentCancelContent() {
   const searchParams = useSearchParams();
-  const submissionId = searchParams.get('submission_id');
+  const submissionId = searchParams.get("submission_id");
 
   return (
     <Card className="w-full max-w-md mx-auto">
@@ -26,9 +26,7 @@ function PaymentCancelContent() {
           <XCircle className="h-10 w-10 text-red-600 dark:text-red-400" />
         </div>
         <CardTitle>Payment Cancelled</CardTitle>
-        <CardDescription>
-          Your payment was not completed.
-        </CardDescription>
+        <CardDescription>Your payment was not completed.</CardDescription>
       </CardHeader>
       <CardContent className="text-center">
         <p className="text-sm text-muted-foreground">

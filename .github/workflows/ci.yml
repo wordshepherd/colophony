@@ -124,6 +124,9 @@ jobs:
       - name: Generate Prisma client
         run: pnpm db:generate
 
+      - name: Build workspace packages
+        run: pnpm turbo run build --filter=@prospector/db --filter=@prospector/types
+
       - name: Push schema to test database
         run: pnpm db:push
         env:
@@ -156,6 +159,7 @@ jobs:
         run: pnpm --filter @prospector/api test:e2e
         env:
           DATABASE_TEST_URL: postgresql://test:test@localhost:5433/prospector_test
+          DATABASE_APP_URL: postgresql://app_user:app_password@localhost:5433/prospector_test
           REDIS_URL: redis://localhost:6379
           REDIS_HOST: localhost
           REDIS_PORT: 6379

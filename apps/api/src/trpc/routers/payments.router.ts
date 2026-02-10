@@ -158,9 +158,9 @@ export const paymentsRouter = router({
       const isSubmitter = submission.submitterId === ctx.user.userId;
       const member = await ctx.prisma.organizationMember.findUnique({
         where: {
-          userId_organizationId: {
-            userId: ctx.user.userId,
+          organizationId_userId: {
             organizationId: ctx.org.id,
+            userId: ctx.user.userId,
           },
         },
       });

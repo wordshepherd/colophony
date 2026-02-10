@@ -28,6 +28,7 @@ pnpm --filter @prospector/web test:e2e:ui
 ```
 
 **Prerequisites for E2E tests:**
+
 - PostgreSQL test DB: `docker-compose up postgres-test`
 - Redis: `docker-compose up redis`
 - For Playwright: `npx playwright install` (first time only, downloads Chromium)
@@ -39,14 +40,15 @@ pnpm --filter @prospector/web test:e2e:ui
 
 **392 tests passing** across 4 tiers:
 
-| Tier | Count | Suites | Location |
-|------|-------|--------|----------|
-| API unit tests | 191 | 13 | `apps/api/test/unit/` |
-| Web unit tests | 117 | 13 | `apps/web/src/**/__tests__/` |
-| API E2E tests | 65 | 5 | `apps/api/test/e2e/` + `app.e2e-spec.ts` |
-| Playwright browser E2E | 19 | 3 | `apps/web/e2e/` |
+| Tier                   | Count | Suites | Location                                 |
+| ---------------------- | ----- | ------ | ---------------------------------------- |
+| API unit tests         | 191   | 13     | `apps/api/test/unit/`                    |
+| Web unit tests         | 117   | 13     | `apps/web/src/**/__tests__/`             |
+| API E2E tests          | 65    | 5      | `apps/api/test/e2e/` + `app.e2e-spec.ts` |
+| Playwright browser E2E | 19    | 3      | `apps/web/e2e/`                          |
 
 **Unit test breakdown (API):**
+
 - `audit.service.spec.ts` — 13 tests
 - `gdpr.service.spec.ts` — 17 tests
 - `retention.service.spec.ts` — 14 tests
@@ -60,6 +62,7 @@ pnpm --filter @prospector/web test:e2e:ui
 - `rate-limit.service.spec.ts`
 
 **API E2E test breakdown:**
+
 - `auth.e2e-spec.ts` — 15 tests (register, login, refresh, logout, me)
 - `submissions.e2e-spec.ts` — 28 tests (CRUD, status transitions, cross-org isolation)
 - `gdpr.e2e-spec.ts` — 15 tests (consent, DSAR, export, deletion)
@@ -67,6 +70,7 @@ pnpm --filter @prospector/web test:e2e:ui
 - `app.e2e-spec.ts` — 1 test (health check)
 
 **Playwright E2E test breakdown:**
+
 - `auth.spec.ts` — 7 tests (login, register, verify, protected routes, logout)
 - `submissions.spec.ts` — 7 tests (create, edit, list, filter, submit, non-draft alert)
 - `editor.spec.ts` — 5 tests (dashboard, filters, review, status change, pagination)
@@ -75,12 +79,12 @@ pnpm --filter @prospector/web test:e2e:ui
 
 ## Coverage Targets
 
-| Scope | Target |
-|-------|--------|
-| Overall | 85%+ |
-| Business logic (services) | 90%+ |
-| API endpoints (tRPC routers) | 80%+ |
-| Integration tests | 70%+ |
+| Scope                        | Target |
+| ---------------------------- | ------ |
+| Overall                      | 85%+   |
+| Business logic (services)    | 90%+   |
+| API endpoints (tRPC routers) | 80%+   |
+| Integration tests            | 70%+   |
 
 ---
 
@@ -89,11 +93,13 @@ pnpm --filter @prospector/web test:e2e:ui
 ### Unit Tests
 
 **API unit tests** (`apps/api/test/unit/`):
+
 - Mock all external dependencies (Prisma, Redis, BullMQ, Stripe, email)
 - Test business logic in isolation
 - Uses Jest with NestJS `@nestjs/testing` for DI
 
 **Web unit tests** (`apps/web/src/**/__tests__/`):
+
 - Co-located with source files
 - Uses Jest + React Testing Library + `@testing-library/react-hooks`
 - Mock tRPC client and browser APIs (localStorage)
@@ -102,6 +108,7 @@ pnpm --filter @prospector/web test:e2e:ui
 ### API E2E Tests
 
 **Test app module** (`test/e2e-app.module.ts`):
+
 - Mirrors `AppModule` but excludes `JobsModule` (BullMQ)
 - A `MockJobsModule` provides a no-op `VirusScanService` globally
 - All real modules (auth, storage, GDPR, audit, etc.) are loaded
@@ -109,19 +116,32 @@ pnpm --filter @prospector/web test:e2e:ui
 **Superuser DB connection rationale:**
 E2E tests use the superuser (`test:test`) for the Prisma singleton because `createContext()` needs to query `organization_members` but RLS requires `current_org` to be set first (chicken-and-egg). RLS isolation is verified separately in unit/integration tests using the dual-client pattern.
 
+**CI environment variables:**
+
+| Variable            | Purpose                                                  | CI Value                                                            |
+| ------------------- | -------------------------------------------------------- | ------------------------------------------------------------------- |
+| `DATABASE_TEST_URL` | Superuser connection (test setup, main Prisma singleton) | `postgresql://test:test@localhost:5433/prospector_test`             |
+| `DATABASE_APP_URL`  | Non-superuser connection (RLS E2E test)                  | `postgresql://app_user:app_password@localhost:5433/prospector_test` |
+| `REDIS_URL`         | Redis for BullMQ, sessions, rate limits                  | `redis://localhost:6379`                                            |
+
+**Important:** `DATABASE_APP_URL` must be separate from `DATABASE_TEST_URL`. The RLS E2E test (`getAppPrisma()`) uses `DATABASE_APP_URL` to connect as `app_user` (non-superuser). If it falls back to `DATABASE_TEST_URL`, both clients are superuser and RLS is silently bypassed.
+
 **Execution model:**
+
 - Sequential: `--runInBand` required — suites share PostgreSQL and Redis
 - `--forceExit` required — Redis/Prisma connections persist after tests
 - Database + Redis cleaned between each test via `cleanDatabase()` (DB truncate + `FLUSHDB`)
 - Rate limits disabled: `RATE_LIMIT_DEFAULT_MAX=10000` and `RATE_LIMIT_AUTH_MAX=10000` in `e2e-setup.ts`
 
 **Test helpers** (`test/e2e-helpers.ts`):
+
 - `createTestApp()` — bootstraps NestJS app from `E2eAppModule`
 - `registerUser()` — registers + auto-verifies email
 - `trpcMutation()` / `trpcQuery()` — typed HTTP calls to tRPC
 - `cleanDatabase()` — truncates all tables + flushes Redis
 
 **Test factories** (`test/utils/factories/`):
+
 - `createOrg()`, `createUser()`, `createSubmission()` — direct DB inserts via admin Prisma
 
 ### Playwright Browser E2E Tests
@@ -129,6 +149,7 @@ E2E tests use the superuser (`test:test`) for the Prisma singleton because `crea
 **Location:** `apps/web/e2e/`
 
 **Architecture:**
+
 - Test data setup uses superuser `PrismaClient` (`e2e/helpers/db.ts`) for direct DB operations
 - User registration uses tRPC API calls (`e2e/helpers/api-client.ts`) to avoid password hashing in test code
 - `loginAsBrowser()` sets tokens directly in localStorage (fast) — only login form test uses `loginViaForm()`
@@ -136,6 +157,7 @@ E2E tests use the superuser (`test:test`) for the Prisma singleton because `crea
 - Strict selectors: `getByRole('heading', ...)`, `{ exact: true }`, `main` scoping
 
 **Running:**
+
 ```bash
 npx playwright install                    # First time (downloads Chromium)
 pnpm --filter @prospector/web test:e2e    # Requires docker-compose up + dev servers
@@ -153,12 +175,18 @@ Uses the **dual-client pattern** to test actual PostgreSQL RLS enforcement:
 ```typescript
 // Admin client (superuser) - for test data setup/teardown
 const adminPrisma = new PrismaClient({
-  datasources: { db: { url: 'postgresql://test:test@localhost:5433/prospector_test' } },
+  datasources: {
+    db: { url: "postgresql://test:test@localhost:5433/prospector_test" },
+  },
 });
 
 // App client (non-superuser) - for RLS-enforced operations
 const appPrisma = new PrismaClient({
-  datasources: { db: { url: 'postgresql://app_user:app_password@localhost:5433/prospector_test' } },
+  datasources: {
+    db: {
+      url: "postgresql://app_user:app_password@localhost:5433/prospector_test",
+    },
+  },
 });
 ```
 
@@ -169,9 +197,9 @@ const appPrisma = new PrismaClient({
 ### 1. Multi-Tenancy Isolation
 
 ```typescript
-import { createContextHelpers } from '@prospector/db';
+import { createContextHelpers } from "@prospector/db";
 
-it('should prevent cross-org data leakage', async () => {
+it("should prevent cross-org data leakage", async () => {
   // Setup with admin client (bypasses RLS)
   const org1 = await createOrg();
   const org2 = await createOrg();
@@ -192,8 +220,8 @@ it('should prevent cross-org data leakage', async () => {
 ### 2. Payment Idempotency
 
 ```typescript
-it('should handle duplicate webhook events', async () => {
-  const event = { id: 'evt_123', type: 'checkout.session.completed' };
+it("should handle duplicate webhook events", async () => {
+  const event = { id: "evt_123", type: "checkout.session.completed" };
 
   await webhookHandler.handle(event);
   await webhookHandler.handle(event); // Duplicate
@@ -206,7 +234,7 @@ it('should handle duplicate webhook events', async () => {
 ### 3. GDPR Export/Erasure
 
 ```typescript
-it('should export all user data', async () => {
+it("should export all user data", async () => {
   const user = await createUser();
   await createSubmissions(user.id, 5);
 
@@ -214,10 +242,10 @@ it('should export all user data', async () => {
   const archive = await unzip(zipPath);
 
   expect(archive).toContainFiles([
-    'profile.json',
-    'submissions.json',
-    'payments.json',
-    'audit-log.json'
+    "profile.json",
+    "submissions.json",
+    "payments.json",
+    "audit-log.json",
   ]);
 });
 ```
@@ -226,9 +254,9 @@ it('should export all user data', async () => {
 
 ## Known Test Quirks
 
-### tRPC v10.45 Zod Errors Return 500
+### tRPC v10.45 Zod Errors Return 400
 
-Input validation (Zod) errors return `INTERNAL_SERVER_ERROR` (500), not `BAD_REQUEST` (400). Tests assert `toBe(500)` with Zod-specific error message content to distinguish from real server crashes.
+Input validation (Zod) errors return `BAD_REQUEST` (400). Tests assert `toBe(400)` with `BAD_REQUEST` error code.
 
 ### NestJS 10.4 Express 4 Path Syntax
 
@@ -254,13 +282,13 @@ All 5 priorities from the false-positive audit have been resolved:
 
 ### Priority 1: Tightened Status Code Assertions
 
-tRPC Zod 500 assertions now check exact status (`toBe(500)`) plus Zod-specific error content.
+tRPC Zod validation assertions check `toBe(400)` with `BAD_REQUEST` error code.
 
-| File | Test | Assertion |
-|------|------|-----------|
-| `auth.e2e-spec.ts` | invalid email | `toBe(500)` + `/invalid.*email\|email/i` |
-| `auth.e2e-spec.ts` | short password | `toBe(500)` + `/password\|too short\|at least/i` |
-| `gdpr.e2e-spec.ts` | wrong confirmation | `toBe(500)` + `/confirmation\|DELETE_MY_ACCOUNT\|invalid/i` |
+| File               | Test               | Assertion                   |
+| ------------------ | ------------------ | --------------------------- |
+| `auth.e2e-spec.ts` | invalid email      | `toBe(400)` + `BAD_REQUEST` |
+| `auth.e2e-spec.ts` | short password     | `toBe(400)` + `BAD_REQUEST` |
+| `gdpr.e2e-spec.ts` | wrong confirmation | `toBe(400)` + `BAD_REQUEST` |
 
 ### Priority 2: Fixed Multi-Status Acceptance in Payments
 
@@ -279,6 +307,7 @@ Added test using `getAppPrisma()` (non-superuser) to verify RLS blocks cross-org
 ### Priority 5: Expanded Submission State Machine Coverage
 
 Added negative tests for invalid transitions:
+
 - `DRAFT` → `ACCEPTED` (invalid)
 - `REJECTED` → `UNDER_REVIEW` (invalid)
 - `ACCEPTED` → `DRAFT` (invalid)

@@ -1,9 +1,9 @@
-'use client';
+"use client";
 
-import { ProtectedRoute } from '@/components/auth/protected-route';
-import { Header } from '@/components/layout/header';
-import { Sidebar } from '@/components/layout/sidebar';
-import { Toaster } from '@/components/ui/sonner';
+import { ProtectedRoute } from "@/components/auth/protected-route";
+import { Header } from "@/components/layout/header";
+import { Sidebar } from "@/components/layout/sidebar";
+import { Toaster } from "@/components/ui/sonner";
 
 export default function DashboardLayout({
   children,

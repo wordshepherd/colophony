@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { trpc, getTrpcClient } from '@/lib/trpc';
+import { useState } from "react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { trpc, getTrpcClient } from "@/lib/trpc";
 
 /**
  * Root providers component
@@ -20,7 +20,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
             retry: 1,
           },
         },
-      })
+      }),
   );
 
   const [trpcClient] = useState(() => getTrpcClient());

@@ -1,10 +1,10 @@
-'use client';
+"use client";
 
-import { useCallback, useEffect } from 'react';
-import { getCurrentOrgId, setCurrentOrgId, trpc } from '@/lib/trpc';
-import { useAuth, type UserProfile } from './use-auth';
+import { useCallback, useEffect } from "react";
+import { getCurrentOrgId, setCurrentOrgId, trpc } from "@/lib/trpc";
+import { useAuth, type UserProfile } from "./use-auth";
 
-export type OrgRole = 'ADMIN' | 'EDITOR' | 'READER';
+export type OrgRole = "ADMIN" | "EDITOR" | "READER";
 
 export interface Organization {
   id: string;
@@ -27,10 +27,11 @@ export function useOrganization() {
     })) ?? [];
 
   // Get current org ID from storage
-  const currentOrgId = typeof window !== 'undefined' ? getCurrentOrgId() : null;
+  const currentOrgId = typeof window !== "undefined" ? getCurrentOrgId() : null;
 
   // Find current organization
-  const currentOrg = organizations.find((org) => org.id === currentOrgId) ?? null;
+  const currentOrg =
+    organizations.find((org) => org.id === currentOrgId) ?? null;
 
   // If no current org but user has orgs, select the first one
   useEffect(() => {
@@ -44,7 +45,7 @@ export function useOrganization() {
     (orgId: string) => {
       const org = organizations.find((o) => o.id === orgId);
       if (!org) {
-        console.error('Organization not found:', orgId);
+        console.error("Organization not found:", orgId);
         return;
       }
 
@@ -53,12 +54,13 @@ export function useOrganization() {
       // Invalidate queries that depend on org context
       utils.invalidate();
     },
-    [organizations, utils]
+    [organizations, utils],
   );
 
   // Role checks
-  const isAdmin = currentOrg?.role === 'ADMIN';
-  const isEditor = currentOrg?.role === 'EDITOR' || currentOrg?.role === 'ADMIN';
+  const isAdmin = currentOrg?.role === "ADMIN";
+  const isEditor =
+    currentOrg?.role === "EDITOR" || currentOrg?.role === "ADMIN";
   const isReader = !!currentOrg;
 
   return {

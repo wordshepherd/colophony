@@ -1,20 +1,21 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from "@prisma/client";
 
-import { prisma as defaultPrisma } from './client';
+import { prisma as defaultPrisma } from "./client";
 
 /**
  * Transaction client type - same as PrismaClient but without transaction methods
  */
 export type PrismaTransaction = Omit<
   PrismaClient,
-  '$connect' | '$disconnect' | '$on' | '$transaction' | '$use' | '$extends'
+  "$connect" | "$disconnect" | "$on" | "$transaction" | "$use" | "$extends"
 >;
 
 /**
  * Validate UUID format to prevent SQL injection
  */
 function validateUuid(id: string, name: string): void {
-  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  const uuidRegex =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
   if (!uuidRegex.test(id)) {
     throw new Error(`Invalid UUID format for ${name}`);
   }
@@ -43,11 +44,11 @@ export async function withOrgContext<T>(
   orgId: string,
   userId: string,
   fn: (tx: PrismaTransaction) => Promise<T>,
-  prismaClient: PrismaClient = defaultPrisma
+  prismaClient: PrismaClient = defaultPrisma,
 ): Promise<T> {
   // Validate UUIDs to prevent SQL injection
-  validateUuid(orgId, 'orgId');
-  validateUuid(userId, 'userId');
+  validateUuid(orgId, "orgId");
+  validateUuid(userId, "userId");
 
   return prismaClient.$transaction(async (tx) => {
     // CRITICAL: Use SET LOCAL, not SET
@@ -73,10 +74,10 @@ export async function withOrgContext<T>(
 export async function withUserContext<T>(
   userId: string,
   fn: (tx: PrismaTransaction) => Promise<T>,
-  prismaClient: PrismaClient = defaultPrisma
+  prismaClient: PrismaClient = defaultPrisma,
 ): Promise<T> {
   // Validate UUID to prevent SQL injection
-  validateUuid(userId, 'userId');
+  validateUuid(userId, "userId");
 
   return prismaClient.$transaction(async (tx) => {
     await tx.$executeRawUnsafe(`SET LOCAL app.user_id = '${userId}'`);
@@ -104,12 +105,12 @@ export function createContextHelpers(prismaClient: PrismaClient) {
     withOrgContext: <T>(
       orgId: string,
       userId: string,
-      fn: (tx: PrismaTransaction) => Promise<T>
+      fn: (tx: PrismaTransaction) => Promise<T>,
     ) => withOrgContext(orgId, userId, fn, prismaClient),
 
     withUserContext: <T>(
       userId: string,
-      fn: (tx: PrismaTransaction) => Promise<T>
+      fn: (tx: PrismaTransaction) => Promise<T>,
     ) => withUserContext(userId, fn, prismaClient),
   };
 }

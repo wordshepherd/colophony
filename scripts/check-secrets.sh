@@ -14,9 +14,10 @@ fi
 FOUND=0
 
 for file in $STAGED_FILES; do
-  # Skip binary files and lock files
+  # Skip binary files, lock files, and this script itself
   case "$file" in
     *.lock|*.png|*.jpg|*.gif|*.ico|*.woff*|*.ttf|*.eot) continue ;;
+    scripts/check-secrets.sh) continue ;;
   esac
 
   # Skip if file doesn't exist (deleted)
@@ -38,7 +39,7 @@ for file in $STAGED_FILES; do
   fi
 
   # Private keys
-  if echo "$content" | grep -qE '-----BEGIN (RSA |EC |DSA )?PRIVATE KEY-----'; then
+  if echo "$content" | grep -q -- '-----BEGIN.*PRIVATE KEY-----'; then
     echo "❌ BLOCKED: Private key found in $file"
     FOUND=1
   fi

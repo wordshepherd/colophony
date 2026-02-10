@@ -61,7 +61,7 @@ describe('Row-Level Security', () => {
         user1.id,
         async (tx) => {
           return tx.submission.findMany();
-        }
+        },
       );
 
       // Assert: Should only see org1's submission
@@ -114,7 +114,7 @@ describe('Row-Level Security', () => {
               status: 'DRAFT',
             },
           });
-        })
+        }),
       ).rejects.toThrow();
     });
   });
@@ -134,7 +134,9 @@ describe('Row-Level Security', () => {
       // This test verifies that FORCE RLS is set, which is required
       // to prevent table owners from bypassing RLS
       const adminPrisma = getTestPrisma();
-      const result = await adminPrisma.$queryRaw<Array<{ relforcerowsecurity: boolean }>>`
+      const result = await adminPrisma.$queryRaw<
+        Array<{ relforcerowsecurity: boolean }>
+      >`
         SELECT relforcerowsecurity FROM pg_class WHERE relname = 'submissions'
       `;
 
@@ -152,7 +154,7 @@ describe('Row-Level Security', () => {
       ]);
 
       const users = await Promise.all(
-        orgs.map((org) => createUserWithOrg(org.id, 'ADMIN'))
+        orgs.map((org) => createUserWithOrg(org.id, 'ADMIN')),
       );
 
       const submissions = await Promise.all(
@@ -161,8 +163,8 @@ describe('Row-Level Security', () => {
             orgId: org.id,
             submitterId: users[i].id,
             title: `Submission for ${org.name}`,
-          })
-        )
+          }),
+        ),
       );
 
       // Act & Assert: Each org should only see their own submissions
@@ -172,7 +174,7 @@ describe('Row-Level Security', () => {
           users[i].id,
           async (tx) => {
             return tx.submission.findMany();
-          }
+          },
         );
 
         expect(results).toHaveLength(1);

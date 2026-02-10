@@ -33,6 +33,7 @@ When the user invokes `/new-component [options] <name>`:
 ### 1. Determine component category
 
 Infer from name or `--category`:
+
 - Names with `submission` → `submissions/`
 - Names with `editor` → `editor/`
 - Names with `auth`, `login`, `register` → `auth/`
@@ -389,6 +390,7 @@ export function <Name>({
 ### 3. Summary
 
 Inform the user:
+
 - The file path created
 - What TODOs need attention
 - Any additional imports needed in parent components

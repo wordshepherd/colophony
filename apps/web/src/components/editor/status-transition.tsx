@@ -1,9 +1,9 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { trpc } from '@/lib/trpc';
-import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
+import { useState } from "react";
+import { trpc } from "@/lib/trpc";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
   DialogContent,
@@ -11,13 +11,13 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
-import { Label } from '@/components/ui/label';
-import { toast } from 'sonner';
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { toast } from "sonner";
 import {
   EDITOR_ALLOWED_TRANSITIONS,
   type SubmissionStatus,
-} from '@prospector/types';
+} from "@prospector/types";
 
 interface StatusTransitionProps {
   submissionId: string;
@@ -26,26 +26,26 @@ interface StatusTransitionProps {
 }
 
 const statusLabels: Record<SubmissionStatus, string> = {
-  DRAFT: 'Draft',
-  SUBMITTED: 'Submitted',
-  UNDER_REVIEW: 'Under Review',
-  ACCEPTED: 'Accept',
-  REJECTED: 'Reject',
-  HOLD: 'Put on Hold',
-  WITHDRAWN: 'Withdrawn',
+  DRAFT: "Draft",
+  SUBMITTED: "Submitted",
+  UNDER_REVIEW: "Under Review",
+  ACCEPTED: "Accept",
+  REJECTED: "Reject",
+  HOLD: "Put on Hold",
+  WITHDRAWN: "Withdrawn",
 };
 
 const statusButtonVariants: Record<
   SubmissionStatus,
-  'default' | 'secondary' | 'destructive' | 'outline'
+  "default" | "secondary" | "destructive" | "outline"
 > = {
-  DRAFT: 'outline',
-  SUBMITTED: 'outline',
-  UNDER_REVIEW: 'secondary',
-  ACCEPTED: 'default',
-  REJECTED: 'destructive',
-  HOLD: 'outline',
-  WITHDRAWN: 'outline',
+  DRAFT: "outline",
+  SUBMITTED: "outline",
+  UNDER_REVIEW: "secondary",
+  ACCEPTED: "default",
+  REJECTED: "destructive",
+  HOLD: "outline",
+  WITHDRAWN: "outline",
 };
 
 export function StatusTransition({
@@ -54,9 +54,9 @@ export function StatusTransition({
   onStatusChange,
 }: StatusTransitionProps) {
   const [selectedStatus, setSelectedStatus] = useState<SubmissionStatus | null>(
-    null
+    null,
   );
-  const [comment, setComment] = useState('');
+  const [comment, setComment] = useState("");
   const utils = trpc.useUtils();
 
   const updateStatusMutation = trpc.submissions.updateStatus.useMutation({
@@ -65,7 +65,7 @@ export function StatusTransition({
       utils.submissions.getById.invalidate({ id: submissionId });
       utils.submissions.list.invalidate();
       setSelectedStatus(null);
-      setComment('');
+      setComment("");
       onStatusChange?.();
     },
     onError: (err) => {
@@ -110,25 +110,25 @@ export function StatusTransition({
         onOpenChange={(open) => {
           if (!open) {
             setSelectedStatus(null);
-            setComment('');
+            setComment("");
           }
         }}
       >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              {selectedStatus === 'REJECTED'
-                ? 'Reject Submission'
-                : selectedStatus === 'ACCEPTED'
-                  ? 'Accept Submission'
-                  : `Change Status to ${selectedStatus ? statusLabels[selectedStatus] : ''}`}
+              {selectedStatus === "REJECTED"
+                ? "Reject Submission"
+                : selectedStatus === "ACCEPTED"
+                  ? "Accept Submission"
+                  : `Change Status to ${selectedStatus ? statusLabels[selectedStatus] : ""}`}
             </DialogTitle>
             <DialogDescription>
-              {selectedStatus === 'REJECTED'
-                ? 'This will reject the submission. Consider providing feedback.'
-                : selectedStatus === 'ACCEPTED'
-                  ? 'This will accept the submission for publication.'
-                  : 'Add an optional comment for this status change.'}
+              {selectedStatus === "REJECTED"
+                ? "This will reject the submission. Consider providing feedback."
+                : selectedStatus === "ACCEPTED"
+                  ? "This will accept the submission for publication."
+                  : "Add an optional comment for this status change."}
             </DialogDescription>
           </DialogHeader>
 
@@ -138,9 +138,9 @@ export function StatusTransition({
               <Textarea
                 id="comment"
                 placeholder={
-                  selectedStatus === 'REJECTED'
-                    ? 'Provide feedback for the submitter...'
-                    : 'Add a note about this status change...'
+                  selectedStatus === "REJECTED"
+                    ? "Provide feedback for the submitter..."
+                    : "Add a note about this status change..."
                 }
                 value={comment}
                 onChange={(e) => setComment(e.target.value)}
@@ -153,21 +153,21 @@ export function StatusTransition({
               variant="outline"
               onClick={() => {
                 setSelectedStatus(null);
-                setComment('');
+                setComment("");
               }}
             >
               Cancel
             </Button>
             <Button
               variant={
-                selectedStatus === 'REJECTED' ? 'destructive' : 'default'
+                selectedStatus === "REJECTED" ? "destructive" : "default"
               }
               onClick={handleConfirm}
               disabled={updateStatusMutation.isPending}
             >
               {updateStatusMutation.isPending
-                ? 'Updating...'
-                : `Confirm ${selectedStatus ? statusLabels[selectedStatus] : ''}`}
+                ? "Updating..."
+                : `Confirm ${selectedStatus ? statusLabels[selectedStatus] : ""}`}
             </Button>
           </DialogFooter>
         </DialogContent>

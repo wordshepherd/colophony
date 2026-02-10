@@ -25,6 +25,7 @@ When the user invokes `/new-migration <ModelName>`:
 1. **Add the model** to `packages/db/prisma/schema.prisma`:
 
 For org-scoped models (default):
+
 ```prisma
 model <ModelName> {
   id             String       @id @default(uuid()) @db.Uuid
@@ -40,6 +41,7 @@ model <ModelName> {
 ```
 
 For global models (`--no-rls`):
+
 ```prisma
 model <ModelName> {
   id        String   @id @default(uuid()) @db.Uuid
@@ -53,12 +55,14 @@ model <ModelName> {
 ```
 
 2. **Add the relation** to the Organization model if org-scoped:
+
 ```prisma
 // In the Organization model, add:
 <modelNames> <ModelName>[]
 ```
 
 3. **Generate the migration**:
+
 ```bash
 cd /home/dmahaffey/projects/prospector
 pnpm --filter @prospector/db exec prisma migrate dev --name add_<model_name>
@@ -80,6 +84,7 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON <model_names> TO app_user;
 ```
 
 5. **Add performance indexes** if relevant:
+
 ```sql
 -- Add to the migration SQL or rls-policies.sql
 CREATE INDEX idx_<model_names>_org ON <model_names>(organization_id);
@@ -87,6 +92,7 @@ CREATE INDEX idx_<model_names>_created ON <model_names>(created_at DESC);
 ```
 
 6. **Regenerate Prisma client**:
+
 ```bash
 pnpm db:generate
 ```

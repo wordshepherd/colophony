@@ -38,15 +38,17 @@ jest.mock('@prospector/db', () => ({
     auditEvent: {
       updateMany: jest.fn(),
     },
-    $transaction: jest.fn((callback: (tx: unknown) => Promise<unknown>) => callback({
-      submissionFile: { deleteMany: jest.fn() },
-      submission: { update: jest.fn() },
-      organizationMember: { deleteMany: jest.fn() },
-      userIdentity: { deleteMany: jest.fn() },
-      userConsent: { deleteMany: jest.fn() },
-      user: { update: jest.fn() },
-      auditEvent: { updateMany: jest.fn() },
-    })),
+    $transaction: jest.fn((callback: (tx: unknown) => Promise<unknown>) =>
+      callback({
+        submissionFile: { deleteMany: jest.fn() },
+        submission: { update: jest.fn() },
+        organizationMember: { deleteMany: jest.fn() },
+        userIdentity: { deleteMany: jest.fn() },
+        userConsent: { deleteMany: jest.fn() },
+        user: { update: jest.fn() },
+        auditEvent: { updateMany: jest.fn() },
+      }),
+    ),
   },
   PrismaTransaction: {},
 }));
@@ -241,13 +243,19 @@ describe('GdprService', () => {
     };
 
     it('should anonymize user data and delete files', async () => {
-      (mockPrisma.user.findUnique as jest.Mock).mockResolvedValue(mockUserWithData);
+      (mockPrisma.user.findUnique as jest.Mock).mockResolvedValue(
+        mockUserWithData,
+      );
 
       await service.deleteUserData('user-123');
 
       // Should have deleted files from storage
-      expect(mockStorageService.deleteFile).toHaveBeenCalledWith('org/sub/file1');
-      expect(mockStorageService.deleteFile).toHaveBeenCalledWith('org/sub/file2');
+      expect(mockStorageService.deleteFile).toHaveBeenCalledWith(
+        'org/sub/file1',
+      );
+      expect(mockStorageService.deleteFile).toHaveBeenCalledWith(
+        'org/sub/file2',
+      );
 
       // Should have logged the erasure
       expect(mockAuditService.log).toHaveBeenCalledWith(
@@ -279,8 +287,12 @@ describe('GdprService', () => {
     });
 
     it('should continue deletion even if file storage deletion fails', async () => {
-      (mockPrisma.user.findUnique as jest.Mock).mockResolvedValue(mockUserWithData);
-      mockStorageService.deleteFile.mockRejectedValue(new Error('Storage error'));
+      (mockPrisma.user.findUnique as jest.Mock).mockResolvedValue(
+        mockUserWithData,
+      );
+      mockStorageService.deleteFile.mockRejectedValue(
+        new Error('Storage error'),
+      );
 
       // Should not throw
       await expect(service.deleteUserData('user-123')).resolves.not.toThrow();
@@ -301,7 +313,9 @@ describe('GdprService', () => {
         notes: null,
       };
 
-      (mockPrisma.dsarRequest.create as jest.Mock).mockResolvedValue(mockRequest);
+      (mockPrisma.dsarRequest.create as jest.Mock).mockResolvedValue(
+        mockRequest,
+      );
 
       const result = await service.createDsarRequest({
         userId: 'user-123',
@@ -329,7 +343,9 @@ describe('GdprService', () => {
         notes: 'User requested account deletion',
       };
 
-      (mockPrisma.dsarRequest.create as jest.Mock).mockResolvedValue(mockRequest);
+      (mockPrisma.dsarRequest.create as jest.Mock).mockResolvedValue(
+        mockRequest,
+      );
 
       const result = await service.createDsarRequest({
         userId: 'user-123',
@@ -357,7 +373,9 @@ describe('GdprService', () => {
         dueAt: new Date(),
       };
 
-      (mockPrisma.dsarRequest.create as jest.Mock).mockResolvedValue(mockRequest);
+      (mockPrisma.dsarRequest.create as jest.Mock).mockResolvedValue(
+        mockRequest,
+      );
 
       await service.createDsarRequest({
         userId: 'user-123',
@@ -392,7 +410,9 @@ describe('GdprService', () => {
         },
       ];
 
-      (mockPrisma.dsarRequest.findMany as jest.Mock).mockResolvedValue(mockRequests);
+      (mockPrisma.dsarRequest.findMany as jest.Mock).mockResolvedValue(
+        mockRequests,
+      );
 
       const result = await service.getUserDsarRequests('user-123');
 
@@ -413,7 +433,9 @@ describe('GdprService', () => {
         status: 'PENDING',
       };
 
-      (mockPrisma.dsarRequest.findUnique as jest.Mock).mockResolvedValue(mockRequest);
+      (mockPrisma.dsarRequest.findUnique as jest.Mock).mockResolvedValue(
+        mockRequest,
+      );
 
       const result = await service.getDsarRequest('dsar-123', 'user-123');
 
@@ -428,7 +450,9 @@ describe('GdprService', () => {
         status: 'PENDING',
       };
 
-      (mockPrisma.dsarRequest.findUnique as jest.Mock).mockResolvedValue(mockRequest);
+      (mockPrisma.dsarRequest.findUnique as jest.Mock).mockResolvedValue(
+        mockRequest,
+      );
 
       const result = await service.getDsarRequest('dsar-123', 'user-123');
 
@@ -453,7 +477,9 @@ describe('GdprService', () => {
         memberships: [],
       };
 
-      (mockPrisma.dsarRequest.findUnique as jest.Mock).mockResolvedValue(mockRequest);
+      (mockPrisma.dsarRequest.findUnique as jest.Mock).mockResolvedValue(
+        mockRequest,
+      );
       (mockPrisma.dsarRequest.update as jest.Mock).mockResolvedValue({});
       (mockPrisma.user.findUnique as jest.Mock).mockResolvedValue(mockUser);
 
@@ -483,7 +509,9 @@ describe('GdprService', () => {
         status: 'COMPLETED',
       };
 
-      (mockPrisma.dsarRequest.findUnique as jest.Mock).mockResolvedValue(mockRequest);
+      (mockPrisma.dsarRequest.findUnique as jest.Mock).mockResolvedValue(
+        mockRequest,
+      );
 
       await expect(service.completeDsarRequest('dsar-123')).rejects.toThrow(
         'DSAR request already completed',
@@ -504,7 +532,9 @@ describe('GdprService', () => {
         },
       ];
 
-      (mockPrisma.dsarRequest.findMany as jest.Mock).mockResolvedValue(mockRequests);
+      (mockPrisma.dsarRequest.findMany as jest.Mock).mockResolvedValue(
+        mockRequests,
+      );
 
       const result = await service.getPendingDsarRequests(7);
 

@@ -1,5 +1,5 @@
-import '@testing-library/jest-dom';
-import React from 'react';
+import "@testing-library/jest-dom";
+import React from "react";
 
 jest.setTimeout(15000);
 
@@ -9,7 +9,7 @@ const mockReplace = jest.fn();
 const mockBack = jest.fn();
 const mockRefresh = jest.fn();
 
-jest.mock('next/navigation', () => ({
+jest.mock("next/navigation", () => ({
   useRouter: () => ({
     push: mockPush,
     replace: mockReplace,
@@ -17,15 +17,15 @@ jest.mock('next/navigation', () => ({
     refresh: mockRefresh,
     prefetch: jest.fn(),
   }),
-  usePathname: () => '/',
+  usePathname: () => "/",
   useSearchParams: () => new URLSearchParams(),
 }));
 
 // Mock next/link
-jest.mock('next/link', () => ({
+jest.mock("next/link", () => ({
   __esModule: true,
   default: (props: { children: React.ReactNode; href: string }) =>
-    React.createElement('a', { href: props.href }, props.children),
+    React.createElement("a", { href: props.href }, props.children),
 }));
 
 // Mock ResizeObserver (required by Radix UI components)
@@ -36,7 +36,7 @@ global.ResizeObserver = class ResizeObserver {
 };
 
 // Mock window.matchMedia (required by shadcn/ui components)
-Object.defineProperty(window, 'matchMedia', {
+Object.defineProperty(window, "matchMedia", {
   writable: true,
   value: jest.fn().mockImplementation((query: string) => ({
     matches: false,
@@ -51,9 +51,9 @@ Object.defineProperty(window, 'matchMedia', {
 });
 
 // Mock crypto.randomUUID
-Object.defineProperty(globalThis, 'crypto', {
+Object.defineProperty(globalThis, "crypto", {
   value: {
-    randomUUID: () => 'test-uuid-' + Math.random().toString(36).substr(2, 9),
+    randomUUID: () => "test-uuid-" + Math.random().toString(36).substr(2, 9),
   },
 });
 

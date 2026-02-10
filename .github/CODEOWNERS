@@ -1,11 +1,11 @@
 # Default: primary developer owns all files
-* @dmahaffey
+* @demahaffey
 
 # Database schema and RLS require extra scrutiny
-packages/db/prisma/ @dmahaffey
-scripts/init-db.sh @dmahaffey
+packages/db/prisma/ @demahaffey
+scripts/init-db.sh @demahaffey
 
 # CI/CD and deployment configs
-.github/ @dmahaffey
-docker-compose*.yml @dmahaffey
-nginx/ @dmahaffey
+.github/ @demahaffey
+docker-compose*.yml @demahaffey
+nginx/ @demahaffey

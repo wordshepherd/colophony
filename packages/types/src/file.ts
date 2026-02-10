@@ -1,11 +1,11 @@
-import { z } from 'zod';
+import { z } from "zod";
 
 export const scanStatusSchema = z.enum([
-  'PENDING',
-  'SCANNING',
-  'CLEAN',
-  'INFECTED',
-  'FAILED',
+  "PENDING",
+  "SCANNING",
+  "CLEAN",
+  "INFECTED",
+  "FAILED",
 ]);
 
 export type ScanStatus = z.infer<typeof scanStatusSchema>;
@@ -16,24 +16,24 @@ export type ScanStatus = z.infer<typeof scanStatusSchema>;
  */
 export const ALLOWED_MIME_TYPES = [
   // Documents
-  'application/pdf',
-  'application/msword',
-  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-  'application/rtf',
-  'text/plain',
-  'text/markdown',
+  "application/pdf",
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "application/rtf",
+  "text/plain",
+  "text/markdown",
   // Images
-  'image/jpeg',
-  'image/png',
-  'image/gif',
-  'image/webp',
+  "image/jpeg",
+  "image/png",
+  "image/gif",
+  "image/webp",
   // Audio (for audio submissions)
-  'audio/mpeg',
-  'audio/wav',
-  'audio/ogg',
+  "audio/mpeg",
+  "audio/wav",
+  "audio/ogg",
   // Video (for video submissions)
-  'video/mp4',
-  'video/webm',
+  "video/mp4",
+  "video/webm",
 ] as const;
 
 export type AllowedMimeType = (typeof ALLOWED_MIME_TYPES)[number];
@@ -90,7 +90,9 @@ export const initiateUploadResponseSchema = z.object({
   expiresAt: z.date(),
 });
 
-export type InitiateUploadResponse = z.infer<typeof initiateUploadResponseSchema>;
+export type InitiateUploadResponse = z.infer<
+  typeof initiateUploadResponseSchema
+>;
 
 /**
  * Input for completing a file upload (called by tusd webhook).
@@ -150,11 +152,14 @@ export const tusdPostFinishHookSchema = z.object({
     IsPartial: z.boolean().optional(),
     IsFinal: z.boolean().optional(),
     PartialUploads: z.array(z.string()).optional().nullable(),
-    Storage: z.object({
-      Bucket: z.string().optional(),
-      Key: z.string().optional(),
-      Type: z.string().optional(),
-    }).optional().nullable(),
+    Storage: z
+      .object({
+        Bucket: z.string().optional(),
+        Key: z.string().optional(),
+        Type: z.string().optional(),
+      })
+      .optional()
+      .nullable(),
   }),
   HTTPRequest: z.object({
     Method: z.string(),
@@ -193,8 +198,8 @@ export function isAllowedMimeType(mimeType: string): boolean {
  * Get file extension from filename
  */
 export function getFileExtension(filename: string): string {
-  const parts = filename.split('.');
-  return parts.length > 1 ? parts[parts.length - 1].toLowerCase() : '';
+  const parts = filename.split(".");
+  return parts.length > 1 ? parts[parts.length - 1].toLowerCase() : "";
 }
 
 /**
@@ -202,16 +207,16 @@ export function getFileExtension(filename: string): string {
  */
 export function sanitizeFilename(filename: string): string {
   // Remove path separators and null bytes
-  let sanitized = filename.replace(/[\\/\0]/g, '');
+  let sanitized = filename.replace(/[\\/\0]/g, "");
   // Replace spaces with underscores
-  sanitized = sanitized.replace(/\s+/g, '_');
+  sanitized = sanitized.replace(/\s+/g, "_");
   // Remove any characters that aren't alphanumeric, dash, underscore, or dot
-  sanitized = sanitized.replace(/[^a-zA-Z0-9._-]/g, '');
+  sanitized = sanitized.replace(/[^a-zA-Z0-9._-]/g, "");
   // Limit length
   if (sanitized.length > 200) {
     const ext = getFileExtension(sanitized);
     const base = sanitized.slice(0, 200 - ext.length - 1);
     sanitized = ext ? `${base}.${ext}` : base;
   }
-  return sanitized || 'unnamed';
+  return sanitized || "unnamed";
 }

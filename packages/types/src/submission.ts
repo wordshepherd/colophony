@@ -1,21 +1,21 @@
-import { z } from 'zod';
-import { scanStatusSchema } from './file';
+import { z } from "zod";
+import { scanStatusSchema } from "./file";
 
 export const submissionStatusSchema = z.enum([
-  'DRAFT',
-  'SUBMITTED',
-  'UNDER_REVIEW',
-  'ACCEPTED',
-  'REJECTED',
-  'HOLD',
-  'WITHDRAWN',
+  "DRAFT",
+  "SUBMITTED",
+  "UNDER_REVIEW",
+  "ACCEPTED",
+  "REJECTED",
+  "HOLD",
+  "WITHDRAWN",
 ]);
 
 export type SubmissionStatus = z.infer<typeof submissionStatusSchema>;
 
 // Re-export scanStatus from file.ts for backwards compatibility
 export { scanStatusSchema };
-export type { ScanStatus } from './file';
+export type { ScanStatus } from "./file";
 
 export const submissionSchema = z.object({
   id: z.string().uuid(),
@@ -51,7 +51,7 @@ export const updateSubmissionSchema = z.object({
 export type UpdateSubmissionInput = z.infer<typeof updateSubmissionSchema>;
 
 // Re-export submissionFileSchema from file.ts for backwards compatibility
-export { submissionFileSchema, type SubmissionFile } from './file';
+export { submissionFileSchema, type SubmissionFile } from "./file";
 
 export const submissionHistorySchema = z.object({
   id: z.string().uuid(),
@@ -125,11 +125,14 @@ export type CreateSubmissionPeriodInput = z.infer<
  * - REJECTED -> (terminal state, no transitions except admin override)
  * - WITHDRAWN -> (terminal state, no transitions)
  */
-export const VALID_STATUS_TRANSITIONS: Record<SubmissionStatus, SubmissionStatus[]> = {
-  DRAFT: ['SUBMITTED', 'WITHDRAWN'],
-  SUBMITTED: ['UNDER_REVIEW', 'REJECTED', 'WITHDRAWN'],
-  UNDER_REVIEW: ['ACCEPTED', 'REJECTED', 'HOLD', 'WITHDRAWN'],
-  HOLD: ['UNDER_REVIEW', 'ACCEPTED', 'REJECTED', 'WITHDRAWN'],
+export const VALID_STATUS_TRANSITIONS: Record<
+  SubmissionStatus,
+  SubmissionStatus[]
+> = {
+  DRAFT: ["SUBMITTED", "WITHDRAWN"],
+  SUBMITTED: ["UNDER_REVIEW", "REJECTED", "WITHDRAWN"],
+  UNDER_REVIEW: ["ACCEPTED", "REJECTED", "HOLD", "WITHDRAWN"],
+  HOLD: ["UNDER_REVIEW", "ACCEPTED", "REJECTED", "WITHDRAWN"],
   ACCEPTED: [], // Terminal state
   REJECTED: [], // Terminal state
   WITHDRAWN: [], // Terminal state
@@ -148,11 +151,14 @@ export function isValidStatusTransition(
 /**
  * Status transitions allowed by editors (excludes submitter-only transitions)
  */
-export const EDITOR_ALLOWED_TRANSITIONS: Record<SubmissionStatus, SubmissionStatus[]> = {
+export const EDITOR_ALLOWED_TRANSITIONS: Record<
+  SubmissionStatus,
+  SubmissionStatus[]
+> = {
   DRAFT: [], // Editors cannot transition drafts
-  SUBMITTED: ['UNDER_REVIEW', 'REJECTED'],
-  UNDER_REVIEW: ['ACCEPTED', 'REJECTED', 'HOLD'],
-  HOLD: ['UNDER_REVIEW', 'ACCEPTED', 'REJECTED'],
+  SUBMITTED: ["UNDER_REVIEW", "REJECTED"],
+  UNDER_REVIEW: ["ACCEPTED", "REJECTED", "HOLD"],
+  HOLD: ["UNDER_REVIEW", "ACCEPTED", "REJECTED"],
   ACCEPTED: [],
   REJECTED: [],
   WITHDRAWN: [],

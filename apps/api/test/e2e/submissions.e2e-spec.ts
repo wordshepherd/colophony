@@ -602,18 +602,26 @@ describe('Submissions E2E', () => {
       });
 
       // Query via app_user (non-superuser) with org1 context — should only see org1
-      const org1Results = await withOrgContext(org1.id, user1.id, async (tx) => {
-        return tx.submission.findMany();
-      });
+      const org1Results = await withOrgContext(
+        org1.id,
+        user1.id,
+        async (tx) => {
+          return tx.submission.findMany();
+        },
+      );
 
       expect(org1Results).toHaveLength(1);
       expect(org1Results[0].id).toBe(sub1.id);
       expect(org1Results[0].title).toBe('Org1 Submission');
 
       // Query via app_user with org2 context — should only see org2
-      const org2Results = await withOrgContext(org2.id, user2.id, async (tx) => {
-        return tx.submission.findMany();
-      });
+      const org2Results = await withOrgContext(
+        org2.id,
+        user2.id,
+        async (tx) => {
+          return tx.submission.findMany();
+        },
+      );
 
       expect(org2Results).toHaveLength(1);
       expect(org2Results[0].id).toBe(sub2.id);
@@ -622,7 +630,7 @@ describe('Submissions E2E', () => {
   });
 
   describe('submissions.mySubmissions', () => {
-    it('should list only the current user\'s submissions', async () => {
+    it("should list only the current user's submissions", async () => {
       const env = await createTestEnvironment(app);
 
       // Create submissions for reader and editor

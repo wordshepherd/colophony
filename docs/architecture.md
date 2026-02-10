@@ -10,6 +10,7 @@ For day-to-day development guidance, see [CLAUDE.md](../CLAUDE.md).
 Multi-tenant submissions management platform for creative arts magazines.
 
 **Deployment model:**
+
 - **Phase 1 (MVP)**: Self-hosted via Docker Compose (WordPress-like)
 - **Phase 2 (SaaS)**: Unified platform with optional self-hosted instances
 
@@ -35,6 +36,7 @@ Multi-tenant submissions management platform for creative arts magazines.
 ```
 
 **Services:**
+
 - **nginx** — Reverse proxy, TLS termination, rate limiting
 - **web** — Next.js 15 frontend (standalone output)
 - **api** — NestJS API with tRPC, BullMQ background jobs
@@ -52,35 +54,38 @@ For deployment details, see [docs/deployment.md](./deployment.md).
 ## Technology Stack
 
 ### Frontend
-| Library | Version | Purpose |
-|---------|---------|---------|
-| Next.js | 15 | App Router, SSR |
-| TypeScript | strict mode | Type safety |
-| Tailwind CSS | 3.4 | Utility-first CSS |
-| shadcn/ui | New York style | Component library |
-| tRPC client | 10.45 | End-to-end type safety |
-| TanStack Query | 4.36 | Server state management |
-| tus-js-client | 4.3.1 | Resumable file uploads |
-| date-fns | — | Date formatting |
+
+| Library        | Version        | Purpose                 |
+| -------------- | -------------- | ----------------------- |
+| Next.js        | 15             | App Router, SSR         |
+| TypeScript     | strict mode    | Type safety             |
+| Tailwind CSS   | 3.4            | Utility-first CSS       |
+| shadcn/ui      | New York style | Component library       |
+| tRPC client    | 10.45          | End-to-end type safety  |
+| TanStack Query | 4.36           | Server state management |
+| tus-js-client  | 4.3.1          | Resumable file uploads  |
+| date-fns       | —              | Date formatting         |
 
 ### Backend
-| Library | Version | Purpose |
-|---------|---------|---------|
-| NestJS | 10.4 | Application framework |
-| tRPC server | 10.45 | API layer (NOT REST) |
-| Prisma | 5.22 | ORM + migrations |
-| BullMQ | 5 | Background job queue |
-| Passport.js + JWT | — | Authentication |
-| Stripe | 20.3 | Payment processing |
-| nodemailer | — | Email sending |
+
+| Library           | Version | Purpose               |
+| ----------------- | ------- | --------------------- |
+| NestJS            | 10.4    | Application framework |
+| tRPC server       | 10.45   | API layer (NOT REST)  |
+| Prisma            | 5.22    | ORM + migrations      |
+| BullMQ            | 5       | Background job queue  |
+| Passport.js + JWT | —       | Authentication        |
+| Stripe            | 20.3    | Payment processing    |
+| nodemailer        | —       | Email sending         |
 
 ### Data & Infrastructure
-| Technology | Version | Purpose |
-|------------|---------|---------|
-| PostgreSQL | 16+ | Primary database with RLS |
-| Redis | 7+ | Sessions, jobs, cache |
-| MinIO | — | S3-compatible storage (dev/self-hosted) |
-| Docker Compose | v2 | Container orchestration |
+
+| Technology     | Version | Purpose                                 |
+| -------------- | ------- | --------------------------------------- |
+| PostgreSQL     | 16+     | Primary database with RLS               |
+| Redis          | 7+      | Sessions, jobs, cache                   |
+| MinIO          | —       | S3-compatible storage (dev/self-hosted) |
+| Docker Compose | v2      | Container orchestration                 |
 
 ---
 
@@ -300,22 +305,22 @@ prospector/
 
 ### Core Tables
 
-| Table | Purpose | Key Fields |
-|-------|---------|-----------|
-| **organizations** | Multi-tenant root | `id`, `name`, `slug`, `settings` (JSONB) |
-| **users** | Global user pool | `id`, `email`, `passwordHash`, `emailVerifiedAt`, `deletedAt` (soft delete) |
-| **user_identities** | Federated identity | `provider` (email/google/github), `providerUserId`, `userId` |
-| **organization_members** | M:N users ↔ orgs | `userId`, `organizationId`, `role` (admin/editor/reader) |
-| **submissions** | RLS-enforced content | `organizationId`, `submitterId`, `status`, `searchVector` (tsvector) |
-| **submission_files** | Attached files | `submissionId`, `storageKey`, `scanStatus` (pending/scanning/clean/infected) |
-| **submission_history** | Immutable status log | `submissionId`, `fromStatus`, `toStatus`, `changedBy`, `comment` |
-| **payments** | Idempotent tracking | `submissionId`, `stripePaymentIntentId`, `status`, `amount` |
-| **stripe_webhook_events** | Deduplication | `eventId`, `eventType`, `processed` (boolean) |
-| **audit_events** | GDPR Article 30 | `actorId`, `action`, `resource`, `resourceId`, `ipAddress`, `userAgent` |
-| **dsar_requests** | Data Subject Access | `userId`, `type`, `status`, `dueAt` (30 days) |
-| **retention_policies** | Data lifecycle | `resource`, `retentionDays`, `active` |
-| **user_consents** | GDPR consent | `userId`, `organizationId`, `consentType`, `grantedAt`, `revokedAt` |
-| **outbox_events** | Reliable notifications | `eventType`, `recipientEmail`, `templateName`, `processedAt`, `retryCount` |
+| Table                     | Purpose                | Key Fields                                                                   |
+| ------------------------- | ---------------------- | ---------------------------------------------------------------------------- |
+| **organizations**         | Multi-tenant root      | `id`, `name`, `slug`, `settings` (JSONB)                                     |
+| **users**                 | Global user pool       | `id`, `email`, `passwordHash`, `emailVerifiedAt`, `deletedAt` (soft delete)  |
+| **user_identities**       | Federated identity     | `provider` (email/google/github), `providerUserId`, `userId`                 |
+| **organization_members**  | M:N users ↔ orgs       | `userId`, `organizationId`, `role` (admin/editor/reader)                     |
+| **submissions**           | RLS-enforced content   | `organizationId`, `submitterId`, `status`, `searchVector` (tsvector)         |
+| **submission_files**      | Attached files         | `submissionId`, `storageKey`, `scanStatus` (pending/scanning/clean/infected) |
+| **submission_history**    | Immutable status log   | `submissionId`, `fromStatus`, `toStatus`, `changedBy`, `comment`             |
+| **payments**              | Idempotent tracking    | `submissionId`, `stripePaymentIntentId`, `status`, `amount`                  |
+| **stripe_webhook_events** | Deduplication          | `eventId`, `eventType`, `processed` (boolean)                                |
+| **audit_events**          | GDPR Article 30        | `actorId`, `action`, `resource`, `resourceId`, `ipAddress`, `userAgent`      |
+| **dsar_requests**         | Data Subject Access    | `userId`, `type`, `status`, `dueAt` (30 days)                                |
+| **retention_policies**    | Data lifecycle         | `resource`, `retentionDays`, `active`                                        |
+| **user_consents**         | GDPR consent           | `userId`, `organizationId`, `consentType`, `grantedAt`, `revokedAt`          |
+| **outbox_events**         | Reliable notifications | `eventType`, `recipientEmail`, `templateName`, `processedAt`, `retryCount`   |
 
 ### Indexes
 
@@ -409,12 +414,13 @@ async function withOrgContext<T>(
   orgId: string,
   userId: string,
   fn: (tx: PrismaTransaction) => Promise<T>,
-  prismaClient: PrismaClient = defaultPrisma
+  prismaClient: PrismaClient = defaultPrisma,
 ): Promise<T> {
   // Validate UUIDs to prevent SQL injection
-  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  const uuidRegex =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
   if (!uuidRegex.test(orgId) || !uuidRegex.test(userId)) {
-    throw new Error('Invalid UUID format');
+    throw new Error("Invalid UUID format");
   }
 
   return prismaClient.$transaction(async (tx) => {
@@ -432,13 +438,14 @@ export const submissionsRouter = router({
     .input(z.object({ status: z.string().optional() }))
     .query(({ ctx, input }) => {
       return ctx.prisma.submission.findMany({
-        where: { status: input.status }
+        where: { status: input.status },
       });
-    })
+    }),
 });
 ```
 
 **NEVER:**
+
 - Query without org context
 - Use session-level `SET` (always `SET LOCAL`)
 - Manually filter by `organizationId` (RLS does this)
@@ -451,10 +458,10 @@ export const submissionsRouter = router({
 
 **Hybrid JWT + Refresh Token:**
 
-| Token | TTL | Storage | Rotation |
-|-------|-----|---------|----------|
-| Access | 15 min | Client memory/localStorage | Stateless (JWT) |
-| Refresh | 7 days | Redis | Single-use, rotated on refresh |
+| Token   | TTL    | Storage                    | Rotation                       |
+| ------- | ------ | -------------------------- | ------------------------------ |
+| Access  | 15 min | Client memory/localStorage | Stateless (JWT)                |
+| Refresh | 7 days | Redis                      | Single-use, rotated on refresh |
 
 ```typescript
 // Login returns both tokens
@@ -483,6 +490,7 @@ DELETE /auth/logout → redis.del(`refresh:${userId}:*`)
 ```
 
 **Key files:**
+
 - `apps/api/src/modules/storage/tusd-webhook.controller.ts` — tusd hooks
 - `apps/api/src/modules/jobs/processors/virus-scan.processor.ts` — scan job
 - `apps/web/src/hooks/use-file-upload.ts` — tus-js-client wrapper
@@ -504,6 +512,7 @@ DELETE /auth/logout → redis.del(`refresh:${userId}:*`)
 ```
 
 **Key files:**
+
 - `apps/api/src/modules/payments/stripe-webhook.controller.ts` — webhook handler
 - `apps/api/src/modules/payments/payments.service.ts` — checkout session creation
 - `apps/api/src/trpc/routers/payments.router.ts` — tRPC endpoints
@@ -544,9 +553,9 @@ await gdprService.deleteUserData(userId);
 ```typescript
 // Create a DSAR request (30-day deadline per GDPR)
 const { id, dueAt } = await gdprService.createDsarRequest({
-  userId: 'user-123',
-  type: 'ACCESS' | 'ERASURE' | 'RECTIFICATION' | 'PORTABILITY',
-  notes: 'Optional notes'
+  userId: "user-123",
+  type: "ACCESS" | "ERASURE" | "RECTIFICATION" | "PORTABILITY",
+  notes: "Optional notes",
 });
 
 // Admin can monitor approaching deadlines
@@ -557,9 +566,11 @@ const pending = await gdprService.getPendingDsarRequests(7); // Due within 7 day
 
 ```typescript
 // tRPC endpoints for user consent
-await trpc.consent.grant({ consentType: 'marketing_emails', organizationId });
-await trpc.consent.revoke({ consentType: 'analytics' });
-const hasConsent = await trpc.consent.check({ consentType: 'terms_of_service' });
+await trpc.consent.grant({ consentType: "marketing_emails", organizationId });
+await trpc.consent.revoke({ consentType: "analytics" });
+const hasConsent = await trpc.consent.check({
+  consentType: "terms_of_service",
+});
 ```
 
 ### Retention Policies (Article 5(1)(e))
@@ -579,19 +590,23 @@ const hasConsent = await trpc.consent.check({ consentType: 'terms_of_service' })
 
 ```typescript
 await auditService.log({
-  organizationId: 'org-123',
-  actorId: 'user-456',
+  organizationId: "org-123",
+  actorId: "user-456",
   action: AuditActions.SUBMISSION_CREATED, // 15+ predefined actions
   resource: AuditResources.SUBMISSION,
-  resourceId: 'sub-789',
-  oldValue: { status: 'DRAFT' },
-  newValue: { status: 'SUBMITTED' },
-  ipAddress: '192.168.1.1',
-  userAgent: 'Mozilla/5.0...'
+  resourceId: "sub-789",
+  oldValue: { status: "DRAFT" },
+  newValue: { status: "SUBMITTED" },
+  ipAddress: "192.168.1.1",
+  userAgent: "Mozilla/5.0...",
 });
 
 // Export audit logs as CSV
-const csv = await auditService.exportAsCsv({ organizationId, dateFrom, dateTo });
+const csv = await auditService.exportAsCsv({
+  organizationId,
+  dateFrom,
+  dateTo,
+});
 ```
 
 ### Transactional Outbox Pattern
@@ -628,7 +643,7 @@ export function getTrpcClient() {
           const orgId = getCurrentOrgId();
           return {
             ...(token ? { Authorization: `Bearer ${token}` } : {}),
-            ...(orgId ? { 'x-organization-id': orgId } : {}),
+            ...(orgId ? { "x-organization-id": orgId } : {}),
           };
         },
       }),
@@ -694,13 +709,13 @@ upload.start();
 ```typescript
 // apps/api/src/trpc/trpc.router.ts
 export const appRouter = router({
-  auth: authRouter,           // login, register, refresh, verify, logout, resetPassword, me
+  auth: authRouter, // login, register, refresh, verify, logout, resetPassword, me
   submissions: submissionsRouter, // list, getById, create, update, submit, withdraw
-  files: filesRouter,         // getUploadUrl, confirmUpload, delete
-  payments: paymentsRouter,   // createCheckoutSession, getForSubmission
-  gdpr: gdprRouter,           // createDsarRequest, exportData, downloadExport, requestDeletion
-  consent: consentRouter,     // list, grant, revoke, check, bulkGrant
-  audit: auditRouter,         // list, getById, getResourceHistory, exportCsv, getStats
+  files: filesRouter, // getUploadUrl, confirmUpload, delete
+  payments: paymentsRouter, // createCheckoutSession, getForSubmission
+  gdpr: gdprRouter, // createDsarRequest, exportData, downloadExport, requestDeletion
+  consent: consentRouter, // list, grant, revoke, check, bulkGrant
+  audit: auditRouter, // list, getById, getResourceHistory, exportCsv, getStats
   retention: retentionRouter, // list, create, update, delete, toggleActive, getDefaults
 });
 ```

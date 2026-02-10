@@ -1,10 +1,10 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
-import { useSearchParams } from 'next/navigation';
-import Link from 'next/link';
-import { trpc } from '@/lib/trpc';
-import { Button } from '@/components/ui/button';
+import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import Link from "next/link";
+import { trpc } from "@/lib/trpc";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -12,33 +12,33 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from '@/components/ui/card';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Skeleton } from '@/components/ui/skeleton';
+} from "@/components/ui/card";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export function VerifyEmailForm() {
   const searchParams = useSearchParams();
-  const token = searchParams.get('token');
-  const required = searchParams.get('required');
+  const token = searchParams.get("token");
+  const required = searchParams.get("required");
 
-  const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>(
-    token ? 'loading' : 'idle'
-  );
-  const [message, setMessage] = useState<string>('');
+  const [status, setStatus] = useState<
+    "idle" | "loading" | "success" | "error"
+  >(token ? "loading" : "idle");
+  const [message, setMessage] = useState<string>("");
 
   const verifyMutation = trpc.auth.verifyEmail.useMutation({
     onSuccess: (data) => {
-      setStatus('success');
+      setStatus("success");
       setMessage(data.message);
     },
     onError: (error) => {
-      setStatus('error');
-      setMessage(error.message || 'Failed to verify email');
+      setStatus("error");
+      setMessage(error.message || "Failed to verify email");
     },
   });
 
   useEffect(() => {
-    if (token && status === 'loading') {
+    if (token && status === "loading") {
       verifyMutation.mutate({ token });
     }
   }, [token, status, verifyMutation]);
@@ -51,14 +51,14 @@ export function VerifyEmailForm() {
           <CardTitle>Verify your email</CardTitle>
           <CardDescription>
             {required
-              ? 'You need to verify your email to continue'
-              : 'Check your email for a verification link'}
+              ? "You need to verify your email to continue"
+              : "Check your email for a verification link"}
           </CardDescription>
         </CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground">
-            We sent a verification link to your email address. Click the link
-            in the email to verify your account.
+            We sent a verification link to your email address. Click the link in
+            the email to verify your account.
           </p>
           <p className="text-sm text-muted-foreground mt-4">
             If you don&apos;t see the email, check your spam folder or request a
@@ -77,12 +77,14 @@ export function VerifyEmailForm() {
   }
 
   // Loading state
-  if (status === 'loading') {
+  if (status === "loading") {
     return (
       <Card className="w-full max-w-md">
         <CardHeader>
           <CardTitle>Verifying your email...</CardTitle>
-          <CardDescription>Please wait while we verify your email</CardDescription>
+          <CardDescription>
+            Please wait while we verify your email
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-2">
@@ -95,12 +97,14 @@ export function VerifyEmailForm() {
   }
 
   // Success state
-  if (status === 'success') {
+  if (status === "success") {
     return (
       <Card className="w-full max-w-md">
         <CardHeader>
           <CardTitle>Email verified!</CardTitle>
-          <CardDescription>Your email has been verified successfully</CardDescription>
+          <CardDescription>
+            Your email has been verified successfully
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <Alert>

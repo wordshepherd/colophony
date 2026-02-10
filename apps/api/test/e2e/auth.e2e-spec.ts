@@ -62,11 +62,10 @@ describe('Auth E2E', () => {
         password: 'SecurePass123!',
       });
 
-      // tRPC v10.45 wraps Zod validation errors as INTERNAL_SERVER_ERROR (500)
-      // with an empty message — this is a known tRPC behavior for input validation
-      expect(res.status).toBe(500);
+      // tRPC returns Zod validation errors as BAD_REQUEST (400)
+      expect(res.status).toBe(400);
       const error = extractError(res);
-      expect(error.data.code).toBe('INTERNAL_SERVER_ERROR');
+      expect(error.data.code).toBe('BAD_REQUEST');
     });
 
     it('should reject short password', async () => {
@@ -75,11 +74,10 @@ describe('Auth E2E', () => {
         password: '123',
       });
 
-      // tRPC v10.45 wraps Zod validation errors as INTERNAL_SERVER_ERROR (500)
-      // with an empty message — this is a known tRPC behavior for input validation
-      expect(res.status).toBe(500);
+      // tRPC returns Zod validation errors as BAD_REQUEST (400)
+      expect(res.status).toBe(400);
       const error = extractError(res);
-      expect(error.data.code).toBe('INTERNAL_SERVER_ERROR');
+      expect(error.data.code).toBe('BAD_REQUEST');
     });
   });
 

@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { z } from "zod";
 
 export const organizationSchema = z.object({
   id: z.string().uuid(),
@@ -17,7 +17,7 @@ export const createOrganizationSchema = z.object({
     .string()
     .min(3)
     .max(63)
-    .regex(/^[a-z0-9-]+$/, 'Slug must be lowercase alphanumeric with hyphens'),
+    .regex(/^[a-z0-9-]+$/, "Slug must be lowercase alphanumeric with hyphens"),
 });
 
 export type CreateOrganizationInput = z.infer<typeof createOrganizationSchema>;
@@ -29,7 +29,7 @@ export const updateOrganizationSchema = z.object({
 
 export type UpdateOrganizationInput = z.infer<typeof updateOrganizationSchema>;
 
-export const roleSchema = z.enum(['ADMIN', 'EDITOR', 'READER']);
+export const roleSchema = z.enum(["ADMIN", "EDITOR", "READER"]);
 export type Role = z.infer<typeof roleSchema>;
 
 export const organizationMemberSchema = z.object({

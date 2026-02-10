@@ -2,7 +2,11 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
 import { getQueueToken } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
-import { VirusScanService, VirusScanJobData, VirusScanResult } from '../../src/modules/jobs/services/virus-scan.service';
+import {
+  VirusScanService,
+  VirusScanJobData,
+  VirusScanResult,
+} from '../../src/modules/jobs/services/virus-scan.service';
 import { VIRUS_SCAN_QUEUE } from '../../src/modules/jobs/constants';
 import { Readable } from 'stream';
 
@@ -91,7 +95,9 @@ describe('VirusScanService', () => {
 
       const jobId = await service.queueScan(jobData);
 
-      expect(mockQueue.add).toHaveBeenCalledWith('scan', jobData, { priority: 1 });
+      expect(mockQueue.add).toHaveBeenCalledWith('scan', jobData, {
+        priority: 1,
+      });
       expect(jobId).toBe('job-456');
     });
   });
@@ -156,28 +162,51 @@ describe('VirusScanService', () => {
     });
 
     it('should parse clean response', () => {
-      const result = (enabledService as unknown as { parseResponse: (r: string) => VirusScanResult }).parseResponse('stream: OK');
+      const result = (
+        enabledService as unknown as {
+          parseResponse: (r: string) => VirusScanResult;
+        }
+      ).parseResponse('stream: OK');
       expect(result).toEqual({ isClean: true });
     });
 
     it('should parse infected response', () => {
-      const result = (enabledService as unknown as { parseResponse: (r: string) => VirusScanResult }).parseResponse('stream: Eicar-Test-Signature FOUND');
-      expect(result).toEqual({ isClean: false, virusName: 'Eicar-Test-Signature' });
+      const result = (
+        enabledService as unknown as {
+          parseResponse: (r: string) => VirusScanResult;
+        }
+      ).parseResponse('stream: Eicar-Test-Signature FOUND');
+      expect(result).toEqual({
+        isClean: false,
+        virusName: 'Eicar-Test-Signature',
+      });
     });
 
     it('should parse error response', () => {
-      const result = (enabledService as unknown as { parseResponse: (r: string) => VirusScanResult }).parseResponse('stream: Connection refused ERROR');
+      const result = (
+        enabledService as unknown as {
+          parseResponse: (r: string) => VirusScanResult;
+        }
+      ).parseResponse('stream: Connection refused ERROR');
       expect(result).toEqual({ isClean: false, error: 'Connection refused' });
     });
 
     it('should handle unknown response', () => {
-      const result = (enabledService as unknown as { parseResponse: (r: string) => VirusScanResult }).parseResponse('unknown response format');
+      const result = (
+        enabledService as unknown as {
+          parseResponse: (r: string) => VirusScanResult;
+        }
+      ).parseResponse('unknown response format');
       expect(result.isClean).toBe(false);
       expect(result.error).toContain('Unknown ClamAV response');
     });
 
     it('should handle trimmed whitespace', () => {
-      const result = (enabledService as unknown as { parseResponse: (r: string) => VirusScanResult }).parseResponse('  stream: OK  \n');
+      const result = (
+        enabledService as unknown as {
+          parseResponse: (r: string) => VirusScanResult;
+        }
+      ).parseResponse('  stream: OK  \n');
       expect(result).toEqual({ isClean: true });
     });
   });
@@ -227,7 +256,9 @@ describe('VirusScanService (enabled with mocked socket)', () => {
     it('should reject with connection error when ClamAV is not running', async () => {
       const stream = Readable.from(Buffer.from('test content'));
 
-      await expect(service.scanStream(stream)).rejects.toThrow(/ClamAV connection failed/);
+      await expect(service.scanStream(stream)).rejects.toThrow(
+        /ClamAV connection failed/,
+      );
     }, 5000);
   });
 
