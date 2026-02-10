@@ -207,6 +207,7 @@ export { use<Name> } from './use-<name>';
 ### 4. Summary
 
 Inform the user:
+
 - The file path created
 - What TODOs need to be completed
 - How to import and use the hook

@@ -79,10 +79,16 @@ describe('RetentionService', () => {
         },
       ];
 
-      (mockPrisma.retentionPolicy.findMany as jest.Mock).mockResolvedValue(mockPolicies);
+      (mockPrisma.retentionPolicy.findMany as jest.Mock).mockResolvedValue(
+        mockPolicies,
+      );
       (mockPrisma.submission.findMany as jest.Mock).mockResolvedValue([]);
-      (mockPrisma.submission.deleteMany as jest.Mock).mockResolvedValue({ count: 5 });
-      (mockPrisma.auditEvent.deleteMany as jest.Mock).mockResolvedValue({ count: 100 });
+      (mockPrisma.submission.deleteMany as jest.Mock).mockResolvedValue({
+        count: 5,
+      });
+      (mockPrisma.auditEvent.deleteMany as jest.Mock).mockResolvedValue({
+        count: 100,
+      });
 
       const result = await service.runRetentionPolicies();
 
@@ -120,9 +126,15 @@ describe('RetentionService', () => {
         },
       ];
 
-      (mockPrisma.retentionPolicy.findMany as jest.Mock).mockResolvedValue(mockPolicies);
-      (mockPrisma.submission.findMany as jest.Mock).mockResolvedValue(mockSubmissions);
-      (mockPrisma.submission.deleteMany as jest.Mock).mockResolvedValue({ count: 2 });
+      (mockPrisma.retentionPolicy.findMany as jest.Mock).mockResolvedValue(
+        mockPolicies,
+      );
+      (mockPrisma.submission.findMany as jest.Mock).mockResolvedValue(
+        mockSubmissions,
+      );
+      (mockPrisma.submission.deleteMany as jest.Mock).mockResolvedValue({
+        count: 2,
+      });
 
       const result = await service.runRetentionPolicies();
 
@@ -143,7 +155,9 @@ describe('RetentionService', () => {
         },
       ];
 
-      (mockPrisma.retentionPolicy.findMany as jest.Mock).mockResolvedValue(mockPolicies);
+      (mockPrisma.retentionPolicy.findMany as jest.Mock).mockResolvedValue(
+        mockPolicies,
+      );
       (mockPrisma.submission.findMany as jest.Mock).mockRejectedValue(
         new Error('Database error'),
       );
@@ -176,9 +190,15 @@ describe('RetentionService', () => {
         },
       ];
 
-      (mockPrisma.retentionPolicy.findMany as jest.Mock).mockResolvedValue(mockPolicies);
-      (mockPrisma.submission.findMany as jest.Mock).mockResolvedValue(mockSubmissions);
-      (mockPrisma.submission.deleteMany as jest.Mock).mockResolvedValue({ count: 1 });
+      (mockPrisma.retentionPolicy.findMany as jest.Mock).mockResolvedValue(
+        mockPolicies,
+      );
+      (mockPrisma.submission.findMany as jest.Mock).mockResolvedValue(
+        mockSubmissions,
+      );
+      (mockPrisma.submission.deleteMany as jest.Mock).mockResolvedValue({
+        count: 1,
+      });
 
       // First file deletion fails, second succeeds
       mockStorageService.deleteFile
@@ -206,9 +226,13 @@ describe('RetentionService', () => {
         },
       ];
 
-      (mockPrisma.retentionPolicy.findMany as jest.Mock).mockResolvedValue(mockPolicies);
+      (mockPrisma.retentionPolicy.findMany as jest.Mock).mockResolvedValue(
+        mockPolicies,
+      );
       (mockPrisma.submission.findMany as jest.Mock).mockResolvedValue([]);
-      (mockPrisma.submission.deleteMany as jest.Mock).mockResolvedValue({ count: 10 });
+      (mockPrisma.submission.deleteMany as jest.Mock).mockResolvedValue({
+        count: 10,
+      });
 
       await service.runRetentionPolicies();
 
@@ -231,9 +255,13 @@ describe('RetentionService', () => {
         },
       ];
 
-      (mockPrisma.retentionPolicy.findMany as jest.Mock).mockResolvedValue(mockPolicies);
+      (mockPrisma.retentionPolicy.findMany as jest.Mock).mockResolvedValue(
+        mockPolicies,
+      );
       (mockPrisma.submission.findMany as jest.Mock).mockResolvedValue([]);
-      (mockPrisma.submission.deleteMany as jest.Mock).mockResolvedValue({ count: 5 });
+      (mockPrisma.submission.deleteMany as jest.Mock).mockResolvedValue({
+        count: 5,
+      });
 
       await service.runRetentionPolicies();
 
@@ -256,9 +284,13 @@ describe('RetentionService', () => {
         },
       ];
 
-      (mockPrisma.retentionPolicy.findMany as jest.Mock).mockResolvedValue(mockPolicies);
+      (mockPrisma.retentionPolicy.findMany as jest.Mock).mockResolvedValue(
+        mockPolicies,
+      );
       (mockPrisma.submission.findMany as jest.Mock).mockResolvedValue([]);
-      (mockPrisma.submission.deleteMany as jest.Mock).mockResolvedValue({ count: 3 });
+      (mockPrisma.submission.deleteMany as jest.Mock).mockResolvedValue({
+        count: 3,
+      });
 
       await service.runRetentionPolicies();
 
@@ -283,8 +315,12 @@ describe('RetentionService', () => {
         },
       ];
 
-      (mockPrisma.retentionPolicy.findMany as jest.Mock).mockResolvedValue(mockPolicies);
-      (mockPrisma.auditEvent.deleteMany as jest.Mock).mockResolvedValue({ count: 1000 });
+      (mockPrisma.retentionPolicy.findMany as jest.Mock).mockResolvedValue(
+        mockPolicies,
+      );
+      (mockPrisma.auditEvent.deleteMany as jest.Mock).mockResolvedValue({
+        count: 1000,
+      });
 
       const result = await service.runRetentionPolicies();
 
@@ -306,8 +342,12 @@ describe('RetentionService', () => {
         },
       ];
 
-      (mockPrisma.retentionPolicy.findMany as jest.Mock).mockResolvedValue(mockPolicies);
-      (mockPrisma.dsarRequest.deleteMany as jest.Mock).mockResolvedValue({ count: 50 });
+      (mockPrisma.retentionPolicy.findMany as jest.Mock).mockResolvedValue(
+        mockPolicies,
+      );
+      (mockPrisma.dsarRequest.deleteMany as jest.Mock).mockResolvedValue({
+        count: 50,
+      });
 
       await service.runRetentionPolicies();
 
@@ -333,8 +373,12 @@ describe('RetentionService', () => {
         },
       ];
 
-      (mockPrisma.retentionPolicy.findMany as jest.Mock).mockResolvedValue(mockPolicies);
-      (mockPrisma.outboxEvent.deleteMany as jest.Mock).mockResolvedValue({ count: 200 });
+      (mockPrisma.retentionPolicy.findMany as jest.Mock).mockResolvedValue(
+        mockPolicies,
+      );
+      (mockPrisma.outboxEvent.deleteMany as jest.Mock).mockResolvedValue({
+        count: 200,
+      });
 
       await service.runRetentionPolicies();
 
@@ -360,8 +404,12 @@ describe('RetentionService', () => {
         },
       ];
 
-      (mockPrisma.retentionPolicy.findMany as jest.Mock).mockResolvedValue(mockPolicies);
-      (mockPrisma.stripeWebhookEvent.deleteMany as jest.Mock).mockResolvedValue({ count: 150 });
+      (mockPrisma.retentionPolicy.findMany as jest.Mock).mockResolvedValue(
+        mockPolicies,
+      );
+      (mockPrisma.stripeWebhookEvent.deleteMany as jest.Mock).mockResolvedValue(
+        { count: 150 },
+      );
 
       await service.runRetentionPolicies();
 
@@ -387,7 +435,9 @@ describe('RetentionService', () => {
         },
       ];
 
-      (mockPrisma.retentionPolicy.findMany as jest.Mock).mockResolvedValue(mockPolicies);
+      (mockPrisma.retentionPolicy.findMany as jest.Mock).mockResolvedValue(
+        mockPolicies,
+      );
 
       const result = await service.runRetentionPolicies();
 
@@ -409,8 +459,12 @@ describe('RetentionService', () => {
         },
       ];
 
-      (mockPrisma.retentionPolicy.findMany as jest.Mock).mockResolvedValue(mockPolicies);
-      (mockPrisma.auditEvent.deleteMany as jest.Mock).mockResolvedValue({ count: 100 });
+      (mockPrisma.retentionPolicy.findMany as jest.Mock).mockResolvedValue(
+        mockPolicies,
+      );
+      (mockPrisma.auditEvent.deleteMany as jest.Mock).mockResolvedValue({
+        count: 100,
+      });
 
       await service.runRetentionPolicies();
 

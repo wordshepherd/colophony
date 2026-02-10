@@ -1,0 +1,16 @@
+# Run the same checks CI runs, so failures are caught before pushing
+echo "Running pre-push checks..."
+
+echo "→ Type checking..."
+pnpm type-check || {
+  echo "Type check failed. Fix errors before pushing."
+  exit 1
+}
+
+echo "→ Linting..."
+pnpm lint || {
+  echo "Lint failed. Fix errors before pushing."
+  exit 1
+}
+
+echo "Pre-push checks passed."

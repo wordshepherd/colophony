@@ -51,7 +51,7 @@ export class MockRedisService {
 
   async scanAndDelete(pattern: string): Promise<number> {
     const regex = new RegExp(
-      '^' + pattern.replace(/\*/g, '.*').replace(/\?/g, '.') + '$'
+      '^' + pattern.replace(/\*/g, '.*').replace(/\?/g, '.') + '$',
     );
     let count = 0;
     for (const key of this.store.keys()) {

@@ -1,13 +1,13 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import Link from 'next/link';
-import { formatDistanceToNow } from 'date-fns';
-import { trpc } from '@/lib/trpc';
-import { StatusBadge } from '@/components/submissions/status-badge';
-import { Button } from '@/components/ui/button';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Skeleton } from '@/components/ui/skeleton';
+import { useState } from "react";
+import Link from "next/link";
+import { formatDistanceToNow } from "date-fns";
+import { trpc } from "@/lib/trpc";
+import { StatusBadge } from "@/components/submissions/status-badge";
+import { Button } from "@/components/ui/button";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
   TableBody,
@@ -15,28 +15,28 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table';
-import { Eye, FileText } from 'lucide-react';
-import type { SubmissionStatus } from '@prospector/types';
+} from "@/components/ui/table";
+import { Eye, FileText } from "lucide-react";
+import type { SubmissionStatus } from "@prospector/types";
 
-const statusTabs: Array<{ value: SubmissionStatus | 'ALL'; label: string }> = [
-  { value: 'ALL', label: 'All' },
-  { value: 'SUBMITTED', label: 'Submitted' },
-  { value: 'UNDER_REVIEW', label: 'Under Review' },
-  { value: 'HOLD', label: 'On Hold' },
-  { value: 'ACCEPTED', label: 'Accepted' },
-  { value: 'REJECTED', label: 'Rejected' },
+const statusTabs: Array<{ value: SubmissionStatus | "ALL"; label: string }> = [
+  { value: "ALL", label: "All" },
+  { value: "SUBMITTED", label: "Submitted" },
+  { value: "UNDER_REVIEW", label: "Under Review" },
+  { value: "HOLD", label: "On Hold" },
+  { value: "ACCEPTED", label: "Accepted" },
+  { value: "REJECTED", label: "Rejected" },
 ];
 
 export function EditorDashboard() {
-  const [statusFilter, setStatusFilter] = useState<SubmissionStatus | 'ALL'>(
-    'SUBMITTED'
+  const [statusFilter, setStatusFilter] = useState<SubmissionStatus | "ALL">(
+    "SUBMITTED",
   );
   const [page, setPage] = useState(1);
   const limit = 20;
 
   const { data, isLoading, error } = trpc.submissions.list.useQuery({
-    status: statusFilter === 'ALL' ? undefined : statusFilter,
+    status: statusFilter === "ALL" ? undefined : statusFilter,
     page,
     limit,
   });
@@ -56,16 +56,14 @@ export function EditorDashboard() {
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold">Editor Dashboard</h1>
-        <p className="text-muted-foreground">
-          Review and manage submissions
-        </p>
+        <p className="text-muted-foreground">Review and manage submissions</p>
       </div>
 
       {/* Status filter tabs */}
       <Tabs
         value={statusFilter}
         onValueChange={(v) => {
-          setStatusFilter(v as SubmissionStatus | 'ALL');
+          setStatusFilter(v as SubmissionStatus | "ALL");
           setPage(1);
         }}
       >
@@ -93,9 +91,9 @@ export function EditorDashboard() {
           <FileText className="mx-auto h-12 w-12 text-muted-foreground" />
           <h3 className="mt-4 text-lg font-semibold">No submissions</h3>
           <p className="text-muted-foreground">
-            {statusFilter === 'ALL'
-              ? 'There are no submissions in this organization.'
-              : `There are no ${statusFilter.toLowerCase().replace('_', ' ')} submissions.`}
+            {statusFilter === "ALL"
+              ? "There are no submissions in this organization."
+              : `There are no ${statusFilter.toLowerCase().replace("_", " ")} submissions.`}
           </p>
         </div>
       )}
@@ -126,17 +124,20 @@ export function EditorDashboard() {
                       </Link>
                     </TableCell>
                     <TableCell className="text-muted-foreground">
-                      {submission.submitter?.email ?? 'Unknown'}
+                      {submission.submitter?.email ?? "Unknown"}
                     </TableCell>
                     <TableCell>
                       <StatusBadge status={submission.status} />
                     </TableCell>
                     <TableCell className="text-muted-foreground">
                       {submission.submittedAt
-                        ? formatDistanceToNow(new Date(submission.submittedAt), {
-                            addSuffix: true,
-                          })
-                        : '-'}
+                        ? formatDistanceToNow(
+                            new Date(submission.submittedAt),
+                            {
+                              addSuffix: true,
+                            },
+                          )
+                        : "-"}
                     </TableCell>
                     <TableCell className="text-right">
                       <Link href={`/editor/${submission.id}`}>

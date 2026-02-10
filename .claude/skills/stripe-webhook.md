@@ -32,7 +32,7 @@ When the user invokes `/stripe-webhook <event-type>`:
    });
 
    if (existingEvent?.processed) {
-     return { received: true, message: 'Event already processed' };
+     return { received: true, message: "Event already processed" };
    }
 
    // 2. Store event record (if new)
@@ -101,14 +101,14 @@ When the user invokes `/stripe-webhook <event-type>`:
 4. **Add test case** to `apps/api/test/unit/payments.service.spec.ts`:
 
    ```typescript
-   describe('handle<EventName>', () => {
-     it('should process <event-type> event', async () => {
+   describe("handle<EventName>", () => {
+     it("should process <event-type> event", async () => {
        const mockEvent = {
-         id: 'evt_test_<event>',
-         type: '<event-type>',
+         id: "evt_test_<event>",
+         type: "<event-type>",
          data: {
            object: {
-             id: '<object-id>',
+             id: "<object-id>",
              // Add relevant mock data
            },
          },
@@ -120,11 +120,11 @@ When the user invokes `/stripe-webhook <event-type>`:
        // Add assertions for expected side effects
      });
 
-     it('should handle duplicate events idempotently', async () => {
+     it("should handle duplicate events idempotently", async () => {
        const mockEvent = {
-         id: 'evt_test_duplicate',
-         type: '<event-type>',
-         data: { object: { id: 'obj_123' } },
+         id: "evt_test_duplicate",
+         type: "<event-type>",
+         data: { object: { id: "obj_123" } },
        } as Stripe.Event;
 
        // First call
@@ -162,18 +162,18 @@ When the user invokes `/stripe-webhook <event-type>`:
 
 ## Common Stripe Events Reference
 
-| Event Type | When it fires | Data object |
-|------------|---------------|-------------|
-| `checkout.session.completed` | Customer completes checkout | `Stripe.Checkout.Session` |
-| `invoice.paid` | Invoice is paid | `Stripe.Invoice` |
-| `invoice.payment_failed` | Invoice payment fails | `Stripe.Invoice` |
-| `customer.subscription.created` | New subscription | `Stripe.Subscription` |
-| `customer.subscription.updated` | Subscription changes | `Stripe.Subscription` |
-| `customer.subscription.deleted` | Subscription cancelled | `Stripe.Subscription` |
-| `payment_intent.succeeded` | Payment succeeds | `Stripe.PaymentIntent` |
-| `payment_intent.payment_failed` | Payment fails | `Stripe.PaymentIntent` |
-| `charge.refunded` | Charge is refunded | `Stripe.Charge` |
-| `customer.created` | New customer | `Stripe.Customer` |
+| Event Type                      | When it fires               | Data object               |
+| ------------------------------- | --------------------------- | ------------------------- |
+| `checkout.session.completed`    | Customer completes checkout | `Stripe.Checkout.Session` |
+| `invoice.paid`                  | Invoice is paid             | `Stripe.Invoice`          |
+| `invoice.payment_failed`        | Invoice payment fails       | `Stripe.Invoice`          |
+| `customer.subscription.created` | New subscription            | `Stripe.Subscription`     |
+| `customer.subscription.updated` | Subscription changes        | `Stripe.Subscription`     |
+| `customer.subscription.deleted` | Subscription cancelled      | `Stripe.Subscription`     |
+| `payment_intent.succeeded`      | Payment succeeds            | `Stripe.PaymentIntent`    |
+| `payment_intent.payment_failed` | Payment fails               | `Stripe.PaymentIntent`    |
+| `charge.refunded`               | Charge is refunded          | `Stripe.Charge`           |
+| `customer.created`              | New customer                | `Stripe.Customer`         |
 
 ## Testing Webhooks Locally
 

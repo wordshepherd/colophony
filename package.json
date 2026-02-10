@@ -24,11 +24,7 @@
     "prepare": "husky"
   },
   "lint-staged": {
-    "*.{ts,tsx}": [
-      "prettier --write",
-      "eslint --fix --no-warn-ignored"
-    ],
-    "*.{json,md}": [
+    "*.{ts,tsx,json,md}": [
       "prettier --write"
     ]
   },

@@ -36,7 +36,9 @@ describe('AuthService', () => {
     mockRedis = new MockRedisService();
 
     mockEmailService = {
-      sendEmail: jest.fn().mockResolvedValue({ success: true, messageId: 'test-123' }),
+      sendEmail: jest
+        .fn()
+        .mockResolvedValue({ success: true, messageId: 'test-123' }),
       isEnabled: jest.fn().mockReturnValue(true),
       getFromAddress: jest.fn().mockReturnValue('noreply@test.com'),
     } as unknown as jest.Mocked<EmailService>;
@@ -263,7 +265,7 @@ describe('AuthService', () => {
 
     it('should throw UNAUTHORIZED for invalid refresh token', async () => {
       await expect(authService.refresh('invalid-token')).rejects.toThrow(
-        TRPCError
+        TRPCError,
       );
       await expect(authService.refresh('invalid-token')).rejects.toMatchObject({
         code: 'UNAUTHORIZED',
@@ -292,7 +294,7 @@ describe('AuthService', () => {
 
       // Second refresh with same token should fail (single-use rotation)
       await expect(
-        authService.refresh(loginResult.refreshToken)
+        authService.refresh(loginResult.refreshToken),
       ).rejects.toThrow(TRPCError);
     });
   });
@@ -324,10 +326,10 @@ describe('AuthService', () => {
 
       // Both refresh tokens should now be invalid
       await expect(authService.refresh(login1.refreshToken)).rejects.toThrow(
-        TRPCError
+        TRPCError,
       );
       await expect(authService.refresh(login2.refreshToken)).rejects.toThrow(
-        TRPCError
+        TRPCError,
       );
     });
   });
@@ -390,14 +392,17 @@ describe('AuthService', () => {
       const userId = 'user-123';
       const email = 'test@example.com';
 
-      const token = await authService.generateEmailVerificationToken(userId, email);
+      const token = await authService.generateEmailVerificationToken(
+        userId,
+        email,
+      );
 
       expect(token).toBeDefined();
       expect(token.length).toBe(64); // 32 bytes = 64 hex chars
 
       // Verify token is stored in Redis
       const stored = await mockRedis.getJSON<{ userId: string; email: string }>(
-        `email_verify:${token}`
+        `email_verify:${token}`,
       );
       expect(stored).not.toBeNull();
       expect(stored?.userId).toBe(userId);
@@ -424,7 +429,7 @@ describe('AuthService', () => {
       // Generate a token first
       const token = await authService.generateEmailVerificationToken(
         user.id,
-        user.email
+        user.email,
       );
 
       // Verify the email
@@ -459,7 +464,7 @@ describe('AuthService', () => {
 
       const token = await authService.generateEmailVerificationToken(
         user.id,
-        user.email
+        user.email,
       );
 
       const result = await authService.verifyEmail(token);
@@ -471,14 +476,14 @@ describe('AuthService', () => {
 
     it('should throw BAD_REQUEST for invalid token', async () => {
       await expect(authService.verifyEmail('invalid-token')).rejects.toThrow(
-        TRPCError
+        TRPCError,
       );
-      await expect(authService.verifyEmail('invalid-token')).rejects.toMatchObject(
-        {
-          code: 'BAD_REQUEST',
-          message: 'Invalid or expired verification token',
-        }
-      );
+      await expect(
+        authService.verifyEmail('invalid-token'),
+      ).rejects.toMatchObject({
+        code: 'BAD_REQUEST',
+        message: 'Invalid or expired verification token',
+      });
     });
 
     it('should throw NOT_FOUND if user does not exist', async () => {
@@ -486,7 +491,7 @@ describe('AuthService', () => {
 
       const token = await authService.generateEmailVerificationToken(
         'deleted-user',
-        'deleted@example.com'
+        'deleted@example.com',
       );
 
       await expect(authService.verifyEmail(token)).rejects.toThrow(TRPCError);
@@ -508,7 +513,7 @@ describe('AuthService', () => {
 
       const token = await authService.generateEmailVerificationToken(
         user.id,
-        user.email
+        user.email,
       );
 
       await expect(authService.verifyEmail(token)).rejects.toThrow(TRPCError);
@@ -531,13 +536,14 @@ describe('AuthService', () => {
       // Generate token with old email
       const token = await authService.generateEmailVerificationToken(
         user.id,
-        'old-email@example.com'
+        'old-email@example.com',
       );
 
       await expect(authService.verifyEmail(token)).rejects.toThrow(TRPCError);
       await expect(authService.verifyEmail(token)).rejects.toMatchObject({
         code: 'BAD_REQUEST',
-        message: 'Email address has changed. Please request a new verification email.',
+        message:
+          'Email address has changed. Please request a new verification email.',
       });
     });
   });
@@ -557,12 +563,12 @@ describe('AuthService', () => {
 
       expect(result.success).toBe(true);
       expect(result.message).toBe(
-        'If an account exists with this email, a verification email has been sent.'
+        'If an account exists with this email, a verification email has been sent.',
       );
       expect(mockEmailService.sendEmail).toHaveBeenCalledWith(
         expect.objectContaining({
           to: user.email,
-        })
+        }),
       );
     });
 
@@ -570,12 +576,12 @@ describe('AuthService', () => {
       (mockPrisma.user.findUnique as jest.Mock).mockResolvedValue(null);
 
       const result = await authService.resendVerificationEmail(
-        'nonexistent@example.com'
+        'nonexistent@example.com',
       );
 
       expect(result.success).toBe(true);
       expect(result.message).toBe(
-        'If an account exists with this email, a verification email has been sent.'
+        'If an account exists with this email, a verification email has been sent.',
       );
     });
 
@@ -609,7 +615,7 @@ describe('AuthService', () => {
 
       expect(result.success).toBe(true);
       expect(result.message).toBe(
-        'If an account exists with this email, a verification email has been sent.'
+        'If an account exists with this email, a verification email has been sent.',
       );
     });
   });

@@ -2,16 +2,17 @@
 
 ## System Requirements
 
-| Resource | Minimum | Recommended |
-|----------|---------|-------------|
-| CPU | 2 cores | 4 cores |
-| RAM | 2 GB | 4 GB |
-| Disk | 20 GB | 50 GB+ |
-| Docker | 24+ | Latest |
-| Docker Compose | v2 | Latest |
-| OS | Any Linux with Docker | Ubuntu 22.04+ / Debian 12+ |
+| Resource       | Minimum               | Recommended                |
+| -------------- | --------------------- | -------------------------- |
+| CPU            | 2 cores               | 4 cores                    |
+| RAM            | 2 GB                  | 4 GB                       |
+| Disk           | 20 GB                 | 50 GB+                     |
+| Docker         | 24+                   | Latest                     |
+| Docker Compose | v2                    | Latest                     |
+| OS             | Any Linux with Docker | Ubuntu 22.04+ / Debian 12+ |
 
 **Additional requirements:**
+
 - `openssl` (for secret generation during installation)
 - Port 80 available (configurable via `HTTP_PORT`)
 
@@ -24,6 +25,7 @@ bash scripts/install.sh
 ```
 
 The installation script will:
+
 1. Check prerequisites (Docker, Compose, openssl)
 2. Generate cryptographic secrets
 3. Prompt for domain and optional Stripe/email configuration
@@ -103,36 +105,36 @@ curl http://localhost/health
 
 ### Required
 
-| Variable | Description | Example |
-|----------|-------------|---------|
-| `DOMAIN` | Your domain name | `submissions.example.com` |
-| `POSTGRES_PASSWORD` | PostgreSQL superuser password | (generated) |
-| `APP_USER_PASSWORD` | App database user password (non-superuser) | (generated) |
-| `JWT_SECRET` | JWT signing secret (64+ chars) | (generated) |
-| `REDIS_PASSWORD` | Redis password | (generated) |
-| `MINIO_ROOT_USER` | MinIO access key | (generated) |
-| `MINIO_ROOT_PASSWORD` | MinIO secret key | (generated) |
-| `TUS_HOOK_SECRET` | tusd webhook auth secret | (generated) |
+| Variable              | Description                                | Example                   |
+| --------------------- | ------------------------------------------ | ------------------------- |
+| `DOMAIN`              | Your domain name                           | `submissions.example.com` |
+| `POSTGRES_PASSWORD`   | PostgreSQL superuser password              | (generated)               |
+| `APP_USER_PASSWORD`   | App database user password (non-superuser) | (generated)               |
+| `JWT_SECRET`          | JWT signing secret (64+ chars)             | (generated)               |
+| `REDIS_PASSWORD`      | Redis password                             | (generated)               |
+| `MINIO_ROOT_USER`     | MinIO access key                           | (generated)               |
+| `MINIO_ROOT_PASSWORD` | MinIO secret key                           | (generated)               |
+| `TUS_HOOK_SECRET`     | tusd webhook auth secret                   | (generated)               |
 
 ### Optional
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `POSTGRES_USER` | PostgreSQL superuser name | `prospector` |
-| `POSTGRES_DB` | Database name | `prospector` |
-| `HTTP_PORT` | Nginx listen port | `80` |
-| `JWT_EXPIRES_IN` | Access token TTL | `15m` |
-| `REFRESH_TOKEN_EXPIRES_IN` | Refresh token TTL | `7d` |
-| `RATE_LIMIT_DEFAULT_MAX` | General rate limit (req/min) | `100` |
-| `RATE_LIMIT_AUTH_MAX` | Auth rate limit (req/min) | `20` |
-| `STRIPE_SECRET_KEY` | Stripe API key | (empty) |
-| `STRIPE_WEBHOOK_SECRET` | Stripe webhook secret | (empty) |
-| `STRIPE_PUBLISHABLE_KEY` | Stripe publishable key | (empty) |
-| `SMTP_HOST` | SMTP server hostname | (empty) |
-| `SMTP_PORT` | SMTP server port | `587` |
-| `SMTP_USER` | SMTP username | (empty) |
-| `SMTP_PASSWORD` | SMTP password | (empty) |
-| `EMAIL_FROM` | Sender email address | `noreply@{DOMAIN}` |
+| Variable                   | Description                  | Default            |
+| -------------------------- | ---------------------------- | ------------------ |
+| `POSTGRES_USER`            | PostgreSQL superuser name    | `prospector`       |
+| `POSTGRES_DB`              | Database name                | `prospector`       |
+| `HTTP_PORT`                | Nginx listen port            | `80`               |
+| `JWT_EXPIRES_IN`           | Access token TTL             | `15m`              |
+| `REFRESH_TOKEN_EXPIRES_IN` | Refresh token TTL            | `7d`               |
+| `RATE_LIMIT_DEFAULT_MAX`   | General rate limit (req/min) | `100`              |
+| `RATE_LIMIT_AUTH_MAX`      | Auth rate limit (req/min)    | `20`               |
+| `STRIPE_SECRET_KEY`        | Stripe API key               | (empty)            |
+| `STRIPE_WEBHOOK_SECRET`    | Stripe webhook secret        | (empty)            |
+| `STRIPE_PUBLISHABLE_KEY`   | Stripe publishable key       | (empty)            |
+| `SMTP_HOST`                | SMTP server hostname         | (empty)            |
+| `SMTP_PORT`                | SMTP server port             | `587`              |
+| `SMTP_USER`                | SMTP username                | (empty)            |
+| `SMTP_PASSWORD`            | SMTP password                | (empty)            |
+| `EMAIL_FROM`               | Sender email address         | `noreply@{DOMAIN}` |
 
 ## Architecture
 
@@ -158,6 +160,7 @@ curl http://localhost/health
 ```
 
 **Services:**
+
 - **nginx** — Reverse proxy, TLS termination, rate limiting
 - **web** — Next.js frontend (standalone output)
 - **api** — NestJS API with tRPC, background jobs

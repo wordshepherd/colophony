@@ -20,6 +20,7 @@ Run RLS (Row-Level Security) integration tests to verify tenant isolation.
 When the user invokes `/test-rls`:
 
 1. **Verify test database is ready**:
+
 ```bash
 docker exec prospector-postgres-test psql -U test -d prospector_test -c "SELECT 1" 2>/dev/null
 ```
@@ -27,6 +28,7 @@ docker exec prospector-postgres-test psql -U test -d prospector_test -c "SELECT 
 If this fails, tell the user to run `docker-compose up -d`.
 
 2. **Run the RLS tests**:
+
 ```bash
 pnpm --filter @prospector/api test -- --testPathPattern=rls
 ```
@@ -46,6 +48,7 @@ pnpm --filter @prospector/api test -- --testPathPattern=rls
 ## Why RLS tests matter
 
 These tests are CRITICAL for security. They verify that:
+
 - Users in Org A cannot see Org B's data
 - Users cannot create data in other organizations
 - All tenant tables enforce isolation

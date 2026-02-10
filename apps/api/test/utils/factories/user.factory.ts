@@ -33,7 +33,7 @@ export async function createUser(options: CreateUserOptions = {}) {
 export async function createUserWithOrg(
   orgId: string,
   role: 'ADMIN' | 'EDITOR' | 'READER' = 'READER',
-  options: CreateUserOptions = {}
+  options: CreateUserOptions = {},
 ) {
   const user = await createUser(options);
 

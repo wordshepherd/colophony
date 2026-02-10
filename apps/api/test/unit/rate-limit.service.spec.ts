@@ -16,7 +16,9 @@ class MockRedisClient {
       zremrangebyscore: (key: string, min: number, max: number) => {
         operations.push(async () => {
           const entries = this.store.get(key) || [];
-          const filtered = entries.filter((e) => e.score > max || e.score < min);
+          const filtered = entries.filter(
+            (e) => e.score > max || e.score < min,
+          );
           this.store.set(key, filtered);
           return [null, entries.length - filtered.length];
         });

@@ -1,15 +1,15 @@
-'use client';
+"use client";
 
-import { useState, useCallback } from 'react';
-import * as tus from 'tus-js-client';
-import { trpc, getAccessToken } from '@/lib/trpc';
-import type { ScanStatus } from '@prospector/types';
+import { useState, useCallback } from "react";
+import * as tus from "tus-js-client";
+import { trpc, getAccessToken } from "@/lib/trpc";
+import type { ScanStatus } from "@prospector/types";
 
 export interface UploadingFile {
   id: string;
   file: File;
   progress: number;
-  status: 'pending' | 'uploading' | 'processing' | 'complete' | 'error';
+  status: "pending" | "uploading" | "processing" | "complete" | "error";
   error?: string;
   fileId?: string;
   scanStatus?: ScanStatus;
@@ -42,7 +42,7 @@ export function useFileUpload({
         return newMap;
       });
     },
-    []
+    [],
   );
 
   const removeUpload = useCallback((id: string) => {
@@ -64,7 +64,7 @@ export function useFileUpload({
           id: uploadId,
           file,
           progress: 0,
-          status: 'pending',
+          status: "pending",
         });
         return newMap;
       });
@@ -74,13 +74,13 @@ export function useFileUpload({
         const { fileId, uploadUrl } = await initiateUploadMutation.mutateAsync({
           submissionId,
           filename: file.name,
-          mimeType: file.type || 'application/octet-stream',
+          mimeType: file.type || "application/octet-stream",
           size: file.size,
         });
 
         updateUpload(uploadId, {
           fileId,
-          status: 'uploading',
+          status: "uploading",
         });
 
         // Create tus upload
@@ -90,7 +90,7 @@ export function useFileUpload({
           chunkSize: 5 * 1024 * 1024, // 5MB chunks
           metadata: {
             filename: file.name,
-            filetype: file.type || 'application/octet-stream',
+            filetype: file.type || "application/octet-stream",
             fileId,
             submissionId,
           },
@@ -104,8 +104,8 @@ export function useFileUpload({
           onSuccess: () => {
             updateUpload(uploadId, {
               progress: 100,
-              status: 'processing',
-              scanStatus: 'PENDING',
+              status: "processing",
+              scanStatus: "PENDING",
             });
             // Invalidate file queries
             utils.files.getBySubmission.invalidate({ submissionId });
@@ -113,10 +113,10 @@ export function useFileUpload({
           },
           onError: (error) => {
             updateUpload(uploadId, {
-              status: 'error',
-              error: error.message || 'Upload failed',
+              status: "error",
+              error: error.message || "Upload failed",
             });
-            onError?.(error.message || 'Upload failed');
+            onError?.(error.message || "Upload failed");
           },
         });
 
@@ -124,9 +124,9 @@ export function useFileUpload({
         upload.start();
       } catch (error) {
         const message =
-          error instanceof Error ? error.message : 'Failed to initiate upload';
+          error instanceof Error ? error.message : "Failed to initiate upload";
         updateUpload(uploadId, {
-          status: 'error',
+          status: "error",
           error: message,
         });
         onError?.(message);
@@ -139,7 +139,7 @@ export function useFileUpload({
       utils.files.getBySubmission,
       onUploadComplete,
       onError,
-    ]
+    ],
   );
 
   const uploadFiles = useCallback(
@@ -149,14 +149,17 @@ export function useFileUpload({
         await uploadFile(file);
       }
     },
-    [uploadFile]
+    [uploadFile],
   );
 
-  const cancelUpload = useCallback((id: string) => {
-    // Note: tus-js-client doesn't expose abort directly in this version
-    // For now, just remove from UI
-    removeUpload(id);
-  }, [removeUpload]);
+  const cancelUpload = useCallback(
+    (id: string) => {
+      // Note: tus-js-client doesn't expose abort directly in this version
+      // For now, just remove from UI
+      removeUpload(id);
+    },
+    [removeUpload],
+  );
 
   return {
     uploads: Array.from(uploads.values()),
@@ -165,7 +168,7 @@ export function useFileUpload({
     removeUpload,
     cancelUpload,
     isUploading: Array.from(uploads.values()).some(
-      (u) => u.status === 'uploading' || u.status === 'pending'
+      (u) => u.status === "uploading" || u.status === "pending",
     ),
   };
 }

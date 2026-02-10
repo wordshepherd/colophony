@@ -1,6 +1,6 @@
-import { createTRPCReact } from '@trpc/react-query';
-import { httpBatchLink } from '@trpc/client';
-import type { AppRouter } from '@prospector/api/trpc/trpc.router';
+import { createTRPCReact } from "@trpc/react-query";
+import { httpBatchLink } from "@trpc/client";
+import type { AppRouter } from "@prospector/api/trpc/trpc.router";
 
 /**
  * tRPC React client
@@ -12,27 +12,27 @@ export const trpc = createTRPCReact<AppRouter>();
  * Get the API base URL
  */
 function getBaseUrl() {
-  if (typeof window !== 'undefined') {
-    return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+  if (typeof window !== "undefined") {
+    return process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
   }
-  return process.env.API_URL || 'http://localhost:4000';
+  return process.env.API_URL || "http://localhost:4000";
 }
 
 /**
  * Storage keys for auth/org data
  */
 export const STORAGE_KEYS = {
-  ACCESS_TOKEN: 'accessToken',
-  REFRESH_TOKEN: 'refreshToken',
-  CURRENT_ORG_ID: 'currentOrgId',
-  TOKEN_EXPIRES_AT: 'tokenExpiresAt',
+  ACCESS_TOKEN: "accessToken",
+  REFRESH_TOKEN: "refreshToken",
+  CURRENT_ORG_ID: "currentOrgId",
+  TOKEN_EXPIRES_AT: "tokenExpiresAt",
 } as const;
 
 /**
  * Get stored auth token
  */
 export function getAccessToken(): string | null {
-  if (typeof window === 'undefined') return null;
+  if (typeof window === "undefined") return null;
   return localStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN);
 }
 
@@ -40,7 +40,7 @@ export function getAccessToken(): string | null {
  * Get current organization ID
  */
 export function getCurrentOrgId(): string | null {
-  if (typeof window === 'undefined') return null;
+  if (typeof window === "undefined") return null;
   return localStorage.getItem(STORAGE_KEYS.CURRENT_ORG_ID);
 }
 
@@ -48,7 +48,7 @@ export function getCurrentOrgId(): string | null {
  * Set current organization ID
  */
 export function setCurrentOrgId(orgId: string | null): void {
-  if (typeof window === 'undefined') return;
+  if (typeof window === "undefined") return;
   if (orgId) {
     localStorage.setItem(STORAGE_KEYS.CURRENT_ORG_ID, orgId);
   } else {
@@ -67,7 +67,7 @@ export function getTrpcClient() {
         fetch(url, options) {
           return fetch(url, {
             ...options,
-            credentials: 'include',
+            credentials: "include",
           });
         },
         headers() {
@@ -77,11 +77,11 @@ export function getTrpcClient() {
           const headers: Record<string, string> = {};
 
           if (token) {
-            headers['Authorization'] = `Bearer ${token}`;
+            headers["Authorization"] = `Bearer ${token}`;
           }
 
           if (orgId) {
-            headers['x-organization-id'] = orgId;
+            headers["x-organization-id"] = orgId;
           }
 
           return headers;

@@ -1,9 +1,9 @@
-'use client';
+"use client";
 
-import { Suspense } from 'react';
-import { VerifyEmailForm } from '@/components/auth/verify-email-form';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { Suspense } from "react";
+import { VerifyEmailForm } from "@/components/auth/verify-email-form";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 
 function VerifyEmailSkeleton() {
   return (

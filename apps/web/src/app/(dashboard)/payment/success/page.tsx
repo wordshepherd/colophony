@@ -1,10 +1,10 @@
-'use client';
+"use client";
 
-import { useEffect, Suspense } from 'react';
-import { useSearchParams, useRouter } from 'next/navigation';
-import Link from 'next/link';
-import { trpc } from '@/lib/trpc';
-import { Button } from '@/components/ui/button';
+import { useEffect, Suspense } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
+import Link from "next/link";
+import { trpc } from "@/lib/trpc";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -12,26 +12,26 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from '@/components/ui/card';
-import { Skeleton } from '@/components/ui/skeleton';
-import { CheckCircle } from 'lucide-react';
+} from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { CheckCircle } from "lucide-react";
 
 function PaymentSuccessContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const sessionId = searchParams.get('session_id');
-  const submissionId = searchParams.get('submission_id');
+  const sessionId = searchParams.get("session_id");
+  const submissionId = searchParams.get("submission_id");
 
   // Optionally fetch submission details
   const { data: submission, isLoading } = trpc.submissions.getById.useQuery(
     { id: submissionId! },
-    { enabled: !!submissionId }
+    { enabled: !!submissionId },
   );
 
   // Redirect if no session ID
   useEffect(() => {
     if (!sessionId) {
-      router.push('/submissions');
+      router.push("/submissions");
     }
   }, [sessionId, router]);
 

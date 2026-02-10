@@ -1,21 +1,21 @@
-'use client';
+"use client";
 
-import Link from 'next/link';
-import { formatDistanceToNow, format } from 'date-fns';
-import { trpc } from '@/lib/trpc';
-import { StatusBadge } from '@/components/submissions/status-badge';
-import { StatusTransition } from './status-transition';
-import { Button } from '@/components/ui/button';
+import Link from "next/link";
+import { formatDistanceToNow, format } from "date-fns";
+import { trpc } from "@/lib/trpc";
+import { StatusBadge } from "@/components/submissions/status-badge";
+import { StatusTransition } from "./status-transition";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from '@/components/ui/card';
-import { Separator } from '@/components/ui/separator';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Badge } from '@/components/ui/badge';
+} from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Badge } from "@/components/ui/badge";
 import {
   ArrowLeft,
   File,
@@ -25,14 +25,17 @@ import {
   AlertCircle,
   Loader2,
   User,
-} from 'lucide-react';
-import type { ScanStatus, SubmissionStatus } from '@prospector/types';
+} from "lucide-react";
+import type { ScanStatus, SubmissionStatus } from "@prospector/types";
 
 interface SubmissionReviewProps {
   submissionId: string;
 }
 
-const scanStatusIcons: Record<ScanStatus, React.ComponentType<{ className?: string }>> = {
+const scanStatusIcons: Record<
+  ScanStatus,
+  React.ComponentType<{ className?: string }>
+> = {
   PENDING: Clock,
   SCANNING: Loader2,
   CLEAN: CheckCircle,
@@ -97,15 +100,15 @@ export function SubmissionReview({ submissionId }: SubmissionReviewProps) {
             <StatusBadge status={submission.status as SubmissionStatus} />
             <div className="flex items-center text-sm text-muted-foreground">
               <User className="mr-1 h-4 w-4" />
-              {submission.submitter?.email ?? 'Unknown'}
+              {submission.submitter?.email ?? "Unknown"}
             </div>
             <span className="text-sm text-muted-foreground">
-              Submitted{' '}
+              Submitted{" "}
               {submission.submittedAt
                 ? formatDistanceToNow(new Date(submission.submittedAt), {
                     addSuffix: true,
                   })
-                : 'not yet'}
+                : "not yet"}
             </span>
           </div>
         </div>
@@ -115,9 +118,7 @@ export function SubmissionReview({ submissionId }: SubmissionReviewProps) {
       <Card>
         <CardHeader>
           <CardTitle>Status Actions</CardTitle>
-          <CardDescription>
-            Change the submission status
-          </CardDescription>
+          <CardDescription>Change the submission status</CardDescription>
         </CardHeader>
         <CardContent>
           <StatusTransition
@@ -168,7 +169,7 @@ export function SubmissionReview({ submissionId }: SubmissionReviewProps) {
               <CardHeader>
                 <CardTitle>Files</CardTitle>
                 <CardDescription>
-                  {files.length} file{files.length !== 1 ? 's' : ''} attached
+                  {files.length} file{files.length !== 1 ? "s" : ""} attached
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -191,22 +192,24 @@ export function SubmissionReview({ submissionId }: SubmissionReviewProps) {
                         </div>
                         <Badge
                           variant={
-                            file.scanStatus === 'CLEAN'
-                              ? 'default'
-                              : file.scanStatus === 'INFECTED'
-                                ? 'destructive'
-                                : 'secondary'
+                            file.scanStatus === "CLEAN"
+                              ? "default"
+                              : file.scanStatus === "INFECTED"
+                                ? "destructive"
+                                : "secondary"
                           }
                           className="gap-1"
                         >
                           <Icon
                             className={`h-3 w-3 ${
-                              file.scanStatus === 'SCANNING' ? 'animate-spin' : ''
+                              file.scanStatus === "SCANNING"
+                                ? "animate-spin"
+                                : ""
                             }`}
                           />
                           {file.scanStatus}
                         </Badge>
-                        {file.scanStatus === 'CLEAN' && (
+                        {file.scanStatus === "CLEAN" && (
                           <Button variant="ghost" size="icon">
                             <Download className="h-4 w-4" />
                           </Button>
@@ -230,19 +233,15 @@ export function SubmissionReview({ submissionId }: SubmissionReviewProps) {
             <CardContent className="space-y-2">
               <div>
                 <p className="text-sm font-medium">
-                  {submission.submitter?.email ?? 'Unknown'}
+                  {submission.submitter?.email ?? "Unknown"}
                 </p>
               </div>
               <Separator />
               <div className="text-sm text-muted-foreground">
-                <p>
-                  Created:{' '}
-                  {format(new Date(submission.createdAt), 'PPP')}
-                </p>
+                <p>Created: {format(new Date(submission.createdAt), "PPP")}</p>
                 {submission.submittedAt && (
                   <p>
-                    Submitted:{' '}
-                    {format(new Date(submission.submittedAt), 'PPP')}
+                    Submitted: {format(new Date(submission.submittedAt), "PPP")}
                   </p>
                 )}
               </div>
@@ -268,18 +267,18 @@ export function SubmissionReview({ submissionId }: SubmissionReviewProps) {
                           <p className="text-sm">
                             {event.fromStatus ? (
                               <>
-                                Changed from{' '}
+                                Changed from{" "}
                                 <Badge variant="outline" className="text-xs">
                                   {event.fromStatus}
-                                </Badge>{' '}
-                                to{' '}
+                                </Badge>{" "}
+                                to{" "}
                                 <Badge variant="outline" className="text-xs">
                                   {event.toStatus}
                                 </Badge>
                               </>
                             ) : (
                               <>
-                                Status set to{' '}
+                                Status set to{" "}
                                 <Badge variant="outline" className="text-xs">
                                   {event.toStatus}
                                 </Badge>
@@ -292,7 +291,7 @@ export function SubmissionReview({ submissionId }: SubmissionReviewProps) {
                             </p>
                           )}
                           <p className="text-xs text-muted-foreground">
-                            {format(new Date(event.changedAt), 'PPp')}
+                            {format(new Date(event.changedAt), "PPp")}
                           </p>
                         </div>
                       </div>

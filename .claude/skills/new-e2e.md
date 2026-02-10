@@ -23,12 +23,17 @@ When the user invokes `/new-e2e <feature>`:
 1. **Create the test file** at `apps/web/e2e/<feature>.spec.ts`:
 
 ```typescript
-import { test, expect } from '@playwright/test';
-import { setupTestUser, loginAsBrowser } from './helpers/auth';
-import { prisma } from './helpers/db';
+import { test, expect } from "@playwright/test";
+import { setupTestUser, loginAsBrowser } from "./helpers/auth";
+import { prisma } from "./helpers/db";
 
-test.describe('<Feature> Page', () => {
-  let testUser: { email: string; password: string; userId: string; orgId: string };
+test.describe("<Feature> Page", () => {
+  let testUser: {
+    email: string;
+    password: string;
+    userId: string;
+    orgId: string;
+  };
 
   test.beforeAll(async () => {
     testUser = await setupTestUser();
@@ -42,9 +47,9 @@ test.describe('<Feature> Page', () => {
     await prisma.$disconnect();
   });
 
-  test('should render the page', async ({ page }) => {
-    await page.goto('/<feature>');
-    await expect(page.getByRole('heading', { name: /TODO/i })).toBeVisible();
+  test("should render the page", async ({ page }) => {
+    await page.goto("/<feature>");
+    await expect(page.getByRole("heading", { name: /TODO/i })).toBeVisible();
   });
 
   // TODO: Add test cases
@@ -54,19 +59,24 @@ test.describe('<Feature> Page', () => {
 For editor role tests (`--editor` flag):
 
 ```typescript
-import { test, expect } from '@playwright/test';
-import { setupTestUser, loginAsBrowser } from './helpers/auth';
-import { prisma } from './helpers/db';
+import { test, expect } from "@playwright/test";
+import { setupTestUser, loginAsBrowser } from "./helpers/auth";
+import { prisma } from "./helpers/db";
 
-test.describe('<Feature> (Editor)', () => {
-  let editorUser: { email: string; password: string; userId: string; orgId: string };
+test.describe("<Feature> (Editor)", () => {
+  let editorUser: {
+    email: string;
+    password: string;
+    userId: string;
+    orgId: string;
+  };
 
   test.beforeAll(async () => {
     // Setup user with editor role
     editorUser = await setupTestUser();
     await prisma.organizationMember.updateMany({
       where: { userId: editorUser.userId },
-      data: { role: 'EDITOR' },
+      data: { role: "EDITOR" },
     });
   });
 
@@ -78,9 +88,9 @@ test.describe('<Feature> (Editor)', () => {
     await prisma.$disconnect();
   });
 
-  test('should render the editor view', async ({ page }) => {
-    await page.goto('/editor/<feature>');
-    await expect(page.getByRole('heading', { name: /TODO/i })).toBeVisible();
+  test("should render the editor view", async ({ page }) => {
+    await page.goto("/editor/<feature>");
+    await expect(page.getByRole("heading", { name: /TODO/i })).toBeVisible();
   });
 
   // TODO: Add test cases
@@ -90,56 +100,68 @@ test.describe('<Feature> (Editor)', () => {
 2. **Follow these patterns** (from existing tests):
 
 **Selectors — always use strict, scoped selectors:**
+
 ```typescript
 // GOOD: role-based, scoped to main
-await page.locator('main').getByRole('heading', { name: 'My Submissions', exact: true });
-await page.getByRole('button', { name: /submit/i });
-await page.getByLabel('Title');
+await page
+  .locator("main")
+  .getByRole("heading", { name: "My Submissions", exact: true });
+await page.getByRole("button", { name: /submit/i });
+await page.getByLabel("Title");
 
 // BAD: fragile CSS selectors
-await page.$('.submission-title');
+await page.$(".submission-title");
 await page.locator('[data-testid="submit-btn"]');
 ```
 
 **Navigation — wait for network idle:**
+
 ```typescript
-await page.goto('/submissions');
+await page.goto("/submissions");
 // or with explicit wait:
-await page.goto('/submissions', { waitUntil: 'networkidle' });
+await page.goto("/submissions", { waitUntil: "networkidle" });
 ```
 
 **Form interactions:**
+
 ```typescript
-await page.getByLabel('Title').fill('My Submission');
-await page.getByLabel('Category').selectOption('fiction');
-await page.getByRole('button', { name: 'Save Draft' }).click();
+await page.getByLabel("Title").fill("My Submission");
+await page.getByLabel("Category").selectOption("fiction");
+await page.getByRole("button", { name: "Save Draft" }).click();
 ```
 
 **Assertions — use locator-based expects:**
+
 ```typescript
-await expect(page.getByText('Submission created')).toBeVisible();
-await expect(page.getByRole('cell', { name: 'DRAFT' })).toBeVisible();
+await expect(page.getByText("Submission created")).toBeVisible();
+await expect(page.getByRole("cell", { name: "DRAFT" })).toBeVisible();
 ```
 
 **API calls for test data setup (prefer over UI):**
+
 ```typescript
-import { trpcFetch } from './helpers/api-client';
+import { trpcFetch } from "./helpers/api-client";
 
 // Create a submission via API instead of clicking through UI
-const submission = await trpcFetch('submissions.create', {
-  title: 'Test Story',
-  content: 'Test content',
-}, { token: testUser.accessToken, orgId: testUser.orgId });
+const submission = await trpcFetch(
+  "submissions.create",
+  {
+    title: "Test Story",
+    content: "Test content",
+  },
+  { token: testUser.accessToken, orgId: testUser.orgId },
+);
 ```
 
 **Direct DB setup for complex state:**
+
 ```typescript
-import { prisma } from './helpers/db';
+import { prisma } from "./helpers/db";
 
 // Set submission status directly (skip UI workflow)
 await prisma.submission.update({
   where: { id: submission.id },
-  data: { status: 'SUBMITTED' },
+  data: { status: "SUBMITTED" },
 });
 ```
 

@@ -115,8 +115,12 @@ export class AuditService {
           action: input.action,
           resource: input.resource,
           resourceId: input.resourceId ?? undefined,
-          oldValue: input.oldValue ?? undefined,
-          newValue: input.newValue ?? undefined,
+          oldValue: input.oldValue
+            ? (input.oldValue as unknown as object)
+            : undefined,
+          newValue: input.newValue
+            ? (input.newValue as unknown as object)
+            : undefined,
           ipAddress: input.ipAddress ?? undefined,
           userAgent: input.userAgent ?? undefined,
         },

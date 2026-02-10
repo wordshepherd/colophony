@@ -1,4 +1,4 @@
-import { STORAGE_KEYS } from './trpc';
+import { STORAGE_KEYS } from "./trpc";
 
 /**
  * Store authentication tokens and expiry
@@ -6,9 +6,9 @@ import { STORAGE_KEYS } from './trpc';
 export function setAuthTokens(
   accessToken: string,
   refreshToken: string,
-  expiresIn: number
+  expiresIn: number,
 ): void {
-  if (typeof window === 'undefined') return;
+  if (typeof window === "undefined") return;
 
   localStorage.setItem(STORAGE_KEYS.ACCESS_TOKEN, accessToken);
   localStorage.setItem(STORAGE_KEYS.REFRESH_TOKEN, refreshToken);
@@ -22,7 +22,7 @@ export function setAuthTokens(
  * Get refresh token
  */
 export function getRefreshToken(): string | null {
-  if (typeof window === 'undefined') return null;
+  if (typeof window === "undefined") return null;
   return localStorage.getItem(STORAGE_KEYS.REFRESH_TOKEN);
 }
 
@@ -30,7 +30,7 @@ export function getRefreshToken(): string | null {
  * Get token expiry timestamp
  */
 export function getTokenExpiresAt(): number | null {
-  if (typeof window === 'undefined') return null;
+  if (typeof window === "undefined") return null;
   const expiresAt = localStorage.getItem(STORAGE_KEYS.TOKEN_EXPIRES_AT);
   return expiresAt ? parseInt(expiresAt, 10) : null;
 }
@@ -51,7 +51,7 @@ export function isTokenExpiringSoon(): boolean {
  * Clear all auth data from storage
  */
 export function clearAuthData(): void {
-  if (typeof window === 'undefined') return;
+  if (typeof window === "undefined") return;
 
   localStorage.removeItem(STORAGE_KEYS.ACCESS_TOKEN);
   localStorage.removeItem(STORAGE_KEYS.REFRESH_TOKEN);
@@ -63,6 +63,6 @@ export function clearAuthData(): void {
  * Check if user is authenticated (has tokens)
  */
 export function hasAuthTokens(): boolean {
-  if (typeof window === 'undefined') return false;
+  if (typeof window === "undefined") return false;
   return !!localStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN);
 }

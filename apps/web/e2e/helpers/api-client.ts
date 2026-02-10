@@ -3,7 +3,7 @@
  * Uses fetch to call tRPC endpoints without going through the browser.
  */
 
-const API_URL = process.env.API_URL || 'http://localhost:4000';
+const API_URL = process.env.API_URL || "http://localhost:4000";
 
 interface AuthTokens {
   accessToken: string;
@@ -33,16 +33,18 @@ async function trpcMutation<T>(
 ): Promise<T> {
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     const res = await fetch(`${API_URL}/trpc/${path}`, {
-      method: 'POST',
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
         ...headers,
       },
       body: input ? JSON.stringify(input) : undefined,
     });
 
     if (res.status === 429 && attempt < maxRetries) {
-      const body = await res.json().catch(() => ({})) as { retryAfter?: number };
+      const body = (await res.json().catch(() => ({}))) as {
+        retryAfter?: number;
+      };
       const waitSec = body.retryAfter ?? (attempt + 1) * 2;
       await sleep(waitSec * 1000);
       continue;
@@ -57,7 +59,9 @@ async function trpcMutation<T>(
     return body.result.data;
   }
 
-  throw new Error(`tRPC ${path} failed after ${maxRetries} retries (rate limited)`);
+  throw new Error(
+    `tRPC ${path} failed after ${maxRetries} retries (rate limited)`,
+  );
 }
 
 /**
@@ -99,7 +103,7 @@ export function authHeaders(
     Authorization: `Bearer ${accessToken}`,
   };
   if (orgId) {
-    headers['x-organization-id'] = orgId;
+    headers["x-organization-id"] = orgId;
   }
   return headers;
 }
@@ -112,7 +116,7 @@ export async function registerUser(input: {
   password: string;
   name?: string;
 }): Promise<AuthTokens> {
-  return trpcMutation<AuthTokens>('auth.register', input);
+  return trpcMutation<AuthTokens>("auth.register", input);
 }
 
 /**
@@ -122,15 +126,13 @@ export async function loginUser(input: {
   email: string;
   password: string;
 }): Promise<AuthTokens> {
-  return trpcMutation<AuthTokens>('auth.login', input);
+  return trpcMutation<AuthTokens>("auth.login", input);
 }
 
 /**
  * Get current user info via the API.
  */
-export async function getMe(
-  accessToken: string,
-): Promise<{
+export async function getMe(accessToken: string): Promise<{
   id: string;
   email: string;
   emailVerified: boolean;
@@ -139,7 +141,7 @@ export async function getMe(
     role: string;
   }>;
 }> {
-  return trpcQuery('auth.me', undefined, authHeaders(accessToken));
+  return trpcQuery("auth.me", undefined, authHeaders(accessToken));
 }
 
 /**
@@ -151,7 +153,7 @@ export async function createSubmission(
   input: { title: string; content?: string; coverLetter?: string },
 ): Promise<{ id: string; title: string; status: string }> {
   return trpcMutation(
-    'submissions.create',
+    "submissions.create",
     input,
     authHeaders(accessToken, orgId),
   );
@@ -166,7 +168,7 @@ export async function submitSubmission(
   id: string,
 ): Promise<{ id: string; status: string }> {
   return trpcMutation(
-    'submissions.submit',
+    "submissions.submit",
     { id },
     authHeaders(accessToken, orgId),
   );
@@ -183,7 +185,7 @@ export async function updateSubmissionStatus(
   comment?: string,
 ): Promise<unknown> {
   return trpcMutation(
-    'submissions.updateStatus',
+    "submissions.updateStatus",
     { id, data: { status, comment } },
     authHeaders(accessToken, orgId),
   );

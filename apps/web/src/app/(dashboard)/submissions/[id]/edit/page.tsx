@@ -1,4 +1,4 @@
-import { SubmissionForm } from '@/components/submissions/submission-form';
+import { SubmissionForm } from "@/components/submissions/submission-form";
 
 interface Props {
   params: Promise<{ id: string }>;

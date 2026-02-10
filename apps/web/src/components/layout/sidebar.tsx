@@ -1,23 +1,18 @@
-'use client';
+"use client";
 
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { cn } from '@/lib/utils';
-import { useOrganization } from '@/hooks/use-organization';
-import {
-  FileText,
-  LayoutDashboard,
-  Settings,
-  Users,
-} from 'lucide-react';
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { cn } from "@/lib/utils";
+import { useOrganization } from "@/hooks/use-organization";
+import { FileText, LayoutDashboard, Settings, Users } from "lucide-react";
 
 const navigation = [
-  { name: 'My Submissions', href: '/submissions', icon: FileText },
-  { name: 'Settings', href: '/settings', icon: Settings },
+  { name: "My Submissions", href: "/submissions", icon: FileText },
+  { name: "Settings", href: "/settings", icon: Settings },
 ];
 
 const editorNavigation = [
-  { name: 'Editor Dashboard', href: '/editor', icon: LayoutDashboard },
+  { name: "Editor Dashboard", href: "/editor", icon: LayoutDashboard },
 ];
 
 export function Sidebar() {
@@ -43,10 +38,10 @@ export function Sidebar() {
               key={item.name}
               href={item.href}
               className={cn(
-                'flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors',
+                "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
                 isActive
-                  ? 'bg-accent text-accent-foreground'
-                  : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+                  ? "bg-accent text-accent-foreground"
+                  : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
               )}
             >
               <item.icon className="h-4 w-4" />
@@ -69,10 +64,10 @@ export function Sidebar() {
                   key={item.name}
                   href={item.href}
                   className={cn(
-                    'flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors',
+                    "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
                     isActive
-                      ? 'bg-accent text-accent-foreground'
-                      : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+                      ? "bg-accent text-accent-foreground"
+                      : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
                   )}
                 >
                   <item.icon className="h-4 w-4" />

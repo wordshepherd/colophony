@@ -1,4 +1,4 @@
-import { SubmissionDetail } from '@/components/submissions/submission-detail';
+import { SubmissionDetail } from "@/components/submissions/submission-detail";
 
 interface Props {
   params: Promise<{ id: string }>;

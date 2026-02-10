@@ -8,10 +8,7 @@ import {
   disconnectTestPrisma,
 } from './utils/test-context';
 import { createOrg } from './utils/factories/org.factory';
-import {
-  createUser,
-  createUserWithOrg,
-} from './utils/factories/user.factory';
+import { createUser, createUserWithOrg } from './utils/factories/user.factory';
 import { createSubmission } from './utils/factories/submission.factory';
 
 /**
@@ -183,9 +180,9 @@ export function extractData<T = unknown>(res: { body: unknown }): T {
 /**
  * Extract the error from a tRPC error response.
  */
-export function extractError(
-  res: { body: unknown },
-): TrpcErrorResponse['error'] {
+export function extractError(res: {
+  body: unknown;
+}): TrpcErrorResponse['error'] {
   const body = res.body as TrpcErrorResponse;
   return body.error;
 }

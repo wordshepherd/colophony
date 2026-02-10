@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import { use } from 'react';
-import { ProtectedRoute } from '@/components/auth/protected-route';
-import { SubmissionReview } from '@/components/editor/submission-review';
+import { use } from "react";
+import { ProtectedRoute } from "@/components/auth/protected-route";
+import { SubmissionReview } from "@/components/editor/submission-review";
 
 interface Props {
   params: Promise<{ id: string }>;

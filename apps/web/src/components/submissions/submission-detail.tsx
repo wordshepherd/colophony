@@ -1,19 +1,19 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import Link from 'next/link';
-import { formatDistanceToNow, format } from 'date-fns';
-import { trpc } from '@/lib/trpc';
-import { StatusBadge } from './status-badge';
-import { Button } from '@/components/ui/button';
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { formatDistanceToNow, format } from "date-fns";
+import { trpc } from "@/lib/trpc";
+import { StatusBadge } from "./status-badge";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from '@/components/ui/card';
+} from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -21,11 +21,11 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
-import { Separator } from '@/components/ui/separator';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Badge } from '@/components/ui/badge';
-import { toast } from 'sonner';
+} from "@/components/ui/dialog";
+import { Separator } from "@/components/ui/separator";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Badge } from "@/components/ui/badge";
+import { toast } from "sonner";
 import {
   Edit,
   Trash2,
@@ -36,14 +36,17 @@ import {
   CheckCircle,
   AlertCircle,
   Loader2,
-} from 'lucide-react';
-import type { ScanStatus, SubmissionStatus } from '@prospector/types';
+} from "lucide-react";
+import type { ScanStatus, SubmissionStatus } from "@prospector/types";
 
 interface SubmissionDetailProps {
   submissionId: string;
 }
 
-const scanStatusIcons: Record<ScanStatus, React.ComponentType<{ className?: string }>> = {
+const scanStatusIcons: Record<
+  ScanStatus,
+  React.ComponentType<{ className?: string }>
+> = {
   PENDING: Clock,
   SCANNING: Loader2,
   CLEAN: CheckCircle,
@@ -77,8 +80,8 @@ export function SubmissionDetail({ submissionId }: SubmissionDetailProps) {
 
   const deleteMutation = trpc.submissions.delete.useMutation({
     onSuccess: () => {
-      toast.success('Submission deleted');
-      router.push('/submissions');
+      toast.success("Submission deleted");
+      router.push("/submissions");
     },
     onError: (err) => {
       toast.error(err.message);
@@ -87,7 +90,7 @@ export function SubmissionDetail({ submissionId }: SubmissionDetailProps) {
 
   const withdrawMutation = trpc.submissions.withdraw.useMutation({
     onSuccess: () => {
-      toast.success('Submission withdrawn');
+      toast.success("Submission withdrawn");
       utils.submissions.getById.invalidate({ id: submissionId });
     },
     onError: (err) => {
@@ -116,10 +119,10 @@ export function SubmissionDetail({ submissionId }: SubmissionDetailProps) {
     );
   }
 
-  const canEdit = submission.status === 'DRAFT';
-  const canDelete = submission.status === 'DRAFT';
-  const canWithdraw = ['SUBMITTED', 'UNDER_REVIEW', 'HOLD'].includes(
-    submission.status
+  const canEdit = submission.status === "DRAFT";
+  const canDelete = submission.status === "DRAFT";
+  const canWithdraw = ["SUBMITTED", "UNDER_REVIEW", "HOLD"].includes(
+    submission.status,
   );
 
   return (
@@ -138,7 +141,7 @@ export function SubmissionDetail({ submissionId }: SubmissionDetailProps) {
           <div className="flex items-center gap-2">
             <StatusBadge status={submission.status as SubmissionStatus} />
             <span className="text-sm text-muted-foreground">
-              Created{' '}
+              Created{" "}
               {formatDistanceToNow(new Date(submission.createdAt), {
                 addSuffix: true,
               })}
@@ -216,7 +219,7 @@ export function SubmissionDetail({ submissionId }: SubmissionDetailProps) {
               <CardHeader>
                 <CardTitle>Files</CardTitle>
                 <CardDescription>
-                  {files.length} file{files.length !== 1 ? 's' : ''} attached
+                  {files.length} file{files.length !== 1 ? "s" : ""} attached
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -239,22 +242,24 @@ export function SubmissionDetail({ submissionId }: SubmissionDetailProps) {
                         </div>
                         <Badge
                           variant={
-                            file.scanStatus === 'CLEAN'
-                              ? 'default'
-                              : file.scanStatus === 'INFECTED'
-                                ? 'destructive'
-                                : 'secondary'
+                            file.scanStatus === "CLEAN"
+                              ? "default"
+                              : file.scanStatus === "INFECTED"
+                                ? "destructive"
+                                : "secondary"
                           }
                           className="gap-1"
                         >
                           <Icon
                             className={`h-3 w-3 ${
-                              file.scanStatus === 'SCANNING' ? 'animate-spin' : ''
+                              file.scanStatus === "SCANNING"
+                                ? "animate-spin"
+                                : ""
                             }`}
                           />
                           {file.scanStatus}
                         </Badge>
-                        {file.scanStatus === 'CLEAN' && (
+                        {file.scanStatus === "CLEAN" && (
                           <Button variant="ghost" size="icon">
                             <Download className="h-4 w-4" />
                           </Button>
@@ -289,18 +294,18 @@ export function SubmissionDetail({ submissionId }: SubmissionDetailProps) {
                           <p className="text-sm">
                             {event.fromStatus ? (
                               <>
-                                Changed from{' '}
+                                Changed from{" "}
                                 <Badge variant="outline" className="text-xs">
                                   {event.fromStatus}
-                                </Badge>{' '}
-                                to{' '}
+                                </Badge>{" "}
+                                to{" "}
                                 <Badge variant="outline" className="text-xs">
                                   {event.toStatus}
                                 </Badge>
                               </>
                             ) : (
                               <>
-                                Status set to{' '}
+                                Status set to{" "}
                                 <Badge variant="outline" className="text-xs">
                                   {event.toStatus}
                                 </Badge>
@@ -313,7 +318,7 @@ export function SubmissionDetail({ submissionId }: SubmissionDetailProps) {
                             </p>
                           )}
                           <p className="text-xs text-muted-foreground">
-                            {format(new Date(event.changedAt), 'PPp')}
+                            {format(new Date(event.changedAt), "PPp")}
                           </p>
                         </div>
                       </div>
@@ -353,7 +358,7 @@ export function SubmissionDetail({ submissionId }: SubmissionDetailProps) {
               }}
               disabled={deleteMutation.isPending}
             >
-              {deleteMutation.isPending ? 'Deleting...' : 'Delete'}
+              {deleteMutation.isPending ? "Deleting..." : "Delete"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -383,7 +388,7 @@ export function SubmissionDetail({ submissionId }: SubmissionDetailProps) {
               }}
               disabled={withdrawMutation.isPending}
             >
-              {withdrawMutation.isPending ? 'Withdrawing...' : 'Withdraw'}
+              {withdrawMutation.isPending ? "Withdrawing..." : "Withdraw"}
             </Button>
           </DialogFooter>
         </DialogContent>

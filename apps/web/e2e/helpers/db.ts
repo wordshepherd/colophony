@@ -5,11 +5,11 @@
  * for creating test orgs, memberships, and other fixtures.
  */
 
-import { PrismaClient } from '@prospector/db';
+import { PrismaClient } from "@prospector/db";
 
 const DATABASE_URL =
   process.env.DATABASE_URL ||
-  'postgresql://prospector:password@localhost:5432/prospector';
+  "postgresql://prospector:password@localhost:5432/prospector";
 
 let prisma: PrismaClient | null = null;
 
@@ -59,7 +59,7 @@ export async function createOrg(data?: {
 export async function addMember(
   orgId: string,
   userId: string,
-  role: 'ADMIN' | 'EDITOR' | 'READER',
+  role: "ADMIN" | "EDITOR" | "READER",
 ): Promise<void> {
   const db = getTestPrisma();
   await db.organizationMember.create({
