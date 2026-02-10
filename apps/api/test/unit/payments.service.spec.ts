@@ -81,9 +81,15 @@ describe('PaymentsService', () => {
     };
 
     it('should create checkout session for valid submission', async () => {
-      mockPrisma.submission.findUnique.mockResolvedValue(mockSubmission as never);
-      stripeService.createCheckoutSession.mockResolvedValue(mockStripeSession as never);
-      mockPrisma.payment.create.mockResolvedValue({ id: 'payment-123' } as never);
+      mockPrisma.submission.findUnique.mockResolvedValue(
+        mockSubmission as never,
+      );
+      stripeService.createCheckoutSession.mockResolvedValue(
+        mockStripeSession as never,
+      );
+      mockPrisma.payment.create.mockResolvedValue({
+        id: 'payment-123',
+      } as never);
 
       const result = await service.createCheckoutSession(mockParams);
 
@@ -168,7 +174,10 @@ describe('PaymentsService', () => {
 
     it('should update payment and submission status on success', async () => {
       mockPrisma.payment.findUnique.mockResolvedValue(mockPayment as never);
-      mockPrisma.payment.update.mockResolvedValue({ ...mockPayment, status: 'SUCCEEDED' } as never);
+      mockPrisma.payment.update.mockResolvedValue({
+        ...mockPayment,
+        status: 'SUCCEEDED',
+      } as never);
       mockPrisma.submission.update.mockResolvedValue({} as never);
       mockPrisma.submissionHistory.create.mockResolvedValue({} as never);
 
@@ -207,7 +216,9 @@ describe('PaymentsService', () => {
     };
 
     it('should mark payment as failed when checkout expires', async () => {
-      mockPrisma.payment.findUnique.mockResolvedValue({ id: 'payment-123' } as never);
+      mockPrisma.payment.findUnique.mockResolvedValue({
+        id: 'payment-123',
+      } as never);
       mockPrisma.payment.update.mockResolvedValue({} as never);
 
       await service.handleCheckoutExpired(mockSession as never);

@@ -1,5 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { AuditService, AuditActions, AuditResources } from '../../src/modules/audit';
+import {
+  AuditService,
+  AuditActions,
+  AuditResources,
+} from '../../src/modules/audit';
 
 // Mock Prisma
 jest.mock('@prospector/db', () => ({
@@ -139,7 +143,9 @@ describe('AuditService', () => {
         },
       ];
 
-      (mockPrisma.auditEvent.findMany as jest.Mock).mockResolvedValue(mockEvents);
+      (mockPrisma.auditEvent.findMany as jest.Mock).mockResolvedValue(
+        mockEvents,
+      );
       (mockPrisma.auditEvent.count as jest.Mock).mockResolvedValue(1);
 
       const result = await service.query({
@@ -199,7 +205,9 @@ describe('AuditService', () => {
         },
       ];
 
-      (mockPrisma.auditEvent.findMany as jest.Mock).mockResolvedValue(mockEvents);
+      (mockPrisma.auditEvent.findMany as jest.Mock).mockResolvedValue(
+        mockEvents,
+      );
 
       const result = await service.getResourceHistory(
         AuditResources.SUBMISSION,
@@ -239,7 +247,9 @@ describe('AuditService', () => {
         },
       ];
 
-      (mockPrisma.auditEvent.findMany as jest.Mock).mockResolvedValue(mockEvents);
+      (mockPrisma.auditEvent.findMany as jest.Mock).mockResolvedValue(
+        mockEvents,
+      );
 
       const result = await service.getUserActivity('user-123');
 
@@ -274,7 +284,9 @@ describe('AuditService', () => {
         },
       ];
 
-      (mockPrisma.auditEvent.findMany as jest.Mock).mockResolvedValue(mockEvents);
+      (mockPrisma.auditEvent.findMany as jest.Mock).mockResolvedValue(
+        mockEvents,
+      );
       (mockPrisma.auditEvent.count as jest.Mock).mockResolvedValue(1);
 
       const result = await service.exportAsCsv({ organizationId: 'org-123' });
@@ -296,7 +308,9 @@ describe('AuditService', () => {
         },
       ];
 
-      (mockPrisma.auditEvent.findMany as jest.Mock).mockResolvedValue(mockEvents);
+      (mockPrisma.auditEvent.findMany as jest.Mock).mockResolvedValue(
+        mockEvents,
+      );
       (mockPrisma.auditEvent.count as jest.Mock).mockResolvedValue(1);
 
       const result = await service.exportAsCsv({});
@@ -317,7 +331,9 @@ describe('AuditActions', () => {
     expect(AuditActions.GDPR_ERASURE_COMPLETED).toBe('gdpr.erasure_completed');
     expect(AuditActions.CONSENT_GRANTED).toBe('consent.granted');
     expect(AuditActions.CONSENT_REVOKED).toBe('consent.revoked');
-    expect(AuditActions.RETENTION_POLICY_CREATED).toBe('retention_policy.created');
+    expect(AuditActions.RETENTION_POLICY_CREATED).toBe(
+      'retention_policy.created',
+    );
   });
 });
 

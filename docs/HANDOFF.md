@@ -4,6 +4,7 @@ This document served as the session handoff during the 5-week MVP build (weeks 1
 It has been archived and its content redistributed to dedicated docs.
 
 **Where to find what was here:**
+
 - **Project context & patterns** → [CLAUDE.md](../CLAUDE.md)
 - **Architecture & schema details** → [docs/architecture.md](./architecture.md)
 - **Testing guide, quirks & bugs found** → [docs/testing.md](./testing.md)

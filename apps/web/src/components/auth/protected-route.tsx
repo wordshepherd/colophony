@@ -1,10 +1,10 @@
-'use client';
+"use client";
 
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { useAuth } from '@/hooks/use-auth';
-import { useOrganization } from '@/hooks/use-organization';
-import { Skeleton } from '@/components/ui/skeleton';
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/hooks/use-auth";
+import { useOrganization } from "@/hooks/use-organization";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -30,32 +30,32 @@ export function ProtectedRoute({
 
     // Not authenticated - redirect to login
     if (!isAuthenticated) {
-      router.push('/login');
+      router.push("/login");
       return;
     }
 
     // Email verification required
     if (requireEmailVerified && !isEmailVerified) {
-      router.push('/verify-email?required=true');
+      router.push("/verify-email?required=true");
       return;
     }
 
     // Organization required but user has none
     if (requireOrganization && !hasOrganizations) {
       // TODO: Redirect to org creation or onboarding
-      router.push('/dashboard?no-org=true');
+      router.push("/dashboard?no-org=true");
       return;
     }
 
     // Editor role required
     if (requireEditor && !isEditor) {
-      router.push('/dashboard?unauthorized=true');
+      router.push("/dashboard?unauthorized=true");
       return;
     }
 
     // Admin role required
     if (requireAdmin && !isAdmin) {
-      router.push('/dashboard?unauthorized=true');
+      router.push("/dashboard?unauthorized=true");
       return;
     }
   }, [

@@ -25,6 +25,7 @@ When the user invokes `/db-reset`:
 2. Run the reset commands:
 
 For dev database:
+
 ```bash
 cd /home/dmahaffey/projects/prospector/packages/db
 DATABASE_URL="postgresql://prospector:password@localhost:5432/prospector" npx prisma db push --force-reset --skip-generate
@@ -32,6 +33,7 @@ docker exec prospector-postgres psql -U prospector -d prospector -f /home/dmahaf
 ```
 
 For test database:
+
 ```bash
 cd /home/dmahaffey/projects/prospector/packages/db
 DATABASE_URL="postgresql://test:test@localhost:5433/prospector_test" npx prisma db push --force-reset --skip-generate
@@ -39,6 +41,7 @@ docker exec prospector-postgres-test psql -U test -d prospector_test -f /home/dm
 ```
 
 3. Recreate the app_user role (needed for RLS testing):
+
 ```bash
 docker exec prospector-postgres-test psql -U test -d prospector_test -c "
 DROP ROLE IF EXISTS app_user;

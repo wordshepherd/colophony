@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { z } from "zod";
 
 export const loginSchema = z.object({
   email: z.string().email(),
@@ -46,7 +46,9 @@ export const emailVerificationResponseSchema = z.object({
   message: z.string(),
 });
 
-export type EmailVerificationResponse = z.infer<typeof emailVerificationResponseSchema>;
+export type EmailVerificationResponse = z.infer<
+  typeof emailVerificationResponseSchema
+>;
 
 export const forgotPasswordSchema = z.object({
   email: z.string().email(),
@@ -79,5 +81,5 @@ export interface AuthContext {
   userId: string;
   email: string;
   orgId?: string;
-  role?: 'ADMIN' | 'EDITOR' | 'READER';
+  role?: "ADMIN" | "EDITOR" | "READER";
 }

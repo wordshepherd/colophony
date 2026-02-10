@@ -1,10 +1,10 @@
-'use client';
+"use client";
 
-import Link from 'next/link';
-import { formatDistanceToNow } from 'date-fns';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { StatusBadge } from './status-badge';
-import type { SubmissionStatus } from '@prospector/types';
+import Link from "next/link";
+import { formatDistanceToNow } from "date-fns";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { StatusBadge } from "./status-badge";
+import type { SubmissionStatus } from "@prospector/types";
 
 interface SubmissionCardProps {
   submission: {
@@ -32,7 +32,7 @@ export function SubmissionCard({ submission }: SubmissionCardProps) {
         </CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground">
-            {submission.submittedAt ? 'Submitted' : 'Created'}{' '}
+            {submission.submittedAt ? "Submitted" : "Created"}{" "}
             {formatDistanceToNow(new Date(date), { addSuffix: true })}
           </p>
         </CardContent>

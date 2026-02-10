@@ -6,9 +6,9 @@
  * 2. Setting localStorage tokens in the browser context
  */
 
-import { type Page } from '@playwright/test';
-import { registerUser, loginUser, getMe } from './api-client';
-import { createOrg, addMember, getUserByEmail } from './db';
+import { type Page } from "@playwright/test";
+import { registerUser, loginUser, getMe } from "./api-client";
+import { createOrg, addMember, getUserByEmail } from "./db";
 
 /**
  * Set auth tokens in the browser's localStorage.
@@ -21,14 +21,14 @@ export async function setAuthTokensInBrowser(
 ): Promise<void> {
   await page.evaluate(
     ({ tokens: t, orgId: o }) => {
-      localStorage.setItem('accessToken', t.accessToken);
-      localStorage.setItem('refreshToken', t.refreshToken);
+      localStorage.setItem("accessToken", t.accessToken);
+      localStorage.setItem("refreshToken", t.refreshToken);
       localStorage.setItem(
-        'tokenExpiresAt',
+        "tokenExpiresAt",
         String(Date.now() + t.expiresIn * 1000),
       );
       if (o) {
-        localStorage.setItem('currentOrgId', o);
+        localStorage.setItem("currentOrgId", o);
       }
     },
     { tokens, orgId },
@@ -40,10 +40,10 @@ export async function setAuthTokensInBrowser(
  */
 export async function clearAuthTokensInBrowser(page: Page): Promise<void> {
   await page.evaluate(() => {
-    localStorage.removeItem('accessToken');
-    localStorage.removeItem('refreshToken');
-    localStorage.removeItem('tokenExpiresAt');
-    localStorage.removeItem('currentOrgId');
+    localStorage.removeItem("accessToken");
+    localStorage.removeItem("refreshToken");
+    localStorage.removeItem("tokenExpiresAt");
+    localStorage.removeItem("currentOrgId");
   });
 }
 
@@ -52,7 +52,7 @@ export async function clearAuthTokensInBrowser(page: Page): Promise<void> {
  * Sets up a complete test environment with an org and membership.
  */
 export async function setupTestUser(
-  role: 'ADMIN' | 'EDITOR' | 'READER' = 'READER',
+  role: "ADMIN" | "EDITOR" | "READER" = "READER",
 ): Promise<{
   email: string;
   password: string;
@@ -61,9 +61,10 @@ export async function setupTestUser(
   orgId: string;
   orgName: string;
 }> {
-  const suffix = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+  const suffix =
+    Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
   const email = `e2e-${role.toLowerCase()}-${suffix}@test.local`;
-  const password = 'TestPassword123!';
+  const password = "TestPassword123!";
 
   // Register user via API
   const tokens = await registerUser({ email, password });
@@ -101,7 +102,7 @@ export async function loginAsBrowser(
   orgId: string,
 ): Promise<void> {
   // Navigate to a page on the origin first (needed for localStorage)
-  await page.goto('/login');
+  await page.goto("/login");
   await setAuthTokensInBrowser(page, tokens, orgId);
 }
 
@@ -113,8 +114,8 @@ export async function loginViaForm(
   email: string,
   password: string,
 ): Promise<void> {
-  await page.goto('/login');
-  await page.getByLabel('Email').fill(email);
-  await page.getByLabel('Password').fill(password);
-  await page.getByRole('button', { name: 'Sign in' }).click();
+  await page.goto("/login");
+  await page.getByLabel("Email").fill(email);
+  await page.getByLabel("Password").fill(password);
+  await page.getByRole("button", { name: "Sign in" }).click();
 }

@@ -219,9 +219,8 @@ describe('GDPR E2E', () => {
       const res = await trpcQuery(app, 'consent.list', undefined, headers);
 
       expect(res.status).toBe(200);
-      const data = extractData<
-        Array<{ consentType: string; granted: boolean }>
-      >(res);
+      const data =
+        extractData<Array<{ consentType: string; granted: boolean }>>(res);
 
       expect(data).toHaveLength(2);
       expect(data.map((c) => c.consentType).sort()).toEqual([
@@ -257,7 +256,8 @@ describe('GDPR E2E', () => {
       // GDPR requires 30-day deadline — verify dueAt is 29-31 days from now
       const dueDate = new Date(data.dueAt);
       const now = new Date();
-      const daysUntilDue = (dueDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24);
+      const daysUntilDue =
+        (dueDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24);
       expect(daysUntilDue).toBeGreaterThanOrEqual(29);
       expect(daysUntilDue).toBeLessThanOrEqual(31);
       expect(data.message).toMatch(/access/i);

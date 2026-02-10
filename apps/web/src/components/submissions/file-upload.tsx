@@ -1,12 +1,12 @@
-'use client';
+"use client";
 
-import { useCallback, useRef } from 'react';
-import { trpc } from '@/lib/trpc';
-import { useFileUpload, type UploadingFile } from '@/hooks/use-file-upload';
-import { Button } from '@/components/ui/button';
-import { Progress } from '@/components/ui/progress';
-import { Badge } from '@/components/ui/badge';
-import { cn } from '@/lib/utils';
+import { useCallback, useRef } from "react";
+import { trpc } from "@/lib/trpc";
+import { useFileUpload, type UploadingFile } from "@/hooks/use-file-upload";
+import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
+import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 import {
   Upload,
   File,
@@ -15,13 +15,13 @@ import {
   AlertCircle,
   Clock,
   Loader2,
-} from 'lucide-react';
+} from "lucide-react";
 import {
   MAX_FILE_SIZE,
   MAX_FILES_PER_SUBMISSION,
   ALLOWED_MIME_TYPES,
   type ScanStatus,
-} from '@prospector/types';
+} from "@prospector/types";
 
 interface FileUploadProps {
   submissionId: string;
@@ -30,32 +30,36 @@ interface FileUploadProps {
 
 const scanStatusConfig: Record<
   ScanStatus,
-  { label: string; icon: React.ComponentType<{ className?: string }>; className: string }
+  {
+    label: string;
+    icon: React.ComponentType<{ className?: string }>;
+    className: string;
+  }
 > = {
   PENDING: {
-    label: 'Pending scan',
+    label: "Pending scan",
     icon: Clock,
-    className: 'bg-gray-100 text-gray-800',
+    className: "bg-gray-100 text-gray-800",
   },
   SCANNING: {
-    label: 'Scanning...',
+    label: "Scanning...",
     icon: Loader2,
-    className: 'bg-blue-100 text-blue-800',
+    className: "bg-blue-100 text-blue-800",
   },
   CLEAN: {
-    label: 'Clean',
+    label: "Clean",
     icon: CheckCircle,
-    className: 'bg-green-100 text-green-800',
+    className: "bg-green-100 text-green-800",
   },
   INFECTED: {
-    label: 'Infected',
+    label: "Infected",
     icon: AlertCircle,
-    className: 'bg-red-100 text-red-800',
+    className: "bg-red-100 text-red-800",
   },
   FAILED: {
-    label: 'Scan failed',
+    label: "Scan failed",
     icon: AlertCircle,
-    className: 'bg-orange-100 text-orange-800',
+    className: "bg-orange-100 text-orange-800",
   },
 };
 
@@ -70,9 +74,9 @@ function ScanStatusBadge({ status }: { status: ScanStatus }) {
   const Icon = config.icon;
 
   return (
-    <Badge variant="secondary" className={cn('gap-1', config.className)}>
+    <Badge variant="secondary" className={cn("gap-1", config.className)}>
       <Icon
-        className={cn('h-3 w-3', status === 'SCANNING' && 'animate-spin')}
+        className={cn("h-3 w-3", status === "SCANNING" && "animate-spin")}
       />
       {config.label}
     </Badge>
@@ -94,26 +98,26 @@ function UploadingFileItem({
         <p className="text-xs text-muted-foreground">
           {formatFileSize(upload.file.size)}
         </p>
-        {upload.status === 'uploading' && (
+        {upload.status === "uploading" && (
           <Progress value={upload.progress} className="h-1 mt-2" />
         )}
-        {upload.status === 'error' && (
+        {upload.status === "error" && (
           <p className="text-xs text-destructive mt-1">{upload.error}</p>
         )}
       </div>
       <div className="flex items-center gap-2">
-        {upload.status === 'uploading' && (
+        {upload.status === "uploading" && (
           <span className="text-xs text-muted-foreground">
             {upload.progress}%
           </span>
         )}
-        {upload.status === 'processing' && upload.scanStatus && (
+        {upload.status === "processing" && upload.scanStatus && (
           <ScanStatusBadge status={upload.scanStatus} />
         )}
-        {upload.status === 'complete' && (
+        {upload.status === "complete" && (
           <CheckCircle className="h-5 w-5 text-green-600" />
         )}
-        {upload.status === 'error' && (
+        {upload.status === "error" && (
           <AlertCircle className="h-5 w-5 text-destructive" />
         )}
         <Button
@@ -193,10 +197,10 @@ export function FileUpload({ submissionId, disabled }: FileUploadProps) {
       }
       // Reset input
       if (inputRef.current) {
-        inputRef.current.value = '';
+        inputRef.current.value = "";
       }
     },
-    [uploadFiles]
+    [uploadFiles],
   );
 
   const handleDrop = useCallback(
@@ -207,7 +211,7 @@ export function FileUpload({ submissionId, disabled }: FileUploadProps) {
         uploadFiles(files);
       }
     },
-    [uploadFiles]
+    [uploadFiles],
   );
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
@@ -220,26 +224,26 @@ export function FileUpload({ submissionId, disabled }: FileUploadProps) {
         await deleteMutation.mutateAsync({ fileId });
         utils.files.getBySubmission.invalidate({ submissionId });
       } catch (error) {
-        console.error('Failed to delete file:', error);
+        console.error("Failed to delete file:", error);
       }
     },
-    [deleteMutation, utils.files.getBySubmission, submissionId]
+    [deleteMutation, utils.files.getBySubmission, submissionId],
   );
 
   const totalFiles = (existingFiles?.length ?? 0) + uploads.length;
   const canUpload = !disabled && totalFiles < MAX_FILES_PER_SUBMISSION;
 
-  const acceptedTypes = ALLOWED_MIME_TYPES.join(',');
+  const acceptedTypes = ALLOWED_MIME_TYPES.join(",");
 
   return (
     <div className="space-y-4">
       {/* Drop zone */}
       <div
         className={cn(
-          'border-2 border-dashed rounded-lg p-8 text-center transition-colors',
+          "border-2 border-dashed rounded-lg p-8 text-center transition-colors",
           canUpload
-            ? 'border-muted-foreground/25 hover:border-primary/50 cursor-pointer'
-            : 'border-muted opacity-50 cursor-not-allowed'
+            ? "border-muted-foreground/25 hover:border-primary/50 cursor-pointer"
+            : "border-muted opacity-50 cursor-not-allowed",
         )}
         onDrop={canUpload ? handleDrop : undefined}
         onDragOver={canUpload ? handleDragOver : undefined}
@@ -247,10 +251,13 @@ export function FileUpload({ submissionId, disabled }: FileUploadProps) {
       >
         <Upload className="mx-auto h-12 w-12 text-muted-foreground" />
         <p className="mt-2 text-sm font-medium">
-          {canUpload ? 'Drop files here or click to upload' : 'Upload limit reached'}
+          {canUpload
+            ? "Drop files here or click to upload"
+            : "Upload limit reached"}
         </p>
         <p className="text-xs text-muted-foreground mt-1">
-          Max {formatFileSize(MAX_FILE_SIZE)} per file. {MAX_FILES_PER_SUBMISSION} files max.
+          Max {formatFileSize(MAX_FILE_SIZE)} per file.{" "}
+          {MAX_FILES_PER_SUBMISSION} files max.
         </p>
         <input
           ref={inputRef}
@@ -294,7 +301,7 @@ export function FileUpload({ submissionId, disabled }: FileUploadProps) {
 
       {/* Warning about pending scans */}
       {existingFiles?.some(
-        (f) => f.scanStatus === 'PENDING' || f.scanStatus === 'SCANNING'
+        (f) => f.scanStatus === "PENDING" || f.scanStatus === "SCANNING",
       ) && (
         <p className="text-sm text-yellow-600 dark:text-yellow-400">
           Some files are still being scanned. You can submit after all scans
@@ -303,7 +310,7 @@ export function FileUpload({ submissionId, disabled }: FileUploadProps) {
       )}
 
       {/* Warning about infected files */}
-      {existingFiles?.some((f) => f.scanStatus === 'INFECTED') && (
+      {existingFiles?.some((f) => f.scanStatus === "INFECTED") && (
         <p className="text-sm text-destructive">
           Some files were flagged as infected. Please remove them before
           submitting.

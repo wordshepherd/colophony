@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { z } from "zod";
 
 export const userSchema = z.object({
   id: z.string().uuid(),
@@ -26,8 +26,8 @@ export const userProfileSchema = z.object({
       id: z.string().uuid(),
       name: z.string(),
       slug: z.string(),
-      role: z.enum(['ADMIN', 'EDITOR', 'READER']),
-    })
+      role: z.enum(["ADMIN", "EDITOR", "READER"]),
+    }),
   ),
 });
 

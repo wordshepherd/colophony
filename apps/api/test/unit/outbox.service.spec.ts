@@ -1,7 +1,10 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getQueueToken } from '@nestjs/bullmq';
 import { Queue, Job } from 'bullmq';
-import { OutboxService, OutboxEventType } from '../../src/modules/jobs/services/outbox.service';
+import {
+  OutboxService,
+  OutboxEventType,
+} from '../../src/modules/jobs/services/outbox.service';
 import { OUTBOX_QUEUE } from '../../src/modules/jobs/constants';
 
 // Mock Prisma
@@ -67,7 +70,9 @@ describe('OutboxService', () => {
         retryCount: 0,
       };
 
-      (mockPrisma.outboxEvent.create as jest.Mock).mockResolvedValue(mockCreatedEvent);
+      (mockPrisma.outboxEvent.create as jest.Mock).mockResolvedValue(
+        mockCreatedEvent,
+      );
 
       const result = await service.createEvent(eventPayload);
 
@@ -156,7 +161,9 @@ describe('OutboxService', () => {
         },
       ];
 
-      (mockPrisma.outboxEvent.findMany as jest.Mock).mockResolvedValue(mockEvents);
+      (mockPrisma.outboxEvent.findMany as jest.Mock).mockResolvedValue(
+        mockEvents,
+      );
 
       const result = await service.getPendingEvents();
 
@@ -194,7 +201,9 @@ describe('OutboxService', () => {
         },
       ];
 
-      (mockPrisma.outboxEvent.findMany as jest.Mock).mockResolvedValue(mockEvents);
+      (mockPrisma.outboxEvent.findMany as jest.Mock).mockResolvedValue(
+        mockEvents,
+      );
 
       const result = await service.getPendingEvents();
 
@@ -286,7 +295,9 @@ describe('OutboxService', () => {
         },
       ];
 
-      (mockPrisma.outboxEvent.findMany as jest.Mock).mockResolvedValue(mockEvents);
+      (mockPrisma.outboxEvent.findMany as jest.Mock).mockResolvedValue(
+        mockEvents,
+      );
 
       await service.queuePendingEvents();
 
@@ -317,8 +328,12 @@ describe('OutboxService', () => {
       await service.schedulePolling();
 
       // Should remove the existing poll-outbox job
-      expect(mockQueue.removeRepeatableByKey).toHaveBeenCalledWith('poll-key-1');
-      expect(mockQueue.removeRepeatableByKey).not.toHaveBeenCalledWith('other-key');
+      expect(mockQueue.removeRepeatableByKey).toHaveBeenCalledWith(
+        'poll-key-1',
+      );
+      expect(mockQueue.removeRepeatableByKey).not.toHaveBeenCalledWith(
+        'other-key',
+      );
 
       // Should schedule new polling job
       expect(mockQueue.add).toHaveBeenCalledWith(
@@ -355,7 +370,9 @@ describe('OutboxService', () => {
         },
       ];
 
-      (mockPrisma.outboxEvent.findMany as jest.Mock).mockResolvedValue(mockEvents);
+      (mockPrisma.outboxEvent.findMany as jest.Mock).mockResolvedValue(
+        mockEvents,
+      );
 
       await service.queuePendingEvents();
 
@@ -387,7 +404,9 @@ describe('OutboxService', () => {
           },
         ];
 
-        (mockPrisma.outboxEvent.findMany as jest.Mock).mockResolvedValue(mockEvents);
+        (mockPrisma.outboxEvent.findMany as jest.Mock).mockResolvedValue(
+          mockEvents,
+        );
 
         await service.queuePendingEvents();
 

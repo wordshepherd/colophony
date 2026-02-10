@@ -202,6 +202,7 @@ Ensure the directory structure exists before creating files.
 ### 5. Summary
 
 Inform the user:
+
 - What files were created
 - What TODOs need to be filled in
 - Remind to add navigation links if needed (sidebar, header)

@@ -13,7 +13,8 @@ import Redis from 'ioredis';
 const adminPrisma = new PrismaClient({
   datasources: {
     db: {
-      url: process.env.DATABASE_ADMIN_URL ||
+      url:
+        process.env.DATABASE_ADMIN_URL ||
         'postgresql://test:test@localhost:5433/prospector_test',
     },
   },
@@ -23,7 +24,8 @@ const adminPrisma = new PrismaClient({
 const appPrisma = new PrismaClient({
   datasources: {
     db: {
-      url: process.env.DATABASE_TEST_URL ||
+      url:
+        process.env.DATABASE_TEST_URL ||
         'postgresql://app_user:app_password@localhost:5433/prospector_test',
     },
   },

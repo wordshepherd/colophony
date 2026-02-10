@@ -1,33 +1,33 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import Link from 'next/link';
-import { trpc } from '@/lib/trpc';
-import { Button } from '@/components/ui/button';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Skeleton } from '@/components/ui/skeleton';
-import { SubmissionCard } from './submission-card';
-import { Plus, FileText } from 'lucide-react';
-import type { SubmissionStatus } from '@prospector/types';
+import { useState } from "react";
+import Link from "next/link";
+import { trpc } from "@/lib/trpc";
+import { Button } from "@/components/ui/button";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Skeleton } from "@/components/ui/skeleton";
+import { SubmissionCard } from "./submission-card";
+import { Plus, FileText } from "lucide-react";
+import type { SubmissionStatus } from "@prospector/types";
 
-const statusTabs: Array<{ value: SubmissionStatus | 'ALL'; label: string }> = [
-  { value: 'ALL', label: 'All' },
-  { value: 'DRAFT', label: 'Drafts' },
-  { value: 'SUBMITTED', label: 'Submitted' },
-  { value: 'UNDER_REVIEW', label: 'Under Review' },
-  { value: 'ACCEPTED', label: 'Accepted' },
-  { value: 'REJECTED', label: 'Rejected' },
+const statusTabs: Array<{ value: SubmissionStatus | "ALL"; label: string }> = [
+  { value: "ALL", label: "All" },
+  { value: "DRAFT", label: "Drafts" },
+  { value: "SUBMITTED", label: "Submitted" },
+  { value: "UNDER_REVIEW", label: "Under Review" },
+  { value: "ACCEPTED", label: "Accepted" },
+  { value: "REJECTED", label: "Rejected" },
 ];
 
 export function SubmissionList() {
-  const [statusFilter, setStatusFilter] = useState<SubmissionStatus | 'ALL'>(
-    'ALL'
+  const [statusFilter, setStatusFilter] = useState<SubmissionStatus | "ALL">(
+    "ALL",
   );
   const [page, setPage] = useState(1);
   const limit = 10;
 
   const { data, isLoading, error } = trpc.submissions.mySubmissions.useQuery({
-    status: statusFilter === 'ALL' ? undefined : statusFilter,
+    status: statusFilter === "ALL" ? undefined : statusFilter,
     page,
     limit,
   });
@@ -64,7 +64,7 @@ export function SubmissionList() {
       <Tabs
         value={statusFilter}
         onValueChange={(v) => {
-          setStatusFilter(v as SubmissionStatus | 'ALL');
+          setStatusFilter(v as SubmissionStatus | "ALL");
           setPage(1);
         }}
       >
@@ -92,11 +92,11 @@ export function SubmissionList() {
           <FileText className="mx-auto h-12 w-12 text-muted-foreground" />
           <h3 className="mt-4 text-lg font-semibold">No submissions</h3>
           <p className="text-muted-foreground">
-            {statusFilter === 'ALL'
+            {statusFilter === "ALL"
               ? "You haven't created any submissions yet."
-              : `You don't have any ${statusFilter.toLowerCase().replace('_', ' ')} submissions.`}
+              : `You don't have any ${statusFilter.toLowerCase().replace("_", " ")} submissions.`}
           </p>
-          {statusFilter === 'ALL' && (
+          {statusFilter === "ALL" && (
             <Link href="/submissions/new">
               <Button className="mt-4">
                 <Plus className="mr-2 h-4 w-4" />

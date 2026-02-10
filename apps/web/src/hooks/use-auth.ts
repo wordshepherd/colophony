@@ -1,16 +1,16 @@
-'use client';
+"use client";
 
-import { useCallback, useEffect, useRef } from 'react';
-import { useRouter } from 'next/navigation';
-import { trpc } from '@/lib/trpc';
+import { useCallback, useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
+import { trpc } from "@/lib/trpc";
 import {
   setAuthTokens,
   getRefreshToken,
   clearAuthData,
   isTokenExpiringSoon,
   hasAuthTokens,
-} from '@/lib/auth';
-import type { LoginInput, RegisterInput } from '@prospector/types';
+} from "@/lib/auth";
+import type { LoginInput, RegisterInput } from "@prospector/types";
 
 export interface UserProfile {
   id: string;
@@ -24,7 +24,7 @@ export interface UserProfile {
       name: string;
       slug: string;
     };
-    role: 'ADMIN' | 'EDITOR' | 'READER';
+    role: "ADMIN" | "EDITOR" | "READER";
   }>;
 }
 
@@ -49,7 +49,7 @@ export function useAuth() {
   // In TanStack Query v4, isLoading is true even when enabled=false
   // (status='loading', fetchStatus='idle'). We only want true loading
   // when a fetch is actually in progress.
-  const isLoading = queryIsLoading && fetchStatus !== 'idle';
+  const isLoading = queryIsLoading && fetchStatus !== "idle";
 
   // Login mutation
   const loginMutation = trpc.auth.login.useMutation({
@@ -77,13 +77,13 @@ export function useAuth() {
       if (refreshTimerRef.current) {
         clearTimeout(refreshTimerRef.current);
       }
-      router.push('/login');
+      router.push("/login");
     },
     onError: () => {
       // Even on error, clear local state
       clearAuthData();
       utils.auth.me.reset();
-      router.push('/login');
+      router.push("/login");
     },
   });
 
@@ -97,34 +97,37 @@ export function useAuth() {
       // Refresh failed, user needs to login again
       clearAuthData();
       utils.auth.me.reset();
-      router.push('/login');
+      router.push("/login");
     },
   });
 
   // Schedule token refresh
-  const scheduleTokenRefresh = useCallback((expiresIn: number) => {
-    if (refreshTimerRef.current) {
-      clearTimeout(refreshTimerRef.current);
-    }
+  const scheduleTokenRefresh = useCallback(
+    (expiresIn: number) => {
+      if (refreshTimerRef.current) {
+        clearTimeout(refreshTimerRef.current);
+      }
 
-    // Refresh 1 minute before expiry
-    const refreshIn = (expiresIn - 60) * 1000;
-    if (refreshIn > 0) {
-      refreshTimerRef.current = setTimeout(() => {
-        const token = getRefreshToken();
-        if (token) {
-          refreshMutation.mutate({ refreshToken: token });
-        }
-      }, refreshIn);
-    }
-  }, [refreshMutation]);
+      // Refresh 1 minute before expiry
+      const refreshIn = (expiresIn - 60) * 1000;
+      if (refreshIn > 0) {
+        refreshTimerRef.current = setTimeout(() => {
+          const token = getRefreshToken();
+          if (token) {
+            refreshMutation.mutate({ refreshToken: token });
+          }
+        }, refreshIn);
+      }
+    },
+    [refreshMutation],
+  );
 
   // Login function
   const login = useCallback(
     async (input: LoginInput) => {
       await loginMutation.mutateAsync(input);
     },
-    [loginMutation]
+    [loginMutation],
   );
 
   // Register function
@@ -132,7 +135,7 @@ export function useAuth() {
     async (input: RegisterInput) => {
       await registerMutation.mutateAsync(input);
     },
-    [registerMutation]
+    [registerMutation],
   );
 
   // Logout function
@@ -143,7 +146,7 @@ export function useAuth() {
     } else {
       clearAuthData();
       utils.auth.me.reset();
-      router.push('/login');
+      router.push("/login");
     }
   }, [logoutMutation, utils.auth.me, router]);
 

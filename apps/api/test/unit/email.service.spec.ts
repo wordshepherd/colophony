@@ -153,10 +153,14 @@ describe('EmailTemplateService', () => {
 
       expect(template.subject).toContain('Verify your email');
       expect(template.html).toContain('John');
-      expect(template.html).toContain('http://localhost:3000/verify?token=abc123');
+      expect(template.html).toContain(
+        'http://localhost:3000/verify?token=abc123',
+      );
       expect(template.html).toContain('24 hours');
       expect(template.text).toContain('John');
-      expect(template.text).toContain('http://localhost:3000/verify?token=abc123');
+      expect(template.text).toContain(
+        'http://localhost:3000/verify?token=abc123',
+      );
     });
 
     it('should escape HTML in user name', () => {
@@ -181,7 +185,9 @@ describe('EmailTemplateService', () => {
 
       expect(template.subject).toContain('Reset your password');
       expect(template.html).toContain('Jane');
-      expect(template.html).toContain('http://localhost:3000/reset?token=xyz789');
+      expect(template.html).toContain(
+        'http://localhost:3000/reset?token=xyz789',
+      );
       expect(template.text).toContain('1 hour');
     });
   });

@@ -2,7 +2,7 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   // Standalone output for Docker deployment
-  output: 'standalone',
+  output: "standalone",
   // Disable ESLint during build (run separately with `pnpm lint`)
   eslint: {
     ignoreDuringBuilds: true,
@@ -13,7 +13,7 @@ const nextConfig: NextConfig = {
     ignoreBuildErrors: true,
   },
   // Transpile workspace packages
-  transpilePackages: ['@prospector/types'],
+  transpilePackages: ["@prospector/types"],
 };
 
 export default nextConfig;

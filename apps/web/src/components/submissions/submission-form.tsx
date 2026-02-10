@@ -1,22 +1,25 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import { trpc } from '@/lib/trpc';
-import { createSubmissionSchema, updateSubmissionSchema } from '@prospector/types';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { trpc } from "@/lib/trpc";
+import {
+  createSubmissionSchema,
+  updateSubmissionSchema,
+} from "@prospector/types";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from '@/components/ui/card';
+} from "@/components/ui/card";
 import {
   Form,
   FormControl,
@@ -25,15 +28,15 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from '@/components/ui/form';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Separator } from '@/components/ui/separator';
-import { FileUpload } from './file-upload';
-import { toast } from 'sonner';
-import { Loader2 } from 'lucide-react';
+} from "@/components/ui/form";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Separator } from "@/components/ui/separator";
+import { FileUpload } from "./file-upload";
+import { toast } from "sonner";
+import { Loader2 } from "lucide-react";
 
 const formSchema = z.object({
-  title: z.string().min(1, 'Title is required').max(500),
+  title: z.string().min(1, "Title is required").max(500),
   content: z.string().max(50000).optional(),
   coverLetter: z.string().max(10000).optional(),
 });
@@ -41,7 +44,7 @@ const formSchema = z.object({
 type FormData = z.infer<typeof formSchema>;
 
 interface SubmissionFormProps {
-  mode: 'create' | 'edit';
+  mode: "create" | "edit";
   submissionId?: string;
 }
 
@@ -54,31 +57,31 @@ export function SubmissionForm({ mode, submissionId }: SubmissionFormProps) {
   const { data: existingSubmission, isLoading: isLoadingSubmission } =
     trpc.submissions.getById.useQuery(
       { id: submissionId! },
-      { enabled: mode === 'edit' && !!submissionId }
+      { enabled: mode === "edit" && !!submissionId },
     );
 
   // Fetch files for the submission
   const { data: existingFiles } = trpc.files.getBySubmission.useQuery(
     { submissionId: submissionId! },
-    { enabled: mode === 'edit' && !!submissionId }
+    { enabled: mode === "edit" && !!submissionId },
   );
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      title: '',
-      content: '',
-      coverLetter: '',
+      title: "",
+      content: "",
+      coverLetter: "",
     },
   });
 
   // Populate form when editing
   useEffect(() => {
-    if (existingSubmission && mode === 'edit') {
+    if (existingSubmission && mode === "edit") {
       form.reset({
         title: existingSubmission.title,
-        content: existingSubmission.content ?? '',
-        coverLetter: existingSubmission.coverLetter ?? '',
+        content: existingSubmission.content ?? "",
+        coverLetter: existingSubmission.coverLetter ?? "",
       });
     }
   }, [existingSubmission, mode, form]);
@@ -86,7 +89,7 @@ export function SubmissionForm({ mode, submissionId }: SubmissionFormProps) {
   // Create mutation
   const createMutation = trpc.submissions.create.useMutation({
     onSuccess: (data) => {
-      toast.success('Submission created');
+      toast.success("Submission created");
       router.push(`/submissions/${data.id}`);
     },
     onError: (err) => {
@@ -97,7 +100,7 @@ export function SubmissionForm({ mode, submissionId }: SubmissionFormProps) {
   // Update mutation
   const updateMutation = trpc.submissions.update.useMutation({
     onSuccess: () => {
-      toast.success('Submission saved');
+      toast.success("Submission saved");
       utils.submissions.getById.invalidate({ id: submissionId! });
     },
     onError: (err) => {
@@ -108,7 +111,7 @@ export function SubmissionForm({ mode, submissionId }: SubmissionFormProps) {
   // Submit mutation (for submitting draft)
   const submitMutation = trpc.submissions.submit.useMutation({
     onSuccess: () => {
-      toast.success('Submission submitted!');
+      toast.success("Submission submitted!");
       router.push(`/submissions/${submissionId}`);
     },
     onError: (err) => {
@@ -119,7 +122,7 @@ export function SubmissionForm({ mode, submissionId }: SubmissionFormProps) {
   const onSubmit = async (data: FormData) => {
     setError(null);
 
-    if (mode === 'create') {
+    if (mode === "create") {
       await createMutation.mutateAsync(data);
     } else if (submissionId) {
       await updateMutation.mutateAsync({
@@ -144,13 +147,17 @@ export function SubmissionForm({ mode, submissionId }: SubmissionFormProps) {
     });
 
     // Check for pending/infected files
-    if (existingFiles?.some((f) => f.scanStatus === 'PENDING' || f.scanStatus === 'SCANNING')) {
-      toast.error('Please wait for file scans to complete');
+    if (
+      existingFiles?.some(
+        (f) => f.scanStatus === "PENDING" || f.scanStatus === "SCANNING",
+      )
+    ) {
+      toast.error("Please wait for file scans to complete");
       return;
     }
 
-    if (existingFiles?.some((f) => f.scanStatus === 'INFECTED')) {
-      toast.error('Please remove infected files before submitting');
+    if (existingFiles?.some((f) => f.scanStatus === "INFECTED")) {
+      toast.error("Please remove infected files before submitting");
       return;
     }
 
@@ -163,9 +170,9 @@ export function SubmissionForm({ mode, submissionId }: SubmissionFormProps) {
     updateMutation.isPending ||
     submitMutation.isPending;
 
-  const canEdit = existingSubmission?.status === 'DRAFT' || mode === 'create';
+  const canEdit = existingSubmission?.status === "DRAFT" || mode === "create";
 
-  if (mode === 'edit' && isLoadingSubmission) {
+  if (mode === "edit" && isLoadingSubmission) {
     return (
       <div className="flex items-center justify-center py-12">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -173,11 +180,12 @@ export function SubmissionForm({ mode, submissionId }: SubmissionFormProps) {
     );
   }
 
-  if (mode === 'edit' && existingSubmission && !canEdit) {
+  if (mode === "edit" && existingSubmission && !canEdit) {
     return (
       <Alert>
         <AlertDescription>
-          This submission cannot be edited because it has already been submitted.
+          This submission cannot be edited because it has already been
+          submitted.
         </AlertDescription>
       </Alert>
     );
@@ -187,12 +195,12 @@ export function SubmissionForm({ mode, submissionId }: SubmissionFormProps) {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold">
-          {mode === 'create' ? 'New Submission' : 'Edit Submission'}
+          {mode === "create" ? "New Submission" : "Edit Submission"}
         </h1>
         <p className="text-muted-foreground">
-          {mode === 'create'
-            ? 'Create a new submission for review'
-            : 'Make changes to your draft submission'}
+          {mode === "create"
+            ? "Create a new submission for review"
+            : "Make changes to your draft submission"}
         </p>
       </div>
 
@@ -274,7 +282,7 @@ export function SubmissionForm({ mode, submissionId }: SubmissionFormProps) {
           </Card>
 
           {/* File upload - only shown after creation */}
-          {mode === 'edit' && submissionId && (
+          {mode === "edit" && submissionId && (
             <Card>
               <CardHeader>
                 <CardTitle>Files</CardTitle>
@@ -303,10 +311,10 @@ export function SubmissionForm({ mode, submissionId }: SubmissionFormProps) {
             <div className="flex gap-2">
               <Button type="submit" disabled={isLoading || !canEdit}>
                 {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {mode === 'create' ? 'Create Draft' : 'Save Draft'}
+                {mode === "create" ? "Create Draft" : "Save Draft"}
               </Button>
 
-              {mode === 'edit' && submissionId && (
+              {mode === "edit" && submissionId && (
                 <Button
                   type="button"
                   onClick={handleSubmitForReview}

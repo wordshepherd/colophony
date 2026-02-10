@@ -1,17 +1,17 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { useAuth } from '@/hooks/use-auth';
-import { useOrganization } from '@/hooks/use-organization';
-import { trpc } from '@/lib/trpc';
-import { Button } from '@/components/ui/button';
+import { useState } from "react";
+import { useAuth } from "@/hooks/use-auth";
+import { useOrganization } from "@/hooks/use-organization";
+import { trpc } from "@/lib/trpc";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from '@/components/ui/card';
+} from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -19,12 +19,12 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
-import { Separator } from '@/components/ui/separator';
-import { Badge } from '@/components/ui/badge';
-import { toast } from 'sonner';
-import { format } from 'date-fns';
-import { Download, Trash2, Building2 } from 'lucide-react';
+} from "@/components/ui/dialog";
+import { Separator } from "@/components/ui/separator";
+import { Badge } from "@/components/ui/badge";
+import { toast } from "sonner";
+import { format } from "date-fns";
+import { Download, Trash2, Building2 } from "lucide-react";
 
 export default function SettingsPage() {
   const { user, logout } = useAuth();
@@ -34,7 +34,9 @@ export default function SettingsPage() {
 
   const deleteMutation = trpc.gdpr.requestDeletion.useMutation({
     onSuccess: () => {
-      toast.success('Account deletion requested. You will receive a confirmation email.');
+      toast.success(
+        "Account deletion requested. You will receive a confirmation email.",
+      );
       logout();
     },
     onError: (err) => {
@@ -46,15 +48,17 @@ export default function SettingsPage() {
     setIsExporting(true);
     try {
       // The actual export will open a download link
-      toast.info('Preparing your data export...');
+      toast.info("Preparing your data export...");
       // In a real implementation, this would call an API endpoint that returns a download URL
       // For now, we'll just show a placeholder message
       setTimeout(() => {
-        toast.success('Data export is ready. Check your email for the download link.');
+        toast.success(
+          "Data export is ready. Check your email for the download link.",
+        );
         setIsExporting(false);
       }, 2000);
     } catch (error) {
-      toast.error('Failed to export data');
+      toast.error("Failed to export data");
       setIsExporting(false);
     }
   };
@@ -90,14 +94,14 @@ export default function SettingsPage() {
             )}
             <div>
               <p className="text-sm font-medium">Email Verified</p>
-              <Badge variant={user.emailVerified ? 'default' : 'secondary'}>
-                {user.emailVerified ? 'Verified' : 'Not verified'}
+              <Badge variant={user.emailVerified ? "default" : "secondary"}>
+                {user.emailVerified ? "Verified" : "Not verified"}
               </Badge>
             </div>
             <div>
               <p className="text-sm font-medium">Member Since</p>
               <p className="text-sm text-muted-foreground">
-                {format(new Date(user.createdAt), 'PPP')}
+                {format(new Date(user.createdAt), "PPP")}
               </p>
             </div>
           </div>
@@ -136,11 +140,11 @@ export default function SettingsPage() {
                   <div className="flex items-center gap-2">
                     <Badge
                       variant={
-                        org.role === 'ADMIN'
-                          ? 'default'
-                          : org.role === 'EDITOR'
-                            ? 'secondary'
-                            : 'outline'
+                        org.role === "ADMIN"
+                          ? "default"
+                          : org.role === "EDITOR"
+                            ? "secondary"
+                            : "outline"
                       }
                     >
                       {org.role.toLowerCase()}
@@ -177,7 +181,7 @@ export default function SettingsPage() {
               disabled={isExporting}
             >
               <Download className="mr-2 h-4 w-4" />
-              {isExporting ? 'Preparing...' : 'Export Data'}
+              {isExporting ? "Preparing..." : "Export Data"}
             </Button>
           </div>
 
@@ -228,14 +232,14 @@ export default function SettingsPage() {
             <Button
               variant="destructive"
               onClick={() => {
-                deleteMutation.mutate({ confirmation: 'DELETE_MY_ACCOUNT' });
+                deleteMutation.mutate({ confirmation: "DELETE_MY_ACCOUNT" });
                 setShowDeleteDialog(false);
               }}
               disabled={deleteMutation.isPending}
             >
               {deleteMutation.isPending
-                ? 'Deleting...'
-                : 'Yes, delete my account'}
+                ? "Deleting..."
+                : "Yes, delete my account"}
             </Button>
           </DialogFooter>
         </DialogContent>

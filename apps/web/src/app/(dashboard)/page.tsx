@@ -1,10 +1,10 @@
-'use client';
+"use client";
 
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { useAuth } from '@/hooks/use-auth';
-import { useOrganization } from '@/hooks/use-organization';
-import { Skeleton } from '@/components/ui/skeleton';
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/hooks/use-auth";
+import { useOrganization } from "@/hooks/use-organization";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -15,13 +15,13 @@ export default function DashboardPage() {
     if (isLoading) return;
 
     if (!isAuthenticated) {
-      router.push('/login');
+      router.push("/login");
       return;
     }
 
     // Redirect to submissions if user has orgs
     if (hasOrganizations) {
-      router.push('/submissions');
+      router.push("/submissions");
     }
   }, [isLoading, isAuthenticated, hasOrganizations, router]);
 

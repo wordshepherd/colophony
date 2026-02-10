@@ -1,16 +1,16 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import Link from 'next/link';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import { registerSchema } from '@prospector/types';
-import { useAuth } from '@/hooks/use-auth';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Checkbox } from '@/components/ui/checkbox';
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { registerSchema } from "@prospector/types";
+import { useAuth } from "@/hooks/use-auth";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Card,
   CardContent,
@@ -18,7 +18,7 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from '@/components/ui/card';
+} from "@/components/ui/card";
 import {
   Form,
   FormControl,
@@ -26,12 +26,12 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from '@/components/ui/form';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+} from "@/components/ui/form";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 const registerFormSchema = registerSchema.extend({
   acceptTerms: z.boolean().refine((val) => val === true, {
-    message: 'You must accept the terms and conditions',
+    message: "You must accept the terms and conditions",
   }),
 });
 
@@ -46,9 +46,9 @@ export function RegisterForm() {
   const form = useForm<RegisterFormInput>({
     resolver: zodResolver(registerFormSchema),
     defaultValues: {
-      email: '',
-      password: '',
-      name: '',
+      email: "",
+      password: "",
+      name: "",
       acceptTerms: false,
     },
   });
@@ -66,7 +66,7 @@ export function RegisterForm() {
       const message =
         err instanceof Error
           ? err.message
-          : 'Failed to create account. Please try again.';
+          : "Failed to create account. Please try again.";
       setError(message);
     }
   };
@@ -83,7 +83,8 @@ export function RegisterForm() {
         <CardContent>
           <p className="text-sm text-muted-foreground">
             Please check your inbox and click the verification link to activate
-            your account. If you don&apos;t see the email, check your spam folder.
+            your account. If you don&apos;t see the email, check your spam
+            folder.
           </p>
         </CardContent>
         <CardFooter>
@@ -101,9 +102,7 @@ export function RegisterForm() {
     <Card className="w-full max-w-md">
       <CardHeader>
         <CardTitle>Create an account</CardTitle>
-        <CardDescription>
-          Sign up to start submitting your work
-        </CardDescription>
+        <CardDescription>Sign up to start submitting your work</CardDescription>
       </CardHeader>
       <CardContent>
         <Form {...form}>
@@ -111,7 +110,7 @@ export function RegisterForm() {
             {(error || registerError) && (
               <Alert variant="destructive">
                 <AlertDescription>
-                  {error || registerError?.message || 'An error occurred'}
+                  {error || registerError?.message || "An error occurred"}
                 </AlertDescription>
               </Alert>
             )}
@@ -185,15 +184,15 @@ export function RegisterForm() {
                   </FormControl>
                   <div className="space-y-1 leading-none">
                     <FormLabel className="text-sm font-normal">
-                      I accept the{' '}
+                      I accept the{" "}
                       <Link
                         href="/terms"
                         className="text-primary hover:underline"
                         target="_blank"
                       >
                         terms of service
-                      </Link>{' '}
-                      and{' '}
+                      </Link>{" "}
+                      and{" "}
                       <Link
                         href="/privacy"
                         className="text-primary hover:underline"
@@ -208,15 +207,19 @@ export function RegisterForm() {
               )}
             />
 
-            <Button type="submit" className="w-full" disabled={isRegisterLoading}>
-              {isRegisterLoading ? 'Creating account...' : 'Create account'}
+            <Button
+              type="submit"
+              className="w-full"
+              disabled={isRegisterLoading}
+            >
+              {isRegisterLoading ? "Creating account..." : "Create account"}
             </Button>
           </form>
         </Form>
       </CardContent>
       <CardFooter>
         <p className="text-sm text-muted-foreground">
-          Already have an account?{' '}
+          Already have an account?{" "}
           <Link href="/login" className="text-primary hover:underline">
             Sign in
           </Link>

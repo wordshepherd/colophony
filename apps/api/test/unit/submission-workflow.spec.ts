@@ -111,7 +111,9 @@ describe('Submission Workflow', () => {
 
     it('should not allow editors to withdraw (submitter action)', () => {
       expect(isEditorAllowedTransition('SUBMITTED', 'WITHDRAWN')).toBe(false);
-      expect(isEditorAllowedTransition('UNDER_REVIEW', 'WITHDRAWN')).toBe(false);
+      expect(isEditorAllowedTransition('UNDER_REVIEW', 'WITHDRAWN')).toBe(
+        false,
+      );
     });
 
     it('should allow editors to accept from UNDER_REVIEW', () => {
