@@ -124,6 +124,9 @@ jobs:
       - name: Generate Prisma client
         run: pnpm db:generate
 
+      - name: Build workspace packages
+        run: pnpm turbo run build --filter=@prospector/db --filter=@prospector/types
+
       - name: Push schema to test database
         run: pnpm db:push
         env:
