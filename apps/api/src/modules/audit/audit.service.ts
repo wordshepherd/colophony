@@ -1,6 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { prisma } from '@prospector/db';
-import { Prisma } from '@prisma/client';
+import { prisma, Prisma } from '@prospector/db';
 
 /**
  * Actions that can be logged for audit purposes
