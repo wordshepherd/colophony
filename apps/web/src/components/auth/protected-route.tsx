@@ -22,7 +22,7 @@ export function ProtectedRoute({
   requireOrganization = true,
 }: ProtectedRouteProps) {
   const router = useRouter();
-  const { user, isLoading, isAuthenticated, isEmailVerified } = useAuth();
+  const { isLoading, isAuthenticated, isEmailVerified } = useAuth();
   const { currentOrg, isEditor, isAdmin, hasOrganizations } = useOrganization();
 
   useEffect(() => {

@@ -33,7 +33,7 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
   }
 
   onModuleDestroy() {
-    this.client?.quit();
+    void this.client?.quit();
   }
 
   getClient(): Redis {

@@ -182,7 +182,7 @@ export function FileUpload({ submissionId, disabled }: FileUploadProps) {
   const deleteMutation = trpc.files.delete.useMutation();
   const utils = trpc.useUtils();
 
-  const { uploads, uploadFiles, removeUpload, isUploading } = useFileUpload({
+  const { uploads, uploadFiles, removeUpload } = useFileUpload({
     submissionId,
     onUploadComplete: () => {
       utils.files.getBySubmission.invalidate({ submissionId });

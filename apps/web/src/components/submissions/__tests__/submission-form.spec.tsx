@@ -32,7 +32,7 @@ jest.mock("@/lib/trpc", () => ({
   trpc: {
     submissions: {
       getById: {
-        useQuery: (_input: unknown, _opts: unknown) => ({
+        useQuery: () => ({
           data: mockExistingSubmission,
           isLoading: mockIsLoadingSubmission,
         }),

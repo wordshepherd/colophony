@@ -1,8 +1,8 @@
 "use client";
 
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useMemo } from "react";
 import { getCurrentOrgId, setCurrentOrgId, trpc } from "@/lib/trpc";
-import { useAuth, type UserProfile } from "./use-auth";
+import { useAuth } from "./use-auth";
 
 export type OrgRole = "ADMIN" | "EDITOR" | "READER";
 
@@ -18,13 +18,16 @@ export function useOrganization() {
   const utils = trpc.useUtils();
 
   // Get organizations from user profile
-  const organizations: Organization[] =
-    user?.organizations?.map((m) => ({
-      id: m.organization.id,
-      name: m.organization.name,
-      slug: m.organization.slug,
-      role: m.role,
-    })) ?? [];
+  const organizations: Organization[] = useMemo(
+    () =>
+      user?.organizations?.map((m) => ({
+        id: m.organization.id,
+        name: m.organization.name,
+        slug: m.organization.slug,
+        role: m.role,
+      })) ?? [],
+    [user?.organizations],
+  );
 
   // Get current org ID from storage
   const currentOrgId = typeof window !== "undefined" ? getCurrentOrgId() : null;
