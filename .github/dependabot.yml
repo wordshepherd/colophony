@@ -31,7 +31,7 @@ updates:
     reviewers:
       - "dmahaffey"
 
-  # Docker base images
+  # Docker base images (pinned to Node 20 LTS)
   - package-ecosystem: "docker"
     directory: "/apps/api"
     schedule:
@@ -39,6 +39,9 @@ updates:
     labels:
       - "dependencies"
       - "docker"
+    ignore:
+      - dependency-name: "node"
+        update-types: ["version-update:semver-major"]
     reviewers:
       - "dmahaffey"
 
@@ -49,5 +52,8 @@ updates:
     labels:
       - "dependencies"
       - "docker"
+    ignore:
+      - dependency-name: "node"
+        update-types: ["version-update:semver-major"]
     reviewers:
       - "dmahaffey"
