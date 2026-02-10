@@ -95,4 +95,4 @@ async function bootstrap() {
   console.log(`tRPC endpoint: http://localhost:${port}/trpc`);
 }
 
-bootstrap();
+void bootstrap();

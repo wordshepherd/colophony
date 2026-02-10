@@ -57,7 +57,7 @@ export default function SettingsPage() {
         );
         setIsExporting(false);
       }, 2000);
-    } catch (error) {
+    } catch {
       toast.error("Failed to export data");
       setIsExporting(false);
     }
