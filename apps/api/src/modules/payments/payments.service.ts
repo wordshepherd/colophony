@@ -208,9 +208,9 @@ export class PaymentsService {
       await prisma.submissionHistory.create({
         data: {
           submissionId: payment.submissionId,
-          previousStatus: 'DRAFT',
-          newStatus: 'SUBMITTED',
-          changedBy: metadata?.userId || 'system',
+          fromStatus: 'DRAFT',
+          toStatus: 'SUBMITTED',
+          changedBy: metadata?.userId || null,
           comment: 'Payment completed, submission submitted',
         },
       });

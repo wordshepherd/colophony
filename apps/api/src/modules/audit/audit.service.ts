@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { prisma } from '@prospector/db';
+import { Prisma } from '@prisma/client';
 
 /**
  * Actions that can be logged for audit purposes
@@ -115,8 +116,8 @@ export class AuditService {
           action: input.action,
           resource: input.resource,
           resourceId: input.resourceId ?? undefined,
-          oldValue: input.oldValue ?? undefined,
-          newValue: input.newValue ?? undefined,
+          oldValue: (input.oldValue as Prisma.InputJsonValue) ?? undefined,
+          newValue: (input.newValue as Prisma.InputJsonValue) ?? undefined,
           ipAddress: input.ipAddress ?? undefined,
           userAgent: input.userAgent ?? undefined,
         },

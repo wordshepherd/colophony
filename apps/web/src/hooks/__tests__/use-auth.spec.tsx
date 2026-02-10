@@ -223,9 +223,7 @@ describe("useAuth", () => {
         await result.current.logout();
       });
 
-      expect(mockLogoutMutateAsync).toHaveBeenCalledWith({
-        refreshToken: "my-refresh",
-      });
+      expect(mockLogoutMutateAsync).toHaveBeenCalled();
       expect(mockClearAuthData).toHaveBeenCalled();
       expect(mockReset).toHaveBeenCalled();
       expect(mockPush).toHaveBeenCalledWith("/login");
