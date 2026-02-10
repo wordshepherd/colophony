@@ -11,8 +11,8 @@ interface SubmissionCardProps {
     id: string;
     title: string;
     status: SubmissionStatus;
-    createdAt: Date;
-    submittedAt: Date | null;
+    createdAt: Date | string;
+    submittedAt: Date | string | null;
   };
 }
 

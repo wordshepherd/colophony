@@ -142,7 +142,7 @@ export function useAuth() {
   const logout = useCallback(async () => {
     const token = getRefreshToken();
     if (token) {
-      await logoutMutation.mutateAsync({ refreshToken: token });
+      await logoutMutation.mutateAsync();
     } else {
       clearAuthData();
       utils.auth.me.reset();
