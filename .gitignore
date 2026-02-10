@@ -1,0 +1,44 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Testing
+coverage/
+test-results/
+playwright-report/
+blob-report/
+*.log
+
+# Next.js
+.next/
+out/
+build/
+
+# Production
+dist/
+
+# Environment
+.env
+.env.local
+.env.prod
+.env.staging
+.env.*.local
+.env.prod.backup.*
+.env.staging.backup.*
+
+# Database
+*.db
+*.db-journal
+packages/db/prisma/migrations/**/tmp-*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Turbo
+.turbo/

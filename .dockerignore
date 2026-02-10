@@ -1,0 +1,41 @@
+node_modules
+.git
+.gitignore
+
+# Build outputs
+dist
+.next
+.turbo
+
+# Test files
+coverage
+playwright-report
+test-results
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+docker-compose.yml
+docker-compose.prod.yml
+Dockerfile
+
+# Documentation
+docs
+*.md
+!packages/db/prisma/migrations/**
+
+# Claude Code
+.claude
