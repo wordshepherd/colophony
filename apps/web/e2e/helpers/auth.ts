@@ -7,7 +7,7 @@
  */
 
 import { type Page } from "@playwright/test";
-import { registerUser, loginUser, getMe } from "./api-client";
+import { registerUser } from "./api-client";
 import { createOrg, addMember, getUserByEmail } from "./db";
 
 /**

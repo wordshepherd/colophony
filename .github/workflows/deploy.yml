@@ -1,10 +1,10 @@
 name: Deploy
 
 on:
-  # Auto-deploy to staging on merge to main
-  push:
-    branches: [main]
-  # Manual deploy to production
+  # Auto-deploy to staging on merge to main (enable when staging server is configured)
+  # push:
+  #   branches: [main]
+  # Manual deploy to staging or production
   workflow_dispatch:
     inputs:
       environment:

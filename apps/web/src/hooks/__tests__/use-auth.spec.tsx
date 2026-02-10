@@ -20,7 +20,7 @@ jest.mock("@/lib/trpc", () => ({
   trpc: {
     auth: {
       me: {
-        useQuery: (input: unknown, opts: unknown) => ({
+        useQuery: () => ({
           data: mockMeData,
           isLoading: mockMeIsLoading,
           error: mockMeError,
@@ -72,10 +72,7 @@ jest.mock("@/lib/trpc", () => ({
         }),
       },
       refresh: {
-        useMutation: (opts: {
-          onSuccess?: (data: unknown) => void;
-          onError?: () => void;
-        }) => ({
+        useMutation: () => ({
           mutate: mockRefreshMutate,
           isPending: false,
         }),

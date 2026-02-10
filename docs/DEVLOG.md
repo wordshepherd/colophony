@@ -4,6 +4,31 @@ Append-only session log. Newest entries first.
 
 ---
 
+## 2026-02-10 — Dependabot Triage & ESLint Cleanup
+
+### Done
+
+- Verified `workflow_run` AI review trigger works: CI on PR → AI review posts comment (confirmed on PR #1)
+- Created GitHub labels (`dependencies`, `ci`, `docker`) for Dependabot
+- Merged Dependabot PRs #1 (`actions/checkout` v4→v6) and #2 (`actions/setup-node` v4→v6)
+- Closed Dependabot PRs #3, #4 (Node 25-alpine — non-LTS, project pinned to Node 20)
+- Added `ignore` rules to `dependabot.yml` to block major Node version bumps in Docker images
+- Fixed all 19 ESLint warnings in web app (unused imports/vars, `useMemo` for exhaustive-deps)
+- Fixed 3 ESLint warnings in API (floating promises)
+- Updated GitHub token permissions: organization read/write access to projects
+
+### Decisions
+
+- Dependabot Docker updates ignore major Node bumps — upgrade to next LTS manually
+- `workflow_run` AI review correctly skips pushes to main (only reviews PRs)
+
+### Next
+
+- Email verification enforcement
+- Zod validation for env vars at API startup
+
+---
+
 ## 2026-02-10 — CI Debugging & Pre-Push Hook
 
 ### Done
