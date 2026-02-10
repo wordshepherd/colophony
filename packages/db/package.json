@@ -1,0 +1,38 @@
+{
+  "name": "@prospector/db",
+  "version": "0.0.0",
+  "private": true,
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./client": {
+      "types": "./dist/client.d.ts",
+      "default": "./dist/client.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "clean": "rm -rf dist",
+    "generate": "prisma generate",
+    "migrate": "prisma migrate dev",
+    "migrate:deploy": "prisma migrate deploy",
+    "push": "prisma db push",
+    "studio": "prisma studio",
+    "seed": "ts-node prisma/seed.ts",
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@prisma/client": "^5.22.0"
+  },
+  "devDependencies": {
+    "@prospector/typescript-config": "workspace:*",
+    "@types/node": "^22.0.0",
+    "prisma": "^5.22.0",
+    "ts-node": "^10.9.0",
+    "typescript": "^5.6.0"
+  }
+}

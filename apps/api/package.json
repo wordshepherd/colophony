@@ -1,0 +1,117 @@
+{
+  "name": "@prospector/api",
+  "version": "0.0.0",
+  "private": true,
+  "main": "./dist/main.js",
+  "types": "./dist/main.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/main.d.ts",
+      "default": "./dist/main.js"
+    },
+    "./trpc": {
+      "types": "./src/trpc/trpc.router.ts",
+      "default": "./dist/trpc/trpc.router.js"
+    }
+  },
+  "scripts": {
+    "build": "nest build",
+    "dev": "nest start --watch",
+    "start": "node dist/main",
+    "start:debug": "nest start --debug --watch",
+    "start:prod": "node dist/main",
+    "lint": "eslint \"{src,test}/**/*.ts\" --fix",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:cov": "jest --coverage",
+    "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
+    "test:e2e": "jest --config ./test/jest-e2e.json --runInBand --forceExit",
+    "type-check": "tsc --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.980.0",
+    "@aws-sdk/s3-request-presigner": "^3.980.0",
+    "@nestjs/bullmq": "^10.2.0",
+    "@nestjs/common": "^10.4.0",
+    "@nestjs/config": "^3.3.0",
+    "@nestjs/core": "^10.4.0",
+    "@nestjs/jwt": "^10.2.0",
+    "@nestjs/passport": "^10.0.0",
+    "@nestjs/platform-express": "^10.4.0",
+    "@nestjs/throttler": "^6.5.0",
+    "@prospector/db": "workspace:*",
+    "@prospector/types": "workspace:*",
+    "@trpc/server": "^10.45.0",
+    "archiver": "^7.0.1",
+    "bcrypt": "^5.1.0",
+    "bullmq": "^5.0.0",
+    "helmet": "^8.1.0",
+    "ioredis": "^5.4.0",
+    "nodemailer": "^7.0.13",
+    "passport": "^0.7.0",
+    "passport-jwt": "^4.0.0",
+    "passport-local": "^1.0.0",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.1",
+    "stripe": "^20.3.0",
+    "zod": "^3.23.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.2",
+    "@faker-js/faker": "^8.4.0",
+    "@nestjs/cli": "^10.4.0",
+    "@nestjs/schematics": "^10.2.0",
+    "@nestjs/testing": "^10.4.0",
+    "@prospector/eslint-config": "workspace:*",
+    "@prospector/typescript-config": "workspace:*",
+    "@types/archiver": "^7.0.0",
+    "@types/bcrypt": "^5.0.0",
+    "@types/express": "^4.17.0",
+    "@types/express-serve-static-core": "^4.19.0",
+    "@types/jest": "^29.5.0",
+    "@types/node": "^22.0.0",
+    "@types/nodemailer": "^7.0.9",
+    "@types/passport-jwt": "^4.0.0",
+    "@types/passport-local": "^1.0.0",
+    "@types/qs": "^6.9.0",
+    "@types/supertest": "^6.0.0",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-plugin-prettier": "^5.5.5",
+    "globals": "^17.3.0",
+    "jest": "^29.7.0",
+    "prettier": "^3.4.0",
+    "source-map-support": "^0.5.21",
+    "supertest": "^7.0.0",
+    "ts-jest": "^29.2.0",
+    "ts-loader": "^9.5.0",
+    "ts-node": "^10.9.0",
+    "tsconfig-paths": "^4.2.0",
+    "typescript": "^5.6.0",
+    "typescript-eslint": "^8.54.0"
+  },
+  "jest": {
+    "moduleFileExtensions": [
+      "js",
+      "json",
+      "ts"
+    ],
+    "rootDir": ".",
+    "testRegex": ".*\\.spec\\.ts$",
+    "transform": {
+      "^.+\\.(t|j)s$": "ts-jest"
+    },
+    "collectCoverageFrom": [
+      "src/**/*.(t|j)s",
+      "!src/main.ts"
+    ],
+    "coverageDirectory": "./coverage",
+    "testEnvironment": "node",
+    "moduleNameMapper": {
+      "^@/(.*)$": "<rootDir>/src/$1"
+    },
+    "setupFilesAfterEnv": [
+      "<rootDir>/test/setup.ts"
+    ]
+  }
+}

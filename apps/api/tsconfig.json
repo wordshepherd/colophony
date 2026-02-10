@@ -1,0 +1,16 @@
+{
+  "extends": "@prospector/typescript-config/nestjs.json",
+  "compilerOptions": {
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "baseUrl": "./",
+    "declaration": false,
+    "declarationMap": false,
+    "preserveSymlinks": true,
+    "paths": {
+      "@/*": ["src/*"]
+    }
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist", "test"]
+}

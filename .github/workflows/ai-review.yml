@@ -1,0 +1,183 @@
+name: AI Code Review
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+    branches: [main]
+
+concurrency:
+  group: ai-review-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  review:
+    name: AI Review
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get PR context
+        id: context
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Get PR metadata
+          PR_TITLE=$(gh pr view ${{ github.event.pull_request.number }} --json title -q .title)
+          PR_BODY=$(gh pr view ${{ github.event.pull_request.number }} --json body -q .body)
+
+          # Get the diff (truncate at ~200K chars to stay within context limits)
+          DIFF=$(gh pr diff ${{ github.event.pull_request.number }} | head -c 200000)
+
+          # Get list of changed files
+          FILES=$(gh pr view ${{ github.event.pull_request.number }} --json files -q '.files[].path' | head -100)
+
+          # Write to files (avoids shell escaping issues)
+          echo "$PR_TITLE" > /tmp/pr_title.txt
+          echo "$PR_BODY" > /tmp/pr_body.txt
+          echo "$DIFF" > /tmp/pr_diff.txt
+          echo "$FILES" > /tmp/pr_files.txt
+
+      - name: Run AI review
+        id: review
+        env:
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          AI_REVIEW_MODEL: ${{ vars.AI_REVIEW_MODEL || 'moonshotai/kimi-k2.5' }}
+        run: |
+          PR_TITLE=$(cat /tmp/pr_title.txt)
+          PR_BODY=$(cat /tmp/pr_body.txt)
+          DIFF=$(cat /tmp/pr_diff.txt)
+          FILES=$(cat /tmp/pr_files.txt)
+
+          # Build the review prompt
+          SYSTEM_PROMPT=$(cat <<'SYSPROMPT'
+          You are a senior code reviewer for a multi-tenant submissions platform (TypeScript monorepo: NestJS API + Next.js frontend + Prisma + PostgreSQL with Row-Level Security).
+
+          Review the PR diff for:
+
+          **Critical (flag clearly):**
+          - Security vulnerabilities (SQL injection, XSS, CSRF, command injection)
+          - Multi-tenancy / RLS violations: any Prisma query on tenant tables (submissions, payments, audit_events, submission_files, etc.) that bypasses `withOrgContext()` or uses raw SQL without RLS context
+          - Secrets or credentials in code
+          - PCI violations (logging/storing card data)
+          - Missing webhook idempotency checks (Stripe events must check `processed` flag)
+          - GDPR violations (data retention, missing consent checks)
+
+          **Important:**
+          - Missing input validation (all tRPC procedures need Zod schemas)
+          - Missing error handling on external service calls (Stripe, S3, Redis)
+          - Missing audit logging on sensitive operations (status changes, deletions, payments, GDPR actions)
+          - Race conditions or transaction safety issues
+          - N+1 queries or missing database indexes for new query patterns
+
+          **Suggestions:**
+          - Code clarity and maintainability
+          - Type safety improvements
+          - Test coverage gaps for new code paths
+
+          **Do NOT comment on:**
+          - Formatting or style (handled by Prettier/ESLint in CI)
+          - Import ordering
+          - Minor naming preferences
+
+          Format your response as markdown. Start with a one-line summary verdict:
+          - ✅ **LGTM** — no issues found
+          - ⚠️ **Minor issues** — suggestions but not blocking
+          - 🚨 **Issues found** — should be addressed before merge
+
+          Then list findings grouped by severity. Reference specific file paths and line numbers from the diff where possible. Keep the review concise — focus on what matters.
+          SYSPROMPT
+          )
+
+          USER_PROMPT=$(cat <<EOF
+          ## PR: ${PR_TITLE}
+
+          ### Description
+          ${PR_BODY}
+
+          ### Changed Files
+          ${FILES}
+
+          ### Diff
+          \`\`\`diff
+          ${DIFF}
+          \`\`\`
+          EOF
+          )
+
+          # Call OpenRouter API
+          RESPONSE=$(jq -n \
+            --arg model "$AI_REVIEW_MODEL" \
+            --arg system "$SYSTEM_PROMPT" \
+            --arg user "$USER_PROMPT" \
+            '{
+              model: $model,
+              messages: [
+                { role: "system", content: $system },
+                { role: "user", content: $user }
+              ],
+              max_tokens: 4096,
+              temperature: 0.2
+            }' | curl -s -X POST "https://openrouter.ai/api/v1/chat/completions" \
+              -H "Content-Type: application/json" \
+              -H "Authorization: Bearer ${OPENROUTER_API_KEY}" \
+              -H "HTTP-Referer: https://github.com/${{ github.repository }}" \
+              -H "X-Title: Prospector AI Review" \
+              -d @-)
+
+          # Extract the review content
+          REVIEW=$(echo "$RESPONSE" | jq -r '.choices[0].message.content // empty')
+          MODEL_USED=$(echo "$RESPONSE" | jq -r '.model // empty')
+          ERROR=$(echo "$RESPONSE" | jq -r '.error.message // empty')
+
+          if [ -n "$ERROR" ] && [ "$ERROR" != "null" ]; then
+            echo "OpenRouter API error: $ERROR"
+            echo "review_failed=true" >> "$GITHUB_OUTPUT"
+            echo "$ERROR" > /tmp/review_error.txt
+          elif [ -z "$REVIEW" ]; then
+            echo "Empty response from OpenRouter"
+            echo "review_failed=true" >> "$GITHUB_OUTPUT"
+            echo "Empty response" > /tmp/review_error.txt
+          else
+            echo "review_failed=false" >> "$GITHUB_OUTPUT"
+            echo "$REVIEW" > /tmp/review_body.txt
+            echo "$MODEL_USED" > /tmp/model_used.txt
+          fi
+
+      - name: Post review comment
+        if: steps.review.outputs.review_failed == 'false'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          MODEL_USED=$(cat /tmp/model_used.txt)
+          REVIEW_BODY=$(cat /tmp/review_body.txt)
+
+          COMMENT=$(cat <<EOF
+          ## 🤖 AI Code Review
+
+          ${REVIEW_BODY}
+
+          ---
+          <sub>Model: \`${MODEL_USED}\` via OpenRouter | [Configure](https://github.com/${{ github.repository }}/settings/variables/actions)</sub>
+          EOF
+          )
+
+          echo "$COMMENT" | gh pr comment ${{ github.event.pull_request.number }} --body-file -
+
+      - name: Post error comment
+        if: steps.review.outputs.review_failed == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          ERROR=$(cat /tmp/review_error.txt)
+          gh pr comment ${{ github.event.pull_request.number }} \
+            --body "## 🤖 AI Code Review
+
+          ⚠️ Review could not be completed: \`${ERROR}\`
+
+          <sub>Check the [workflow run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) for details.</sub>"

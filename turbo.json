@@ -1,0 +1,44 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "tasks": {
+    "build": {
+      "dependsOn": ["^build"],
+      "outputs": ["dist/**", ".next/**", "!.next/cache/**"],
+      "env": ["NODE_ENV"]
+    },
+    "dev": {
+      "cache": false,
+      "persistent": true,
+      "dependsOn": ["^build"]
+    },
+    "lint": {
+      "dependsOn": ["^build"],
+      "outputs": []
+    },
+    "test": {
+      "dependsOn": ["^build"],
+      "outputs": ["coverage/**"],
+      "env": ["NODE_ENV", "DATABASE_URL", "DATABASE_TEST_URL"]
+    },
+    "test:cov": {
+      "dependsOn": ["^build"],
+      "outputs": ["coverage/**"],
+      "env": ["NODE_ENV", "DATABASE_URL", "DATABASE_TEST_URL"]
+    },
+    "test:e2e": {
+      "dependsOn": ["^build"],
+      "outputs": [],
+      "env": ["NODE_ENV", "DATABASE_URL", "DATABASE_TEST_URL"]
+    },
+    "type-check": {
+      "dependsOn": ["^build"],
+      "outputs": []
+    },
+    "generate": {
+      "cache": false
+    },
+    "clean": {
+      "cache": false
+    }
+  }
+}

@@ -1,0 +1,5 @@
+# Secret scanning (blocks commit on live keys, private keys, env files)
+sh scripts/check-secrets.sh
+
+# Lint and format staged files
+npx lint-staged

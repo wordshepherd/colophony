@@ -1,0 +1,353 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================================
+// ORGANIZATIONS
+// ============================================================================
+
+model Organization {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String
+  slug      String   @unique
+  settings  Json     @default("{}")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  members           OrganizationMember[]
+  submissions       Submission[]
+  submissionPeriods SubmissionPeriod[]
+  payments          Payment[]
+  auditEvents       AuditEvent[]
+  retentionPolicies RetentionPolicy[]
+  userConsents      UserConsent[]
+
+  @@map("organizations")
+}
+
+// ============================================================================
+// USERS & IDENTITY
+// ============================================================================
+
+model User {
+  id              String    @id @default(uuid()) @db.Uuid
+  email           String    @unique
+  passwordHash    String?   @map("password_hash")
+  emailVerified   Boolean   @default(false) @map("email_verified")
+  emailVerifiedAt DateTime? @map("email_verified_at")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+  deletedAt       DateTime? @map("deleted_at")
+
+  identities   UserIdentity[]
+  memberships  OrganizationMember[]
+  submissions  Submission[]
+  auditEvents  AuditEvent[]         @relation("AuditActor")
+  dsarRequests DsarRequest[]
+
+  @@index([email])
+  @@index([deletedAt])
+  @@map("users")
+}
+
+model UserIdentity {
+  id           String   @id @default(uuid()) @db.Uuid
+  userId       String   @map("user_id") @db.Uuid
+  provider     String // email, google, github, self-hosted-instance
+  providerId   String   @map("provider_id")
+  accessToken  String?  @map("access_token")
+  refreshToken String?  @map("refresh_token")
+  expiresAt    DateTime? @map("expires_at")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerId])
+  @@index([userId])
+  @@map("user_identities")
+}
+
+// ============================================================================
+// ORGANIZATION MEMBERSHIP
+// ============================================================================
+
+model OrganizationMember {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  userId         String   @map("user_id") @db.Uuid
+  role           Role     @default(READER)
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, userId])
+  @@index([userId, organizationId])
+  @@map("organization_members")
+}
+
+enum Role {
+  ADMIN
+  EDITOR
+  READER
+}
+
+// ============================================================================
+// SUBMISSIONS
+// ============================================================================
+
+model SubmissionPeriod {
+  id             String    @id @default(uuid()) @db.Uuid
+  organizationId String    @map("organization_id") @db.Uuid
+  name           String
+  description    String?
+  opensAt        DateTime  @map("opens_at")
+  closesAt       DateTime  @map("closes_at")
+  fee            Decimal?  @db.Decimal(10, 2)
+  maxSubmissions Int?      @map("max_submissions")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  submissions  Submission[]
+
+  @@index([organizationId])
+  @@index([opensAt, closesAt])
+  @@map("submission_periods")
+}
+
+model Submission {
+  id                 String           @id @default(uuid()) @db.Uuid
+  organizationId     String           @map("organization_id") @db.Uuid
+  submitterId        String           @map("submitter_id") @db.Uuid
+  submissionPeriodId String?          @map("submission_period_id") @db.Uuid
+  title              String
+  content            String?
+  coverLetter        String?          @map("cover_letter")
+  status             SubmissionStatus @default(DRAFT)
+  submittedAt        DateTime?        @map("submitted_at")
+  createdAt          DateTime         @default(now()) @map("created_at")
+  updatedAt          DateTime         @updatedAt @map("updated_at")
+  searchVector       Unsupported("tsvector")? @map("search_vector")
+
+  organization     Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  submitter        User              @relation(fields: [submitterId], references: [id])
+  submissionPeriod SubmissionPeriod? @relation(fields: [submissionPeriodId], references: [id])
+  files            SubmissionFile[]
+  history          SubmissionHistory[]
+  payments         Payment[]
+
+  @@index([organizationId, status, submittedAt(sort: Desc)])
+  @@index([submitterId, submittedAt(sort: Desc)])
+  @@map("submissions")
+}
+
+enum SubmissionStatus {
+  DRAFT
+  SUBMITTED
+  UNDER_REVIEW
+  ACCEPTED
+  REJECTED
+  HOLD
+  WITHDRAWN
+}
+
+model SubmissionFile {
+  id           String     @id @default(uuid()) @db.Uuid
+  submissionId String     @map("submission_id") @db.Uuid
+  filename     String
+  mimeType     String     @map("mime_type")
+  size         BigInt
+  storageKey   String     @map("storage_key")
+  scanStatus   ScanStatus @default(PENDING) @map("scan_status")
+  scannedAt    DateTime?  @map("scanned_at")
+  uploadedAt   DateTime   @default(now()) @map("uploaded_at")
+
+  submission Submission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+
+  @@index([submissionId])
+  @@index([scanStatus, uploadedAt])
+  @@map("submission_files")
+}
+
+enum ScanStatus {
+  PENDING
+  SCANNING
+  CLEAN
+  INFECTED
+  FAILED
+}
+
+model SubmissionHistory {
+  id           String           @id @default(uuid()) @db.Uuid
+  submissionId String           @map("submission_id") @db.Uuid
+  fromStatus   SubmissionStatus? @map("from_status")
+  toStatus     SubmissionStatus @map("to_status")
+  changedBy    String?          @map("changed_by") @db.Uuid
+  comment      String?
+  changedAt    DateTime         @default(now()) @map("changed_at")
+
+  submission Submission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+
+  @@index([submissionId, changedAt(sort: Desc)])
+  @@map("submission_history")
+}
+
+// ============================================================================
+// PAYMENTS
+// ============================================================================
+
+model Payment {
+  id               String        @id @default(uuid()) @db.Uuid
+  organizationId   String        @map("organization_id") @db.Uuid
+  submissionId     String?       @map("submission_id") @db.Uuid
+  stripePaymentId  String?       @unique @map("stripe_payment_id")
+  stripeSessionId  String?       @unique @map("stripe_session_id")
+  amount           Decimal       @db.Decimal(10, 2)
+  currency         String        @default("usd")
+  status           PaymentStatus @default(PENDING)
+  metadata         Json          @default("{}")
+  createdAt        DateTime      @default(now()) @map("created_at")
+  updatedAt        DateTime      @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  submission   Submission?  @relation(fields: [submissionId], references: [id])
+
+  @@index([organizationId])
+  @@index([stripePaymentId])
+  @@map("payments")
+}
+
+enum PaymentStatus {
+  PENDING
+  PROCESSING
+  SUCCEEDED
+  FAILED
+  REFUNDED
+}
+
+model StripeWebhookEvent {
+  id          String   @id @default(uuid()) @db.Uuid
+  stripeId    String   @unique @map("stripe_id")
+  type        String
+  payload     Json
+  processed   Boolean  @default(false)
+  processedAt DateTime? @map("processed_at")
+  error       String?
+  receivedAt  DateTime @default(now()) @map("received_at")
+
+  @@index([processed, receivedAt])
+  @@map("stripe_webhook_events")
+}
+
+// ============================================================================
+// AUDIT & COMPLIANCE
+// ============================================================================
+
+model AuditEvent {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String?  @map("organization_id") @db.Uuid
+  actorId        String?  @map("actor_id") @db.Uuid
+  action         String
+  resource       String
+  resourceId     String?  @map("resource_id")
+  oldValue       Json?    @map("old_value")
+  newValue       Json?    @map("new_value")
+  ipAddress      String?  @map("ip_address")
+  userAgent      String?  @map("user_agent")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  organization Organization? @relation(fields: [organizationId], references: [id])
+  actor        User?         @relation("AuditActor", fields: [actorId], references: [id])
+
+  @@index([actorId, createdAt(sort: Desc)])
+  @@index([organizationId, createdAt(sort: Desc)])
+  @@index([resource, resourceId])
+  @@map("audit_events")
+}
+
+model DsarRequest {
+  id          String      @id @default(uuid()) @db.Uuid
+  userId      String      @map("user_id") @db.Uuid
+  type        DsarType
+  status      DsarStatus  @default(PENDING)
+  requestedAt DateTime    @default(now()) @map("requested_at")
+  dueAt       DateTime    @map("due_at")
+  completedAt DateTime?   @map("completed_at")
+  notes       String?
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([status, dueAt])
+  @@map("dsar_requests")
+}
+
+enum DsarType {
+  ACCESS
+  ERASURE
+  RECTIFICATION
+  PORTABILITY
+}
+
+enum DsarStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  REJECTED
+}
+
+model RetentionPolicy {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String?  @map("organization_id") @db.Uuid
+  resource       String
+  retentionDays  Int      @map("retention_days")
+  condition      String?
+  isActive       Boolean  @default(true) @map("is_active")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  organization Organization? @relation(fields: [organizationId], references: [id])
+
+  @@unique([organizationId, resource])
+  @@map("retention_policies")
+}
+
+model UserConsent {
+  id             String   @id @default(uuid()) @db.Uuid
+  userId         String   @map("user_id") @db.Uuid
+  organizationId String?  @map("organization_id") @db.Uuid
+  consentType    String   @map("consent_type")
+  granted        Boolean
+  grantedAt      DateTime @default(now()) @map("granted_at")
+  revokedAt      DateTime? @map("revoked_at")
+  ipAddress      String?  @map("ip_address")
+
+  organization Organization? @relation(fields: [organizationId], references: [id])
+
+  @@index([userId, consentType])
+  @@map("user_consents")
+}
+
+// ============================================================================
+// OUTBOX (Transactional Messaging)
+// ============================================================================
+
+model OutboxEvent {
+  id          String    @id @default(uuid()) @db.Uuid
+  eventType   String    @map("event_type")
+  payload     Json
+  createdAt   DateTime  @default(now()) @map("created_at")
+  processedAt DateTime? @map("processed_at")
+  error       String?
+  retryCount  Int       @default(0) @map("retry_count")
+
+  @@index([processedAt, createdAt])
+  @@map("outbox_events")
+}
