@@ -4,6 +4,37 @@ Append-only session log. Newest entries first.
 
 ---
 
+## 2026-02-10 — CI Debugging & Pre-Push Hook
+
+### Done
+
+- Fixed all 4 CI jobs (Lint, Type Check, Unit Tests, E2E) across 8 iterative commits on PR #5
+- Added pre-push hook (`.husky/pre-push`) — runs `pnpm type-check` + `pnpm lint` before every push
+- Changed AI review to `workflow_run` trigger (only runs after CI passes)
+- Added `DATABASE_APP_URL` env var to CI for non-superuser RLS testing
+
+### Issues Found
+
+- **RLS E2E false pass**: `appPrisma` used `DATABASE_TEST_URL` which CI set to superuser — both clients were superuser, RLS silently bypassed. Fixed with separate `DATABASE_APP_URL`
+- **tRPC Zod errors are 400, not 500**: tests and docs claimed `INTERNAL_SERVER_ERROR`; actual behavior is `BAD_REQUEST`. `ts-jest` never caught this because it transpiles without type-checking
+- **Web tsc resolves API source via path alias**: `@prospector/api/*` → `../api/src/*` means web's `tsc --noEmit` type-checks NestJS decorators without `experimentalDecorators`
+- **Prisma field name drift**: `previousStatus`/`newStatus` in code vs `fromStatus`/`toStatus` in schema; `userId_organizationId` vs `organizationId_userId` (Prisma generates names in schema declaration order)
+- **`next-env.d.ts` lint error**: auto-generated triple-slash references trigger ESLint
+- **`gcTime` vs `cacheTime`**: TanStack Query v4 uses `cacheTime`; `gcTime` is v5
+
+### Decisions
+
+- Pre-push (not pre-commit) for type-check/lint — keeps commits fast, catches errors before CI
+- Pre-commit stays lean: secret scanning + Prettier only
+- All these errors were invisible locally because `ts-jest` only transpiles (no type checking) and local Docker had full RLS setup
+
+### Next
+
+- Merge PR #5, verify `workflow_run` AI review triggers from `main`
+- Consider cleaning up the 19 ESLint warnings in web app
+
+---
+
 ## 2026-02-10 — AI Code Review Pipeline
 
 ### Done

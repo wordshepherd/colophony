@@ -116,6 +116,16 @@ pnpm --filter @prospector/web test:e2e:ui
 **Superuser DB connection rationale:**
 E2E tests use the superuser (`test:test`) for the Prisma singleton because `createContext()` needs to query `organization_members` but RLS requires `current_org` to be set first (chicken-and-egg). RLS isolation is verified separately in unit/integration tests using the dual-client pattern.
 
+**CI environment variables:**
+
+| Variable            | Purpose                                                  | CI Value                                                            |
+| ------------------- | -------------------------------------------------------- | ------------------------------------------------------------------- |
+| `DATABASE_TEST_URL` | Superuser connection (test setup, main Prisma singleton) | `postgresql://test:test@localhost:5433/prospector_test`             |
+| `DATABASE_APP_URL`  | Non-superuser connection (RLS E2E test)                  | `postgresql://app_user:app_password@localhost:5433/prospector_test` |
+| `REDIS_URL`         | Redis for BullMQ, sessions, rate limits                  | `redis://localhost:6379`                                            |
+
+**Important:** `DATABASE_APP_URL` must be separate from `DATABASE_TEST_URL`. The RLS E2E test (`getAppPrisma()`) uses `DATABASE_APP_URL` to connect as `app_user` (non-superuser). If it falls back to `DATABASE_TEST_URL`, both clients are superuser and RLS is silently bypassed.
+
 **Execution model:**
 
 - Sequential: `--runInBand` required — suites share PostgreSQL and Redis
@@ -244,9 +254,9 @@ it("should export all user data", async () => {
 
 ## Known Test Quirks
 
-### tRPC v10.45 Zod Errors Return 500
+### tRPC v10.45 Zod Errors Return 400
 
-Input validation (Zod) errors return `INTERNAL_SERVER_ERROR` (500), not `BAD_REQUEST` (400). Tests assert `toBe(500)` with Zod-specific error message content to distinguish from real server crashes.
+Input validation (Zod) errors return `BAD_REQUEST` (400). Tests assert `toBe(400)` with `BAD_REQUEST` error code.
 
 ### NestJS 10.4 Express 4 Path Syntax
 
@@ -272,13 +282,13 @@ All 5 priorities from the false-positive audit have been resolved:
 
 ### Priority 1: Tightened Status Code Assertions
 
-tRPC Zod 500 assertions now check exact status (`toBe(500)`) plus Zod-specific error content.
+tRPC Zod validation assertions check `toBe(400)` with `BAD_REQUEST` error code.
 
-| File               | Test               | Assertion                                                   |
-| ------------------ | ------------------ | ----------------------------------------------------------- |
-| `auth.e2e-spec.ts` | invalid email      | `toBe(500)` + `/invalid.*email\|email/i`                    |
-| `auth.e2e-spec.ts` | short password     | `toBe(500)` + `/password\|too short\|at least/i`            |
-| `gdpr.e2e-spec.ts` | wrong confirmation | `toBe(500)` + `/confirmation\|DELETE_MY_ACCOUNT\|invalid/i` |
+| File               | Test               | Assertion                   |
+| ------------------ | ------------------ | --------------------------- |
+| `auth.e2e-spec.ts` | invalid email      | `toBe(400)` + `BAD_REQUEST` |
+| `auth.e2e-spec.ts` | short password     | `toBe(400)` + `BAD_REQUEST` |
+| `gdpr.e2e-spec.ts` | wrong confirmation | `toBe(400)` + `BAD_REQUEST` |
 
 ### Priority 2: Fixed Multi-Status Acceptance in Payments
 

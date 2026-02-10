@@ -110,17 +110,17 @@ Full patterns: [docs/architecture.md — Frontend](docs/architecture.md#frontend
 
 ## Known Quirks & Gotchas
 
-| Quirk                            | Details                                                                                                                       |
-| -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| **tRPC v10.45 Zod errors**       | Zod validation errors return 500 (`INTERNAL_SERVER_ERROR`), not 400. Tests assert `toBe(500)` + Zod-specific message content. |
-| **NestJS 10.4 Express 4 paths**  | `setGlobalPrefix` exclude must use `trpc/(.*)` (Express 4), NOT `trpc/*path` (Express 5).                                     |
-| **TrpcController URL stripping** | `@Controller('trpc')` prefix must be manually stripped from `req.url` before passing to tRPC middleware.                      |
-| **TanStack Query v4 isLoading**  | `isLoading` is `true` even when query is disabled (`enabled: false`). Check `fetchStatus !== 'idle'` instead.                 |
-| **Prisma + Alpine OpenSSL**      | Must `apk add openssl` BEFORE `prisma generate` in Docker. Otherwise defaults to wrong engine.                                |
-| **pnpm deploy --prod Prisma**    | Misses generated client files (`.prisma/`). Requires `cp -r` step in Dockerfile.                                              |
-| **BullMQ Redis password**        | Uses `REDIS_HOST`/`REDIS_PORT`/`REDIS_PASSWORD` (not `REDIS_URL`). Password passed in `jobs.module.ts`.                       |
-| **Docker Compose env_file**      | `env_file:` sets container env only. For YAML `${VAR}` substitution, use `--env-file .env.prod` on CLI.                       |
-| **PostgreSQL init-db.sh**        | Only runs on first DB creation. Must `docker compose down -v` to re-run after changes.                                        |
+| Quirk                            | Details                                                                                                       |
+| -------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| **tRPC v10.45 Zod errors**       | Zod validation errors return 400 (`BAD_REQUEST`). Tests assert `toBe(400)` + `BAD_REQUEST` error code.        |
+| **NestJS 10.4 Express 4 paths**  | `setGlobalPrefix` exclude must use `trpc/(.*)` (Express 4), NOT `trpc/*path` (Express 5).                     |
+| **TrpcController URL stripping** | `@Controller('trpc')` prefix must be manually stripped from `req.url` before passing to tRPC middleware.      |
+| **TanStack Query v4 isLoading**  | `isLoading` is `true` even when query is disabled (`enabled: false`). Check `fetchStatus !== 'idle'` instead. |
+| **Prisma + Alpine OpenSSL**      | Must `apk add openssl` BEFORE `prisma generate` in Docker. Otherwise defaults to wrong engine.                |
+| **pnpm deploy --prod Prisma**    | Misses generated client files (`.prisma/`). Requires `cp -r` step in Dockerfile.                              |
+| **BullMQ Redis password**        | Uses `REDIS_HOST`/`REDIS_PORT`/`REDIS_PASSWORD` (not `REDIS_URL`). Password passed in `jobs.module.ts`.       |
+| **Docker Compose env_file**      | `env_file:` sets container env only. For YAML `${VAR}` substitution, use `--env-file .env.prod` on CLI.       |
+| **PostgreSQL init-db.sh**        | Only runs on first DB creation. Must `docker compose down -v` to re-run after changes.                        |
 
 **Version pins (do not upgrade without testing):**
 
@@ -226,14 +226,21 @@ test: add RLS isolation test for payments
 refactor: extract queue constants from jobs.module
 ```
 
-### Pre-Commit Hooks (husky + lint-staged)
+### Git Hooks (husky)
 
-Runs automatically on `git commit`:
+**Pre-commit** — runs on `git commit`:
 
 1. **Secret scanning** (`scripts/check-secrets.sh`) — blocks Stripe live keys, AWS keys, private keys, `.env` files
-2. **lint-staged** — runs Prettier + ESLint on staged `.ts`/`.tsx` files only
+2. **lint-staged** — runs Prettier on staged `.ts`/`.tsx`/`.json`/`.md` files
 
-Bypass with `git commit --no-verify` (use sparingly).
+**Pre-push** — runs on `git push`:
+
+1. **Type check** (`pnpm type-check`) — full `tsc --noEmit` across all packages (~2-3s cached)
+2. **Lint** (`pnpm lint`) — ESLint across all packages (~3-4s cached)
+
+This catches the same errors CI checks, avoiding slow CI round-trips. Turbo caching makes subsequent runs near-instant.
+
+Bypass with `--no-verify` (use sparingly).
 
 ### CI Pipeline (GitHub Actions)
 
@@ -249,7 +256,7 @@ Runs on every PR to `main` and pushes to `main`:
 
 **AI Review** (`ai-review.yml`):
 
-- Triggers on PR open/update, sends diff to configurable model via OpenRouter
+- Triggers after CI passes (`workflow_run`), sends diff to configurable model via OpenRouter
 - Default model: Kimi K2.5 (`moonshotai/kimi-k2.5`), changeable via `AI_REVIEW_MODEL` Actions variable
 - Reviews for: RLS violations, security issues, missing idempotency, GDPR gaps, input validation
 - Posts findings as PR comment before senior dev review
@@ -261,24 +268,25 @@ Runs on every PR to `main` and pushes to `main`:
 
 ### What Runs Where
 
-| Check                    | Pre-commit                  | CI                | AI Review   | Claude Code                  |
-| ------------------------ | --------------------------- | ----------------- | ----------- | ---------------------------- |
-| Secret scanning          | `check-secrets.sh`          | —                 | —           | `pre-edit-validate.js`       |
-| Format + lint            | lint-staged (changed files) | Full repo         | —           | —                            |
-| Type check               | —                           | `pnpm type-check` | —           | —                            |
-| Unit tests               | —                           | `pnpm test`       | —           | —                            |
-| API E2E tests            | —                           | `pnpm test:e2e`   | —           | —                            |
-| Build verification       | —                           | `pnpm build`      | —           | —                            |
-| Dependency audit         | —                           | `pnpm audit`      | —           | —                            |
-| RLS / multi-tenancy      | —                           | —                 | Diff review | `pre-edit-validate.js`       |
-| Security vulnerabilities | —                           | —                 | Diff review | `pre-edit-validate.js`       |
-| Audit logging checks     | —                           | —                 | Diff review | `pre-router-audit.js`        |
-| Payment idempotency      | —                           | —                 | Diff review | `pre-payment-validate.js`    |
-| GDPR compliance          | —                           | —                 | Diff review | —                            |
-| Frontend patterns        | —                           | —                 | —           | `pre-frontend-validate.js`   |
-| Migration RLS reminder   | —                           | —                 | —           | `post-migration-validate.js` |
-| DEVLOG reminder          | —                           | —                 | —           | `post-commit-devlog.js`      |
-| Scaffolding              | —                           | —                 | —           | Skills (`/new-router`, etc.) |
+| Check                    | Pre-commit             | CI                | AI Review   | Claude Code                  |
+| ------------------------ | ---------------------- | ----------------- | ----------- | ---------------------------- |
+| Secret scanning          | `check-secrets.sh`     | —                 | —           | `pre-edit-validate.js`       |
+| Format                   | lint-staged (Prettier) | `format:check`    | —           | —                            |
+| Type check               | Pre-push               | `pnpm type-check` | —           | —                            |
+| Lint                     | Pre-push               | `pnpm lint`       | —           | —                            |
+| Unit tests               | —                      | `pnpm test`       | —           | —                            |
+| API E2E tests            | —                      | `pnpm test:e2e`   | —           | —                            |
+| Build verification       | —                      | `pnpm build`      | —           | —                            |
+| Dependency audit         | —                      | `pnpm audit`      | —           | —                            |
+| RLS / multi-tenancy      | —                      | —                 | Diff review | `pre-edit-validate.js`       |
+| Security vulnerabilities | —                      | —                 | Diff review | `pre-edit-validate.js`       |
+| Audit logging checks     | —                      | —                 | Diff review | `pre-router-audit.js`        |
+| Payment idempotency      | —                      | —                 | Diff review | `pre-payment-validate.js`    |
+| GDPR compliance          | —                      | —                 | Diff review | —                            |
+| Frontend patterns        | —                      | —                 | —           | `pre-frontend-validate.js`   |
+| Migration RLS reminder   | —                      | —                 | —           | `post-migration-validate.js` |
+| DEVLOG reminder          | —                      | —                 | —           | `post-commit-devlog.js`      |
+| Scaffolding              | —                      | —                 | —           | Skills (`/new-router`, etc.) |
 
 ### PR Process
 
