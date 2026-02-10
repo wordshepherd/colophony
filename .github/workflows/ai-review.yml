@@ -1,18 +1,22 @@
 name: AI Code Review
 
 on:
-  pull_request:
-    types: [opened, synchronize]
-    branches: [main]
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
 
 concurrency:
-  group: ai-review-${{ github.event.pull_request.number }}
+  group: ai-review-${{ github.event.workflow_run.head_branch }}
   cancel-in-progress: true
 
 jobs:
   review:
     name: AI Review
     runs-on: ubuntu-latest
+    # Only run when CI succeeded and it was triggered by a PR
+    if: >
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'pull_request'
     permissions:
       pull-requests: write
       contents: read
@@ -20,7 +24,21 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          ref: ${{ github.event.workflow_run.head_sha }}
           fetch-depth: 0
+
+      - name: Get PR number
+        id: pr
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Find the PR associated with this workflow run
+          PR_NUMBER=$(gh pr list --head "${{ github.event.workflow_run.head_branch }}" --json number -q '.[0].number')
+          if [ -z "$PR_NUMBER" ]; then
+            echo "No PR found for branch ${{ github.event.workflow_run.head_branch }}"
+            exit 1
+          fi
+          echo "number=$PR_NUMBER" >> "$GITHUB_OUTPUT"
 
       - name: Get PR context
         id: context
@@ -28,14 +46,14 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           # Get PR metadata
-          PR_TITLE=$(gh pr view ${{ github.event.pull_request.number }} --json title -q .title)
-          PR_BODY=$(gh pr view ${{ github.event.pull_request.number }} --json body -q .body)
+          PR_TITLE=$(gh pr view ${{ steps.pr.outputs.number }} --json title -q .title)
+          PR_BODY=$(gh pr view ${{ steps.pr.outputs.number }} --json body -q .body)
 
           # Get the diff (truncate at ~200K chars to stay within context limits)
-          DIFF=$(gh pr diff ${{ github.event.pull_request.number }} | head -c 200000)
+          DIFF=$(gh pr diff ${{ steps.pr.outputs.number }} | head -c 200000)
 
           # Get list of changed files
-          FILES=$(gh pr view ${{ github.event.pull_request.number }} --json files -q '.files[].path' | head -100)
+          FILES=$(gh pr view ${{ steps.pr.outputs.number }} --json files -q '.files[].path' | head -100)
 
           # Write to files (avoids shell escaping issues)
           echo "$PR_TITLE" > /tmp/pr_title.txt
@@ -167,7 +185,7 @@ jobs:
           EOF
           )
 
-          echo "$COMMENT" | gh pr comment ${{ github.event.pull_request.number }} --body-file -
+          echo "$COMMENT" | gh pr comment ${{ steps.pr.outputs.number }} --body-file -
 
       - name: Post error comment
         if: steps.review.outputs.review_failed == 'true'
@@ -175,7 +193,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           ERROR=$(cat /tmp/review_error.txt)
-          gh pr comment ${{ github.event.pull_request.number }} \
+          gh pr comment ${{ steps.pr.outputs.number }} \
             --body "## 🤖 AI Code Review
 
           ⚠️ Review could not be completed: \`${ERROR}\`
