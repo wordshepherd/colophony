@@ -1,5 +1,5 @@
 # Stage 1: deps — install pnpm workspace dependencies
-FROM node:20-alpine AS deps
+FROM node:25-alpine AS deps
 RUN corepack enable && corepack prepare pnpm@9.15.0 --activate
 WORKDIR /app
 COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
@@ -26,7 +26,7 @@ RUN pnpm --filter @prospector/api deploy --prod /app/deploy
 RUN cp -r /app/node_modules/.pnpm/@prisma+client@*/node_modules/.prisma /app/deploy/node_modules/.pnpm/@prisma+client@*/node_modules/
 
 # Stage 3: runner — production image
-FROM node:20-alpine AS runner
+FROM node:25-alpine AS runner
 RUN apk add --no-cache curl openssl
 RUN addgroup --system --gid 1001 nodejs && adduser --system --uid 1001 nestjs
 WORKDIR /app
