@@ -383,11 +383,11 @@ describe('GDPR E2E', () => {
         authHeaders(tokens.accessToken),
       );
 
-      // tRPC v10.45 wraps Zod validation errors as INTERNAL_SERVER_ERROR (500)
+      // tRPC returns Zod validation errors as BAD_REQUEST (400)
       // The confirmation field requires literal 'DELETE_MY_ACCOUNT' — Zod rejects mismatches
-      expect(res.status).toBe(500);
+      expect(res.status).toBe(400);
       const error = extractError(res);
-      expect(error.data.code).toBe('INTERNAL_SERVER_ERROR');
+      expect(error.data.code).toBe('BAD_REQUEST');
     });
   });
 });
