@@ -1,3 +1,8 @@
+---
+name: new-component
+description: Scaffold a new React component with proper patterns for Prospector.
+---
+
 # /new-component
 
 Scaffold a new React component with proper patterns for Prospector.

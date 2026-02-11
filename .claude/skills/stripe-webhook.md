@@ -1,3 +1,8 @@
+---
+name: stripe-webhook
+description: Add a new Stripe webhook event handler with proper idempotency.
+---
+
 # /stripe-webhook
 
 Add a new Stripe webhook event handler with proper idempotency.

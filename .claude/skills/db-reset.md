@@ -1,3 +1,8 @@
+---
+name: db-reset
+description: Reset the database schema and apply RLS policies.
+---
+
 # /db-reset
 
 Reset the database schema and apply RLS policies.

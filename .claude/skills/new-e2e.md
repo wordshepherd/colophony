@@ -1,3 +1,8 @@
+---
+name: new-e2e
+description: Scaffold a Playwright browser E2E test with proper helpers and patterns.
+---
+
 # /new-e2e
 
 Scaffold a Playwright browser E2E test with proper helpers and patterns.
