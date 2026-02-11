@@ -121,6 +121,7 @@ Full patterns: [docs/architecture.md — Frontend](docs/architecture.md#frontend
 | **BullMQ Redis password**        | Uses `REDIS_HOST`/`REDIS_PORT`/`REDIS_PASSWORD` (not `REDIS_URL`). Password passed in `jobs.module.ts`.       |
 | **Docker Compose env_file**      | `env_file:` sets container env only. For YAML `${VAR}` substitution, use `--env-file .env.prod` on CLI.       |
 | **PostgreSQL init-db.sh**        | Only runs on first DB creation. Must `docker compose down -v` to re-run after changes.                        |
+| **GitHub PAT: no Checks perm**   | Fine-grained PATs lack `Checks` permission. Use `gh run list/view` (Actions API), NOT `gh pr checks`.         |
 
 **Version pins (do not upgrade without testing):**
 
