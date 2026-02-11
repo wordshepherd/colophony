@@ -4,6 +4,78 @@ Append-only session log. Newest entries first.
 
 ---
 
+## 2026-02-10 — Core Journey E2E Tests & Workflow Automation
+
+### Done
+
+- Created 6 core user journey E2E tests (`apps/web/e2e/journeys.spec.ts`): registration, login redirect chain, submission CRUD, multi-user lifecycle, cross-role visibility, sidebar link validation
+- Fixed test failures: org selection after form login, editor dashboard default tab behavior
+- Created PR workflow enforcement: `pre-push-branch.js` hook blocks pushing to main, CLAUDE.md docs updated
+- Triaged 9 Dependabot PRs: closed 6 breaking major bumps, left 3 safe ones for review
+- Documented GitHub fine-grained PAT limitation (no Checks permission — use Actions API instead)
+- Addressed AI review feedback on PR #18: fixed 3 issues (cleanup error handling, eager registration cleanup, hook regex), dismissed 12 false positives
+- Created `/end-session` skill for end-of-session housekeeping
+- Created `/start-session` skill for session orientation briefing
+- Created `/check-ai-review` skill for evaluating AI review comments
+- Created `post-push-ai-review.js` hook for AI review reminder after push
+- Updated `/start-session` and `/end-session` with AI review integration
+- Fixed all 14 skill files with YAML frontmatter for slash command registration
+
+### Decisions
+
+- Skills require YAML frontmatter (`name`, `description`) to register as slash commands — plain markdown headers are not enough
+- AI review false positives are common for: test helpers (superuser by design), cleanup patterns (try-catch + .catch), Claude Code hooks (by design not git hooks)
+- Use `gh run list/view` for CI status everywhere, never `gh pr checks` (PAT limitation)
+
+### Next
+
+- Reader sidebar visibility E2E test (verify readers don't see editor-only nav links)
+- Git pre-push hook to block pushes to main from terminal (complement Claude Code hook)
+- Build org creation / onboarding flow (carried over from previous session)
+- Merge PR #18 after senior dev review
+
+---
+
+## 2026-02-10 — Local Dev Environment Setup & Bug Fixes
+
+### Done
+
+- Set up local dev environment: Docker services, env files, Prisma client generation
+- Fixed PostgreSQL SCRAM auth mismatch (password reset required after container recreation)
+- Identified Node 24 incompatibility — `util.inspect` crashes with tRPC/Prisma objects; project requires Node 20 LTS
+- Cleared SMTP placeholder values so email service disables gracefully in dev mode
+- Fixed `/dashboard` 404: route group `(dashboard)` doesn't create a URL segment, updated redirects to `/`
+- Fixed redirect loop: dashboard layout's `ProtectedRoute` no longer requires org (individual pages handle it)
+- Fixed login redirect: goes to `/` (dashboard router) instead of directly to `/submissions`
+- Fixed submission list crash: query now gated on `currentOrg` presence, shows welcome message when no org
+- Restored tRPC `onError` handler with safe string formatting (no object inspection)
+- Removed Prisma `"query"` log level (verbose, not needed in dev); kept `"error"` and `"warn"`
+- Created "Test Magazine" org and assigned david@mahaffey.me as ADMIN for local testing
+- Web `.env.local` created from example
+
+### Decisions
+
+- Node 20 LTS required — Node 24 breaks tRPC/Prisma error serialization via `util.inspect`
+- No seed script exists yet — `pnpm db:seed` references missing `prisma/seed.ts`
+- `/terms` and `/privacy` pages are 404s (never created) — left as-is for now
+
+### Bugs Found (not yet fixed)
+
+- `onError` in `trpc.controller.ts` originally passed full error object to `console.error` — crashes on Node 24, replaced with string-only logging. Should be revisited if Node 24 support is needed.
+
+### New Feature Needed
+
+- **Organization onboarding flow**: Registration should distinguish org admin (create org) vs submitter (join via invite). Currently no way to create an org through the UI. TODO exists at `protected-route.tsx:45`.
+
+### Next
+
+- Build org creation / onboarding flow
+- Create `prisma/seed.ts` for local dev data
+- Email verification enforcement
+- Zod validation for env vars at API startup
+
+---
+
 ## 2026-02-10 — Dependabot Triage & ESLint Cleanup
 
 ### Done
