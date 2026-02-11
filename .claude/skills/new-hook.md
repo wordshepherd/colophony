@@ -1,3 +1,8 @@
+---
+name: new-hook
+description: Scaffold a new custom React hook with proper patterns.
+---
+
 # /new-hook
 
 Scaffold a new custom React hook with proper patterns.

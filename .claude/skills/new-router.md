@@ -1,3 +1,8 @@
+---
+name: new-router
+description: Scaffold a new tRPC router with proper RLS middleware and tests.
+---
+
 # /new-router
 
 Scaffold a new tRPC router with proper RLS middleware and tests.

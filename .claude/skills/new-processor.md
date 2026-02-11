@@ -1,3 +1,8 @@
+---
+name: new-processor
+description: Scaffold a new BullMQ job processor with service, processor, queue registration, and tests.
+---
+
 # /new-processor
 
 Scaffold a new BullMQ job processor with service, processor, queue registration, and tests.

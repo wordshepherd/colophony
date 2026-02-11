@@ -1,3 +1,8 @@
+---
+name: new-module
+description: Scaffold a new NestJS module with service, controller, tests, and barrel exports.
+---
+
 # /new-module
 
 Scaffold a new NestJS module with service, controller, tests, and barrel exports.
