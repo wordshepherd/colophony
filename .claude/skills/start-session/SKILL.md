@@ -33,7 +33,7 @@ Check whether the previous session ended cleanly. Run these in parallel:
 
 ```bash
 # Get the date from the latest DEVLOG entry
-head -20 docs/DEVLOG.md | grep -oP '## \K\d{4}-\d{2}-\d{2}'
+grep -m1 -oE '## [0-9]{4}-[0-9]{2}-[0-9]{2}' docs/DEVLOG.md | sed 's/## //'
 
 # Get the date of the most recent commit on main
 git log origin/main -1 --format='%cs'
@@ -42,7 +42,7 @@ git log origin/main -1 --format='%cs'
 gh pr list --state merged --limit 10 --json number,title,mergedAt,headRefName
 
 # Check for stale local branches (merged remotely but still local)
-git branch --merged origin/main | grep -v '^\*\|main$' | tr -d ' '
+git branch --merged origin/main | grep -v '^\*\|main$' | sed 's/^[* ] *//'
 ```
 
 Flag an **incomplete session** if ANY of these are true:

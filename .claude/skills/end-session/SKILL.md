@@ -126,7 +126,7 @@ Ask the user if they want to apply the suggestions before proceeding.
 
    ```bash
    git fetch origin main
-   git branch --merged origin/main | grep -v '^\*\|main$' | tr -d ' '
+   git branch --merged origin/main | grep -v '^\*\|main$' | sed 's/^[* ] *//'
    ```
 
    If any stale branches are found, list them and delete:
