@@ -3,14 +3,8 @@ name: CI
 on:
   pull_request:
     branches: [main]
-    paths-ignore:
-      - '**.md'
-      - 'docs/**'
   push:
     branches: [main]
-    paths-ignore:
-      - '**.md'
-      - 'docs/**'
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -22,10 +16,31 @@ env:
 
 jobs:
   # ──────────────────────────────────────────────────
+  # Detect whether this is a docs-only change
+  # ──────────────────────────────────────────────────
+  changes:
+    name: Detect Changes
+    runs-on: ubuntu-latest
+    outputs:
+      code: ${{ steps.filter.outputs.code }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            code:
+              - '!**.md'
+              - '!docs/**'
+
+  # ──────────────────────────────────────────────────
   # Fast checks (~1 min): lint, format, type-check
   # ──────────────────────────────────────────────────
   quality:
     name: Lint & Type Check
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -62,6 +77,8 @@ jobs:
   # ──────────────────────────────────────────────────
   unit-tests:
     name: Unit Tests
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -88,6 +105,8 @@ jobs:
   # ──────────────────────────────────────────────────
   e2e-tests:
     name: API E2E Tests
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -175,6 +194,8 @@ jobs:
   # ──────────────────────────────────────────────────
   build:
     name: Build
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
