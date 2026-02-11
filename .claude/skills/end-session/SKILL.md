@@ -115,10 +115,31 @@ Ask the user if they want to apply the suggestions before proceeding.
    - If a PR exists, it's already updated by the push
 
 5. **Check CI status** on the PR (use Actions API, NOT `gh pr checks`):
+
    ```bash
    gh run list --branch <branch-name> --limit 1 --json status,conclusion,name
    ```
+
    Report the CI status to the user.
+
+6. **Clean up stale local branches**: Delete local branches that have already been merged to `origin/main`:
+
+   ```bash
+   git fetch origin main
+   git branch --merged origin/main | grep -v '^\*\|main$' | tr -d ' '
+   ```
+
+   If any stale branches are found, list them and delete:
+
+   ```bash
+   git branch -d <branch-name>
+   ```
+
+   Also switch to `main` if the current branch was already merged and the session's PR work is done:
+
+   ```bash
+   git checkout main && git pull origin main
+   ```
 
 ### Step 5: Check AI review on PR
 
@@ -165,6 +186,9 @@ Print a summary for the user:
 
 ### AI Review
 - [findings addressed, or "No AI review comments yet — check after CI passes"]
+
+### Branch Cleanup
+- [branches deleted, or "No stale branches"]
 
 ### Open Items
 - [anything left undone, PRs awaiting review, etc.]
