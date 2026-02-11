@@ -13,7 +13,11 @@ import {
 } from "./helpers/db";
 
 test.describe("Core User Journeys", () => {
-  const cleanup: Array<{ orgId?: string; userId?: string }> = [];
+  const cleanup: Array<{
+    orgId?: string;
+    userId?: string;
+    email?: string;
+  }> = [];
 
   test.afterEach(async ({ page }) => {
     await page.evaluate(() => localStorage.clear());
@@ -21,8 +25,16 @@ test.describe("Core User Journeys", () => {
 
   test.afterAll(async () => {
     for (const item of cleanup) {
-      if (item.orgId) await deleteOrg(item.orgId);
-      if (item.userId) await deleteUser(item.userId);
+      try {
+        if (item.orgId) await deleteOrg(item.orgId);
+        if (item.userId) await deleteUser(item.userId);
+        if (item.email) {
+          const user = await getUserByEmail(item.email);
+          if (user) await deleteUser(user.id);
+        }
+      } catch {
+        // Continue cleanup even if one item fails
+      }
     }
     await disconnectDb();
   });
@@ -33,6 +45,9 @@ test.describe("Core User Journeys", () => {
     const suffix =
       Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
     const email = `e2e-journey-register-${suffix}@test.local`;
+
+    // Register cleanup eagerly so it runs even if assertions fail below
+    cleanup.push({ email });
 
     await page.goto("/register");
 
@@ -58,10 +73,6 @@ test.describe("Core User Journeys", () => {
     await page.waitForURL("**/login", { timeout: 10_000 });
     await expect(page.getByLabel("Email")).toBeVisible();
     await expect(page.getByRole("button", { name: "Sign in" })).toBeVisible();
-
-    // Clean up
-    const user = await getUserByEmail(email);
-    if (user) cleanup.push({ userId: user.id });
   });
 
   test("login via form → select org → verify submissions page renders", async ({

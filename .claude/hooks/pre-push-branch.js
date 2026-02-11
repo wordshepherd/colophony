@@ -19,7 +19,8 @@ if (!command.includes('git push')) {
 
 // Detect pushing directly to main or master
 // Matches: git push origin main, git push -u origin main, git push origin HEAD:main, etc.
-const pushToMainPattern = /git push\b.*\b(main|master)\b/;
+// Uses end-of-string or whitespace anchor to avoid matching branch names like fix/master-data
+const pushToMainPattern = /git push\b.*(?:\s|:)(main|master)(?:\s|$)/;
 
 if (pushToMainPattern.test(command)) {
   // Output JSON to block the action
