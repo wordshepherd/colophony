@@ -9,8 +9,8 @@ Add a new Stripe webhook event handler with proper idempotency.
 
 ## What this skill does
 
-1. Adds a new event handler method to the webhook controller
-2. Implements idempotent processing pattern
+1. Adds a new event handler to the webhook route
+2. Implements idempotent processing pattern using Drizzle
 3. Updates the payments service with business logic
 4. Creates or updates tests for the new handler
 
@@ -32,49 +32,49 @@ When the user invokes `/stripe-webhook <event-type>`:
 
    ```typescript
    // 1. Check if event already processed
-   const existingEvent = await this.prisma.stripeWebhookEvent.findUnique({
-     where: { eventId: event.id },
-   });
+   const [existing] = await db
+     .select()
+     .from(stripeWebhookEvents)
+     .where(eq(stripeWebhookEvents.eventId, event.id))
+     .limit(1);
 
-   if (existingEvent?.processed) {
+   if (existing?.processed) {
      return { received: true, message: "Event already processed" };
    }
 
    // 2. Store event record (if new)
-   if (!existingEvent) {
-     await this.prisma.stripeWebhookEvent.create({
-       data: {
-         eventId: event.id,
-         type: event.type,
-         processed: false,
-         receivedAt: new Date(),
-       },
+   if (!existing) {
+     await db.insert(stripeWebhookEvents).values({
+       eventId: event.id,
+       type: event.type,
+       processed: false,
+       receivedAt: new Date(),
      });
    }
 
    // 3. Process the event
-   await this.processEvent(event);
+   await processEvent(event);
 
    // 4. Mark as processed
-   await this.prisma.stripeWebhookEvent.update({
-     where: { eventId: event.id },
-     data: { processed: true, processedAt: new Date() },
-   });
+   await db
+     .update(stripeWebhookEvents)
+     .set({ processed: true, processedAt: new Date() })
+     .where(eq(stripeWebhookEvents.eventId, event.id));
    ```
 
-2. **Add handler method** to `apps/api/src/modules/payments/stripe-webhook.controller.ts`:
+2. **Add handler** to the webhook route at `apps/api/src/routes/stripe-webhook.route.ts`:
 
-   In the `routeEvent` switch statement, add a new case:
+   In the event routing logic, add a new case:
 
    ```typescript
    case '<event-type>':
-     return this.paymentsService.handle<EventName>(event);
+     return paymentsService.handle<EventName>(event);
    ```
 
    Where `<EventName>` is the PascalCase version of the event type.
    For example: `invoice.paid` → `handleInvoicePaid`
 
-3. **Add service method** to `apps/api/src/modules/payments/payments.service.ts`:
+3. **Add service method** to `apps/api/src/services/payments.service.ts`:
 
    ```typescript
    /**
@@ -84,13 +84,13 @@ When the user invokes `/stripe-webhook <event-type>`:
    async handle<EventName>(event: Stripe.Event): Promise<{ received: boolean }> {
      const data = event.data.object as Stripe.<DataType>;
 
-     this.logger.log(`Processing <event-type> for ${data.id}`);
+     console.log(`Processing <event-type> for ${data.id}`);
 
      // TODO: Implement business logic
      // Example operations:
-     // - Update database records
+     // - Update database records with db.update(...)
+     // - Enqueue follow-up jobs
      // - Send notifications
-     // - Trigger follow-up jobs
 
      return { received: true };
    }
@@ -103,7 +103,26 @@ When the user invokes `/stripe-webhook <event-type>`:
    - `payment_intent.*` → `Stripe.PaymentIntent`
    - `charge.*` → `Stripe.Charge`
 
-4. **Add test case** to `apps/api/test/unit/payments.service.spec.ts`:
+4. **Verify raw body setup** — The Fastify route MUST have raw body access:
+
+   ```typescript
+   import Stripe from "stripe";
+
+   app.post("/webhooks/stripe", {
+     config: { rawBody: true },
+     handler: async (request, reply) => {
+       const sig = request.headers["stripe-signature"] as string;
+       const event = stripe.webhooks.constructEvent(
+         request.rawBody!,
+         sig,
+         env.STRIPE_WEBHOOK_SECRET,
+       );
+       // ... route to handler
+     },
+   });
+   ```
+
+5. **Add test case** to `apps/api/test/unit/payments.service.spec.ts`:
 
    ```typescript
    describe("handle<EventName>", () => {
@@ -142,16 +161,12 @@ When the user invokes `/stripe-webhook <event-type>`:
    });
    ```
 
-5. **Update types** if needed in `packages/types/src/index.ts`:
-
-   Add any new types needed for the webhook handler.
-
 6. **Inform the user**:
 
    ```
    Added handler for <event-type>:
-   - Updated: apps/api/src/modules/payments/stripe-webhook.controller.ts
-   - Updated: apps/api/src/modules/payments/payments.service.ts
+   - Updated: apps/api/src/routes/stripe-webhook.route.ts
+   - Updated: apps/api/src/services/payments.service.ts
    - Updated: apps/api/test/unit/payments.service.spec.ts
 
    IMPORTANT - Idempotency:

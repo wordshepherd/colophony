@@ -26,11 +26,27 @@
         "script": ".claude/hooks/pre-frontend-validate.js"
       },
       {
-        "event": "Edit(**/routers/*.router.ts)",
+        "event": "Edit(**/routes/*.ts)",
         "script": ".claude/hooks/pre-router-audit.js"
       },
       {
-        "event": "Write(**/routers/*.router.ts)",
+        "event": "Write(**/routes/*.ts)",
+        "script": ".claude/hooks/pre-router-audit.js"
+      },
+      {
+        "event": "Edit(**/*.route.ts)",
+        "script": ".claude/hooks/pre-router-audit.js"
+      },
+      {
+        "event": "Write(**/*.route.ts)",
+        "script": ".claude/hooks/pre-router-audit.js"
+      },
+      {
+        "event": "Edit(**/*.handler.ts)",
+        "script": ".claude/hooks/pre-router-audit.js"
+      },
+      {
+        "event": "Write(**/*.handler.ts)",
         "script": ".claude/hooks/pre-router-audit.js"
       },
       {
@@ -40,7 +56,11 @@
     ],
     "PostToolUse": [
       {
-        "event": "Edit(**/schema.prisma)",
+        "event": "Edit(**/schema/*.ts)",
+        "script": ".claude/hooks/post-schema.js"
+      },
+      {
+        "event": "Write(**/schema/*.ts)",
         "script": ".claude/hooks/post-schema.js"
       },
       {
@@ -53,6 +73,14 @@
       },
       {
         "event": "Write(**/migrations/**/*.sql)",
+        "script": ".claude/hooks/post-migration-validate.js"
+      },
+      {
+        "event": "Edit(**/drizzle/**/*.sql)",
+        "script": ".claude/hooks/post-migration-validate.js"
+      },
+      {
+        "event": "Write(**/drizzle/**/*.sql)",
         "script": ".claude/hooks/post-migration-validate.js"
       },
       {

@@ -4,6 +4,60 @@ Append-only session log. Newest entries first.
 
 ---
 
+## 2026-02-11 — v2 Bootstrap: Tooling Transition
+
+### Done
+
+- Tagged v1 MVP as `v1.0.0-mvp` (annotated tag on current HEAD)
+- Full CLAUDE.md rewrite (499 lines) for Colophony v2 stack: Fastify 5, Drizzle ORM, Zitadel, ts-rest, Pothos + GraphQL Yoga
+  - Suite components table (Hopper, Slate, Relay, Register)
+  - All v2 target file locations, tech stack, critical patterns
+  - Security checklist reset, new known quirks, updated version pins
+  - Development tracks table, updated env vars (Zitadel, Federation)
+- Updated 4 blocking hooks for Drizzle/Fastify patterns:
+  - `pre-edit-validate.js` — Prisma query methods → Drizzle (`.select()`, `.insert()`, etc.)
+  - `pre-payment-validate.js` — Prisma/NestJS patterns → Drizzle/Fastify
+  - `pre-router-audit.js` — tRPC router detection → Fastify route/handler detection
+  - `post-schema.js` — Prisma client generation → Drizzle migration reminder
+- Updated `hooks.json` event patterns (`schema.prisma` → `schema/*.ts`, `routers/*.router.ts` → `routes/*.ts` + `.route.ts` + `.handler.ts`, added `drizzle/**/*.sql`)
+- Rewrote 7 backend skills for Colophony stack:
+  - `new-router.md` → `new-route.md` (ts-rest contract + Fastify handler + Drizzle + Vitest)
+  - `new-module.md` → `new-service.md` (plain service class, no NestJS decorators)
+  - `new-processor.md` (BullMQ Worker function, no NestJS `@Processor`)
+  - `new-migration.md` (Drizzle schema + `pgPolicy` + `enableRLS()` + drizzle-kit)
+  - `stripe-webhook.md` (Fastify route + Drizzle idempotency)
+  - `test-rls.md` (Drizzle pgPolicy, no separate rls-policies.sql)
+  - `db-reset.md` (Drizzle migrations instead of Prisma db push)
+- Removed old v1 skill files (`new-router.md`, `new-module.md`)
+
+### Prior sessions (same day, separate contexts)
+
+- Architecture v2 research: 8 research agents covering competitive analysis, backend frameworks, ORM/data access, auth services, hosting, API layer, form builder, federation protocol, plugin system
+- Architecture v2 planning document (`docs/architecture-v2-planning.md`, ~3700 lines)
+- API layer v2 research document (`docs/api-layer-v2-research.md`, ~1300 lines) — fully updated for Fastify/Drizzle
+- Form builder research document (`docs/form-builder-research.md`)
+- Component naming: Hopper, Slate, Relay, Register — propagated through all docs
+- Bulk rename: Prospector → Colophony, PFP → CFP, @prospector/_ → @colophony/_
+- Expanded interaction effects [3] (Drizzle + Zitadel webhook sync) and [4] (Zitadel + Federation identity layering) with full implementation guides
+
+### Decisions
+
+- Same repo for v2 (no fresh repo) — preserves git history, DEVLOG, CI config
+- v1 code preserved under `v1.0.0-mvp` tag for reference
+- Hooks and skills must be updated BEFORE starting v2 coding (they'd actively fight the new stack)
+- Frontend skills (new-page, new-component, new-hook, new-e2e) left unchanged — Next.js/React patterns are the same in v2
+- Session skills (start-session, end-session, check-ai-review) left unchanged — workflow-only, no stack dependencies
+
+### Next
+
+- Start Track 1 — Core Infrastructure:
+  1. Set up Drizzle ORM in `packages/db/` (replace Prisma schema)
+  2. Set up Fastify 5 app entry in `apps/api/` (replace NestJS)
+  3. Stand up Zitadel in Docker Compose
+  4. Wire up the auth hook
+
+---
+
 ## 2026-02-10 — Dependabot Triage & ESLint Cleanup
 
 ### Done
