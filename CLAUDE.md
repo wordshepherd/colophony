@@ -412,6 +412,7 @@ Production environment should have **required reviewers** enabled in GitHub sett
 /new-e2e <feature>    # Scaffold Playwright E2E test with helpers
 
 # Session
+/start-session        # Session briefing (DEVLOG context, git state, PRs, infra)
 /end-session          # End-of-session housekeeping (DEVLOG, git, PR, summary)
 ```
 
