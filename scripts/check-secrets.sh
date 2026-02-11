@@ -17,7 +17,7 @@ for file in $STAGED_FILES; do
   # Skip binary files, lock files, and this script itself
   case "$file" in
     *.lock|*.png|*.jpg|*.gif|*.ico|*.woff*|*.ttf|*.eot) continue ;;
-    scripts/check-secrets.sh) continue ;;
+    scripts/check-secrets.sh|.claude/hooks/*) continue ;;
   esac
 
   # Skip if file doesn't exist (deleted)

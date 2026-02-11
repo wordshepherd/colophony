@@ -1,11 +1,12 @@
 #!/usr/bin/env node
-const { execSync } = require('child_process');
 
-console.log('🔄 Regenerating Prisma client...');
-try {
-  execSync('pnpm db:generate', { stdio: 'inherit' });
-  console.log('✅ Prisma client updated');
-} catch (error) {
-  console.error('❌ Failed to generate Prisma client');
-  process.exit(1);
-}
+/**
+ * Post-edit hook for Drizzle schema files.
+ * Reminds to generate a migration after schema changes.
+ */
+
+console.log('📋 Drizzle schema changed. Remember to:');
+console.log('   1. Run `pnpm db:generate` to generate a migration');
+console.log('   2. Review the generated SQL in packages/db/drizzle/');
+console.log('   3. Run `pnpm db:migrate` to apply it');
+console.log('   4. If you added a new table, add pgPolicy for RLS in the schema');
