@@ -1,3 +1,8 @@
+---
+name: start-session
+description: Start-of-session orientation — load context, check environment, surface open work.
+---
+
 # /start-session
 
 Start-of-session orientation: load context, check environment, surface open work.

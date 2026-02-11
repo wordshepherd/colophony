@@ -1,3 +1,8 @@
+---
+name: new-page
+description: Scaffold a new Next.js page with proper patterns for the Prospector dashboard.
+---
+
 # /new-page
 
 Scaffold a new Next.js page with proper patterns for the Prospector dashboard.

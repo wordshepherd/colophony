@@ -1,3 +1,8 @@
+---
+name: end-session
+description: End-of-session housekeeping — update docs, clean up git state, and summarize work.
+---
+
 # /end-session
 
 End-of-session housekeeping: update docs, clean up git state, and summarize work.

@@ -1,3 +1,8 @@
+---
+name: check-ai-review
+description: Fetch, evaluate, and address AI code review comments on a PR.
+---
+
 # /check-ai-review
 
 Fetch, evaluate, and address AI code review comments on a PR.

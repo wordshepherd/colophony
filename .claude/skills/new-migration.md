@@ -1,3 +1,8 @@
+---
+name: new-migration
+description: Add a new Prisma model with migration and RLS policies.
+---
+
 # /new-migration
 
 Add a new Prisma model with migration and RLS policies.

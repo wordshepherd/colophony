@@ -1,3 +1,8 @@
+---
+name: test-rls
+description: Run RLS (Row-Level Security) integration tests to verify tenant isolation.
+---
+
 # /test-rls
 
 Run RLS (Row-Level Security) integration tests to verify tenant isolation.
