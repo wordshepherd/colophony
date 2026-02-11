@@ -16,18 +16,26 @@ for (const pattern of secretPatterns) {
   }
 }
 
-// Warn about missing RLS context
-const prismaQueryMethods = [
-  'findMany', 'findFirst', 'findUnique', 'findFirstOrThrow', 'findUniqueOrThrow',
-  'create', 'createMany', 'update', 'updateMany', 'upsert',
-  'delete', 'deleteMany', 'count', 'aggregate', 'groupBy',
+// Warn about missing RLS context for Drizzle queries
+const drizzleQueryMethods = [
+  '.select(', '.insert(', '.update(', '.delete(',
+  '.query.',
 ];
 
-if (newContent.includes('prisma.')) {
-  const hasPrismaQuery = prismaQueryMethods.some(method => newContent.includes(method));
-  if (hasPrismaQuery && !newContent.includes('withOrgContext') && !newContent.includes('$transaction')) {
-    console.warn('⚠️  WARNING: Prisma query without RLS context (withOrgContext or $transaction).');
-    console.warn('   All org-scoped queries must go through withOrgContext() — see packages/db/src/context.ts');
+const hasDrizzleQuery = drizzleQueryMethods.some(method => newContent.includes(method));
+const hasDbPrefix = newContent.includes('db.') || newContent.includes('tx.');
+
+if (hasDbPrefix && hasDrizzleQuery) {
+  const hasRlsContext =
+    newContent.includes('withOrgContext') ||
+    newContent.includes('withRLS') ||
+    newContent.includes('SET LOCAL') ||
+    newContent.includes('set_config');
+
+  if (!hasRlsContext) {
+    console.warn('⚠️  WARNING: Drizzle query without RLS context (withOrgContext, withRLS, or SET LOCAL).');
+    console.warn('   All org-scoped queries must set SET LOCAL app.current_org inside a transaction.');
+    console.warn('   RLS policies are defined via pgPolicy in packages/db/src/schema/');
   }
 }
 

@@ -21,31 +21,36 @@ const hasWebhookHandling =
   newContent.includes('webhook');
 
 const hasIdempotencyCheck =
-  newContent.includes('stripeWebhookEvent') ||
+  newContent.includes('stripeWebhookEvents') ||
   newContent.includes('.processed') ||
-  newContent.includes('findUnique') && newContent.includes('eventId');
+  newContent.includes('eventId') ||
+  newContent.includes('idempotencyKey');
 
 if (hasWebhookHandling && !hasIdempotencyCheck) {
   console.warn('⚠️  WARNING: Stripe webhook code detected without idempotency check.');
-  console.warn('   Ensure you check stripeWebhookEvent.processed before processing.');
+  console.warn('   Ensure you check stripeWebhookEvents.processed before processing.');
   console.warn('   Pattern: Check → Store → Process → Mark processed');
   console.warn('   See: /stripe-webhook skill for the correct pattern.');
 }
 
 // Check for missing webhook event storage
-const createsPayment = newContent.includes('prisma.payment.create');
-const storesWebhookEvent = newContent.includes('stripeWebhookEvent.create') || newContent.includes('stripeWebhookEvent.upsert');
+const createsPayment =
+  newContent.includes('db.insert(payments)') ||
+  newContent.includes("insert(payments)");
+const storesWebhookEvent =
+  newContent.includes('db.insert(stripeWebhookEvents)') ||
+  newContent.includes('insert(stripeWebhookEvents)');
 
 if (createsPayment && !storesWebhookEvent && hasWebhookHandling) {
   console.warn('⚠️  WARNING: Creating payment without storing webhook event.');
   console.warn('   Store the event BEFORE processing to prevent duplicates.');
 }
 
-// Check for raw body requirement
+// Check for raw body requirement (Fastify)
 if (newContent.includes('constructEvent') || newContent.includes('stripe-signature')) {
-  if (!newContent.includes('rawBody') && !newContent.includes('RawBodyRequest')) {
+  if (!newContent.includes('rawBody') && !newContent.includes('request.rawBody')) {
     console.warn('⚠️  WARNING: Stripe signature verification requires raw body.');
-    console.warn('   Use @Req() request: RawBodyRequest<Request>');
+    console.warn('   Register fastify-raw-body plugin and use request.rawBody');
   }
 }
 
