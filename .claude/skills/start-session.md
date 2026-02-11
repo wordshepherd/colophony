@@ -72,6 +72,20 @@ gh run list --branch <branch> --limit 1 --json databaseId,conclusion --jq '.[] |
 
 Then `gh run view <id> --json jobs --jq '.jobs[] | select(.conclusion == "failure") | .name'`
 
+For each open PR, check for unaddressed AI review comments:
+
+```bash
+gh pr view <number> --comments --json comments --jq '[.comments[] | select(.author.login == "github-actions")] | length'
+```
+
+If a PR has AI review comments, note it in the briefing. To check whether they've already been addressed, look for a follow-up "AI Review Response" comment:
+
+```bash
+gh pr view <number> --comments --json comments --jq '.comments[] | select(.body | test("AI Review Response")) | .createdAt'
+```
+
+If there are AI review comments with no response, flag the PR as needing attention.
+
 ### Step 4: Check infrastructure
 
 Run these commands in parallel:
@@ -108,7 +122,7 @@ Next steps planned: [bullet points from DEVLOG "Next" section]
 ### Git State
 - Branch: <current branch>
 - Uncommitted changes: [yes/no, summary if yes]
-- Open PRs: [list with CI status]
+- Open PRs: [list with CI status and AI review status]
 
 ### Infrastructure
 - PostgreSQL: [running/stopped]
