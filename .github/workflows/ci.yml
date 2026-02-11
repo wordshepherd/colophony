@@ -25,18 +25,18 @@ jobs:
       contents: read
       pull-requests: read
     outputs:
-      code: ${{ steps.filter.outputs.code }}
+      docs_only: ${{ steps.filter.outputs.docs_only }}
     steps:
       - uses: actions/checkout@v6
 
       - uses: dorny/paths-filter@v3
         id: filter
         with:
+          predicate-quantifier: 'every'
           filters: |
-            code:
-              - '**'
-              - '!**.md'
-              - '!docs/**'
+            docs_only:
+              - '**.md'
+              - 'docs/**'
 
   # ──────────────────────────────────────────────────
   # Fast checks (~1 min): lint, format, type-check
@@ -44,7 +44,7 @@ jobs:
   quality:
     name: Lint & Type Check
     needs: changes
-    if: needs.changes.outputs.code == 'true'
+    if: needs.changes.outputs.docs_only != 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -82,7 +82,7 @@ jobs:
   unit-tests:
     name: Unit Tests
     needs: changes
-    if: needs.changes.outputs.code == 'true'
+    if: needs.changes.outputs.docs_only != 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -110,7 +110,7 @@ jobs:
   e2e-tests:
     name: API E2E Tests
     needs: changes
-    if: needs.changes.outputs.code == 'true'
+    if: needs.changes.outputs.docs_only != 'true'
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -199,7 +199,7 @@ jobs:
   build:
     name: Build
     needs: changes
-    if: needs.changes.outputs.code == 'true'
+    if: needs.changes.outputs.docs_only != 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
