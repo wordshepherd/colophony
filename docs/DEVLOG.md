@@ -84,12 +84,17 @@ Append-only session log. Newest entries first.
   - Round 2: missing `git fetch`, broken merged-branch detection (`^\*` exclusion bug), quoted branch names
   - Round 3: `main` false positive in merged-branch check
 - Added commit cadence guidance to CLAUDE.md (PR #25)
+- Added `paths-ignore` to CI workflow for docs-only PRs (PR #27):
+  - Skips CI + AI review for `**.md` and `docs/**` changes
+  - Keeps CI + AI review for `.claude/skills/**` (AI reviewer catches real bugs there)
+  - No branch protection conflict (classic protections not configured)
 
 #### Decisions
 
 - Detect missed `/end-session` at session start (not via exit hooks) — more reliable, can actually act on it
 - Commit at stable checkpoints — branch history is squash-merged anyway, frequent commits aid recovery
-- AI review path filters for docs-only PRs: decided against — CI is fast and review catches real bugs even on docs
+- Skip CI for docs/markdown only — pre-commit Prettier is sufficient, AI review adds no value on DEVLOGs
+- Keep CI for skill files — AI reviewer caught 3 real bugs in skill shell commands this session
 - AI reviewer tends to repeat dismissed findings across rounds — dismiss confidently when the rationale hasn't changed
 
 ### Next
