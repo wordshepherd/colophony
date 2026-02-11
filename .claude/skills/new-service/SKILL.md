@@ -33,6 +33,9 @@ import { db } from '@colophony/db';
 import { env } from '../config/env';
 
 export class <Name>Service {
+  // For tenant-scoped operations, callers must provide a transaction
+  // with SET LOCAL app.current_org already executed (via withOrgContext).
+  // For non-tenant operations (e.g., system-level queries), db can be used directly.
   constructor(
     private readonly db: typeof db,
   ) {}
@@ -45,6 +48,8 @@ export class <Name>Service {
   }
 
   // Add service methods here...
+  // Tenant-scoped methods should accept a `tx` parameter instead of using this.db:
+  //   async findByOrg(tx: typeof db): Promise<...> { ... }
 }
 
 /**

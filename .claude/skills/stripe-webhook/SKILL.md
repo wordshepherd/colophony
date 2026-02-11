@@ -31,35 +31,39 @@ When the user invokes `/stripe-webhook <event-type>`:
    All Stripe webhook handlers MUST follow this pattern to prevent double-processing:
 
    ```typescript
-   // 1. Check if event already processed
-   const [existing] = await db
-     .select()
-     .from(stripeWebhookEvents)
-     .where(eq(stripeWebhookEvents.eventId, event.id))
-     .limit(1);
+   // All steps MUST be wrapped in a transaction to prevent race conditions
+   // where duplicate webhooks both pass the check before either inserts.
+   await db.transaction(async (tx) => {
+     // 1. Check if event already processed (inside transaction for atomicity)
+     const [existing] = await tx
+       .select()
+       .from(stripeWebhookEvents)
+       .where(eq(stripeWebhookEvents.eventId, event.id))
+       .limit(1);
 
-   if (existing?.processed) {
-     return { received: true, message: "Event already processed" };
-   }
+     if (existing?.processed) {
+       return { received: true, message: "Event already processed" };
+     }
 
-   // 2. Store event record (if new)
-   if (!existing) {
-     await db.insert(stripeWebhookEvents).values({
-       eventId: event.id,
-       type: event.type,
-       processed: false,
-       receivedAt: new Date(),
-     });
-   }
+     // 2. Store event record (if new)
+     if (!existing) {
+       await tx.insert(stripeWebhookEvents).values({
+         eventId: event.id,
+         type: event.type,
+         processed: false,
+         receivedAt: new Date(),
+       });
+     }
 
-   // 3. Process the event
-   await processEvent(event);
+     // 3. Process the event (pass tx so all writes are atomic)
+     await processEvent(event, tx);
 
-   // 4. Mark as processed
-   await db
-     .update(stripeWebhookEvents)
-     .set({ processed: true, processedAt: new Date() })
-     .where(eq(stripeWebhookEvents.eventId, event.id));
+     // 4. Mark as processed
+     await tx
+       .update(stripeWebhookEvents)
+       .set({ processed: true, processedAt: new Date() })
+       .where(eq(stripeWebhookEvents.eventId, event.id));
+   });
    ```
 
 2. **Add handler** to the webhook route at `apps/api/src/routes/stripe-webhook.route.ts`:

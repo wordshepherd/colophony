@@ -41,7 +41,8 @@ import { <NAME_UPPER>_QUEUE } from '../queues/constants';
 
 export interface <Name>JobData {
   id: string;
-  // Define job data interface here
+  organizationId: string; // Required for RLS context in worker
+  // Define additional job data fields here
 }
 
 export interface <Name>JobResult {
@@ -89,7 +90,7 @@ export class <Name>Service {
 
 ```typescript
 import { Worker, Job } from 'bullmq';
-import { db } from '@colophony/db';
+import { db, withOrgContext } from '@colophony/db';
 import { <NAME_UPPER>_QUEUE } from '../queues/constants';
 import type { <Name>JobData, <Name>JobResult } from '../services/<name>.service';
 
@@ -99,27 +100,27 @@ export function create<Name>Worker(connection: { host: string; port: number; pas
     async (job: Job<<Name>JobData>): Promise<<Name>JobResult> => {
       console.log(`Processing <name> job ${job.id}`);
 
-      try {
-        const { id } = job.data;
+      // IMPORTANT: organizationId MUST be included in job data for tenant-scoped work.
+      // The worker runs outside any request context, so RLS must be set explicitly.
+      const { id, organizationId } = job.data;
 
+      await withOrgContext(db, organizationId, async (tx) => {
         // TODO: Implement job processing logic here
+        // Use `tx` (not `db`) for all queries — it has RLS context set via SET LOCAL
         await job.updateProgress(50);
 
-        // TODO: Do the actual work with db
+        // TODO: Do the actual work with tx
 
         await job.updateProgress(100);
+      });
 
-        console.log(`Completed <name> job ${job.id}`);
-        return { success: true };
-      } catch (error) {
-        const message = error instanceof Error ? error.message : 'Unknown error';
-        console.error(`<Name> job ${job.id} failed: ${message}`);
-        return { success: false, message };
-      }
+      console.log(`Completed <name> job ${job.id}`);
+      return { success: true };
     },
     {
       connection,
       concurrency: 5,
+      // Let BullMQ handle retries — unhandled errors trigger backoff automatically
     },
   );
 }
