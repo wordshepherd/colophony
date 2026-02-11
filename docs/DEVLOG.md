@@ -69,6 +69,29 @@ Append-only session log. Newest entries first.
 - **AI review `ARG_MAX`**: GitHub Actions shell steps hit argument length limits when passing large PR diffs as variables. Fixed by switching to file-based approach with heredocs (PRs #20, #21)
 - **Shell expansion in CI**: `$` characters in TypeScript template literals were being expanded by bash in the AI review workflow. Fixed by eliminating all shell variable interpolation for content payloads
 
+### Session 2 (same day, separate context): Session Workflow Hardening
+
+#### Done
+
+- Completed end-of-session catch-up for previous incomplete session (DEVLOG update, PR #22)
+- Fixed DEVLOG research document count typo flagged by AI review (PR #23)
+- Added incomplete session detection to `/start-session` skill (PR #24):
+  - Checks DEVLOG date vs latest commit date, stale local branches, current branch already merged
+  - Alerts user and offers catch-up housekeeping before briefing
+- Added stale branch cleanup to `/end-session` skill (PR #24)
+- Addressed 3 rounds of AI review on PR #24:
+  - Round 1: shell portability (`grep -oP` → `grep -oE`, `head -20` → `grep -m1`, `tr` → `sed`)
+  - Round 2: missing `git fetch`, broken merged-branch detection (`^\*` exclusion bug), quoted branch names
+  - Round 3: `main` false positive in merged-branch check
+- Added commit cadence guidance to CLAUDE.md (PR #25)
+
+#### Decisions
+
+- Detect missed `/end-session` at session start (not via exit hooks) — more reliable, can actually act on it
+- Commit at stable checkpoints — branch history is squash-merged anyway, frequent commits aid recovery
+- AI review path filters for docs-only PRs: decided against — CI is fast and review catches real bugs even on docs
+- AI reviewer tends to repeat dismissed findings across rounds — dismiss confidently when the rationale hasn't changed
+
 ### Next
 
 - Start Track 1 — Core Infrastructure:
