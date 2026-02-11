@@ -29,7 +29,13 @@ When the user invokes `/start-session`, perform these steps in order:
 
 ### Step 1: Detect incomplete previous session
 
-Check whether the previous session ended cleanly. Run these in parallel:
+Check whether the previous session ended cleanly. First, fetch the latest remote state:
+
+```bash
+git fetch origin main
+```
+
+Then run these in parallel:
 
 ```bash
 # Get the date from the latest DEVLOG entry
@@ -38,11 +44,14 @@ grep -m1 -oE '## [0-9]{4}-[0-9]{2}-[0-9]{2}' docs/DEVLOG.md | sed 's/## //'
 # Get the date of the most recent commit on main
 git log origin/main -1 --format='%cs'
 
-# Get recently merged PRs (last 48 hours)
+# Get recently merged PRs (10 most recent)
 gh pr list --state merged --limit 10 --json number,title,mergedAt,headRefName
 
 # Check for stale local branches (merged remotely but still local)
 git branch --merged origin/main | grep -v '^\*\|main$' | sed 's/^[* ] *//'
+
+# Check if current branch is already merged to main
+git branch --merged origin/main | grep '^\*' | sed 's/^\* //'
 ```
 
 Flag an **incomplete session** if ANY of these are true:

@@ -132,7 +132,7 @@ Ask the user if they want to apply the suggestions before proceeding.
    If any stale branches are found, list them and delete:
 
    ```bash
-   git branch -d <branch-name>
+   git branch -d "<branch-name>"
    ```
 
    Also switch to `main` if the current branch was already merged and the session's PR work is done:
