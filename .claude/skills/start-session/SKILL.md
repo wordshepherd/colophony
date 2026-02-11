@@ -9,12 +9,13 @@ Start-of-session orientation: load context, check environment, surface open work
 
 ## What this skill does
 
-1. Reads the latest DEVLOG entry for context and planned next steps
-2. Checks git state (branch, uncommitted changes, open PRs)
-3. Checks CI health and open PR status
-4. Verifies infrastructure is running (Docker, DB)
-5. Surfaces open roadmap items and pending work
-6. Prints a briefing for the user
+1. Detects incomplete previous sessions (missed /end-session) and offers catch-up
+2. Reads the latest DEVLOG entry for context and planned next steps
+3. Checks git state (branch, uncommitted changes, open PRs)
+4. Checks CI health and open PR status
+5. Verifies infrastructure is running (Docker, DB)
+6. Surfaces open roadmap items and pending work
+7. Prints a briefing for the user
 
 ## Usage
 
@@ -26,7 +27,57 @@ Start-of-session orientation: load context, check environment, surface open work
 
 When the user invokes `/start-session`, perform these steps in order:
 
-### Step 1: Load session context from DEVLOG
+### Step 1: Detect incomplete previous session
+
+Check whether the previous session ended cleanly. First, fetch the latest remote state:
+
+```bash
+git fetch origin main
+```
+
+Then run these in parallel:
+
+```bash
+# Get the date from the latest DEVLOG entry
+grep -m1 -oE '## [0-9]{4}-[0-9]{2}-[0-9]{2}' docs/DEVLOG.md | sed 's/## //'
+
+# Get the date of the most recent commit on main
+git log origin/main -1 --format='%cs'
+
+# Get recently merged PRs (10 most recent)
+gh pr list --state merged --limit 10 --json number,title,mergedAt,headRefName
+
+# Check for stale local branches (merged remotely but still local)
+git branch --merged origin/main | grep -v '^\*\|main$' | sed 's/^[* ] *//'
+
+# Check if current branch is a feature branch already merged to main
+git branch --merged origin/main | grep '^\*' | grep -v 'main$' | sed 's/^\* //'
+```
+
+Flag an **incomplete session** if ANY of these are true:
+
+1. **DEVLOG is stale**: The most recent commit date on `origin/main` is newer than the latest DEVLOG entry date. This means work was merged without a DEVLOG update.
+2. **Stale branches exist**: Local branches that are already merged to main but weren't cleaned up (indicates session ended without housekeeping).
+3. **On a merged branch**: The current branch is a feature branch whose PR has already been merged.
+
+If an incomplete session is detected, alert the user prominently:
+
+```
+⚠️  INCOMPLETE SESSION DETECTED
+
+The previous session appears to have ended without running /end-session:
+- [describe what was found: stale branches, missing DEVLOG entries, etc.]
+- Merged PRs since last DEVLOG: [list]
+
+Recommend: Run /end-session first to catch up, then continue with this session.
+Or: I can do the catch-up housekeeping now before the briefing.
+```
+
+Wait for the user to decide before continuing. If they say to catch up, perform the end-session steps (DEVLOG update, branch cleanup) before proceeding with the rest of the briefing.
+
+If no incomplete session is detected, proceed normally.
+
+### Step 2: Load session context from DEVLOG
 
 Read the most recent entry in `docs/DEVLOG.md` (the first entry after the header). Extract:
 
@@ -36,7 +87,7 @@ Read the most recent entry in `docs/DEVLOG.md` (the first entry after the header
 
 This is the primary source of continuity between sessions.
 
-### Step 2: Check git state
+### Step 3: Check git state
 
 Run these commands in parallel:
 
@@ -53,7 +104,7 @@ Report:
 - Any uncommitted changes (summarize what files are modified)
 - Recent commit history for context
 
-### Step 3: Check open PRs and CI
+### Step 4: Check open PRs and CI
 
 Run these commands in parallel:
 
@@ -91,7 +142,7 @@ gh pr view <number> --comments --json comments --jq '.comments[] | select(.body 
 
 If there are AI review comments with no response, flag the PR as needing attention.
 
-### Step 4: Check infrastructure
+### Step 5: Check infrastructure
 
 Run these commands in parallel:
 
@@ -103,7 +154,7 @@ Report which services are up/down. Flag if critical services (postgres, redis) a
 
 Do NOT auto-start services — just report status so the user can decide.
 
-### Step 5: Surface open work
+### Step 6: Surface open work
 
 Read the Post-MVP Roadmap section of `CLAUDE.md` (search for `## Post-MVP Roadmap`) and list the unchecked `[ ]` items from the "Immediate (pre-launch)" and "Short-term" sections.
 
@@ -113,7 +164,7 @@ Also check for any `TODO(CLAUDE.md)` comments in the codebase:
 grep -r "TODO(CLAUDE.md)" --include="*.ts" --include="*.tsx" --include="*.js" . 2>/dev/null
 ```
 
-### Step 6: Print briefing
+### Step 7: Print briefing
 
 Format everything as a concise briefing:
 
@@ -145,7 +196,7 @@ Next steps planned: [bullet points from DEVLOG "Next" section]
 
 ## Important notes
 
-- This is a READ-ONLY operation — do not modify any files or start any services
+- This is a READ-ONLY operation — do not modify any files or start any services (exception: if the user opts for catch-up housekeeping in Step 1, perform end-session steps before continuing)
 - Use `gh run list/view` for CI status, NOT `gh pr checks` (fine-grained PAT limitation)
 - Keep the briefing concise — the user wants orientation, not a novel
 - If Docker services are down, mention it but don't block — the user may not need them for every task
