@@ -89,7 +89,7 @@ Append-only session log. Newest entries first.
   - Switched to job-level filtering: lightweight `Detect Changes` job runs `dorny/paths-filter`, four CI jobs skip via `if:` when docs-only
   - Skipped jobs satisfy rulesets (unlike never-started workflows)
   - Fixed permissions: job-level `permissions` replaces all defaults, needed both `contents: read` and `pull-requests: read`
-  - Fixed `dorny/paths-filter` needing a positive base pattern (`'**'`) before negative exclusions work (PR #29)
+  - Replaced `dorny/paths-filter` with shell-based detection (PR #30) — `dorny` pattern semantics proved unreliable across multiple attempts (`paths-ignore`, negative patterns, `every` quantifier all failed). Shell check uses `gh pr diff --name-only` + `grep` to count non-docs files.
 
 #### Decisions
 
@@ -98,7 +98,7 @@ Append-only session log. Newest entries first.
 - Skip CI for docs/markdown only — pre-commit Prettier is sufficient, AI review adds no value on DEVLOGs
 - Keep CI for skill files — AI reviewer caught 3 real bugs in skill shell commands this session
 - AI reviewer tends to repeat dismissed findings across rounds — dismiss confidently when the rationale hasn't changed
-- `paths-ignore` at workflow level is incompatible with rulesets — use job-level `if:` with `dorny/paths-filter` instead
+- Avoid `dorny/paths-filter` — unreliable pattern semantics; simple shell scripts are more debuggable
 
 ### Next
 
