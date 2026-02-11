@@ -45,21 +45,11 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # Get PR metadata
-          PR_TITLE=$(gh pr view ${{ steps.pr.outputs.number }} --json title -q .title)
-          PR_BODY=$(gh pr view ${{ steps.pr.outputs.number }} --json body -q .body)
-
-          # Get the diff (truncate at ~200K chars to stay within context limits)
-          DIFF=$(gh pr diff ${{ steps.pr.outputs.number }} | head -c 200000)
-
-          # Get list of changed files
-          FILES=$(gh pr view ${{ steps.pr.outputs.number }} --json files -q '.files[].path' | head -100)
-
-          # Write to files (avoids shell escaping issues)
-          echo "$PR_TITLE" > /tmp/pr_title.txt
-          echo "$PR_BODY" > /tmp/pr_body.txt
-          echo "$DIFF" > /tmp/pr_diff.txt
-          echo "$FILES" > /tmp/pr_files.txt
+          # Write all PR data directly to files — never store large content in shell variables
+          gh pr view ${{ steps.pr.outputs.number }} --json title -q .title > /tmp/pr_title.txt
+          gh pr view ${{ steps.pr.outputs.number }} --json body -q .body > /tmp/pr_body.txt
+          gh pr diff ${{ steps.pr.outputs.number }} | head -c 200000 > /tmp/pr_diff.txt
+          gh pr view ${{ steps.pr.outputs.number }} --json files -q '.files[].path' | head -100 > /tmp/pr_files.txt
 
       - name: Run AI review
         id: review
@@ -67,7 +57,7 @@ jobs:
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
           AI_REVIEW_MODEL: ${{ vars.AI_REVIEW_MODEL || 'moonshotai/kimi-k2.5' }}
         run: |
-          # Write system prompt to file (avoids shell variable size limits)
+          # Write system prompt to file
           cat <<'SYSPROMPT' > /tmp/system_prompt.txt
           You are a senior code reviewer for a multi-tenant submissions platform (TypeScript monorepo: Fastify API + Next.js frontend + Drizzle ORM + PostgreSQL with Row-Level Security).
 
@@ -106,7 +96,7 @@ jobs:
           Then list findings grouped by severity. Reference specific file paths and line numbers from the diff where possible. Keep the review concise — focus on what matters.
           SYSPROMPT
 
-          # Build user prompt from file contents (avoids ARG_MAX on large diffs)
+          # Build user prompt from file contents (no shell variables for large data)
           {
             echo "## PR: $(cat /tmp/pr_title.txt)"
             echo ""
@@ -122,8 +112,9 @@ jobs:
             echo '```'
           } > /tmp/user_prompt.txt
 
-          # Build JSON payload from files using jq --rawfile (bypasses shell ARG_MAX)
-          RESPONSE=$(jq -n \
+          # Build JSON payload from files and send to OpenRouter
+          # curl writes response directly to file — never passes through shell variables
+          jq -n \
             --arg model "$AI_REVIEW_MODEL" \
             --rawfile system /tmp/system_prompt.txt \
             --rawfile user /tmp/user_prompt.txt \
@@ -140,25 +131,29 @@ jobs:
               -H "Authorization: Bearer ${OPENROUTER_API_KEY}" \
               -H "HTTP-Referer: https://github.com/${{ github.repository }}" \
               -H "X-Title: Prospector AI Review" \
-              -d @-)
+              -d @- \
+              -o /tmp/response.json
 
-          # Extract the review content
-          REVIEW=$(echo "$RESPONSE" | jq -r '.choices[0].message.content // empty')
-          MODEL_USED=$(echo "$RESPONSE" | jq -r '.model // empty')
-          ERROR=$(echo "$RESPONSE" | jq -r '.error.message // empty')
+          # Debug: log response structure (truncated, no secrets)
+          echo "Response keys: $(jq -r 'keys | join(", ")' /tmp/response.json 2>/dev/null || echo 'invalid JSON')"
+          echo "HTTP response size: $(wc -c < /tmp/response.json) bytes"
+
+          # Extract fields from the response file — no shell variables for large content
+          jq -r '.choices[0].message.content // empty' /tmp/response.json > /tmp/review_body.txt
+          jq -r '.model // empty' /tmp/response.json > /tmp/model_used.txt
+          ERROR=$(jq -r '.error.message // empty' /tmp/response.json)
 
           if [ -n "$ERROR" ] && [ "$ERROR" != "null" ]; then
             echo "OpenRouter API error: $ERROR"
             echo "review_failed=true" >> "$GITHUB_OUTPUT"
             echo "$ERROR" > /tmp/review_error.txt
-          elif [ -z "$REVIEW" ]; then
+          elif [ ! -s /tmp/review_body.txt ]; then
             echo "Empty response from OpenRouter"
+            echo "Raw response: $(head -c 500 /tmp/response.json)"
             echo "review_failed=true" >> "$GITHUB_OUTPUT"
             echo "Empty response" > /tmp/review_error.txt
           else
             echo "review_failed=false" >> "$GITHUB_OUTPUT"
-            echo "$REVIEW" > /tmp/review_body.txt
-            echo "$MODEL_USED" > /tmp/model_used.txt
           fi
 
       - name: Post review comment
@@ -166,20 +161,17 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          MODEL_USED=$(cat /tmp/model_used.txt)
-          REVIEW_BODY=$(cat /tmp/review_body.txt)
+          # Build comment in a file — no shell expansion of review content
+          {
+            echo "## 🤖 AI Code Review"
+            echo ""
+            cat /tmp/review_body.txt
+            echo ""
+            echo "---"
+            echo "<sub>Model: \`$(cat /tmp/model_used.txt)\` via OpenRouter | [Configure](https://github.com/${{ github.repository }}/settings/variables/actions)</sub>"
+          } > /tmp/comment.md
 
-          COMMENT=$(cat <<EOF
-          ## 🤖 AI Code Review
-
-          ${REVIEW_BODY}
-
-          ---
-          <sub>Model: \`${MODEL_USED}\` via OpenRouter | [Configure](https://github.com/${{ github.repository }}/settings/variables/actions)</sub>
-          EOF
-          )
-
-          echo "$COMMENT" | gh pr comment ${{ steps.pr.outputs.number }} --body-file -
+          gh pr comment ${{ steps.pr.outputs.number }} --body-file /tmp/comment.md
 
       - name: Post error comment
         if: steps.review.outputs.review_failed == 'true'
