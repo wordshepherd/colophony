@@ -410,6 +410,9 @@ Production environment should have **required reviewers** enabled in GitHub sett
 /new-component <name> # Scaffold React component (form, list, dialog, or basic)
 /new-hook <name>      # Scaffold React hook (query, mutation, or state)
 /new-e2e <feature>    # Scaffold Playwright E2E test with helpers
+
+# Session
+/end-session          # End-of-session housekeeping (DEVLOG, git, PR, summary)
 ```
 
 ### Claude Code Hooks (run automatically)
