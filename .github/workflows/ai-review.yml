@@ -67,27 +67,22 @@ jobs:
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
           AI_REVIEW_MODEL: ${{ vars.AI_REVIEW_MODEL || 'moonshotai/kimi-k2.5' }}
         run: |
-          PR_TITLE=$(cat /tmp/pr_title.txt)
-          PR_BODY=$(cat /tmp/pr_body.txt)
-          DIFF=$(cat /tmp/pr_diff.txt)
-          FILES=$(cat /tmp/pr_files.txt)
-
-          # Build the review prompt
-          SYSTEM_PROMPT=$(cat <<'SYSPROMPT'
-          You are a senior code reviewer for a multi-tenant submissions platform (TypeScript monorepo: NestJS API + Next.js frontend + Prisma + PostgreSQL with Row-Level Security).
+          # Write system prompt to file (avoids shell variable size limits)
+          cat <<'SYSPROMPT' > /tmp/system_prompt.txt
+          You are a senior code reviewer for a multi-tenant submissions platform (TypeScript monorepo: Fastify API + Next.js frontend + Drizzle ORM + PostgreSQL with Row-Level Security).
 
           Review the PR diff for:
 
           **Critical (flag clearly):**
           - Security vulnerabilities (SQL injection, XSS, CSRF, command injection)
-          - Multi-tenancy / RLS violations: any Prisma query on tenant tables (submissions, payments, audit_events, submission_files, etc.) that bypasses `withOrgContext()` or uses raw SQL without RLS context
+          - Multi-tenancy / RLS violations: any Drizzle query on tenant tables (submissions, payments, audit_events, submission_files, etc.) that runs outside a transaction with `SET LOCAL app.current_org`
           - Secrets or credentials in code
           - PCI violations (logging/storing card data)
           - Missing webhook idempotency checks (Stripe events must check `processed` flag)
           - GDPR violations (data retention, missing consent checks)
 
           **Important:**
-          - Missing input validation (all tRPC procedures need Zod schemas)
+          - Missing input validation (all API procedures need Zod schemas)
           - Missing error handling on external service calls (Stripe, S3, Redis)
           - Missing audit logging on sensitive operations (status changes, deletions, payments, GDPR actions)
           - Race conditions or transaction safety issues
@@ -110,29 +105,28 @@ jobs:
 
           Then list findings grouped by severity. Reference specific file paths and line numbers from the diff where possible. Keep the review concise — focus on what matters.
           SYSPROMPT
-          )
 
-          USER_PROMPT=$(cat <<EOF
-          ## PR: ${PR_TITLE}
+          # Build user prompt from file contents (avoids ARG_MAX on large diffs)
+          {
+            echo "## PR: $(cat /tmp/pr_title.txt)"
+            echo ""
+            echo "### Description"
+            cat /tmp/pr_body.txt
+            echo ""
+            echo "### Changed Files"
+            cat /tmp/pr_files.txt
+            echo ""
+            echo "### Diff"
+            echo '```diff'
+            cat /tmp/pr_diff.txt
+            echo '```'
+          } > /tmp/user_prompt.txt
 
-          ### Description
-          ${PR_BODY}
-
-          ### Changed Files
-          ${FILES}
-
-          ### Diff
-          \`\`\`diff
-          ${DIFF}
-          \`\`\`
-          EOF
-          )
-
-          # Call OpenRouter API
+          # Build JSON payload from files using jq --rawfile (bypasses shell ARG_MAX)
           RESPONSE=$(jq -n \
             --arg model "$AI_REVIEW_MODEL" \
-            --arg system "$SYSTEM_PROMPT" \
-            --arg user "$USER_PROMPT" \
+            --rawfile system /tmp/system_prompt.txt \
+            --rawfile user /tmp/user_prompt.txt \
             '{
               model: $model,
               messages: [
