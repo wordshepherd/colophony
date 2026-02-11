@@ -264,7 +264,7 @@ Runs on every PR to `main` and pushes to `main`:
 
 **Not in CI** (run manually or nightly):
 
-- Playwright browser E2E (19 tests) — requires full stack, too slow/brittle for every PR
+- Playwright browser E2E (25 tests) — requires full stack, too slow/brittle for every PR
 
 ### What Runs Where
 
@@ -286,6 +286,7 @@ Runs on every PR to `main` and pushes to `main`:
 | Frontend patterns        | —                      | —                 | —           | `pre-frontend-validate.js`   |
 | Migration RLS reminder   | —                      | —                 | —           | `post-migration-validate.js` |
 | DEVLOG reminder          | —                      | —                 | —           | `post-commit-devlog.js`      |
+| Push-to-main guard       | —                      | —                 | —           | `pre-push-branch.js`         |
 | Scaffolding              | —                      | —                 | —           | Skills (`/new-router`, etc.) |
 
 ### PR Process
@@ -296,6 +297,39 @@ Runs on every PR to `main` and pushes to `main`:
 4. CI runs automatically — all 4 jobs must pass
 5. Senior dev reviews
 6. Squash merge to `main`
+
+### Claude Code Git Workflow (IMPORTANT)
+
+**NEVER push directly to `main`.** The `main` branch is protected and requires PRs.
+
+When committing and pushing changes, ALWAYS follow this flow:
+
+```bash
+# 1. Create a feature branch (use conventional prefix)
+git checkout -b feat/<topic>    # or fix/, chore/, test/, docs/, refactor/
+
+# 2. Commit changes
+git add <files>
+git commit -m "feat: description"
+
+# 3. Push the feature branch
+git push -u origin <branch-name>
+
+# 4. Create a PR
+gh pr create --title "feat: description" --body "..."
+```
+
+If already on `main` with commits, move to a branch first:
+
+```bash
+git stash              # if there are unstaged changes
+git checkout -b <branch-name>
+git stash pop          # restore unstaged changes
+git push -u origin <branch-name>
+gh pr create ...
+```
+
+The `pre-push-branch.js` hook will block any `git push` targeting `main` directly.
 
 ### Release Tagging
 
@@ -385,6 +419,7 @@ Production environment should have **required reviewers** enabled in GitHub sett
 - `pre-payment-validate.js` — Warns when payment/webhook code lacks idempotency
 - `pre-frontend-validate.js` — Validates frontend patterns (use client, shadcn, org context)
 - `pre-router-audit.js` — Warns when router has sensitive ops without audit logging
+- `pre-push-branch.js` — Blocks `git push` directly to main; enforces feature branch + PR workflow
 
 **Post-edit:**
 

@@ -32,6 +32,10 @@
       {
         "event": "Write(**/routers/*.router.ts)",
         "script": ".claude/hooks/pre-router-audit.js"
+      },
+      {
+        "event": "Bash(git push*)",
+        "script": ".claude/hooks/pre-push-branch.js"
       }
     ],
     "PostToolUse": [
