@@ -84,10 +84,11 @@ Append-only session log. Newest entries first.
   - Round 2: missing `git fetch`, broken merged-branch detection (`^\*` exclusion bug), quoted branch names
   - Round 3: `main` false positive in merged-branch check
 - Added commit cadence guidance to CLAUDE.md (PR #25)
-- Added `paths-ignore` to CI workflow for docs-only PRs (PR #27):
-  - Skips CI + AI review for `**.md` and `docs/**` changes
-  - Keeps CI + AI review for `.claude/skills/**` (AI reviewer catches real bugs there)
-  - No branch protection conflict (classic protections not configured)
+- Added docs-only CI skip via `dorny/paths-filter` (PR #28):
+  - Initial attempt with `paths-ignore` blocked merging (rulesets require all status checks)
+  - Switched to job-level filtering: lightweight `Detect Changes` job runs `dorny/paths-filter`, four CI jobs skip via `if:` when docs-only
+  - Skipped jobs satisfy rulesets (unlike never-started workflows)
+  - Fixed permissions: job-level `permissions` replaces all defaults, needed both `contents: read` and `pull-requests: read`
 
 #### Decisions
 
@@ -96,6 +97,7 @@ Append-only session log. Newest entries first.
 - Skip CI for docs/markdown only — pre-commit Prettier is sufficient, AI review adds no value on DEVLOGs
 - Keep CI for skill files — AI reviewer caught 3 real bugs in skill shell commands this session
 - AI reviewer tends to repeat dismissed findings across rounds — dismiss confidently when the rationale hasn't changed
+- `paths-ignore` at workflow level is incompatible with rulesets — use job-level `if:` with `dorny/paths-filter` instead
 
 ### Next
 
