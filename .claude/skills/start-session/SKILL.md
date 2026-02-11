@@ -50,8 +50,8 @@ gh pr list --state merged --limit 10 --json number,title,mergedAt,headRefName
 # Check for stale local branches (merged remotely but still local)
 git branch --merged origin/main | grep -v '^\*\|main$' | sed 's/^[* ] *//'
 
-# Check if current branch is already merged to main
-git branch --merged origin/main | grep '^\*' | sed 's/^\* //'
+# Check if current branch is a feature branch already merged to main
+git branch --merged origin/main | grep '^\*' | grep -v 'main$' | sed 's/^\* //'
 ```
 
 Flag an **incomplete session** if ANY of these are true:
