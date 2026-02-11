@@ -282,6 +282,25 @@ refactor(relay): extract email template renderer
 
 Scope with component name when the change is component-specific.
 
+### Commit Cadence
+
+Commit at **stable checkpoints** — after each logical unit of work compiles and passes tests. Branch history is squash-merged anyway, so commit frequency doesn't affect `main`.
+
+**Always commit before:**
+
+- Risky operations (refactors, dependency upgrades, config changes)
+- Ending a session (`/end-session` will catch uncommitted work)
+- Switching context to a different task
+
+**A good checkpoint is:**
+
+- A new schema/migration that runs cleanly
+- A service or route that compiles with its tests passing
+- A hook or config change that's been verified
+- Any working intermediate state you'd want to recover
+
+`/start-session` detects incomplete previous sessions, so unexpected exits are covered — but committed work is always safer than uncommitted work.
+
 ### Git Hooks (husky)
 
 **Pre-commit** — runs on `git commit`:
