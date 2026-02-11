@@ -38,7 +38,7 @@ Append-only session log. Newest entries first.
   - PR #20: avoid `ARG_MAX` by piping large PR diffs via stdin instead of shell arguments
   - PR #21: eliminate all shell variable expansion for large content using heredocs and temp files
 - Rewrote `ai-review.yml` to handle large diffs safely (file-based approach, no shell interpolation)
-- Created 4 new v2 research documents:
+- Created 5 new v2 research documents:
   - `docs/architecture-v2-planning.md` (~3700 lines)
   - `docs/api-layer-v2-research.md` (~1300 lines)
   - `docs/competitive-analysis.md` (~1150 lines)
