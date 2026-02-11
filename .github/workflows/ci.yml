@@ -25,18 +25,28 @@ jobs:
       contents: read
       pull-requests: read
     outputs:
-      docs_only: ${{ steps.filter.outputs.docs_only }}
+      docs_only: ${{ steps.check.outputs.docs_only }}
     steps:
-      - uses: actions/checkout@v6
-
-      - uses: dorny/paths-filter@v3
-        id: filter
-        with:
-          predicate-quantifier: 'every'
-          filters: |
-            docs_only:
-              - '**.md'
-              - 'docs/**'
+      - name: Check for code changes
+        id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            FILES=$(gh pr diff ${{ github.event.pull_request.number }} --name-only --repo ${{ github.repository }})
+          else
+            FILES=$(gh api repos/${{ github.repository }}/commits/${{ github.sha }} --jq '.files[].filename')
+          fi
+          # Count files that are NOT .md and NOT in docs/
+          CODE_FILES=$(echo "$FILES" | grep -vcE '\.md$|^docs/' || true)
+          echo "Changed files:"
+          echo "$FILES"
+          echo "Non-docs file count: $CODE_FILES"
+          if [ "$CODE_FILES" -gt 0 ]; then
+            echo "docs_only=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "docs_only=true" >> "$GITHUB_OUTPUT"
+          fi
 
   # ──────────────────────────────────────────────────
   # Fast checks (~1 min): lint, format, type-check
