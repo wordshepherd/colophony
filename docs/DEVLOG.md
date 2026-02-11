@@ -89,6 +89,7 @@ Append-only session log. Newest entries first.
   - Switched to job-level filtering: lightweight `Detect Changes` job runs `dorny/paths-filter`, four CI jobs skip via `if:` when docs-only
   - Skipped jobs satisfy rulesets (unlike never-started workflows)
   - Fixed permissions: job-level `permissions` replaces all defaults, needed both `contents: read` and `pull-requests: read`
+  - Fixed `dorny/paths-filter` needing a positive base pattern (`'**'`) before negative exclusions work (PR #29)
 
 #### Decisions
 
