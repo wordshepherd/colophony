@@ -29,6 +29,21 @@ Append-only session log. Newest entries first.
   - `test-rls.md` (Drizzle pgPolicy, no separate rls-policies.sql)
   - `db-reset.md` (Drizzle migrations instead of Prisma db push)
 - Removed old v1 skill files (`new-router.md`, `new-module.md`)
+- Restructured all skills from flat `skill-name.md` to `skill-name/SKILL.md` directory format
+- Addressed AI review findings on PR #19 (RLS context and transaction safety):
+  - `new-processor` skill: require `organizationId` in job data, use `withOrgContext` for all tenant-scoped queries in workers
+  - `stripe-webhook` skill: wrap idempotency check + process + mark in a single `db.transaction` to prevent race conditions
+  - `new-service` skill: document that tenant-scoped operations need a transaction with RLS context
+- Fixed CI pipeline for AI review workflow (PRs #20 and #21):
+  - PR #20: avoid `ARG_MAX` by piping large PR diffs via stdin instead of shell arguments
+  - PR #21: eliminate all shell variable expansion for large content using heredocs and temp files
+- Rewrote `ai-review.yml` to handle large diffs safely (file-based approach, no shell interpolation)
+- Created 4 new v2 research documents:
+  - `docs/architecture-v2-planning.md` (~3700 lines)
+  - `docs/api-layer-v2-research.md` (~1300 lines)
+  - `docs/competitive-analysis.md` (~1150 lines)
+  - `docs/form-builder-research.md` (~1330 lines)
+  - `docs/research/plugin-extension-system.md` (~1550 lines)
 
 ### Prior sessions (same day, separate contexts)
 
@@ -47,6 +62,12 @@ Append-only session log. Newest entries first.
 - Hooks and skills must be updated BEFORE starting v2 coding (they'd actively fight the new stack)
 - Frontend skills (new-page, new-component, new-hook, new-e2e) left unchanged — Next.js/React patterns are the same in v2
 - Session skills (start-session, end-session, check-ai-review) left unchanged — workflow-only, no stack dependencies
+- AI review on PR #19 surfaced legitimate RLS gaps in skill templates — addressed before merge
+
+### Issues Found
+
+- **AI review `ARG_MAX`**: GitHub Actions shell steps hit argument length limits when passing large PR diffs as variables. Fixed by switching to file-based approach with heredocs (PRs #20, #21)
+- **Shell expansion in CI**: `$` characters in TypeScript template literals were being expanded by bash in the AI review workflow. Fixed by eliminating all shell variable interpolation for content payloads
 
 ### Next
 
