@@ -58,6 +58,10 @@
       {
         "event": "Bash(git commit*)",
         "script": ".claude/hooks/post-commit-devlog.js"
+      },
+      {
+        "event": "Bash(git push*)",
+        "script": ".claude/hooks/post-push-ai-review.js"
       }
     ]
   }

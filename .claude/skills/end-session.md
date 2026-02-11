@@ -8,7 +8,8 @@ End-of-session housekeeping: update docs, clean up git state, and summarize work
 2. Checks for any `TODO(CLAUDE.md)` comments and proposes updates
 3. Ensures all changes are committed on a feature branch (not `main`)
 4. Pushes the branch and creates/updates a PR if needed
-5. Prints a session summary for the user
+5. Checks and addresses AI review comments on the PR
+6. Prints a session summary for the user
 
 ## Usage
 
@@ -114,7 +115,30 @@ Ask the user if they want to apply the suggestions before proceeding.
    ```
    Report the CI status to the user.
 
-### Step 5: Session summary
+### Step 5: Check AI review on PR
+
+If a PR exists for the current branch, check if the AI reviewer has posted comments:
+
+```bash
+gh pr view <number> --comments --json comments --jq '.comments[] | select(.author.login == "github-actions") | {createdAt: .createdAt, body: .body}'
+```
+
+If there are AI review comments that haven't been addressed yet:
+
+1. Use the `/check-ai-review <number>` skill logic to evaluate each finding
+2. Fix legitimate issues, dismiss false positives
+3. Commit and push any fixes
+4. Post a response comment on the PR
+
+If there are no AI review comments, check if CI has finished:
+
+```bash
+gh run list --branch <branch-name> --limit 1 --json status,conclusion,name --jq '.[] | select(.name == "CI") | "\(.status) \(.conclusion)"'
+```
+
+If CI is still running or just passed, the AI review may not have triggered yet (it runs via `workflow_run` after CI passes). Note this in the session summary so the user knows to check later.
+
+### Step 6: Session summary
 
 Print a summary for the user:
 
@@ -133,6 +157,9 @@ Print a summary for the user:
 
 ### CLAUDE.md Updates
 - [any proposed or applied updates, or "None needed"]
+
+### AI Review
+- [findings addressed, or "No AI review comments yet — check after CI passes"]
 
 ### Open Items
 - [anything left undone, PRs awaiting review, etc.]

@@ -288,6 +288,7 @@ Runs on every PR to `main` and pushes to `main`:
 | Migration RLS reminder   | —                      | —                 | —           | `post-migration-validate.js` |
 | DEVLOG reminder          | —                      | —                 | —           | `post-commit-devlog.js`      |
 | Push-to-main guard       | —                      | —                 | —           | `pre-push-branch.js`         |
+| AI review reminder       | —                      | —                 | —           | `post-push-ai-review.js`     |
 | Scaffolding              | —                      | —                 | —           | Skills (`/new-router`, etc.) |
 
 ### PR Process
@@ -414,6 +415,7 @@ Production environment should have **required reviewers** enabled in GitHub sett
 # Session
 /start-session        # Session briefing (DEVLOG context, git state, PRs, infra)
 /end-session          # End-of-session housekeeping (DEVLOG, git, PR, summary)
+/check-ai-review [#]  # Fetch, evaluate, and address AI review comments on a PR
 ```
 
 ### Claude Code Hooks (run automatically)
@@ -432,6 +434,7 @@ Production environment should have **required reviewers** enabled in GitHub sett
 - `post-email-template.js` — Reminds to add text version for HTML emails
 - `post-migration-validate.js` — Reminds to add RLS policies for new tables in migrations
 - `post-commit-devlog.js` — Reminds to update `docs/DEVLOG.md` after git commits
+- `post-push-ai-review.js` — Reminds to check AI review after pushing to a PR branch
 
 ### MCP Servers (restart Claude Code to activate)
 
