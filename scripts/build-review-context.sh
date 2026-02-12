@@ -109,35 +109,33 @@ ${PR_BODY}
 "
 append_within_budget "$tier1"
 
-# Tier 1.5: Prior review conversation (AI reviews + developer responses)
-# Fetch comments from github-actions (AI reviews) and comments containing
-# "AI Review Response" (developer responses), ordered chronologically.
-# This prevents the reviewer from re-raising already-addressed findings.
-REVIEW_CONVERSATION=$(gh pr view "$PR_NUMBER" --json comments --jq '
+# Tier 1.5: Prior review responses (developer "AI Review Response" comments)
+# Only includes the developer response summaries, not the full AI review text.
+# The responses already summarize what was fixed, dismissed, and why — that's
+# all the reviewer needs to avoid re-raising resolved findings. Including full
+# AI reviews would waste ~15-20KB of context budget on redundant content.
+REVIEW_RESPONSES=$(gh pr view "$PR_NUMBER" --json comments --jq '
   [.comments[]
-   | select(
-       (.author.login == "github-actions") or
-       (.body | test("AI Review Response"))
-     )
-   | {author: .author.login, createdAt: .createdAt, body: .body}
+   | select(.body | test("AI Review Response"))
+   | {createdAt: .createdAt, body: .body}
   ]
   | sort_by(.createdAt)
   | .[]
-  | "---\n**\(.author)** (\(.createdAt)):\n\(.body)"
+  | "---\n\(.body)"
 ' 2>/dev/null || true)
 
-if [ -n "$REVIEW_CONVERSATION" ]; then
-  review_block="### Prior Review Conversation
+if [ -n "$REVIEW_RESPONSES" ]; then
+  review_block="### Prior Review Responses
 
-The following AI review comments and developer responses have already been posted on this PR. Do NOT re-raise findings that have been fixed, dismissed, or acknowledged.
+The following developer responses summarize findings from previous AI reviews on this PR. Each lists what was fixed, what was already handled, and what was dismissed with reasoning. Do NOT re-raise any finding covered by these responses.
 
-${REVIEW_CONVERSATION}
+${REVIEW_RESPONSES}
 
 ---
 
 "
   append_within_budget "$review_block" || true
-  echo "Prior review conversation: ${#REVIEW_CONVERSATION} bytes" >&2
+  echo "Prior review responses: ${#REVIEW_RESPONSES} bytes" >&2
 fi
 
 # Get list of changed files
