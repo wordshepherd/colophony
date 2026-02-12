@@ -1,0 +1,34 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1770865752902,
+      "tag": "0000_extensions_and_functions",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1770865765883,
+      "tag": "0001_perfect_ironclad",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1770865774480,
+      "tag": "0002_apply_triggers",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1770868435576,
+      "tag": "0003_old_major_mapleleaf",
+      "breakpoints": true
+    }
+  ]
+}

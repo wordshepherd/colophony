@@ -1,5 +1,5 @@
 {
-  "name": "@prospector/db",
+  "name": "@colophony/db",
   "version": "0.0.0",
   "private": true,
   "main": "./dist/index.js",
@@ -17,22 +17,23 @@
   "scripts": {
     "build": "tsc",
     "clean": "rm -rf dist",
-    "generate": "prisma generate",
-    "migrate": "prisma migrate dev",
-    "migrate:deploy": "prisma migrate deploy",
-    "push": "prisma db push",
-    "studio": "prisma studio",
-    "seed": "ts-node prisma/seed.ts",
+    "generate": "drizzle-kit generate",
+    "migrate": "drizzle-kit migrate",
+    "check": "drizzle-kit check",
+    "studio": "drizzle-kit studio",
+    "seed": "tsx src/seed.ts",
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
-    "@prisma/client": "^5.22.0"
+    "drizzle-orm": "^0.44.0",
+    "pg": "^8.13.0"
   },
   "devDependencies": {
     "@prospector/typescript-config": "workspace:*",
     "@types/node": "^25.2.3",
-    "prisma": "^5.22.0",
-    "ts-node": "^10.9.0",
+    "@types/pg": "^8.11.0",
+    "drizzle-kit": "^0.30.0",
+    "tsx": "^4.19.0",
     "typescript": "^5.6.0"
   }
 }
