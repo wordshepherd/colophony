@@ -4,6 +4,42 @@ Append-only session log. Newest entries first.
 
 ---
 
+## 2026-02-12 — Claude Code GitHub App Trial & Revert
+
+### Done
+
+- Installed Claude Code GitHub App via `/install-github-app` skill (PR #37 merged)
+  - Required `gh auth refresh -h github.com -s repo,workflow` for PAT scopes
+  - Added `claude-code-review.yml` (auto-review on PR events) and `claude.yml` (@claude mention handler)
+- Closed PR #38 as empty duplicate (second `/install-github-app` run, no diff)
+- Discovered `claude-code-action` code-review plugin is not production-ready:
+  - Churns through tools (YAML validation, fetching action source, etc.) without producing review output
+  - No short-circuit for empty diffs — ran 7+ minutes on PR #38 with zero file changes
+  - Still running on PR #39 after 10+ minutes with no output
+  - `pull-requests: read` permission may be insufficient to post comments
+- Reverted: PR #39 removes both Claude Code workflow files, restores Kimi/OpenRouter review
+- Added `gh pr edit` workaround to CLAUDE.md Known Quirks (returns GraphQL Projects Classic deprecation error; use `gh api` PATCH instead)
+- Cleaned up 4 stale `add-claude-github-actions-*` remote branches
+
+### Decisions
+
+- **Keep Kimi K2.5 via OpenRouter** for AI code review — working and produces useful output
+- **Remove Claude Code review workflows** — plugin not mature enough; revisit when it improves
+- **Keep `@claude` mention workflow removed too** — both workflows used the same OAuth token setup; cleaner to remove both
+
+### Issues Found
+
+- **`/install-github-app` skill auth detection**: Reports "not authenticated" even when `gh auth status` confirms login — likely checks for OAuth vs PAT differently
+- **`gh pr edit` broken**: Returns GraphQL error about Projects Classic deprecation — use `gh api` PATCH as workaround
+
+### Next
+
+- Optionally remove `CLAUDE_CODE_OAUTH_TOKEN` secret from repo settings
+- Continue Track 1: Zitadel auth integration
+- Revisit Claude Code review when `claude-code-action` plugin matures
+
+---
+
 ## 2026-02-12 — Husky Hook Fixes + Session Skill Improvements
 
 ### Done
