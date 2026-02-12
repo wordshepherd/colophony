@@ -301,6 +301,28 @@ Commit at **stable checkpoints** — after each logical unit of work compiles an
 
 `/start-session` detects incomplete previous sessions, so unexpected exits are covered — but committed work is always safer than uncommitted work.
 
+### Push Cadence
+
+Pushes serve different purposes than commits: backup, CI feedback, and reviewer visibility. Commits are local and squashed away; pushes are visible and trigger automation.
+
+**Push when:**
+
+- You've completed a **reviewable unit of work** — one or more commits that form a coherent change (e.g., a full schema rewrite, a new route with tests)
+- You're **stepping away** — remote is backup; a local-only commit doesn't survive machine failure, WSL issues, or accidental `docker compose down -v`
+- You want **CI feedback** — CI runs on push to PR branches; push to validate in a clean environment
+- You want **AI review feedback** — pushing to a PR branch triggers the AI review workflow (`post-push-ai-review.js`)
+
+**Don't push:**
+
+- Broken states — unlike commits, pushes trigger CI and are visible to reviewers; a push should at minimum compile
+- Partial work that would confuse reviewers — if the PR is already open and you're mid-refactor, either finish or use a draft PR
+
+**Create the PR when:**
+
+- The branch is in a **reviewable state** — not necessarily "done," but coherent enough for feedback
+- You have enough context for a **meaningful description** — summary, test plan, and any caveats
+- **Draft PRs** are fine for early feedback or to get CI running while you continue work
+
 ### Git Hooks (husky)
 
 **Pre-commit** — runs on `git commit`:

@@ -1,0 +1,1 @@
+CREATE INDEX "submissions_submitter_status_idx" ON "submissions" USING btree ("submitter_id","status");

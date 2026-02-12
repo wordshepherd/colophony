@@ -52,7 +52,7 @@
   "devDependencies": {
     "@eslint/eslintrc": "^3.3.3",
     "@playwright/test": "^1.58.2",
-    "@prospector/db": "workspace:*",
+    "@colophony/db": "workspace:*",
     "@prospector/eslint-config": "workspace:*",
     "@prospector/typescript-config": "workspace:*",
     "@testing-library/jest-dom": "^6.1.5",
