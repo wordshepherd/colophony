@@ -38,27 +38,34 @@ git fetch origin main
 Then run these in parallel:
 
 ```bash
-# Get the date from the latest DEVLOG entry
-grep -m1 -oE '## [0-9]{4}-[0-9]{2}-[0-9]{2}' docs/DEVLOG.md | sed 's/## //'
-
 # Get the date of the most recent commit on main
 git log origin/main -1 --format='%cs'
 
 # Get recently merged PRs (10 most recent)
 gh pr list --state merged --limit 10 --json number,title,mergedAt,headRefName
 
-# Check for stale local branches (merged remotely but still local)
-git branch --merged origin/main | grep -v '^\*\|main$' | sed 's/^[* ] *//'
-
-# Check if current branch is a feature branch already merged to main
-git branch --merged origin/main | grep '^\*' | grep -v 'main$' | sed 's/^\* //'
+# Check for stale local branches (squash-merged PRs leave branches whose upstream is gone)
+# AND check if current branch is a feature branch whose upstream was deleted
+git fetch --prune
+git branch -vv
 ```
+
+For the DEVLOG date, use the Grep tool (not bash) to find the first `## YYYY-MM-DD` heading in `docs/DEVLOG.md` and extract the date.
+
+For the `git branch -vv` output, Claude parses it directly:
+
+- Lines containing `[gone]` indicate branches whose remote tracking branch was deleted (PR merged/closed)
+- Lines starting with `*` indicate the current branch
+- Extract the branch name (first non-whitespace token after `*` or leading spaces)
+- Skip `main` — never flag main
+- Branches with `[gone]` upstream (excluding main) are stale branches
+- If the `*` (current) branch has `[gone]` upstream, the current branch is a merged feature branch
 
 Flag an **incomplete session** if ANY of these are true:
 
 1. **DEVLOG is stale**: The most recent commit date on `origin/main` is newer than the latest DEVLOG entry date. This means work was merged without a DEVLOG update.
-2. **Stale branches exist**: Local branches that are already merged to main but weren't cleaned up (indicates session ended without housekeeping).
-3. **On a merged branch**: The current branch is a feature branch whose PR has already been merged.
+2. **Stale branches exist**: Local branches whose remote tracking branch is `[gone]` (squash-merged PRs not cleaned up — indicates session ended without housekeeping).
+3. **On a merged branch**: The current branch is a feature branch whose upstream is `[gone]`.
 
 If an incomplete session is detected, alert the user prominently:
 
@@ -95,8 +102,10 @@ Run these commands in parallel:
 git branch --show-current
 git status --short
 git log --oneline -5
-git branch --list --format='%(refname:short) %(upstream:track)' | grep -v '^\s*$'
+git branch --list --format='%(refname:short) %(upstream:track)'
 ```
+
+For the branch tracking output, Claude filters out blank lines when parsing the result.
 
 Report:
 
@@ -158,11 +167,7 @@ Do NOT auto-start services — just report status so the user can decide.
 
 Read the Post-MVP Roadmap section of `CLAUDE.md` (search for `## Post-MVP Roadmap`) and list the unchecked `[ ]` items from the "Immediate (pre-launch)" and "Short-term" sections.
 
-Also check for any `TODO(CLAUDE.md)` comments in the codebase:
-
-```bash
-grep -r "TODO(CLAUDE.md)" --include="*.ts" --include="*.tsx" --include="*.js" . 2>/dev/null
-```
+Also check for any `TODO(CLAUDE.md)` comments in the codebase using the Grep tool (not bash) to search for `TODO(CLAUDE.md)` in `*.ts`, `*.tsx`, and `*.js` files.
 
 ### Step 7: Print briefing
 
