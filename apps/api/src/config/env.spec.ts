@@ -67,6 +67,38 @@ describe('validateEnv', () => {
     expect(env.ZITADEL_CLIENT_ID).toBeUndefined();
   });
 
+  it('applies rate limit defaults', () => {
+    const env = validateEnv(validBase);
+    expect(env.RATE_LIMIT_DEFAULT_MAX).toBe(60);
+    expect(env.RATE_LIMIT_AUTH_MAX).toBe(200);
+    expect(env.RATE_LIMIT_WINDOW_SECONDS).toBe(60);
+    expect(env.RATE_LIMIT_KEY_PREFIX).toBe('colophony:rl');
+  });
+
+  it('coerces rate limit values from strings to numbers', () => {
+    const env = validateEnv({
+      ...validBase,
+      RATE_LIMIT_DEFAULT_MAX: '120',
+      RATE_LIMIT_AUTH_MAX: '500',
+      RATE_LIMIT_WINDOW_SECONDS: '30',
+    });
+    expect(env.RATE_LIMIT_DEFAULT_MAX).toBe(120);
+    expect(env.RATE_LIMIT_AUTH_MAX).toBe(500);
+    expect(env.RATE_LIMIT_WINDOW_SECONDS).toBe(30);
+  });
+
+  it('rejects non-positive rate limit values', () => {
+    expect(() =>
+      validateEnv({ ...validBase, RATE_LIMIT_DEFAULT_MAX: '0' }),
+    ).toThrow();
+    expect(() =>
+      validateEnv({ ...validBase, RATE_LIMIT_AUTH_MAX: '-1' }),
+    ).toThrow();
+    expect(() =>
+      validateEnv({ ...validBase, RATE_LIMIT_WINDOW_SECONDS: '0' }),
+    ).toThrow();
+  });
+
   it('transforms FEDERATION_ENABLED to boolean', () => {
     const envTrue = validateEnv({
       ...validBase,
