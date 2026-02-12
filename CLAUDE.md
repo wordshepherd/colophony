@@ -171,6 +171,8 @@ tRPC client for internal API calls. Zitadel handles login/signup UI. `ProtectedR
 | **WSL husky hooks need nvm PATH**                     | Husky v9 runs hooks under `sh`/`dash`; `nvm.sh` can't be sourced. Hooks add nvm node bin to PATH directly. `lint-staged` called without `npx`                               |
 | **CI: workspace deps need build before Vitest**       | Vitest resolves workspace packages via `exports` field (pointing to `dist/`). CI must build deps before running tests                                                       |
 | **`gh pr edit` broken (Projects Classic)**            | Returns GraphQL error about Projects Classic deprecation. Use `gh api repos/{owner}/{repo}/pulls/{number} -X PATCH -f title="..." -f body="..."` instead                    |
+| **`@fastify/raw-body` doesn't exist**                 | Official `@fastify/` scoped package not published on npm. Use `fastify-raw-body` (community package, v5.0.0 for Fastify 5)                                                  |
+| **AI review budget exhaustion**                       | Prior review conversation can consume significant context budget (~21KB for 3 rounds). Only feed developer response summaries (~5.5KB), not full AI review text             |
 
 **Version pins (do not upgrade without testing):**
 

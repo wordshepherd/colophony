@@ -35,6 +35,7 @@ Append-only session log. Newest entries first.
 - **`@fastify/raw-body` doesn't exist** — the official `@fastify/` scoped package is not published; `fastify-raw-body` community package works fine
 - **CI workspace dep build order** — new workspace packages must be added to CI build step or Vitest can't resolve their `exports` pointing to `dist/`
 - **AI review budget exhaustion** — prior review conversation can consume significant budget if not trimmed to essentials
+- Updated CLAUDE.md Known Quirks: added `fastify-raw-body` and AI review budget gotchas
 
 ### Next
 
