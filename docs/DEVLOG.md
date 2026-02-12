@@ -4,6 +4,43 @@ Append-only session log. Newest entries first.
 
 ---
 
+## 2026-02-12 — Audit Logging Infrastructure (Track 1)
+
+### Done
+
+- **PR #44** — Audit logging infrastructure for sensitive lifecycle events (9 files, 672 insertions)
+- Created shared audit types in `packages/types/src/audit.ts`: `AuditActions` and `AuditResources` constants, discriminated union `AuditLogParams` that enforces valid action↔resource pairs at compile time
+- Created `apps/api/src/services/audit.service.ts` — first v2 service; core `auditService.log(tx, params)` with `serializeValue()` helper: secret key scrubbing (`/token|secret|password|authorization/i`), 8KB truncation, circular reference handling via WeakSet
+- Created `apps/api/src/hooks/audit.ts` — Fastify plugin decorating `request.audit` pre-bound to request context (actorId, orgId, IP, user-agent); depends on `colophony-db-context`; provides warning no-op when dbTx is null
+- Integrated audit logging into all 6 Zitadel webhook event types: `user.created` → `USER_CREATED`, `user.changed` → `USER_UPDATED`, `user.deactivated` → `USER_DEACTIVATED`, `user.reactivated` → `USER_REACTIVATED`, `user.removed` → `USER_REMOVED`, `user.email.verified` → `USER_EMAIL_VERIFIED`
+- Webhook audit events use `auditService.log(tx, ...)` directly (not `request.audit`) because webhooks run in a separate Fastify scope without auth/org-context/db-context hooks
+- Registered audit plugin in `main.ts` after db-context (hook order: auth → rate-limit → org-context → db-context → audit)
+- 17 new tests across 3 files: 10 audit service (serialization, scrubbing, truncation, circular refs, error propagation), 3 audit plugin (no-op without dbTx, context passing, error propagation), 4 webhook audit assertions
+- All 217 tests passing, type-check and lint clean
+- AI review: LGTM, no blocking issues
+
+### Decisions
+
+- **Discriminated union for type safety** — prevents logging `USER_CREATED` against resource `SUBMISSION`; each resource type has its own set of valid actions
+- **Errors propagate (no swallowing)** — if audit insert fails, the enclosing transaction rolls back; audit is atomic with the business operation
+- **Webhook audit calls `auditService.log()` directly** — webhooks manage their own `pool.connect()` transaction, so `request.audit` (which relies on `request.dbTx`) is not available
+- **System events have `actorId = undefined`, `organizationId = undefined`** — webhook-triggered events are not user- or org-scoped; NULL org rows are visible to all org-scoped queries (acceptable for now; documented for future refinement)
+- **IP in webhook audit = Zitadel server IP** — not the end user's; documented as acceptable since it records "who triggered the system event"
+
+### Issues Found
+
+- **Lint: unused destructured vars** — `const [_tx, params] = mock.calls[0]` flagged by `@typescript-eslint/no-unused-vars` even with underscore prefix; fixed by using `mock.calls[0][1]` index access instead
+
+### Next
+
+- Integration testing with real DB for RLS audit event isolation
+- Auth failure auditing (happens before db-context hook, needs separate `pool.connect` pattern)
+- Audit query/list endpoints (tRPC/REST routes when API surfaces are wired)
+- Request correlation (requestId/method/route columns — requires migration adding metadata JSONB column)
+- Frontend OIDC flow (Track 1 continuation)
+
+---
+
 ## 2026-02-12 — Zitadel OIDC Auth Integration (Track 1)
 
 ### Done
@@ -40,7 +77,7 @@ Append-only session log. Newest entries first.
 ### Next
 
 - Rate limiting across all API surfaces (roadmap item flagged by AI reviewer)
-- Audit logging infrastructure for sensitive lifecycle events
+- ~~Audit logging infrastructure for sensitive lifecycle events~~ ✅ Done (PR #44)
 - Integration testing with real DB for org-context + db-context RLS flow
 - Frontend OIDC flow (Track 1 continuation, separate session)
 

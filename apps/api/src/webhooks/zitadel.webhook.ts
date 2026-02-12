@@ -5,6 +5,8 @@ import type { ZitadelWebhookPayload } from '@colophony/auth-client';
 import { eq, pool, users } from '@colophony/db';
 import type { DrizzleDb } from '@colophony/db';
 import type { Env } from '../config/env.js';
+import { auditService } from '../services/audit.service.js';
+import { AuditActions, AuditResources } from '@prospector/types';
 
 export interface ZitadelWebhookOptions {
   env: Env;
@@ -160,6 +162,20 @@ async function processEvent(
             updatedAt: new Date(),
           },
         });
+      await auditService.log(tx, {
+        resource: AuditResources.USER,
+        action:
+          eventType === 'user.created'
+            ? AuditActions.USER_CREATED
+            : AuditActions.USER_UPDATED,
+        newValue: {
+          zitadelUserId: userData.userId,
+          email: userData.email,
+          emailVerified: userData.emailVerified,
+        },
+        ipAddress: request.ip,
+        userAgent: request.headers['user-agent'],
+      });
       request.log.info(
         { zitadelUserId: userData.userId, eventType },
         'User upserted from webhook',
@@ -178,6 +194,13 @@ async function processEvent(
           'user.deactivated: user not found locally',
         );
       }
+      await auditService.log(tx, {
+        resource: AuditResources.USER,
+        action: AuditActions.USER_DEACTIVATED,
+        newValue: { zitadelUserId: userData.userId },
+        ipAddress: request.ip,
+        userAgent: request.headers['user-agent'],
+      });
       break;
     }
 
@@ -192,6 +215,13 @@ async function processEvent(
           'user.reactivated: user not found locally',
         );
       }
+      await auditService.log(tx, {
+        resource: AuditResources.USER,
+        action: AuditActions.USER_REACTIVATED,
+        newValue: { zitadelUserId: userData.userId },
+        ipAddress: request.ip,
+        userAgent: request.headers['user-agent'],
+      });
       break;
     }
 
@@ -219,6 +249,16 @@ async function processEvent(
           'User anonymized (GDPR removal)',
         );
       }
+      await auditService.log(tx, {
+        resource: AuditResources.USER,
+        action: AuditActions.USER_REMOVED,
+        newValue: {
+          zitadelUserId: userData.userId,
+          email: anonymizedEmail,
+        },
+        ipAddress: request.ip,
+        userAgent: request.headers['user-agent'],
+      });
       break;
     }
 
@@ -237,6 +277,13 @@ async function processEvent(
           'user.email.verified: user not found locally',
         );
       }
+      await auditService.log(tx, {
+        resource: AuditResources.USER,
+        action: AuditActions.USER_EMAIL_VERIFIED,
+        newValue: { zitadelUserId: userData.userId },
+        ipAddress: request.ip,
+        userAgent: request.headers['user-agent'],
+      });
       break;
     }
 

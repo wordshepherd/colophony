@@ -7,6 +7,7 @@ import authPlugin from './hooks/auth.js';
 import rateLimitPlugin from './hooks/rate-limit.js';
 import orgContextPlugin from './hooks/org-context.js';
 import dbContextPlugin from './hooks/db-context.js';
+import auditPlugin from './hooks/audit.js';
 import { registerZitadelWebhooks } from './webhooks/zitadel.webhook.js';
 
 export async function buildApp(env: Env): Promise<FastifyInstance> {
@@ -79,6 +80,7 @@ export async function buildApp(env: Env): Promise<FastifyInstance> {
   await app.register(rateLimitPlugin, { env });
   await app.register(orgContextPlugin);
   await app.register(dbContextPlugin);
+  await app.register(auditPlugin);
 
   // Webhooks — separate scope to isolate fastify-raw-body
   await app.register(async (scope) => {
