@@ -24,27 +24,27 @@ API layer and plugin system use the `@colophony/` prefix directly.
 
 > **Note:** These are TARGET paths for the v2 architecture. During the rewrite, files are created incrementally. Check actual existence before referencing.
 
-| What                        | Path                                                             |
-| --------------------------- | ---------------------------------------------------------------- |
-| **Drizzle schema**          | `packages/db/src/schema/` (one file per table group)             |
-| **Drizzle migrations**      | `packages/db/migrations/`                                        |
-| **Drizzle client**          | `packages/db/src/client.ts`                                      |
-| **RLS policies**            | `packages/db/src/schema/*.ts` (via `pgPolicy` in Drizzle schema) |
-| **Shared Zod schemas**      | `packages/types/src/`                                            |
-| **ts-rest contracts**       | `packages/api-contracts/src/`                                    |
-| **Zitadel auth client**     | `packages/auth-client/src/`                                      |
-| **Fastify app entry**       | `apps/api/src/main.ts`                                           |
-| **REST routes (ts-rest)**   | `apps/api/src/rest/`                                             |
-| **GraphQL (Pothos + Yoga)** | `apps/api/src/graphql/`                                          |
-| **tRPC (internal)**         | `apps/api/src/trpc/`                                             |
-| **Fastify hooks**           | `apps/api/src/hooks/` (auth, rate-limit, org-context)            |
-| **Service layer**           | `apps/api/src/services/`                                         |
-| **BullMQ processors**       | `apps/api/src/jobs/`                                             |
-| **Zitadel webhooks**        | `apps/api/src/webhooks/zitadel.webhook.ts`                       |
-| **Stripe webhooks**         | `apps/api/src/webhooks/stripe.webhook.ts`                        |
-| **Federation endpoints**    | `apps/api/src/federation/`                                       |
-| **Next.js frontend**        | `apps/web/`                                                      |
-| **tRPC client**             | `apps/web/src/lib/trpc.ts`                                       |
+| What                        | Path                                                                     |
+| --------------------------- | ------------------------------------------------------------------------ |
+| **Drizzle schema**          | `packages/db/src/schema/` (one file per table group)                     |
+| **Drizzle migrations**      | `packages/db/migrations/`                                                |
+| **Drizzle client**          | `packages/db/src/client.ts`                                              |
+| **RLS policies**            | `packages/db/src/schema/*.ts` (via `pgPolicy` in Drizzle schema)         |
+| **Shared Zod schemas**      | `packages/types/src/`                                                    |
+| **ts-rest contracts**       | `packages/api-contracts/src/`                                            |
+| **Zitadel auth client**     | `packages/auth-client/src/`                                              |
+| **Fastify app entry**       | `apps/api/src/main.ts`                                                   |
+| **REST routes (ts-rest)**   | `apps/api/src/rest/`                                                     |
+| **GraphQL (Pothos + Yoga)** | `apps/api/src/graphql/`                                                  |
+| **tRPC (internal)**         | `apps/api/src/trpc/`                                                     |
+| **Fastify hooks**           | `apps/api/src/hooks/` (auth, rate-limit, org-context, db-context, audit) |
+| **Service layer**           | `apps/api/src/services/`                                                 |
+| **BullMQ processors**       | `apps/api/src/jobs/`                                                     |
+| **Zitadel webhooks**        | `apps/api/src/webhooks/zitadel.webhook.ts`                               |
+| **Stripe webhooks**         | `apps/api/src/webhooks/stripe.webhook.ts`                                |
+| **Federation endpoints**    | `apps/api/src/federation/`                                               |
+| **Next.js frontend**        | `apps/web/`                                                              |
+| **tRPC client**             | `apps/web/src/lib/trpc.ts`                                               |
 
 Full project structure: [docs/architecture-v2-planning.md](docs/architecture-v2-planning.md)
 
