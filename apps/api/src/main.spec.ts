@@ -7,8 +7,43 @@ import { type Env } from './config/env.js';
 vi.mock('@colophony/db', () => ({
   pool: {
     query: vi.fn().mockResolvedValue({ rows: [{ '?column?': 1 }] }),
+    connect: vi.fn().mockResolvedValue({
+      query: vi.fn().mockResolvedValue({ rows: [] }),
+      release: vi.fn(),
+    }),
   },
-  db: {},
+  db: {
+    query: {
+      users: { findFirst: vi.fn() },
+      organizations: { findFirst: vi.fn() },
+      organizationMembers: { findFirst: vi.fn() },
+    },
+    insert: vi.fn(() => ({
+      values: vi.fn(() => ({
+        onConflictDoUpdate: vi.fn().mockResolvedValue({ rowCount: 1 }),
+      })),
+    })),
+    update: vi.fn(() => ({
+      set: vi.fn(() => ({
+        where: vi.fn().mockResolvedValue({ rowCount: 1 }),
+      })),
+    })),
+  },
+  eq: vi.fn(),
+  and: vi.fn(),
+  users: { zitadelUserId: 'zitadel_user_id' },
+  organizations: { id: 'id' },
+  organizationMembers: { organizationId: 'organization_id', userId: 'user_id' },
+  zitadelWebhookEvents: {},
+}));
+
+vi.mock('@colophony/auth-client', () => ({
+  createJwksVerifier: vi.fn(),
+  verifyZitadelSignature: vi.fn(() => false),
+}));
+
+vi.mock('drizzle-orm/node-postgres', () => ({
+  drizzle: vi.fn(() => ({ __mock: true })),
 }));
 
 const testEnv: Env = {

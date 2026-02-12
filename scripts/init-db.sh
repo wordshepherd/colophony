@@ -33,3 +33,27 @@ psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-E
 EOSQL
 
 echo "✅ app_user role created successfully"
+
+# --- Zitadel database and user ---
+# Zitadel needs its own database and a limited-privilege user.
+# The Zitadel container uses ADMIN credentials to bootstrap the schema,
+# then operates as this user.
+psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-EOSQL
+    DO \$\$
+    BEGIN
+        IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'zitadel') THEN
+            CREATE ROLE zitadel WITH LOGIN PASSWORD '${ZITADEL_DB_PASSWORD:-zitadel_password}' NOSUPERUSER NOCREATEDB;
+        END IF;
+    END
+    \$\$;
+EOSQL
+
+# Create the zitadel database if it doesn't exist
+psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "postgres" <<-EOSQL
+    SELECT 'CREATE DATABASE zitadel OWNER $POSTGRES_USER'
+    WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'zitadel')\gexec
+
+    GRANT ALL PRIVILEGES ON DATABASE zitadel TO zitadel;
+EOSQL
+
+echo "✅ zitadel database and role created successfully"

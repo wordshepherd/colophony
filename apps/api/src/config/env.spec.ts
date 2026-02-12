@@ -53,6 +53,20 @@ describe('validateEnv', () => {
     expect(typeof env.PORT).toBe('number');
   });
 
+  it('accepts optional ZITADEL_CLIENT_ID', () => {
+    const env = validateEnv({
+      ...validBase,
+      ZITADEL_AUTHORITY: 'http://localhost:8080',
+      ZITADEL_CLIENT_ID: 'my-zitadel-client',
+    });
+    expect(env.ZITADEL_CLIENT_ID).toBe('my-zitadel-client');
+  });
+
+  it('defaults ZITADEL_CLIENT_ID to undefined', () => {
+    const env = validateEnv(validBase);
+    expect(env.ZITADEL_CLIENT_ID).toBeUndefined();
+  });
+
   it('transforms FEDERATION_ENABLED to boolean', () => {
     const envTrue = validateEnv({
       ...validBase,
