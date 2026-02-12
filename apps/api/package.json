@@ -40,7 +40,7 @@
     "@nestjs/passport": "^10.0.0",
     "@nestjs/platform-express": "^10.4.0",
     "@nestjs/throttler": "^6.5.0",
-    "@prospector/db": "workspace:*",
+    "@colophony/db": "workspace:*",
     "@prospector/types": "workspace:*",
     "@trpc/server": "^10.45.0",
     "archiver": "^7.0.1",

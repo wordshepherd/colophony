@@ -1,8 +1,23 @@
-export * from "@prisma/client";
-export { prisma } from "./client";
+// Schema — tables, enums, relations
+export * from "./schema/index";
+
+// Client
+export { db, pool } from "./client";
+
+// RLS context helper
+export { withRls, type DrizzleDb } from "./context";
+
+// Type aliases
+export * from "./types";
+
+// JSONB helpers
 export {
-  withOrgContext,
-  withUserContext,
-  createContextHelpers,
-  type PrismaTransaction,
-} from "./context";
+  jsonbContains,
+  jsonbGet,
+  jsonbGetText,
+  jsonbGetPath,
+  jsonbGetPathText,
+} from "./json-helpers";
+
+// Re-export commonly used drizzle-orm utilities
+export { eq, ne, gt, gte, lt, lte, and, or, not, sql } from "drizzle-orm";
