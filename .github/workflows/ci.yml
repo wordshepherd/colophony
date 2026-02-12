@@ -76,9 +76,8 @@ jobs:
       - name: Lint
         run: pnpm lint
 
-      # TODO: Re-enable after API rewrite (apps/api still imports @prospector/db)
-      # - name: Type check
-      #   run: pnpm type-check
+      - name: Type check (scoped — web app excluded during rewrite)
+        run: pnpm turbo run type-check --filter=@colophony/db --filter=@colophony/api
 
       - name: Audit dependencies
         run: pnpm audit --audit-level=high
@@ -86,25 +85,26 @@ jobs:
 
   # ──────────────────────────────────────────────────
   # Unit tests (~2 min): no infra required
-  # TODO: Re-enable after API rewrite (apps/api + apps/web tests import @prospector/db)
   # ──────────────────────────────────────────────────
-  # unit-tests:
-  #   name: Unit Tests
-  #   needs: changes
-  #   if: needs.changes.outputs.docs_only != 'true'
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - uses: actions/checkout@v6
-  #     - uses: pnpm/action-setup@v4
-  #       with:
-  #         version: ${{ env.PNPM_VERSION }}
-  #     - uses: actions/setup-node@v6
-  #       with:
-  #         node-version: ${{ env.NODE_VERSION }}
-  #         cache: 'pnpm'
-  #     - run: pnpm install --frozen-lockfile
-  #     - name: Run unit tests
-  #       run: pnpm test
+  unit-tests:
+    name: Unit Tests
+    needs: changes
+    if: needs.changes.outputs.docs_only != 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+      - uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+      - run: pnpm install --frozen-lockfile
+      - name: Build workspace dependencies
+        run: pnpm --filter @colophony/db build
+      - name: Run unit tests (scoped — web app excluded during rewrite)
+        run: pnpm --filter @colophony/api test
 
   # ──────────────────────────────────────────────────
   # API E2E tests (~5 min): needs Postgres + Redis
@@ -183,24 +183,21 @@ jobs:
 
   # ──────────────────────────────────────────────────
   # Build verification (~2 min)
-  # TODO: Re-enable after API rewrite (apps/api + apps/web still import @prospector/db)
   # ──────────────────────────────────────────────────
-  # build:
-  #   name: Build
-  #   needs: changes
-  #   if: needs.changes.outputs.docs_only != 'true'
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - uses: actions/checkout@v6
-  #     - uses: pnpm/action-setup@v4
-  #       with:
-  #         version: ${{ env.PNPM_VERSION }}
-  #     - uses: actions/setup-node@v6
-  #       with:
-  #         node-version: ${{ env.NODE_VERSION }}
-  #         cache: 'pnpm'
-  #     - run: pnpm install --frozen-lockfile
-  #     - name: Build all packages
-  #       run: pnpm build
-  #       env:
-  #         NEXT_PUBLIC_API_URL: http://localhost:4000
+  build:
+    name: Build
+    needs: changes
+    if: needs.changes.outputs.docs_only != 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+      - uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+      - run: pnpm install --frozen-lockfile
+      - name: Build packages (scoped — web app excluded during rewrite)
+        run: pnpm turbo run build --filter=@colophony/db --filter=@colophony/api --filter=@prospector/types

@@ -157,7 +157,8 @@ while IFS= read -r file; do
   if [ -f "$filepath" ] && [[ "$file" == *.ts || "$file" == *.tsx ]]; then
     filedir=$(dirname "$filepath")
     # Extract relative imports: from "./foo" or from "../bar"
-    grep -oP "from ['\"](\./[^'\"]+|\.\.\/[^'\"]+)['\"]" "$filepath" 2>/dev/null | \
+    # Note: grep || true prevents pipefail exit when no relative imports exist
+    (grep -oP "from ['\"](\./[^'\"]+|\.\.\/[^'\"]+)['\"]" "$filepath" 2>/dev/null || true) | \
       sed "s/from ['\"]//;s/['\"]$//" | while IFS= read -r imp; do
         # Resolve relative path
         resolved=$(cd "$filedir" && realpath -m "$imp" 2>/dev/null || echo "")
