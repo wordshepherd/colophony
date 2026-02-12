@@ -63,11 +63,7 @@ If today already has a DEVLOG entry, **append to the existing entry's sections**
 
 ### Step 3: Check for CLAUDE.md updates
 
-Search the codebase for any `TODO(CLAUDE.md)` comments added during this session:
-
-```bash
-grep -r "TODO(CLAUDE.md)" --include="*.ts" --include="*.tsx" --include="*.js" .
-```
+Search the codebase for any `TODO(CLAUDE.md)` comments added during this session using the Grep tool (not bash) to search for `TODO(CLAUDE.md)` in `*.ts`, `*.tsx`, and `*.js` files.
 
 Also review the session for any new patterns, quirks, or constraints discovered. If updates are warranted, propose them:
 
@@ -122,20 +118,28 @@ Ask the user if they want to apply the suggestions before proceeding.
 
    Report the CI status to the user.
 
-6. **Clean up stale local branches**: Delete local branches that have already been merged to `origin/main`:
+6. **Clean up stale local branches**: Delete local branches whose remote tracking branch has been deleted (i.e., squash-merged PRs):
 
    ```bash
-   git fetch origin main
-   git branch --merged origin/main | grep -v '^\*\|main$' | sed 's/^[* ] *//'
+   git fetch --prune
+   git branch -vv
    ```
 
-   If any stale branches are found, list them and delete:
+   Claude parses the `git branch -vv` output:
+   - Lines containing `[gone]` indicate branches whose upstream was deleted (the PR was merged/closed and the remote branch removed)
+   - Lines starting with `*` indicate the current branch
+   - Extract the branch name (first non-whitespace token after `*` or leading spaces)
+   - Skip `main` — never delete main
+
+   If any stale branches are found (upstream `[gone]`), list them and delete:
 
    ```bash
-   git branch -d "<branch-name>"
+   git branch -D "<branch-name>"
    ```
 
-   Also switch to `main` if the current branch was already merged and the session's PR work is done:
+   Note: Use `-D` (force delete) because squash-merged branches are not recognized as `--merged` by git.
+
+   Also switch to `main` if the current branch's upstream is `[gone]` and the session's PR work is done:
 
    ```bash
    git checkout main && git pull origin main

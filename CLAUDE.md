@@ -154,22 +154,22 @@ tRPC client for internal API calls. Zitadel handles login/signup UI. `ProtectedR
 
 ## Known Quirks & Gotchas
 
-| Quirk                                                 | Details                                                                                                                      |
-| ----------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| **Drizzle `pgPolicy` requires `drizzle-orm/pg-core`** | Import `pgPolicy` from `drizzle-orm/pg-core`, not the top-level export                                                       |
-| **Drizzle JSONB queries need raw SQL**                | No native JSONB operators yet. Use `sql` template tag for JSONB path queries. Track Drizzle JSONB roadmap (Q2 2026)          |
-| **Pothos has no Drizzle plugin**                      | Manual type definitions, manual DataLoader setup, manual cursor pagination for every model. See architecture doc section 5.5 |
-| **Zitadel webhook signatures**                        | Verify `x-zitadel-signature` header on all webhook payloads. Use shared secret from Zitadel Actions config                   |
-| **`@ts-rest/fastify` adapter**                        | `initServer()` then `s.router(contract, handlers)` — different from the NestJS adapter pattern                               |
-| **GraphQL Yoga + Fastify**                            | Mount via `app.route()` with `handleNodeRequest`, not a Fastify plugin. Must forward headers manually                        |
-| **BullMQ Redis password**                             | Uses `REDIS_HOST`/`REDIS_PORT`/`REDIS_PASSWORD` (not `REDIS_URL`). Pass password in worker/queue config                      |
-| **Docker Compose env_file**                           | `env_file:` sets container env only. For YAML `${VAR}` substitution, use `--env-file .env` on CLI                            |
-| **PostgreSQL init-db.sh**                             | Only runs on first DB creation. Must `docker compose down -v` to re-run after changes                                        |
-| **TanStack Query v4 isLoading**                       | `isLoading` is `true` even when query is disabled (`enabled: false`). Check `fetchStatus !== 'idle'` instead                 |
-| **GitHub PAT: no Checks perm**                        | Fine-grained PATs lack `Checks` permission. Use `gh run list/view` (Actions API), NOT `gh pr checks`                         |
+| Quirk                                                 | Details                                                                                                                                                                     |
+| ----------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Drizzle `pgPolicy` requires `drizzle-orm/pg-core`** | Import `pgPolicy` from `drizzle-orm/pg-core`, not the top-level export                                                                                                      |
+| **Drizzle JSONB queries need raw SQL**                | No native JSONB operators yet. Use `sql` template tag for JSONB path queries. Track Drizzle JSONB roadmap (Q2 2026)                                                         |
+| **Pothos has no Drizzle plugin**                      | Manual type definitions, manual DataLoader setup, manual cursor pagination for every model. See architecture doc section 5.5                                                |
+| **Zitadel webhook signatures**                        | Verify `x-zitadel-signature` header on all webhook payloads. Use shared secret from Zitadel Actions config                                                                  |
+| **`@ts-rest/fastify` adapter**                        | `initServer()` then `s.router(contract, handlers)` — different from the NestJS adapter pattern                                                                              |
+| **GraphQL Yoga + Fastify**                            | Mount via `app.route()` with `handleNodeRequest`, not a Fastify plugin. Must forward headers manually                                                                       |
+| **BullMQ Redis password**                             | Uses `REDIS_HOST`/`REDIS_PORT`/`REDIS_PASSWORD` (not `REDIS_URL`). Pass password in worker/queue config                                                                     |
+| **Docker Compose env_file**                           | `env_file:` sets container env only. For YAML `${VAR}` substitution, use `--env-file .env` on CLI                                                                           |
+| **PostgreSQL init-db.sh**                             | Only runs on first DB creation. Must `docker compose down -v` to re-run after changes                                                                                       |
+| **TanStack Query v4 isLoading**                       | `isLoading` is `true` even when query is disabled (`enabled: false`). Check `fetchStatus !== 'idle'` instead                                                                |
+| **GitHub PAT: no Checks perm**                        | Fine-grained PATs lack `Checks` permission. Use `gh run list/view` (Actions API), NOT `gh pr checks`                                                                        |
 | **tRPC TS2742 under NodeNext**                        | `typeof appRouter` can't be named without internal `@trpc/server/dist/core/router` reference. Use `AnyRouter` annotation; refine to concrete type when procedures are added |
-| **WSL `npx` resolves to Windows**                     | Pre-commit `npx lint-staged` fails in WSL when Windows npm is in PATH. Use `pnpm exec` instead of `npx` in hooks             |
-| **CI: workspace deps need build before Vitest**       | Vitest resolves workspace packages via `exports` field (pointing to `dist/`). CI must build deps before running tests         |
+| **WSL husky hooks need nvm PATH**                     | Husky v9 runs hooks under `sh`/`dash`; `nvm.sh` can't be sourced. Hooks add nvm node bin to PATH directly. `lint-staged` called without `npx`                               |
+| **CI: workspace deps need build before Vitest**       | Vitest resolves workspace packages via `exports` field (pointing to `dist/`). CI must build deps before running tests                                                       |
 
 **Version pins (do not upgrade without testing):**
 

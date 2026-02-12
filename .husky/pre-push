@@ -1,3 +1,10 @@
+# WSL: node/pnpm aren't in husky's default sh PATH; add nvm node
+NVM_NODE="$HOME/.nvm/versions/node"
+for d in "$NVM_NODE"/*/bin; do
+  PATH="$d:$PATH"
+done
+export PATH
+
 # Run the same checks CI runs, so failures are caught before pushing
 echo "Running pre-push checks..."
 
