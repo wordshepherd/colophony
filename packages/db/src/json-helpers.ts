@@ -27,11 +27,27 @@ export function jsonbGetText(column: PgColumn, key: string): SQL {
 }
 
 /**
+ * Validate and sanitize JSONB path segments.
+ * Only allows alphanumeric characters, underscores, and hyphens.
+ */
+function sanitizePath(path: string[]): string {
+  const valid = /^[a-zA-Z0-9_-]+$/;
+  for (const segment of path) {
+    if (!valid.test(segment)) {
+      throw new Error(
+        `Invalid JSONB path segment: "${segment}". Only alphanumeric, underscore, and hyphen characters are allowed.`,
+      );
+    }
+  }
+  return path.join(",");
+}
+
+/**
  * JSONB nested path access: column #> '{path, to, value}'
  * Returns JSONB element at the given path.
  */
 export function jsonbGetPath(column: PgColumn, path: string[]): SQL {
-  const pathStr = path.join(",");
+  const pathStr = sanitizePath(path);
   return sql`${column} #> ${`{${pathStr}}`}`;
 }
 
@@ -40,6 +56,6 @@ export function jsonbGetPath(column: PgColumn, path: string[]): SQL {
  * Returns text value at the given path.
  */
 export function jsonbGetPathText(column: PgColumn, path: string[]): SQL {
-  const pathStr = path.join(",");
+  const pathStr = sanitizePath(path);
   return sql`${column} #>> ${`{${pathStr}}`}`;
 }

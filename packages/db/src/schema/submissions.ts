@@ -94,6 +94,10 @@ export const submissions = pgTable(
   (table) => [
     index("submissions_organization_id_idx").on(table.organizationId),
     index("submissions_submitter_id_idx").on(table.submitterId),
+    index("submissions_submitter_status_idx").on(
+      table.submitterId,
+      table.status,
+    ),
     index("submissions_submission_period_id_idx").on(table.submissionPeriodId),
     index("submissions_org_status_submitted_idx").on(
       table.organizationId,
