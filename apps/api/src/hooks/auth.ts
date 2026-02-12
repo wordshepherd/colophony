@@ -118,12 +118,15 @@ export default fp(
           }
           sub = payload.sub;
         } catch (err) {
-          const message =
+          const detail =
             err instanceof Error ? err.message : 'Token validation failed';
-          const isExpired = message.includes('exp');
+          const isExpired = detail.includes('exp');
+          request.log.warn({ err }, 'Token validation failed');
           return reply.status(401).send({
             error: isExpired ? 'token_expired' : 'token_invalid',
-            message,
+            message: isExpired
+              ? 'Token has expired'
+              : 'Token validation failed',
           });
         }
 
