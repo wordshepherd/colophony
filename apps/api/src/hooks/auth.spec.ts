@@ -192,6 +192,7 @@ describe('auth plugin', () => {
       });
 
       const dbModule = await import('@colophony/db');
+      // eslint-disable-next-line @typescript-eslint/unbound-method
       vi.mocked(dbModule.db.query.users.findFirst).mockResolvedValueOnce(
         undefined,
       );
@@ -212,6 +213,7 @@ describe('auth plugin', () => {
       });
 
       const dbModule = await import('@colophony/db');
+      // eslint-disable-next-line @typescript-eslint/unbound-method
       vi.mocked(dbModule.db.query.users.findFirst).mockResolvedValueOnce({
         id: 'user-1',
         email: 'deleted@example.com',
@@ -239,6 +241,7 @@ describe('auth plugin', () => {
       });
 
       const dbModule = await import('@colophony/db');
+      // eslint-disable-next-line @typescript-eslint/unbound-method
       vi.mocked(dbModule.db.query.users.findFirst).mockResolvedValueOnce({
         id: 'user-1',
         email: 'alice@example.com',

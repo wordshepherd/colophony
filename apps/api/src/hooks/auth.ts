@@ -16,7 +16,7 @@ const PUBLIC_PREFIXES = ['/health', '/ready', '/webhooks/', '/.well-known/'];
 const PUBLIC_EXACT = ['/', '/health', '/ready'];
 
 function isPublicRoute(url: string): boolean {
-  const path = url.split('?')[0]!;
+  const path = url.split('?')[0];
   if (PUBLIC_EXACT.includes(path)) return true;
   return PUBLIC_PREFIXES.some((prefix) => path.startsWith(prefix));
 }
@@ -97,7 +97,7 @@ export default fp(
           });
         }
 
-        const token = match[1]!;
+        const token = match[1];
 
         if (!verifyToken) {
           return reply.status(401).send({
