@@ -167,6 +167,9 @@ tRPC client for internal API calls. Zitadel handles login/signup UI. `ProtectedR
 | **PostgreSQL init-db.sh**                             | Only runs on first DB creation. Must `docker compose down -v` to re-run after changes                                        |
 | **TanStack Query v4 isLoading**                       | `isLoading` is `true` even when query is disabled (`enabled: false`). Check `fetchStatus !== 'idle'` instead                 |
 | **GitHub PAT: no Checks perm**                        | Fine-grained PATs lack `Checks` permission. Use `gh run list/view` (Actions API), NOT `gh pr checks`                         |
+| **tRPC TS2742 under NodeNext**                        | `typeof appRouter` can't be named without internal `@trpc/server/dist/core/router` reference. Use `AnyRouter` annotation; refine to concrete type when procedures are added |
+| **WSL `npx` resolves to Windows**                     | Pre-commit `npx lint-staged` fails in WSL when Windows npm is in PATH. Use `pnpm exec` instead of `npx` in hooks             |
+| **CI: workspace deps need build before Vitest**       | Vitest resolves workspace packages via `exports` field (pointing to `dist/`). CI must build deps before running tests         |
 
 **Version pins (do not upgrade without testing):**
 
