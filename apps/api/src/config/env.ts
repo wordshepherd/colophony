@@ -25,6 +25,7 @@ const envSchema = z.object({
   STRIPE_SECRET_KEY: z.string().optional(),
   STRIPE_WEBHOOK_SECRET: z.string().optional(),
   ZITADEL_AUTHORITY: z.string().url().optional(),
+  ZITADEL_CLIENT_ID: z.string().optional(),
   ZITADEL_WEBHOOK_SECRET: z.string().optional(),
   FEDERATION_DOMAIN: z.string().optional(),
   FEDERATION_ENABLED: z
