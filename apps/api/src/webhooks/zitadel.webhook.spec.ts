@@ -12,35 +12,39 @@ import Fastify, { type FastifyInstance } from 'fastify';
 import type { Env } from '../config/env.js';
 
 // vi.hoisted for mock functions used in vi.mock factories
-const { mockPoolConnect, mockClientQuery, mockClientRelease } = vi.hoisted(
-  () => {
-    const mockClientQuery = vi.fn().mockResolvedValue({ rows: [] });
-    const mockClientRelease = vi.fn();
-    const mockPoolConnect = vi.fn().mockResolvedValue({
-      query: mockClientQuery,
-      release: mockClientRelease,
-    });
-    return { mockPoolConnect, mockClientQuery, mockClientRelease };
-  },
-);
+const {
+  mockPoolConnect,
+  mockClientQuery,
+  mockClientRelease,
+  mockTxInsert,
+  mockTxUpdate,
+} = vi.hoisted(() => {
+  const mockClientQuery = vi.fn().mockResolvedValue({ rows: [] });
+  const mockClientRelease = vi.fn();
+  const mockPoolConnect = vi.fn().mockResolvedValue({
+    query: mockClientQuery,
+    release: mockClientRelease,
+  });
 
-vi.mock('@colophony/db', () => {
+  // Mock tx (Drizzle instance on transaction client)
   const onConflictDoUpdate = vi.fn().mockResolvedValue({ rowCount: 1 });
   const values = vi.fn(() => ({ onConflictDoUpdate }));
+  const mockTxInsert = vi.fn(() => ({ values }));
   const where = vi.fn().mockResolvedValue({ rowCount: 1 });
+  const set = vi.fn(() => ({ where }));
+  const mockTxUpdate = vi.fn(() => ({ set }));
 
   return {
-    db: {
-      insert: vi.fn(() => ({ values })),
-      update: vi.fn(() => ({
-        set: vi.fn(() => ({
-          where: where,
-        })),
-      })),
-      query: {
-        users: { findFirst: vi.fn() },
-      },
-    },
+    mockPoolConnect,
+    mockClientQuery,
+    mockClientRelease,
+    mockTxInsert,
+    mockTxUpdate,
+  };
+});
+
+vi.mock('@colophony/db', () => {
+  return {
     eq: vi.fn((_col: unknown, val: unknown) => val),
     pool: {
       connect: mockPoolConnect,
@@ -50,6 +54,14 @@ vi.mock('@colophony/db', () => {
     zitadelWebhookEvents: {},
   };
 });
+
+// Mock drizzle constructor to return a tx with insert/update
+vi.mock('drizzle-orm/node-postgres', () => ({
+  drizzle: vi.fn(() => ({
+    insert: mockTxInsert,
+    update: mockTxUpdate,
+  })),
+}));
 
 import { registerZitadelWebhooks } from './zitadel.webhook.js';
 
@@ -105,6 +117,8 @@ describe('Zitadel webhook handler', () => {
     mockClientQuery.mockClear();
     mockClientRelease.mockClear();
     mockPoolConnect.mockClear();
+    mockTxInsert.mockClear();
+    mockTxUpdate.mockClear();
 
     // Default: insert returns 1 row (new event), not a duplicate
     mockPoolConnect.mockResolvedValue({
@@ -126,6 +140,14 @@ describe('Zitadel webhook handler', () => {
       }
       return { rows: [] };
     });
+
+    // Reset tx mocks to default behavior
+    const onConflictDoUpdate = vi.fn().mockResolvedValue({ rowCount: 1 });
+    const values = vi.fn(() => ({ onConflictDoUpdate }));
+    mockTxInsert.mockImplementation(() => ({ values }));
+    const where = vi.fn().mockResolvedValue({ rowCount: 1 });
+    const set = vi.fn(() => ({ where }));
+    mockTxUpdate.mockImplementation(() => ({ set }));
   });
 
   it('rejects missing signature', async () => {
@@ -218,6 +240,13 @@ describe('Zitadel webhook handler', () => {
   });
 
   it('returns 500 on processing error and rolls back', async () => {
+    // Make tx.insert throw to simulate a DB error during event processing
+    mockTxInsert.mockImplementation(() => ({
+      values: vi.fn(() => ({
+        onConflictDoUpdate: vi.fn().mockRejectedValue(new Error('DB error')),
+      })),
+    }));
+
     mockClientQuery.mockImplementation((sql: string) => {
       if (
         typeof sql === 'string' &&
@@ -225,11 +254,7 @@ describe('Zitadel webhook handler', () => {
       ) {
         return { rows: [{ id: 'webhook-evt-id' }] };
       }
-      if (typeof sql === 'string' && sql.includes('ROLLBACK')) {
-        return { rows: [] };
-      }
-      // Simulate error during event processing
-      throw new Error('DB error');
+      return { rows: [] };
     });
 
     const body = JSON.stringify(makePayload({ eventId: 'evt-error' }));

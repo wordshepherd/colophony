@@ -1,7 +1,9 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import { drizzle } from 'drizzle-orm/node-postgres';
 import { verifyZitadelSignature } from '@colophony/auth-client';
 import type { ZitadelWebhookPayload } from '@colophony/auth-client';
-import { db, eq, pool, users } from '@colophony/db';
+import { eq, pool, users } from '@colophony/db';
+import type { DrizzleDb } from '@colophony/db';
 import type { Env } from '../config/env.js';
 
 export interface ZitadelWebhookOptions {
@@ -44,21 +46,23 @@ export async function registerZitadelWebhooks(
         | string
         | undefined;
 
-      if (!env.ZITADEL_WEBHOOK_SECRET) {
-        request.log.error('ZITADEL_WEBHOOK_SECRET not configured');
-        return reply.status(500).send({ error: 'webhook_not_configured' });
-      }
-
       const rawBody = (request as FastifyRequest & { rawBody?: Buffer })
         .rawBody;
       if (!rawBody) {
         return reply.status(400).send({ error: 'missing_body' });
       }
 
+      // Verify signature — returns generic 401 for both missing config and
+      // invalid signature to prevent configuration state probing.
       if (
+        !env.ZITADEL_WEBHOOK_SECRET ||
         !verifyZitadelSignature(rawBody, signature, env.ZITADEL_WEBHOOK_SECRET)
       ) {
-        request.log.warn('Invalid Zitadel webhook signature');
+        if (!env.ZITADEL_WEBHOOK_SECRET) {
+          request.log.error('ZITADEL_WEBHOOK_SECRET not configured');
+        } else {
+          request.log.warn('Invalid Zitadel webhook signature');
+        }
         return reply.status(401).send({ error: 'invalid_signature' });
       }
 
@@ -91,8 +95,10 @@ export async function registerZitadelWebhooks(
 
         const webhookEventId = insertResult.rows[0].id as string;
 
-        // Process the event
-        await processEvent(payload, request);
+        // Process event using a Drizzle instance on the same transaction client
+        // so that user state changes are atomic with the idempotency record.
+        const tx = drizzle(client);
+        await processEvent(payload, request, tx);
 
         // Mark as processed
         await client.query(
@@ -116,6 +122,7 @@ export async function registerZitadelWebhooks(
 async function processEvent(
   payload: ZitadelWebhookPayload,
   request: FastifyRequest,
+  tx: DrizzleDb,
 ): Promise<void> {
   const { eventType, user: userData } = payload;
 
@@ -128,7 +135,7 @@ async function processEvent(
     case 'user.created':
     case 'user.changed': {
       // Upsert: handles both create and out-of-order delivery
-      await db
+      await tx
         .insert(users)
         .values({
           email: userData.email ?? `${userData.userId}@placeholder.local`,
@@ -159,7 +166,7 @@ async function processEvent(
     }
 
     case 'user.deactivated': {
-      const result = await db
+      const result = await tx
         .update(users)
         .set({ deletedAt: new Date(), updatedAt: new Date() })
         .where(eq(users.zitadelUserId, userData.userId));
@@ -173,7 +180,7 @@ async function processEvent(
     }
 
     case 'user.reactivated': {
-      const result = await db
+      const result = await tx
         .update(users)
         .set({ deletedAt: null, updatedAt: new Date() })
         .where(eq(users.zitadelUserId, userData.userId));
@@ -189,7 +196,7 @@ async function processEvent(
     case 'user.removed': {
       // GDPR: Anonymize email, preserve referential integrity
       const anonymizedEmail = `deleted-${userData.userId}@anonymized.local`;
-      const result = await db
+      const result = await tx
         .update(users)
         .set({
           email: anonymizedEmail,
@@ -214,7 +221,7 @@ async function processEvent(
     }
 
     case 'user.email.verified': {
-      const result = await db
+      const result = await tx
         .update(users)
         .set({
           emailVerified: true,
