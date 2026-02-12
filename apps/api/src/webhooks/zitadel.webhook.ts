@@ -72,7 +72,9 @@ export async function registerZitadelWebhooks(
         return reply.status(400).send({ error: 'invalid_payload' });
       }
 
-      // Full transaction for idempotency + processing
+      // SECURITY NOTE: Uses pool.connect() directly (bypasses RLS) because
+      // webhooks are unauthenticated system events. The zitadel_webhook_events
+      // table has no RLS policies (system table, not tenant-scoped).
       const client = await pool.connect();
       try {
         await client.query('BEGIN');
