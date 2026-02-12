@@ -46,6 +46,17 @@ vi.mock('drizzle-orm/node-postgres', () => ({
   drizzle: vi.fn(() => ({ __mock: true })),
 }));
 
+// Mock ioredis so rate-limit plugin doesn't connect to real Redis
+vi.mock('ioredis', () => {
+  const RedisMock = vi.fn().mockImplementation(() => ({
+    connect: vi.fn().mockResolvedValue(undefined),
+    eval: vi.fn().mockResolvedValue([1, 60000]),
+    quit: vi.fn().mockResolvedValue('OK'),
+    status: 'ready',
+  }));
+  return { default: RedisMock };
+});
+
 const testEnv: Env = {
   DATABASE_URL: 'postgresql://test:test@localhost:5432/test',
   PORT: 0,
@@ -56,6 +67,10 @@ const testEnv: Env = {
   REDIS_PORT: 6379,
   REDIS_PASSWORD: '',
   CORS_ORIGIN: 'http://localhost:3000',
+  RATE_LIMIT_DEFAULT_MAX: 60,
+  RATE_LIMIT_AUTH_MAX: 200,
+  RATE_LIMIT_WINDOW_SECONDS: 60,
+  RATE_LIMIT_KEY_PREFIX: 'colophony:rl',
 };
 
 describe('Fastify app', () => {
