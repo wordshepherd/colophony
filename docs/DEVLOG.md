@@ -4,6 +4,48 @@ Append-only session log. Newest entries first.
 
 ---
 
+## 2026-02-12 — Zitadel OIDC Auth Integration (Track 1)
+
+### Done
+
+- **PR #41 merged** — Full Zitadel OIDC auth integration (28 files, 2196 insertions)
+- Created `packages/auth-client` package: JWKS verifier (`jose`), webhook HMAC-SHA256 signature verification, Zitadel event types
+- Created auth hook (`apps/api/src/hooks/auth.ts`): Bearer token validation via JWKS, user lookup by `zitadelUserId`, production fail-fast guard, test mode header injection
+- Created org-context hook (`apps/api/src/hooks/org-context.ts`): `X-Organization-Id` header validation, org existence + membership check (intentional RLS bypass documented)
+- Created db-context hook (`apps/api/src/hooks/db-context.ts`): per-request RLS transaction lifecycle (BEGIN → `set_config` for `app.user_id`/`app.current_org` → COMMIT/ROLLBACK)
+- Created Zitadel webhook handler (`apps/api/src/webhooks/zitadel.webhook.ts`): signature verification, idempotency via `ON CONFLICT DO NOTHING`, upsert for out-of-order delivery, GDPR anonymization on `user.removed`
+- Updated env schema (added `ZITADEL_CLIENT_ID`), types (added OIDC types, deprecated legacy v1 schemas), main.ts (wired all plugins)
+- Added Docker Compose Zitadel service (pinned v4.10.1, `auth` profile), updated `init-db.sh` (zitadel DB + NOSUPERUSER role)
+- Fixed CI workflow to build `@colophony/auth-client` and `@prospector/types` before unit tests
+- 64 tests total (18 auth-client + 46 API), all passing
+- Addressed 3 rounds of AI review: webhook transaction atomicity (critical fix), config state probing, error message exposure, security comments, UUID regex relaxation
+- **Improved AI review workflow** to prevent repetitive findings: feeds prior developer response comments into reviewer context, system prompt instructs not to re-raise resolved items. Result: round 5 returned LGTM immediately.
+
+### Decisions
+
+- **`processEvent` uses tx on transaction client** — ensures user state changes are atomic with idempotency record (AI review caught this)
+- **Generic 401 for webhook auth failures** — both missing secret and invalid signature return same error to prevent config probing
+- **Auth hook logs full errors, returns generic messages** — prevents leaking JWKS/JWT internals to clients
+- **UUID regex relaxed** — accepts all UUID versions (not just v1-5) to future-proof for UUID v7
+- **AI review context: responses only** — including full AI review comments (~21KB) exhausted the 180KB budget causing blank reviews; developer response summaries (~5.5KB) contain all the signal
+- **`fastify-raw-body` (community)** — `@fastify/raw-body` doesn't exist on npm; used community package v5.0.0
+
+### Issues Found
+
+- **`@fastify/raw-body` doesn't exist** — the official `@fastify/` scoped package is not published; `fastify-raw-body` community package works fine
+- **CI workspace dep build order** — new workspace packages must be added to CI build step or Vitest can't resolve their `exports` pointing to `dist/`
+- **AI review budget exhaustion** — prior review conversation can consume significant budget if not trimmed to essentials
+- Updated CLAUDE.md Known Quirks: added `fastify-raw-body` and AI review budget gotchas
+
+### Next
+
+- Rate limiting across all API surfaces (roadmap item flagged by AI reviewer)
+- Audit logging infrastructure for sensitive lifecycle events
+- Integration testing with real DB for org-context + db-context RLS flow
+- Frontend OIDC flow (Track 1 continuation, separate session)
+
+---
+
 ## 2026-02-12 — Claude Code GitHub App Trial & Revert
 
 ### Done
