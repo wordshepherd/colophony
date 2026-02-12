@@ -21,6 +21,12 @@ const envSchema = z.object({
   REDIS_PASSWORD: z.string().default(''),
   CORS_ORIGIN: z.string().default('http://localhost:3000'),
 
+  // Rate limiting
+  RATE_LIMIT_DEFAULT_MAX: z.coerce.number().int().positive().default(60),
+  RATE_LIMIT_AUTH_MAX: z.coerce.number().int().positive().default(200),
+  RATE_LIMIT_WINDOW_SECONDS: z.coerce.number().int().positive().default(60),
+  RATE_LIMIT_KEY_PREFIX: z.string().default('colophony:rl'),
+
   // Optional — validated when modules wire up
   STRIPE_SECRET_KEY: z.string().optional(),
   STRIPE_WEBHOOK_SECRET: z.string().optional(),

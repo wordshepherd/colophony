@@ -35,6 +35,10 @@ const baseEnv: Env = {
   REDIS_PORT: 6379,
   REDIS_PASSWORD: '',
   CORS_ORIGIN: 'http://localhost:3000',
+  RATE_LIMIT_DEFAULT_MAX: 60,
+  RATE_LIMIT_AUTH_MAX: 200,
+  RATE_LIMIT_WINDOW_SECONDS: 60,
+  RATE_LIMIT_KEY_PREFIX: 'colophony:rl',
 };
 
 describe('auth plugin', () => {

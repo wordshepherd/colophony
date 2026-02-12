@@ -199,6 +199,29 @@ Next steps planned: [bullet points from DEVLOG "Next" section]
 [Based on the DEVLOG "Next" section and open PR state, suggest what to work on]
 ```
 
+### Step 8: Branch prompt (when on main)
+
+If the current branch is `main` and there is no open feature branch for the suggested focus, prompt the user to confirm what they're working on and offer to create a branch:
+
+```
+You're on main. What are you working on this session?
+
+Based on the DEVLOG "Next" steps, I'd suggest:
+  1. <suggested topic> → `feat/<suggested-branch>`
+  2. <other topic> → `fix/<suggested-branch>`
+  3. Something else
+
+Want me to create a branch so we're ready to go?
+```
+
+Use AskUserQuestion with the suggested options. Once the user picks (or provides their own topic), create the branch with:
+
+```bash
+git checkout -b <prefix>/<branch-name>
+```
+
+If the user is already on a feature branch, skip this step entirely.
+
 ## Important notes
 
 - This is a READ-ONLY operation — do not modify any files or start any services (exception: if the user opts for catch-up housekeeping in Step 1, perform end-session steps before continuing)
@@ -206,3 +229,4 @@ Next steps planned: [bullet points from DEVLOG "Next" section]
 - Keep the briefing concise — the user wants orientation, not a novel
 - If Docker services are down, mention it but don't block — the user may not need them for every task
 - If there are uncommitted changes on `main`, flag this prominently as it likely needs to be moved to a branch
+- Always prompt for a branch when on `main` (Step 8) — never skip this, as the pre-push hook blocks pushes to main

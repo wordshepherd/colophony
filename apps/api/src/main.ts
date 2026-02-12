@@ -4,6 +4,7 @@ import helmet from '@fastify/helmet';
 import { pool } from '@colophony/db';
 import { type Env, validateEnv } from './config/env.js';
 import authPlugin from './hooks/auth.js';
+import rateLimitPlugin from './hooks/rate-limit.js';
 import orgContextPlugin from './hooks/org-context.js';
 import dbContextPlugin from './hooks/db-context.js';
 import { registerZitadelWebhooks } from './webhooks/zitadel.webhook.js';
@@ -73,8 +74,9 @@ export async function buildApp(env: Env): Promise<FastifyInstance> {
     maxAge: 86400, // 24 hours
   });
 
-  // Auth + org context + per-request RLS transaction
+  // Auth + rate limit + org context + per-request RLS transaction
   await app.register(authPlugin, { env });
+  await app.register(rateLimitPlugin, { env });
   await app.register(orgContextPlugin);
   await app.register(dbContextPlugin);
 
