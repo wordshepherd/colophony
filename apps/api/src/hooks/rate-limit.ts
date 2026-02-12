@@ -87,6 +87,7 @@ export default fp(
         if (shouldSkip(request)) return;
 
         const isAuthenticated = !!request.authContext?.userId;
+        // request.ip uses X-Forwarded-For when trustProxy: true (set in main.ts)
         const identifier = isAuthenticated
           ? request.authContext!.userId
           : request.ip;
