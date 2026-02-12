@@ -77,12 +77,19 @@ Review the PR for:
 
 **Do NOT comment on:** formatting, import ordering, minor naming preferences (handled by linters).
 
+**Prior review context:** If this PR has been reviewed before, the prior AI review comments and developer responses are included below. **Do NOT re-raise findings that have already been:**
+- **Fixed** — the developer addressed the issue in a subsequent commit.
+- **Dismissed with reasoning** — the developer explained why the finding is a false positive, already handled, or out of scope. Accept their reasoning unless you have a concrete, specific counter-argument (not just restating the original concern).
+- **Acknowledged as a roadmap item** — the developer noted it's planned but not in scope for this PR.
+
+Only re-raise a previously dismissed finding if the code has materially changed in a way that invalidates the prior reasoning, or if you identify a genuinely new angle not covered by the prior response. Your review should focus on **new or unaddressed issues only**.
+
 Format your response as markdown. Start with a one-line verdict:
 - ✅ **LGTM** — no issues found
 - ⚠️ **Minor issues** — suggestions but not blocking
 - 🚨 **Issues found** — should be addressed before merge
 
-Then list findings grouped by severity. Reference specific file paths and line numbers.
+Then list findings grouped by severity. Reference specific file paths and line numbers. If all prior findings have been addressed and no new issues exist, return ✅ **LGTM**.
 INSTRUCTIONS
 } > /tmp/system_prompt.txt
 
@@ -101,6 +108,37 @@ ${PR_BODY}
 
 "
 append_within_budget "$tier1"
+
+# Tier 1.5: Prior review conversation (AI reviews + developer responses)
+# Fetch comments from github-actions (AI reviews) and comments containing
+# "AI Review Response" (developer responses), ordered chronologically.
+# This prevents the reviewer from re-raising already-addressed findings.
+REVIEW_CONVERSATION=$(gh pr view "$PR_NUMBER" --json comments --jq '
+  [.comments[]
+   | select(
+       (.author.login == "github-actions") or
+       (.body | test("AI Review Response"))
+     )
+   | {author: .author.login, createdAt: .createdAt, body: .body}
+  ]
+  | sort_by(.createdAt)
+  | .[]
+  | "---\n**\(.author)** (\(.createdAt)):\n\(.body)"
+' 2>/dev/null || true)
+
+if [ -n "$REVIEW_CONVERSATION" ]; then
+  review_block="### Prior Review Conversation
+
+The following AI review comments and developer responses have already been posted on this PR. Do NOT re-raise findings that have been fixed, dismissed, or acknowledged.
+
+${REVIEW_CONVERSATION}
+
+---
+
+"
+  append_within_budget "$review_block" || true
+  echo "Prior review conversation: ${#REVIEW_CONVERSATION} bytes" >&2
+fi
 
 # Get list of changed files
 gh pr view "$PR_NUMBER" --json files -q '.files[].path' 2>/dev/null | head -200 > /tmp/pr_files.txt || true
