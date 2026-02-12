@@ -1,5 +1,12 @@
+# WSL: node/pnpm aren't in husky's default sh PATH; add nvm node
+NVM_NODE="$HOME/.nvm/versions/node"
+for d in "$NVM_NODE"/*/bin; do
+  PATH="$d:$PATH"
+done
+export PATH
+
 # Secret scanning (blocks commit on live keys, private keys, env files)
 sh scripts/check-secrets.sh
 
 # Lint and format staged files
-npx lint-staged
+lint-staged
