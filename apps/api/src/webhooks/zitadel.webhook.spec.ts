@@ -18,6 +18,7 @@ const {
   mockClientRelease,
   mockTxInsert,
   mockTxUpdate,
+  mockAuditLog,
 } = vi.hoisted(() => {
   const mockClientQuery = vi.fn().mockResolvedValue({ rows: [] });
   const mockClientRelease = vi.fn();
@@ -33,6 +34,7 @@ const {
   const where = vi.fn().mockResolvedValue({ rowCount: 1 });
   const set = vi.fn(() => ({ where }));
   const mockTxUpdate = vi.fn(() => ({ set }));
+  const mockAuditLog = vi.fn().mockResolvedValue(undefined);
 
   return {
     mockPoolConnect,
@@ -40,6 +42,7 @@ const {
     mockClientRelease,
     mockTxInsert,
     mockTxUpdate,
+    mockAuditLog,
   };
 });
 
@@ -61,6 +64,10 @@ vi.mock('drizzle-orm/node-postgres', () => ({
     insert: mockTxInsert,
     update: mockTxUpdate,
   })),
+}));
+
+vi.mock('../services/audit.service.js', () => ({
+  auditService: { log: mockAuditLog },
 }));
 
 import { registerZitadelWebhooks } from './zitadel.webhook.js';
@@ -123,6 +130,7 @@ describe('Zitadel webhook handler', () => {
     mockPoolConnect.mockClear();
     mockTxInsert.mockClear();
     mockTxUpdate.mockClear();
+    mockAuditLog.mockClear().mockResolvedValue(undefined);
 
     // Default: insert returns 1 row (new event), not a duplicate
     mockPoolConnect.mockResolvedValue({
@@ -241,6 +249,103 @@ describe('Zitadel webhook handler', () => {
     });
     expect(response.statusCode).toBe(400);
     expect(response.json().error).toBe('invalid_payload');
+  });
+
+  it('logs audit event for user.created', async () => {
+    const body = JSON.stringify(makePayload());
+    const sig = signPayload(body);
+
+    await app.inject({
+      method: 'POST',
+      url: '/webhooks/zitadel',
+      headers: {
+        'content-type': 'application/json',
+        'x-zitadel-signature': sig,
+      },
+      payload: body,
+    });
+
+    expect(mockAuditLog).toHaveBeenCalledOnce();
+    const params = mockAuditLog.mock.calls[0][1];
+    expect(params.action).toBe('USER_CREATED');
+    expect(params.resource).toBe('user');
+    expect(params.actorId).toBeUndefined();
+    expect(params.organizationId).toBeUndefined();
+    expect(params.newValue).toEqual({
+      zitadelUserId: 'zitadel-user-1',
+      email: 'alice@example.com',
+      emailVerified: true,
+    });
+  });
+
+  it('logs audit event for user.deactivated', async () => {
+    const body = JSON.stringify(
+      makePayload({ eventType: 'user.deactivated', eventId: 'evt-deact' }),
+    );
+    const sig = signPayload(body);
+
+    await app.inject({
+      method: 'POST',
+      url: '/webhooks/zitadel',
+      headers: {
+        'content-type': 'application/json',
+        'x-zitadel-signature': sig,
+      },
+      payload: body,
+    });
+
+    expect(mockAuditLog).toHaveBeenCalledOnce();
+    const params = mockAuditLog.mock.calls[0][1];
+    expect(params.action).toBe('USER_DEACTIVATED');
+    expect(params.resource).toBe('user');
+  });
+
+  it('logs USER_UPDATED audit for user.changed', async () => {
+    const body = JSON.stringify(
+      makePayload({ eventType: 'user.changed', eventId: 'evt-changed' }),
+    );
+    const sig = signPayload(body);
+
+    await app.inject({
+      method: 'POST',
+      url: '/webhooks/zitadel',
+      headers: {
+        'content-type': 'application/json',
+        'x-zitadel-signature': sig,
+      },
+      payload: body,
+    });
+
+    expect(mockAuditLog).toHaveBeenCalledOnce();
+    const params = mockAuditLog.mock.calls[0][1];
+    expect(params.action).toBe('USER_UPDATED');
+  });
+
+  it('does not log audit for duplicate webhook delivery', async () => {
+    mockClientQuery.mockImplementation((sql: string) => {
+      if (
+        typeof sql === 'string' &&
+        sql.includes('INSERT INTO zitadel_webhook_events')
+      ) {
+        return { rows: [] }; // duplicate
+      }
+      return { rows: [] };
+    });
+
+    const body = JSON.stringify(makePayload({ eventId: 'evt-dup-audit' }));
+    const sig = signPayload(body);
+
+    await app.inject({
+      method: 'POST',
+      url: '/webhooks/zitadel',
+      headers: {
+        'content-type': 'application/json',
+        'x-zitadel-signature': sig,
+      },
+      payload: body,
+    });
+
+    expect(mockAuditLog).not.toHaveBeenCalled();
   });
 
   it('returns 500 on processing error and rolls back', async () => {
