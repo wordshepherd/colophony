@@ -1,98 +1,154 @@
-import { NestFactory } from '@nestjs/core';
-import helmet from 'helmet';
-import { AppModule } from './app.module';
+import Fastify, { type FastifyInstance } from "fastify";
+import cors from "@fastify/cors";
+import helmet from "@fastify/helmet";
+import { pool } from "@colophony/db";
+import { type Env, validateEnv } from "./config/env.js";
 
-async function bootstrap() {
-  const app = await NestFactory.create(AppModule, {
-    // Enable raw body for Stripe webhook signature verification
-    rawBody: true,
+export async function buildApp(env: Env): Promise<FastifyInstance> {
+  const app = Fastify({
+    logger: {
+      level: env.LOG_LEVEL,
+      ...(env.NODE_ENV === "development"
+        ? { transport: { target: "pino-pretty" } }
+        : {}),
+      redact: [
+        "req.headers.authorization",
+        "req.headers.cookie",
+        'req.headers["x-api-key"]',
+      ],
+    },
+    trustProxy: true,
+    keepAliveTimeout: 65_000,
+    requestTimeout: 60_000,
+    connectionTimeout: 5_000,
   });
 
-  // Security headers via helmet
-  app.use(
-    helmet({
-      // Content Security Policy
-      contentSecurityPolicy: {
-        directives: {
-          defaultSrc: ["'self'"],
-          scriptSrc: ["'self'", 'https://js.stripe.com'],
-          styleSrc: ["'self'", "'unsafe-inline'"],
-          imgSrc: ["'self'", 'data:', 'https:', 'https://*.stripe.com'],
-          connectSrc: ["'self'", 'https://api.stripe.com'],
-          fontSrc: ["'self'"],
-          objectSrc: ["'none'"],
-          mediaSrc: ["'self'"],
-          frameSrc: ['https://js.stripe.com', 'https://hooks.stripe.com'],
-          // Allow Stripe for payment processing
-          frameAncestors: ["'self'"],
-        },
-      },
-      // HTTP Strict Transport Security
-      hsts: {
-        maxAge: 31536000, // 1 year
-        includeSubDomains: true,
-        preload: true,
-      },
-      // Prevent MIME type sniffing
-      noSniff: true,
-      // X-Frame-Options
-      frameguard: { action: 'deny' },
-      // X-XSS-Protection (legacy but still useful)
-      xssFilter: true,
-      // Referrer Policy
-      referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
-      // Don't advertise that we're using Express
-      hidePoweredBy: true,
-    }),
-  );
+  // Security headers
+  await app.register(helmet, {
+    contentSecurityPolicy: false, // No HTML served from API
+    crossOriginResourcePolicy: { policy: "cross-origin" },
+  });
 
-  // Parse allowed origins from environment
-  const allowedOrigins = (process.env.CORS_ORIGIN || 'http://localhost:3000')
-    .split(',')
-    .map((origin) => origin.trim());
+  // CORS
+  const origins = env.CORS_ORIGIN.split(",").map((o) => o.trim());
+  const hasWildcard = origins.includes("*");
 
-  // Enable CORS for frontend
-  app.enableCors({
+  if (hasWildcard) {
+    app.log.warn(
+      "CORS_ORIGIN includes wildcard (*) — credentials will be disabled (CORS spec forbids credentials: true with wildcard origin)",
+    );
+  }
+
+  await app.register(cors, {
     origin: (origin, callback) => {
       // Allow requests with no origin (mobile apps, curl, etc.)
       if (!origin) {
         callback(null, true);
         return;
       }
-
-      if (allowedOrigins.includes(origin) || allowedOrigins.includes('*')) {
+      if (hasWildcard || origins.includes(origin)) {
         callback(null, true);
       } else {
-        callback(new Error('Not allowed by CORS'));
+        callback(new Error("Not allowed by CORS"), false);
       }
     },
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    credentials: !hasWildcard,
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
     allowedHeaders: [
-      'Content-Type',
-      'Authorization',
-      'X-Organization-Id',
-      'X-Request-Id',
+      "Content-Type",
+      "Authorization",
+      "X-Organization-Id",
+      "X-Request-Id",
     ],
     exposedHeaders: [
-      'X-RateLimit-Limit',
-      'X-RateLimit-Remaining',
-      'X-RateLimit-Reset',
-      'Retry-After',
+      "X-RateLimit-Limit",
+      "X-RateLimit-Remaining",
+      "X-RateLimit-Reset",
+      "Retry-After",
     ],
     maxAge: 86400, // 24 hours
   });
 
-  // Global prefix for all routes except tRPC and health check
-  app.setGlobalPrefix('api', {
-    exclude: ['trpc/(.*)', 'health'],
+  // TODO: Register tRPC adapter when wiring procedures
+  // await app.register(fastifyTRPCPlugin, { prefix: '/trpc', router: appRouter });
+
+  // Routes
+  app.get("/health", async () => ({
+    status: "ok",
+    timestamp: new Date().toISOString(),
+  }));
+
+  app.get("/ready", async (_request, reply) => {
+    try {
+      await pool.query("SELECT 1");
+      return { status: "ready", timestamp: new Date().toISOString() };
+    } catch (err) {
+      app.log.error(err, "Readiness check failed — database unreachable");
+      return reply.status(503).send({
+        status: "unavailable",
+        error: "database_unreachable",
+        timestamp: new Date().toISOString(),
+      });
+    }
   });
 
-  const port = process.env.PORT ?? 4000;
-  await app.listen(port);
+  app.get("/", async () => ({
+    name: "Colophony API",
+    version: "2.0.0-dev",
+  }));
 
-  console.log(`API running on http://localhost:${port}`);
-  console.log(`tRPC endpoint: http://localhost:${port}/trpc`);
+  // Error handlers
+  app.setErrorHandler((error, _request, reply) => {
+    app.log.error(error);
+    const statusCode = error.statusCode ?? 500;
+    void reply.status(statusCode).send({
+      error: statusCode >= 500 ? "internal_error" : error.message,
+    });
+  });
+
+  app.setNotFoundHandler((_request, reply) => {
+    void reply.status(404).send({ error: "not_found" });
+  });
+
+  return app;
 }
 
-void bootstrap();
+async function start(): Promise<void> {
+  const env = validateEnv();
+  const app = await buildApp(env);
+
+  // Graceful shutdown
+  const shutdown = async (signal: string) => {
+    app.log.info(`Received ${signal}, shutting down gracefully...`);
+
+    const forceExit = setTimeout(() => {
+      app.log.error("Shutdown timeout exceeded, forcing exit");
+      process.exit(1);
+    }, 10_000);
+
+    try {
+      await app.close();
+      // TODO: Close DB pool when connection management is centralized
+      // TODO: Close Redis connections
+      // TODO: Close BullMQ workers
+      app.log.info("Server closed");
+    } finally {
+      clearTimeout(forceExit);
+      process.exit(0);
+    }
+  };
+
+  process.once("SIGINT", () => void shutdown("SIGINT"));
+  process.once("SIGTERM", () => void shutdown("SIGTERM"));
+
+  await app.listen({ port: env.PORT, host: env.HOST });
+  app.log.info(`Colophony API listening on ${env.HOST}:${env.PORT}`);
+}
+
+// Only start when run directly, not when imported by tests
+if (require.main === module) {
+  start().catch((err) => {
+    console.error("Failed to start server:", err);
+    process.exit(1);
+  });
+}
