@@ -1,25 +1,25 @@
-import { z } from "zod";
+import { z } from 'zod';
 
 const envSchema = z.object({
   // Required
   DATABASE_URL: z
     .string()
-    .min(1, "DATABASE_URL is required")
-    .startsWith("postgresql://", "DATABASE_URL must be a postgresql:// URL"),
+    .min(1, 'DATABASE_URL is required')
+    .startsWith('postgresql://', 'DATABASE_URL must be a postgresql:// URL'),
 
   // With defaults
   PORT: z.coerce.number().int().positive().default(4000),
-  HOST: z.string().default("0.0.0.0"),
+  HOST: z.string().default('0.0.0.0'),
   NODE_ENV: z
-    .enum(["development", "production", "test"])
-    .default("development"),
+    .enum(['development', 'production', 'test'])
+    .default('development'),
   LOG_LEVEL: z
-    .enum(["fatal", "error", "warn", "info", "debug", "trace"])
-    .default("info"),
-  REDIS_HOST: z.string().default("localhost"),
+    .enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace'])
+    .default('info'),
+  REDIS_HOST: z.string().default('localhost'),
   REDIS_PORT: z.coerce.number().int().positive().default(6379),
-  REDIS_PASSWORD: z.string().default(""),
-  CORS_ORIGIN: z.string().default("http://localhost:3000"),
+  REDIS_PASSWORD: z.string().default(''),
+  CORS_ORIGIN: z.string().default('http://localhost:3000'),
 
   // Optional — validated when modules wire up
   STRIPE_SECRET_KEY: z.string().optional(),
@@ -28,8 +28,8 @@ const envSchema = z.object({
   ZITADEL_WEBHOOK_SECRET: z.string().optional(),
   FEDERATION_DOMAIN: z.string().optional(),
   FEDERATION_ENABLED: z
-    .enum(["true", "false"])
-    .transform((v) => v === "true")
+    .enum(['true', 'false'])
+    .transform((v) => v === 'true')
     .optional(),
 });
 

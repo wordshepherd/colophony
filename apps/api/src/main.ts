@@ -1,19 +1,19 @@
-import Fastify, { type FastifyInstance } from "fastify";
-import cors from "@fastify/cors";
-import helmet from "@fastify/helmet";
-import { pool } from "@colophony/db";
-import { type Env, validateEnv } from "./config/env.js";
+import Fastify, { type FastifyInstance } from 'fastify';
+import cors from '@fastify/cors';
+import helmet from '@fastify/helmet';
+import { pool } from '@colophony/db';
+import { type Env, validateEnv } from './config/env.js';
 
 export async function buildApp(env: Env): Promise<FastifyInstance> {
   const app = Fastify({
     logger: {
       level: env.LOG_LEVEL,
-      ...(env.NODE_ENV === "development"
-        ? { transport: { target: "pino-pretty" } }
+      ...(env.NODE_ENV === 'development'
+        ? { transport: { target: 'pino-pretty' } }
         : {}),
       redact: [
-        "req.headers.authorization",
-        "req.headers.cookie",
+        'req.headers.authorization',
+        'req.headers.cookie',
         'req.headers["x-api-key"]',
       ],
     },
@@ -26,16 +26,16 @@ export async function buildApp(env: Env): Promise<FastifyInstance> {
   // Security headers
   await app.register(helmet, {
     contentSecurityPolicy: false, // No HTML served from API
-    crossOriginResourcePolicy: { policy: "cross-origin" },
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
   });
 
   // CORS
-  const origins = env.CORS_ORIGIN.split(",").map((o) => o.trim());
-  const hasWildcard = origins.includes("*");
+  const origins = env.CORS_ORIGIN.split(',').map((o) => o.trim());
+  const hasWildcard = origins.includes('*');
 
   if (hasWildcard) {
     app.log.warn(
-      "CORS_ORIGIN includes wildcard (*) — credentials will be disabled (CORS spec forbids credentials: true with wildcard origin)",
+      'CORS_ORIGIN includes wildcard (*) — credentials will be disabled (CORS spec forbids credentials: true with wildcard origin)',
     );
   }
 
@@ -49,22 +49,22 @@ export async function buildApp(env: Env): Promise<FastifyInstance> {
       if (hasWildcard || origins.includes(origin)) {
         callback(null, true);
       } else {
-        callback(new Error("Not allowed by CORS"), false);
+        callback(new Error('Not allowed by CORS'), false);
       }
     },
     credentials: !hasWildcard,
-    methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: [
-      "Content-Type",
-      "Authorization",
-      "X-Organization-Id",
-      "X-Request-Id",
+      'Content-Type',
+      'Authorization',
+      'X-Organization-Id',
+      'X-Request-Id',
     ],
     exposedHeaders: [
-      "X-RateLimit-Limit",
-      "X-RateLimit-Remaining",
-      "X-RateLimit-Reset",
-      "Retry-After",
+      'X-RateLimit-Limit',
+      'X-RateLimit-Remaining',
+      'X-RateLimit-Reset',
+      'Retry-After',
     ],
     maxAge: 86400, // 24 hours
   });
@@ -73,41 +73,45 @@ export async function buildApp(env: Env): Promise<FastifyInstance> {
   // await app.register(fastifyTRPCPlugin, { prefix: '/trpc', router: appRouter });
 
   // Routes
-  app.get("/health", async () => ({
-    status: "ok",
+  app.get('/health', async () => ({
+    status: 'ok',
     timestamp: new Date().toISOString(),
   }));
 
-  app.get("/ready", async (_request, reply) => {
+  app.get('/ready', async (_request, reply) => {
     try {
-      await pool.query("SELECT 1");
-      return { status: "ready", timestamp: new Date().toISOString() };
+      await pool.query('SELECT 1');
+      return { status: 'ready', timestamp: new Date().toISOString() };
     } catch (err) {
-      app.log.error(err, "Readiness check failed — database unreachable");
+      app.log.error(err, 'Readiness check failed — database unreachable');
       return reply.status(503).send({
-        status: "unavailable",
-        error: "database_unreachable",
+        status: 'unavailable',
+        error: 'database_unreachable',
         timestamp: new Date().toISOString(),
       });
     }
   });
 
-  app.get("/", async () => ({
-    name: "Colophony API",
-    version: "2.0.0-dev",
+  app.get('/', async () => ({
+    name: 'Colophony API',
+    version: '2.0.0-dev',
   }));
 
   // Error handlers
-  app.setErrorHandler((error, _request, reply) => {
+  app.setErrorHandler<Error>((error, _request, reply) => {
     app.log.error(error);
-    const statusCode = error.statusCode ?? 500;
+    const statusCode =
+      'statusCode' in error &&
+      typeof (error as Record<string, unknown>).statusCode === 'number'
+        ? ((error as Record<string, unknown>).statusCode as number)
+        : 500;
     void reply.status(statusCode).send({
-      error: statusCode >= 500 ? "internal_error" : error.message,
+      error: statusCode >= 500 ? 'internal_error' : error.message,
     });
   });
 
   app.setNotFoundHandler((_request, reply) => {
-    void reply.status(404).send({ error: "not_found" });
+    void reply.status(404).send({ error: 'not_found' });
   });
 
   return app;
@@ -122,7 +126,7 @@ async function start(): Promise<void> {
     app.log.info(`Received ${signal}, shutting down gracefully...`);
 
     const forceExit = setTimeout(() => {
-      app.log.error("Shutdown timeout exceeded, forcing exit");
+      app.log.error('Shutdown timeout exceeded, forcing exit');
       process.exit(1);
     }, 10_000);
 
@@ -131,15 +135,15 @@ async function start(): Promise<void> {
       // TODO: Close DB pool when connection management is centralized
       // TODO: Close Redis connections
       // TODO: Close BullMQ workers
-      app.log.info("Server closed");
+      app.log.info('Server closed');
     } finally {
       clearTimeout(forceExit);
       process.exit(0);
     }
   };
 
-  process.once("SIGINT", () => void shutdown("SIGINT"));
-  process.once("SIGTERM", () => void shutdown("SIGTERM"));
+  process.once('SIGINT', () => void shutdown('SIGINT'));
+  process.once('SIGTERM', () => void shutdown('SIGTERM'));
 
   await app.listen({ port: env.PORT, host: env.HOST });
   app.log.info(`Colophony API listening on ${env.HOST}:${env.PORT}`);
@@ -148,7 +152,7 @@ async function start(): Promise<void> {
 // Only start when run directly, not when imported by tests
 if (require.main === module) {
   start().catch((err) => {
-    console.error("Failed to start server:", err);
+    console.error('Failed to start server:', err);
     process.exit(1);
   });
 }
