@@ -170,6 +170,7 @@ tRPC client for internal API calls. Zitadel handles login/signup UI. `ProtectedR
 | **tRPC TS2742 under NodeNext**                        | `typeof appRouter` can't be named without internal `@trpc/server/dist/core/router` reference. Use `AnyRouter` annotation; refine to concrete type when procedures are added |
 | **WSL husky hooks need nvm PATH**                     | Husky v9 runs hooks under `sh`/`dash`; `nvm.sh` can't be sourced. Hooks add nvm node bin to PATH directly. `lint-staged` called without `npx`                               |
 | **CI: workspace deps need build before Vitest**       | Vitest resolves workspace packages via `exports` field (pointing to `dist/`). CI must build deps before running tests                                                       |
+| **`gh pr edit` broken (Projects Classic)**            | Returns GraphQL error about Projects Classic deprecation. Use `gh api repos/{owner}/{repo}/pulls/{number} -X PATCH -f title="..." -f body="..."` instead                    |
 
 **Version pins (do not upgrade without testing):**
 
