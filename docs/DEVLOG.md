@@ -4,6 +4,45 @@ Append-only session log. Newest entries first.
 
 ---
 
+## 2026-02-12 — Redis Rate Limiting (Track 1)
+
+### Done
+
+- **PR #43 opened** — Redis-backed rate limiting via custom Fastify plugin (`colophony-rate-limit`)
+- Atomic Lua script (INCR + PEXPIRE + PTTL in one round-trip) for race-free fixed window counting
+- Keyed by `userId` for authenticated requests (200/window) and IP for unauthenticated (60/window)
+- Graceful degradation: Redis unavailable → requests allowed, logged at warn
+- Skips health checks, webhooks, `.well-known`, root, OPTIONS preflight
+- Standard headers: `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset`; `Retry-After` + `Cache-Control: no-store` on 429
+- Added 4 env vars with Zod validation: `RATE_LIMIT_DEFAULT_MAX`, `RATE_LIMIT_AUTH_MAX`, `RATE_LIMIT_WINDOW_SECONDS`, `RATE_LIMIT_KEY_PREFIX`
+- 16 new rate limit tests + 3 env validation tests using `ioredis-mock` (65 total, all passing)
+- Updated all 5 existing spec files with new env fields
+- Addressed AI review: added `trustProxy` documentation comment
+- Added branch prompt (Step 8) to `/start-session` skill — prompts user to create feature branch when on main
+
+### Decisions
+
+- **Custom plugin over `@fastify/rate-limit`** — fits existing `fastify-plugin` chain, no new runtime dep, direct control over graceful degradation
+- **Fixed window counter** — sufficient for current needs; sliding window upgrade path documented in plugin JSDoc
+- **`ioredis-mock` for testing** — realistic Redis behavior; needed `flushall()` in `beforeEach` because instances share in-memory state by default
+- **Test Redis injection** — plugin accepts optional `redis` param for testing, avoids mocking the ioredis module in rate-limit tests
+
+### Issues Found
+
+- **`ioredis-mock` shares state** — all instances with the same config share an in-memory store; must `flushall()` between tests
+- **`@types/ioredis-mock` needed separately** — not bundled with `ioredis-mock`; required for `tsc --noEmit` to pass
+- **Pre-existing web type errors** — tRPC router type issues in `apps/web/` unrelated to this PR (existed before)
+
+### Next
+
+- Merge PR #43 after CI + senior dev review
+- Audit logging infrastructure for sensitive lifecycle events
+- Integration testing with real DB for org-context + db-context RLS flow
+- GraphQL cost-based rate limiting (when GraphQL is implemented)
+- Per-org quotas (when billing/plans exist)
+
+---
+
 ## 2026-02-12 — Zitadel OIDC Auth Integration (Track 1)
 
 ### Done
