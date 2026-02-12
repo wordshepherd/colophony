@@ -101,6 +101,8 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'pnpm'
       - run: pnpm install --frozen-lockfile
+      - name: Build workspace dependencies
+        run: pnpm --filter @colophony/db build
       - name: Run unit tests (scoped — web app excluded during rewrite)
         run: pnpm --filter @colophony/api test
 
