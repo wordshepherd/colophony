@@ -10,12 +10,13 @@ Start-of-session orientation: load context, check environment, surface open work
 ## What this skill does
 
 1. Detects incomplete previous sessions (missed /end-session) and offers catch-up
-2. Reads the latest DEVLOG entry for context and planned next steps
-3. Checks git state (branch, uncommitted changes, open PRs)
-4. Checks CI health and open PR status
-5. Verifies infrastructure is running (Docker, DB)
-6. Surfaces open roadmap items and pending work
-7. Prints a briefing for the user
+2. Cleans up stale local branches from merged PRs
+3. Reads the latest DEVLOG entry for context and planned next steps
+4. Checks git state (branch, uncommitted changes, open PRs)
+5. Checks CI health and open PR status
+6. Verifies infrastructure is running (Docker, DB)
+7. Surfaces open roadmap items and pending work
+8. Prints a briefing for the user
 
 ## Usage
 
@@ -83,6 +84,40 @@ Or: I can do the catch-up housekeeping now before the briefing.
 Wait for the user to decide before continuing. If they say to catch up, perform the end-session steps (DEVLOG update, branch cleanup) before proceeding with the rest of the briefing.
 
 If no incomplete session is detected, proceed normally.
+
+### Step 1b: Clean up stale branches
+
+After the incomplete session check (regardless of outcome), clean up any local branches whose remote tracking branch has been deleted (i.e., squash-merged PRs from previous sessions):
+
+```bash
+git fetch --prune
+git branch -vv
+```
+
+Claude parses the `git branch -vv` output:
+
+- Lines containing `[gone]` indicate branches whose upstream was deleted (the PR was merged/closed and the remote branch removed)
+- Lines starting with `*` indicate the current branch
+- Extract the branch name (first non-whitespace token after `*` or leading spaces)
+- Skip `main` — never delete main
+
+If any stale branches are found (upstream `[gone]`), list them and delete:
+
+```bash
+git branch -D "<branch-name>"
+```
+
+Note: Use `-D` (force delete) because squash-merged branches are not recognized as `--merged` by git.
+
+If the **current branch** has upstream `[gone]` (you're on a merged feature branch), switch to `main` first:
+
+```bash
+git checkout main && git pull origin main
+```
+
+Then delete the stale branch. Report what was cleaned up in the briefing.
+
+If no stale branches are found, skip this step silently.
 
 ### Step 2: Load session context from DEVLOG
 
@@ -184,6 +219,7 @@ Next steps planned: [bullet points from DEVLOG "Next" section]
 - Branch: <current branch>
 - Uncommitted changes: [yes/no, summary if yes]
 - Open PRs: [list with CI status and AI review status]
+- Branches cleaned up: [list of deleted stale branches, or "None"]
 
 ### Infrastructure
 - PostgreSQL: [running/stopped]
