@@ -112,18 +112,16 @@ describe('RLS No Context (empty context)', () => {
 
   describe('INSERT without context on nullable tables', () => {
     it('INSERT audit_event with NULL org_id, no context succeeds', async () => {
-      const rows = await withTestRls({}, (tx) =>
-        tx
-          .insert(auditEvents)
-          .values({
-            organizationId: null,
-            action: 'SYSTEM_EVENT',
-            resource: `no_ctx_audit_${Date.now()}`,
-          })
-          .returning(),
+      // No .returning() — the strict SELECT policy intentionally blocks
+      // reading NULL-org audit rows back (auth failure events are write-only
+      // outside org context). Verifying insert doesn't throw is sufficient.
+      await withTestRls({}, (tx) =>
+        tx.insert(auditEvents).values({
+          organizationId: null,
+          action: 'SYSTEM_EVENT',
+          resource: `no_ctx_audit_${Date.now()}`,
+        }),
       );
-      expect(rows).toHaveLength(1);
-      expect(rows[0].organizationId).toBeNull();
     });
 
     it('INSERT retention_policy with NULL org_id, no context succeeds', async () => {
