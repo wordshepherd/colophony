@@ -4,6 +4,40 @@ Append-only session log. Newest entries first.
 
 ---
 
+## 2026-02-13 — Organization Service + tRPC Procedures (Track 1 → Track 2)
+
+### Done
+
+- **PR #50** — Organization service + tRPC procedures — first end-to-end request path: tRPC → service → Drizzle → RLS
+- Migration `0005_membership_helpers.sql`: `list_user_organizations()` SECURITY DEFINER function for cross-tenant org listing, hardened with `SET search_path`, `REVOKE FROM PUBLIC`, `GRANT` to `app_user` only
+- Fixed org-context hook RLS bug: replaced `db.query` calls (broken — `app_user` subject to RLS with no context set) with RLS-native bootstrap using temporary read-only transactions (`pool.connect()` → `BEGIN READ ONLY` → `SET LOCAL` → query → `COMMIT`)
+- Organization service (`organization.service.ts`) with 9 methods: `listUserOrganizations`, `create`, `isSlugAvailable`, `getById`, `update`, `listMembers`, `addMember`, `removeMember`, `updateMemberRole`
+- tRPC infrastructure: `context.ts` (typed context from Fastify hooks), `init.ts` (middleware stack: `isAuthed` → `hasOrgContext` → `isAdmin`), mounted at `/trpc` in `main.ts`
+- 9 tRPC procedures across `organizations.*` and `organizations.members.*` namespaces, all mutations audit-logged
+- 124 unit tests passing (20 procedure tests, 9 service tests, updated hook tests), 9 RLS integration test cases
+- **Non-interactive Codex review** (2 P1 findings, both fixed): DB error swallowed as 403 in org-context catch block; non-atomic last-admin guard (countAdmins + removeMember race)
+- **Interactive Codex review** (4 findings addressed): `FOR UPDATE` with aggregates invalid in PostgreSQL (rewrote to select rows + count in app code); slug TOCTOU race (catch `23505` unique constraint); inline zod in `checkSlug` (extracted `slugSchema`/`checkSlugSchema` to `@prospector/types`); audit atomicity on `organizations.create` (documented trade-off)
+
+### Decisions
+
+- **Only one SECURITY DEFINER function** (`list_user_organizations`) — genuinely cross-tenant query. Everything else uses RLS-native `SET LOCAL` inside transactions, consistent with project rules
+- **`create()` manages its own transaction** — org doesn't exist yet, so no RLS context can be set by hooks. Audit runs in the separate request transaction; atomicity gap is acceptable and documented
+- **`appRouter` typed as `AnyRouter`** — TS2742 workaround; test callers use `as any` cast. Will refine when tRPC v11 or project restructuring resolves the inferred type issue
+- **Extracted `init.ts`** to break circular dependency between `router.ts` ↔ `routers/organizations.ts`
+
+### Issues Found
+
+- Web type-check has pre-existing failures (`@prospector/api/trpc/trpc.router` import path doesn't exist, `AnyRouter` erases procedure types for frontend client). Will need fixing when frontend tRPC client is wired up
+
+### Next
+
+- Wire frontend tRPC client to new `AppRouter` (fix web type errors)
+- Add remaining API surfaces (ts-rest REST, Pothos GraphQL) for organizations
+- Frontend OIDC flow (Track 1 continuation)
+- Deferred: dedicated `audit_writer` role, request correlation columns, in-memory auth throttle
+
+---
+
 ## 2026-02-13 — Audit Integration Tests + Codex Workflow Rewrite (Track 1)
 
 ### Done
