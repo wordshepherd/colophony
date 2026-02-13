@@ -113,7 +113,7 @@ export default fp(
 
         const match = /^Bearer\s+(\S+)$/i.exec(authHeader);
         if (!match) {
-          await logAuthFailure(request, AuditActions.AUTH_TOKEN_INVALID, {
+          void logAuthFailure(request, AuditActions.AUTH_TOKEN_INVALID, {
             reason: 'invalid_header_format',
           });
           return reply.status(401).send({
@@ -137,6 +137,9 @@ export default fp(
         try {
           const { payload } = await verifyToken(token);
           if (!payload.sub) {
+            void logAuthFailure(request, AuditActions.AUTH_TOKEN_INVALID, {
+              reason: 'missing_sub_claim',
+            });
             return reply.status(401).send({
               error: 'token_invalid',
               message: 'Token missing subject claim',
@@ -146,7 +149,7 @@ export default fp(
         } catch (err) {
           const isExpired = err instanceof Error && err.name === 'JWTExpired';
           request.log.warn({ err }, 'Token validation failed');
-          await logAuthFailure(
+          void logAuthFailure(
             request,
             isExpired
               ? AuditActions.AUTH_TOKEN_EXPIRED
@@ -167,11 +170,10 @@ export default fp(
         });
 
         if (!user) {
-          await logAuthFailure(
-            request,
-            AuditActions.AUTH_USER_NOT_PROVISIONED,
-            { reason: 'not_provisioned', zitadelUserId: sub },
-          );
+          void logAuthFailure(request, AuditActions.AUTH_USER_NOT_PROVISIONED, {
+            reason: 'not_provisioned',
+            zitadelUserId: sub,
+          });
           return reply.status(403).send({
             error: 'user_not_provisioned',
             message:
@@ -180,7 +182,7 @@ export default fp(
         }
 
         if (user.deletedAt) {
-          await logAuthFailure(
+          void logAuthFailure(
             request,
             AuditActions.AUTH_USER_DEACTIVATED,
             { reason: 'deactivated', zitadelUserId: sub },

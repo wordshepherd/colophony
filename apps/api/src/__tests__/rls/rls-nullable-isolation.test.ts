@@ -19,7 +19,7 @@ describe('RLS Nullable Isolation (IS NULL OR organization_id = current_org_id())
   });
 
   describe('audit_events', () => {
-    it('org A context sees org A + global events, not org B', async () => {
+    it('org A context sees only org A events, not org B or global', async () => {
       const rows = await withTestRls(
         { orgId: scenario.orgA.id, userId: scenario.userA.id },
         (tx) => tx.select().from(auditEvents),
@@ -27,11 +27,11 @@ describe('RLS Nullable Isolation (IS NULL OR organization_id = current_org_id())
 
       const ids = rows.map((r) => r.id);
       expect(ids).toContain(scenario.auditEventA.id);
-      expect(ids).toContain(scenario.auditEventGlobal.id);
+      expect(ids).not.toContain(scenario.auditEventGlobal.id);
       expect(ids).not.toContain(scenario.auditEventB.id);
     });
 
-    it('org B context sees org B + global events, not org A', async () => {
+    it('org B context sees only org B events, not org A or global', async () => {
       const rows = await withTestRls(
         { orgId: scenario.orgB.id, userId: scenario.userB.id },
         (tx) => tx.select().from(auditEvents),
@@ -39,11 +39,11 @@ describe('RLS Nullable Isolation (IS NULL OR organization_id = current_org_id())
 
       const ids = rows.map((r) => r.id);
       expect(ids).toContain(scenario.auditEventB.id);
-      expect(ids).toContain(scenario.auditEventGlobal.id);
+      expect(ids).not.toContain(scenario.auditEventGlobal.id);
       expect(ids).not.toContain(scenario.auditEventA.id);
     });
 
-    it('global audit event is visible to both orgs', async () => {
+    it('global audit events (null org) are NOT visible to tenant contexts', async () => {
       const rowsA = await withTestRls(
         { orgId: scenario.orgA.id, userId: scenario.userA.id },
         (tx) => tx.select().from(auditEvents),
@@ -53,8 +53,12 @@ describe('RLS Nullable Isolation (IS NULL OR organization_id = current_org_id())
         (tx) => tx.select().from(auditEvents),
       );
 
-      expect(rowsA.map((r) => r.id)).toContain(scenario.auditEventGlobal.id);
-      expect(rowsB.map((r) => r.id)).toContain(scenario.auditEventGlobal.id);
+      expect(rowsA.map((r) => r.id)).not.toContain(
+        scenario.auditEventGlobal.id,
+      );
+      expect(rowsB.map((r) => r.id)).not.toContain(
+        scenario.auditEventGlobal.id,
+      );
     });
   });
 

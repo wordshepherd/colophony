@@ -163,7 +163,6 @@ Report:
 - Open PRs and their branches
 - CI status for each (pass/fail)
 - Any PRs with failing CI that need attention
-- Any PRs with unresolved AI review comments
 
 For PRs with failures, fetch the failure details:
 
@@ -173,26 +172,18 @@ gh run list --branch <branch> --limit 1 --json databaseId,conclusion --jq '.[] |
 
 Then `gh run view <id> --json jobs --jq '.jobs[] | select(.conclusion == "failure") | .name'`
 
-For each open PR, check for unaddressed AI review comments:
-
-```bash
-gh pr view <number> --comments --json comments --jq '[.comments[] | select(.author.login == "github-actions")] | length'
-```
-
-If a PR has AI review comments, note it in the briefing. To check whether they've already been addressed, look for a follow-up "AI Review Response" comment:
-
-```bash
-gh pr view <number> --comments --json comments --jq '.comments[] | select(.body | test("AI Review Response")) | .createdAt'
-```
-
-If there are AI review comments with no response, flag the PR as needing attention.
-
 ### Step 5: Check infrastructure
 
 Run these commands in parallel:
 
 ```bash
 docker compose ps --format '{{.Name}}\t{{.Status}}' 2>/dev/null || echo "Docker Compose not running"
+```
+
+Also check if a Codex review tmux session is active:
+
+```bash
+tmux has-session -t codex-review 2>/dev/null && echo "active" || echo "not started"
 ```
 
 Report which services are up/down. Flag if critical services (postgres, redis) are not running.
@@ -219,13 +210,14 @@ Next steps planned: [bullet points from DEVLOG "Next" section]
 ### Git State
 - Branch: <current branch>
 - Uncommitted changes: [yes/no, summary if yes]
-- Open PRs: [list with CI status and AI review status]
+- Open PRs: [list with CI status]
 - Branches cleaned up: [list of deleted stale branches, or "None"]
 
 ### Infrastructure
 - PostgreSQL: [running/stopped]
 - Redis: [running/stopped]
 - MinIO: [running/stopped]
+- Codex review: [active/not started] (run /codex-review when ready)
 
 ### Open Work
 - [unchecked roadmap items]

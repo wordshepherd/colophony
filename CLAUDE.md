@@ -154,26 +154,27 @@ tRPC client for internal API calls. Zitadel handles login/signup UI. `ProtectedR
 
 ## Known Quirks & Gotchas
 
-| Quirk                                                  | Details                                                                                                                                                                                                                                                                       |
-| ------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Drizzle `pgPolicy` requires `drizzle-orm/pg-core`**  | Import `pgPolicy` from `drizzle-orm/pg-core`, not the top-level export                                                                                                                                                                                                        |
-| **Drizzle JSONB queries need raw SQL**                 | No native JSONB operators yet. Use `sql` template tag for JSONB path queries. Track Drizzle JSONB roadmap (Q2 2026)                                                                                                                                                           |
-| **Drizzle `migrate()` silent no-op after schema drop** | `migrate(db, { migrationsFolder })` completes without error but creates zero tables after `DROP SCHEMA CASCADE; CREATE SCHEMA public`. Use manual SQL execution (read `_journal.json`, split on `--> statement-breakpoint`) instead. Affects Drizzle ORM 0.44 with journal v7 |
-| **Pothos has no Drizzle plugin**                       | Manual type definitions, manual DataLoader setup, manual cursor pagination for every model. See architecture doc section 5.5                                                                                                                                                  |
-| **Zitadel webhook signatures**                         | Verify `x-zitadel-signature` header on all webhook payloads. Use shared secret from Zitadel Actions config                                                                                                                                                                    |
-| **`@ts-rest/fastify` adapter**                         | `initServer()` then `s.router(contract, handlers)` — different from the NestJS adapter pattern                                                                                                                                                                                |
-| **GraphQL Yoga + Fastify**                             | Mount via `app.route()` with `handleNodeRequest`, not a Fastify plugin. Must forward headers manually                                                                                                                                                                         |
-| **BullMQ Redis password**                              | Uses `REDIS_HOST`/`REDIS_PORT`/`REDIS_PASSWORD` (not `REDIS_URL`). Pass password in worker/queue config                                                                                                                                                                       |
-| **Docker Compose env_file**                            | `env_file:` sets container env only. For YAML `${VAR}` substitution, use `--env-file .env` on CLI                                                                                                                                                                             |
-| **PostgreSQL init-db.sh**                              | Only runs on first DB creation. Must `docker compose down -v` to re-run after changes                                                                                                                                                                                         |
-| **TanStack Query v4 isLoading**                        | `isLoading` is `true` even when query is disabled (`enabled: false`). Check `fetchStatus !== 'idle'` instead                                                                                                                                                                  |
-| **GitHub PAT: no Checks perm**                         | Fine-grained PATs lack `Checks` permission. Use `gh run list/view` (Actions API), NOT `gh pr checks`                                                                                                                                                                          |
-| **tRPC TS2742 under NodeNext**                         | `typeof appRouter` can't be named without internal `@trpc/server/dist/core/router` reference. Use `AnyRouter` annotation; refine to concrete type when procedures are added                                                                                                   |
-| **WSL husky hooks need nvm PATH**                      | Husky v9 runs hooks under `sh`/`dash`; `nvm.sh` can't be sourced. Hooks add nvm node bin to PATH directly. `lint-staged` called without `npx`                                                                                                                                 |
-| **CI: workspace deps need build before Vitest**        | Vitest resolves workspace packages via `exports` field (pointing to `dist/`). CI must build deps before running tests                                                                                                                                                         |
-| **`gh pr edit` broken (Projects Classic)**             | Returns GraphQL error about Projects Classic deprecation. Use `gh api repos/{owner}/{repo}/pulls/{number} -X PATCH -f title="..." -f body="..."` instead                                                                                                                      |
-| **`@fastify/raw-body` doesn't exist**                  | Official `@fastify/` scoped package not published on npm. Use `fastify-raw-body` (community package, v5.0.0 for Fastify 5)                                                                                                                                                    |
-| **AI review budget exhaustion**                        | Prior review conversation can consume significant context budget (~21KB for 3 rounds). Only feed developer response summaries (~5.5KB), not full AI review text                                                                                                               |
+| Quirk                                                       | Details                                                                                                                                                                                                                                                                                                                               |
+| ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Drizzle `pgPolicy` requires `drizzle-orm/pg-core`**       | Import `pgPolicy` from `drizzle-orm/pg-core`, not the top-level export                                                                                                                                                                                                                                                                |
+| **Drizzle JSONB queries need raw SQL**                      | No native JSONB operators yet. Use `sql` template tag for JSONB path queries. Track Drizzle JSONB roadmap (Q2 2026)                                                                                                                                                                                                                   |
+| **Drizzle `migrate()` silent no-op after schema drop**      | `migrate(db, { migrationsFolder })` completes without error but creates zero tables after `DROP SCHEMA CASCADE; CREATE SCHEMA public`. Use manual SQL execution (read `_journal.json`, split on `--> statement-breakpoint`) instead. Affects Drizzle ORM 0.44 with journal v7                                                         |
+| **Pothos has no Drizzle plugin**                            | Manual type definitions, manual DataLoader setup, manual cursor pagination for every model. See architecture doc section 5.5                                                                                                                                                                                                          |
+| **Zitadel webhook signatures**                              | Verify `x-zitadel-signature` header on all webhook payloads. Use shared secret from Zitadel Actions config                                                                                                                                                                                                                            |
+| **`@ts-rest/fastify` adapter**                              | `initServer()` then `s.router(contract, handlers)` — different from the NestJS adapter pattern                                                                                                                                                                                                                                        |
+| **GraphQL Yoga + Fastify**                                  | Mount via `app.route()` with `handleNodeRequest`, not a Fastify plugin. Must forward headers manually                                                                                                                                                                                                                                 |
+| **BullMQ Redis password**                                   | Uses `REDIS_HOST`/`REDIS_PORT`/`REDIS_PASSWORD` (not `REDIS_URL`). Pass password in worker/queue config                                                                                                                                                                                                                               |
+| **Docker Compose env_file**                                 | `env_file:` sets container env only. For YAML `${VAR}` substitution, use `--env-file .env` on CLI                                                                                                                                                                                                                                     |
+| **PostgreSQL `INSERT...RETURNING` evaluates SELECT policy** | When RLS policies are split by command (separate SELECT/INSERT), `INSERT...RETURNING` requires BOTH the INSERT WITH CHECK AND the SELECT USING policy to pass. The RETURNING clause reads the row back via SELECT. If the SELECT policy is stricter than INSERT (e.g., audit_events), drop `.returning()` or widen the SELECT policy. |
+| **PostgreSQL init-db.sh**                                   | Only runs on first DB creation. Must `docker compose down -v` to re-run after changes                                                                                                                                                                                                                                                 |
+| **TanStack Query v4 isLoading**                             | `isLoading` is `true` even when query is disabled (`enabled: false`). Check `fetchStatus !== 'idle'` instead                                                                                                                                                                                                                          |
+| **GitHub PAT: no Checks perm**                              | Fine-grained PATs lack `Checks` permission. Use `gh run list/view` (Actions API), NOT `gh pr checks`                                                                                                                                                                                                                                  |
+| **tRPC TS2742 under NodeNext**                              | `typeof appRouter` can't be named without internal `@trpc/server/dist/core/router` reference. Use `AnyRouter` annotation; refine to concrete type when procedures are added                                                                                                                                                           |
+| **WSL husky hooks need nvm PATH**                           | Husky v9 runs hooks under `sh`/`dash`; `nvm.sh` can't be sourced. Hooks add nvm node bin to PATH directly. `lint-staged` called without `npx`                                                                                                                                                                                         |
+| **CI: workspace deps need build before Vitest**             | Vitest resolves workspace packages via `exports` field (pointing to `dist/`). CI must build deps before running tests                                                                                                                                                                                                                 |
+| **`gh pr edit` broken (Projects Classic)**                  | Returns GraphQL error about Projects Classic deprecation. Use `gh api repos/{owner}/{repo}/pulls/{number} -X PATCH -f title="..." -f body="..."` instead                                                                                                                                                                              |
+| **`@fastify/raw-body` doesn't exist**                       | Official `@fastify/` scoped package not published on npm. Use `fastify-raw-body` (community package, v5.0.0 for Fastify 5)                                                                                                                                                                                                            |
+| **Codex CLI needs nvm in non-interactive shells**           | Codex installed via npm under nvm. tmux `send-keys` runs non-interactive shells; must source nvm manually before invoking `codex`. The `/codex-review` skill handles this automatically.                                                                                                                                              |
 
 **Version pins (do not upgrade without testing):**
 
@@ -317,7 +318,7 @@ Pushes serve different purposes than commits: backup, CI feedback, and reviewer 
 - You've completed a **reviewable unit of work** — one or more commits that form a coherent change (e.g., a full schema rewrite, a new route with tests)
 - You're **stepping away** — remote is backup; a local-only commit doesn't survive machine failure, WSL issues, or accidental `docker compose down -v`
 - You want **CI feedback** — CI runs on push to PR branches; push to validate in a clean environment
-- You want **AI review feedback** — pushing to a PR branch triggers the AI review workflow (`post-push-ai-review.js`)
+- You want **code review** — run `/codex-review` before pushing for immediate local feedback
 
 **Don't push:**
 
@@ -348,13 +349,12 @@ Bypass with `--no-verify` (use sparingly).
 
 Runs on every PR to `main` and pushes to `main`:
 
-| Job            | What it checks                                        |
-| -------------- | ----------------------------------------------------- |
-| **quality**    | `format:check`, `lint`, `type-check`, `pnpm audit`    |
-| **unit-tests** | `pnpm test`                                           |
-| **e2e-tests**  | `pnpm test:e2e` (Postgres + Redis service containers) |
-| **build**      | `pnpm build` (API + Web production build)             |
-| **AI review**  | PR diff sent to OpenRouter → posts review comment     |
+| Job            | What it checks                                     |
+| -------------- | -------------------------------------------------- |
+| **quality**    | `format:check`, `lint`, `type-check`, `pnpm audit` |
+| **unit-tests** | `pnpm test`                                        |
+| **rls-tests**  | RLS tenant isolation integration tests             |
+| **build**      | `pnpm build` (API + Web production build)          |
 
 ### Claude Code Git Workflow (IMPORTANT)
 
@@ -411,7 +411,7 @@ The v1 MVP is tagged as `v1.0.0-mvp`.
 # Session
 /start-session        # Session briefing (DEVLOG context, git state, PRs, infra)
 /end-session          # End-of-session housekeeping (DEVLOG, git, PR, summary)
-/check-ai-review [#]  # Fetch, evaluate, and address AI review comments on a PR
+/codex-review [type]  # Run Codex code review (plan, diff, branch; default: branch)
 ```
 
 ### Claude Code Hooks (run automatically)
@@ -430,7 +430,16 @@ The v1 MVP is tagged as `v1.0.0-mvp`.
 - `post-email-template.js` — Reminds to add text version for HTML emails
 - `post-migration-validate.js` — Reminds to add RLS policies for new tables in migrations
 - `post-commit-devlog.js` — Reminds to update `docs/DEVLOG.md` after git commits
-- `post-push-ai-review.js` — Reminds to check AI review after pushing to a PR branch
+
+### Codex Review Integration
+
+Code reviews are performed locally via Codex CLI in a tmux session, managed by Claude Code.
+
+- **Skill:** `/codex-review [plan|diff|branch]` (default: branch)
+- **tmux session:** `codex-review` (lazy-initialized on first invocation)
+- **Context isolation:** Codex is killed and relaunched between reviews
+- **Idle detection:** Polls tmux capture-pane for `__CODEX_REVIEW_DONE__` sentinel
+- **Branch diffs:** Always uses `origin/main` (fetched) to avoid stale local main
 
 ### MCP Servers (restart Claude Code to activate)
 

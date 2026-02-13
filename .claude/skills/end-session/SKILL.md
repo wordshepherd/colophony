@@ -5,15 +5,15 @@ description: End-of-session housekeeping — update docs, clean up git state, an
 
 # /end-session
 
-End-of-session housekeeping: address AI review, update docs, push to PR, and summarize work.
+End-of-session housekeeping: update docs, push to PR, and summarize work.
 
 ## What this skill does
 
 1. Gathers session context from the conversation
 2. Ensures all code changes are committed on a feature branch (not `main`)
 3. Pushes the branch and creates/updates a PR if needed
-4. Checks and addresses AI review comments — fixes code if needed
-5. Updates `docs/DEVLOG.md` with a session summary (captures everything including AI review fixes)
+4. Notes any Codex review findings addressed during this session
+5. Updates `docs/DEVLOG.md` with a session summary (captures everything including Codex review fixes addressed during this session)
 6. Checks for any `TODO(CLAUDE.md)` comments and proposes updates
 7. Commits and pushes doc updates as the final commit on the branch
 8. Prints a session summary with PR link for user to merge
@@ -65,62 +65,14 @@ Scan the conversation to identify:
    - If no PR exists, create one with `gh pr create`
    - If a PR exists, it's already updated by the push
 
-### Step 3: Check and address AI review
+### Step 3: Note Codex review status
 
-If a PR exists for the current branch, check if the AI reviewer has posted comments:
+Check the conversation history for any `/codex-review` invocations during this session:
 
-```bash
-gh pr view <number> --comments --json comments --jq '.comments[] | select(.author.login == "github-actions") | {createdAt: .createdAt, body: .body}'
-```
+- **If a review was done**: Note which findings were addressed vs deferred in the session summary
+- **If no review was done and there are code changes**: Suggest running `/codex-review` before ending
 
-**If AI review comments exist and haven't been addressed yet:**
-
-1. Parse and categorize each finding (critical, important, suggestion)
-2. Evaluate each finding by reading the relevant source code:
-   - **Legitimate issue — fix it**: Apply the minimal fix needed
-   - **Legitimate concern — already handled**: Note why it's already addressed
-   - **False positive — dismiss**: Note reasoning
-3. If code fixes were made, commit and push them:
-
-   ```bash
-   git add <fixed files>
-   git commit -m "fix: address AI review feedback on PR #<number>
-
-   <summary of what was fixed>"
-   git push origin <branch-name>
-   ```
-
-4. Post a response comment on the PR:
-
-   ```bash
-   gh pr comment <number> --body "$(cat <<'COMMENT'
-   ## AI Review Response
-
-   ### Fixed
-   - [description of each fix applied, with file:line references]
-
-   ### Already Handled
-   - [findings that are valid but already addressed, with explanation]
-
-   ### Dismissed
-   - [false positives with reasoning for dismissal]
-   COMMENT
-   )"
-   ```
-
-   Omit any section that has no items.
-
-**If no AI review comments exist yet:**
-
-Check if CI has finished:
-
-```bash
-gh run list --branch <branch-name> --limit 1 --json status,conclusion,name --jq '.[] | select(.name == "CI") | "\(.status) \(.conclusion)"'
-```
-
-If CI is still running or just passed, the AI review may not have triggered yet (it runs via `workflow_run` after CI passes). Note this in the session summary so the user knows to check later or run `/check-ai-review` before merging.
-
-**If AI review was already addressed earlier in the session**, note this and skip to the next step.
+This step does NOT perform a review — it only records what happened during the session.
 
 ### Step 4: Update DEVLOG
 
@@ -131,7 +83,7 @@ Read `docs/DEVLOG.md` to see the latest entry format, then **prepend** a new ent
 
 ### Done
 
-- [bullet points of completed work, INCLUDING any AI review fixes]
+- [bullet points of completed work, INCLUDING any Codex review fixes addressed during this session]
 
 ### Decisions
 
@@ -148,7 +100,7 @@ Read `docs/DEVLOG.md` to see the latest entry format, then **prepend** a new ent
 
 If today already has a DEVLOG entry for this session's work, **append to the existing entry's sections** rather than creating a duplicate.
 
-**Important:** The DEVLOG entry should capture the full session including AI review outcomes (e.g., "Addressed AI review: fixed X, dismissed Y as false positive").
+**Important:** The DEVLOG entry should capture the full session including any Codex review outcomes (e.g., "Addressed Codex review: fixed X, deferred Y").
 
 ### Step 5: Check for CLAUDE.md and other doc updates
 
@@ -206,8 +158,8 @@ Print a summary for the user:
 ### Changes
 - [list of commits in this session]
 
-### AI Review
-- [findings addressed with counts, or "LGTM — no issues", or "Not yet posted — check with /check-ai-review before merging"]
+### Code Review
+- [Codex review findings addressed with counts, or "No review done this session"]
 
 ### Docs Updated
 - [list of doc files updated]
@@ -225,6 +177,6 @@ Print a summary for the user:
 - Use `gh run list/view` for CI status, NOT `gh pr checks` (fine-grained PAT limitation)
 - The DEVLOG entry should be concise but complete — future sessions rely on it for context
 - If the session had multiple unrelated workstreams, consider whether they should be separate PRs
-- Doc updates are always the LAST commit — after all code changes and AI review fixes
+- Doc updates are always the LAST commit — after all code changes and any review fixes
 - Do NOT switch to `main`, delete branches, or do branch cleanup — that's handled by `/start-session`
 - The PR should be left open for the user to review and merge

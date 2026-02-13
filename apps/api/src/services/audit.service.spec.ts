@@ -203,6 +203,19 @@ describe('auditService.logDirect', () => {
     expect(JSON.parse(row.oldValue)).toEqual({ name: 'before' });
   });
 
+  it('rejects organizationId to prevent misuse outside RLS context', async () => {
+    const params = {
+      resource: 'auth' as const,
+      action: 'AUTH_TOKEN_INVALID' as const,
+      organizationId: 'org-should-not-be-here',
+    };
+
+    await expect(auditService.logDirect(params)).rejects.toThrow(
+      'logDirect must not include organizationId',
+    );
+    expect(mockDbInsert).not.toHaveBeenCalled();
+  });
+
   it('propagates insertion errors', async () => {
     mockDbValues.mockRejectedValue(new Error('connection refused'));
 
