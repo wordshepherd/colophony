@@ -63,7 +63,7 @@ export default fp(
           action,
           resource: AuditResources.AUTH,
           ipAddress: request.ip,
-          userAgent: request.headers['user-agent'] as string | undefined,
+          userAgent: request.headers['user-agent'],
           newValue: details,
           actorId,
         });
