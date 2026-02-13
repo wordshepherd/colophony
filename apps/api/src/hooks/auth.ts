@@ -2,8 +2,10 @@ import fp from 'fastify-plugin';
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { createJwksVerifier } from '@colophony/auth-client';
 import { db, eq, users } from '@colophony/db';
-import type { AuthContext } from '@prospector/types';
+import type { AuthContext, AuthAuditParams } from '@prospector/types';
+import { AuditActions, AuditResources } from '@prospector/types';
 import type { Env } from '../config/env.js';
+import { auditService } from '../services/audit.service.js';
 
 declare module 'fastify' {
   interface FastifyRequest {
@@ -49,6 +51,27 @@ export default fp(
       );
     }
 
+    /** Log an auth failure audit event. Never throws — swallows errors. */
+    async function logAuthFailure(
+      request: FastifyRequest,
+      action: AuthAuditParams['action'],
+      details: Record<string, unknown>,
+      actorId?: string,
+    ): Promise<void> {
+      try {
+        await auditService.logDirect({
+          action,
+          resource: AuditResources.AUTH,
+          ipAddress: request.ip,
+          userAgent: request.headers['user-agent'],
+          newValue: details,
+          actorId,
+        });
+      } catch (err) {
+        request.log.warn({ err }, 'Failed to log auth failure audit event');
+      }
+    }
+
     // Create JWKS verifier if authority is configured
     const verifyToken = env.ZITADEL_AUTHORITY
       ? createJwksVerifier({
@@ -90,6 +113,9 @@ export default fp(
 
         const match = /^Bearer\s+(\S+)$/i.exec(authHeader);
         if (!match) {
+          await logAuthFailure(request, AuditActions.AUTH_TOKEN_INVALID, {
+            reason: 'invalid_header_format',
+          });
           return reply.status(401).send({
             error: 'unauthorized',
             message:
@@ -118,10 +144,15 @@ export default fp(
           }
           sub = payload.sub;
         } catch (err) {
-          const detail =
-            err instanceof Error ? err.message : 'Token validation failed';
-          const isExpired = detail.includes('exp');
+          const isExpired = err instanceof Error && err.name === 'JWTExpired';
           request.log.warn({ err }, 'Token validation failed');
+          await logAuthFailure(
+            request,
+            isExpired
+              ? AuditActions.AUTH_TOKEN_EXPIRED
+              : AuditActions.AUTH_TOKEN_INVALID,
+            { reason: isExpired ? 'expired' : 'signature_failed' },
+          );
           return reply.status(401).send({
             error: isExpired ? 'token_expired' : 'token_invalid',
             message: isExpired
@@ -136,6 +167,11 @@ export default fp(
         });
 
         if (!user) {
+          await logAuthFailure(
+            request,
+            AuditActions.AUTH_USER_NOT_PROVISIONED,
+            { reason: 'not_provisioned', zitadelUserId: sub },
+          );
           return reply.status(403).send({
             error: 'user_not_provisioned',
             message:
@@ -144,6 +180,12 @@ export default fp(
         }
 
         if (user.deletedAt) {
+          await logAuthFailure(
+            request,
+            AuditActions.AUTH_USER_DEACTIVATED,
+            { reason: 'deactivated', zitadelUserId: sub },
+            user.id,
+          );
           return reply.status(403).send({
             error: 'user_deactivated',
             message: 'Account has been deactivated.',

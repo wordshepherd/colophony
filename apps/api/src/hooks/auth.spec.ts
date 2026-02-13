@@ -1,4 +1,12 @@
-import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
+import {
+  describe,
+  it,
+  expect,
+  beforeAll,
+  beforeEach,
+  afterAll,
+  vi,
+} from 'vitest';
 import Fastify, { type FastifyInstance } from 'fastify';
 import authPlugin from './auth.js';
 import type { Env } from '../config/env.js';
@@ -16,6 +24,14 @@ vi.mock('@colophony/db', () => ({
   users: { zitadelUserId: 'zitadel_user_id' },
   pool: {
     query: vi.fn().mockResolvedValue({ rows: [{ '?column?': 1 }] }),
+  },
+}));
+
+// Mock audit service
+const mockLogDirect = vi.fn().mockResolvedValue(undefined);
+vi.mock('../services/audit.service.js', () => ({
+  auditService: {
+    logDirect: (...args: unknown[]) => mockLogDirect(...args),
   },
 }));
 
@@ -176,9 +192,9 @@ describe('auth plugin', () => {
     });
 
     it('returns 401 for expired token', async () => {
-      mockVerifyToken.mockRejectedValueOnce(
-        new Error('"exp" claim timestamp check failed'),
-      );
+      const expiredErr = new Error('"exp" claim timestamp check failed');
+      expiredErr.name = 'JWTExpired';
+      mockVerifyToken.mockRejectedValueOnce(expiredErr);
 
       const response = await app.inject({
         method: 'GET',
@@ -280,6 +296,178 @@ describe('auth plugin', () => {
         }),
       ).rejects.toThrow('ZITADEL_AUTHORITY is required in production');
       await app.close();
+    });
+  });
+
+  describe('auth failure auditing', () => {
+    let app: FastifyInstance;
+
+    const envWithAuth: Env = {
+      ...baseEnv,
+      NODE_ENV: 'development' as const,
+      ZITADEL_AUTHORITY: 'http://localhost:8080',
+      ZITADEL_CLIENT_ID: 'my-client',
+    };
+
+    beforeAll(async () => {
+      app = Fastify({ logger: false });
+      await app.register(authPlugin, { env: envWithAuth });
+      app.get('/protected', async (request) => ({
+        authContext: request.authContext,
+      }));
+    });
+
+    beforeEach(() => {
+      mockLogDirect.mockClear().mockResolvedValue(undefined);
+    });
+
+    afterAll(async () => {
+      await app.close();
+    });
+
+    it('audits malformed Authorization header as AUTH_TOKEN_INVALID', async () => {
+      await app.inject({
+        method: 'GET',
+        url: '/protected',
+        headers: { authorization: 'Basic dXNlcjpwYXNz' },
+      });
+
+      expect(mockLogDirect).toHaveBeenCalledOnce();
+      const params = mockLogDirect.mock.calls[0][0];
+      expect(params.action).toBe('AUTH_TOKEN_INVALID');
+      expect(params.resource).toBe('auth');
+      expect(params.newValue).toEqual({ reason: 'invalid_header_format' });
+      expect(params.actorId).toBeUndefined();
+    });
+
+    it('audits token validation failure as AUTH_TOKEN_INVALID', async () => {
+      mockVerifyToken.mockRejectedValueOnce(new Error('invalid signature'));
+
+      await app.inject({
+        method: 'GET',
+        url: '/protected',
+        headers: { authorization: 'Bearer bad-token' },
+      });
+
+      expect(mockLogDirect).toHaveBeenCalledOnce();
+      const params = mockLogDirect.mock.calls[0][0];
+      expect(params.action).toBe('AUTH_TOKEN_INVALID');
+      expect(params.resource).toBe('auth');
+      expect(params.newValue).toEqual({ reason: 'signature_failed' });
+      expect(params.actorId).toBeUndefined();
+    });
+
+    it('audits expired token as AUTH_TOKEN_EXPIRED using error.name', async () => {
+      const expiredErr = new Error('token expired');
+      expiredErr.name = 'JWTExpired';
+      mockVerifyToken.mockRejectedValueOnce(expiredErr);
+
+      await app.inject({
+        method: 'GET',
+        url: '/protected',
+        headers: { authorization: 'Bearer expired-token' },
+      });
+
+      expect(mockLogDirect).toHaveBeenCalledOnce();
+      const params = mockLogDirect.mock.calls[0][0];
+      expect(params.action).toBe('AUTH_TOKEN_EXPIRED');
+      expect(params.resource).toBe('auth');
+      expect(params.newValue).toEqual({ reason: 'expired' });
+      expect(params.actorId).toBeUndefined();
+    });
+
+    it('audits user not provisioned as AUTH_USER_NOT_PROVISIONED with zitadelUserId', async () => {
+      mockVerifyToken.mockResolvedValueOnce({
+        payload: { sub: 'zitadel-unknown-user' },
+        header: { alg: 'RS256' },
+      });
+
+      const dbModule = await import('@colophony/db');
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      vi.mocked(dbModule.db.query.users.findFirst).mockResolvedValueOnce(
+        undefined,
+      );
+
+      await app.inject({
+        method: 'GET',
+        url: '/protected',
+        headers: { authorization: 'Bearer valid-token' },
+      });
+
+      expect(mockLogDirect).toHaveBeenCalledOnce();
+      const params = mockLogDirect.mock.calls[0][0];
+      expect(params.action).toBe('AUTH_USER_NOT_PROVISIONED');
+      expect(params.resource).toBe('auth');
+      expect(params.newValue).toEqual({
+        reason: 'not_provisioned',
+        zitadelUserId: 'zitadel-unknown-user',
+      });
+      expect(params.actorId).toBeUndefined();
+    });
+
+    it('audits deactivated user as AUTH_USER_DEACTIVATED with actorId', async () => {
+      mockVerifyToken.mockResolvedValueOnce({
+        payload: { sub: 'zitadel-deactivated' },
+        header: { alg: 'RS256' },
+      });
+
+      const dbModule = await import('@colophony/db');
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      vi.mocked(dbModule.db.query.users.findFirst).mockResolvedValueOnce({
+        id: 'local-user-deactivated',
+        email: 'deleted@example.com',
+        zitadelUserId: 'zitadel-deactivated',
+        emailVerified: true,
+        emailVerifiedAt: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        deletedAt: new Date(),
+      });
+
+      await app.inject({
+        method: 'GET',
+        url: '/protected',
+        headers: { authorization: 'Bearer valid-token' },
+      });
+
+      expect(mockLogDirect).toHaveBeenCalledOnce();
+      const params = mockLogDirect.mock.calls[0][0];
+      expect(params.action).toBe('AUTH_USER_DEACTIVATED');
+      expect(params.resource).toBe('auth');
+      expect(params.newValue).toEqual({
+        reason: 'deactivated',
+        zitadelUserId: 'zitadel-deactivated',
+      });
+      expect(params.actorId).toBe('local-user-deactivated');
+    });
+
+    it('still returns correct error when audit service throws', async () => {
+      mockLogDirect.mockRejectedValueOnce(new Error('DB unavailable'));
+
+      const response = await app.inject({
+        method: 'GET',
+        url: '/protected',
+        headers: { authorization: 'Basic dXNlcjpwYXNz' },
+      });
+
+      expect(response.statusCode).toBe(401);
+      expect(response.json().error).toBe('unauthorized');
+    });
+
+    it('never includes token or Authorization header in audit details', async () => {
+      mockVerifyToken.mockRejectedValueOnce(new Error('invalid signature'));
+
+      await app.inject({
+        method: 'GET',
+        url: '/protected',
+        headers: { authorization: 'Bearer super-secret-token' },
+      });
+
+      expect(mockLogDirect).toHaveBeenCalledOnce();
+      const params = mockLogDirect.mock.calls[0][0];
+      const serialized = JSON.stringify(params);
+      expect(serialized).not.toContain('super-secret-token');
+      expect(serialized).not.toContain('Bearer');
     });
   });
 });
