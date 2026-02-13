@@ -18,6 +18,7 @@ Append-only session log. Newest entries first.
   - Created: `/codex-review` skill — tmux session management, sentinel-based idle detection, three review modes (branch, diff, plan)
   - Updated: `hooks.json`, `/end-session`, `/start-session`, `CLAUDE.md`
 - First live `/codex-review branch` run: Codex explored diffs, schema, migrations, and context files autonomously; produced actionable findings in ~90s
+- Fixed CI: RLS infrastructure test now checks `with_check` (not just `qual`) for split policies; no-context INSERT test drops `.returning()` since strict SELECT policy blocks NULL-org readback
 - All tests passing: 14 audit service, 23 auth hook
 
 ### Decisions
