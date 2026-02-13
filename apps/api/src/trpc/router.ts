@@ -1,5 +1,6 @@
 import { t } from './init.js';
 import { organizationsRouter } from './routers/organizations.js';
+import { usersRouter } from './routers/users.js';
 
 // Re-export procedure builders for convenience
 export {
@@ -18,7 +19,7 @@ export {
 export const appRouter = t.router({
   health: t.procedure.query(() => ({ status: 'ok' as const })),
   organizations: organizationsRouter,
-  auth: t.router({}),
+  users: usersRouter,
   submissions: t.router({}),
   files: t.router({}),
   payments: t.router({}),

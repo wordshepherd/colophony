@@ -1,20 +1,45 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
-import { hasAuthTokens } from "@/lib/auth";
+import { getUserManager } from "@/lib/oidc";
 import { Button } from "@/components/ui/button";
 
 export default function Home() {
   const router = useRouter();
+  const [checking, setChecking] = useState(true);
 
   useEffect(() => {
-    // If user is authenticated, redirect to dashboard
-    if (hasAuthTokens()) {
-      router.push("/submissions");
+    const userManager = getUserManager();
+    if (!userManager) {
+      setChecking(false);
+      return;
     }
+
+    userManager
+      .getUser()
+      .then((user) => {
+        if (user && !user.expired) {
+          router.push("/submissions");
+        } else {
+          setChecking(false);
+        }
+      })
+      .catch(() => {
+        setChecking(false);
+      });
   }, [router]);
+
+  if (checking) {
+    return null;
+  }
+
+  const handleSignIn = () => {
+    const userManager = getUserManager();
+    if (userManager) {
+      void userManager.signinRedirect();
+    }
+  };
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -22,14 +47,9 @@ export default function Home() {
       <header className="border-b">
         <div className="container flex h-14 items-center justify-between">
           <span className="font-bold text-lg">Colophony</span>
-          <div className="flex items-center gap-2">
-            <Link href="/login">
-              <Button variant="ghost">Sign in</Button>
-            </Link>
-            <Link href="/register">
-              <Button>Sign up</Button>
-            </Link>
-          </div>
+          <Button variant="ghost" onClick={handleSignIn}>
+            Sign in
+          </Button>
         </div>
       </header>
 
@@ -44,14 +64,9 @@ export default function Home() {
             review content, and streamline the editorial workflow.
           </p>
           <div className="mt-10 flex items-center justify-center gap-4">
-            <Link href="/register">
-              <Button size="lg">Get Started</Button>
-            </Link>
-            <Link href="/login">
-              <Button variant="outline" size="lg">
-                Sign in
-              </Button>
-            </Link>
+            <Button size="lg" onClick={handleSignIn}>
+              Get Started
+            </Button>
           </div>
         </div>
       </main>

@@ -22,21 +22,16 @@ export function ProtectedRoute({
   requireOrganization = true,
 }: ProtectedRouteProps) {
   const router = useRouter();
-  const { isLoading, isAuthenticated, isEmailVerified } = useAuth();
+  const { user, isLoading, isAuthenticated, isEmailVerified, error, login } =
+    useAuth();
   const { currentOrg, isEditor, isAdmin, hasOrganizations } = useOrganization();
 
   useEffect(() => {
     if (isLoading) return;
 
-    // Not authenticated - redirect to login
+    // Not authenticated - redirect to Zitadel login
     if (!isAuthenticated) {
-      router.push("/login");
-      return;
-    }
-
-    // Email verification required
-    if (requireEmailVerified && !isEmailVerified) {
-      router.push("/verify-email?required=true");
+      login();
       return;
     }
 
@@ -70,6 +65,7 @@ export function ProtectedRoute({
     requireAdmin,
     requireOrganization,
     router,
+    login,
   ]);
 
   // Show loading skeleton while checking auth
@@ -88,6 +84,42 @@ export function ProtectedRoute({
   // Don't render children if not authenticated
   if (!isAuthenticated) {
     return null;
+  }
+
+  // Authenticated via OIDC but local profile not loaded yet
+  // (e.g., first login before Zitadel webhook provisions the user).
+  // The query polls every 3s via refetchInterval until profile arrives.
+  // If the query errored out after retries, show an error with retry option.
+  if (!user) {
+    if (error) {
+      return (
+        <div className="flex min-h-screen items-center justify-center">
+          <div className="text-center space-y-4 max-w-md">
+            <h1 className="text-xl font-semibold">
+              Unable to load your profile
+            </h1>
+            <p className="text-muted-foreground">
+              {error.message || "Something went wrong. Please try again."}
+            </p>
+            <button
+              onClick={() => window.location.reload()}
+              className="text-primary hover:underline"
+            >
+              Retry
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="text-center space-y-2">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent mx-auto" />
+          <p className="text-muted-foreground">Setting up your account...</p>
+        </div>
+      </div>
+    );
   }
 
   // Don't render if email verification required but not verified
