@@ -173,7 +173,7 @@ tRPC client for internal API calls. Zitadel handles login/signup UI. `ProtectedR
 | **CI: workspace deps need build before Vitest**        | Vitest resolves workspace packages via `exports` field (pointing to `dist/`). CI must build deps before running tests                                                                                                                                                         |
 | **`gh pr edit` broken (Projects Classic)**             | Returns GraphQL error about Projects Classic deprecation. Use `gh api repos/{owner}/{repo}/pulls/{number} -X PATCH -f title="..." -f body="..."` instead                                                                                                                      |
 | **`@fastify/raw-body` doesn't exist**                  | Official `@fastify/` scoped package not published on npm. Use `fastify-raw-body` (community package, v5.0.0 for Fastify 5)                                                                                                                                                    |
-| **AI review budget exhaustion**                        | Prior review conversation can consume significant context budget (~21KB for 3 rounds). Only feed developer response summaries (~5.5KB), not full AI review text                                                                                                               |
+| **Codex CLI needs nvm in non-interactive shells**      | Codex installed via npm under nvm. tmux `send-keys` runs non-interactive shells; must source nvm manually before invoking `codex`. The `/codex-review` skill handles this automatically.                                                                                      |
 
 **Version pins (do not upgrade without testing):**
 
@@ -317,7 +317,7 @@ Pushes serve different purposes than commits: backup, CI feedback, and reviewer 
 - You've completed a **reviewable unit of work** — one or more commits that form a coherent change (e.g., a full schema rewrite, a new route with tests)
 - You're **stepping away** — remote is backup; a local-only commit doesn't survive machine failure, WSL issues, or accidental `docker compose down -v`
 - You want **CI feedback** — CI runs on push to PR branches; push to validate in a clean environment
-- You want **AI review feedback** — pushing to a PR branch triggers the AI review workflow (`post-push-ai-review.js`)
+- You want **code review** — run `/codex-review` before pushing for immediate local feedback
 
 **Don't push:**
 
@@ -348,13 +348,12 @@ Bypass with `--no-verify` (use sparingly).
 
 Runs on every PR to `main` and pushes to `main`:
 
-| Job            | What it checks                                        |
-| -------------- | ----------------------------------------------------- |
-| **quality**    | `format:check`, `lint`, `type-check`, `pnpm audit`    |
-| **unit-tests** | `pnpm test`                                           |
-| **e2e-tests**  | `pnpm test:e2e` (Postgres + Redis service containers) |
-| **build**      | `pnpm build` (API + Web production build)             |
-| **AI review**  | PR diff sent to OpenRouter → posts review comment     |
+| Job            | What it checks                                     |
+| -------------- | -------------------------------------------------- |
+| **quality**    | `format:check`, `lint`, `type-check`, `pnpm audit` |
+| **unit-tests** | `pnpm test`                                        |
+| **rls-tests**  | RLS tenant isolation integration tests             |
+| **build**      | `pnpm build` (API + Web production build)          |
 
 ### Claude Code Git Workflow (IMPORTANT)
 
@@ -411,7 +410,7 @@ The v1 MVP is tagged as `v1.0.0-mvp`.
 # Session
 /start-session        # Session briefing (DEVLOG context, git state, PRs, infra)
 /end-session          # End-of-session housekeeping (DEVLOG, git, PR, summary)
-/check-ai-review [#]  # Fetch, evaluate, and address AI review comments on a PR
+/codex-review [type]  # Run Codex code review (plan, diff, branch; default: branch)
 ```
 
 ### Claude Code Hooks (run automatically)
@@ -430,7 +429,16 @@ The v1 MVP is tagged as `v1.0.0-mvp`.
 - `post-email-template.js` — Reminds to add text version for HTML emails
 - `post-migration-validate.js` — Reminds to add RLS policies for new tables in migrations
 - `post-commit-devlog.js` — Reminds to update `docs/DEVLOG.md` after git commits
-- `post-push-ai-review.js` — Reminds to check AI review after pushing to a PR branch
+
+### Codex Review Integration
+
+Code reviews are performed locally via Codex CLI in a tmux session, managed by Claude Code.
+
+- **Skill:** `/codex-review [plan|diff|branch]` (default: branch)
+- **tmux session:** `codex-review` (lazy-initialized on first invocation)
+- **Context isolation:** Codex is killed and relaunched between reviews
+- **Idle detection:** Polls tmux capture-pane for `__CODEX_REVIEW_DONE__` sentinel
+- **Branch diffs:** Always uses `origin/main` (fetched) to avoid stale local main
 
 ### MCP Servers (restart Claude Code to activate)
 
