@@ -1,4 +1,4 @@
-import { auditEvents, type DrizzleDb } from '@colophony/db';
+import { auditEvents, db, type DrizzleDb } from '@colophony/db';
 import type { AuditLogParams } from '@prospector/types';
 
 const MAX_VALUE_LENGTH = 8192;
@@ -48,6 +48,27 @@ export function serializeValue(value: unknown): string | null {
 export const auditService = {
   async log(tx: DrizzleDb, params: AuditLogParams): Promise<void> {
     await tx.insert(auditEvents).values({
+      action: params.action,
+      resource: params.resource,
+      resourceId: params.resourceId,
+      actorId: params.actorId,
+      organizationId: params.organizationId,
+      oldValue: serializeValue(params.oldValue),
+      newValue: serializeValue(params.newValue),
+      ipAddress: params.ipAddress,
+      userAgent: params.userAgent,
+    });
+  },
+
+  /**
+   * Insert an audit event directly via the shared `db` instance.
+   *
+   * Used for events that occur before a per-request transaction exists
+   * (e.g. auth failures). Errors propagate — caller is responsible
+   * for try/catch.
+   */
+  async logDirect(params: AuditLogParams): Promise<void> {
+    await db.insert(auditEvents).values({
       action: params.action,
       resource: params.resource,
       resourceId: params.resourceId,

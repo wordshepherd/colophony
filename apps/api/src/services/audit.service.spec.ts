@@ -3,8 +3,15 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 const mockValues = vi.fn().mockResolvedValue(undefined);
 const mockInsert = vi.fn(() => ({ values: mockValues }));
 
+const { mockDbValues, mockDbInsert } = vi.hoisted(() => {
+  const mockDbValues = vi.fn().mockResolvedValue(undefined);
+  const mockDbInsert = vi.fn().mockReturnValue({ values: mockDbValues });
+  return { mockDbValues, mockDbInsert };
+});
+
 vi.mock('@colophony/db', () => ({
   auditEvents: { _: 'audit_events_table_ref' },
+  db: { insert: mockDbInsert },
 }));
 
 import { auditService, serializeValue } from './audit.service.js';
@@ -144,6 +151,68 @@ describe('auditService.log', () => {
 
     await expect(auditService.log(tx, params)).rejects.toThrow(
       'DB write failed',
+    );
+  });
+});
+
+describe('auditService.logDirect', () => {
+  beforeEach(() => {
+    mockDbInsert.mockClear();
+    mockDbValues.mockClear().mockResolvedValue(undefined);
+  });
+
+  it('inserts via shared db with correct fields', async () => {
+    const params: AuditLogParams = {
+      resource: 'auth',
+      action: 'AUTH_TOKEN_INVALID',
+      ipAddress: '10.0.0.1',
+      userAgent: 'TestAgent/2.0',
+      newValue: { reason: 'invalid_header_format' },
+    };
+
+    await auditService.logDirect(params);
+
+    expect(mockDbInsert).toHaveBeenCalledOnce();
+    expect(mockDbValues).toHaveBeenCalledOnce();
+    const row = mockDbValues.mock.calls[0][0];
+    expect(row.action).toBe('AUTH_TOKEN_INVALID');
+    expect(row.resource).toBe('auth');
+    expect(row.ipAddress).toBe('10.0.0.1');
+    expect(row.userAgent).toBe('TestAgent/2.0');
+    expect(JSON.parse(row.newValue)).toEqual({
+      reason: 'invalid_header_format',
+    });
+    expect(row.actorId).toBeUndefined();
+    expect(row.organizationId).toBeUndefined();
+  });
+
+  it('applies serializeValue to values', async () => {
+    const params: AuditLogParams = {
+      resource: 'auth',
+      action: 'AUTH_USER_DEACTIVATED',
+      oldValue: { name: 'before' },
+      newValue: { reason: 'deactivated', secretToken: 'should-redact' },
+    };
+
+    await auditService.logDirect(params);
+
+    const row = mockDbValues.mock.calls[0][0];
+    const newVal = JSON.parse(row.newValue);
+    expect(newVal.reason).toBe('deactivated');
+    expect(newVal.secretToken).toBe('[REDACTED]');
+    expect(JSON.parse(row.oldValue)).toEqual({ name: 'before' });
+  });
+
+  it('propagates insertion errors', async () => {
+    mockDbValues.mockRejectedValue(new Error('connection refused'));
+
+    const params: AuditLogParams = {
+      resource: 'auth',
+      action: 'AUTH_TOKEN_EXPIRED',
+    };
+
+    await expect(auditService.logDirect(params)).rejects.toThrow(
+      'connection refused',
     );
   });
 });

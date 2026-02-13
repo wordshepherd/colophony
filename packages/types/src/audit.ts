@@ -19,6 +19,12 @@ export const AuditActions = {
   ORG_MEMBER_ADDED: "ORG_MEMBER_ADDED",
   ORG_MEMBER_REMOVED: "ORG_MEMBER_REMOVED",
   ORG_MEMBER_ROLE_CHANGED: "ORG_MEMBER_ROLE_CHANGED",
+
+  // Authentication failures
+  AUTH_TOKEN_INVALID: "AUTH_TOKEN_INVALID",
+  AUTH_TOKEN_EXPIRED: "AUTH_TOKEN_EXPIRED",
+  AUTH_USER_NOT_PROVISIONED: "AUTH_USER_NOT_PROVISIONED",
+  AUTH_USER_DEACTIVATED: "AUTH_USER_DEACTIVATED",
 } as const;
 
 export type AuditAction = (typeof AuditActions)[keyof typeof AuditActions];
@@ -27,6 +33,7 @@ export type AuditAction = (typeof AuditActions)[keyof typeof AuditActions];
 export const AuditResources = {
   USER: "user",
   ORGANIZATION: "organization",
+  AUTH: "auth",
 } as const;
 
 export type AuditResource =
@@ -68,5 +75,14 @@ export interface OrgAuditParams extends BaseAuditParams {
     | typeof AuditActions.ORG_MEMBER_ROLE_CHANGED;
 }
 
+export interface AuthAuditParams extends BaseAuditParams {
+  resource: typeof AuditResources.AUTH;
+  action:
+    | typeof AuditActions.AUTH_TOKEN_INVALID
+    | typeof AuditActions.AUTH_TOKEN_EXPIRED
+    | typeof AuditActions.AUTH_USER_NOT_PROVISIONED
+    | typeof AuditActions.AUTH_USER_DEACTIVATED;
+}
+
 /** Union of all resource-specific param types. */
-export type AuditLogParams = UserAuditParams | OrgAuditParams;
+export type AuditLogParams = UserAuditParams | OrgAuditParams | AuthAuditParams;
