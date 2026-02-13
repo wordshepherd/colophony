@@ -175,6 +175,8 @@ tRPC client for internal API calls. Zitadel handles login/signup UI. `ProtectedR
 | **`gh pr edit` broken (Projects Classic)**                  | Returns GraphQL error about Projects Classic deprecation. Use `gh api repos/{owner}/{repo}/pulls/{number} -X PATCH -f title="..." -f body="..."` instead                                                                                                                                                                              |
 | **`@fastify/raw-body` doesn't exist**                       | Official `@fastify/` scoped package not published on npm. Use `fastify-raw-body` (community package, v5.0.0 for Fastify 5)                                                                                                                                                                                                            |
 | **Codex CLI needs nvm in non-interactive shells**           | Codex installed via npm under nvm. tmux `send-keys` runs non-interactive shells; must source nvm manually before invoking `codex`. The `/codex-review` skill handles this automatically.                                                                                                                                              |
+| **Codex interactive: Enter adds newline**                   | In interactive Codex CLI, Enter adds a newline to the input field instead of submitting. Use **Escape then Enter** to submit multiline prompts, or pass the prompt as an argument: `codex "prompt"`. For long prompts, pipe via stdin: `codex - < /tmp/prompt.txt`                                                                    |
+| **Codex `review --base` excludes `[PROMPT]`**               | `codex review --base <branch>` and `--uncommitted` are mutually exclusive with the `[PROMPT]` positional argument. Custom review instructions must come from Codex project rules files (`~/.codex/rules/` or `.codex/instructions.md`), not inline. `codex exec` does accept stdin prompts via `-`                                    |
 
 **Version pins (do not upgrade without testing):**
 
@@ -433,13 +435,44 @@ The v1 MVP is tagged as `v1.0.0-mvp`.
 
 ### Codex Review Integration
 
-Code reviews are performed locally via Codex CLI in a tmux session, managed by Claude Code.
+Two modes for running Codex code reviews:
 
-- **Skill:** `/codex-review [plan|diff|branch]` (default: branch)
-- **tmux session:** `codex-review` (lazy-initialized on first invocation)
-- **Context isolation:** Codex is killed and relaunched between reviews
-- **Idle detection:** Polls tmux capture-pane for `__CODEX_REVIEW_DONE__` sentinel
-- **Branch diffs:** Always uses `origin/main` (fetched) to avoid stale local main
+#### Non-Interactive (Claude Code skill)
+
+`/codex-review [plan|diff|branch]` — runs `codex review` non-interactively. Claude Code invokes Codex, captures stdout, and presents findings. No tmux required.
+
+- **Branch review:** `codex review --base origin/main` (default)
+- **Diff review:** `codex review --uncommitted`
+- **Plan review:** `codex exec -s read-only` with plan file prompt
+- Always fetches `origin/main` to avoid stale local main
+
+#### Interactive Codex (tmux)
+
+For live progress visibility, re-review, and ad-hoc follow-up, run Codex in a tmux pane alongside Claude Code.
+
+**Setup (one-time per terminal session):**
+
+```bash
+# Split your Claude Code tmux window into two panes (left: Claude, right: Codex)
+# From within tmux, press Ctrl+B then % (vertical split) or " (horizontal split)
+
+# In the new pane, launch Codex:
+export NVM_DIR="$HOME/.nvm" && [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh" \
+  && nvm use v20.20.0 && cd /home/dmahaffey/projects/prospector && codex
+```
+
+**Submitting prompts in interactive Codex:**
+
+- Codex's input field treats Enter as a newline, not submit. Press **Escape then Enter** to submit.
+- **Alternative:** Pass the prompt as an argument when launching: `codex "your prompt here"`
+- **Long prompts from file:** Use `codex - < /tmp/prompt.txt` or launch with `codex "$(cat /tmp/prompt.txt)"`
+
+**Workflow:**
+
+1. Keep Codex running between reviews — no need to kill/relaunch
+2. Use `codex resume` or `codex fork --last` to continue from a previous session
+3. Switch to the Codex pane with `Ctrl+B` then arrow key
+4. Codex persists after reviews for follow-up questions or re-review
 
 ### MCP Servers (restart Claude Code to activate)
 
