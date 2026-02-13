@@ -9,6 +9,9 @@ import orgContextPlugin from './hooks/org-context.js';
 import dbContextPlugin from './hooks/db-context.js';
 import auditPlugin from './hooks/audit.js';
 import { registerZitadelWebhooks } from './webhooks/zitadel.webhook.js';
+import { fastifyTRPCPlugin } from '@trpc/server/adapters/fastify';
+import { appRouter } from './trpc/router.js';
+import { createContext } from './trpc/context.js';
 
 export async function buildApp(env: Env): Promise<FastifyInstance> {
   const app = Fastify({
@@ -87,8 +90,17 @@ export async function buildApp(env: Env): Promise<FastifyInstance> {
     await registerZitadelWebhooks(scope, { env });
   });
 
-  // TODO: Register tRPC adapter when wiring procedures
-  // await app.register(fastifyTRPCPlugin, { prefix: '/trpc', router: appRouter });
+  // tRPC adapter
+  await app.register(fastifyTRPCPlugin, {
+    prefix: '/trpc',
+    trpcOptions: {
+      router: appRouter,
+      createContext,
+      onError({ error }: { error: Error }) {
+        app.log.error(error, 'tRPC error');
+      },
+    },
+  });
 
   // Routes
   app.get('/health', async () => ({
