@@ -1,6 +1,6 @@
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import type { SubmissionStatus } from "@prospector/types";
+import type { SubmissionStatus } from "@colophony/types";
 
 const statusConfig: Record<
   SubmissionStatus,

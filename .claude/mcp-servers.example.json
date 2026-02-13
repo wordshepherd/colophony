@@ -1,12 +1,12 @@
 {
-  "description": "Recommended MCP servers for Prospector development. Copy these to ~/.claude/settings.json under 'mcpServers'.",
+  "description": "Recommended MCP servers for Colophony development. Copy these to ~/.claude/settings.json under 'mcpServers'.",
   "mcpServers": {
     "postgres": {
       "description": "Direct database queries and schema exploration",
       "command": "npx",
       "args": ["-y", "@modelcontextprotocol/server-postgres"],
       "env": {
-        "POSTGRES_CONNECTION_STRING": "postgresql://prospector:password@localhost:5432/prospector"
+        "POSTGRES_CONNECTION_STRING": "postgresql://colophony:password@localhost:5432/colophony"
       }
     },
     "redis": {

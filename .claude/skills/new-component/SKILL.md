@@ -1,11 +1,11 @@
 ---
 name: new-component
-description: Scaffold a new React component with proper patterns for Prospector.
+description: Scaffold a new React component with proper patterns for Colophony.
 ---
 
 # /new-component
 
-Scaffold a new React component with proper patterns for Prospector.
+Scaffold a new React component with proper patterns for Colophony.
 
 ## What this skill does
 

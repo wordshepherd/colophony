@@ -19,8 +19,8 @@
 ## Quick Start
 
 ```bash
-git clone https://github.com/your-org/prospector.git
-cd prospector
+git clone https://github.com/wordshepherd/colophony.git
+cd colophony
 bash scripts/install.sh
 ```
 
@@ -120,8 +120,8 @@ curl http://localhost/health
 
 | Variable                   | Description                  | Default            |
 | -------------------------- | ---------------------------- | ------------------ |
-| `POSTGRES_USER`            | PostgreSQL superuser name    | `prospector`       |
-| `POSTGRES_DB`              | Database name                | `prospector`       |
+| `POSTGRES_USER`            | PostgreSQL superuser name    | `colophony`        |
+| `POSTGRES_DB`              | Database name                | `colophony`        |
 | `HTTP_PORT`                | Nginx listen port            | `80`               |
 | `JWT_EXPIRES_IN`           | Access token TTL             | `15m`              |
 | `REFRESH_TOKEN_EXPIRES_IN` | Refresh token TTL            | `7d`               |
@@ -235,11 +235,11 @@ echo "0 3 * * * certbot renew --pre-hook 'docker compose -f /path/to/docker-comp
 ```bash
 # Backup
 docker compose --env-file .env.prod -f docker-compose.prod.yml exec postgres \
-  pg_dump -U prospector prospector > backup_$(date +%Y%m%d).sql
+  pg_dump -U colophony colophony > backup_$(date +%Y%m%d).sql
 
 # Restore
 docker compose --env-file .env.prod -f docker-compose.prod.yml exec -T postgres \
-  psql -U prospector prospector < backup_20260210.sql
+  psql -U colophony colophony < backup_20260210.sql
 ```
 
 ### Full volume backup
@@ -250,17 +250,17 @@ docker compose --env-file .env.prod -f docker-compose.prod.yml down
 
 # Backup volumes
 docker run --rm \
-  -v prospector_postgres_data:/data \
+  -v colophony_postgres_data:/data \
   -v $(pwd):/backup \
   alpine tar czf /backup/postgres_data.tar.gz -C /data .
 
 docker run --rm \
-  -v prospector_minio_data:/data \
+  -v colophony_minio_data:/data \
   -v $(pwd):/backup \
   alpine tar czf /backup/minio_data.tar.gz -C /data .
 
 docker run --rm \
-  -v prospector_redis_data:/data \
+  -v colophony_redis_data:/data \
   -v $(pwd):/backup \
   alpine tar czf /backup/redis_data.tar.gz -C /data .
 
@@ -274,7 +274,7 @@ docker compose --env-file .env.prod -f docker-compose.prod.yml up -d
 docker compose --env-file .env.prod -f docker-compose.prod.yml down
 
 docker run --rm \
-  -v prospector_postgres_data:/data \
+  -v colophony_postgres_data:/data \
   -v $(pwd):/backup \
   alpine sh -c "rm -rf /data/* && tar xzf /backup/postgres_data.tar.gz -C /data"
 
@@ -381,7 +381,7 @@ docker compose --env-file .env.prod -f docker-compose.prod.yml logs postgres
 
 # Verify credentials
 docker compose --env-file .env.prod -f docker-compose.prod.yml exec postgres \
-  psql -U prospector -c "SELECT 1;"
+  psql -U colophony -c "SELECT 1;"
 ```
 
 ### Port conflict
@@ -406,7 +406,7 @@ docker compose --env-file .env.prod -f docker-compose.prod.yml up -d --build
 
 ```bash
 docker compose --env-file .env.prod -f docker-compose.prod.yml exec postgres \
-  psql -U prospector -c "
+  psql -U colophony -c "
     SELECT relname, relrowsecurity, relforcerowsecurity
     FROM pg_class
     WHERE relname IN ('submissions', 'payments', 'audit_events');"
@@ -416,6 +416,6 @@ docker compose --env-file .env.prod -f docker-compose.prod.yml exec postgres \
 
 ```bash
 docker compose --env-file .env.prod -f docker-compose.prod.yml exec postgres \
-  psql -U prospector -c "SELECT usename, usesuper FROM pg_user WHERE usename = 'app_user';"
+  psql -U colophony -c "SELECT usename, usesuper FROM pg_user WHERE usename = 'app_user';"
 # Expected: app_user | f
 ```

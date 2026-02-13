@@ -1,5 +1,5 @@
 #!/bin/bash
-# Prospector Self-Hosted Installation Script
+# Colophony Self-Hosted Installation Script
 # Usage: bash scripts/install.sh
 set -e
 
@@ -10,7 +10,7 @@ RED='\033[0;31m'
 NC='\033[0m'
 
 echo -e "${BOLD}======================================${NC}"
-echo -e "${BOLD}  Prospector Installation Script${NC}"
+echo -e "${BOLD}  Colophony Installation Script${NC}"
 echo -e "${BOLD}======================================${NC}"
 echo ""
 
@@ -109,7 +109,7 @@ echo -e "${BOLD}Writing .env.prod...${NC}"
 
 cat > .env.prod << EOF
 # =============================================================================
-# Prospector Production Configuration
+# Colophony Production Configuration
 # Generated on $(date -u +"%Y-%m-%d %H:%M:%S UTC")
 # =============================================================================
 
@@ -117,9 +117,9 @@ DOMAIN=${DOMAIN}
 HTTP_PORT=${HTTP_PORT}
 
 # PostgreSQL
-POSTGRES_USER=prospector
+POSTGRES_USER=colophony
 POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-POSTGRES_DB=prospector
+POSTGRES_DB=colophony
 APP_USER_PASSWORD=${APP_USER_PASSWORD}
 
 # Authentication
@@ -175,12 +175,12 @@ INTERVAL=5
 
 while [ $WAITED -lt $MAX_WAIT ]; do
   # Check if nginx is healthy (depends on api and web)
-  NGINX_HEALTH=$(docker inspect --format='{{.State.Health.Status}}' prospector-nginx 2>/dev/null || echo "not found")
+  NGINX_HEALTH=$(docker inspect --format='{{.State.Health.Status}}' colophony-nginx 2>/dev/null || echo "not found")
 
   if [ "$NGINX_HEALTH" = "healthy" ]; then
     echo ""
     echo -e "${GREEN}${BOLD}======================================${NC}"
-    echo -e "${GREEN}${BOLD}  Prospector is ready!${NC}"
+    echo -e "${GREEN}${BOLD}  Colophony is ready!${NC}"
     echo -e "${GREEN}${BOLD}======================================${NC}"
     echo ""
     echo "  URL: http://${DOMAIN}:${HTTP_PORT}"

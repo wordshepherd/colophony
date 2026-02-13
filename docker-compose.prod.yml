@@ -2,7 +2,7 @@ services:
   # Reverse proxy — only externally exposed service
   nginx:
     image: nginx:alpine
-    container_name: prospector-nginx
+    container_name: colophony-nginx
     ports:
       - "${HTTP_PORT:-80}:80"
     volumes:
@@ -24,21 +24,21 @@ services:
         limits:
           memory: 128M
     networks:
-      - prospector
+      - colophony
 
   # NestJS API + tRPC server
   api:
     build:
       context: .
       dockerfile: apps/api/Dockerfile
-    container_name: prospector-api
+    container_name: colophony-api
     expose:
       - "4000"
     env_file: .env.prod
     environment:
       NODE_ENV: production
       PORT: 4000
-      DATABASE_URL: postgresql://app_user:${APP_USER_PASSWORD}@postgres:5432/${POSTGRES_DB:-prospector}
+      DATABASE_URL: postgresql://app_user:${APP_USER_PASSWORD}@postgres:5432/${POSTGRES_DB:-colophony}
       REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
       REDIS_HOST: redis
       REDIS_PORT: 6379
@@ -71,7 +71,7 @@ services:
         limits:
           memory: 512M
     networks:
-      - prospector
+      - colophony
 
   # Next.js frontend
   web:
@@ -80,7 +80,7 @@ services:
       dockerfile: apps/web/Dockerfile
       args:
         NEXT_PUBLIC_API_URL: http://${DOMAIN:-localhost}/trpc
-    container_name: prospector-web
+    container_name: colophony-web
     expose:
       - "3000"
     environment:
@@ -98,25 +98,25 @@ services:
         limits:
           memory: 256M
     networks:
-      - prospector
+      - colophony
 
   # PostgreSQL database
   postgres:
     image: postgres:16-alpine
-    container_name: prospector-postgres
+    container_name: colophony-postgres
     expose:
       - "5432"
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-prospector}
+      POSTGRES_USER: ${POSTGRES_USER:-colophony}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: ${POSTGRES_DB:-prospector}
+      POSTGRES_DB: ${POSTGRES_DB:-colophony}
       APP_USER_PASSWORD: ${APP_USER_PASSWORD}
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./scripts/init-db.sh:/docker-entrypoint-initdb.d/init-db.sh:ro
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-prospector}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-colophony}"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -125,12 +125,12 @@ services:
         limits:
           memory: 1G
     networks:
-      - prospector
+      - colophony
 
   # Redis for sessions, cache, and job queue
   redis:
     image: redis:7-alpine
-    container_name: prospector-redis
+    container_name: colophony-redis
     expose:
       - "6379"
     command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD}
@@ -147,12 +147,12 @@ services:
         limits:
           memory: 256M
     networks:
-      - prospector
+      - colophony
 
   # MinIO S3-compatible file storage
   minio:
     image: minio/minio:latest
-    container_name: prospector-minio
+    container_name: colophony-minio
     expose:
       - "9000"
     environment:
@@ -172,12 +172,12 @@ services:
         limits:
           memory: 512M
     networks:
-      - prospector
+      - colophony
 
   # Create default MinIO buckets on startup
   minio-setup:
     image: minio/mc:latest
-    container_name: prospector-minio-setup
+    container_name: colophony-minio-setup
     depends_on:
       minio:
         condition: service_healthy
@@ -192,12 +192,12 @@ services:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
     networks:
-      - prospector
+      - colophony
 
   # tusd for resumable file uploads
   tusd:
     image: tusproject/tusd:latest
-    container_name: prospector-tusd
+    container_name: colophony-tusd
     expose:
       - "1080"
     environment:
@@ -229,12 +229,12 @@ services:
         limits:
           memory: 128M
     networks:
-      - prospector
+      - colophony
 
   # ClamAV virus scanning (optional — enable with --profile full)
   clamav:
     image: clamav/clamav:stable
-    container_name: prospector-clamav
+    container_name: colophony-clamav
     expose:
       - "3310"
     volumes:
@@ -253,7 +253,7 @@ services:
     profiles:
       - full
     networks:
-      - prospector
+      - colophony
 
   # Database migration (runs once, then exits)
   migrate:
@@ -261,7 +261,7 @@ services:
       context: .
       dockerfile: apps/api/Dockerfile
       target: builder
-    container_name: prospector-migrate
+    container_name: colophony-migrate
     entrypoint: ["sh", "-c"]
     command:
       - |
@@ -270,8 +270,8 @@ services:
         # Run migrations and apply RLS
         /app/scripts/init-prod.sh
     environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER:-prospector}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-prospector}
-      APP_DATABASE_URL: postgresql://app_user:${APP_USER_PASSWORD}@postgres:5432/${POSTGRES_DB:-prospector}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-colophony}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-colophony}
+      APP_DATABASE_URL: postgresql://app_user:${APP_USER_PASSWORD}@postgres:5432/${POSTGRES_DB:-colophony}
     volumes:
       - ./scripts/init-prod.sh:/app/scripts/init-prod.sh:ro
       - ./packages/db/prisma:/app/prisma:ro
@@ -279,7 +279,7 @@ services:
       postgres:
         condition: service_healthy
     networks:
-      - prospector
+      - colophony
 
 volumes:
   postgres_data:
@@ -288,5 +288,5 @@ volumes:
   clamav_data:
 
 networks:
-  prospector:
+  colophony:
     driver: bridge

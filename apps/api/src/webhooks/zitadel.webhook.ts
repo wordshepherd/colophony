@@ -6,7 +6,7 @@ import { eq, pool, users } from '@colophony/db';
 import type { DrizzleDb } from '@colophony/db';
 import type { Env } from '../config/env.js';
 import { auditService } from '../services/audit.service.js';
-import { AuditActions, AuditResources } from '@prospector/types';
+import { AuditActions, AuditResources } from '@colophony/types';
 
 export interface ZitadelWebhookOptions {
   env: Env;

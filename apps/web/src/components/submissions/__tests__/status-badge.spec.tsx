@@ -1,7 +1,7 @@
 import React from "react";
 import { render, screen } from "@testing-library/react";
 import { StatusBadge } from "../status-badge";
-import type { SubmissionStatus } from "@prospector/types";
+import type { SubmissionStatus } from "@colophony/types";
 
 describe("StatusBadge", () => {
   const statusLabels: Record<SubmissionStatus, string> = {

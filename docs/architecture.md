@@ -1,6 +1,6 @@
 # Architecture Reference
 
-Detailed architecture documentation for the Prospector submissions platform.
+Detailed architecture documentation for the Colophony submissions platform.
 For day-to-day development guidance, see [CLAUDE.md](../CLAUDE.md).
 
 ---
@@ -91,10 +91,10 @@ For deployment details, see [docs/deployment.md](./deployment.md).
 
 ## Project Structure
 
-**Package naming convention:** `@prospector/*` (e.g., `@prospector/db`, `@prospector/api`)
+**Package naming convention:** `@colophony/*` (e.g., `@colophony/db`, `@colophony/api`)
 
 ```
-prospector/
+colophony/
 ├── CLAUDE.md                        # AI assistant context (concise)
 ├── package.json                     # Root pnpm workspace (husky + lint-staged)
 ├── pnpm-workspace.yaml
@@ -702,7 +702,7 @@ upload.start();
 
 - Paginated lists return `{ items, total, page, limit, totalPages }`
 - Update mutations expect `{ id, data: {...} }` format
-- Status transitions use `EDITOR_ALLOWED_TRANSITIONS` from `@prospector/types`
+- Status transitions use `EDITOR_ALLOWED_TRANSITIONS` from `@colophony/types`
 
 ### Available tRPC Routers
 

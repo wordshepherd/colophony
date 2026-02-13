@@ -12,10 +12,10 @@ const migrationsFolder = path.resolve(
 
 const ADMIN_URL =
   process.env.DATABASE_TEST_URL ??
-  'postgresql://test:test@localhost:5433/prospector_test';
+  'postgresql://test:test@localhost:5433/colophony_test';
 const APP_URL =
   process.env.DATABASE_APP_URL ??
-  'postgresql://app_user:app_password@localhost:5433/prospector_test';
+  'postgresql://app_user:app_password@localhost:5433/colophony_test';
 
 let adminPool: Pool | null = null;
 let appPool: Pool | null = null;

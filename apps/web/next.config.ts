@@ -13,7 +13,7 @@ const nextConfig: NextConfig = {
     ignoreBuildErrors: true,
   },
   // Transpile workspace packages
-  transpilePackages: ["@prospector/types"],
+  transpilePackages: ["@colophony/types"],
 };
 
 export default nextConfig;

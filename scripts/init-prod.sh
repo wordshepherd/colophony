@@ -4,7 +4,7 @@
 # Designed to be idempotent — safe to run multiple times
 set -e
 
-echo "=== Prospector Production Initialization ==="
+echo "=== Colophony Production Initialization ==="
 
 # Validate required environment variables
 if [ -z "$DATABASE_URL" ]; then

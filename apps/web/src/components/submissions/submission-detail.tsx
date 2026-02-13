@@ -36,7 +36,7 @@ import {
   AlertCircle,
   Loader2,
 } from "lucide-react";
-import type { ScanStatus, SubmissionStatus } from "@prospector/types";
+import type { ScanStatus, SubmissionStatus } from "@colophony/types";
 
 interface SubmissionDetailProps {
   submissionId: string;

@@ -54,7 +54,7 @@ User lifecycle events are synced from Zitadel to the local DB via webhooks.
 | **REST**    | Public API, Zapier    | _Planned_ | API key or OIDC    |
 | **GraphQL** | Power users           | _Planned_ | API key or OIDC    |
 
-All surfaces share the same service layer and Zod schemas from `@prospector/types`.
+All surfaces share the same service layer and Zod schemas from `@colophony/types`.
 
 ---
 

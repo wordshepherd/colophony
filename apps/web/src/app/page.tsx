@@ -21,7 +21,7 @@ export default function Home() {
       {/* Header */}
       <header className="border-b">
         <div className="container flex h-14 items-center justify-between">
-          <span className="font-bold text-lg">Prospector</span>
+          <span className="font-bold text-lg">Colophony</span>
           <div className="flex items-center gap-2">
             <Link href="/login">
               <Button variant="ghost">Sign in</Button>
@@ -59,7 +59,7 @@ export default function Home() {
       {/* Footer */}
       <footer className="border-t py-6">
         <div className="container text-center text-sm text-muted-foreground">
-          &copy; {new Date().getFullYear()} Prospector. All rights reserved.
+          &copy; {new Date().getFullYear()} Colophony. All rights reserved.
         </div>
       </footer>
     </div>
