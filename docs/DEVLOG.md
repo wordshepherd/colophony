@@ -4,6 +4,32 @@ Append-only session log. Newest entries first.
 
 ---
 
+## 2026-02-13 — Restructure CLAUDE.md into Per-Directory Files (Docs)
+
+### Done
+
+- Split monolithic CLAUDE.md (592 lines) into 4 files:
+  - Root `CLAUDE.md` (326 lines) — cross-cutting concerns, git workflow, dev workflow
+  - `packages/db/CLAUDE.md` (105 lines) — authoritative RLS rules, schema files, migration workflow, production verification queries
+  - `apps/api/CLAUDE.md` (115 lines) — hook registration order, tRPC procedure builders, auth, payments, webhook idempotency
+  - `apps/web/CLAUDE.md` (80 lines) — tRPC client, providers, auth utilities, conventions
+- Removed speculative content for unbuilt features (Pothos, GraphQL Yoga, ts-rest adapter, DataLoaders, federation auth)
+- Consolidated redundancy: RLS rules (3→1 location), PCI rules (2→1), webhook idempotency (2→1), Common Pitfalls section dissolved
+- Applied Codex review fixes: added missing RLS verification queries, fixed `@colophony/web` → `@prospector/web` package name, aligned Stripe status as "planned," restored "test multi-tenancy isolation in every feature" rule
+- Context per work area: DB 431, API 441, Web 406 lines (vs 592 always-loaded before)
+
+### Next Priority
+
+- **`chore: rename @prospector/* packages to @colophony/*`** — atomic rename of package identity (Tiers 1+2: ~45 files, package.json names + all import paths + tsconfig aliases + lockfile regen). Docs/Docker/CI refs (Tier 3) can drift naturally. Must be a single commit — partial rename breaks the build.
+
+### Next
+
+- Frontend OIDC flow with Zitadel (replaces v1 `trpc.auth.*` procedures)
+- Org management UI (depends on OIDC auth flow)
+- Deferred: type-only `AppRouter` export layer to decouple web from API Fastify internals
+
+---
+
 ## 2026-02-13 — Wire Frontend tRPC Client to Real AppRouter (Track 2)
 
 ### Done
