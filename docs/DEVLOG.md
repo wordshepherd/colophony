@@ -4,35 +4,37 @@ Append-only session log. Newest entries first.
 
 ---
 
-## 2026-02-12 — Auth Failure Audit Logging (Track 1)
+## 2026-02-12 — Auth Failure Auditing + Codex Review Integration (Track 1)
 
 ### Done
 
-- **PR #47** — Auth failure audit logging for events that occur before per-request transaction exists (5 files, ~340 insertions)
-- New `logDirect()` method on `auditService` inserts directly via shared `db` instance (bypasses per-request transaction)
-- 4 new audit actions: `AUTH_TOKEN_INVALID`, `AUTH_TOKEN_EXPIRED`, `AUTH_USER_NOT_PROVISIONED`, `AUTH_USER_DEACTIVATED`
-- New `AUTH` resource type added to discriminated union in `@prospector/types`
-- `logAuthFailure()` helper in auth hook — try/catch wrapper ensures audit failures never block auth responses
-- 5 audit points in auth hook: malformed header, JOSE signature failure, JOSE expired, user not provisioned, user deactivated
-- Replaced heuristic `detail.includes('exp')` with deterministic `err.name === 'JWTExpired'` for JOSE error classification
-- Strict sanitization: never log raw tokens; `zitadelUserId` only logged after signature verification succeeds
-- `actorId` set only for `AUTH_USER_DEACTIVATED` (user presenting credentials); undefined for unauthenticated failures
-- 10 new tests (3 for `logDirect`, 7 for auth failure auditing) — all 92 tests passing
-- Type-check and lint clean
+- **PR #48** — Auth failure audit logging + Codex review integration (continuation of PR #47)
+- Auth failure audit logging: `logDirect()` on `auditService`, 4 auth failure actions, 5 audit points in auth hook
+- New `audit_events` RLS split migration (`0004`): org-scoped events require org context, auth-type events allowed without
+- Hardened `logDirect()`: narrowed type to `AuthAuditParams`, added runtime guard rejecting `organizationId` (Codex review finding #3)
+- Updated RLS integration tests for nullable isolation and no-context scenarios to cover policy split
+- **Replaced GitHub AI review with local Codex review via tmux:**
+  - Deleted: `ai-review.yml` workflow, `build-review-context.sh`, `post-push-ai-review.js` hook, `/check-ai-review` skill
+  - Created: `/codex-review` skill — tmux session management, sentinel-based idle detection, three review modes (branch, diff, plan)
+  - Updated: `hooks.json`, `/end-session`, `/start-session`, `CLAUDE.md`
+- First live `/codex-review branch` run: Codex explored diffs, schema, migrations, and context files autonomously; produced actionable findings in ~90s
+- Fixed CI: RLS infrastructure test now checks `with_check` (not just `qual`) for split policies; no-context INSERT test drops `.returning()` since strict SELECT policy blocks NULL-org readback
+- All tests passing: 14 audit service, 23 auth hook
 
 ### Decisions
 
-- **Shared `db` instance over transaction** — auth failures occur in `authPlugin` (hook 1) before `dbContextPlugin` (hook 4) creates a transaction. The shared `db` connects as `app_user`, and `audit_events` RLS allows `organization_id IS NULL` inserts (verified by existing RLS tests)
-- **Deterministic JOSE error classification** — `error.name === 'JWTExpired'` instead of substring matching on error message; more reliable and forwards-compatible
-- **`vi.hoisted()` for mock initialization** — Vitest hoists `vi.mock()` factories to top of file; mocks referenced inside factories must use `vi.hoisted()` to avoid `ReferenceError: Cannot access before initialization`
+- **Local Codex review over GitHub Actions AI review** — faster feedback loop (seconds vs minutes), codebase-aware (Codex explores files itself), fewer false positives. OpenRouter/Kimi K2.5 pipeline retired
+- **`logDirect` type narrowing** — only `AuthAuditParams` accepted; prevents accidental org-scoped writes outside RLS transaction context. Runtime guard provides defense-in-depth alongside TypeScript types
+- **Fire-and-forget audit for auth failures** — intentional design trade-off; audit logging failure should not break auth responses. Codex flagged this (finding #2) but it's the correct design for pre-auth events
+- **Codex review finding #4 deferred** — integration test for auth-failure audit writes through transaction/context path requires DB stack; will address when infrastructure is available
 
 ### Next
 
-- Check AI review on PR #47 with `/check-ai-review` before merging
+- Retire `OPENROUTER_API_KEY` secret and `AI_REVIEW_MODEL` variable in GitHub repo settings (manual)
+- Deferred: integration test for auth-failure audit writes (Codex finding #4, needs DB stack)
 - Deferred: dedicated `audit_writer` role with INSERT-only on `audit_events` (production hardening)
 - Deferred: in-memory per-IP throttle for auth failure auditing (DoS protection)
 - Deferred: request correlation columns (`requestId`, `method`, `route`) — requires schema migration
-- Deferred: counter metrics for auth failures (needs monitoring infrastructure)
 - Audit query/list endpoints (tRPC/REST routes when API surfaces are wired)
 - Frontend OIDC flow (Track 1 continuation)
 

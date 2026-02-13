@@ -281,10 +281,12 @@ describe('RLS Infrastructure', () => {
       ];
       const { rows } = await admin.query<{
         tablename: string;
-        qual: string;
+        policyname: string;
+        qual: string | null;
+        with_check: string | null;
       }>(
         `
-        SELECT tablename, qual
+        SELECT tablename, policyname, qual, with_check
         FROM pg_policies
         WHERE schemaname = 'public'
           AND tablename = ANY($1)
@@ -292,11 +294,26 @@ describe('RLS Infrastructure', () => {
         [nullableTables],
       );
 
+      // Group by table — at least one policy per table must contain IS NULL
+      // in either its USING (qual) or WITH CHECK clause.
+      // Split policies (e.g. audit_events) have IS NULL only in WITH CHECK.
+      const tableMap = new Map<string, typeof rows>();
       for (const row of rows) {
+        if (!tableMap.has(row.tablename)) tableMap.set(row.tablename, []);
+        tableMap.get(row.tablename)!.push(row);
+      }
+
+      for (const table of nullableTables) {
+        const policies = tableMap.get(table) ?? [];
+        const hasNullCheck = policies.some(
+          (p) =>
+            (p.qual && p.qual.includes('IS NULL')) ||
+            (p.with_check && p.with_check.includes('IS NULL')),
+        );
         expect(
-          row.qual,
-          `${row.tablename} policy should include IS NULL`,
-        ).toContain('IS NULL');
+          hasNullCheck,
+          `${table} should have at least one policy with IS NULL check`,
+        ).toBe(true);
       }
     });
   });
