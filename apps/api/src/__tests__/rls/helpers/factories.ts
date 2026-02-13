@@ -42,7 +42,7 @@ export async function createOrganization(
       ...overrides,
     })
     .returning();
-  return org!;
+  return org;
 }
 
 export async function createUser(overrides?: Partial<User>): Promise<User> {
@@ -54,7 +54,7 @@ export async function createUser(overrides?: Partial<User>): Promise<User> {
       ...overrides,
     })
     .returning();
-  return user!;
+  return user;
 }
 
 export async function createOrgMember(
@@ -72,7 +72,7 @@ export async function createOrgMember(
       ...overrides,
     })
     .returning();
-  return member!;
+  return member;
 }
 
 export async function createSubmissionPeriod(
@@ -91,7 +91,7 @@ export async function createSubmissionPeriod(
       ...overrides,
     })
     .returning();
-  return period!;
+  return period;
 }
 
 export async function createSubmission(
@@ -111,7 +111,7 @@ export async function createSubmission(
       ...overrides,
     })
     .returning();
-  return submission!;
+  return submission;
 }
 
 export async function createSubmissionFile(
@@ -130,7 +130,7 @@ export async function createSubmissionFile(
       ...overrides,
     })
     .returning();
-  return file!;
+  return file;
 }
 
 export async function createSubmissionHistory(
@@ -146,7 +146,7 @@ export async function createSubmissionHistory(
       ...overrides,
     })
     .returning();
-  return history!;
+  return history;
 }
 
 export async function createPayment(
@@ -165,7 +165,7 @@ export async function createPayment(
       ...overrides,
     })
     .returning();
-  return payment!;
+  return payment;
 }
 
 export async function createAuditEvent(
@@ -180,7 +180,7 @@ export async function createAuditEvent(
       ...overrides,
     })
     .returning();
-  return event!;
+  return event;
 }
 
 export async function createRetentionPolicy(
@@ -195,7 +195,7 @@ export async function createRetentionPolicy(
       ...overrides,
     })
     .returning();
-  return policy!;
+  return policy;
 }
 
 export async function createUserConsent(
@@ -212,7 +212,7 @@ export async function createUserConsent(
       ...overrides,
     })
     .returning();
-  return consent!;
+  return consent;
 }
 
 export interface TwoOrgScenario {
