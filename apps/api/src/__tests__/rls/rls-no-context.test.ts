@@ -71,11 +71,9 @@ describe('RLS No Context (empty context)', () => {
   });
 
   describe('nullable tables return only global rows without context', () => {
-    it('audit_events: no context returns only global (null org) events', async () => {
+    it('audit_events: no context returns 0 rows (global events not exposed)', async () => {
       const rows = await withTestRls({}, (tx) => tx.select().from(auditEvents));
-      expect(rows).toHaveLength(1);
-      expect(rows[0].id).toBe(scenario.auditEventGlobal.id);
-      expect(rows[0].organizationId).toBeNull();
+      expect(rows).toHaveLength(0);
     });
 
     it('retention_policies: no context returns only global (null org) policies', async () => {

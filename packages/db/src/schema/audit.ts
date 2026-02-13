@@ -43,9 +43,13 @@ export const auditEvents = pgTable(
       table.organizationId,
       table.createdAt,
     ),
-    pgPolicy("audit_events_org_isolation", {
-      for: "all",
-      using: sql`organization_id IS NULL OR organization_id = current_org_id()`,
+    pgPolicy("audit_events_org_isolation_select", {
+      for: "select",
+      using: sql`organization_id = current_org_id()`,
+    }),
+    pgPolicy("audit_events_org_isolation_insert", {
+      for: "insert",
+      withCheck: sql`organization_id IS NULL OR organization_id = current_org_id()`,
     }),
   ],
 ).enableRLS();

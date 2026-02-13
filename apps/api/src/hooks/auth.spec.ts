@@ -300,6 +300,9 @@ describe('auth plugin', () => {
   });
 
   describe('auth failure auditing', () => {
+    /** Flush microtasks so fire-and-forget audit writes complete. */
+    const flushPromises = () => new Promise((r) => process.nextTick(r));
+
     let app: FastifyInstance;
 
     const envWithAuth: Env = {
@@ -331,6 +334,7 @@ describe('auth plugin', () => {
         url: '/protected',
         headers: { authorization: 'Basic dXNlcjpwYXNz' },
       });
+      await flushPromises();
 
       expect(mockLogDirect).toHaveBeenCalledOnce();
       const params = mockLogDirect.mock.calls[0][0];
@@ -348,6 +352,7 @@ describe('auth plugin', () => {
         url: '/protected',
         headers: { authorization: 'Bearer bad-token' },
       });
+      await flushPromises();
 
       expect(mockLogDirect).toHaveBeenCalledOnce();
       const params = mockLogDirect.mock.calls[0][0];
@@ -367,6 +372,7 @@ describe('auth plugin', () => {
         url: '/protected',
         headers: { authorization: 'Bearer expired-token' },
       });
+      await flushPromises();
 
       expect(mockLogDirect).toHaveBeenCalledOnce();
       const params = mockLogDirect.mock.calls[0][0];
@@ -393,6 +399,7 @@ describe('auth plugin', () => {
         url: '/protected',
         headers: { authorization: 'Bearer valid-token' },
       });
+      await flushPromises();
 
       expect(mockLogDirect).toHaveBeenCalledOnce();
       const params = mockLogDirect.mock.calls[0][0];
@@ -402,6 +409,27 @@ describe('auth plugin', () => {
         reason: 'not_provisioned',
         zitadelUserId: 'zitadel-unknown-user',
       });
+      expect(params.actorId).toBeUndefined();
+    });
+
+    it('audits token missing sub claim as AUTH_TOKEN_INVALID', async () => {
+      mockVerifyToken.mockResolvedValueOnce({
+        payload: {},
+        header: { alg: 'RS256' },
+      });
+
+      await app.inject({
+        method: 'GET',
+        url: '/protected',
+        headers: { authorization: 'Bearer no-sub-token' },
+      });
+      await flushPromises();
+
+      expect(mockLogDirect).toHaveBeenCalledOnce();
+      const params = mockLogDirect.mock.calls[0][0];
+      expect(params.action).toBe('AUTH_TOKEN_INVALID');
+      expect(params.resource).toBe('auth');
+      expect(params.newValue).toEqual({ reason: 'missing_sub_claim' });
       expect(params.actorId).toBeUndefined();
     });
 
@@ -429,6 +457,7 @@ describe('auth plugin', () => {
         url: '/protected',
         headers: { authorization: 'Bearer valid-token' },
       });
+      await flushPromises();
 
       expect(mockLogDirect).toHaveBeenCalledOnce();
       const params = mockLogDirect.mock.calls[0][0];
@@ -449,6 +478,7 @@ describe('auth plugin', () => {
         url: '/protected',
         headers: { authorization: 'Basic dXNlcjpwYXNz' },
       });
+      await flushPromises();
 
       expect(response.statusCode).toBe(401);
       expect(response.json().error).toBe('unauthorized');
@@ -462,6 +492,7 @@ describe('auth plugin', () => {
         url: '/protected',
         headers: { authorization: 'Bearer super-secret-token' },
       });
+      await flushPromises();
 
       expect(mockLogDirect).toHaveBeenCalledOnce();
       const params = mockLogDirect.mock.calls[0][0];

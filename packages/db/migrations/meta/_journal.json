@@ -29,6 +29,13 @@
       "when": 1770868435576,
       "tag": "0003_old_major_mapleleaf",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1771023300000,
+      "tag": "0004_audit_events_rls_split",
+      "breakpoints": true
     }
   ]
 }
