@@ -51,7 +51,7 @@ git fetch --prune
 git branch -vv
 ```
 
-For the DEVLOG date, use the Grep tool (not bash) to find the first `## YYYY-MM-DD` heading in `docs/DEVLOG.md` and extract the date.
+For the DEVLOG date, determine the current month's devlog file (`docs/devlog/YYYY-MM.md`, e.g., `docs/devlog/2026-02.md`). Use the Grep tool (not bash) to find the first `## YYYY-MM-DD` heading in that file and extract the date.
 
 For the `git branch -vv` output, Claude parses it directly:
 
@@ -122,7 +122,9 @@ If no stale branches are found, skip this step silently.
 
 ### Step 2: Load session context from DEVLOG
 
-Read the most recent entry in `docs/DEVLOG.md` (the first entry after the header). Extract:
+Determine the current month's devlog file: `docs/devlog/YYYY-MM.md` (e.g., `docs/devlog/2026-02.md`). If the file for the current month doesn't exist yet, check the previous month's file instead.
+
+Read the most recent entry (the first entry after the header). Extract:
 
 - **What was done last** — the "Done" section
 - **Open issues** — the "Issues Found" or "Bugs Found" section (if any)

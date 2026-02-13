@@ -4,7 +4,7 @@ Open-source suite covering the full publication lifecycle: submission intake, pu
 
 **Status:** v2 rewrite in progress. v1 MVP (Prospector) tagged as `v1.0.0-mvp`.
 **Team:** David (primary dev), Senior Developer (PR reviews), CEO (priorities)
-**Session log:** [docs/DEVLOG.md](docs/DEVLOG.md) — append entries after each session
+**Session log:** `docs/devlog/YYYY-MM.md` (monthly rotation) — append entries after each session
 **Architecture:** [docs/architecture-v2-planning.md](docs/architecture-v2-planning.md)
 
 ### Suite Components
