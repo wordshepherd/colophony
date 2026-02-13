@@ -13,7 +13,7 @@ RUN pnpm install --frozen-lockfile
 FROM deps AS builder
 COPY packages/ packages/
 COPY apps/api/ apps/api/
-RUN pnpm --filter @prospector/types build
+RUN pnpm --filter @colophony/types build
 RUN pnpm --filter @colophony/db build
 RUN pnpm --filter @colophony/api build
 # Deploy creates a standalone directory with production deps (pnpm's Docker approach)
@@ -32,8 +32,8 @@ COPY --from=builder /app/apps/api/dist ./dist
 # Copy workspace package dist files (built in builder, not included by pnpm deploy)
 COPY --from=builder /app/packages/db/dist ./node_modules/@colophony/db/dist
 COPY --from=builder /app/packages/db/package.json ./node_modules/@colophony/db/package.json
-COPY --from=builder /app/packages/types/dist ./node_modules/@prospector/types/dist
-COPY --from=builder /app/packages/types/package.json ./node_modules/@prospector/types/package.json
+COPY --from=builder /app/packages/types/dist ./node_modules/@colophony/types/dist
+COPY --from=builder /app/packages/types/package.json ./node_modules/@colophony/types/package.json
 
 # Copy Drizzle migrations (for production CD init step, not run at API startup)
 COPY --from=builder /app/packages/db/migrations ./migrations

@@ -30,7 +30,7 @@ export function Header() {
 
         {/* Logo */}
         <Link href="/" className="flex items-center space-x-2 mr-6">
-          <span className="font-bold text-lg">Prospector</span>
+          <span className="font-bold text-lg">Colophony</span>
         </Link>
 
         {/* Spacer */}

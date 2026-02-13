@@ -16,7 +16,7 @@ vi.mock('@colophony/db', () => ({
 
 import { auditService, serializeValue } from './audit.service.js';
 import type { DrizzleDb } from '@colophony/db';
-import type { AuditLogParams } from '@prospector/types';
+import type { AuditLogParams } from '@colophony/types';
 
 function makeTx() {
   mockInsert.mockClear();

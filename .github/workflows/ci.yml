@@ -102,7 +102,7 @@ jobs:
           cache: 'pnpm'
       - run: pnpm install --frozen-lockfile
       - name: Build workspace dependencies
-        run: pnpm turbo run build --filter=@colophony/db --filter=@colophony/auth-client --filter=@prospector/types
+        run: pnpm turbo run build --filter=@colophony/db --filter=@colophony/auth-client --filter=@colophony/types
       - name: Run unit tests (scoped — web app excluded during rewrite)
         run: pnpm --filter @colophony/db test && pnpm --filter @colophony/auth-client test && pnpm --filter @colophony/api test
 
@@ -121,7 +121,7 @@ jobs:
   #       env:
   #         POSTGRES_USER: test
   #         POSTGRES_PASSWORD: test
-  #         POSTGRES_DB: prospector_test
+  #         POSTGRES_DB: colophony_test
   #       ports:
   #         - 5433:5432
   #       options: >-
@@ -149,14 +149,14 @@ jobs:
   #         cache: 'pnpm'
   #     - run: pnpm install --frozen-lockfile
   #     - name: Build workspace packages
-  #       run: pnpm turbo run build --filter=@colophony/db --filter=@prospector/types
+  #       run: pnpm turbo run build --filter=@colophony/db --filter=@colophony/types
   #     - name: Run Drizzle migrations on test database
   #       run: pnpm db:migrate
   #       env:
-  #         DATABASE_URL: postgresql://test:test@localhost:5433/prospector_test
+  #         DATABASE_URL: postgresql://test:test@localhost:5433/colophony_test
   #     - name: Create app_user role for RLS tests
   #       run: |
-  #         PGPASSWORD=test psql -h localhost -p 5433 -U test -d prospector_test -c "
+  #         PGPASSWORD=test psql -h localhost -p 5433 -U test -d colophony_test -c "
   #           DO \$\$
   #           BEGIN
   #             IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'app_user') THEN
@@ -164,7 +164,7 @@ jobs:
   #             END IF;
   #           END
   #           \$\$;
-  #           GRANT CONNECT ON DATABASE prospector_test TO app_user;
+  #           GRANT CONNECT ON DATABASE colophony_test TO app_user;
   #           GRANT USAGE ON SCHEMA public TO app_user;
   #           GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO app_user;
   #           GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO app_user;
@@ -173,10 +173,10 @@ jobs:
   #         "
   #       continue-on-error: true
   #     - name: Run API E2E tests
-  #       run: pnpm --filter @prospector/api test:e2e
+  #       run: pnpm --filter @colophony/api test:e2e
   #       env:
-  #         DATABASE_TEST_URL: postgresql://test:test@localhost:5433/prospector_test
-  #         DATABASE_APP_URL: postgresql://app_user:app_password@localhost:5433/prospector_test
+  #         DATABASE_TEST_URL: postgresql://test:test@localhost:5433/colophony_test
+  #         DATABASE_APP_URL: postgresql://app_user:app_password@localhost:5433/colophony_test
   #         REDIS_URL: redis://localhost:6379
   #         REDIS_HOST: localhost
   #         REDIS_PORT: 6379
@@ -195,7 +195,7 @@ jobs:
         env:
           POSTGRES_USER: test
           POSTGRES_PASSWORD: test
-          POSTGRES_DB: prospector_test
+          POSTGRES_DB: colophony_test
         ports:
           - 5433:5432
         options: >-
@@ -214,12 +214,12 @@ jobs:
           cache: 'pnpm'
       - run: pnpm install --frozen-lockfile
       - name: Build workspace dependencies
-        run: pnpm turbo run build --filter=@colophony/db --filter=@prospector/types
+        run: pnpm turbo run build --filter=@colophony/db --filter=@colophony/types
       - name: Run RLS integration tests
         run: pnpm --filter @colophony/api test:rls
         env:
-          DATABASE_TEST_URL: postgresql://test:test@localhost:5433/prospector_test
-          DATABASE_APP_URL: postgresql://app_user:app_password@localhost:5433/prospector_test
+          DATABASE_TEST_URL: postgresql://test:test@localhost:5433/colophony_test
+          DATABASE_APP_URL: postgresql://app_user:app_password@localhost:5433/colophony_test
 
   # ──────────────────────────────────────────────────
   # Build verification (~2 min)
@@ -240,4 +240,4 @@ jobs:
           cache: 'pnpm'
       - run: pnpm install --frozen-lockfile
       - name: Build packages (scoped — web app excluded during rewrite)
-        run: pnpm turbo run build --filter=@colophony/db --filter=@colophony/auth-client --filter=@colophony/api --filter=@prospector/types
+        run: pnpm turbo run build --filter=@colophony/db --filter=@colophony/auth-client --filter=@colophony/api --filter=@colophony/types

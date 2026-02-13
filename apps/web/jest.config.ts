@@ -18,7 +18,7 @@ const config: Config = {
           isolatedModules: true,
           paths: {
             "@/*": ["./src/*"],
-            "@prospector/api/*": ["../api/src/*"],
+            "@colophony/api/*": ["../api/src/*"],
           },
         },
       },
@@ -26,8 +26,8 @@ const config: Config = {
   },
   moduleNameMapper: {
     "^@/(.*)$": "<rootDir>/src/$1",
-    "^@prospector/types$": "<rootDir>/../../packages/types/src/index.ts",
-    "^@prospector/types/(.*)$": "<rootDir>/../../packages/types/src/$1",
+    "^@colophony/types$": "<rootDir>/../../packages/types/src/index.ts",
+    "^@colophony/types/(.*)$": "<rootDir>/../../packages/types/src/$1",
   },
   moduleFileExtensions: ["js", "json", "ts", "tsx"],
   setupFilesAfterEnv: ["<rootDir>/test/setup.ts"],

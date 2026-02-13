@@ -38,7 +38,7 @@ export default function DashboardPage() {
   if (!hasOrganizations) {
     return (
       <div className="text-center py-12">
-        <h1 className="text-2xl font-bold mb-2">Welcome to Prospector</h1>
+        <h1 className="text-2xl font-bold mb-2">Welcome to Colophony</h1>
         <p className="text-muted-foreground mb-4">
           You&apos;re not a member of any organizations yet.
         </p>

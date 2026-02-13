@@ -2,7 +2,7 @@
 
 Open-source suite covering the full publication lifecycle: submission intake, publication pipeline, notifications, and cross-instance federation.
 
-**Status:** v2 rewrite in progress. v1 MVP (Prospector) tagged as `v1.0.0-mvp`.
+**Status:** v2 rewrite in progress. v1 MVP (originally named Prospector) tagged as `v1.0.0-mvp`.
 **Team:** David (primary dev), Senior Developer (PR reviews), CEO (priorities)
 **Session log:** `docs/devlog/YYYY-MM.md` (monthly rotation) — append entries after each session
 **Architecture:** [docs/architecture-v2-planning.md](docs/architecture-v2-planning.md)
@@ -245,7 +245,7 @@ pnpm dev                      # API: 4000, Web: 3000
 ```bash
 pnpm test                     # Unit tests
 pnpm test:e2e                 # API E2E (needs docker-compose up)
-pnpm --filter @prospector/web test:e2e  # Playwright (needs dev servers)
+pnpm --filter @colophony/web test:e2e  # Playwright (needs dev servers)
 ```
 
 Full testing guide: [docs/testing.md](docs/testing.md)

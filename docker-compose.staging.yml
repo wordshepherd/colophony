@@ -4,7 +4,7 @@
 services:
   nginx:
     image: nginx:alpine
-    container_name: prospector-staging-nginx
+    container_name: colophony-staging-nginx
     ports:
       - "${HTTP_PORT:-80}:80"
     volumes:
@@ -26,13 +26,13 @@ services:
         limits:
           memory: 128M
     networks:
-      - prospector-staging
+      - colophony-staging
 
   api:
     build:
       context: .
       dockerfile: apps/api/Dockerfile
-    container_name: prospector-staging-api
+    container_name: colophony-staging-api
     expose:
       - "4000"
     env_file: .env.staging
@@ -40,7 +40,7 @@ services:
       NODE_ENV: production
       PORT: 4000
       LOG_LEVEL: ${LOG_LEVEL:-debug}
-      DATABASE_URL: postgresql://app_user:${APP_USER_PASSWORD}@postgres:5432/${POSTGRES_DB:-prospector_staging}
+      DATABASE_URL: postgresql://app_user:${APP_USER_PASSWORD}@postgres:5432/${POSTGRES_DB:-colophony_staging}
       REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
       REDIS_HOST: redis
       REDIS_PORT: 6379
@@ -73,7 +73,7 @@ services:
         limits:
           memory: 384M
     networks:
-      - prospector-staging
+      - colophony-staging
 
   web:
     build:
@@ -81,7 +81,7 @@ services:
       dockerfile: apps/web/Dockerfile
       args:
         NEXT_PUBLIC_API_URL: http://${DOMAIN:-localhost}/trpc
-    container_name: prospector-staging-web
+    container_name: colophony-staging-web
     expose:
       - "3000"
     environment:
@@ -99,24 +99,24 @@ services:
         limits:
           memory: 192M
     networks:
-      - prospector-staging
+      - colophony-staging
 
   postgres:
     image: postgres:16-alpine
-    container_name: prospector-staging-postgres
+    container_name: colophony-staging-postgres
     expose:
       - "5432"
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-prospector}
+      POSTGRES_USER: ${POSTGRES_USER:-colophony}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: ${POSTGRES_DB:-prospector_staging}
+      POSTGRES_DB: ${POSTGRES_DB:-colophony_staging}
       APP_USER_PASSWORD: ${APP_USER_PASSWORD}
     volumes:
       - staging_postgres_data:/var/lib/postgresql/data
       - ./scripts/init-db.sh:/docker-entrypoint-initdb.d/init-db.sh:ro
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-prospector}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-colophony}"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -125,11 +125,11 @@ services:
         limits:
           memory: 512M
     networks:
-      - prospector-staging
+      - colophony-staging
 
   redis:
     image: redis:7-alpine
-    container_name: prospector-staging-redis
+    container_name: colophony-staging-redis
     expose:
       - "6379"
     command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD}
@@ -146,11 +146,11 @@ services:
         limits:
           memory: 128M
     networks:
-      - prospector-staging
+      - colophony-staging
 
   minio:
     image: minio/minio:latest
-    container_name: prospector-staging-minio
+    container_name: colophony-staging-minio
     expose:
       - "9000"
     environment:
@@ -170,11 +170,11 @@ services:
         limits:
           memory: 256M
     networks:
-      - prospector-staging
+      - colophony-staging
 
   minio-setup:
     image: minio/mc:latest
-    container_name: prospector-staging-minio-setup
+    container_name: colophony-staging-minio-setup
     depends_on:
       minio:
         condition: service_healthy
@@ -189,11 +189,11 @@ services:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
     networks:
-      - prospector-staging
+      - colophony-staging
 
   tusd:
     image: tusproject/tusd:latest
-    container_name: prospector-staging-tusd
+    container_name: colophony-staging-tusd
     expose:
       - "1080"
     environment:
@@ -225,11 +225,11 @@ services:
         limits:
           memory: 128M
     networks:
-      - prospector-staging
+      - colophony-staging
 
   clamav:
     image: clamav/clamav:stable
-    container_name: prospector-staging-clamav
+    container_name: colophony-staging-clamav
     expose:
       - "3310"
     volumes:
@@ -248,22 +248,22 @@ services:
     profiles:
       - full
     networks:
-      - prospector-staging
+      - colophony-staging
 
   migrate:
     build:
       context: .
       dockerfile: apps/api/Dockerfile
       target: builder
-    container_name: prospector-staging-migrate
+    container_name: colophony-staging-migrate
     entrypoint: ["sh", "-c"]
     command:
       - |
         apk add --no-cache postgresql16-client openssl
         /app/scripts/init-prod.sh
     environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER:-prospector}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-prospector_staging}
-      APP_DATABASE_URL: postgresql://app_user:${APP_USER_PASSWORD}@postgres:5432/${POSTGRES_DB:-prospector_staging}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-colophony}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-colophony_staging}
+      APP_DATABASE_URL: postgresql://app_user:${APP_USER_PASSWORD}@postgres:5432/${POSTGRES_DB:-colophony_staging}
     volumes:
       - ./scripts/init-prod.sh:/app/scripts/init-prod.sh:ro
       - ./packages/db/prisma:/app/prisma:ro
@@ -271,7 +271,7 @@ services:
       postgres:
         condition: service_healthy
     networks:
-      - prospector-staging
+      - colophony-staging
 
 volumes:
   staging_postgres_data:
@@ -280,5 +280,5 @@ volumes:
   staging_clamav_data:
 
 networks:
-  prospector-staging:
+  colophony-staging:
     driver: bridge

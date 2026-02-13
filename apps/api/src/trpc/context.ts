@@ -1,5 +1,5 @@
 import type { CreateFastifyContextOptions } from '@trpc/server/adapters/fastify';
-import type { AuthContext, AuditLogParams } from '@prospector/types';
+import type { AuthContext, AuditLogParams } from '@colophony/types';
 import type { DrizzleDb } from '@colophony/db';
 
 type RequestAuditFn = (

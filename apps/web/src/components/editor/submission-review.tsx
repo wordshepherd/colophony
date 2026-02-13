@@ -26,7 +26,7 @@ import {
   Loader2,
   User,
 } from "lucide-react";
-import type { ScanStatus, SubmissionStatus } from "@prospector/types";
+import type { ScanStatus, SubmissionStatus } from "@colophony/types";
 
 interface SubmissionReviewProps {
   submissionId: string;

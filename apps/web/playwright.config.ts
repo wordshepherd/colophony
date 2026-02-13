@@ -34,14 +34,14 @@ export default defineConfig({
 
   webServer: [
     {
-      command: "pnpm --filter @prospector/api dev",
+      command: "pnpm --filter @colophony/api dev",
       url: "http://localhost:4000/trpc/auth.me",
       reuseExistingServer: !process.env.CI,
       timeout: 60_000,
       cwd: "../..",
     },
     {
-      command: "pnpm --filter @prospector/web dev",
+      command: "pnpm --filter @colophony/web dev",
       url: "http://localhost:3000",
       reuseExistingServer: !process.env.CI,
       timeout: 60_000,

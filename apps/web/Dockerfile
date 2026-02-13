@@ -17,11 +17,11 @@ ARG NEXT_PUBLIC_API_URL
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 COPY packages/ packages/
 COPY apps/web/ apps/web/
-# Prisma generate needed because @prospector/types may depend on Prisma types
-RUN pnpm --filter @prospector/db generate
-RUN pnpm --filter @prospector/types build
-RUN pnpm --filter @prospector/db build
-RUN pnpm --filter @prospector/web build
+# Prisma generate needed because @colophony/types may depend on Prisma types
+RUN pnpm --filter @colophony/db generate
+RUN pnpm --filter @colophony/types build
+RUN pnpm --filter @colophony/db build
+RUN pnpm --filter @colophony/web build
 
 # Stage 3: runner — standalone Next.js output
 FROM node:20-alpine AS runner

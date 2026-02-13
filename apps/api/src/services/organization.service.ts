@@ -13,7 +13,7 @@ import type {
   UpdateOrganizationInput,
   PaginationInput,
   Role,
-} from '@prospector/types';
+} from '@colophony/types';
 
 export class UserNotFoundError extends Error {
   constructor(email: string) {

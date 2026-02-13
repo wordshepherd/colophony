@@ -3,7 +3,7 @@
 import { useState, useCallback } from "react";
 import * as tus from "tus-js-client";
 import { trpc, getAccessToken } from "@/lib/trpc";
-import type { ScanStatus } from "@prospector/types";
+import type { ScanStatus } from "@colophony/types";
 
 export interface UploadingFile {
   id: string;

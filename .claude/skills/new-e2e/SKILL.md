@@ -184,8 +184,8 @@ Available helpers (already exist, just import):
 - prisma — superuser PrismaClient for test data setup
 
 Run with:
-  pnpm --filter @prospector/web test:e2e
-  pnpm --filter @prospector/web test:e2e:ui  (interactive)
+  pnpm --filter @colophony/web test:e2e
+  pnpm --filter @colophony/web test:e2e:ui  (interactive)
 
 Requires:
   docker-compose up -d

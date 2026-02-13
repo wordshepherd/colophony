@@ -9,7 +9,7 @@ import {
   checkSlugSchema,
   AuditActions,
   AuditResources,
-} from '@prospector/types';
+} from '@colophony/types';
 import {
   authedProcedure,
   orgProcedure,

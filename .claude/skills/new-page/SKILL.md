@@ -1,11 +1,11 @@
 ---
 name: new-page
-description: Scaffold a new Next.js page with proper patterns for the Prospector dashboard.
+description: Scaffold a new Next.js page with proper patterns for the Colophony dashboard.
 ---
 
 # /new-page
 
-Scaffold a new Next.js page with proper patterns for the Prospector dashboard.
+Scaffold a new Next.js page with proper patterns for the Colophony dashboard.
 
 ## What this skill does
 

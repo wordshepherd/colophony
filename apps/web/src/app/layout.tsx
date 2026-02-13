@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Prospector - Submissions Platform",
+  title: "Colophony - Submissions Platform",
   description: "Multi-tenant submissions management platform",
 };
 

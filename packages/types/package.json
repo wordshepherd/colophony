@@ -1,5 +1,5 @@
 {
-  "name": "@prospector/types",
+  "name": "@colophony/types",
   "version": "0.0.0",
   "private": true,
   "main": "./dist/index.js",
@@ -19,7 +19,7 @@
     "zod": "^3.23.0"
   },
   "devDependencies": {
-    "@prospector/typescript-config": "workspace:*",
+    "@colophony/typescript-config": "workspace:*",
     "typescript": "^5.6.0"
   }
 }
