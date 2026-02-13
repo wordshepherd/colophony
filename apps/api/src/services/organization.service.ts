@@ -205,8 +205,35 @@ export const organizationService = {
 
   /**
    * Remove a member from the organization.
+   * Atomically prevents removing the last admin using FOR UPDATE row locks.
+   *
+   * Acquires FOR UPDATE locks on all ADMIN member rows in the current org,
+   * then checks the count. This prevents concurrent requests from both
+   * observing count=2 and both deleting an admin, which would leave the
+   * org with zero admins.
    */
   async removeMember(tx: DrizzleDb, memberId: string) {
+    // First, fetch the member to check if they're an admin
+    const [member] = await tx
+      .select()
+      .from(organizationMembers)
+      .where(eq(organizationMembers.id, memberId))
+      .limit(1);
+
+    if (!member) return null;
+
+    if (member.role === 'ADMIN') {
+      // Lock all admin rows with FOR UPDATE and count them atomically.
+      // This serializes concurrent last-admin checks within the same org.
+      const result = await tx.execute<{ admin_count: number }>(
+        sql`SELECT count(*)::int AS admin_count FROM organization_members WHERE role = 'ADMIN' FOR UPDATE`,
+      );
+      const adminCount = result.rows[0]?.admin_count ?? 0;
+      if (adminCount <= 1) {
+        throw new LastAdminError();
+      }
+    }
+
     const [deleted] = await tx
       .delete(organizationMembers)
       .where(eq(organizationMembers.id, memberId))
@@ -224,16 +251,5 @@ export const organizationService = {
       .where(eq(organizationMembers.id, memberId))
       .returning();
     return updated ?? null;
-  },
-
-  /**
-   * Count admins in the current org context. Used to prevent removing the last admin.
-   */
-  async countAdmins(tx: DrizzleDb): Promise<number> {
-    const [result] = await tx
-      .select({ count: sql<number>`count(*)::int` })
-      .from(organizationMembers)
-      .where(eq(organizationMembers.role, 'ADMIN'));
-    return result?.count ?? 0;
   },
 };

@@ -74,8 +74,10 @@ export default fp(
             role = memberResult.rows[0].role;
           }
           await client.query('COMMIT');
-        } catch {
+        } catch (err) {
           await client.query('ROLLBACK').catch(() => {});
+          // Rethrow DB errors — don't mask infrastructure failures as 403s
+          throw err;
         } finally {
           client.release();
         }

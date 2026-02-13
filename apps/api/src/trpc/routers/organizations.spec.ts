@@ -13,13 +13,18 @@ vi.mock('../../services/organization.service.js', () => ({
     addMember: vi.fn(),
     removeMember: vi.fn(),
     updateMemberRole: vi.fn(),
-    countAdmins: vi.fn(),
   },
   UserNotFoundError: class UserNotFoundError extends Error {
     name = 'UserNotFoundError';
   },
   SlugTakenError: class SlugTakenError extends Error {
     name = 'SlugTakenError';
+  },
+  LastAdminError: class LastAdminError extends Error {
+    name = 'LastAdminError';
+    constructor() {
+      super('Cannot remove the last admin of an organization');
+    }
   },
 }));
 
@@ -276,7 +281,6 @@ describe('organizations tRPC router', () => {
 
   describe('organizations.members.remove', () => {
     it('removes member and audits', async () => {
-      mockService.countAdmins.mockResolvedValueOnce(2);
       mockService.removeMember.mockResolvedValueOnce({
         id: 'mem-1',
         userId: 'u-1',
@@ -292,12 +296,10 @@ describe('organizations tRPC router', () => {
     });
 
     it('prevents removing last admin', async () => {
-      mockService.countAdmins.mockResolvedValueOnce(1);
-      mockService.removeMember.mockResolvedValueOnce({
-        id: 'mem-1',
-        userId: 'u-1',
-        role: 'ADMIN',
-      } as never);
+      // Service now throws LastAdminError atomically (FOR UPDATE lock)
+      const { LastAdminError } =
+        await import('../../services/organization.service.js');
+      mockService.removeMember.mockRejectedValueOnce(new LastAdminError());
 
       const caller = createCaller(orgContext('ADMIN'));
       await expect(

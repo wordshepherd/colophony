@@ -196,4 +196,25 @@ describe('org-context plugin', () => {
     expect(body.authContext.role).toBe('EDITOR');
     expect(mockClientRelease).toHaveBeenCalled();
   });
+
+  it('returns 500 when membership bootstrap DB query fails', async () => {
+    // pool.query for org existence check — succeeds
+    mockPoolQuery.mockResolvedValueOnce({ rows: [{ id: VALID_ORG_ID }] });
+    // client.query: BEGIN succeeds, then set_config throws DB error
+    mockClientQuery
+      .mockResolvedValueOnce({}) // BEGIN READ ONLY
+      .mockRejectedValueOnce(new Error('connection reset')); // set_config fails
+
+    const response = await app.inject({
+      method: 'GET',
+      url: '/test',
+      headers: {
+        'x-test-user-id': 'user-1',
+        'x-organization-id': VALID_ORG_ID,
+      },
+    });
+    // DB errors should propagate as 500, not be masked as 403
+    expect(response.statusCode).toBe(500);
+    expect(mockClientRelease).toHaveBeenCalled();
+  });
 });

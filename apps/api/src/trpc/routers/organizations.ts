@@ -18,6 +18,7 @@ import {
 import {
   organizationService,
   UserNotFoundError,
+  LastAdminError,
 } from '../../services/organization.service.js';
 
 const membersRouter = createRouter({
@@ -56,32 +57,33 @@ const membersRouter = createRouter({
   remove: adminProcedure
     .input(z.object({ memberId: z.string().uuid() }))
     .mutation(async ({ ctx, input }) => {
-      const adminCount = await organizationService.countAdmins(ctx.dbTx);
-      // Check if the member being removed is an admin
-      const deleted = await organizationService.removeMember(
-        ctx.dbTx,
-        input.memberId,
-      );
-      if (!deleted) {
-        throw new TRPCError({
-          code: 'NOT_FOUND',
-          message: 'Member not found',
+      try {
+        const deleted = await organizationService.removeMember(
+          ctx.dbTx,
+          input.memberId,
+        );
+        if (!deleted) {
+          throw new TRPCError({
+            code: 'NOT_FOUND',
+            message: 'Member not found',
+          });
+        }
+        await ctx.audit({
+          action: AuditActions.ORG_MEMBER_REMOVED,
+          resource: AuditResources.ORGANIZATION,
+          resourceId: deleted.id,
+          oldValue: { userId: deleted.userId, role: deleted.role },
         });
+        return { success: true };
+      } catch (e) {
+        if (e instanceof LastAdminError) {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: e.message,
+          });
+        }
+        throw e;
       }
-      if (deleted.role === 'ADMIN' && adminCount <= 1) {
-        // This will be rolled back by the transaction on error
-        throw new TRPCError({
-          code: 'BAD_REQUEST',
-          message: 'Cannot remove the last admin of an organization',
-        });
-      }
-      await ctx.audit({
-        action: AuditActions.ORG_MEMBER_REMOVED,
-        resource: AuditResources.ORGANIZATION,
-        resourceId: deleted.id,
-        oldValue: { userId: deleted.userId, role: deleted.role },
-      });
-      return { success: true };
     }),
 
   updateRole: adminProcedure
