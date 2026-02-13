@@ -1,6 +1,6 @@
 # Competitive Analysis & Feature Research
 
-> **Purpose:** Comprehensive research into submissions management platforms and adjacent tools, to inform feature prioritization conversations for Prospector.
+> **Purpose:** Comprehensive research into submissions management platforms and adjacent tools, to inform feature prioritization conversations for Colophony.
 >
 > **Generated:** 2026-02-10
 >
@@ -12,7 +12,7 @@
 
 ## Table of Contents
 
-1. [Prospector Current State](#1-prospector-current-state)
+1. [Colophony Current State](#1-colophony-current-state)
 2. [Primary Competitors](#2-primary-competitors)
    - [Submittable](#21-submittable)
    - [Moksha](#22-moksha)
@@ -36,11 +36,11 @@
 
 ---
 
-## 1. Prospector Current State
+## 1. Colophony Current State
 
 ### Summary
 
-Prospector is a **production-ready MVP** multi-tenant submissions management platform for creative arts magazines. Built with NestJS + Next.js + PostgreSQL RLS. 308 unit tests + 65 E2E tests. Docker Compose deployment.
+Colophony is a **production-ready MVP** multi-tenant submissions management platform for creative arts magazines. Built with NestJS + Next.js + PostgreSQL RLS. 308 unit tests + 65 E2E tests. Docker Compose deployment.
 
 ### Implemented Features
 
@@ -516,7 +516,7 @@ These are writer-facing tools, not publisher-facing. They're relevant because th
 
 **Open Journal Systems (OJS)** -- Free, open source
 
-- **Closest philosophical match to Prospector's self-hosted model**
+- **Closest philosophical match to Colophony's self-hosted model**
 - Plugin architecture for extensibility
 - Multi-journal per installation
 - Author-suggested reviewers
@@ -584,7 +584,7 @@ These are writer-facing tools, not publisher-facing. They're relevant because th
 
 ## 5. Pricing Models Across the Landscape
 
-| Model                              | Examples                                                                                             | Prospector Applicability                                    |
+| Model                              | Examples                                                                                             | Colophony Applicability                                     |
 | ---------------------------------- | ---------------------------------------------------------------------------------------------------- | ----------------------------------------------------------- |
 | **Flat monthly subscription**      | Submittable ($29-$1,499+/mo), Dapple ($35/mo), Moksha (~$50/mo), Subfolio ($10/mo), Zealous ($29/mo) | Predictable revenue; standard SaaS model                    |
 | **Per-submission / usage-based**   | Duosuma ($0.09/sub), EntryThingy ($3/token), Manuscript Manager (credit packs)                       | Attractive to tiny magazines; aligns cost with usage        |
@@ -593,7 +593,7 @@ These are writer-facing tools, not publisher-facing. They're relevant because th
 | **Pay-per-use (no subscription)**  | OESS, Manuscript Manager                                                                             | Maximum flexibility, zero commitment                        |
 | **Free + donations**               | The Grinder, Chill Subs                                                                              | Not viable as primary business model                        |
 | **Tiered by volume, not features** | Moksha (all features on all plans, tier by publication count)                                        | Builds trust; simple to understand                          |
-| **Self-hosted (free software)**    | OJS, Prospector (current)                                                                            | Zero ongoing cost for the org; monetize via support/hosting |
+| **Self-hosted (free software)**    | OJS, Colophony (current)                                                                             | Zero ongoing cost for the org; monetize via support/hosting |
 
 ---
 
@@ -601,7 +601,7 @@ These are writer-facing tools, not publisher-facing. They're relevant because th
 
 ### Core Submission Features
 
-| Feature             | Prospector                      | Submittable                        | Moksha                         | Dapple                       | Duosuma                  |
+| Feature             | Colophony                       | Submittable                        | Moksha                         | Dapple                       | Duosuma                  |
 | ------------------- | ------------------------------- | ---------------------------------- | ------------------------------ | ---------------------------- | ------------------------ |
 | Form builder        | Basic                           | Advanced (12+ types, branching)    | Structured fields              | Drag-and-drop + AI generator | Custom questions         |
 | File uploads        | Resumable (tus), 50MB, 17 types | 70+ types, 400MB                   | 6 doc types                    | Any type/size                | Standard                 |
@@ -614,7 +614,7 @@ These are writer-facing tools, not publisher-facing. They're relevant because th
 
 ### Editorial Workflow
 
-| Feature            | Prospector                      | Submittable                   | Moksha                        | Dapple                         | Duosuma                                  |
+| Feature            | Colophony                       | Submittable                   | Moksha                        | Dapple                         | Duosuma                                  |
 | ------------------ | ------------------------------- | ----------------------------- | ----------------------------- | ------------------------------ | ---------------------------------------- |
 | Status transitions | 7 statuses, allowed transitions | 5 statuses                    | 8+ statuses                   | Unlimited custom stages        | Standard                                 |
 | Scoring/rating     | No                              | Yes/Maybe/No + custom rubrics | Numeric rating, auto-forward  | Scoring + voting               | Multiple systems (5-star, letter, Y/N/M) |
@@ -628,7 +628,7 @@ These are writer-facing tools, not publisher-facing. They're relevant because th
 
 ### Communication
 
-| Feature            | Prospector        | Submittable                           | Moksha                       | Dapple                 | Duosuma            |
+| Feature            | Colophony         | Submittable                           | Moksha                       | Dapple                 | Duosuma            |
 | ------------------ | ----------------- | ------------------------------------- | ---------------------------- | ---------------------- | ------------------ |
 | Email templates    | Verification only | Rich templates with merge fields      | One-click form letters       | Customizable templates | Response templates |
 | In-app messaging   | No                | Threaded per submission               | Author comments (if enabled) | Not documented         | Not documented     |
@@ -639,7 +639,7 @@ These are writer-facing tools, not publisher-facing. They're relevant because th
 
 ### Submitter Experience
 
-| Feature              | Prospector       | Submittable               | Moksha                         | Dapple                        | Duosuma                        |
+| Feature              | Colophony        | Submittable               | Moksha                         | Dapple                        | Duosuma                        |
 | -------------------- | ---------------- | ------------------------- | ------------------------------ | ----------------------------- | ------------------------------ |
 | Account required     | Yes              | Yes (free)                | No                             | Yes                           | Via Duotrope                   |
 | Status tracking      | Yes (via portal) | Detailed portal with tabs | Status URL with queue position | Status tracking               | Auto-syncs to Duotrope tracker |
@@ -651,7 +651,7 @@ These are writer-facing tools, not publisher-facing. They're relevant because th
 
 ### Team & Organization
 
-| Feature     | Prospector              | Submittable                   | Moksha                    | Dapple              | Duosuma    |
+| Feature     | Colophony               | Submittable                   | Moksha                    | Dapple              | Duosuma    |
 | ----------- | ----------------------- | ----------------------------- | ------------------------- | ------------------- | ---------- |
 | Roles       | 3 (Admin/Editor/Reader) | 5 tiers + custom (Enterprise) | Per-user permission flags | Role-based + panels | Role-based |
 | Multi-org   | Yes (multi-tenant RLS)  | Per-org accounts              | Multiple publications     | Multi-org support   | Per-org    |
@@ -660,7 +660,7 @@ These are writer-facing tools, not publisher-facing. They're relevant because th
 
 ### Analytics & Reporting
 
-| Feature           | Prospector             | Submittable               | Moksha               | Dapple                          | Duosuma        |
+| Feature           | Colophony              | Submittable               | Moksha               | Dapple                          | Duosuma        |
 | ----------------- | ---------------------- | ------------------------- | -------------------- | ------------------------------- | -------------- |
 | Dashboard         | Submission list only   | Visual pipeline dashboard | No (email summaries) | Central analytics dashboard     | Dashboard      |
 | Custom reports    | Audit log export (CSV) | Standard + impact reports | No                   | Stage analytics, date filtering | Not documented |
@@ -669,7 +669,7 @@ These are writer-facing tools, not publisher-facing. They're relevant because th
 
 ### Compliance & Security
 
-| Feature              | Prospector                                 | Submittable              | Moksha         | Dapple              | Duosuma        |
+| Feature              | Colophony                                  | Submittable              | Moksha         | Dapple              | Duosuma        |
 | -------------------- | ------------------------------------------ | ------------------------ | -------------- | ------------------- | -------------- |
 | GDPR                 | Full (export, erasure, consent, retention) | DPA + consent checkboxes | Not documented | Privacy policy only | Not documented |
 | Audit logging        | 30+ actions with before/after              | Not detailed             | No             | No                  | No             |
@@ -679,7 +679,7 @@ These are writer-facing tools, not publisher-facing. They're relevant because th
 
 ### Integrations
 
-| Feature           | Prospector              | Submittable       | Moksha | Dapple           | Duosuma        |
+| Feature           | Colophony               | Submittable       | Moksha | Dapple           | Duosuma        |
 | ----------------- | ----------------------- | ----------------- | ------ | ---------------- | -------------- |
 | API               | tRPC (internal)         | REST API v4       | None   | Limited/unclear  | Not documented |
 | Webhooks          | Internal (tusd, Stripe) | Via Zapier        | None   | Not confirmed    | Not documented |
@@ -692,7 +692,7 @@ These are writer-facing tools, not publisher-facing. They're relevant because th
 
 ## 7. Gap Analysis
 
-### 7.1 Features Competitors Have That Prospector Lacks
+### 7.1 Features Competitors Have That Colophony Lacks
 
 **High-impact gaps (multiple competitors have these):**
 
@@ -722,7 +722,7 @@ These are writer-facing tools, not publisher-facing. They're relevant because th
 | **Creator profiles**                | Dapple              | Medium     | Historical record of all submissions per person  |
 | **Reading period enforcement**      | Moksha, Submittable | Low        | Auto-open/close, block out-of-period submissions |
 
-### 7.2 Prospector Advantages Over Competitors
+### 7.2 Colophony Advantages Over Competitors
 
 | Advantage                        | Details                                                                                                             |
 | -------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
@@ -740,9 +740,9 @@ These are writer-facing tools, not publisher-facing. They're relevant because th
 
 1. **Self-hosted Submittable alternative:** No one offers this for literary magazines. OJS proves the model works for academia.
 2. **Post-acceptance workflow:** Most platforms end at accept/reject. The publication pipeline (contracts, payments to contributors, copyediting, issue assembly) is underserved.
-3. **Affordable all-in-one:** Subfolio ($10/mo) is leading on price, but Prospector's self-hosted model could be even cheaper at scale.
+3. **Affordable all-in-one:** Subfolio ($10/mo) is leading on price, but Colophony's self-hosted model could be even cheaper at scale.
 4. **Writer-side discovery + publisher-side management:** No single platform excels at both sides. Building both creates a moat.
-5. **Multi-magazine organizations:** University presses and literary orgs running multiple journals need multi-tenant by design -- exactly what Prospector already provides.
+5. **Multi-magazine organizations:** University presses and literary orgs running multiple journals need multi-tenant by design -- exactly what Colophony already provides.
 
 ---
 
@@ -752,7 +752,7 @@ The following questions are organized by feature area. Each section starts with 
 
 ### 8.1 Editorial Workflow & Review
 
-**Context:** Every competitor offers scoring/rating, blind review, and reviewer assignment. These are table-stakes features that Prospector currently lacks. Moksha has a particularly elegant auto-forward-on-rating-threshold system. Dapple uses a kanban board.
+**Context:** Every competitor offers scoring/rating, blind review, and reviewer assignment. These are table-stakes features that Colophony currently lacks. Moksha has a particularly elegant auto-forward-on-rating-threshold system. Dapple uses a kanban board.
 
 1. **Scoring system:** What kind of scoring do you envision? Simple (Yes/Maybe/No like Submittable), numeric (like Moksha's rating average), multi-criteria rubrics, or configurable per-org?
 
@@ -772,11 +772,11 @@ The following questions are organized by feature area. Each section starts with 
 
 ### 8.2 Communication & Email
 
-**Context:** Prospector currently only sends verification emails. Every competitor has rich template systems with merge fields. Moksha has scheduled sending. Submittable can message submitters about incomplete drafts.
+**Context:** Colophony currently only sends verification emails. Every competitor has rich template systems with merge fields. Moksha has scheduled sending. Submittable can message submitters about incomplete drafts.
 
 9. **Email templates:** What response types are most needed? Accept, reject, hold, revision request, reading period open/closed? Should they support merge fields (submitter name, submission title, etc.)?
 
-10. **In-app messaging:** Should Prospector support threaded messaging per submission (Submittable) or is email sufficient?
+10. **In-app messaging:** Should Colophony support threaded messaging per submission (Submittable) or is email sufficient?
 
 11. **Automated notifications:** Which events should trigger notifications? New submission, status change, review complete, reading period open/close?
 
@@ -800,7 +800,7 @@ The following questions are organized by feature area. Each section starts with 
 
 19. **No-account submissions:** Moksha doesn't require authors to create accounts. Is reducing submitter friction worth the tradeoff in tracking/communication?
 
-20. **File types:** Currently 17 MIME types. Submittable supports 70+. Should Prospector expand, and if so, what types matter (audio? video? 3D models)?
+20. **File types:** Currently 17 MIME types. Submittable supports 70+. Should Colophony expand, and if so, what types matter (audio? video? 3D models)?
 
 ### 8.4 Submitter Experience & Discovery
 
@@ -808,9 +808,9 @@ The following questions are organized by feature area. Each section starts with 
 
 21. **Submitter portal:** How rich should the submitter experience be? Current basic status tracking, or expand to include submission history, profiles, and cross-org tracking?
 
-22. **Discovery/marketplace:** Should Prospector have a public-facing directory of participating magazines' open calls? This is a major strategic decision -- it could create network effects but adds significant scope.
+22. **Discovery/marketplace:** Should Colophony have a public-facing directory of participating magazines' open calls? This is a major strategic decision -- it could create network effects but adds significant scope.
 
-23. **Creator profiles:** Dapple tracks all submissions per creator. Should Prospector build creator profiles that persist across submissions to help editors see a submitter's history?
+23. **Creator profiles:** Dapple tracks all submissions per creator. Should Colophony build creator profiles that persist across submissions to help editors see a submitter's history?
 
 24. **Branded landing pages:** Dapple's "Pages" feature lets orgs create branded multi-opportunity landing pages. Is this valuable, or do magazines prefer their own websites?
 
@@ -820,11 +820,11 @@ The following questions are organized by feature area. Each section starts with 
 
 **Context:** Pricing models range from flat subscriptions to per-submission to commission-only. Moksha philosophically opposes submission fees. Dapple claims 50% lower transaction fees than competitors.
 
-26. **Prospector's pricing model:** When/if Prospector is offered as a hosted service, what pricing model fits? Flat subscription, per-submission usage, commission on fees, tiered by features, tiered by volume, or dual model?
+26. **Colophony's pricing model:** When/if Colophony is offered as a hosted service, what pricing model fits? Flat subscription, per-submission usage, commission on fees, tiered by features, tiered by volume, or dual model?
 
-27. **Feature gating vs. volume gating:** Moksha puts all features on all plans and only gates by publication count. Submittable gates features by tier. Which approach fits Prospector's philosophy?
+27. **Feature gating vs. volume gating:** Moksha puts all features on all plans and only gates by publication count. Submittable gates features by tier. Which approach fits Colophony's philosophy?
 
-28. **Submission fee flexibility:** Currently Prospector has a hardcoded $25 fee. Should fees be org-configurable, per-period configurable, support waivers/discounts/coupon codes, or support multi-currency?
+28. **Submission fee flexibility:** Currently Colophony has a hardcoded $25 fee. Should fees be org-configurable, per-period configurable, support waivers/discounts/coupon codes, or support multi-currency?
 
 29. **Contributor payments:** Several competitors (Submittable Enterprise, Fluxx) handle paying contributors/awardees. Is paying accepted contributors in-platform a priority?
 
@@ -832,7 +832,7 @@ The following questions are organized by feature area. Each section starts with 
 
 ### 8.6 Team & Organization
 
-**Context:** Submittable has 5 permission tiers plus custom roles. Moksha has per-user permission flags. Prospector has 3 roles.
+**Context:** Submittable has 5 permission tiers plus custom roles. Moksha has per-user permission flags. Colophony has 3 roles.
 
 31. **Permission granularity:** Are 3 roles (Admin/Editor/Reader) sufficient, or do you need more granular permissions (e.g., "can bulk reject but not accept," "can see scores but not author names")?
 
@@ -844,7 +844,7 @@ The following questions are organized by feature area. Each section starts with 
 
 ### 8.7 Analytics & Reporting
 
-**Context:** Most competitors have dashboards. Fluxx has 7,000+ dynamic visualizations. Scholastica tracks time-to-decision and editor-level metrics. Prospector currently has audit log export only.
+**Context:** Most competitors have dashboards. Fluxx has 7,000+ dynamic visualizations. Scholastica tracks time-to-decision and editor-level metrics. Colophony currently has audit log export only.
 
 35. **Dashboard priorities:** What metrics matter most? Submission volume over time, status pipeline, acceptance rate, time-to-decision, reviewer workload, reading period performance?
 
@@ -856,9 +856,9 @@ The following questions are organized by feature area. Each section starts with 
 
 ### 8.8 Integrations & API
 
-**Context:** Submittable has Zapier, REST API, and 7+ native integrations. Moksha has zero integrations (closed system). Prospector currently has internal tRPC only.
+**Context:** Submittable has Zapier, REST API, and 7+ native integrations. Moksha has zero integrations (closed system). Colophony currently has internal tRPC only.
 
-39. **Public API:** Should Prospector expose a public REST/GraphQL API for organizations to build on?
+39. **Public API:** Should Colophony expose a public REST/GraphQL API for organizations to build on?
 
 40. **Zapier/automation:** Is Zapier integration important for the target market, or are literary magazines too small to use it?
 
@@ -866,21 +866,21 @@ The following questions are organized by feature area. Each section starts with 
 
 42. **SSO:** Is SAML/OAuth SSO relevant for the target market, or only for larger institutions?
 
-43. **Email marketing integration:** Should Prospector sync with Mailchimp/similar for building subscriber lists from submitters?
+43. **Email marketing integration:** Should Colophony sync with Mailchimp/similar for building subscriber lists from submitters?
 
 ### 8.9 Branding & Customization
 
 **Context:** Submittable offers custom CSS and white-labeling on Enterprise. Dapple has branded Pages. Moksha uses subdomains only.
 
-44. **Custom domains:** Should organizations get `submissions.theirmagazine.com` instead of `prospector.app/their-magazine`?
+44. **Custom domains:** Should organizations get `submissions.theirmagazine.com` instead of `colophony.app/their-magazine`?
 
 45. **Visual customization:** How much branding control? Logo + colors only, custom CSS, or full theme control?
 
-46. **White-labeling:** Should organizations be able to remove Prospector branding entirely?
+46. **White-labeling:** Should organizations be able to remove Colophony branding entirely?
 
 ### 8.10 Compliance & Security
 
-**Context:** Prospector already leads in GDPR, audit logging, RLS, and virus scanning. Submittable has SOC 2 Type 2.
+**Context:** Colophony already leads in GDPR, audit logging, RLS, and virus scanning. Submittable has SOC 2 Type 2.
 
 47. **SOC 2:** Is SOC 2 certification a priority? It's expensive but important for enterprise/institutional customers.
 
@@ -892,15 +892,15 @@ The following questions are organized by feature area. Each section starts with 
 
 **Context:** This is the biggest gap across ALL competitors. Most platforms end at the accept/reject decision. OESS and ShowSubmit auto-generate galleries from accepted work. Editorial Manager supports manuscript transfer between journals.
 
-50. **Publication pipeline:** After accepting a submission, what happens? Should Prospector support copyediting workflow, proofreading stages, or is that out of scope?
+50. **Publication pipeline:** After accepting a submission, what happens? Should Colophony support copyediting workflow, proofreading stages, or is that out of scope?
 
 51. **Contributor contracts:** Should the platform generate and track contributor agreements/contracts?
 
 52. **Issue/edition assembly:** Should editors be able to assemble accepted pieces into issues/editions within the platform?
 
-53. **Auto-generated publication page:** OESS and ShowSubmit auto-generate online galleries from accepted work. Should Prospector auto-generate a published issue page?
+53. **Auto-generated publication page:** OESS and ShowSubmit auto-generate online galleries from accepted work. Should Colophony auto-generate a published issue page?
 
-54. **Cross-journal transfer:** Editorial Manager lets rejected pieces transfer to another journal (with author consent). Is this relevant if multiple magazines use Prospector?
+54. **Cross-journal transfer:** Editorial Manager lets rejected pieces transfer to another journal (with author consent). Is this relevant if multiple magazines use Colophony?
 
 ### 8.12 Existing Feature Enhancements
 
@@ -920,15 +920,15 @@ The following questions are organized by feature area. Each section starts with 
 
 ### 8.13 Strategic Direction
 
-61. **Target market:** Where does Prospector fit? Literary magazines only? All creative arts? Broader (contests, grants)?
+61. **Target market:** Where does Colophony fit? Literary magazines only? All creative arts? Broader (contests, grants)?
 
 62. **Self-hosted vs. hosted:** Is the long-term play purely self-hosted (like OJS), hosted SaaS, or both? The roadmap mentions "SaaS platform" under medium-term.
 
-63. **Open source:** Should Prospector be open-source? OJS proves this model works at scale for publishing. It could capture the entire "Submittable is too expensive" market.
+63. **Open source:** Should Colophony be open-source? OJS proves this model works at scale for publishing. It could capture the entire "Submittable is too expensive" market.
 
-64. **Competitive positioning:** Against Submittable (feature-rich but expensive and drifting away from literary focus), Moksha (specialist but closed/limited), Dapple (modern but new/unproven), and Duosuma (cheap but tied to Duotrope ecosystem) -- where should Prospector sit?
+64. **Competitive positioning:** Against Submittable (feature-rich but expensive and drifting away from literary focus), Moksha (specialist but closed/limited), Dapple (modern but new/unproven), and Duosuma (cheap but tied to Duotrope ecosystem) -- where should Colophony sit?
 
-65. **Two-sided marketplace:** Should Prospector invest in the submitter side (discovery, tracking, profiles) to create network effects, or stay purely publisher-focused?
+65. **Two-sided marketplace:** Should Colophony invest in the submitter side (discovery, tracking, profiles) to create network effects, or stay purely publisher-focused?
 
 ---
 
@@ -975,28 +975,28 @@ The following questions are organized by feature area. Each section starts with 
 
 ### 9.4 Submission Intake & Forms
 
-| Decision                       | Detail                                                                                                                                                                        |
-| ------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Form builder**               | Full drag-and-drop builder with multiple field types and conditional logic. Like Submittable's but open-source.                                                               |
-| **Submission types**           | Essential. Different categories with different forms, rules, file types, and word counts per type.                                                                            |
-| **Reading period enforcement** | Full: auto-open/close by date, submission count limits, per-author throttling. All configurable per period.                                                                   |
-| **File types**                 | Expand to support audio + video uploads plus rich media embeds (YouTube, Vimeo, SoundCloud URLs). Support multimedia literary content.                                        |
-| **Embeddable forms**           | Essential, but with careful attention to authentication UX. Users signed into a magazine's website need a clear path to Prospector auth for orgs without federated/SSO setup. |
+| Decision                       | Detail                                                                                                                                                                       |
+| ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Form builder**               | Full drag-and-drop builder with multiple field types and conditional logic. Like Submittable's but open-source.                                                              |
+| **Submission types**           | Essential. Different categories with different forms, rules, file types, and word counts per type.                                                                           |
+| **Reading period enforcement** | Full: auto-open/close by date, submission count limits, per-author throttling. All configurable per period.                                                                  |
+| **File types**                 | Expand to support audio + video uploads plus rich media embeds (YouTube, Vimeo, SoundCloud URLs). Support multimedia literary content.                                       |
+| **Embeddable forms**           | Essential, but with careful attention to authentication UX. Users signed into a magazine's website need a clear path to Colophony auth for orgs without federated/SSO setup. |
 
 ### 9.5 Submitter Experience
 
-| Decision                                | Detail                                                                                                                                                                                              |
-| --------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Auth model**                          | Account strongly preferred. Federated auth for reducing friction. Admins can set account as optional for specific calls (some merit full anonymity, though seldom the norm).                        |
-| **Simultaneous submission enforcement** | If a publication says no simultaneous submissions, the system should prevent sim-subbing across federated orgs/publications/calls. Novel use of federation.                                         |
-| **Cross-publication transfer**          | Optional for editors to avoid adding to workloads. Primarily author-facing: rejected pieces can be re-submitted to another Prospector publication with author consent and one-click (no re-upload). |
+| Decision                                | Detail                                                                                                                                                                                             |
+| --------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Auth model**                          | Account strongly preferred. Federated auth for reducing friction. Admins can set account as optional for specific calls (some merit full anonymity, though seldom the norm).                       |
+| **Simultaneous submission enforcement** | If a publication says no simultaneous submissions, the system should prevent sim-subbing across federated orgs/publications/calls. Novel use of federation.                                        |
+| **Cross-publication transfer**          | Optional for editors to avoid adding to workloads. Primarily author-facing: rejected pieces can be re-submitted to another Colophony publication with author consent and one-click (no re-upload). |
 
 ### 9.6 Payments
 
 | Decision                 | Detail                                                                                                                                                                                                          |
 | ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Submission fees**      | Full flexibility + scholarship waivers + subscriber/member fee waivers (waive fees for paying magazine subscribers/members). Per-period configurable, optional/required/tiered, discount codes, multi-currency. |
-| **Contributor payments** | In-platform as default via Stripe payouts, but trackable when paid outside Prospector. Many magazines have international contributors where specific payment providers can be a hassle if mandatory.            |
+| **Contributor payments** | In-platform as default via Stripe payouts, but trackable when paid outside Colophony. Many magazines have international contributors where specific payment providers can be a hassle if mandatory.             |
 | **Payment providers**    | Provider-agnostic adapter pattern. Ship with Stripe + PayPal. Community can add others.                                                                                                                         |
 
 ### 9.7 Team & Organization
@@ -1030,14 +1030,14 @@ The following questions are organized by feature area. Each section starts with 
 
 ### 9.11 Post-Acceptance Pipeline
 
-This is where Prospector diverges most dramatically from ALL competitors.
+This is where Colophony diverges most dramatically from ALL competitors.
 
 | Decision                  | Detail                                                                                                                                                                                                                                                  |
 | ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Publication pipeline**  | Full workflow management through production: copyediting, proofreading, layout, approval, scheduled. Integrates with WordPress/Ghost for publishing. Very basic built-in publishing option ("starter home") for magazines without other infrastructure. |
 | **Contributor contracts** | Template generation with merge fields + built-in e-signature. Track contract status per piece.                                                                                                                                                          |
 | **Issue assembly**        | Full issue management: create issues, add accepted pieces, order them, group into sections, generate TOC, set publication date. The editorial calendar.                                                                                                 |
-| **CMS integration**       | Workflow + CMS integration (WordPress/Ghost). Prospector is the back-office, CMS is the front-end. Basic built-in option for magazines without a CMS.                                                                                                   |
+| **CMS integration**       | Workflow + CMS integration (WordPress/Ghost). Colophony is the back-office, CMS is the front-end. Basic built-in option for magazines without a CMS.                                                                                                    |
 
 ### 9.12 Compliance & Security
 
@@ -1052,28 +1052,28 @@ This is where Prospector diverges most dramatically from ALL competitors.
 
 These emerged during the interview as additional priorities:
 
-| Feature Area                     | Decision                                                                                                                                                                          |
-| -------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Newsletters**                  | Integration hub + optional installation and configuration of a recommended open-source tool (e.g., Listmonk) for magazines that don't have their own setup.                       |
-| **Social media**                 | Social post management for magazines. Part of the post-acceptance marketing calendar.                                                                                             |
-| **Contributor CRM**              | Integration with external CRMs + either install/configure an open-source CRM or build a lightweight one. Same pattern as newsletters: integration hub with curated defaults.      |
-| **Submitter CRM**                | Same approach. Track submitter relationships, submission history, and communication across the platform.                                                                          |
-| **Marketing calendar**           | Basic marketing calendar as part of the post-acceptance workflow. Coordinate publication, newsletters, social posts.                                                              |
-| **Magazine subscriptions/sales** | Research first. Evaluate open-source subscription tools that could self-host alongside Prospector. Ghost memberships, Memberful, Steady, and Stripe subscriptions are candidates. |
-| **Accessibility**                | Important for inclusivity. WCAG compliance.                                                                                                                                       |
-| **Internationalization**         | English at launch with a clear community contribution framework. Prioritize Spanish, French, and Portuguese based on literary publishing demand.                                  |
-| **Mobile experience**            | Dedicated mobile interface for editors and submitters.                                                                                                                            |
+| Feature Area                     | Decision                                                                                                                                                                         |
+| -------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Newsletters**                  | Integration hub + optional installation and configuration of a recommended open-source tool (e.g., Listmonk) for magazines that don't have their own setup.                      |
+| **Social media**                 | Social post management for magazines. Part of the post-acceptance marketing calendar.                                                                                            |
+| **Contributor CRM**              | Integration with external CRMs + either install/configure an open-source CRM or build a lightweight one. Same pattern as newsletters: integration hub with curated defaults.     |
+| **Submitter CRM**                | Same approach. Track submitter relationships, submission history, and communication across the platform.                                                                         |
+| **Marketing calendar**           | Basic marketing calendar as part of the post-acceptance workflow. Coordinate publication, newsletters, social posts.                                                             |
+| **Magazine subscriptions/sales** | Research first. Evaluate open-source subscription tools that could self-host alongside Colophony. Ghost memberships, Memberful, Steady, and Stripe subscriptions are candidates. |
+| **Accessibility**                | Important for inclusivity. WCAG compliance.                                                                                                                                      |
+| **Internationalization**         | English at launch with a clear community contribution framework. Prioritize Spanish, French, and Portuguese based on literary publishing demand.                                 |
+| **Mobile experience**            | Dedicated mobile interface for editors and submitters.                                                                                                                           |
 
 ### 9.14 Architectural Philosophy
 
 A clear pattern emerged across all decisions:
 
-> **Prospector as integration hub with curated open-source defaults.**
+> **Colophony as integration hub with curated open-source defaults.**
 
 For every ancillary capability (newsletters, CRM, subscriptions, auth, payment processing), the approach is:
 
 1. **Build adapter/integration interfaces** so magazines with existing tools can plug them in
-2. **Curate and recommend open-source defaults** that can be installed and configured alongside Prospector for magazines without existing infrastructure
+2. **Curate and recommend open-source defaults** that can be installed and configured alongside Colophony for magazines without existing infrastructure
 3. **Build a lightweight built-in option** only when no suitable open-source tool exists (e.g., the "starter home" publishing layer)
 
 This philosophy serves both ends of the market:
@@ -1081,11 +1081,11 @@ This philosophy serves both ends of the market:
 - **Established magazines** bring their own tools and integrate via APIs
 - **New/small magazines** get a complete, pre-configured stack out of the box
 
-Combined with the open-source, self-hostable, federated model, this positions Prospector as a fundamentally different product than Submittable (closed SaaS), Moksha (closed single-developer tool), or Dapple (closed SaaS).
+Combined with the open-source, self-hostable, federated model, this positions Colophony as a fundamentally different product than Submittable (closed SaaS), Moksha (closed single-developer tool), or Dapple (closed SaaS).
 
 ### 9.15 Key Differentiators (Post-Interview)
 
-Based on all decisions, Prospector's competitive differentiation is:
+Based on all decisions, Colophony's competitive differentiation is:
 
 1. **Open-source and self-hostable** — the only open-source submissions platform for literary magazines
 2. **Federated identity** — cross-instance submitter identity, simultaneous submission enforcement, cross-journal transfers

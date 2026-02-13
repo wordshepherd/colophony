@@ -17,7 +17,7 @@ import { toast } from "sonner";
 import {
   EDITOR_ALLOWED_TRANSITIONS,
   type SubmissionStatus,
-} from "@prospector/types";
+} from "@colophony/types";
 
 interface StatusTransitionProps {
   submissionId: string;

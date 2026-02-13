@@ -19,7 +19,7 @@ import {
   AuditActions,
   AuditResources,
   type AuthAuditParams,
-} from '@prospector/types';
+} from '@colophony/types';
 import { auditService, serializeValue } from '../../services/audit.service';
 import {
   globalSetup,

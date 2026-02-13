@@ -19,7 +19,7 @@
 export const trpc = createTRPCReact<AppRouter>();
 ```
 
-- `AppRouter` type imported via source path alias: `@prospector/api/trpc/router` (bundler resolution, not `.d.ts`)
+- `AppRouter` type imported via source path alias: `@colophony/api/trpc/router` (bundler resolution, not `.d.ts`)
 - `httpBatchLink` to `${NEXT_PUBLIC_API_URL}/trpc`
 - Headers: `Authorization: Bearer <token>` + `x-organization-id` from localStorage
 - `credentials: "include"` on fetch

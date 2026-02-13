@@ -2,8 +2,8 @@ import fp from 'fastify-plugin';
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { createJwksVerifier } from '@colophony/auth-client';
 import { db, eq, users } from '@colophony/db';
-import type { AuthContext, AuthAuditParams } from '@prospector/types';
-import { AuditActions, AuditResources } from '@prospector/types';
+import type { AuthContext, AuthAuditParams } from '@colophony/types';
+import { AuditActions, AuditResources } from '@colophony/types';
 import type { Env } from '../config/env.js';
 import { auditService } from '../services/audit.service.js';
 

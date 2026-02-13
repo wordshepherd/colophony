@@ -4,18 +4,18 @@ services:
   # Development PostgreSQL database
   postgres:
     image: postgres:16-alpine
-    container_name: prospector-postgres
+    container_name: colophony-postgres
     ports:
       - '5432:5432'
     environment:
-      POSTGRES_USER: prospector
+      POSTGRES_USER: colophony
       POSTGRES_PASSWORD: password
-      POSTGRES_DB: prospector
+      POSTGRES_DB: colophony
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./scripts/init-db.sh:/docker-entrypoint-initdb.d/init-db.sh:ro
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U prospector']
+      test: ['CMD-SHELL', 'pg_isready -U colophony']
       interval: 5s
       timeout: 5s
       retries: 5
@@ -23,13 +23,13 @@ services:
   # Test PostgreSQL database (in-memory for speed)
   postgres-test:
     image: postgres:16-alpine
-    container_name: prospector-postgres-test
+    container_name: colophony-postgres-test
     ports:
       - '5433:5432'
     environment:
       POSTGRES_USER: test
       POSTGRES_PASSWORD: test
-      POSTGRES_DB: prospector_test
+      POSTGRES_DB: colophony_test
     tmpfs:
       - /var/lib/postgresql/data
     volumes:
@@ -43,7 +43,7 @@ services:
   # Redis for sessions, cache, and job queue
   redis:
     image: redis:7-alpine
-    container_name: prospector-redis
+    container_name: colophony-redis
     ports:
       - '6379:6379'
     volumes:
@@ -58,7 +58,7 @@ services:
   # MinIO for S3-compatible file storage
   minio:
     image: minio/minio:latest
-    container_name: prospector-minio
+    container_name: colophony-minio
     ports:
       - '9000:9000'
       - '9001:9001'
@@ -77,7 +77,7 @@ services:
   # Create default MinIO bucket on startup
   minio-setup:
     image: minio/mc:latest
-    container_name: prospector-minio-setup
+    container_name: colophony-minio-setup
     depends_on:
       minio:
         condition: service_healthy
@@ -92,7 +92,7 @@ services:
   # tusd for resumable file uploads (tus protocol)
   tusd:
     image: tusproject/tusd:latest
-    container_name: prospector-tusd
+    container_name: colophony-tusd
     ports:
       - '1080:1080'
     environment:
@@ -121,7 +121,7 @@ services:
   # Zitadel OIDC identity provider (optional in development)
   zitadel:
     image: ghcr.io/zitadel/zitadel:v4.10.1
-    container_name: prospector-zitadel
+    container_name: colophony-zitadel
     command: start-from-init --masterkey "MasterkeyNeedsToHave32Characters" --tlsMode disabled
     ports:
       - '127.0.0.1:8080:8080'
@@ -132,7 +132,7 @@ services:
       ZITADEL_DATABASE_POSTGRES_USER_USERNAME: zitadel
       ZITADEL_DATABASE_POSTGRES_USER_PASSWORD: ${ZITADEL_DB_PASSWORD:-zitadel_password}
       ZITADEL_DATABASE_POSTGRES_USER_SSL_MODE: disable
-      ZITADEL_DATABASE_POSTGRES_ADMIN_USERNAME: prospector
+      ZITADEL_DATABASE_POSTGRES_ADMIN_USERNAME: colophony
       ZITADEL_DATABASE_POSTGRES_ADMIN_PASSWORD: ${POSTGRES_PASSWORD:-password}
       ZITADEL_DATABASE_POSTGRES_ADMIN_SSL_MODE: disable
       ZITADEL_EXTERNALDOMAIN: localhost
@@ -154,7 +154,7 @@ services:
   # ClamAV for virus scanning (optional in development)
   clamav:
     image: clamav/clamav:stable
-    container_name: prospector-clamav
+    container_name: colophony-clamav
     ports:
       - '3310:3310'
     volumes:

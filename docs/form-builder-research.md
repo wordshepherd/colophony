@@ -54,18 +54,18 @@ Research document for implementing a drag-and-drop form builder for literary mag
 
 **Tally** uses a Notion-style block-based builder. Forms are stored as arrays of blocks, each with a UUID, type, groupUuid, groupType, and a payload containing the block's data. This modular approach allows flexible composition.
 
-**Form.io** uses a recursive components array where each component has `type`, `key`, `label`, `validate`, and `conditional` properties. Components can contain child components for nested structures. This is the most developer-friendly approach for a platform like Prospector.
+**Form.io** uses a recursive components array where each component has `type`, `key`, `label`, `validate`, and `conditional` properties. Components can contain child components for nested structures. This is the most developer-friendly approach for a platform like Colophony.
 
 ### Recommendation: Custom Schema Inspired by Form.io
 
 Adopting a pure JSON Schema standard (draft-07 or 2020-12) is insufficient for form building because JSON Schema was designed for data validation, not form rendering. The layout, field ordering, conditional visibility, and UI-specific metadata (placeholders, help text, field grouping) are not part of the JSON Schema standard.
 
-The best approach for Prospector is a **custom form definition schema** that borrows patterns from Form.io and JSON Forms:
+The best approach for Colophony is a **custom form definition schema** that borrows patterns from Form.io and JSON Forms:
 
 - **Form.io pattern**: Recursive `components` array with `type`, `key`, `label`, `validate`, `conditional` properties. Simple, flat, easy to serialize.
 - **JSON Forms pattern**: Separate data schema from UI schema. More architecturally pure but adds complexity.
 
-Given that Prospector's form builder is for non-technical magazine editors and the forms are relatively simple (12-15 field types, not deeply nested enterprise forms), the **Form.io-style flat components array** is the better fit. It is simpler to build a drag-and-drop UI for, simpler to serialize/deserialize, and simpler to validate.
+Given that Colophony's form builder is for non-technical magazine editors and the forms are relatively simple (12-15 field types, not deeply nested enterprise forms), the **Form.io-style flat components array** is the better fit. It is simpler to build a drag-and-drop UI for, simpler to serialize/deserialize, and simpler to validate.
 
 ---
 
@@ -88,7 +88,7 @@ Given that Prospector's form builder is for non-technical magazine editors and t
 
 **Strengths:**
 
-- Purpose-built as an embeddable library, not a standalone product. This is exactly what Prospector needs.
+- Purpose-built as an embeddable library, not a standalone product. This is exactly what Colophony needs.
 - True React components (not DOM manipulation wrappers).
 - Separation of business logic (`survey-core`) from rendering. Business logic is framework-agnostic.
 - Rich field types (30+), conditional logic, calculated values, validation, and themes.
@@ -104,13 +104,13 @@ Given that Prospector's form builder is for non-technical magazine editors and t
 - Heavy bundle size when including the full creator.
 - Styling system uses its own theming, not Tailwind/shadcn natively.
 
-**Verdict:** If budget allows, SurveyJS is the fastest path to a production-quality form builder. The renderer (MIT) can be used for free for rendering submitted forms. The builder requires a license. For a self-hosted open-source product like Prospector, the commercial builder license creates an uncomfortable dependency. The renderer could be used as a rendering backend while building a custom builder UI.
+**Verdict:** If budget allows, SurveyJS is the fastest path to a production-quality form builder. The renderer (MIT) can be used for free for rendering submitted forms. The builder requires a license. For a self-hosted open-source product like Colophony, the commercial builder license creates an uncomfortable dependency. The renderer could be used as a rendering backend while building a custom builder UI.
 
 #### Formbricks — Closest Architecture Match (But Not a Library)
 
 **Strengths:**
 
-- Nearly identical tech stack to Prospector: Next.js, Prisma, Tailwind, TypeScript.
+- Nearly identical tech stack to Colophony: Next.js, Prisma, Tailwind, TypeScript.
 - Strong privacy-first / GDPR-compliant design.
 - Modern, clean UI with Tailwind + Radix primitives.
 - MIT licensed.
@@ -119,7 +119,7 @@ Given that Prospector's form builder is for non-technical magazine editors and t
 **Weaknesses:**
 
 - Designed as a standalone survey/experience-management product, not an embeddable library.
-- Extracting the form builder components from Formbricks and integrating them into Prospector would require significant effort and create a maintenance burden.
+- Extracting the form builder components from Formbricks and integrating them into Colophony would require significant effort and create a maintenance burden.
 - Focused on surveys/feedback collection, not structured submission intake.
 - Missing literary-submission-specific features (file uploads for manuscripts, cover letters).
 
@@ -138,7 +138,7 @@ Given that Prospector's form builder is for non-technical magazine editors and t
 
 **Weaknesses:**
 
-- Architecture depends on MongoDB, not PostgreSQL. Prospector uses PostgreSQL.
+- Architecture depends on MongoDB, not PostgreSQL. Colophony uses PostgreSQL.
 - Community edition is limited. Enterprise features (e.g., multi-tenancy, form versioning) require paid license.
 - The JavaScript renderer (`formio.js`) is framework-agnostic but uses DOM manipulation, not React components. Integration with React/Next.js feels like an afterthought.
 - Heavy bundle size.
@@ -154,7 +154,7 @@ Given that Prospector's form builder is for non-technical magazine editors and t
 #### HeyForm — MongoDB-Dependent, AGPL License
 
 **Strengths:** Good feature set, AI-powered form creation, modern UI.
-**Weaknesses:** MongoDB + KeyDB stack (incompatible with Prospector's PostgreSQL + Redis). AGPL license requires derivative works to be open-source (fine for Prospector, but limits future SaaS flexibility). Limited community.
+**Weaknesses:** MongoDB + KeyDB stack (incompatible with Colophony's PostgreSQL + Redis). AGPL license requires derivative works to be open-source (fine for Colophony, but limits future SaaS flexibility). Limited community.
 **Verdict:** Not suitable as a dependency.
 
 #### Tripetto — Instructive Architecture (But Commercial)
@@ -172,7 +172,7 @@ Given that Prospector's form builder is for non-technical magazine editors and t
 - Use SurveyJS's MIT-licensed renderer as a reference implementation for the form renderer.
 - Build a custom drag-and-drop builder UI using dnd-kit + shadcn/ui components.
 
-This approach gives Prospector full control over the form builder, no license dependencies, and a schema format optimized for literary submissions.
+This approach gives Colophony full control over the form builder, no license dependencies, and a schema format optimized for literary submissions.
 
 ---
 
@@ -195,7 +195,7 @@ This approach gives Prospector full control over the form builder, no license de
 
 1. **Sortable preset** (`@dnd-kit/sortable`) is purpose-built for reordering lists, which is exactly what a form builder needs (dragging fields into position).
 2. **Built-in keyboard accessibility** with `KeyboardSensor` and `sortableKeyboardCoordinates`. Users can pick up items with Space, move with arrow keys, and drop with Space. This is essential for WCAG compliance.
-3. **Hooks-based API** integrates naturally with React functional components and the existing shadcn/ui component patterns in Prospector.
+3. **Hooks-based API** integrates naturally with React functional components and the existing shadcn/ui component patterns in Colophony.
 4. **Lightweight** at ~12KB gzipped.
 5. **Two-zone pattern**: Supports dragging items from a "palette" (field type list) into a "canvas" (form builder area), which is the core UX pattern for form builders.
 6. **Existing form builder examples**: The dnd-kit community has shared form builder implementations (GitHub Discussion #639).
@@ -289,7 +289,7 @@ Literary magazine forms need relatively simple conditional logic:
 
 ### Recommended: Custom Rule Engine with JSON Logic Syntax
 
-For Prospector's use case, a **custom lightweight rule engine** that uses a subset of JSON Logic syntax is the best approach. Full JSON Logic is more powerful than needed (it supports arithmetic, string operations, array operations, etc.), and the custom engine can be optimized for the specific patterns used in form conditional logic.
+For Colophony's use case, a **custom lightweight rule engine** that uses a subset of JSON Logic syntax is the best approach. Full JSON Logic is more powerful than needed (it supports arithmetic, string operations, array operations, etc.), and the custom engine can be optimized for the specific patterns used in form conditional logic.
 
 #### Rule Definition Format
 
@@ -398,7 +398,7 @@ function evaluateCondition(
 - **Early exit**: For AND conditions, stop evaluating after the first `false`. For OR conditions, stop after the first `true`.
 - **Memoization**: Cache evaluation results per field value combination. Invalidate only when a dependency changes.
 
-For Prospector's forms (typically 10-30 fields with 0-10 conditional rules), performance is not a concern. Even a naive implementation evaluating all rules on every change would complete in under 1ms.
+For Colophony's forms (typically 10-30 fields with 0-10 conditional rules), performance is not a concern. Even a naive implementation evaluating all rules on every change would complete in under 1ms.
 
 #### Rule Builder UI
 
@@ -422,9 +422,9 @@ This is simple enough for non-technical magazine editors to understand. Each fie
 Magazines need to embed submission forms on their own websites (WordPress, Squarespace, custom sites). The embed must:
 
 1. Render the form correctly regardless of the host site's CSS.
-2. Handle authentication (the submitter needs a Prospector account).
+2. Handle authentication (the submitter needs a Colophony account).
 3. Handle file uploads (tus protocol).
-4. Submit form data to the Prospector API.
+4. Submit form data to the Colophony API.
 5. Be simple to embed (one script tag or one-line embed code).
 
 ### Approach Comparison
@@ -444,7 +444,7 @@ For the MVP embeddable form, an **iframe** is the correct choice. Here is the ra
 
 1. **Complete style isolation.** Magazine websites have wildly varied CSS (WordPress themes, custom designs, Squarespace templates). Shadow DOM provides CSS isolation, but CSS custom properties and certain global styles can still leak in. An iframe provides complete isolation.
 
-2. **Authentication simplicity.** The iframe loads a page on `forms.prospector.app` (or the self-hosted domain). Authentication happens within the iframe via the same login flow as the main app. No cross-origin token passing needed.
+2. **Authentication simplicity.** The iframe loads a page on `forms.colophony.app` (or the self-hosted domain). Authentication happens within the iframe via the same login flow as the main app. No cross-origin token passing needed.
 
 3. **Security.** The form runs in its own browsing context. The host page cannot access form data, and the form cannot access the host page. This is important for GDPR compliance.
 
@@ -461,7 +461,7 @@ For the MVP embeddable form, an **iframe** is the correct choice. Here is the ra
    ></iframe>
    ```
 
-5. **File uploads work natively.** The tus upload client runs inside the iframe, connecting to the Prospector API. No cross-origin complications.
+5. **File uploads work natively.** The tus upload client runs inside the iframe, connecting to the Colophony API. No cross-origin complications.
 
 #### iframe Drawbacks and Mitigations
 
@@ -477,7 +477,7 @@ For the MVP embeddable form, an **iframe** is the correct choice. Here is the ra
 ```html
 <!-- Magazine's website -->
 <iframe
-  id="prospector-form"
+  id="colophony-form"
   src="https://submit.magazine.com/forms/fiction-2025"
   width="100%"
   frameborder="0"
@@ -485,8 +485,8 @@ For the MVP embeddable form, an **iframe** is the correct choice. Here is the ra
 ></iframe>
 <script>
   window.addEventListener("message", function (e) {
-    if (e.data.type === "prospector-resize") {
-      document.getElementById("prospector-form").style.height =
+    if (e.data.type === "colophony-resize") {
+      document.getElementById("colophony-form").style.height =
         e.data.height + "px";
     }
   });
@@ -494,10 +494,10 @@ For the MVP embeddable form, an **iframe** is the correct choice. Here is the ra
 ```
 
 ```typescript
-// Inside the iframe (Prospector form page)
+// Inside the iframe (Colophony form page)
 const observer = new ResizeObserver((entries) => {
   const height = entries[0].contentRect.height;
-  window.parent.postMessage({ type: "prospector-resize", height }, "*");
+  window.parent.postMessage({ type: "colophony-resize", height }, "*");
 });
 observer.observe(document.body);
 ```
@@ -507,12 +507,12 @@ observer.observe(document.body);
 For Phase 2 (SaaS), consider adding a Web Component wrapper around the iframe for a cleaner developer experience:
 
 ```html
-<script src="https://cdn.prospector.app/embed.js"></script>
-<prospector-form
+<script src="https://cdn.colophony.app/embed.js"></script>
+<colophony-form
   org="literary-review"
   form="fiction-2025"
   theme="light"
-></prospector-form>
+></colophony-form>
 ```
 
 The Web Component internally creates an iframe but handles auto-resize, theming via query params, and postMessage communication automatically. This provides a better developer experience while maintaining the isolation benefits of iframes.
@@ -534,7 +534,7 @@ The form page reads these params and applies them as CSS custom properties. This
 
 ### Current Architecture
 
-Prospector already has a mature file upload pipeline:
+Colophony already has a mature file upload pipeline:
 
 1. `tus-js-client` on the frontend (in `use-file-upload.ts` hook)
 2. `tusd` sidecar for resumable uploads
@@ -572,7 +572,7 @@ File uploads should not wait for form submission. The recommended pattern:
 2. **File upload**: When the submitter selects a file, upload it immediately via tus. Associate the file with the submission/context.
 3. **Form submission**: When the submitter clicks "Submit," validate the form data (including checking that required file fields have files and all files have passed virus scanning), then finalize the submission.
 
-This is consistent with Prospector's existing pattern where files are uploaded during the edit phase and the submission is finalized separately.
+This is consistent with Colophony's existing pattern where files are uploaded during the edit phase and the submission is finalized separately.
 
 #### Integration with Form Schema
 

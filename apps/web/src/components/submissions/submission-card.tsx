@@ -4,7 +4,7 @@ import Link from "next/link";
 import { formatDistanceToNow } from "date-fns";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatusBadge } from "./status-badge";
-import type { SubmissionStatus } from "@prospector/types";
+import type { SubmissionStatus } from "@colophony/types";
 
 interface SubmissionCardProps {
   submission: {

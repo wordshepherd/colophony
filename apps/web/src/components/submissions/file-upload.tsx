@@ -21,7 +21,7 @@ import {
   MAX_FILES_PER_SUBMISSION,
   ALLOWED_MIME_TYPES,
   type ScanStatus,
-} from "@prospector/types";
+} from "@colophony/types";
 
 interface FileUploadProps {
   submissionId: string;

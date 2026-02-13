@@ -38,10 +38,10 @@ cd /home/dmahaffey/projects/prospector/packages/db
 pnpm drizzle-kit push --force
 
 # Or for a clean slate:
-docker exec colophony-postgres psql -U prospector -d colophony -c "
+docker exec colophony-postgres psql -U colophony -d colophony -c "
   DROP SCHEMA public CASCADE;
   CREATE SCHEMA public;
-  GRANT ALL ON SCHEMA public TO prospector;
+  GRANT ALL ON SCHEMA public TO colophony;
 "
 pnpm db:migrate
 ```
@@ -86,6 +86,6 @@ GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO app_user;
 - The `app_user` role must still be created manually (it's a database role, not a table)
 - After reset, verify RLS is active:
   ```bash
-  docker exec colophony-postgres psql -U prospector -d colophony -c \
+  docker exec colophony-postgres psql -U colophony -d colophony -c \
     "SELECT relname, relrowsecurity, relforcerowsecurity FROM pg_class WHERE relrowsecurity = true;"
   ```

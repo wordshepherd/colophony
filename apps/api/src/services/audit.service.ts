@@ -1,5 +1,5 @@
 import { auditEvents, db, type DrizzleDb } from '@colophony/db';
-import type { AuditLogParams, AuthAuditParams } from '@prospector/types';
+import type { AuditLogParams, AuthAuditParams } from '@colophony/types';
 
 const MAX_VALUE_LENGTH = 8192;
 

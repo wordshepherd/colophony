@@ -5,11 +5,11 @@
  * for creating test orgs, memberships, and other fixtures.
  */
 
-import { PrismaClient } from "@prospector/db";
+import { PrismaClient } from "@colophony/db";
 
 const DATABASE_URL =
   process.env.DATABASE_URL ||
-  "postgresql://prospector:password@localhost:5432/prospector";
+  "postgresql://colophony:password@localhost:5432/colophony";
 
 let prisma: PrismaClient | null = null;
 

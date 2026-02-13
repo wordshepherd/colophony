@@ -35,15 +35,15 @@ importers:
       '@colophony/db':
         specifier: workspace:*
         version: link:../../packages/db
+      '@colophony/types':
+        specifier: workspace:*
+        version: link:../../packages/types
       '@fastify/cors':
         specifier: ^11.0.0
         version: 11.2.0
       '@fastify/helmet':
         specifier: ^13.0.0
         version: 13.0.2
-      '@prospector/types':
-        specifier: workspace:*
-        version: link:../../packages/types
       '@trpc/server':
         specifier: ^10.45.0
         version: 10.45.4
@@ -78,18 +78,18 @@ importers:
         specifier: ^3.23.0
         version: 3.25.76
     devDependencies:
+      '@colophony/eslint-config':
+        specifier: workspace:*
+        version: link:../../packages/eslint-config
+      '@colophony/typescript-config':
+        specifier: workspace:*
+        version: link:../../packages/typescript-config
       '@eslint/js':
         specifier: ^9.39.2
         version: 9.39.2
       '@faker-js/faker':
         specifier: ^8.4.0
         version: 8.4.1
-      '@prospector/eslint-config':
-        specifier: workspace:*
-        version: link:../../packages/eslint-config
-      '@prospector/typescript-config':
-        specifier: workspace:*
-        version: link:../../packages/typescript-config
       '@types/archiver':
         specifier: ^7.0.0
         version: 7.0.0
@@ -141,12 +141,12 @@ importers:
 
   apps/web:
     dependencies:
+      '@colophony/types':
+        specifier: workspace:*
+        version: link:../../packages/types
       '@hookform/resolvers':
         specifier: ^5.2.2
         version: 5.2.2(react-hook-form@7.71.1(react@18.3.1))
-      '@prospector/types':
-        specifier: workspace:*
-        version: link:../../packages/types
       '@radix-ui/react-avatar':
         specifier: ^1.1.11
         version: 1.1.11(@types/react-dom@18.3.7(@types/react@18.3.27))(@types/react@18.3.27)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
@@ -241,18 +241,18 @@ importers:
       '@colophony/db':
         specifier: workspace:*
         version: link:../../packages/db
+      '@colophony/eslint-config':
+        specifier: workspace:*
+        version: link:../../packages/eslint-config
+      '@colophony/typescript-config':
+        specifier: workspace:*
+        version: link:../../packages/typescript-config
       '@eslint/eslintrc':
         specifier: ^3.3.3
         version: 3.3.3
       '@playwright/test':
         specifier: ^1.58.2
         version: 1.58.2
-      '@prospector/eslint-config':
-        specifier: workspace:*
-        version: link:../../packages/eslint-config
-      '@prospector/typescript-config':
-        specifier: workspace:*
-        version: link:../../packages/typescript-config
       '@testing-library/jest-dom':
         specifier: ^6.1.5
         version: 6.9.1
@@ -302,7 +302,7 @@ importers:
         specifier: ^6.0.0
         version: 6.1.3
     devDependencies:
-      '@prospector/typescript-config':
+      '@colophony/typescript-config':
         specifier: workspace:*
         version: link:../typescript-config
       '@types/node':
@@ -324,7 +324,7 @@ importers:
         specifier: ^8.13.0
         version: 8.18.0
     devDependencies:
-      '@prospector/typescript-config':
+      '@colophony/typescript-config':
         specifier: workspace:*
         version: link:../typescript-config
       '@types/node':
@@ -370,7 +370,7 @@ importers:
         specifier: ^3.23.0
         version: 3.25.76
     devDependencies:
-      '@prospector/typescript-config':
+      '@colophony/typescript-config':
         specifier: workspace:*
         version: link:../typescript-config
       typescript:

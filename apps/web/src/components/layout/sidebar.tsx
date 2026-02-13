@@ -24,7 +24,7 @@ export function Sidebar() {
       {/* Header */}
       <div className="flex h-14 items-center border-b px-4">
         <Link href="/" className="font-bold text-lg">
-          Prospector
+          Colophony
         </Link>
       </div>
 

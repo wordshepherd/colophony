@@ -3,7 +3,8 @@
 > **Research date:** 2026-02-11
 > **Status:** Complete -- recommendation ready for review
 > **Parent document:** [docs/architecture-v2-planning.md](../architecture-v2-planning.md) (Section 5.8)
-> **Context:** Prospector v2 needs an extensible architecture for adapters, integrations, and community contributions. The platform's philosophy is "integration hub with curated open-source defaults."
+> **Context:** Colophony v2 needs an extensible architecture for adapters, integrations, and community contributions. The platform's philosophy is "integration hub with curated open-source defaults."
+> **Note:** This document was originally written under the project name "Prospector" (v1). All references have been updated to use the current name "Colophony".
 
 ---
 
@@ -18,7 +19,7 @@
    - [F. VS Code Extension Model](#f-vs-code-extension-model)
    - [G. Backstage Plugin Architecture](#g-backstage-spotify-plugin-architecture)
 2. [Design Patterns Evaluation](#2-design-patterns-evaluation)
-3. [Plugin Categories for Prospector](#3-plugin-categories-for-prospector)
+3. [Plugin Categories for Colophony](#3-plugin-categories-for-colophony)
 4. [Recommended Architecture](#4-recommended-architecture)
 5. [Plugin SDK Package Structure](#5-plugin-sdk-package-structure)
 6. [Security Model](#6-security-model)
@@ -72,7 +73,7 @@ WordPress has the most successful plugin ecosystem ever built, with over 65,000 
 - **No dependency management**: Plugins cannot declare dependencies on other plugins. Load order is alphabetical by directory name.
 - **Backward compatibility burden**: WordPress's commitment to never breaking plugins means the core cannot evolve its APIs cleanly.
 
-**Relevance to Prospector:** The hook/filter pattern is the right mental model for extensibility, but the implementation needs TypeScript typing, proper isolation, and a defined permission model. The priority system and lifecycle hooks are directly applicable.
+**Relevance to Colophony:** The hook/filter pattern is the right mental model for extensibility, but the implementation needs TypeScript typing, proper isolation, and a defined permission model. The priority system and lifecycle hooks are directly applicable.
 
 _Sources: [WordPress Hooks Handbook](https://developer.wordpress.org/plugins/hooks/), [WordPress Hook System Analysis](https://www.sitepoint.com/wordpress-hook-system/), [Mediator Pattern in WordPress](https://carlalexander.ca/mediator-pattern-wordpress/), [WordPress Security Architecture](https://www.wordfence.com/blog/2024/07/wordpress-security-research-series-wordpress-request-architecture-and-hooks/)_
 
@@ -116,7 +117,7 @@ Strapi is a modern, TypeScript-based headless CMS with a well-structured plugin 
 - Known bugs with lifecycle hooks in v5 (afterUpdate/afterCreate trigger ordering issues)
 - Less modular than it appears -- extending plugins requires understanding Strapi internals deeply
 
-**Relevance to Prospector:** The two-phase lifecycle (`register` then `bootstrap`) is directly applicable. The Plugin SDK tooling (init, build, verify, watch:link) is an excellent model for Prospector's plugin development experience. The admin panel extension pattern (injection zones, menu items, settings pages) maps well to Prospector's editorial UI extensibility needs.
+**Relevance to Colophony:** The two-phase lifecycle (`register` then `bootstrap`) is directly applicable. The Plugin SDK tooling (init, build, verify, watch:link) is an excellent model for Colophony's plugin development experience. The admin panel extension pattern (injection zones, menu items, settings pages) maps well to Colophony's editorial UI extensibility needs.
 
 _Sources: [Strapi Plugin Creation](https://docs.strapi.io/cms/plugins-development/create-a-plugin), [Strapi Plugin Structure](https://docs.strapi.io/cms/plugins-development/plugin-structure), [Strapi Server API](https://docs.strapi.io/cms/plugins-development/server-api), [Strapi Admin Panel API](https://docs.strapi.io/cms/plugins-development/admin-panel-api), [Strapi Lifecycle Functions](https://docs.strapi.io/cms/configurations/functions)_
 
@@ -164,7 +165,7 @@ Ghost deliberately does NOT have a plugin system. Instead:
 - Cannot modify the admin panel or editorial experience
 - Non-developers hit a wall when Zapier templates do not cover their use case
 
-**Relevance to Prospector:** Ghost's webhook + API key model is the right approach for external integrations (CRM sync, notification relay, analytics). But Prospector needs deeper extensibility (adapter pattern for email/payment/auth, editorial workflow hooks, UI extensions) that Ghost deliberately avoids. Prospector should provide Ghost-style webhooks as the simplest integration tier while offering richer plugin APIs for deeper integration.
+**Relevance to Colophony:** Ghost's webhook + API key model is the right approach for external integrations (CRM sync, notification relay, analytics). But Colophony needs deeper extensibility (adapter pattern for email/payment/auth, editorial workflow hooks, UI extensions) that Ghost deliberately avoids. Colophony should provide Ghost-style webhooks as the simplest integration tier while offering richer plugin APIs for deeper integration.
 
 _Sources: [Ghost Webhooks](https://docs.ghost.org/webhooks), [Ghost Custom Integrations](https://ghost.org/integrations/custom-integrations/), [Ghost on AWS Webhook Architecture](https://subaud.io/blog/ghost-on-aws-webhook-architecture-and-time-gated-content/)_
 
@@ -204,7 +205,7 @@ OJS is the closest domain match -- open-source software for managing scholarly j
 **Strengths:**
 
 - Plugin categories provide clear organizational structure and discoverability
-- Import/export plugin category is directly relevant to Prospector (submission format adapters)
+- Import/export plugin category is directly relevant to Colophony (submission format adapters)
 - Payment method adapters demonstrate the adapter pattern for financial integrations
 - Plugin Gallery demonstrates self-hosted marketplace within the application
 - Strong community contribution model in academic circles
@@ -217,7 +218,7 @@ OJS is the closest domain match -- open-source software for managing scholarly j
 - Plugin compatibility across versions is a constant pain point
 - No sandboxing -- plugins have full application access
 
-**Relevance to Prospector:** The plugin category system is directly applicable -- Prospector should define clear categories (adapters, workflows, import/export, themes, reports, notification channels). The Plugin Gallery model (in-app discovery + one-click install) is the right UX for self-hosted instances. The import/export and payment method categories map directly to Prospector's needs. The deprecation of HookRegistry validates moving toward an event-based system rather than a pure hook registry.
+**Relevance to Colophony:** The plugin category system is directly applicable -- Colophony should define clear categories (adapters, workflows, import/export, themes, reports, notification channels). The Plugin Gallery model (in-app discovery + one-click install) is the right UX for self-hosted instances. The import/export and payment method categories map directly to Colophony's needs. The deprecation of HookRegistry validates moving toward an event-based system rather than a pure hook registry.
 
 _Sources: [OJS Hook Registration](https://docs.pkp.sfu.ca/ojs-2-technical-reference/en/hook_registration_and_callback.html), [OJS Hooks Documentation](https://docs.pkp.sfu.ca/dev/documentation/3.3/en/utilities-hooks.html), [OJS Plugin Categories](https://pkp.sfu.ca/ojs/doxygen/master/html/group__plugins.html), [OJS Hook List](https://docs.pkp.sfu.ca/ojs-2-technical-reference/en/hook_list)_
 
@@ -278,7 +279,7 @@ Grafana has a modern, React-based plugin system with strong security controls an
 - The sandbox is still in preview and requires CSP `unsafe-eval`
 - Plugin signing requires going through Grafana Labs (centralized trust)
 
-**Relevance to Prospector:** The plugin signing model is relevant for managed hosting where Prospector needs to control which plugins run. The three plugin types (panel/data source/app) map loosely to Prospector's needs (UI extensions/adapters/full-featured plugins). The frontend sandbox approach is worth implementing for community-contributed UI plugins. However, Prospector should keep everything in TypeScript (not require Go for backend plugins) to maintain a single-language contributor experience.
+**Relevance to Colophony:** The plugin signing model is relevant for managed hosting where Colophony needs to control which plugins run. The three plugin types (panel/data source/app) map loosely to Colophony's needs (UI extensions/adapters/full-featured plugins). The frontend sandbox approach is worth implementing for community-contributed UI plugins. However, Colophony should keep everything in TypeScript (not require Go for backend plugins) to maintain a single-language contributor experience.
 
 _Sources: [Grafana Plugin System](https://deepwiki.com/grafana/grafana/11-plugin-system), [Grafana Plugin Types](https://grafana.com/developers/plugin-tools/key-concepts/plugin-types-usage), [Grafana Frontend Sandbox](https://grafana.com/docs/grafana/latest/administration/plugin-management/plugin-frontend-sandbox/), [Grafana Plugin Signing](https://grafana.com/docs/grafana/latest/administration/plugin-management/plugin-sign/)_
 
@@ -333,7 +334,7 @@ VS Code has the gold standard for sandboxed, performant extension systems with a
 - No fine-grained permission model -- extensions can access the full VS Code API
 - The marketplace has had supply chain attacks (malicious extensions mimicking popular ones)
 
-**Relevance to Prospector:** The contribution points pattern (declarative UI extension via manifest) is directly applicable for Prospector's admin panel extensibility. The activation events pattern (lazy loading) is important for keeping Prospector fast when many plugins are installed. Process-level isolation is overkill for Prospector's use case (we are not running untrusted code from anonymous publishers), but the manifest-based declaration pattern is the right model.
+**Relevance to Colophony:** The contribution points pattern (declarative UI extension via manifest) is directly applicable for Colophony's admin panel extensibility. The activation events pattern (lazy loading) is important for keeping Colophony fast when many plugins are installed. Process-level isolation is overkill for Colophony's use case (we are not running untrusted code from anonymous publishers), but the manifest-based declaration pattern is the right model.
 
 _Sources: [VS Code Extension Host](https://code.visualstudio.com/api/advanced-topics/extension-host), [VS Code Contribution Points](https://code.visualstudio.com/api/references/contribution-points), [VS Code Activation Events](https://code.visualstudio.com/api/references/activation-events), [VS Code Extension Anatomy](https://code.visualstudio.com/api/get-started/extension-anatomy)_
 
@@ -404,7 +405,7 @@ export const myModule = createBackendModule({
 - The "new backend system" is a rewrite that community plugins are still migrating to.
 - Frontend plugin composition requires understanding Backstage's routing and extension model deeply.
 
-**Relevance to Prospector:** Backstage's extension point pattern is the most directly applicable model for Prospector's adapter system. The typed `createExtensionPoint<T>` pattern maps perfectly to adapter interfaces (email, payment, auth, storage). The module pattern (extending a plugin via its extension point) enables community-contributed adapter implementations. The services pattern (built-in logging, config, database) should be replicated in Prospector's Plugin SDK.
+**Relevance to Colophony:** Backstage's extension point pattern is the most directly applicable model for Colophony's adapter system. The typed `createExtensionPoint<T>` pattern maps perfectly to adapter interfaces (email, payment, auth, storage). The module pattern (extending a plugin via its extension point) enables community-contributed adapter implementations. The services pattern (built-in logging, config, database) should be replicated in Colophony's Plugin SDK.
 
 _Sources: [Backstage New Backend System](https://backstage.io/docs/plugins/new-backend-system/), [Backstage Extension Points](https://backstage.io/docs/backend-system/architecture/extension-points/), [Backstage Building Plugins and Modules](https://backstage.io/docs/backend-system/building-plugins-and-modules/index/), [Backstage Architecture Overview](https://backstage.io/docs/overview/architecture-overview/)_
 
@@ -421,9 +422,9 @@ _Sources: [Backstage New Backend System](https://backstage.io/docs/plugins/new-b
 | **Module-based** (NestJS)              | Plugins are modules that extend the application via DI                   | Testable, strongly typed, clear dependency graph                | Requires understanding DI framework, higher contributor barrier         | Internal service composition, platform features               |
 | **Extension Point-based** (Backstage)  | Plugins declare typed extension points; modules register implementations | Most type-safe, individually versionable, clean contracts       | Highest abstraction, steepest learning curve                            | Typed adapter registration, composable feature extension      |
 
-**Evaluation for Prospector's needs:**
+**Evaluation for Colophony's needs:**
 
-No single pattern is sufficient. Prospector needs a **layered approach** combining multiple patterns for different extension surfaces:
+No single pattern is sufficient. Colophony needs a **layered approach** combining multiple patterns for different extension surfaces:
 
 1. **Adapter pattern** for infrastructure services (email, payment, auth, storage) -- these need exactly one active implementation with a clear interface contract.
 2. **Event/hook pattern** for workflow extensibility (submission lifecycle events, editorial actions) -- multiple listeners can react to the same event.
@@ -432,9 +433,9 @@ No single pattern is sufficient. Prospector needs a **layered approach** combini
 
 ---
 
-## 3. Plugin Categories for Prospector
+## 3. Plugin Categories for Colophony
 
-Based on the analysis of OJS categories, Grafana plugin types, and Prospector's specific needs:
+Based on the analysis of OJS categories, Grafana plugin types, and Colophony's specific needs:
 
 | Category                       | Pattern            | Description                              | Examples                                                                             |
 | ------------------------------ | ------------------ | ---------------------------------------- | ------------------------------------------------------------------------------------ |
@@ -459,14 +460,14 @@ Based on the analysis of OJS categories, Grafana plugin types, and Prospector's 
 
 ### Overview
 
-Prospector's plugin system uses a **five-tier extensibility model**, combining patterns from the systems studied above. The tiers are ordered from simplest (lowest contributor barrier) to most complex (deepest integration).
+Colophony's plugin system uses a **five-tier extensibility model**, combining patterns from the systems studied above. The tiers are ordered from simplest (lowest contributor barrier) to most complex (deepest integration).
 
 ```
 Tier 4: Full Plugins       (Modules that add entire features)
 Tier 3: UI Extensions       (Contribution points for admin panel)
 Tier 2: Workflow Hooks       (Event listeners for lifecycle events)
 Tier 1: Adapters             (Interface implementations for infrastructure)
-Tier 0: Webhooks             (External HTTP notifications -- no code in Prospector)
+Tier 0: Webhooks             (External HTTP notifications -- no code in Colophony)
 ```
 
 Each tier builds on the previous. A contributor can start at Tier 0 (configuring a webhook URL) and progressively adopt deeper integration as their needs grow.
@@ -475,7 +476,7 @@ Each tier builds on the previous. A contributor can start at Tier 0 (configuring
 
 ### Tier 0: Webhooks (Ghost-inspired)
 
-The simplest integration tier. Zero code inside Prospector. External systems receive HTTP POST notifications when events occur.
+The simplest integration tier. Zero code inside Colophony. External systems receive HTTP POST notifications when events occur.
 
 **Events emitted:**
 
@@ -509,7 +510,7 @@ interface WebhookPayload {
 
 ### Tier 1: Adapters (Backstage Extension Point-inspired)
 
-Adapters implement infrastructure service interfaces. Exactly one adapter is active per service per deployment (configurable). Adapters are the most important plugin type for Prospector's "integration hub" philosophy.
+Adapters implement infrastructure service interfaces. Exactly one adapter is active per service per deployment (configurable). Adapters are the most important plugin type for Colophony's "integration hub" philosophy.
 
 **Core adapter interfaces:**
 
@@ -727,7 +728,7 @@ import type {
   SendEmailOptions,
   SendEmailResult,
   AdapterHealthResult,
-} from "@prospector/plugin-sdk";
+} from "@colophony/plugin-sdk";
 
 const SendGridConfigSchema = z.object({
   apiKey: z.string().min(1, "SendGrid API key is required"),
@@ -810,7 +811,7 @@ export default SendGridEmailAdapter;
 
 ### Tier 2: Workflow Hooks (WordPress-inspired, typed)
 
-Workflow hooks allow plugins to react to and modify the editorial pipeline. Unlike WordPress's untyped hooks, Prospector's hooks are fully typed with discriminated union event payloads.
+Workflow hooks allow plugins to react to and modify the editorial pipeline. Unlike WordPress's untyped hooks, Colophony's hooks are fully typed with discriminated union event payloads.
 
 ```typescript
 // packages/plugin-sdk/src/hooks/types.ts
@@ -1018,7 +1019,7 @@ export class HookEngine {
 
 ### Tier 3: UI Extensions (VS Code Contribution Points-inspired)
 
-UI extensions use a declarative manifest to register components into the Prospector admin panel without requiring deep knowledge of the React application structure.
+UI extensions use a declarative manifest to register components into the Colophony admin panel without requiring deep knowledge of the React application structure.
 
 ```typescript
 // packages/plugin-sdk/src/ui/types.ts
@@ -1103,7 +1104,7 @@ import type { UIExtensionDeclaration } from "./ui/types";
 import type { AdapterType } from "./registry";
 
 /**
- * Plugin manifest -- the package.json "prospector" field.
+ * Plugin manifest -- the package.json "colophony" field.
  * Inspired by VS Code's package.json contributes + Strapi plugin structure.
  */
 export interface PluginManifest {
@@ -1113,8 +1114,8 @@ export interface PluginManifest {
   name: string;
   /** Plugin version (semver) */
   version: string;
-  /** Minimum Prospector version required */
-  prospectorVersion: string;
+  /** Minimum Colophony version required */
+  colophonyVersion: string;
   /** Plugin description */
   description: string;
   /** Plugin author */
@@ -1178,12 +1179,12 @@ export type PluginPermission =
 // packages/plugin-sdk/src/plugin-base.ts
 
 /**
- * Base class for Prospector plugins.
+ * Base class for Colophony plugins.
  * Inspired by Strapi's register/bootstrap/destroy lifecycle.
  *
  * Plugins extend this class and override lifecycle methods.
  */
-export abstract class ProspectorPlugin {
+export abstract class ColophonyPlugin {
   abstract readonly manifest: PluginManifest;
 
   /**
@@ -1198,7 +1199,7 @@ export abstract class ProspectorPlugin {
   /**
    * Phase 2: Bootstrap.
    * Called after all plugins have registered and all services are available.
-   * Use this for initialization that requires Prospector's APIs (seeding data,
+   * Use this for initialization that requires Colophony's APIs (seeding data,
    * verifying configuration, starting background tasks).
    */
   async bootstrap(context: PluginBootstrapContext): Promise<void> {
@@ -1227,7 +1228,7 @@ export interface PluginRegisterContext {
   ): void;
   /** Register UI extensions */
   registerUIExtension(declaration: UIExtensionDeclaration): void;
-  /** Access plugin configuration (from Prospector config or env vars) */
+  /** Access plugin configuration (from Colophony config or env vars) */
   getConfig<T>(schema: z.ZodType<T>): T;
   /** Logger scoped to this plugin */
   logger: Logger;
@@ -1235,7 +1236,7 @@ export interface PluginRegisterContext {
 
 /**
  * Context provided during the bootstrap phase.
- * Adds access to Prospector's services.
+ * Adds access to Colophony's services.
  */
 export interface PluginBootstrapContext extends PluginRegisterContext {
   /** Resolved email adapter (whichever is active) */
@@ -1258,7 +1259,7 @@ export interface PluginBootstrapContext extends PluginRegisterContext {
 
 ```
 1. Discover plugins (node_modules + local plugins directory)
-2. Validate manifests (check prospectorVersion compatibility)
+2. Validate manifests (check colophonyVersion compatibility)
 3. Resolve dependency graph (topological sort)
 4. Phase 1 -- Register (all plugins, in dependency order)
    - Adapters registered
@@ -1280,7 +1281,7 @@ packages/plugin-sdk/
   src/
     index.ts                    # Public API re-exports
     plugin.ts                   # PluginManifest, PluginCategory, PluginPermission
-    plugin-base.ts              # ProspectorPlugin base class
+    plugin-base.ts              # ColophonyPlugin base class
     adapters/
       index.ts                  # Re-exports all adapter interfaces
       email.ts                  # EmailAdapter interface
@@ -1316,12 +1317,12 @@ packages/plugin-sdk/
 
 ### Principle: Trust tiers based on plugin source
 
-| Trust Level            | Source                                             | Restrictions                                     | Use Case                                      |
-| ---------------------- | -------------------------------------------------- | ------------------------------------------------ | --------------------------------------------- |
-| **Core**               | Ships with Prospector (monorepo)                   | None -- full access                              | Built-in adapters (SMTP, Stripe, S3)          |
-| **First-party**        | Published by the Prospector project                | Full access, signed                              | Official adapter packages                     |
-| **Verified community** | Community-published, reviewed by maintainers       | Permission-scoped, signed                        | Community adapters in the plugin registry     |
-| **Unverified**         | Any npm package claiming to be a Prospector plugin | Only allowed on self-hosted with explicit opt-in | Experimental plugins, self-hosted custom code |
+| Trust Level            | Source                                            | Restrictions                                     | Use Case                                      |
+| ---------------------- | ------------------------------------------------- | ------------------------------------------------ | --------------------------------------------- |
+| **Core**               | Ships with Colophony (monorepo)                   | None -- full access                              | Built-in adapters (SMTP, Stripe, S3)          |
+| **First-party**        | Published by the Colophony project                | Full access, signed                              | Official adapter packages                     |
+| **Verified community** | Community-published, reviewed by maintainers      | Permission-scoped, signed                        | Community adapters in the plugin registry     |
+| **Unverified**         | Any npm package claiming to be a Colophony plugin | Only allowed on self-hosted with explicit opt-in | Experimental plugins, self-hosted custom code |
 
 ### Permission enforcement
 
@@ -1332,7 +1333,7 @@ packages/plugin-sdk/
 
 ### Plugin signing (Grafana-inspired, future)
 
-- First-party and verified community plugins are signed with the Prospector project's key.
+- First-party and verified community plugins are signed with the Colophony project's key.
 - Managed hosting instances only load signed plugins by default.
 - Self-hosted instances can opt into `allow_unsigned_plugins` mode.
 - Signing covers the npm package tarball hash, not individual file signatures.
@@ -1355,40 +1356,40 @@ packages/plugin-sdk/
 
 ### Primary channel: npm packages
 
-- Plugins are standard npm packages with a `prospector` field in `package.json` containing the `PluginManifest`.
+- Plugins are standard npm packages with a `colophony` field in `package.json` containing the `PluginManifest`.
 - npm is the distribution mechanism (publishing, versioning, dependency resolution are already solved).
 - No custom plugin registry infrastructure is needed initially.
 
 ### Discovery
 
-- **Phase 1 (launch):** A curated `awesome-prospector` list on GitHub documenting known plugins by category.
+- **Phase 1 (launch):** A curated `awesome-colophony` list on GitHub documenting known plugins by category.
 - **Phase 2 (growth):** An in-app Plugin Gallery (OJS-inspired) that queries a lightweight JSON registry (hosted as a static file or simple API). Self-hosted instances can search and install plugins from the admin panel.
 - **Phase 3 (scale):** A full plugin marketplace website with search, ratings, compatibility information, and download counts.
 
 ### Naming convention
 
 ```
-@prospector/adapter-email-sendgrid     # First-party adapter
-@prospector/adapter-payment-paypal     # First-party adapter
-@prospector/integration-wordpress      # First-party integration
-prospector-plugin-slack-notifications  # Community plugin
-prospector-plugin-plagiarism-check     # Community plugin
+@colophony/adapter-email-sendgrid     # First-party adapter
+@colophony/adapter-payment-paypal     # First-party adapter
+@colophony/integration-wordpress      # First-party integration
+colophony-plugin-slack-notifications  # Community plugin
+colophony-plugin-plagiarism-check     # Community plugin
 ```
 
 ### Version compatibility
 
-- Plugins declare `prospectorVersion` in their manifest using semver ranges (e.g., `"^2.0.0"`).
+- Plugins declare `colophonyVersion` in their manifest using semver ranges (e.g., `"^2.0.0"`).
 - The Plugin SDK version follows semver. Breaking changes to adapter interfaces or hook payloads increment the major version.
-- Prospector checks manifest compatibility at plugin load time and logs warnings for mismatches.
-- The plugin loading step in the initialization sequence rejects plugins incompatible with the running Prospector version.
+- Colophony checks manifest compatibility at plugin load time and logs warnings for mismatches.
+- The plugin loading step in the initialization sequence rejects plugins incompatible with the running Colophony version.
 
 ### Plugin API versioning strategy
 
-- The Plugin SDK package (`@prospector/plugin-sdk`) is the single versioned contract.
+- The Plugin SDK package (`@colophony/plugin-sdk`) is the single versioned contract.
 - New adapter methods are added as optional interface members (backward compatible).
 - Deprecated hooks/adapter methods are marked with `@deprecated` JSDoc tags and supported for at least one major version.
 - Breaking changes (removed methods, changed signatures) trigger a major version bump of the SDK.
-- A compatibility matrix is maintained in the Plugin SDK documentation showing which SDK versions work with which Prospector versions.
+- A compatibility matrix is maintained in the Plugin SDK documentation showing which SDK versions work with which Colophony versions.
 
 ---
 
@@ -1398,13 +1399,13 @@ prospector-plugin-plagiarism-check     # Community plugin
 
 ```bash
 # Scaffold a new adapter plugin
-npx @prospector/create-plugin --type adapter --adapter-type email --name sendgrid
+npx @colophony/create-plugin --type adapter --adapter-type email --name sendgrid
 
 # Scaffold a workflow plugin
-npx @prospector/create-plugin --type workflow --name auto-reviewer
+npx @colophony/create-plugin --type workflow --name auto-reviewer
 
 # Scaffold a full plugin with UI
-npx @prospector/create-plugin --type full --name analytics-dashboard
+npx @colophony/create-plugin --type full --name analytics-dashboard
 ```
 
 ### Local development workflow (Strapi-inspired)
@@ -1413,8 +1414,8 @@ npx @prospector/create-plugin --type full --name analytics-dashboard
 # In the plugin directory
 pnpm dev          # Watch mode -- recompiles on changes
 
-# In the Prospector app directory
-# prospector.config.ts includes the local plugin path
+# In the Colophony app directory
+# colophony.config.ts includes the local plugin path
 pnpm dev          # Hot-reloads when plugin rebuilds
 ```
 
@@ -1422,7 +1423,7 @@ pnpm dev          # Hot-reloads when plugin rebuilds
 
 ```typescript
 // Using the Plugin SDK test harness
-import { createTestHarness } from "@prospector/plugin-sdk/testing";
+import { createTestHarness } from "@colophony/plugin-sdk/testing";
 import { SendGridEmailAdapter } from "../src";
 
 describe("SendGridEmailAdapter", () => {
@@ -1466,13 +1467,13 @@ Plugins are configured at two levels:
 ### Deployment-level (which adapters are active, static configuration)
 
 ```typescript
-// prospector.config.ts (root of the Prospector installation)
+// colophony.config.ts (root of the Colophony installation)
 
-import { defineConfig } from "@prospector/plugin-sdk";
-import { SmtpEmailAdapter } from "@prospector/adapter-email-smtp";
-import { StripePaymentAdapter } from "@prospector/adapter-payment-stripe";
-import { S3StorageAdapter } from "@prospector/adapter-storage-s3";
-import { SlackNotificationPlugin } from "prospector-plugin-slack-notifications";
+import { defineConfig } from "@colophony/plugin-sdk";
+import { SmtpEmailAdapter } from "@colophony/adapter-email-smtp";
+import { StripePaymentAdapter } from "@colophony/adapter-payment-stripe";
+import { S3StorageAdapter } from "@colophony/adapter-storage-s3";
+import { SlackNotificationPlugin } from "colophony-plugin-slack-notifications";
 
 export default defineConfig({
   adapters: {
@@ -1494,7 +1495,7 @@ export default defineConfig({
 
 ## 10. Comparison Summary
 
-| Aspect                  | WordPress           | Strapi                     | Ghost              | OJS            | Grafana                        | VS Code             | Backstage        | **Prospector (recommended)**               |
+| Aspect                  | WordPress           | Strapi                     | Ghost              | OJS            | Grafana                        | VS Code             | Backstage        | **Colophony (recommended)**                |
 | ----------------------- | ------------------- | -------------------------- | ------------------ | -------------- | ------------------------------ | ------------------- | ---------------- | ------------------------------------------ |
 | **Extension model**     | Hook/filter         | Module lifecycle           | Webhooks + API     | HookRegistry   | Plugin types                   | Extension host      | Extension points | Layered (adapters + hooks + UI + webhooks) |
 | **Type safety**         | None                | Partial                    | N/A (external)     | None           | TypeScript                     | TypeScript          | TypeScript       | Full TypeScript (Zod + interfaces)         |
@@ -1510,14 +1511,14 @@ export default defineConfig({
 
 ## 11. Implementation Roadmap
 
-| Phase                           | Scope                                                                                                                                                       | Timeline  |
-| ------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- |
-| **Phase 1: Adapter foundation** | `@prospector/plugin-sdk` with EmailAdapter, PaymentAdapter, StorageAdapter interfaces. Built-in adapters (SMTP, Stripe, S3). `prospector.config.ts` loader. | v2 launch |
-| **Phase 2: Hooks + webhooks**   | HookEngine with typed hooks for submission lifecycle. Webhook delivery via BullMQ. Webhook configuration UI.                                                | v2 launch |
-| **Phase 3: UI extensions**      | Contribution point system. Dashboard widgets. Settings page extensions. Submission detail sections.                                                         | v2.1      |
-| **Phase 4: Plugin gallery**     | In-app plugin discovery (JSON registry). One-click install for self-hosted. `create-plugin` scaffolding CLI.                                                | v2.2      |
-| **Phase 5: Security hardening** | Plugin signing. Permission enforcement. Frontend sandboxing for community UI plugins. Managed hosting allow-list.                                           | v2.3      |
-| **Phase 6: Marketplace**        | Full marketplace website. Ratings, reviews, compatibility matrix. Community contribution guidelines.                                                        | v2.4+     |
+| Phase                           | Scope                                                                                                                                                     | Timeline  |
+| ------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- |
+| **Phase 1: Adapter foundation** | `@colophony/plugin-sdk` with EmailAdapter, PaymentAdapter, StorageAdapter interfaces. Built-in adapters (SMTP, Stripe, S3). `colophony.config.ts` loader. | v2 launch |
+| **Phase 2: Hooks + webhooks**   | HookEngine with typed hooks for submission lifecycle. Webhook delivery via BullMQ. Webhook configuration UI.                                              | v2 launch |
+| **Phase 3: UI extensions**      | Contribution point system. Dashboard widgets. Settings page extensions. Submission detail sections.                                                       | v2.1      |
+| **Phase 4: Plugin gallery**     | In-app plugin discovery (JSON registry). One-click install for self-hosted. `create-plugin` scaffolding CLI.                                              | v2.2      |
+| **Phase 5: Security hardening** | Plugin signing. Permission enforcement. Frontend sandboxing for community UI plugins. Managed hosting allow-list.                                         | v2.3      |
+| **Phase 6: Marketplace**        | Full marketplace website. Ratings, reviews, compatibility matrix. Community contribution guidelines.                                                      | v2.4+     |
 
 ---
 
@@ -1548,4 +1549,4 @@ export default defineConfig({
 
 5. **Frontend plugin bundling:** Should UI extensions be separate bundles loaded at runtime (dynamic import), or compiled into the main application at build time? Runtime loading enables true plugin installation without rebuilds but adds bundle complexity.
 
-6. **Webhook vs event bus:** For Tier 0, should webhooks be the only external integration mechanism, or should Prospector also offer a Redis pub/sub or NATS event bus that external services can subscribe to?
+6. **Webhook vs event bus:** For Tier 0, should webhooks be the only external integration mechanism, or should Colophony also offer a Redis pub/sub or NATS event bus that external services can subscribe to?

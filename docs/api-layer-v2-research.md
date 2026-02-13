@@ -554,7 +554,7 @@ The runtime approach is preferred because:
 
 ### Current State
 
-The MVP (Prospector v1) uses:
+The MVP (Colophony v1) uses:
 
 - **Auth:** JWT (15-min access + 7-day refresh) via `Authorization: Bearer <token>`
 - **Org context:** `x-organization-id` header
@@ -854,7 +854,7 @@ For GraphQL consumers, `graphql-codegen` from The Guild generates typed clients:
 import type { CodegenConfig } from "@graphql-codegen/cli";
 
 const config: CodegenConfig = {
-  schema: "https://api.prospector.example.com/graphql",
+  schema: "https://api.colophony.example.com/graphql",
   documents: "src/**/*.graphql",
   generates: {
     "./src/generated/graphql.ts": {
@@ -1310,7 +1310,7 @@ export const openApiDocument = generateOpenApi(
       },
     },
     servers: [
-      { url: "https://api.prospector.example.com", description: "Production" },
+      { url: "https://api.colophony.example.com", description: "Production" },
       { url: "http://localhost:4000", description: "Local development" },
     ],
     security: [{ apiKey: [] }, { bearerAuth: [] }],

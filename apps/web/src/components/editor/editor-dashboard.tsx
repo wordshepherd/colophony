@@ -17,7 +17,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Eye, FileText } from "lucide-react";
-import type { SubmissionStatus } from "@prospector/types";
+import type { SubmissionStatus } from "@colophony/types";
 
 const statusTabs: Array<{ value: SubmissionStatus | "ALL"; label: string }> = [
   { value: "ALL", label: "All" },

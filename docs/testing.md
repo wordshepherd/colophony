@@ -1,6 +1,6 @@
 # Testing Guide
 
-Comprehensive testing reference for the Prospector platform.
+Comprehensive testing reference for the Colophony platform.
 For architecture details, see [docs/architecture.md](./architecture.md).
 
 ---
@@ -24,10 +24,10 @@ pnpm --filter @colophony/api test:rls
 pnpm test:e2e
 
 # Playwright browser E2E tests (19 tests, requires dev servers)
-pnpm --filter @prospector/web test:e2e
+pnpm --filter @colophony/web test:e2e
 
 # Playwright interactive UI mode
-pnpm --filter @prospector/web test:e2e:ui
+pnpm --filter @colophony/web test:e2e:ui
 ```
 
 **Prerequisites for E2E tests:**
@@ -122,11 +122,11 @@ E2E tests use the superuser (`test:test`) for the Prisma singleton because `crea
 
 **CI environment variables:**
 
-| Variable            | Purpose                                                  | CI Value                                                            |
-| ------------------- | -------------------------------------------------------- | ------------------------------------------------------------------- |
-| `DATABASE_TEST_URL` | Superuser connection (test setup, main Prisma singleton) | `postgresql://test:test@localhost:5433/prospector_test`             |
-| `DATABASE_APP_URL`  | Non-superuser connection (RLS E2E test)                  | `postgresql://app_user:app_password@localhost:5433/prospector_test` |
-| `REDIS_URL`         | Redis for BullMQ, sessions, rate limits                  | `redis://localhost:6379`                                            |
+| Variable            | Purpose                                                  | CI Value                                                           |
+| ------------------- | -------------------------------------------------------- | ------------------------------------------------------------------ |
+| `DATABASE_TEST_URL` | Superuser connection (test setup, main Prisma singleton) | `postgresql://test:test@localhost:5433/colophony_test`             |
+| `DATABASE_APP_URL`  | Non-superuser connection (RLS E2E test)                  | `postgresql://app_user:app_password@localhost:5433/colophony_test` |
+| `REDIS_URL`         | Redis for BullMQ, sessions, rate limits                  | `redis://localhost:6379`                                           |
 
 **Important:** `DATABASE_APP_URL` must be separate from `DATABASE_TEST_URL`. The RLS E2E test (`getAppPrisma()`) uses `DATABASE_APP_URL` to connect as `app_user` (non-superuser). If it falls back to `DATABASE_TEST_URL`, both clients are superuser and RLS is silently bypassed.
 
@@ -164,8 +164,8 @@ E2E tests use the superuser (`test:test`) for the Prisma singleton because `crea
 
 ```bash
 npx playwright install                    # First time (downloads Chromium)
-pnpm --filter @prospector/web test:e2e    # Requires docker-compose up + dev servers
-pnpm --filter @prospector/web test:e2e:ui # Interactive UI mode
+pnpm --filter @colophony/web test:e2e    # Requires docker-compose up + dev servers
+pnpm --filter @colophony/web test:e2e:ui # Interactive UI mode
 ```
 
 The `playwright.config.ts` `webServer` config can auto-start API and Web dev servers, or reuse already-running ones (`reuseExistingServer: true` in dev).
@@ -179,13 +179,13 @@ Uses the **dual-client pattern** with Drizzle ORM + raw `pg` pools to test actua
 ```typescript
 // Admin pool (superuser) - for test data setup/teardown (bypasses RLS)
 const adminPool = new Pool({
-  connectionString: "postgresql://test:test@localhost:5433/prospector_test",
+  connectionString: "postgresql://test:test@localhost:5433/colophony_test",
 });
 
 // App pool (non-superuser, NOSUPERUSER NOBYPASSRLS) - for RLS-enforced queries
 const appPool = new Pool({
   connectionString:
-    "postgresql://app_user:app_password@localhost:5433/prospector_test",
+    "postgresql://app_user:app_password@localhost:5433/colophony_test",
 });
 ```
 
@@ -222,7 +222,7 @@ pnpm --filter @colophony/api test:rls
 ### 1. Multi-Tenancy Isolation
 
 ```typescript
-import { createContextHelpers } from "@prospector/db";
+import { createContextHelpers } from "@colophony/db";
 
 it("should prevent cross-org data leakage", async () => {
   // Setup with admin client (bypasses RLS)

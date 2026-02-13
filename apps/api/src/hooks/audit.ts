@@ -1,7 +1,7 @@
 import fp from 'fastify-plugin';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { auditService } from '../services/audit.service.js';
-import type { AuditLogParams } from '@prospector/types';
+import type { AuditLogParams } from '@colophony/types';
 
 type RequestAuditFn = (
   params: Omit<

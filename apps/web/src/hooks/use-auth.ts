@@ -10,7 +10,7 @@ import {
   isTokenExpiringSoon,
   hasAuthTokens,
 } from "@/lib/auth";
-import type { LoginInput, RegisterInput } from "@prospector/types";
+import type { LoginInput, RegisterInput } from "@colophony/types";
 
 export interface UserProfile {
   id: string;

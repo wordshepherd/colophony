@@ -1,5 +1,5 @@
 {
-  "name": "prospector",
+  "name": "colophony",
   "private": true,
   "packageManager": "pnpm@9.15.0",
   "engines": {
