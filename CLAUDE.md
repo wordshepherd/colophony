@@ -4,7 +4,7 @@ Open-source suite covering the full publication lifecycle: submission intake, pu
 
 **Status:** v2 rewrite in progress. v1 MVP (Prospector) tagged as `v1.0.0-mvp`.
 **Team:** David (primary dev), Senior Developer (PR reviews), CEO (priorities)
-**Session log:** [docs/DEVLOG.md](docs/DEVLOG.md) — append entries after each session
+**Session log:** `docs/devlog/YYYY-MM.md` (monthly rotation) — append entries after each session
 **Architecture:** [docs/architecture-v2-planning.md](docs/architecture-v2-planning.md)
 
 ### Suite Components
@@ -22,29 +22,28 @@ API layer and plugin system use the `@colophony/` prefix directly.
 
 ## Quick Reference: Key File Locations
 
-> **Note:** These are TARGET paths for the v2 architecture. During the rewrite, files are created incrementally. Check actual existence before referencing.
+Per-directory CLAUDE.md files contain domain-specific details:
 
-| What                        | Path                                                                     |
-| --------------------------- | ------------------------------------------------------------------------ |
-| **Drizzle schema**          | `packages/db/src/schema/` (one file per table group)                     |
-| **Drizzle migrations**      | `packages/db/migrations/`                                                |
-| **Drizzle client**          | `packages/db/src/client.ts`                                              |
-| **RLS policies**            | `packages/db/src/schema/*.ts` (via `pgPolicy` in Drizzle schema)         |
-| **Shared Zod schemas**      | `packages/types/src/`                                                    |
-| **ts-rest contracts**       | `packages/api-contracts/src/`                                            |
-| **Zitadel auth client**     | `packages/auth-client/src/`                                              |
-| **Fastify app entry**       | `apps/api/src/main.ts`                                                   |
-| **REST routes (ts-rest)**   | `apps/api/src/rest/`                                                     |
-| **GraphQL (Pothos + Yoga)** | `apps/api/src/graphql/`                                                  |
-| **tRPC (internal)**         | `apps/api/src/trpc/`                                                     |
-| **Fastify hooks**           | `apps/api/src/hooks/` (auth, rate-limit, org-context, db-context, audit) |
-| **Service layer**           | `apps/api/src/services/`                                                 |
-| **BullMQ processors**       | `apps/api/src/jobs/`                                                     |
-| **Zitadel webhooks**        | `apps/api/src/webhooks/zitadel.webhook.ts`                               |
-| **Stripe webhooks**         | `apps/api/src/webhooks/stripe.webhook.ts`                                |
-| **Federation endpoints**    | `apps/api/src/federation/`                                               |
-| **Next.js frontend**        | `apps/web/`                                                              |
-| **tRPC client**             | `apps/web/src/lib/trpc.ts`                                               |
+- **`packages/db/CLAUDE.md`** — RLS rules (authoritative), schema files, migration workflow
+- **`apps/api/CLAUDE.md`** — Hook registration, tRPC procedures, auth, webhooks
+- **`apps/web/CLAUDE.md`** — tRPC client, providers, auth utilities, conventions
+
+| What                    | Path                                                                     |
+| ----------------------- | ------------------------------------------------------------------------ |
+| **Drizzle schema**      | `packages/db/src/schema/` (one file per table group)                     |
+| **Drizzle migrations**  | `packages/db/migrations/`                                                |
+| **Drizzle client**      | `packages/db/src/client.ts`                                              |
+| **RLS context**         | `packages/db/src/context.ts` (`withRls()`)                               |
+| **Shared Zod schemas**  | `packages/types/src/`                                                    |
+| **Zitadel auth client** | `packages/auth-client/src/`                                              |
+| **Fastify app entry**   | `apps/api/src/main.ts`                                                   |
+| **Fastify hooks**       | `apps/api/src/hooks/` (auth, rate-limit, org-context, db-context, audit) |
+| **Service layer**       | `apps/api/src/services/`                                                 |
+| **tRPC (internal)**     | `apps/api/src/trpc/`                                                     |
+| **Zitadel webhook**     | `apps/api/src/webhooks/zitadel.webhook.ts`                               |
+| **Next.js frontend**    | `apps/web/`                                                              |
+| **tRPC client**         | `apps/web/src/lib/trpc.ts`                                               |
+| **Env config (Zod)**    | `apps/api/src/config/env.ts`                                             |
 
 Full project structure: [docs/architecture-v2-planning.md](docs/architecture-v2-planning.md)
 
@@ -56,7 +55,7 @@ Full project structure: [docs/architecture-v2-planning.md](docs/architecture-v2-
 
 **Backend:** Fastify 5, TypeScript (strict), Drizzle ORM, BullMQ 5, Zitadel (auth), Stripe, nodemailer
 
-**API surfaces:** ts-rest (public REST + OpenAPI 3.1), Pothos + GraphQL Yoga (GraphQL), tRPC (internal frontend)
+**API surfaces:** tRPC (built), ts-rest REST + OpenAPI 3.1 (planned), GraphQL (planned)
 
 **Data:** PostgreSQL 16+ (RLS via Drizzle `pgPolicy`), Redis 7+, MinIO (S3-compatible)
 
@@ -68,49 +67,15 @@ Full project structure: [docs/architecture-v2-planning.md](docs/architecture-v2-
 
 ### 1. Multi-Tenancy with RLS (CRITICAL)
 
-RLS policies are defined directly in Drizzle schema via `pgPolicy`. Org context is set via `SET LOCAL` inside transactions.
+**See `packages/db/CLAUDE.md`** for the authoritative RLS rules, `withRls()` usage, code examples, and full NEVER list.
 
-```typescript
-// Drizzle schema — RLS is in the schema definition, not a separate SQL file
-export const submissions = pgTable(
-  "submissions",
-  {
-    id: uuid("id").defaultRandom().primaryKey(),
-    organizationId: uuid("organization_id").notNull(),
-    // ... fields
-  },
-  (table) => [
-    pgPolicy("submissions_org_isolation", {
-      for: "all",
-      using: sql`organization_id = current_setting('app.current_org')::uuid`,
-    }),
-  ],
-);
-```
-
-**NEVER:**
-
-- Query tenant data without setting org context via `SET LOCAL`
-- Use session-level `SET` (always `SET LOCAL` inside transaction)
-- Manually filter by `organizationId` (RLS does this)
-- Use `app.current_user` (reserved keyword — use `app.user_id`)
-- Skip `FORCE ROW LEVEL SECURITY` on tenant tables
-- Make `app_user` a superuser (superusers bypass RLS)
+Summary: RLS policies are in Drizzle schema via `pgPolicy`. Org context set via `SET LOCAL` inside transactions. Never query tenant data without setting context. Never make `app_user` a superuser.
 
 ### 2. Authentication (Zitadel OIDC)
 
-Zitadel handles all authentication: login, signup, MFA, session management, token issuance. The API validates Zitadel-issued tokens via a Fastify `onRequest` hook.
+**See `apps/api/CLAUDE.md`** for hook chain, token types, and auth details.
 
-```typescript
-// Fastify auth hook — validates Zitadel OIDC token or API key
-app.addHook("onRequest", authHook);
-```
-
-- **Interactive users:** Zitadel OIDC tokens (access + refresh)
-- **API consumers:** API keys (stored in DB, scoped per org)
-- **Cross-instance (federation):** HTTP Message Signatures with `did:web` identity
-
-User lifecycle events are synced from Zitadel to the local DB via webhooks (see interaction effect [3] in architecture doc).
+Summary: Zitadel handles all authentication. API validates tokens via Fastify `onRequest` hook. User lifecycle synced via Zitadel webhooks.
 
 ### 3. File Uploads (tusd)
 
@@ -118,80 +83,41 @@ Client → tusd sidecar (chunked, resumable) → pre-create hook validates → p
 
 Unchanged from v1. Uses tus-js-client on frontend, tusd sidecar in Docker Compose.
 
-### 4. Payments (Stripe Checkout)
+### 4. Payments (Stripe Checkout) — planned
 
-Stripe Checkout only (zero PCI scope). Webhook handler is **idempotent** — checks processed status in `stripe_webhook_events` table first.
+**See `apps/api/CLAUDE.md`** for PCI NEVER list and webhook idempotency patterns.
 
-**NEVER:**
+Summary: Stripe Checkout only (zero PCI scope). No Stripe handler exists yet. PCI guardrails apply when built: never log card numbers or store card data.
 
-- Log card numbers or CVV
-- Store card data in database
-- Process a webhook without idempotency check
-- Skip transaction wrapping for webhook processing
+### 5. Frontend
 
-### 5. Three API Surfaces
-
-| Surface     | Audience                     | Framework               | Auth               |
-| ----------- | ---------------------------- | ----------------------- | ------------------ |
-| **tRPC**    | Internal web frontend        | tRPC + Fastify          | Zitadel OIDC token |
-| **REST**    | Public API, webhooks, Zapier | ts-rest + Fastify       | API key or OIDC    |
-| **GraphQL** | Power users, aggregators     | Pothos + Yoga + Fastify | API key or OIDC    |
-
-All three share the same service layer and Zod schemas. The API surface is a thin adapter.
-
-Zod schemas in `@colophony/types` are the single source of truth for validation across all surfaces.
-
-### 6. Frontend
-
-tRPC client for internal API calls. Zitadel handles login/signup UI. `ProtectedRoute` wraps auth-required pages.
-
-**API response patterns:**
-
-- Paginated lists: `{ items, total, page, limit, totalPages }`
-- Status transitions: use defined allowed-transition maps
+**See `apps/web/CLAUDE.md`** for tRPC client setup, providers, auth utilities, and conventions.
 
 ---
 
 ## Known Quirks & Gotchas
 
-| Quirk                                                       | Details                                                                                                                                                                                                                                                                                                                                             |
-| ----------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Drizzle `pgPolicy` requires `drizzle-orm/pg-core`**       | Import `pgPolicy` from `drizzle-orm/pg-core`, not the top-level export                                                                                                                                                                                                                                                                              |
-| **Drizzle JSONB queries need raw SQL**                      | No native JSONB operators yet. Use `sql` template tag for JSONB path queries. Track Drizzle JSONB roadmap (Q2 2026)                                                                                                                                                                                                                                 |
-| **Drizzle `migrate()` silent no-op after schema drop**      | `migrate(db, { migrationsFolder })` completes without error but creates zero tables after `DROP SCHEMA CASCADE; CREATE SCHEMA public`. Use manual SQL execution (read `_journal.json`, split on `--> statement-breakpoint`) instead. Affects Drizzle ORM 0.44 with journal v7                                                                       |
-| **Pothos has no Drizzle plugin**                            | Manual type definitions, manual DataLoader setup, manual cursor pagination for every model. See architecture doc section 5.5                                                                                                                                                                                                                        |
-| **Zitadel webhook signatures**                              | Verify `x-zitadel-signature` header on all webhook payloads. Use shared secret from Zitadel Actions config                                                                                                                                                                                                                                          |
-| **`@ts-rest/fastify` adapter**                              | `initServer()` then `s.router(contract, handlers)` — different from the NestJS adapter pattern                                                                                                                                                                                                                                                      |
-| **GraphQL Yoga + Fastify**                                  | Mount via `app.route()` with `handleNodeRequest`, not a Fastify plugin. Must forward headers manually                                                                                                                                                                                                                                               |
-| **BullMQ Redis password**                                   | Uses `REDIS_HOST`/`REDIS_PORT`/`REDIS_PASSWORD` (not `REDIS_URL`). Pass password in worker/queue config                                                                                                                                                                                                                                             |
-| **Docker Compose env_file**                                 | `env_file:` sets container env only. For YAML `${VAR}` substitution, use `--env-file .env` on CLI                                                                                                                                                                                                                                                   |
-| **PostgreSQL `INSERT...RETURNING` evaluates SELECT policy** | When RLS policies are split by command (separate SELECT/INSERT), `INSERT...RETURNING` requires BOTH the INSERT WITH CHECK AND the SELECT USING policy to pass. The RETURNING clause reads the row back via SELECT. If the SELECT policy is stricter than INSERT (e.g., audit_events), drop `.returning()` or widen the SELECT policy.               |
-| **PostgreSQL init-db.sh**                                   | Only runs on first DB creation. Must `docker compose down -v` to re-run after changes                                                                                                                                                                                                                                                               |
-| **TanStack Query v4 isLoading**                             | `isLoading` is `true` even when query is disabled (`enabled: false`). Check `fetchStatus !== 'idle'` instead                                                                                                                                                                                                                                        |
-| **GitHub PAT: no Checks perm**                              | Fine-grained PATs lack `Checks` permission. Use `gh run list/view` (Actions API), NOT `gh pr checks`                                                                                                                                                                                                                                                |
-| **tRPC TS2742 under NodeNext**                              | `typeof appRouter` can't be named without internal `@trpc/server/dist/core/router` reference. Workaround: `declaration: false` in API tsconfig (no workspace consumer uses `.d.ts`). `@ts-ignore` cannot suppress TS2742 in TS 5.5+ (declaration emit errors are immune). Web app resolves `AppRouter` via source path aliases (bundler resolution) |
-| **WSL husky hooks need nvm PATH**                           | Husky v9 runs hooks under `sh`/`dash`; `nvm.sh` can't be sourced. Hooks add nvm node bin to PATH directly. `lint-staged` called without `npx`                                                                                                                                                                                                       |
-| **CI: workspace deps need build before Vitest**             | Vitest resolves workspace packages via `exports` field (pointing to `dist/`). CI must build deps before running tests                                                                                                                                                                                                                               |
-| **`gh pr edit` broken (Projects Classic)**                  | Returns GraphQL error about Projects Classic deprecation. Use `gh api repos/{owner}/{repo}/pulls/{number} -X PATCH -f title="..." -f body="..."` instead                                                                                                                                                                                            |
-| **`@fastify/raw-body` doesn't exist**                       | Official `@fastify/` scoped package not published on npm. Use `fastify-raw-body` (community package, v5.0.0 for Fastify 5)                                                                                                                                                                                                                          |
-| **Codex CLI needs nvm in non-interactive shells**           | Codex installed via npm under nvm. tmux `send-keys` runs non-interactive shells; must source nvm manually before invoking `codex`. The `/codex-review` skill handles this automatically.                                                                                                                                                            |
-| **Codex interactive: Enter adds newline**                   | In interactive Codex CLI, Enter adds a newline to the input field instead of submitting. Use **Escape then Enter** to submit multiline prompts, or pass the prompt as an argument: `codex "prompt"`. For long prompts, pipe via stdin: `codex - < /tmp/prompt.txt`                                                                                  |
-| **Codex `review --base` excludes `[PROMPT]`**               | `codex review --base <branch>` and `--uncommitted` are mutually exclusive with the `[PROMPT]` positional argument. Custom review instructions must come from Codex project rules files (`~/.codex/rules/` or `.codex/instructions.md`), not inline. `codex exec` does accept stdin prompts via `-`                                                  |
+Domain-specific quirks are in per-directory CLAUDE.md files. Cross-cutting quirks below:
 
-**Version pins (do not upgrade without testing):**
+| Quirk                                             | Details                                                                                                                                                                     |
+| ------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Docker Compose env_file**                       | `env_file:` sets container env only. For YAML `${VAR}` substitution, use `--env-file .env` on CLI                                                                           |
+| **PostgreSQL init-db.sh**                         | Only runs on first DB creation. Must `docker compose down -v` to re-run after changes                                                                                       |
+| **GitHub PAT: no Checks perm**                    | Fine-grained PATs lack `Checks` permission. Use `gh run list/view` (Actions API), NOT `gh pr checks`                                                                        |
+| **WSL husky hooks need nvm PATH**                 | Husky v9 runs hooks under `sh`/`dash`; `nvm.sh` can't be sourced. Hooks add nvm node bin to PATH directly. `lint-staged` called without `npx`                               |
+| **CI: workspace deps need build before Vitest**   | Vitest resolves workspace packages via `exports` field (pointing to `dist/`). CI must build deps before running tests                                                       |
+| **`gh pr edit` broken (Projects Classic)**        | Returns GraphQL error about Projects Classic deprecation. Use `gh api repos/{owner}/{repo}/pulls/{number} -X PATCH -f title="..." -f body="..."` instead                    |
+| **Codex CLI needs nvm in non-interactive shells** | Codex installed via npm under nvm. tmux `send-keys` runs non-interactive shells; must source nvm manually. The `/codex-review` skill handles this automatically             |
+| **Codex interactive: Enter adds newline**         | Press **Escape then Enter** to submit. Or pass prompt as argument: `codex "prompt"`. For long prompts: `codex - < /tmp/prompt.txt`                                          |
+| **Codex `review --base` excludes `[PROMPT]`**     | `--base` and `--uncommitted` are mutually exclusive with positional `[PROMPT]`. Custom instructions go in Codex rules files (`~/.codex/rules/` or `.codex/instructions.md`) |
 
-| Package        | Pinned        | Notes                                                |
-| -------------- | ------------- | ---------------------------------------------------- |
-| Fastify        | 5.x           | Major version; check plugin compat before upgrading  |
-| Drizzle ORM    | latest stable | Schema API evolving; pin after initial setup         |
-| Pothos         | 4.x           | Manual Drizzle mapping; no breaking changes expected |
-| GraphQL Yoga   | 5.x           | Fastify integration via handleNodeRequest            |
-| ts-rest        | 3.x           | Fastify adapter; check OpenAPI generation compat     |
-| tRPC           | 10.45         | Internal only; Zod error behavior specific to v10    |
-| TanStack Query | 4.36          | isLoading behavior changes in v5                     |
-| tus-js-client  | 4.3.1         | —                                                    |
-| Stripe         | 20.3          | —                                                    |
-| BullMQ         | 5             | —                                                    |
+**Version pin (cross-cutting):**
+
+| Package     | Pinned        | Notes                                        |
+| ----------- | ------------- | -------------------------------------------- |
+| Drizzle ORM | latest stable | Schema API evolving; pin after initial setup |
+
+All other version pins are in their respective per-directory CLAUDE.md files.
 
 ---
 
@@ -199,16 +125,16 @@ tRPC client for internal API calls. Zitadel handles login/signup UI. `ProtectedR
 
 ### Application Security (v2 — in progress)
 
-- [ ] Rate limiting on all API surfaces (Fastify hook, cost-based for GraphQL)
+- [ ] Rate limiting on all API surfaces (Fastify hook)
 - [ ] Security headers (@fastify/helmet: CSP, HSTS, X-Content-Type-Options)
-- [x] Secrets in environment only (never committed)
+- [x] Secrets in environment only (never committed). Validate env schema with Zod at startup; canonical definition: `apps/api/src/config/env.ts`
 - [x] Pre-commit hook blocks secrets (husky + `scripts/check-secrets.sh`)
 - [ ] Zitadel OIDC token validation on all protected routes
 - [ ] API key authentication with scopes
 - [ ] Audit log for all sensitive actions
 - [ ] File virus scanning before production bucket (ClamAV via BullMQ)
-- [x] RLS policies on all tenant tables via Drizzle `pgPolicy` with FORCE
-- [x] Application database role is NOT superuser
+- [x] RLS policies on all tenant tables via Drizzle `pgPolicy` with FORCE — see `packages/db/CLAUDE.md`
+- [x] Application database role is NOT superuser — see `packages/db/CLAUDE.md`
 - [ ] Input validation with Zod on all API surfaces
 - [ ] Zitadel webhook signature verification
 - [ ] Stripe webhook signature verification + idempotency
@@ -217,175 +143,40 @@ tRPC client for internal API calls. Zitadel handles login/signup UI. `ProtectedR
 ### Production Deployment Checklist
 
 - [ ] Change `app_user` password from default
-- [ ] PostgreSQL SSL/TLS (`sslmode=require`)
-- [ ] Connection pooling (PgBouncer)
-- [ ] Database backups (WAL-G to S3)
+- [ ] PostgreSQL SSL/TLS (`sslmode=require`), connection pooling (PgBouncer), backups (WAL-G to S3)
 - [ ] `pg_stat_statements` for query monitoring
 - [ ] Rotate credentials quarterly
 - [ ] AGPL license boundary documented (Zitadel is AGPL; Colophony code is unaffected)
-- [ ] Monitoring stack: Prometheus + Grafana + Loki
-- [ ] Verify RLS in production:
-  ```bash
-  docker compose exec postgres psql -U colophony -c \
-    "SELECT usename, usesuper FROM pg_user WHERE usename = 'app_user';"
-  docker compose exec postgres psql -U colophony -c \
-    "SELECT relname, relforcerowsecurity FROM pg_class WHERE relname IN ('submissions', 'payments');"
-  ```
-
----
-
-## Common Pitfalls
-
-1. **RLS Context Leakage**
-   - ALWAYS use `SET LOCAL` inside transaction
-   - NEVER use session-level `SET` with connection pooling
-   - Application role MUST NOT be superuser
-   - All tenant tables MUST have `FORCE ROW LEVEL SECURITY`
-   - Test multi-tenancy isolation in EVERY feature
-
-2. **Webhook Non-Idempotency**
-   - ALWAYS check processed status before handling (Stripe and Zitadel webhooks)
-   - Use database transaction for webhook processing
-   - Record event ID after processing to prevent duplicates
-
-3. **Missing DataLoaders (GraphQL)**
-   - Every relation field in Pothos types MUST use a DataLoader
-   - Without DataLoaders, GraphQL queries cause N+1 queries
-   - Create loaders in `apps/api/src/graphql/loaders.ts`
-
-4. **Hard-Coded Secrets**
-   - Validate env schema with Zod at startup
-   - Use environment variables for all configuration
-
-5. **Pothos Type Drift**
-   - Pothos types are manually mapped from Drizzle schema (no plugin)
-   - When Drizzle schema changes, manually update corresponding Pothos types
-   - Month 3 evaluation: reassess Pothos vs alternatives
-
-6. **PCI Violations**
-   - NEVER log card numbers or CVV
-   - NEVER store card data in database
-   - Use Stripe Checkout only
+- [ ] Monitoring: Prometheus + Grafana + Loki
+- [ ] Verify RLS in production — see `packages/db/CLAUDE.md` for verification queries
 
 ---
 
 ## Git Workflow
 
-### Branching Strategy
+**NEVER push directly to `main`.** Protected branch — requires PR + CI + senior dev review. The `pre-push-branch.js` hook blocks direct pushes.
 
-- **`main`** — protected, always deployable. Requires PR + CI passing + senior dev review.
-- **Feature branches** — branch from `main`, named `feat/<topic>`, `fix/<topic>`, `chore/<topic>`.
-- **Squash merge** to `main` to keep history clean.
-
-### Commit Messages
-
-Use [Conventional Commits](https://www.conventionalcommits.org/):
-
-```
-feat(hopper): add form builder conditional logic engine
-fix(register): prevent identity leak in cross-instance WebFinger
-chore: update Drizzle to latest stable
-docs: add Zitadel webhook setup guide
-test: add RLS isolation test for payments
-refactor(relay): extract email template renderer
-```
-
-Scope with component name when the change is component-specific.
-
-### Commit Cadence
-
-Commit at **stable checkpoints** — after each logical unit of work compiles and passes tests. Branch history is squash-merged anyway, so commit frequency doesn't affect `main`.
-
-**Always commit before:**
-
-- Risky operations (refactors, dependency upgrades, config changes)
-- Ending a session (`/end-session` will catch uncommitted work)
-- Switching context to a different task
-
-**A good checkpoint is:**
-
-- A new schema/migration that runs cleanly
-- A service or route that compiles with its tests passing
-- A hook or config change that's been verified
-- Any working intermediate state you'd want to recover
-
-`/start-session` detects incomplete previous sessions, so unexpected exits are covered — but committed work is always safer than uncommitted work.
-
-### Push Cadence
-
-Pushes serve different purposes than commits: backup, CI feedback, and reviewer visibility. Commits are local and squashed away; pushes are visible and trigger automation.
-
-**Push when:**
-
-- You've completed a **reviewable unit of work** — one or more commits that form a coherent change (e.g., a full schema rewrite, a new route with tests)
-- You're **stepping away** — remote is backup; a local-only commit doesn't survive machine failure, WSL issues, or accidental `docker compose down -v`
-- You want **CI feedback** — CI runs on push to PR branches; push to validate in a clean environment
-- You want **code review** — run `/codex-review` before pushing for immediate local feedback
-
-**Don't push:**
-
-- Broken states — unlike commits, pushes trigger CI and are visible to reviewers; a push should at minimum compile
-- Partial work that would confuse reviewers — if the PR is already open and you're mid-refactor, either finish or use a draft PR
-
-**Create the PR when:**
-
-- The branch is in a **reviewable state** — not necessarily "done," but coherent enough for feedback
-- You have enough context for a **meaningful description** — summary, test plan, and any caveats
-- **Draft PRs** are fine for early feedback or to get CI running while you continue work
+- **Branching:** `feat/<topic>`, `fix/<topic>`, `chore/<topic>` from `main`. Squash merge.
+- **Commits:** [Conventional Commits](https://www.conventionalcommits.org/) — scope with component name when specific (e.g., `feat(hopper): ...`).
+- **Commit cadence:** At stable checkpoints. Always before risky ops, ending a session, or switching context.
+- **Push cadence:** When you have a reviewable unit, are stepping away, or want CI feedback. Don't push broken states.
+- **Release tags:** semver `v{major}.{minor}.{patch}`. v1 MVP tagged `v1.0.0-mvp`.
 
 ### Git Hooks (husky)
 
-**Pre-commit** — runs on `git commit`:
-
-1. **Secret scanning** (`scripts/check-secrets.sh`) — blocks Stripe live keys, AWS keys, private keys, `.env` files
-2. **lint-staged** — runs Prettier on staged `.ts`/`.tsx`/`.json`/`.md` files
-
-**Pre-push** — runs on `git push`:
-
-1. **Type check** (`pnpm type-check`) — full `tsc --noEmit` across all packages
-2. **Lint** (`pnpm lint`) — ESLint across all packages
-
-Bypass with `--no-verify` (use sparingly).
+| Hook           | Checks                                                                                             |
+| -------------- | -------------------------------------------------------------------------------------------------- |
+| **Pre-commit** | Secret scanning (`scripts/check-secrets.sh`), lint-staged (Prettier on `.ts`/`.tsx`/`.json`/`.md`) |
+| **Pre-push**   | `pnpm type-check` (tsc --noEmit), `pnpm lint` (ESLint)                                             |
 
 ### CI Pipeline (GitHub Actions)
 
-Runs on every PR to `main` and pushes to `main`:
-
-| Job            | What it checks                                     |
+| Job            | Checks                                             |
 | -------------- | -------------------------------------------------- |
 | **quality**    | `format:check`, `lint`, `type-check`, `pnpm audit` |
 | **unit-tests** | `pnpm test`                                        |
 | **rls-tests**  | RLS tenant isolation integration tests             |
 | **build**      | `pnpm build` (API + Web production build)          |
-
-### Claude Code Git Workflow (IMPORTANT)
-
-**NEVER push directly to `main`.** The `main` branch is protected and requires PRs.
-
-When committing and pushing changes, ALWAYS follow this flow:
-
-```bash
-# 1. Create a feature branch (use conventional prefix)
-git checkout -b feat/<topic>    # or fix/, chore/, test/, docs/, refactor/
-
-# 2. Commit changes
-git add <files>
-git commit -m "feat: description"
-
-# 3. Push the feature branch
-git push -u origin <branch-name>
-
-# 4. Create a PR
-gh pr create --title "feat: description" --body "..."
-```
-
-The `pre-push-branch.js` hook will block any `git push` targeting `main` directly.
-
-### Release Tagging
-
-Use semver tags: `v{major}.{minor}.{patch}` — e.g., `v2.0.0`, `v2.1.0`
-
-The v1 MVP is tagged as `v1.0.0-mvp`.
 
 ---
 
@@ -418,61 +209,15 @@ The v1 MVP is tagged as `v1.0.0-mvp`.
 
 ### Claude Code Hooks (run automatically)
 
-**Pre-edit:**
+**Pre-edit:** `pre-edit-validate.js` (secrets, RLS context), `pre-payment-validate.js` (idempotency), `pre-frontend-validate.js` (use client, shadcn, org context), `pre-router-audit.js` (audit logging), `pre-push-branch.js` (blocks push to main)
 
-- `pre-edit-validate.js` — Blocks secrets, warns missing RLS context on Drizzle query methods
-- `pre-payment-validate.js` — Warns when payment/webhook code lacks idempotency
-- `pre-frontend-validate.js` — Validates frontend patterns (use client, shadcn, org context)
-- `pre-router-audit.js` — Warns when route handlers have sensitive ops without audit logging
-- `pre-push-branch.js` — Blocks `git push` directly to main; enforces feature branch + PR workflow
-
-**Post-edit:**
-
-- `post-schema.js` — Reminds to run `pnpm db:generate` after Drizzle schema changes
-- `post-email-template.js` — Reminds to add text version for HTML emails
-- `post-migration-validate.js` — Reminds to add RLS policies for new tables in migrations
-- `post-commit-devlog.js` — Reminds to update `docs/DEVLOG.md` after git commits
+**Post-edit:** `post-schema.js` (db:generate reminder), `post-email-template.js` (text version), `post-migration-validate.js` (RLS for new tables), `post-commit-devlog.js` (DEVLOG reminder)
 
 ### Codex Review Integration
 
-Two modes for running Codex code reviews:
+`/codex-review [plan|diff|branch]` — non-interactive Codex review. Branch review (default): `codex review --base origin/main`. Diff review: `--uncommitted`. Plan review: `codex exec -s read-only`.
 
-#### Non-Interactive (Claude Code skill)
-
-`/codex-review [plan|diff|branch]` — runs `codex review` non-interactively. Claude Code invokes Codex, captures stdout, and presents findings. No tmux required.
-
-- **Branch review:** `codex review --base origin/main` (default)
-- **Diff review:** `codex review --uncommitted`
-- **Plan review:** `codex exec -s read-only` with plan file prompt
-- Always fetches `origin/main` to avoid stale local main
-
-#### Interactive Codex (tmux)
-
-For live progress visibility, re-review, and ad-hoc follow-up, run Codex in a tmux pane alongside Claude Code.
-
-**Setup (one-time per terminal session):**
-
-```bash
-# Split your Claude Code tmux window into two panes (left: Claude, right: Codex)
-# From within tmux, press Ctrl+B then % (vertical split) or " (horizontal split)
-
-# In the new pane, launch Codex:
-export NVM_DIR="$HOME/.nvm" && [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh" \
-  && nvm use v20.20.0 && cd /home/dmahaffey/projects/prospector && codex
-```
-
-**Submitting prompts in interactive Codex:**
-
-- Codex's input field treats Enter as a newline, not submit. Press **Escape then Enter** to submit.
-- **Alternative:** Pass the prompt as an argument when launching: `codex "your prompt here"`
-- **Long prompts from file:** Use `codex - < /tmp/prompt.txt` or launch with `codex "$(cat /tmp/prompt.txt)"`
-
-**Workflow:**
-
-1. Keep Codex running between reviews — no need to kill/relaunch
-2. Use `codex resume` or `codex fork --last` to continue from a previous session
-3. Switch to the Codex pane with `Ctrl+B` then arrow key
-4. Codex persists after reviews for follow-up questions or re-review
+For interactive Codex in tmux: source nvm, `nvm use v20.20.0`, then `codex`. Use `codex resume` or `codex fork --last` for follow-up.
 
 ### MCP Servers (restart Claude Code to activate)
 
@@ -500,7 +245,7 @@ pnpm dev                      # API: 4000, Web: 3000
 ```bash
 pnpm test                     # Unit tests
 pnpm test:e2e                 # API E2E (needs docker-compose up)
-pnpm --filter @colophony/web test:e2e  # Playwright (needs dev servers)
+pnpm --filter @prospector/web test:e2e  # Playwright (needs dev servers)
 ```
 
 Full testing guide: [docs/testing.md](docs/testing.md)
@@ -516,30 +261,21 @@ pnpm db:reset                 # Drop and recreate with migrations + RLS
 
 ### Environment Variables
 
-**Frontend (`apps/web/.env.local`):**
+Canonical env definition with Zod validation: `apps/api/src/config/env.ts`
 
-```bash
-NEXT_PUBLIC_API_URL=http://localhost:4000
-NEXT_PUBLIC_ZITADEL_AUTHORITY=http://localhost:8080
-NEXT_PUBLIC_ZITADEL_CLIENT_ID=your-client-id
-NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_xxx
-API_URL=http://localhost:4000  # SSR-only
-```
-
-**Backend (`apps/api/.env`):**
-
-```bash
-DATABASE_URL=postgresql://app_user:password@localhost:5432/colophony
-REDIS_HOST=localhost
-REDIS_PORT=6379
-REDIS_PASSWORD=
-ZITADEL_AUTHORITY=http://localhost:8080
-ZITADEL_WEBHOOK_SECRET=your-webhook-secret
-STRIPE_SECRET_KEY=sk_test_xxx
-STRIPE_WEBHOOK_SECRET=whsec_xxx
-FEDERATION_DOMAIN=localhost
-FEDERATION_ENABLED=false
-```
+| Variable                                                          | Required | Default                     | Used by        |
+| ----------------------------------------------------------------- | -------- | --------------------------- | -------------- |
+| `DATABASE_URL`                                                    | Yes      | —                           | API            |
+| `PORT` / `HOST`                                                   | No       | `4000` / `0.0.0.0`          | API            |
+| `NODE_ENV`                                                        | No       | `development`               | API            |
+| `REDIS_HOST` / `REDIS_PORT` / `REDIS_PASSWORD`                    | No       | `localhost` / `6379` / `""` | API            |
+| `CORS_ORIGIN`                                                     | No       | `http://localhost:3000`     | API            |
+| `ZITADEL_AUTHORITY` / `ZITADEL_CLIENT_ID`                         | Optional | —                           | API            |
+| `ZITADEL_WEBHOOK_SECRET`                                          | Optional | —                           | API            |
+| `STRIPE_SECRET_KEY` / `STRIPE_WEBHOOK_SECRET`                     | Optional | —                           | API            |
+| `NEXT_PUBLIC_API_URL`                                             | No       | `http://localhost:4000`     | Web            |
+| `NEXT_PUBLIC_ZITADEL_AUTHORITY` / `NEXT_PUBLIC_ZITADEL_CLIENT_ID` | —        | —                           | Web            |
+| `API_URL`                                                         | —        | —                           | Web (SSR only) |
 
 ---
 
@@ -562,8 +298,7 @@ See [docs/architecture-v2-planning.md Section 6](docs/architecture-v2-planning.m
 ## References
 
 - [Fastify](https://fastify.dev/docs) | [Drizzle](https://orm.drizzle.team/docs) | [Zitadel](https://zitadel.com/docs)
-- [ts-rest](https://ts-rest.com/docs) | [Pothos](https://pothos-graphql.dev/) | [GraphQL Yoga](https://the-guild.dev/graphql/yoga-server)
-- [tRPC](https://trpc.io/docs) | [Next.js](https://nextjs.org/docs)
+- [ts-rest](https://ts-rest.com/docs) | [tRPC](https://trpc.io/docs) | [Next.js](https://nextjs.org/docs)
 - [BullMQ](https://docs.bullmq.io) | [tus](https://tus.io) | [Stripe](https://stripe.com/docs/api)
 - [PostgreSQL RLS](https://www.postgresql.org/docs/current/ddl-rowsecurity.html)
 

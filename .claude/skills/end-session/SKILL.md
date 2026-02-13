@@ -13,7 +13,7 @@ End-of-session housekeeping: update docs, push to PR, and summarize work.
 2. Ensures all code changes are committed on a feature branch (not `main`)
 3. Pushes the branch and creates/updates a PR if needed
 4. Notes any Codex review findings addressed during this session
-5. Updates `docs/DEVLOG.md` with a session summary (captures everything including Codex review fixes addressed during this session)
+5. Updates the current month's devlog (`docs/devlog/YYYY-MM.md`) with a session summary (captures everything including Codex review fixes addressed during this session)
 6. Checks for any `TODO(CLAUDE.md)` comments and proposes updates
 7. Commits and pushes doc updates as the final commit on the branch
 8. Prints a session summary with PR link for user to merge
@@ -76,7 +76,9 @@ This step does NOT perform a review — it only records what happened during the
 
 ### Step 4: Update DEVLOG
 
-Read `docs/DEVLOG.md` to see the latest entry format, then **prepend** a new entry (newest first) using this template:
+Determine the current month's devlog file: `docs/devlog/YYYY-MM.md` (e.g., `docs/devlog/2026-02.md`). If the file doesn't exist yet, create it with the header `# Development Log — [Month Year]` followed by a blank line and `Newest entries first.`
+
+Read the current month's devlog to see the latest entry format, then **prepend** a new entry (newest first, after the header) using this template:
 
 ```markdown
 ## YYYY-MM-DD — [Session Focus]
@@ -101,6 +103,8 @@ Read `docs/DEVLOG.md` to see the latest entry format, then **prepend** a new ent
 If today already has a DEVLOG entry for this session's work, **append to the existing entry's sections** rather than creating a duplicate.
 
 **Important:** The DEVLOG entry should capture the full session including any Codex review outcomes (e.g., "Addressed Codex review: fixed X, deferred Y").
+
+**File convention:** Monthly rotation in `docs/devlog/YYYY-MM.md`. Never write to `docs/DEVLOG.md` (redirect stub only).
 
 ### Step 5: Check for CLAUDE.md and other doc updates
 
@@ -129,8 +133,8 @@ Ask the user if they want to apply the suggestions before proceeding.
 This is the **final commit** on the branch. Stage all doc changes:
 
 ```bash
-git add docs/DEVLOG.md CLAUDE.md docs/testing.md [any other docs]
-git commit -m "docs: update DEVLOG and docs for [session date] session"
+git add docs/devlog/ CLAUDE.md docs/testing.md [any other docs]
+git commit -m "docs: update devlog and docs for [session date] session"
 git push origin <branch-name>
 ```
 

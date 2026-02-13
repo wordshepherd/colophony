@@ -2,7 +2,7 @@
 
 /**
  * PostToolUse hook for Bash commands.
- * After a git commit, reminds to update docs/DEVLOG.md if it wasn't part of the commit.
+ * After a git commit, reminds to update the current month's devlog if it wasn't part of the commit.
  */
 
 const fs = require('fs');
@@ -22,8 +22,10 @@ try {
     cwd: process.env.CLAUDE_WORKING_DIRECTORY || process.cwd(),
   });
 
-  if (!lastCommitFiles.includes('DEVLOG.md')) {
-    console.warn('📝 REMINDER: Update docs/DEVLOG.md with what was done in this session.');
+  if (!lastCommitFiles.includes('devlog/')) {
+    const now = new Date();
+    const month = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    console.warn(`📝 REMINDER: Update docs/devlog/${month}.md with what was done in this session.`);
     console.warn('   Format: ## YYYY-MM-DD — [Session Focus]');
     console.warn('   Sections: ### Done / ### Decisions / ### Next / ### Issues Found (optional)');
   }
