@@ -4,6 +4,39 @@ Append-only session log. Newest entries first.
 
 ---
 
+## 2026-02-13 — Audit Integration Tests + Codex Workflow Rewrite (Track 1)
+
+### Done
+
+- **PR #49** — Audit service integration tests + Codex workflow rewrite
+- 11 integration tests in `audit-write-path.test.ts` exercising `auditService.logDirect()` and `auditService.log()` against PostgreSQL with RLS enforced as `app_user` — closes Codex review finding #4 from 2026-02-12 session
+- Tests cover: all 4 auth failure actions (it.each), actorId storage, organizationId rejection guard, `INSERT...RETURNING` 42501 confirmation, org-scoped writes with tenant isolation, transaction rollback atomicity, `serializeValue()` round-trip through PostgreSQL text column
+- Added `DATABASE_URL` env to `vitest.config.rls.ts` with `DATABASE_APP_URL` fallback for CI portability (Codex non-interactive review finding, fixed same session)
+- **Rewrote `/codex-review` skill to use non-interactive `codex review`:** no tmux session management needed; `codex review --base origin/main` runs directly from Bash tool
+- Documented interactive two-pane tmux workflow in CLAUDE.md for live progress visibility and follow-up
+- Created `.codex/instructions.md` with project review rules — loaded automatically by `codex review`
+- Added 2 new Known Quirks: Codex Enter key behavior (Esc+Enter to submit), `--base`/`[PROMPT]` mutual exclusivity
+- Fixed 2 documentation contradictions found by interactive Codex review (Enter key docs, SKILL.md Step 3/4 inconsistency)
+- Removed unused `eq` import (Codex review finding from first review cycle)
+- Cleaned up GitHub repo: removed `OPENROUTER_API_KEY` secret, `CLAUDE_CODE_OAUTH_TOKEN` secret (both unused by CI)
+- All 81 RLS tests passing (7 files), type-check and lint clean
+
+### Decisions
+
+- **Two-mode Codex workflow** — non-interactive (`codex review --base`) for `/codex-review` skill (Claude Code runs it, captures stdout); interactive tmux pane for live progress and follow-up. Context persistence is the key differentiator for interactive mode
+- **`codex review --base` can't take inline prompts** — `--base` and `[PROMPT]` are mutually exclusive (Codex CLI 0.101.0). Project rules go in `.codex/instructions.md` instead; `codex exec` still accepts stdin for plan reviews
+- **`DATABASE_URL` env var fallback** — `vitest.config.rls.ts` uses `process.env.DATABASE_APP_URL` with hardcoded fallback, matching the pattern in `db-setup.ts`. Ensures CI portability
+
+### Next
+
+- Deferred: dedicated `audit_writer` role with INSERT-only on `audit_events` (production hardening)
+- Deferred: in-memory per-IP throttle for auth failure auditing (DoS protection)
+- Deferred: request correlation columns (`requestId`, `method`, `route`) — requires schema migration
+- Audit query/list endpoints (tRPC/REST routes when API surfaces are wired)
+- Frontend OIDC flow (Track 1 continuation)
+
+---
+
 ## 2026-02-12 — Auth Failure Auditing + Codex Review Integration (Track 1)
 
 ### Done
