@@ -4,10 +4,15 @@ Append-only session log. Newest entries first.
 
 ---
 
-## 2026-02-12 — RLS Integration Tests (Track 1)
+## 2026-02-12 — RLS Integration Tests + Session Skill Workflow (Track 1)
 
 ### Done
 
+- **PR #46** — Improved `/end-session` and `/start-session` skill workflow to produce single mergeable PRs
+  - Reordered `/end-session`: AI review + code fixes before doc updates (DEVLOG captures everything)
+  - Moved branch cleanup from `/end-session` to `/start-session` (new Step 1b)
+  - Doc commit is always the final commit on the branch; summary ends with "PR ready to merge"
+  - Addressed AI review suggestion: added explicit `git branch -D` after switching to main
 - **PR #45** — 70 RLS integration tests across 6 files verifying tenant isolation against a real PostgreSQL instance (15 files, 1,678 insertions)
 - Dual-client pattern: superuser (admin) for setup, `app_user` (NOSUPERUSER NOBYPASSRLS) for RLS-enforced queries
 - All 3 RLS policy patterns covered:
@@ -32,6 +37,7 @@ Append-only session log. Newest entries first.
 - **`{ cause: { code: "42501" } }` assertion pattern** — Drizzle 0.44+ wraps pg errors in `DrizzleQueryError` with original error in `.cause`. Tests match the exact SQLSTATE code at the correct nesting level.
 - **Shared pool lifecycle via `process.on('beforeExit')`** — In `singleFork` mode, pools are module singletons shared across all test files. Individual `afterAll` only truncates data; pool teardown happens at process exit.
 - **RLS tests excluded from default `pnpm test`** — requires separate `pnpm test:rls` with postgres-test running; prevents failures when developers run unit tests without Docker
+- **Single-PR session workflow** — `/end-session` now handles AI review, code fixes, and doc updates in one branch so the user merges once. Branch cleanup deferred to `/start-session` since it can only run after the PR is merged
 
 ### Issues Found
 
