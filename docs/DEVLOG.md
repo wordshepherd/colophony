@@ -4,6 +4,49 @@ Append-only session log. Newest entries first.
 
 ---
 
+## 2026-02-12 — RLS Integration Tests (Track 1)
+
+### Done
+
+- **PR #45** — 70 RLS integration tests across 6 files verifying tenant isolation against a real PostgreSQL instance (15 files, 1,678 insertions)
+- Dual-client pattern: superuser (admin) for setup, `app_user` (NOSUPERUSER NOBYPASSRLS) for RLS-enforced queries
+- All 3 RLS policy patterns covered:
+  - **Direct** (`org_id = current_org_id()`): submissions, submission_periods, payments, organization_members
+  - **Indirect/subquery** (`submission_id IN (SELECT ...)`): submission_files, submission_history
+  - **Nullable** (`org_id IS NULL OR = current_org_id()`): audit_events, retention_policies, user_consents
+- Infrastructure tests (14): FORCE RLS, relrowsecurity, role security, GUC functions, policy existence/expressions
+- Write prevention tests (12): cross-org INSERT/UPDATE/DELETE with SQLSTATE 42501 verification
+- No-context tests (15): empty context returns 0 rows (strict) or global-only (nullable), INSERT behavior
+- Faker-based collision-safe factories for all 9 RLS tables + `createTwoOrgScenario()` composite
+- Dedicated `vitest.config.rls.ts` with `singleFork` mode for sequential execution with shared pools
+- CI `rls-tests` job with `postgres:16-alpine` service container — role creation handled in test setup (fully portable, no external scripts)
+- Default `vitest.config.ts` excludes RLS tests (prevents parallel worker race conditions)
+- All 70 RLS tests + 82 existing unit tests passing, type-check and lint clean
+- AI review: LGTM, no blocking issues
+- Updated `docs/testing.md` RLS section to reflect new Drizzle-based suite
+- Checked CLAUDE.md security items for RLS policies and app_user role
+
+### Decisions
+
+- **Manual SQL migration execution** — Drizzle `migrate()` silently no-ops after `DROP SCHEMA CASCADE; CREATE SCHEMA public` (possibly Drizzle ORM 0.44 bug with journal version 7). Replaced with manual `_journal.json` parsing → SQL file splitting on `--> statement-breakpoint` → `pool.query()`. More robust and debuggable.
+- **`{ cause: { code: "42501" } }` assertion pattern** — Drizzle 0.44+ wraps pg errors in `DrizzleQueryError` with original error in `.cause`. Tests match the exact SQLSTATE code at the correct nesting level.
+- **Shared pool lifecycle via `process.on('beforeExit')`** — In `singleFork` mode, pools are module singletons shared across all test files. Individual `afterAll` only truncates data; pool teardown happens at process exit.
+- **RLS tests excluded from default `pnpm test`** — requires separate `pnpm test:rls` with postgres-test running; prevents failures when developers run unit tests without Docker
+
+### Issues Found
+
+- **Drizzle `migrate()` silent no-op** — after `DROP SCHEMA CASCADE` + `CREATE SCHEMA public`, `migrate(db, { migrationsFolder })` completes without error but creates zero tables. No `__drizzle_migrations` table created. Root cause unclear (journal v7 compatibility?). Workaround: manual SQL execution.
+- **ESLint `no-unnecessary-type-assertion`** — `const [x] = await db.insert(...).returning()` — destructured array elements are already non-nullable; `x!` flagged as unnecessary. Removed all 11 non-null assertions.
+
+### Next
+
+- Auth failure auditing (happens before db-context hook, needs separate `pool.connect` pattern)
+- Audit query/list endpoints (tRPC/REST routes when API surfaces are wired)
+- Request correlation (requestId/method/route columns — requires migration adding metadata JSONB column)
+- Frontend OIDC flow (Track 1 continuation)
+
+---
+
 ## 2026-02-12 — Audit Logging Infrastructure (Track 1)
 
 ### Done
@@ -33,7 +76,7 @@ Append-only session log. Newest entries first.
 
 ### Next
 
-- Integration testing with real DB for RLS audit event isolation
+- ~~Integration testing with real DB for RLS audit event isolation~~ ✅ Done (PR #45)
 - Auth failure auditing (happens before db-context hook, needs separate `pool.connect` pattern)
 - Audit query/list endpoints (tRPC/REST routes when API surfaces are wired)
 - Request correlation (requestId/method/route columns — requires migration adding metadata JSONB column)
@@ -78,7 +121,7 @@ Append-only session log. Newest entries first.
 
 - Rate limiting across all API surfaces (roadmap item flagged by AI reviewer)
 - ~~Audit logging infrastructure for sensitive lifecycle events~~ ✅ Done (PR #44)
-- Integration testing with real DB for org-context + db-context RLS flow
+- ~~Integration testing with real DB for org-context + db-context RLS flow~~ ✅ Done (PR #45)
 - Frontend OIDC flow (Track 1 continuation, separate session)
 
 ---
