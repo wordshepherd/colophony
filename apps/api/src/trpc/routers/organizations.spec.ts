@@ -88,8 +88,7 @@ function orgContext(
 }
 
 // Create a caller factory for testing.
-// appRouter is typed as AnyRouter (TS2742 workaround), so we cast to any
-// for test access. Procedure shapes are tested at runtime.
+// Cast to any for test caller access. Procedure shapes are tested at runtime.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const createCaller = (appRouter as any).createCaller as (
   ctx: TRPCContext,
