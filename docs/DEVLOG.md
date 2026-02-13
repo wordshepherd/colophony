@@ -4,6 +4,33 @@ Append-only session log. Newest entries first.
 
 ---
 
+## 2026-02-13 — Wire Frontend tRPC Client to Real AppRouter (Track 2)
+
+### Done
+
+- Fixed two root causes of 65 cascade type errors in web app:
+  1. Wrong import path (`trpc.router` → `router`) in `apps/web/src/lib/trpc.ts`
+  2. Erased `AppRouter` type (`AnyRouter` → `typeof appRouter`) in `apps/api/src/trpc/router.ts`
+- Disabled declaration emit in API tsconfig (`declaration: false`) to avoid TS2742 under NodeNext/TS 5.9 — `@ts-ignore` cannot suppress declaration emit errors in TS 5.5+
+- Removed stale `.d.ts` entrypoints from `apps/api/package.json` exports (Codex review finding #1)
+- Cleaned up unused `AnyRouter` import/re-export from `init.ts`, updated stale test comment
+- All 124 API tests passing, API type-check + build green
+- Web cascade errors eliminated: 0 "collides with built-in method" errors remaining
+- 71 remaining web errors are all v1-procedure-specific (auth, submissions, files, gdpr)
+
+### Decisions
+
+- **Disabled declaration emit** rather than keeping `AnyRouter` annotation — no workspace consumer resolves `@colophony/api` via package exports for types; web app uses source path aliases with bundler resolution. Re-enable when TS2742 is resolved upstream or a type-only export layer is added
+- **Codex review finding #2 deferred** — source-alias approach pulls API Fastify augmentations (`authContext`, `dbTx`, `audit` on `FastifyRequest`) into web type-check via `router.ts` → `init.ts` → `context.ts` chain, causing 3 errors. Proper fix requires a type-only re-export layer or moving `AppRouter` to a shared types package. These errors were previously hidden by the broken import path
+
+### Next
+
+- Frontend OIDC flow with Zitadel (replaces v1 `trpc.auth.*` procedures)
+- Org management UI (depends on OIDC auth flow)
+- Deferred: type-only `AppRouter` export layer to decouple web from API Fastify internals
+
+---
+
 ## 2026-02-13 — Organization Service + tRPC Procedures (Track 1 → Track 2)
 
 ### Done
@@ -22,16 +49,16 @@ Append-only session log. Newest entries first.
 
 - **Only one SECURITY DEFINER function** (`list_user_organizations`) — genuinely cross-tenant query. Everything else uses RLS-native `SET LOCAL` inside transactions, consistent with project rules
 - **`create()` manages its own transaction** — org doesn't exist yet, so no RLS context can be set by hooks. Audit runs in the separate request transaction; atomicity gap is acceptable and documented
-- **`appRouter` typed as `AnyRouter`** — TS2742 workaround; test callers use `as any` cast. Will refine when tRPC v11 or project restructuring resolves the inferred type issue
+- **`appRouter` typed as `AnyRouter`** — TS2742 workaround; test callers use `as any` cast. **Resolved** in 2026-02-13 tRPC client session (disabled declaration emit, restored `typeof appRouter`)
 - **Extracted `init.ts`** to break circular dependency between `router.ts` ↔ `routers/organizations.ts`
 
 ### Issues Found
 
-- Web type-check has pre-existing failures (`@prospector/api/trpc/trpc.router` import path doesn't exist, `AnyRouter` erases procedure types for frontend client). Will need fixing when frontend tRPC client is wired up
+- Web type-check has pre-existing failures (`@prospector/api/trpc/trpc.router` import path doesn't exist, `AnyRouter` erases procedure types for frontend client). **Resolved** in 2026-02-13 tRPC client session
 
 ### Next
 
-- Wire frontend tRPC client to new `AppRouter` (fix web type errors)
+- ~~Wire frontend tRPC client to new `AppRouter`~~ ✓
 - Add remaining API surfaces (ts-rest REST, Pothos GraphQL) for organizations
 - Frontend OIDC flow (Track 1 continuation)
 - Deferred: dedicated `audit_writer` role, request correlation columns, in-memory auth throttle

@@ -1,4 +1,4 @@
-import { t, type AnyRouter } from './init.js';
+import { t } from './init.js';
 import { organizationsRouter } from './routers/organizations.js';
 
 // Re-export procedure builders for convenience
@@ -15,7 +15,7 @@ export {
 // App router
 // ---------------------------------------------------------------------------
 
-export const appRouter: AnyRouter = t.router({
+export const appRouter = t.router({
   health: t.procedure.query(() => ({ status: 'ok' as const })),
   organizations: organizationsRouter,
   auth: t.router({}),
@@ -28,6 +28,4 @@ export const appRouter: AnyRouter = t.router({
   retention: t.router({}),
 });
 
-// Using AnyRouter avoids TS2742 (non-portable inferred type) under NodeNext.
-// Refine to `typeof appRouter` when TS2742 is confirmed absent.
-export type AppRouter = AnyRouter;
+export type AppRouter = typeof appRouter;

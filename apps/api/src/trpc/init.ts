@@ -1,4 +1,4 @@
-import { initTRPC, TRPCError, type AnyRouter } from '@trpc/server';
+import { initTRPC, TRPCError } from '@trpc/server';
 import type { TRPCContext } from './context.js';
 
 export const t = initTRPC.context<TRPCContext>().create();
@@ -89,5 +89,3 @@ export const orgProcedure = t.procedure.use(hasOrgContext);
 export const adminProcedure = t.procedure.use(isAdmin);
 export const createRouter = t.router;
 export const mergeRouters = t.mergeRouters;
-
-export type { AnyRouter };
