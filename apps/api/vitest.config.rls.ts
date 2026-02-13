@@ -13,5 +13,12 @@ export default defineConfig({
         singleFork: true,
       },
     },
+    env: {
+      // Point @colophony/db's pool at the test database so that
+      // auditService.logDirect() (which uses the shared `db` export)
+      // exercises the real write path as app_user with RLS enforced.
+      DATABASE_URL:
+        'postgresql://app_user:app_password@localhost:5433/prospector_test',
+    },
   },
 });
