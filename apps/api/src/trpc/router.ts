@@ -1,11 +1,23 @@
-import { initTRPC, type AnyRouter } from '@trpc/server';
+import { t, type AnyRouter } from './init.js';
+import { organizationsRouter } from './routers/organizations.js';
 
-const t = initTRPC.create();
+// Re-export procedure builders for convenience
+export {
+  publicProcedure,
+  authedProcedure,
+  orgProcedure,
+  adminProcedure,
+  createRouter,
+  mergeRouters,
+} from './init.js';
 
-// Namespace stubs matching v1 router shape.
-// Actual procedures added incrementally as services are ported.
+// ---------------------------------------------------------------------------
+// App router
+// ---------------------------------------------------------------------------
+
 export const appRouter: AnyRouter = t.router({
   health: t.procedure.query(() => ({ status: 'ok' as const })),
+  organizations: organizationsRouter,
   auth: t.router({}),
   submissions: t.router({}),
   files: t.router({}),
@@ -16,6 +28,6 @@ export const appRouter: AnyRouter = t.router({
   retention: t.router({}),
 });
 
-// Stub type — refined with concrete procedure types as services are ported.
 // Using AnyRouter avoids TS2742 (non-portable inferred type) under NodeNext.
+// Refine to `typeof appRouter` when TS2742 is confirmed absent.
 export type AppRouter = AnyRouter;

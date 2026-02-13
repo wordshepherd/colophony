@@ -11,13 +11,18 @@ export const organizationSchema = z.object({
 
 export type Organization = z.infer<typeof organizationSchema>;
 
+export const slugSchema = z
+  .string()
+  .min(3)
+  .max(63)
+  .regex(/^[a-z0-9-]+$/, "Slug must be lowercase alphanumeric with hyphens");
+
+export const checkSlugSchema = z.object({ slug: slugSchema });
+export type CheckSlugInput = z.infer<typeof checkSlugSchema>;
+
 export const createOrganizationSchema = z.object({
   name: z.string().min(1).max(255),
-  slug: z
-    .string()
-    .min(3)
-    .max(63)
-    .regex(/^[a-z0-9-]+$/, "Slug must be lowercase alphanumeric with hyphens"),
+  slug: slugSchema,
 });
 
 export type CreateOrganizationInput = z.infer<typeof createOrganizationSchema>;

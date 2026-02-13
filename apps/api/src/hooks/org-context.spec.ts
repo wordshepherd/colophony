@@ -10,18 +10,26 @@ import {
 import Fastify, { type FastifyInstance } from 'fastify';
 import type { Env } from '../config/env.js';
 
-const { mockFindOrg, mockFindMember } = vi.hoisted(() => {
-  const mockFindOrg = vi.fn();
-  const mockFindMember = vi.fn();
-  return { mockFindOrg, mockFindMember };
-});
+const { mockPoolQuery, mockClientQuery, mockClientRelease, mockPoolConnect } =
+  vi.hoisted(() => {
+    const mockPoolQuery = vi.fn();
+    const mockClientQuery = vi.fn();
+    const mockClientRelease = vi.fn();
+    const mockPoolConnect = vi.fn();
+    return {
+      mockPoolQuery,
+      mockClientQuery,
+      mockClientRelease,
+      mockPoolConnect,
+    };
+  });
 
 vi.mock('@colophony/db', () => ({
   db: {
     query: {
       users: { findFirst: vi.fn() },
-      organizations: { findFirst: mockFindOrg },
-      organizationMembers: { findFirst: mockFindMember },
+      organizations: { findFirst: vi.fn() },
+      organizationMembers: { findFirst: vi.fn() },
     },
   },
   eq: vi.fn((_col: unknown, val: unknown) => val),
@@ -30,7 +38,8 @@ vi.mock('@colophony/db', () => ({
   organizations: { id: 'id' },
   organizationMembers: { organizationId: 'organization_id', userId: 'user_id' },
   pool: {
-    query: vi.fn().mockResolvedValue({ rows: [{ '?column?': 1 }] }),
+    query: mockPoolQuery,
+    connect: mockPoolConnect,
   },
 }));
 
@@ -77,15 +86,23 @@ describe('org-context plugin', () => {
   });
 
   beforeEach(() => {
-    mockFindOrg.mockReset();
-    mockFindMember.mockReset();
+    mockPoolQuery.mockReset();
+    mockPoolConnect.mockReset();
+    mockClientQuery.mockReset();
+    mockClientRelease.mockReset();
+
+    // Default: pool.connect returns a mock client
+    mockPoolConnect.mockResolvedValue({
+      query: mockClientQuery,
+      release: mockClientRelease,
+    });
   });
 
   it('skips when no auth context', async () => {
     const response = await app.inject({ method: 'GET', url: '/test' });
     expect(response.statusCode).toBe(200);
     expect(response.json().authContext).toBeNull();
-    expect(mockFindOrg).not.toHaveBeenCalled();
+    expect(mockPoolQuery).not.toHaveBeenCalled();
   });
 
   it('skips when no X-Organization-Id header', async () => {
@@ -116,7 +133,7 @@ describe('org-context plugin', () => {
   });
 
   it('returns 400 when org not found', async () => {
-    mockFindOrg.mockResolvedValueOnce(undefined);
+    mockPoolQuery.mockResolvedValueOnce({ rows: [] });
 
     const response = await app.inject({
       method: 'GET',
@@ -132,8 +149,15 @@ describe('org-context plugin', () => {
   });
 
   it('returns 403 when user is not a member', async () => {
-    mockFindOrg.mockResolvedValueOnce({ id: VALID_ORG_ID, name: 'Test Org' });
-    mockFindMember.mockResolvedValueOnce(undefined);
+    // pool.query for org existence check
+    mockPoolQuery.mockResolvedValueOnce({ rows: [{ id: VALID_ORG_ID }] });
+    // client.query calls: BEGIN, set_config x2, membership query, COMMIT
+    mockClientQuery
+      .mockResolvedValueOnce({}) // BEGIN READ ONLY
+      .mockResolvedValueOnce({}) // set_config app.current_org
+      .mockResolvedValueOnce({}) // set_config app.user_id
+      .mockResolvedValueOnce({ rows: [] }) // membership query — not found
+      .mockResolvedValueOnce({}); // COMMIT
 
     const response = await app.inject({
       method: 'GET',
@@ -148,13 +172,15 @@ describe('org-context plugin', () => {
   });
 
   it('enriches authContext with orgId and role on valid membership', async () => {
-    mockFindOrg.mockResolvedValueOnce({ id: VALID_ORG_ID, name: 'Test Org' });
-    mockFindMember.mockResolvedValueOnce({
-      id: 'member-1',
-      organizationId: VALID_ORG_ID,
-      userId: 'user-1',
-      role: 'EDITOR',
-    });
+    // pool.query for org existence check
+    mockPoolQuery.mockResolvedValueOnce({ rows: [{ id: VALID_ORG_ID }] });
+    // client.query calls: BEGIN, set_config x2, membership query, COMMIT
+    mockClientQuery
+      .mockResolvedValueOnce({}) // BEGIN READ ONLY
+      .mockResolvedValueOnce({}) // set_config app.current_org
+      .mockResolvedValueOnce({}) // set_config app.user_id
+      .mockResolvedValueOnce({ rows: [{ role: 'EDITOR' }] }) // membership found
+      .mockResolvedValueOnce({}); // COMMIT
 
     const response = await app.inject({
       method: 'GET',
@@ -168,5 +194,27 @@ describe('org-context plugin', () => {
     const body = response.json();
     expect(body.authContext.orgId).toBe(VALID_ORG_ID);
     expect(body.authContext.role).toBe('EDITOR');
+    expect(mockClientRelease).toHaveBeenCalled();
+  });
+
+  it('returns 500 when membership bootstrap DB query fails', async () => {
+    // pool.query for org existence check — succeeds
+    mockPoolQuery.mockResolvedValueOnce({ rows: [{ id: VALID_ORG_ID }] });
+    // client.query: BEGIN succeeds, then set_config throws DB error
+    mockClientQuery
+      .mockResolvedValueOnce({}) // BEGIN READ ONLY
+      .mockRejectedValueOnce(new Error('connection reset')); // set_config fails
+
+    const response = await app.inject({
+      method: 'GET',
+      url: '/test',
+      headers: {
+        'x-test-user-id': 'user-1',
+        'x-organization-id': VALID_ORG_ID,
+      },
+    });
+    // DB errors should propagate as 500, not be masked as 403
+    expect(response.statusCode).toBe(500);
+    expect(mockClientRelease).toHaveBeenCalled();
   });
 });
