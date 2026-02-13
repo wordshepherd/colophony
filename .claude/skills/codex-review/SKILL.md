@@ -79,7 +79,7 @@ Format your review as markdown:
 ```bash
 git fetch origin main
 
-export NVM_DIR="$HOME/.nvm" && [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh" && nvm use v20.20.0 > /dev/null 2>&1 && cd /home/dmahaffey/projects/prospector && codex review --base origin/main
+export NVM_DIR="$HOME/.nvm" && [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh" && nvm use v20.20.0 > /dev/null 2>&1 && cd /home/dmahaffey/projects/colophony && codex review --base origin/main
 ```
 
 **For diff review:**
@@ -101,7 +101,7 @@ If no changes at all, tell the user and exit.
 Then run:
 
 ```bash
-export NVM_DIR="$HOME/.nvm" && [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh" && nvm use v20.20.0 > /dev/null 2>&1 && cd /home/dmahaffey/projects/prospector && codex review --uncommitted
+export NVM_DIR="$HOME/.nvm" && [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh" && nvm use v20.20.0 > /dev/null 2>&1 && cd /home/dmahaffey/projects/colophony && codex review --uncommitted
 ```
 
 **For plan review:**
@@ -125,7 +125,7 @@ Check that referenced files exist, patterns match reality, and the approach is s
 <project rules prompt from Step 3>
 PROMPT_EOF
 
-export NVM_DIR="$HOME/.nvm" && [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh" && nvm use v20.20.0 > /dev/null 2>&1 && cd /home/dmahaffey/projects/prospector && codex exec -s read-only - < /tmp/codex-review-prompt.txt
+export NVM_DIR="$HOME/.nvm" && [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh" && nvm use v20.20.0 > /dev/null 2>&1 && cd /home/dmahaffey/projects/colophony && codex exec -s read-only - < /tmp/codex-review-prompt.txt
 ```
 
 **Important:** Run the codex command in the background using the Bash tool's `run_in_background` parameter. Set a timeout of 300000ms (5 minutes). Tell the user the review is running and check back on it periodically.

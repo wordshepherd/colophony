@@ -32,7 +32,7 @@ When the user invokes `/db-reset`:
 For dev database:
 
 ```bash
-cd /home/dmahaffey/projects/prospector/packages/db
+cd /home/dmahaffey/projects/colophony/packages/db
 
 # Drop all tables and re-run migrations
 pnpm drizzle-kit push --force
@@ -49,7 +49,7 @@ pnpm db:migrate
 For test database:
 
 ```bash
-cd /home/dmahaffey/projects/prospector/packages/db
+cd /home/dmahaffey/projects/colophony/packages/db
 
 # Drop and recreate test schema
 docker exec colophony-postgres-test psql -U test -d colophony_test -c "
