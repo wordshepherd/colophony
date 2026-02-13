@@ -163,6 +163,20 @@ describe('organizations tRPC router', () => {
         caller.organizations.create({ name: 'Test', slug: 'taken' }),
       ).rejects.toThrow('already taken');
     });
+
+    it('throws CONFLICT on unique constraint race (23505)', async () => {
+      mockService.isSlugAvailable.mockResolvedValueOnce(true);
+      const pgError = new Error(
+        'duplicate key value violates unique constraint',
+      );
+      (pgError as unknown as { code: string }).code = '23505';
+      mockService.create.mockRejectedValueOnce(pgError);
+
+      const caller = createCaller(authedContext());
+      await expect(
+        caller.organizations.create({ name: 'Test', slug: 'race' }),
+      ).rejects.toThrow('already taken');
+    });
   });
 
   describe('organizations.get', () => {
@@ -221,6 +235,13 @@ describe('organizations tRPC router', () => {
         slug: 'available',
       });
       expect(result).toEqual({ available: true });
+    });
+
+    it('rejects invalid slug format', async () => {
+      const caller = createCaller(authedContext());
+      await expect(
+        caller.organizations.checkSlug({ slug: 'UPPER_CASE!' }),
+      ).rejects.toThrow();
     });
   });
 

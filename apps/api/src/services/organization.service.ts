@@ -207,10 +207,10 @@ export const organizationService = {
    * Remove a member from the organization.
    * Atomically prevents removing the last admin using FOR UPDATE row locks.
    *
-   * Acquires FOR UPDATE locks on all ADMIN member rows in the current org,
-   * then checks the count. This prevents concurrent requests from both
-   * observing count=2 and both deleting an admin, which would leave the
-   * org with zero admins.
+   * When the target member is an ADMIN, locks all ADMIN rows in the same org
+   * with FOR UPDATE before checking the count. This serializes concurrent
+   * last-admin removal attempts within the same org, preventing both from
+   * seeing count=2 and proceeding.
    */
   async removeMember(tx: DrizzleDb, memberId: string) {
     // First, fetch the member to check if they're an admin
@@ -223,13 +223,13 @@ export const organizationService = {
     if (!member) return null;
 
     if (member.role === 'ADMIN') {
-      // Lock all admin rows with FOR UPDATE and count them atomically.
-      // This serializes concurrent last-admin checks within the same org.
-      const result = await tx.execute<{ admin_count: number }>(
-        sql`SELECT count(*)::int AS admin_count FROM organization_members WHERE role = 'ADMIN' FOR UPDATE`,
+      // Lock all admin rows in this org with FOR UPDATE and count them.
+      // FOR UPDATE cannot be used with aggregates, so we select individual
+      // rows and count in application code.
+      const adminRows = await tx.execute<{ id: string }>(
+        sql`SELECT id FROM organization_members WHERE organization_id = ${member.organizationId} AND role = 'ADMIN' FOR UPDATE`,
       );
-      const adminCount = result.rows[0]?.admin_count ?? 0;
-      if (adminCount <= 1) {
+      if (adminRows.rows.length <= 1) {
         throw new LastAdminError();
       }
     }

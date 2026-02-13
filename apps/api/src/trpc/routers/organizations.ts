@@ -6,6 +6,7 @@ import {
   inviteMemberSchema,
   updateMemberRoleSchema,
   paginationSchema,
+  checkSlugSchema,
   AuditActions,
   AuditResources,
 } from '@prospector/types';
@@ -118,6 +119,7 @@ export const organizationsRouter = createRouter({
   create: authedProcedure
     .input(createOrganizationSchema)
     .mutation(async ({ ctx, input }) => {
+      // Pre-check is a UX optimization; the unique constraint is the real safety net.
       const available = await organizationService.isSlugAvailable(input.slug);
       if (!available) {
         throw new TRPCError({
@@ -125,12 +127,34 @@ export const organizationsRouter = createRouter({
           message: `Slug "${input.slug}" is already taken`,
         });
       }
-      const result = await organizationService.create(
-        input,
-        ctx.authContext.userId,
-      );
-      // Audit with null org context (org didn't exist when hooks ran).
-      // The audit INSERT policy allows organization_id IS NULL.
+
+      let result;
+      try {
+        result = await organizationService.create(
+          input,
+          ctx.authContext.userId,
+        );
+      } catch (e) {
+        // Catch unique constraint violation on slug (race between pre-check and insert)
+        if (
+          e instanceof Error &&
+          'code' in e &&
+          (e as { code: string }).code === '23505'
+        ) {
+          throw new TRPCError({
+            code: 'CONFLICT',
+            message: `Slug "${input.slug}" is already taken`,
+          });
+        }
+        throw e;
+      }
+
+      // Atomicity note: create() commits org+membership in its own transaction
+      // (necessary because no org context exists yet for RLS). Audit runs in the
+      // request's separate transaction. If audit fails, org is committed but the
+      // request errors. This is acceptable: audit failure on CREATE is extremely
+      // unlikely, and the failure mode is recoverable (org exists, audit can be
+      // replayed). This is the same class of issue as Stripe charge-then-record.
       await ctx.audit({
         action: AuditActions.ORG_CREATED,
         resource: AuditResources.ORGANIZATION,
@@ -182,12 +206,10 @@ export const organizationsRouter = createRouter({
       return updated;
     }),
 
-  checkSlug: authedProcedure
-    .input(z.object({ slug: z.string().min(3).max(63) }))
-    .query(async ({ input }) => {
-      const available = await organizationService.isSlugAvailable(input.slug);
-      return { available };
-    }),
+  checkSlug: authedProcedure.input(checkSlugSchema).query(async ({ input }) => {
+    const available = await organizationService.isSlugAvailable(input.slug);
+    return { available };
+  }),
 
   members: membersRouter,
 });
