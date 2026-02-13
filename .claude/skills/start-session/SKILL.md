@@ -109,13 +109,14 @@ git branch -D "<branch-name>"
 
 Note: Use `-D` (force delete) because squash-merged branches are not recognized as `--merged` by git.
 
-If the **current branch** has upstream `[gone]` (you're on a merged feature branch), switch to `main` first:
+If the **current branch** has upstream `[gone]` (you're on a merged feature branch), switch to `main` first, then delete it:
 
 ```bash
 git checkout main && git pull origin main
+git branch -D "<previous-branch-name>"
 ```
 
-Then delete the stale branch. Report what was cleaned up in the briefing.
+Report what was cleaned up in the briefing.
 
 If no stale branches are found, skip this step silently.
 
