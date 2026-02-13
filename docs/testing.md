@@ -17,6 +17,9 @@ pnpm test:watch
 # Coverage report
 pnpm test:cov
 
+# RLS integration tests (70 tests, requires postgres-test container)
+pnpm --filter @colophony/api test:rls
+
 # API E2E tests (65 tests, requires docker-compose up)
 pnpm test:e2e
 
@@ -38,12 +41,13 @@ pnpm --filter @prospector/web test:e2e:ui
 
 ## Current Test Status
 
-**392 tests passing** across 4 tiers:
+**462 tests passing** across 5 tiers:
 
 | Tier                   | Count | Suites | Location                                 |
 | ---------------------- | ----- | ------ | ---------------------------------------- |
 | API unit tests         | 191   | 13     | `apps/api/test/unit/`                    |
 | Web unit tests         | 117   | 13     | `apps/web/src/**/__tests__/`             |
+| RLS integration tests  | 70    | 6      | `apps/api/src/__tests__/rls/`            |
 | API E2E tests          | 65    | 5      | `apps/api/test/e2e/` + `app.e2e-spec.ts` |
 | Playwright browser E2E | 19    | 3      | `apps/web/e2e/`                          |
 
@@ -168,27 +172,48 @@ The `playwright.config.ts` `webServer` config can auto-start API and Web dev ser
 
 ### RLS Integration Tests
 
-**Location:** `apps/api/test/integration/rls.spec.ts`
+**Location:** `apps/api/src/__tests__/rls/` (6 test files, 70 tests)
 
-Uses the **dual-client pattern** to test actual PostgreSQL RLS enforcement:
+Uses the **dual-client pattern** with Drizzle ORM + raw `pg` pools to test actual PostgreSQL RLS enforcement:
 
 ```typescript
-// Admin client (superuser) - for test data setup/teardown
-const adminPrisma = new PrismaClient({
-  datasources: {
-    db: { url: "postgresql://test:test@localhost:5433/prospector_test" },
-  },
+// Admin pool (superuser) - for test data setup/teardown (bypasses RLS)
+const adminPool = new Pool({
+  connectionString: "postgresql://test:test@localhost:5433/prospector_test",
 });
 
-// App client (non-superuser) - for RLS-enforced operations
-const appPrisma = new PrismaClient({
-  datasources: {
-    db: {
-      url: "postgresql://app_user:app_password@localhost:5433/prospector_test",
-    },
-  },
+// App pool (non-superuser, NOSUPERUSER NOBYPASSRLS) - for RLS-enforced queries
+const appPool = new Pool({
+  connectionString:
+    "postgresql://app_user:app_password@localhost:5433/prospector_test",
 });
 ```
+
+**Test files:**
+
+| File                             | Tests | Coverage                                                     |
+| -------------------------------- | ----- | ------------------------------------------------------------ |
+| `rls-infrastructure.test.ts`     | 14    | FORCE RLS, role security, GUC functions, policy existence    |
+| `rls-direct-isolation.test.ts`   | 12    | submissions, submission_periods, payments, org_members       |
+| `rls-indirect-isolation.test.ts` | 8     | submission_files, submission_history (subquery policies)     |
+| `rls-nullable-isolation.test.ts` | 9     | audit_events, retention_policies, user_consents              |
+| `rls-write-prevention.test.ts`   | 12    | Cross-org INSERT/UPDATE/DELETE with SQLSTATE 42501           |
+| `rls-no-context.test.ts`         | 15    | Empty context behavior (0 rows strict, global-only nullable) |
+
+**Running:**
+
+```bash
+# Requires postgres-test container
+docker compose up -d postgres-test
+pnpm --filter @colophony/api test:rls
+```
+
+**Key design:**
+
+- Dedicated `vitest.config.rls.ts` with `singleFork: true` (sequential execution, shared pools)
+- Excluded from default `pnpm test` to avoid failures without Docker
+- `globalSetup()` creates `app_user` role portably (works in CI and locally)
+- Faker-based factories prevent collision errors in watch mode
 
 ---
 

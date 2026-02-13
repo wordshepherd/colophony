@@ -182,6 +182,46 @@ jobs:
   #         REDIS_PORT: 6379
 
   # ──────────────────────────────────────────────────
+  # RLS integration tests (~3 min): needs Postgres
+  # ──────────────────────────────────────────────────
+  rls-tests:
+    name: RLS Integration Tests
+    needs: changes
+    if: needs.changes.outputs.docs_only != 'true'
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: prospector_test
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd "pg_isready -U test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v6
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+      - uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+      - run: pnpm install --frozen-lockfile
+      - name: Build workspace dependencies
+        run: pnpm turbo run build --filter=@colophony/db --filter=@prospector/types
+      - name: Run RLS integration tests
+        run: pnpm --filter @colophony/api test:rls
+        env:
+          DATABASE_TEST_URL: postgresql://test:test@localhost:5433/prospector_test
+          DATABASE_APP_URL: postgresql://app_user:app_password@localhost:5433/prospector_test
+
+  # ──────────────────────────────────────────────────
   # Build verification (~2 min)
   # ──────────────────────────────────────────────────
   build:

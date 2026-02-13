@@ -1,0 +1,303 @@
+import { describe, it, expect, beforeAll } from 'vitest';
+import { globalSetup, getAdminPool, getAppPool } from './helpers/db-setup';
+
+const RLS_TABLES = [
+  'organization_members',
+  'submission_periods',
+  'submissions',
+  'submission_files',
+  'submission_history',
+  'payments',
+  'audit_events',
+  'retention_policies',
+  'user_consents',
+];
+
+const NON_RLS_TABLES = [
+  'organizations',
+  'users',
+  'dsar_requests',
+  'stripe_webhook_events',
+  'outbox_events',
+  'zitadel_webhook_events',
+];
+
+describe('RLS Infrastructure', () => {
+  beforeAll(async () => {
+    await globalSetup();
+  });
+
+  // No teardown — pools are shared across test files (singleFork mode)
+
+  describe('Row-level security enabled', () => {
+    it('should have relrowsecurity = true on all 9 RLS tables', async () => {
+      const admin = getAdminPool();
+      const { rows } = await admin.query<{
+        relname: string;
+        relrowsecurity: boolean;
+      }>(
+        `
+        SELECT relname, relrowsecurity
+        FROM pg_class
+        WHERE relname = ANY($1)
+      `,
+        [RLS_TABLES],
+      );
+
+      expect(rows).toHaveLength(RLS_TABLES.length);
+      for (const row of rows) {
+        expect(
+          row.relrowsecurity,
+          `${row.relname} should have RLS enabled`,
+        ).toBe(true);
+      }
+    });
+
+    it('should have relforcerowsecurity = true on all 9 RLS tables', async () => {
+      const admin = getAdminPool();
+      const { rows } = await admin.query<{
+        relname: string;
+        relforcerowsecurity: boolean;
+      }>(
+        `
+        SELECT relname, relforcerowsecurity
+        FROM pg_class
+        WHERE relname = ANY($1)
+      `,
+        [RLS_TABLES],
+      );
+
+      expect(rows).toHaveLength(RLS_TABLES.length);
+      for (const row of rows) {
+        expect(
+          row.relforcerowsecurity,
+          `${row.relname} should have FORCE RLS`,
+        ).toBe(true);
+      }
+    });
+  });
+
+  describe('Non-RLS tables', () => {
+    it('should NOT have FORCE RLS on non-RLS tables', async () => {
+      const admin = getAdminPool();
+      const { rows } = await admin.query<{
+        relname: string;
+        relforcerowsecurity: boolean;
+      }>(
+        `
+        SELECT relname, relforcerowsecurity
+        FROM pg_class
+        WHERE relname = ANY($1)
+      `,
+        [NON_RLS_TABLES],
+      );
+
+      for (const row of rows) {
+        expect(
+          row.relforcerowsecurity,
+          `${row.relname} should NOT have FORCE RLS`,
+        ).toBe(false);
+      }
+    });
+  });
+
+  describe('app_user role', () => {
+    it('should be NOSUPERUSER', async () => {
+      const admin = getAdminPool();
+      const { rows } = await admin.query<{ usesuper: boolean }>(
+        "SELECT usesuper FROM pg_user WHERE usename = 'app_user'",
+      );
+      expect(rows).toHaveLength(1);
+      expect(rows[0].usesuper).toBe(false);
+    });
+
+    it('should be NOBYPASSRLS', async () => {
+      const admin = getAdminPool();
+      const { rows } = await admin.query<{ rolbypassrls: boolean }>(
+        "SELECT rolbypassrls FROM pg_roles WHERE rolname = 'app_user'",
+      );
+      expect(rows).toHaveLength(1);
+      expect(rows[0].rolbypassrls).toBe(false);
+    });
+
+    it('should have DML permissions on all RLS tables', async () => {
+      const admin = getAdminPool();
+      for (const table of RLS_TABLES) {
+        const { rows } = await admin.query<{ has_priv: boolean }>(
+          `
+          SELECT has_table_privilege('app_user', $1, 'SELECT, INSERT, UPDATE, DELETE') as has_priv
+        `,
+          [table],
+        );
+        expect(rows[0].has_priv, `app_user should have DML on ${table}`).toBe(
+          true,
+        );
+      }
+    });
+  });
+
+  describe('RLS context functions', () => {
+    it('current_org_id() returns NULL without context', async () => {
+      const app = getAppPool();
+      const client = await app.connect();
+      try {
+        const { rows } = await client.query(
+          'SELECT current_org_id() as org_id',
+        );
+        expect(rows[0].org_id).toBeNull();
+      } finally {
+        client.release();
+      }
+    });
+
+    it('current_org_id() returns UUID when set', async () => {
+      const app = getAppPool();
+      const client = await app.connect();
+      try {
+        await client.query('BEGIN');
+        const testId = 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11';
+        await client.query("SELECT set_config('app.current_org', $1, true)", [
+          testId,
+        ]);
+        const { rows } = await client.query(
+          'SELECT current_org_id() as org_id',
+        );
+        expect(rows[0].org_id).toBe(testId);
+        await client.query('ROLLBACK');
+      } finally {
+        client.release();
+      }
+    });
+
+    it('current_user_id() returns NULL without context', async () => {
+      const app = getAppPool();
+      const client = await app.connect();
+      try {
+        const { rows } = await client.query(
+          'SELECT current_user_id() as user_id',
+        );
+        expect(rows[0].user_id).toBeNull();
+      } finally {
+        client.release();
+      }
+    });
+
+    it('current_user_id() returns UUID when set', async () => {
+      const app = getAppPool();
+      const client = await app.connect();
+      try {
+        await client.query('BEGIN');
+        const testId = 'b0eebc99-9c0b-4ef8-bb6d-6bb9bd380a22';
+        await client.query("SELECT set_config('app.user_id', $1, true)", [
+          testId,
+        ]);
+        const { rows } = await client.query(
+          'SELECT current_user_id() as user_id',
+        );
+        expect(rows[0].user_id).toBe(testId);
+        await client.query('ROLLBACK');
+      } finally {
+        client.release();
+      }
+    });
+  });
+
+  describe('RLS policies exist', () => {
+    it('should have policies on each RLS table', async () => {
+      const admin = getAdminPool();
+      const { rows } = await admin.query<{
+        tablename: string;
+        policyname: string;
+      }>(
+        `
+        SELECT tablename, policyname
+        FROM pg_policies
+        WHERE schemaname = 'public'
+          AND tablename = ANY($1)
+        ORDER BY tablename, policyname
+      `,
+        [RLS_TABLES],
+      );
+
+      const tablesWithPolicies = new Set(rows.map((r) => r.tablename));
+      for (const table of RLS_TABLES) {
+        expect(
+          tablesWithPolicies.has(table),
+          `${table} should have at least one policy`,
+        ).toBe(true);
+      }
+    });
+
+    it('direct isolation policies reference current_org_id()', async () => {
+      const admin = getAdminPool();
+      const directTables = ['submissions', 'submission_periods', 'payments'];
+      const { rows } = await admin.query<{
+        tablename: string;
+        qual: string;
+      }>(
+        `
+        SELECT tablename, qual
+        FROM pg_policies
+        WHERE schemaname = 'public'
+          AND tablename = ANY($1)
+      `,
+        [directTables],
+      );
+
+      for (const row of rows) {
+        expect(
+          row.qual,
+          `${row.tablename} policy should reference current_org_id()`,
+        ).toContain('current_org_id()');
+      }
+    });
+
+    it('organization_members has separate SELECT and ALL policies', async () => {
+      const admin = getAdminPool();
+      const { rows } = await admin.query<{
+        policyname: string;
+        cmd: string;
+      }>(
+        `
+        SELECT policyname, cmd
+        FROM pg_policies
+        WHERE schemaname = 'public'
+          AND tablename = 'organization_members'
+        ORDER BY policyname
+      `,
+      );
+
+      const cmds = rows.map((r) => r.cmd);
+      expect(cmds).toContain('SELECT');
+      expect(cmds).toContain('ALL');
+    });
+
+    it('nullable policies include IS NULL check', async () => {
+      const admin = getAdminPool();
+      const nullableTables = [
+        'audit_events',
+        'retention_policies',
+        'user_consents',
+      ];
+      const { rows } = await admin.query<{
+        tablename: string;
+        qual: string;
+      }>(
+        `
+        SELECT tablename, qual
+        FROM pg_policies
+        WHERE schemaname = 'public'
+          AND tablename = ANY($1)
+      `,
+        [nullableTables],
+      );
+
+      for (const row of rows) {
+        expect(
+          row.qual,
+          `${row.tablename} policy should include IS NULL`,
+        ).toContain('IS NULL');
+      }
+    });
+  });
+});
