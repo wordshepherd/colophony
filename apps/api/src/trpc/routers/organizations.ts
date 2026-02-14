@@ -51,6 +51,12 @@ const membersRouter = createRouter({
             message: e.message,
           });
         }
+        if ((e as { code?: string }).code === '23505') {
+          throw new TRPCError({
+            code: 'CONFLICT',
+            message: 'User is already a member of this organization',
+          });
+        }
         throw e;
       }
     }),

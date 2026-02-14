@@ -42,7 +42,7 @@ export const organizationMemberSchema = z.object({
   userId: z.string().uuid(),
   email: z.string().email(),
   role: roleSchema,
-  joinedAt: z.date(),
+  createdAt: z.date(),
 });
 
 export type OrganizationMember = z.infer<typeof organizationMemberSchema>;
