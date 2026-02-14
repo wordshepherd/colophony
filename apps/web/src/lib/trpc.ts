@@ -1,6 +1,6 @@
 import { createTRPCReact } from "@trpc/react-query";
 import { httpBatchLink } from "@trpc/client";
-import type { AppRouter } from "@colophony/api/trpc/router";
+import type { AppRouter } from "@colophony/api/trpc/client-types";
 
 /**
  * tRPC React client
