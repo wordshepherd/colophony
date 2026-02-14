@@ -31,7 +31,6 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
-import type { Role } from "@colophony/types";
 
 const formSchema = z.object({
   email: z.string().email("Invalid email address"),
