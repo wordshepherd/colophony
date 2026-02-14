@@ -2,16 +2,17 @@
 
 ## Key Paths
 
-| What             | Path                              |
-| ---------------- | --------------------------------- |
-| App entry        | `src/main.ts`                     |
-| Env config (Zod) | `src/config/env.ts`               |
-| Fastify hooks    | `src/hooks/`                      |
-| Service layer    | `src/services/`                   |
-| tRPC router      | `src/trpc/router.ts`              |
-| tRPC init        | `src/trpc/init.ts`                |
-| tRPC context     | `src/trpc/context.ts`             |
-| Zitadel webhook  | `src/webhooks/zitadel.webhook.ts` |
+| What              | Path                              |
+| ----------------- | --------------------------------- |
+| App entry         | `src/main.ts`                     |
+| Env config (Zod)  | `src/config/env.ts`               |
+| Fastify hooks     | `src/hooks/`                      |
+| Service layer     | `src/services/`                   |
+| tRPC router       | `src/trpc/router.ts`              |
+| tRPC client types | `src/trpc/client-types.ts`        |
+| tRPC init         | `src/trpc/init.ts`                |
+| tRPC context      | `src/trpc/context.ts`             |
+| Zitadel webhook   | `src/webhooks/zitadel.webhook.ts` |
 
 ---
 
@@ -98,12 +99,12 @@ When built: check processed status in `stripe_webhook_events` table before handl
 
 ## Quirks
 
-| Quirk                                 | Details                                                                                                                                                                                                                   |
-| ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Zitadel webhook signatures**        | Verify `x-zitadel-signature` header on all webhook payloads. Use shared secret from Zitadel Actions config                                                                                                                |
-| **BullMQ Redis password**             | Uses `REDIS_HOST`/`REDIS_PORT`/`REDIS_PASSWORD` (not `REDIS_URL`). Pass password in worker/queue config                                                                                                                   |
-| **tRPC TS2742 under NodeNext**        | `typeof appRouter` can't be named without internal `@trpc/server/dist/core/router` reference. Workaround: `declaration: false` in API tsconfig. Web app resolves `AppRouter` via source path aliases (bundler resolution) |
-| **`@fastify/raw-body` doesn't exist** | Official `@fastify/` scoped package not published on npm. Use `fastify-raw-body` (community package, v5.0.0 for Fastify 5)                                                                                                |
+| Quirk                                 | Details                                                                                                                                                                                                                                                                                                                  |
+| ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Zitadel webhook signatures**        | Verify `x-zitadel-signature` header on all webhook payloads. Use shared secret from Zitadel Actions config                                                                                                                                                                                                               |
+| **BullMQ Redis password**             | Uses `REDIS_HOST`/`REDIS_PORT`/`REDIS_PASSWORD` (not `REDIS_URL`). Pass password in worker/queue config                                                                                                                                                                                                                  |
+| **tRPC TS2742 under NodeNext**        | `typeof appRouter` can't be named without internal `@trpc/server/dist/core/router` reference. Workaround: `declaration: false` in API tsconfig. Web app resolves `AppRouter` via source path alias pointing to `src/trpc/client-types.ts` (bundler resolution). All web-facing type exports go through `client-types.ts` |
+| **`@fastify/raw-body` doesn't exist** | Official `@fastify/` scoped package not published on npm. Use `fastify-raw-body` (community package, v5.0.0 for Fastify 5)                                                                                                                                                                                               |
 
 ## Version Pins
 

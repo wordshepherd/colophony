@@ -21,7 +21,7 @@
     ],
     "paths": {
       "@/*": ["./src/*"],
-      "@colophony/api/*": ["../api/src/*"]
+      "@colophony/api/trpc/client-types": ["../api/src/trpc/client-types.ts"]
     }
   },
   "include": [
