@@ -32,7 +32,7 @@ export type ZitadelEventType = z.infer<typeof zitadelEventTypeSchema>;
 
 export const zitadelWebhookUserSchema = z
   .object({
-    userId: z.string().min(1),
+    userId: z.string().optional(),
     username: z.string().optional(),
     email: z.string().optional(),
     emailVerified: z.boolean().optional(),
@@ -46,7 +46,7 @@ export const zitadelWebhookPayloadSchema = z
   .object({
     eventType: z.string().min(1),
     eventId: z.string().min(1),
-    creationDate: z.string(),
+    creationDate: z.string().min(1),
     user: zitadelWebhookUserSchema.optional(),
   })
   .passthrough();
