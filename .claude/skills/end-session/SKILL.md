@@ -110,16 +110,21 @@ If today already has a DEVLOG entry for this session's work, **append to the exi
 
 Search the codebase for any `TODO(CLAUDE.md)` comments added during this session using the Grep tool (not bash) to search for `TODO(CLAUDE.md)` in `*.ts`, `*.tsx`, and `*.js` files.
 
-Also review the session for any new patterns, quirks, or constraints discovered. Check whether any of these need updates:
+Also review the session for any new patterns, quirks, or constraints discovered. Check whether any of these CLAUDE.md files need updates:
 
-- `CLAUDE.md` — Known Quirks, Security Status checklist, Version Pins
+- `CLAUDE.md` (root) — Known Quirks, Security Status checklist, Version Pins, Key File Locations
+- `packages/db/CLAUDE.md` — RLS rules, schema files, migration workflow
+- `apps/api/CLAUDE.md` — Key Paths, hook chain, tRPC procedures, quirks
+- `apps/web/CLAUDE.md` — tRPC client, providers, conventions, quirks
 - `docs/testing.md` — test counts, new test tiers, running instructions
 - Other docs referenced in the session
+
+Domain-specific discoveries should go in the relevant per-directory CLAUDE.md, not the root. The root file covers cross-cutting concerns only.
 
 If updates are warranted, propose them:
 
 ```markdown
-## Suggested Update for CLAUDE.md
+## Suggested Update for [file path]
 
 **Section**: [section name]
 **Addition**: [new content]

@@ -19,7 +19,7 @@
 export const trpc = createTRPCReact<AppRouter>();
 ```
 
-- `AppRouter` type imported via source path alias: `@colophony/api/trpc/router` (bundler resolution, not `.d.ts`)
+- `AppRouter` type imported via source path alias: `@colophony/api/trpc/client-types` (bundler resolution, not `.d.ts`). This is the only allowed import from `@colophony/api` — enforced by ESLint `no-restricted-imports`
 - `httpBatchLink` to `${NEXT_PUBLIC_API_URL}/trpc`
 - Headers: `Authorization: Bearer <token>` + `x-organization-id` from localStorage
 - Token sourced from `oidc-client-ts` `UserManager` (async `getUser()`)

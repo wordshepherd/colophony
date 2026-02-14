@@ -18,7 +18,9 @@ const config: Config = {
           isolatedModules: true,
           paths: {
             "@/*": ["./src/*"],
-            "@colophony/api/*": ["../api/src/*"],
+            "@colophony/api/trpc/client-types": [
+              "../api/src/trpc/client-types.ts",
+            ],
           },
         },
       },
@@ -26,6 +28,8 @@ const config: Config = {
   },
   moduleNameMapper: {
     "^@/(.*)$": "<rootDir>/src/$1",
+    "^@colophony/api/trpc/client-types$":
+      "<rootDir>/../api/src/trpc/client-types.ts",
     "^@colophony/types$": "<rootDir>/../../packages/types/src/index.ts",
     "^@colophony/types/(.*)$": "<rootDir>/../../packages/types/src/$1",
   },

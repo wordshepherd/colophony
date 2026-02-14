@@ -14,6 +14,22 @@ const eslintConfig = [
   {
     ignores: [".next/**", "out/**", "build/**", "tailwind.config.js", "postcss.config.js", "next-env.d.ts"],
   },
+  {
+    rules: {
+      "no-restricted-imports": ["error", {
+        patterns: [{
+          group: ["@colophony/api/**"],
+          message: "Import types from @colophony/api/trpc/client-types only (via src/lib/trpc.ts).",
+        }],
+      }],
+    },
+  },
+  {
+    files: ["src/lib/trpc.ts"],
+    rules: {
+      "no-restricted-imports": "off",
+    },
+  },
 ];
 
 export default eslintConfig;
