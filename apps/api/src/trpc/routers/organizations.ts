@@ -96,24 +96,34 @@ const membersRouter = createRouter({
   updateRole: adminProcedure
     .input(updateMemberRoleSchema)
     .mutation(async ({ ctx, input }) => {
-      const updated = await organizationService.updateMemberRole(
-        ctx.dbTx,
-        input.memberId,
-        input.role,
-      );
-      if (!updated) {
-        throw new TRPCError({
-          code: 'NOT_FOUND',
-          message: 'Member not found',
+      try {
+        const updated = await organizationService.updateMemberRole(
+          ctx.dbTx,
+          input.memberId,
+          input.role,
+        );
+        if (!updated) {
+          throw new TRPCError({
+            code: 'NOT_FOUND',
+            message: 'Member not found',
+          });
+        }
+        await ctx.audit({
+          action: AuditActions.ORG_MEMBER_ROLE_CHANGED,
+          resource: AuditResources.ORGANIZATION,
+          resourceId: updated.id,
+          newValue: { role: input.role },
         });
+        return updated;
+      } catch (e) {
+        if (e instanceof LastAdminError) {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: e.message,
+          });
+        }
+        throw e;
       }
-      await ctx.audit({
-        action: AuditActions.ORG_MEMBER_ROLE_CHANGED,
-        resource: AuditResources.ORGANIZATION,
-        resourceId: updated.id,
-        newValue: { role: input.role },
-      });
-      return updated;
     }),
 });
 

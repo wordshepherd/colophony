@@ -60,6 +60,7 @@ export function MemberList() {
   const updateRoleMutation = trpc.organizations.members.updateRole.useMutation({
     onSuccess: () => {
       utils.organizations.members.list.invalidate();
+      utils.users.me.invalidate();
       toast.success("Role updated");
     },
     onError: (err) => {
@@ -70,6 +71,7 @@ export function MemberList() {
   const removeMutation = trpc.organizations.members.remove.useMutation({
     onSuccess: () => {
       utils.organizations.members.list.invalidate();
+      utils.users.me.invalidate();
       toast.success("Member removed");
       setRemovingMember(null);
     },
