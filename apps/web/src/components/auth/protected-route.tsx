@@ -37,8 +37,7 @@ export function ProtectedRoute({
 
     // Organization required but user has none
     if (requireOrganization && !hasOrganizations) {
-      // TODO: Redirect to org creation or onboarding
-      router.push("/dashboard?no-org=true");
+      router.push("/organizations/new");
       return;
     }
 

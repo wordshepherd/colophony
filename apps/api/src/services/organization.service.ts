@@ -245,6 +245,24 @@ export const organizationService = {
    * Update a member's role.
    */
   async updateMemberRole(tx: DrizzleDb, memberId: string, role: Role) {
+    // If demoting an admin, check they aren't the last one
+    if (role !== 'ADMIN') {
+      const [member] = await tx
+        .select()
+        .from(organizationMembers)
+        .where(eq(organizationMembers.id, memberId))
+        .limit(1);
+
+      if (member?.role === 'ADMIN') {
+        const adminRows = await tx.execute<{ id: string }>(
+          sql`SELECT id FROM organization_members WHERE organization_id = ${member.organizationId} AND role = 'ADMIN' FOR UPDATE`,
+        );
+        if (adminRows.rows.length <= 1) {
+          throw new LastAdminError();
+        }
+      }
+    }
+
     const [updated] = await tx
       .update(organizationMembers)
       .set({ role, updatedAt: new Date() })
