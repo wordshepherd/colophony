@@ -95,7 +95,7 @@ export function useFileUpload({
             submissionId,
           },
           headers: {
-            Authorization: `Bearer ${getAccessToken()}`,
+            Authorization: `Bearer ${await getAccessToken()}`,
           },
           onProgress: (bytesUploaded, bytesTotal) => {
             const progress = Math.round((bytesUploaded / bytesTotal) * 100);

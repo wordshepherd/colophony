@@ -19,22 +19,11 @@ function getBaseUrl() {
 }
 
 /**
- * Storage keys for auth/org data
+ * Storage keys for org data
  */
 export const STORAGE_KEYS = {
-  ACCESS_TOKEN: "accessToken",
-  REFRESH_TOKEN: "refreshToken",
   CURRENT_ORG_ID: "currentOrgId",
-  TOKEN_EXPIRES_AT: "tokenExpiresAt",
 } as const;
-
-/**
- * Get stored auth token
- */
-export function getAccessToken(): string | null {
-  if (typeof window === "undefined") return null;
-  return localStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN);
-}
 
 /**
  * Get current organization ID
@@ -57,6 +46,19 @@ export function setCurrentOrgId(orgId: string | null): void {
 }
 
 /**
+ * Get access token from OIDC UserManager.
+ * Uses dynamic import to avoid SSR issues with oidc-client-ts.
+ */
+export async function getAccessToken(): Promise<string | null> {
+  if (typeof window === "undefined") return null;
+  const { getUserManager } = await import("@/lib/oidc");
+  const userManager = getUserManager();
+  if (!userManager) return null;
+  const user = await userManager.getUser();
+  return user && !user.expired ? user.access_token : null;
+}
+
+/**
  * tRPC client configuration
  */
 export function getTrpcClient() {
@@ -70,8 +72,8 @@ export function getTrpcClient() {
             credentials: "include",
           });
         },
-        headers() {
-          const token = getAccessToken();
+        async headers() {
+          const token = await getAccessToken();
           const orgId = getCurrentOrgId();
 
           const headers: Record<string, string> = {};

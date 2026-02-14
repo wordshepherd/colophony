@@ -21,9 +21,9 @@ export function useOrganization() {
   const organizations: Organization[] = useMemo(
     () =>
       user?.organizations?.map((m) => ({
-        id: m.organization.id,
-        name: m.organization.name,
-        slug: m.organization.slug,
+        id: m.organizationId,
+        name: m.name,
+        slug: m.slug,
         role: m.role,
       })) ?? [],
     [user?.organizations],

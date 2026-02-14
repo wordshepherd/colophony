@@ -8,14 +8,14 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 export default function DashboardPage() {
   const router = useRouter();
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, login } = useAuth();
   const { hasOrganizations } = useOrganization();
 
   useEffect(() => {
     if (isLoading) return;
 
     if (!isAuthenticated) {
-      router.push("/login");
+      login();
       return;
     }
 
@@ -23,7 +23,7 @@ export default function DashboardPage() {
     if (hasOrganizations) {
       router.push("/submissions");
     }
-  }, [isLoading, isAuthenticated, hasOrganizations, router]);
+  }, [isLoading, isAuthenticated, hasOrganizations, router, login]);
 
   if (isLoading) {
     return (
