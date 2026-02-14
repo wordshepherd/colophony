@@ -15,7 +15,7 @@ import {
 import { LogOut, Settings } from "lucide-react";
 
 export function UserMenu() {
-  const { user, logout, isLogoutLoading } = useAuth();
+  const { user, logout } = useAuth();
 
   if (!user) {
     return null;
@@ -61,11 +61,10 @@ export function UserMenu() {
         <DropdownMenuSeparator />
         <DropdownMenuItem
           onClick={() => logout()}
-          disabled={isLogoutLoading}
           className="cursor-pointer text-red-600 focus:text-red-600"
         >
           <LogOut className="mr-2 h-4 w-4" />
-          {isLogoutLoading ? "Signing out..." : "Sign out"}
+          Sign out
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

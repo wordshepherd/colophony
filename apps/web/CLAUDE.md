@@ -5,7 +5,7 @@
 | What           | Path                                      |
 | -------------- | ----------------------------------------- |
 | tRPC client    | `src/lib/trpc.ts`                         |
-| Auth utilities | `src/lib/auth.ts`                         |
+| OIDC client    | `src/lib/oidc.ts`                         |
 | Root providers | `src/components/providers.tsx`            |
 | ProtectedRoute | `src/components/auth/protected-route.tsx` |
 | Hooks          | `src/hooks/`                              |
@@ -22,6 +22,7 @@ export const trpc = createTRPCReact<AppRouter>();
 - `AppRouter` type imported via source path alias: `@colophony/api/trpc/router` (bundler resolution, not `.d.ts`)
 - `httpBatchLink` to `${NEXT_PUBLIC_API_URL}/trpc`
 - Headers: `Authorization: Bearer <token>` + `x-organization-id` from localStorage
+- Token sourced from `oidc-client-ts` `UserManager` (async `getUser()`)
 - `credentials: "include"` on fetch
 
 ---
@@ -37,19 +38,19 @@ QueryClient defaults:
 
 ---
 
-## Auth Utilities (`src/lib/auth.ts`)
+## OIDC Client (`src/lib/oidc.ts`)
 
-Token storage via `STORAGE_KEYS` constants (defined in `trpc.ts`):
+Zitadel OIDC Authorization Code flow with PKCE via `oidc-client-ts`:
 
-- `accessToken`, `refreshToken`, `tokenExpiresAt`, `currentOrgId`
+- `getUserManager()` — returns singleton `UserManager` (SSR-safe, returns `null` on server)
+- Config from `NEXT_PUBLIC_ZITADEL_AUTHORITY` and `NEXT_PUBLIC_ZITADEL_CLIENT_ID` env vars
+- `automaticSilentRenew: true` — uses refresh tokens from `offline_access` scope
+- Callback page: `src/app/auth/callback/page.tsx`
 
-Key functions:
+Key functions in `trpc.ts`:
 
-- `setAuthTokens(accessToken, refreshToken, expiresIn)` — stores tokens + calculates expiry
-- `clearAuthData()` — removes all auth keys from localStorage
-- `hasAuthTokens()` — checks if access token exists
-- `isTokenExpiringSoon()` — true if within 1 minute of expiry
-- `getAccessToken()`, `getCurrentOrgId()`, `setCurrentOrgId()` — in `trpc.ts`
+- `getAccessToken()` — async, reads from OIDC user manager
+- `getCurrentOrgId()`, `setCurrentOrgId()` — localStorage for org context
 
 ---
 

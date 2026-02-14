@@ -1,6 +1,5 @@
 import {
   STORAGE_KEYS,
-  getAccessToken,
   getCurrentOrgId,
   setCurrentOrgId,
   getTrpcClient,
@@ -13,21 +12,7 @@ describe("trpc utilities", () => {
 
   describe("STORAGE_KEYS", () => {
     it("should have correct key values", () => {
-      expect(STORAGE_KEYS.ACCESS_TOKEN).toBe("accessToken");
-      expect(STORAGE_KEYS.REFRESH_TOKEN).toBe("refreshToken");
       expect(STORAGE_KEYS.CURRENT_ORG_ID).toBe("currentOrgId");
-      expect(STORAGE_KEYS.TOKEN_EXPIRES_AT).toBe("tokenExpiresAt");
-    });
-  });
-
-  describe("getAccessToken", () => {
-    it("should return token when stored", () => {
-      localStorage.setItem("accessToken", "my-token");
-      expect(getAccessToken()).toBe("my-token");
-    });
-
-    it("should return null when no token", () => {
-      expect(getAccessToken()).toBeNull();
     });
   });
 
