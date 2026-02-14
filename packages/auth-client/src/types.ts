@@ -1,4 +1,5 @@
 import type { JWTPayload, JWTHeaderParameters } from "jose";
+import { z } from "zod";
 
 /** Configuration for the JWKS-based token verifier. */
 export interface JwksConfig {
@@ -18,29 +19,36 @@ export interface VerifiedToken {
   header: JWTHeaderParameters;
 }
 
-/** Zitadel webhook event types we handle. */
-export type ZitadelEventType =
-  | "user.created"
-  | "user.changed"
-  | "user.deactivated"
-  | "user.reactivated"
-  | "user.removed"
-  | "user.email.verified";
+/** Known Zitadel event types (for switch narrowing, NOT for parse validation). */
+export const zitadelEventTypeSchema = z.enum([
+  "user.created",
+  "user.changed",
+  "user.deactivated",
+  "user.reactivated",
+  "user.removed",
+  "user.email.verified",
+]);
+export type ZitadelEventType = z.infer<typeof zitadelEventTypeSchema>;
 
-/** Shape of a Zitadel webhook payload. */
-export interface ZitadelWebhookPayload {
-  eventType: ZitadelEventType;
-  /** Unique event ID for idempotency. */
-  eventId: string;
-  /** Timestamp of the event in Zitadel. */
-  creationDate: string;
-  /** The user affected by this event. */
-  user?: {
-    userId: string;
-    username?: string;
-    email?: string;
-    emailVerified?: boolean;
-    displayName?: string;
-  };
-  [key: string]: unknown;
-}
+export const zitadelWebhookUserSchema = z
+  .object({
+    userId: z.string().min(1),
+    username: z.string().optional(),
+    email: z.string().optional(),
+    emailVerified: z.boolean().optional(),
+    displayName: z.string().optional(),
+  })
+  .passthrough();
+
+/** eventType is z.string() (not z.enum) so unknown types pass validation
+ *  and reach the switch default case for logging + idempotency recording. */
+export const zitadelWebhookPayloadSchema = z
+  .object({
+    eventType: z.string().min(1),
+    eventId: z.string().min(1),
+    creationDate: z.string(),
+    user: zitadelWebhookUserSchema.optional(),
+  })
+  .passthrough();
+
+export type ZitadelWebhookPayload = z.infer<typeof zitadelWebhookPayloadSchema>;
