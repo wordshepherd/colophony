@@ -232,6 +232,7 @@ describe('Zitadel webhook handler', () => {
     });
     expect(response.statusCode).toBe(200);
     expect(response.json().status).toBe('already_processed');
+    expect(mockClientRelease).toHaveBeenCalledOnce();
   });
 
   it('rejects invalid payload (missing eventId)', async () => {
@@ -249,6 +250,94 @@ describe('Zitadel webhook handler', () => {
     });
     expect(response.statusCode).toBe(400);
     expect(response.json().error).toBe('invalid_payload');
+  });
+
+  it.each([
+    ['array', []],
+    ['string', 'not-json-object'],
+    ['number', 123],
+  ])('rejects non-object body (%s)', async (_label, payload) => {
+    const body = JSON.stringify(payload);
+    const sig = signPayload(body);
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/webhooks/zitadel',
+      headers: {
+        'content-type': 'application/json',
+        'x-zitadel-signature': sig,
+      },
+      payload: body,
+    });
+    expect(response.statusCode).toBe(400);
+    expect(response.json().error).toBe('invalid_payload');
+  });
+
+  it('rejects payload with empty eventType', async () => {
+    const body = JSON.stringify({
+      eventId: 'evt-empty-type',
+      eventType: '',
+      creationDate: new Date().toISOString(),
+    });
+    const sig = signPayload(body);
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/webhooks/zitadel',
+      headers: {
+        'content-type': 'application/json',
+        'x-zitadel-signature': sig,
+      },
+      payload: body,
+    });
+    expect(response.statusCode).toBe(400);
+    expect(response.json().error).toBe('invalid_payload');
+  });
+
+  it('accepts unknown eventType without user mutations or audit', async () => {
+    const body = JSON.stringify(
+      makePayload({ eventType: 'org.created', eventId: 'evt-unknown-type' }),
+    );
+    const sig = signPayload(body);
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/webhooks/zitadel',
+      headers: {
+        'content-type': 'application/json',
+        'x-zitadel-signature': sig,
+      },
+      payload: body,
+    });
+    expect(response.statusCode).toBe(200);
+    expect(response.json().status).toBe('processed');
+    expect(mockTxInsert).not.toHaveBeenCalled();
+    expect(mockTxUpdate).not.toHaveBeenCalled();
+    expect(mockAuditLog).not.toHaveBeenCalled();
+  });
+
+  it('accepts payload with no user field without mutations or audit', async () => {
+    const body = JSON.stringify({
+      eventId: 'evt-no-user',
+      eventType: 'user.created',
+      creationDate: new Date().toISOString(),
+    });
+    const sig = signPayload(body);
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/webhooks/zitadel',
+      headers: {
+        'content-type': 'application/json',
+        'x-zitadel-signature': sig,
+      },
+      payload: body,
+    });
+    expect(response.statusCode).toBe(200);
+    expect(response.json().status).toBe('processed');
+    expect(mockTxInsert).not.toHaveBeenCalled();
+    expect(mockTxUpdate).not.toHaveBeenCalled();
+    expect(mockAuditLog).not.toHaveBeenCalled();
   });
 
   it('logs audit event for user.created', async () => {

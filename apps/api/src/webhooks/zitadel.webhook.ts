@@ -1,6 +1,9 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { drizzle } from 'drizzle-orm/node-postgres';
-import { verifyZitadelSignature } from '@colophony/auth-client';
+import {
+  verifyZitadelSignature,
+  zitadelWebhookPayloadSchema,
+} from '@colophony/auth-client';
 import type { ZitadelWebhookPayload } from '@colophony/auth-client';
 import { eq, pool, users } from '@colophony/db';
 import type { DrizzleDb } from '@colophony/db';
@@ -68,11 +71,15 @@ export async function registerZitadelWebhooks(
         return reply.status(401).send({ error: 'invalid_signature' });
       }
 
-      const payload = request.body as ZitadelWebhookPayload;
-
-      if (!payload.eventId || !payload.eventType) {
+      const parsed = zitadelWebhookPayloadSchema.safeParse(request.body);
+      if (!parsed.success) {
+        request.log.warn(
+          { errors: parsed.error.flatten() },
+          'Invalid webhook payload',
+        );
         return reply.status(400).send({ error: 'invalid_payload' });
       }
+      const payload: ZitadelWebhookPayload = parsed.data;
 
       // SECURITY NOTE: Uses pool.connect() directly (bypasses RLS) because
       // webhooks are unauthenticated system events. The zitadel_webhook_events
@@ -93,7 +100,6 @@ export async function registerZitadelWebhooks(
         // If no rows inserted, this event was already seen
         if (insertResult.rows.length === 0) {
           await client.query('COMMIT');
-          client.release();
           return reply.status(200).send({ status: 'already_processed' });
         }
 
