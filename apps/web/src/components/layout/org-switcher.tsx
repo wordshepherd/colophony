@@ -1,6 +1,7 @@
 "use client";
 
-import { Building2, Check, ChevronsUpDown } from "lucide-react";
+import Link from "next/link";
+import { Building2, Check, ChevronsUpDown, Plus, Settings } from "lucide-react";
 import { useOrganization } from "@/hooks/use-organization";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -21,7 +22,8 @@ const roleColors = {
 };
 
 export function OrgSwitcher() {
-  const { currentOrg, organizations, switchOrganization } = useOrganization();
+  const { currentOrg, organizations, switchOrganization, isAdmin } =
+    useOrganization();
 
   if (organizations.length === 0) {
     return null;
@@ -72,6 +74,21 @@ export function OrgSwitcher() {
             </div>
           </DropdownMenuItem>
         ))}
+        <DropdownMenuSeparator />
+        {isAdmin && (
+          <DropdownMenuItem asChild>
+            <Link href="/organizations/settings" className="cursor-pointer">
+              <Settings className="mr-2 h-4 w-4" />
+              Org Settings
+            </Link>
+          </DropdownMenuItem>
+        )}
+        <DropdownMenuItem asChild>
+          <Link href="/organizations/new" className="cursor-pointer">
+            <Plus className="mr-2 h-4 w-4" />
+            Create Organization
+          </Link>
+        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );

@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { useAuth } from "@/hooks/use-auth";
 import { useOrganization } from "@/hooks/use-organization";
 import { trpc } from "@/lib/trpc";
@@ -24,11 +26,18 @@ import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { format } from "date-fns";
-import { Download, Trash2, Building2 } from "lucide-react";
+import {
+  Download,
+  Trash2,
+  Building2,
+  Plus,
+  Settings as SettingsIcon,
+} from "lucide-react";
 
 export default function SettingsPage() {
   const { user, logout } = useAuth();
-  const { organizations, currentOrg } = useOrganization();
+  const router = useRouter();
+  const { organizations, currentOrg, switchOrganization } = useOrganization();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
 
@@ -152,11 +161,32 @@ export default function SettingsPage() {
                     {currentOrg?.id === org.id && (
                       <Badge variant="outline">Current</Badge>
                     )}
+                    {org.role === "ADMIN" && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          switchOrganization(org.id);
+                          router.push("/organizations/settings");
+                        }}
+                      >
+                        <SettingsIcon className="mr-1 h-3 w-3" />
+                        Manage
+                      </Button>
+                    )}
                   </div>
                 </div>
               ))}
             </div>
           )}
+          <div className="mt-4">
+            <Button variant="outline" asChild>
+              <Link href="/organizations/new">
+                <Plus className="mr-2 h-4 w-4" />
+                Create Organization
+              </Link>
+            </Button>
+          </div>
         </CardContent>
       </Card>
 
