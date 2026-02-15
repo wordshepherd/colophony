@@ -81,6 +81,7 @@ services:
       dockerfile: apps/web/Dockerfile
       args:
         NEXT_PUBLIC_API_URL: http://${DOMAIN:-localhost}/trpc
+        NEXT_PUBLIC_TUS_URL: http://${DOMAIN:-localhost}/upload/files/
     container_name: colophony-staging-web
     expose:
       - "3000"
