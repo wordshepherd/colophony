@@ -9,6 +9,14 @@ type RequestAuditFn = (
   >,
 ) => Promise<void>;
 
+declare module 'fastify' {
+  interface FastifyRequest {
+    authContext: AuthContext | null;
+    dbTx: DrizzleDb | null;
+    audit: RequestAuditFn;
+  }
+}
+
 export interface TRPCContext {
   authContext: AuthContext | null;
   dbTx: DrizzleDb | null;

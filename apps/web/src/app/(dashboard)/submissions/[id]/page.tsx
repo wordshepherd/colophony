@@ -1,10 +1,10 @@
-import { SubmissionDetail } from "@/components/submissions/submission-detail";
-
-interface Props {
-  params: Promise<{ id: string }>;
-}
-
-export default async function SubmissionDetailPage({ params }: Props) {
-  const { id } = await params;
-  return <SubmissionDetail submissionId={id} />;
+export default function SubmissionDetailPage() {
+  return (
+    <div className="p-6">
+      <h1 className="text-2xl font-bold">Submission Detail</h1>
+      <p className="text-muted-foreground mt-2">
+        Coming soon — v2 submission detail view under development.
+      </p>
+    </div>
+  );
 }
