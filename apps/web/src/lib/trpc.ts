@@ -59,6 +59,13 @@ export async function getAccessToken(): Promise<string | null> {
 }
 
 /**
+ * Get the tusd upload endpoint URL
+ */
+export function getTusEndpoint(): string {
+  return process.env.NEXT_PUBLIC_TUS_URL || "http://localhost:1080/files/";
+}
+
+/**
  * tRPC client configuration
  */
 export function getTrpcClient() {
