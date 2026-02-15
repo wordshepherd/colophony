@@ -1,19 +1,10 @@
-"use client";
-
-import { use } from "react";
-import { ProtectedRoute } from "@/components/auth/protected-route";
-import { SubmissionReview } from "@/components/editor/submission-review";
-
-interface Props {
-  params: Promise<{ id: string }>;
-}
-
-export default function SubmissionReviewPage({ params }: Props) {
-  const { id } = use(params);
-
+export default function SubmissionReviewPage() {
   return (
-    <ProtectedRoute requireEditor>
-      <SubmissionReview submissionId={id} />
-    </ProtectedRoute>
+    <div className="p-6">
+      <h1 className="text-2xl font-bold">Submission Review</h1>
+      <p className="text-muted-foreground mt-2">
+        Coming soon — v2 submission review under development.
+      </p>
+    </div>
   );
 }
