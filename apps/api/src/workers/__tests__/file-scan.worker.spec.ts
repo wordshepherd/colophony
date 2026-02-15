@@ -255,6 +255,54 @@ describe('file-scan worker', () => {
   });
 
   // -------------------------------------------------------------------------
+  // FAILED path (post-scan S3 error)
+  // -------------------------------------------------------------------------
+
+  it('marks file FAILED when S3 copy fails after clean scan', async () => {
+    const processor = getProcessor();
+
+    mockGetObjectStream.mockResolvedValueOnce({ pipe: vi.fn() });
+    mockScanStream.mockResolvedValueOnce({
+      isInfected: false,
+      viruses: [],
+    });
+    mockCopyObject.mockRejectedValueOnce(new Error('S3 copy failed'));
+    mockUpdateScanStatus.mockResolvedValue(null);
+    mockAuditLog.mockResolvedValue(undefined);
+
+    await expect(processor(TEST_JOB)).rejects.toThrow('S3 copy failed');
+
+    // Should have set SCANNING, then FAILED (not CLEAN)
+    expect(mockUpdateScanStatus).toHaveBeenCalledWith(
+      expect.anything(),
+      'file-1',
+      'SCANNING',
+    );
+    expect(mockUpdateScanStatus).toHaveBeenCalledWith(
+      expect.anything(),
+      'file-1',
+      'FAILED',
+    );
+    expect(mockUpdateScanStatus).not.toHaveBeenCalledWith(
+      expect.anything(),
+      'file-1',
+      'CLEAN',
+    );
+
+    // Audit includes phase info
+    expect(mockAuditLog).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        action: 'FILE_SCAN_FAILED',
+        newValue: expect.objectContaining({
+          phase: 'post-scan-s3',
+          scanResult: 'CLEAN',
+        }),
+      }),
+    );
+  });
+
+  // -------------------------------------------------------------------------
   // RLS wrapping
   // -------------------------------------------------------------------------
 

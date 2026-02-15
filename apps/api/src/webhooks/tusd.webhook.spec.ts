@@ -67,6 +67,15 @@ vi.mock('../queues/file-scan.queue.js', () => ({
   enqueueFileScan: (...args: unknown[]) => mockEnqueueFileScan(...args),
 }));
 
+// Mock S3 service
+const mockCopyObject = vi.fn();
+const mockDeleteS3Object = vi.fn();
+vi.mock('../services/s3.js', () => ({
+  createS3Client: vi.fn().mockReturnValue({}),
+  copyObject: (...args: unknown[]) => mockCopyObject(...args),
+  deleteS3Object: (...args: unknown[]) => mockDeleteS3Object(...args),
+}));
+
 // Mock auth-client
 vi.mock('@colophony/auth-client', () => ({
   createJwksVerifier: vi.fn(),
@@ -532,7 +541,7 @@ describe('tusd webhook handler', () => {
       );
     });
 
-    it('does not enqueue scan when idempotent (file already exists)', async () => {
+    it('does not enqueue scan when idempotent (file already processed)', async () => {
       mockWithRls.mockImplementation(
         async (_ctx: unknown, fn: (tx: unknown) => Promise<void>) => {
           return fn({});
@@ -541,6 +550,7 @@ describe('tusd webhook handler', () => {
       mockFileService.getByStorageKey.mockResolvedValueOnce({
         id: 'existing-file',
         storageKey: 'quarantine/upload-abc123',
+        scanStatus: 'CLEAN',
       } as never);
 
       await app.inject({
@@ -551,6 +561,36 @@ describe('tusd webhook handler', () => {
       });
 
       expect(mockEnqueueFileScan).not.toHaveBeenCalled();
+    });
+
+    it('re-enqueues scan for PENDING file on retry (prior enqueue failed)', async () => {
+      mockWithRls.mockImplementation(
+        async (_ctx: unknown, fn: (tx: unknown) => Promise<void>) => {
+          return fn({});
+        },
+      );
+      mockFileService.getByStorageKey.mockResolvedValueOnce({
+        id: 'existing-file',
+        storageKey: 'quarantine/upload-abc123',
+        scanStatus: 'PENDING',
+      } as never);
+      mockEnqueueFileScan.mockResolvedValueOnce(undefined);
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/webhooks/tusd',
+        headers: { 'hook-name': 'post-finish' },
+        payload: makePostFinishBody(),
+      });
+
+      expect(response.statusCode).toBe(200);
+      expect(mockEnqueueFileScan).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({
+          fileId: 'existing-file',
+          storageKey: 'quarantine/upload-abc123',
+        }),
+      );
     });
 
     it('returns 500 on processing error', async () => {

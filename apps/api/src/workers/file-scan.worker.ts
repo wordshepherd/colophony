@@ -77,40 +77,59 @@ export function startFileScanWorker(env: Env): Worker<FileScanJobData> {
       }
 
       // Phase 3: Handle scan result with S3 ops + DB update
-      if (!isInfected) {
-        // CLEAN: copy to submissions bucket, delete from quarantine
-        await copyObject(
-          s3Client,
-          env.S3_QUARANTINE_BUCKET,
-          storageKey,
-          env.S3_BUCKET,
-          storageKey,
-        );
-        await deleteS3Object(s3Client, env.S3_QUARANTINE_BUCKET, storageKey);
+      try {
+        if (!isInfected) {
+          // CLEAN: copy to submissions bucket, delete from quarantine
+          await copyObject(
+            s3Client,
+            env.S3_QUARANTINE_BUCKET,
+            storageKey,
+            env.S3_BUCKET,
+            storageKey,
+          );
+          await deleteS3Object(s3Client, env.S3_QUARANTINE_BUCKET, storageKey);
 
+          await withRls({ orgId: organizationId }, async (tx: DrizzleDb) => {
+            await fileService.updateScanStatus(tx, fileId, 'CLEAN');
+            await auditService.log(tx, {
+              resource: AuditResources.FILE,
+              action: AuditActions.FILE_SCAN_CLEAN,
+              resourceId: fileId,
+              organizationId,
+            });
+          });
+        } else {
+          // INFECTED: delete from quarantine
+          await deleteS3Object(s3Client, env.S3_QUARANTINE_BUCKET, storageKey);
+
+          await withRls({ orgId: organizationId }, async (tx: DrizzleDb) => {
+            await fileService.updateScanStatus(tx, fileId, 'INFECTED');
+            await auditService.log(tx, {
+              resource: AuditResources.FILE,
+              action: AuditActions.FILE_SCAN_INFECTED,
+              resourceId: fileId,
+              organizationId,
+              newValue: { viruses },
+            });
+          });
+        }
+      } catch (err) {
+        // S3 move/delete failed — mark FAILED so file doesn't stay SCANNING
         await withRls({ orgId: organizationId }, async (tx: DrizzleDb) => {
-          await fileService.updateScanStatus(tx, fileId, 'CLEAN');
+          await fileService.updateScanStatus(tx, fileId, 'FAILED');
           await auditService.log(tx, {
             resource: AuditResources.FILE,
-            action: AuditActions.FILE_SCAN_CLEAN,
+            action: AuditActions.FILE_SCAN_FAILED,
             resourceId: fileId,
             organizationId,
+            newValue: {
+              error: err instanceof Error ? err.message : 'Unknown error',
+              phase: 'post-scan-s3',
+              scanResult: isInfected ? 'INFECTED' : 'CLEAN',
+            },
           });
         });
-      } else {
-        // INFECTED: delete from quarantine
-        await deleteS3Object(s3Client, env.S3_QUARANTINE_BUCKET, storageKey);
-
-        await withRls({ orgId: organizationId }, async (tx: DrizzleDb) => {
-          await fileService.updateScanStatus(tx, fileId, 'INFECTED');
-          await auditService.log(tx, {
-            resource: AuditResources.FILE,
-            action: AuditActions.FILE_SCAN_INFECTED,
-            resourceId: fileId,
-            organizationId,
-            newValue: { viruses },
-          });
-        });
+        throw err;
       }
     },
     {
