@@ -18,7 +18,10 @@ const {
   mockClientRelease,
   mockTxInsert,
   mockTxUpdate,
+  mockTxSelect,
   mockAuditLog,
+  mockRedisEval,
+  mockRedisQuit,
 } = vi.hoisted(() => {
   const mockClientQuery = vi.fn().mockResolvedValue({ rows: [] });
   const mockClientRelease = vi.fn();
@@ -34,7 +37,12 @@ const {
   const where = vi.fn().mockResolvedValue({ rowCount: 1 });
   const set = vi.fn(() => ({ where }));
   const mockTxUpdate = vi.fn(() => ({ set }));
+  const limit = vi.fn().mockResolvedValue([{ id: 'existing-user-id' }]);
+  const selectFrom = vi.fn(() => ({ where: vi.fn(() => ({ limit })) }));
+  const mockTxSelect = vi.fn(() => ({ from: selectFrom }));
   const mockAuditLog = vi.fn().mockResolvedValue(undefined);
+  const mockRedisEval = vi.fn().mockResolvedValue([1, 60000]);
+  const mockRedisQuit = vi.fn().mockResolvedValue('OK');
 
   return {
     mockPoolConnect,
@@ -42,33 +50,63 @@ const {
     mockClientRelease,
     mockTxInsert,
     mockTxUpdate,
+    mockTxSelect,
     mockAuditLog,
+    mockRedisEval,
+    mockRedisQuit,
   };
 });
 
 vi.mock('@colophony/db', () => {
   return {
     eq: vi.fn((_col: unknown, val: unknown) => val),
+    and: vi.fn((...args: unknown[]) => args),
+    or: vi.fn((...args: unknown[]) => args),
+    lt: vi.fn((_col: unknown, val: unknown) => val),
+    isNull: vi.fn((_col: unknown) => 'IS_NULL'),
+    sql: Object.assign(
+      (strings: TemplateStringsArray, ...values: unknown[]) => ({
+        strings,
+        values,
+      }),
+      { raw: (s: string) => s },
+    ),
     pool: {
       connect: mockPoolConnect,
       query: vi.fn().mockResolvedValue({ rows: [{ '?column?': 1 }] }),
     },
-    users: { zitadelUserId: 'zitadel_user_id' },
+    users: {
+      zitadelUserId: 'zitadel_user_id',
+      lastEventAt: 'last_event_at',
+      id: 'id',
+    },
     zitadelWebhookEvents: {},
   };
 });
 
-// Mock drizzle constructor to return a tx with insert/update
+// Mock drizzle constructor to return a tx with insert/update/select
 vi.mock('drizzle-orm/node-postgres', () => ({
   drizzle: vi.fn(() => ({
     insert: mockTxInsert,
     update: mockTxUpdate,
+    select: mockTxSelect,
   })),
 }));
 
 vi.mock('../services/audit.service.js', () => ({
   auditService: { log: mockAuditLog },
 }));
+
+// Mock ioredis
+vi.mock('ioredis', () => {
+  const RedisMock = vi.fn().mockImplementation(() => ({
+    connect: vi.fn().mockResolvedValue(undefined),
+    eval: mockRedisEval,
+    quit: mockRedisQuit,
+    status: 'ready',
+  }));
+  return { default: RedisMock };
+});
 
 import { registerZitadelWebhooks } from './zitadel.webhook.js';
 
@@ -88,6 +126,8 @@ const testEnv: Env = {
   RATE_LIMIT_AUTH_MAX: 200,
   RATE_LIMIT_WINDOW_SECONDS: 60,
   RATE_LIMIT_KEY_PREFIX: 'colophony:rl',
+  WEBHOOK_TIMESTAMP_MAX_AGE_SECONDS: 300,
+  WEBHOOK_RATE_LIMIT_MAX: 100,
   ZITADEL_WEBHOOK_SECRET: WEBHOOK_SECRET,
 };
 
@@ -130,7 +170,10 @@ describe('Zitadel webhook handler', () => {
     mockPoolConnect.mockClear();
     mockTxInsert.mockClear();
     mockTxUpdate.mockClear();
+    mockTxSelect.mockClear();
     mockAuditLog.mockClear().mockResolvedValue(undefined);
+    mockRedisEval.mockClear().mockResolvedValue([1, 60000]);
+    mockRedisQuit.mockClear();
 
     // Default: insert returns 1 row (new event), not a duplicate
     mockPoolConnect.mockResolvedValue({
@@ -160,6 +203,10 @@ describe('Zitadel webhook handler', () => {
     const where = vi.fn().mockResolvedValue({ rowCount: 1 });
     const set = vi.fn(() => ({ where }));
     mockTxUpdate.mockImplementation(() => ({ set }));
+    const limit = vi.fn().mockResolvedValue([{ id: 'existing-user-id' }]);
+    const selectWhere = vi.fn(() => ({ limit }));
+    const selectFrom = vi.fn(() => ({ where: selectWhere }));
+    mockTxSelect.mockImplementation(() => ({ from: selectFrom }));
   });
 
   it('rejects missing signature', async () => {
@@ -469,5 +516,250 @@ describe('Zitadel webhook handler', () => {
     });
     expect(response.statusCode).toBe(500);
     expect(response.json().error).toBe('processing_failed');
+  });
+
+  // === Timestamp freshness tests ===
+
+  describe('timestamp freshness', () => {
+    it('rejects event with timestamp too old', async () => {
+      const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+      const body = JSON.stringify(
+        makePayload({
+          eventId: 'evt-old',
+          creationDate: tenMinutesAgo,
+        }),
+      );
+      const sig = signPayload(body);
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/webhooks/zitadel',
+        headers: {
+          'content-type': 'application/json',
+          'x-zitadel-signature': sig,
+        },
+        payload: body,
+      });
+      expect(response.statusCode).toBe(400);
+      expect(response.json().error).toBe('event_too_old');
+    });
+
+    it('rejects event with timestamp in the future', async () => {
+      const fiveMinutesAhead = new Date(
+        Date.now() + 5 * 60 * 1000,
+      ).toISOString();
+      const body = JSON.stringify(
+        makePayload({
+          eventId: 'evt-future',
+          creationDate: fiveMinutesAhead,
+        }),
+      );
+      const sig = signPayload(body);
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/webhooks/zitadel',
+        headers: {
+          'content-type': 'application/json',
+          'x-zitadel-signature': sig,
+        },
+        payload: body,
+      });
+      expect(response.statusCode).toBe(400);
+      expect(response.json().error).toBe('event_from_future');
+    });
+
+    it('accepts fresh event (30s ago)', async () => {
+      const thirtySecondsAgo = new Date(Date.now() - 30 * 1000).toISOString();
+      const body = JSON.stringify(
+        makePayload({
+          eventId: 'evt-fresh',
+          creationDate: thirtySecondsAgo,
+        }),
+      );
+      const sig = signPayload(body);
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/webhooks/zitadel',
+        headers: {
+          'content-type': 'application/json',
+          'x-zitadel-signature': sig,
+        },
+        payload: body,
+      });
+      expect(response.statusCode).toBe(200);
+      expect(response.json().status).toBe('processed');
+    });
+  });
+
+  // === Rate limiting tests ===
+
+  describe('webhook rate limiting', () => {
+    it('returns 429 when rate limit exceeded', async () => {
+      // Simulate over-limit: count = 101, ttl = 30000ms
+      mockRedisEval.mockResolvedValueOnce([101, 30000]);
+
+      const body = JSON.stringify(makePayload({ eventId: 'evt-rate-limited' }));
+      const sig = signPayload(body);
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/webhooks/zitadel',
+        headers: {
+          'content-type': 'application/json',
+          'x-zitadel-signature': sig,
+        },
+        payload: body,
+      });
+      expect(response.statusCode).toBe(429);
+      expect(response.json().error).toBe('rate_limit_exceeded');
+      expect(response.headers['retry-after']).toBeDefined();
+    });
+
+    it('allows request when under rate limit', async () => {
+      mockRedisEval.mockResolvedValueOnce([5, 60000]);
+
+      const body = JSON.stringify(makePayload({ eventId: 'evt-under-limit' }));
+      const sig = signPayload(body);
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/webhooks/zitadel',
+        headers: {
+          'content-type': 'application/json',
+          'x-zitadel-signature': sig,
+        },
+        payload: body,
+      });
+      expect(response.statusCode).toBe(200);
+    });
+
+    it('allows request when Redis errors (graceful degradation)', async () => {
+      mockRedisEval.mockRejectedValueOnce(new Error('Redis connection failed'));
+
+      const body = JSON.stringify(makePayload({ eventId: 'evt-redis-err' }));
+      const sig = signPayload(body);
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/webhooks/zitadel',
+        headers: {
+          'content-type': 'application/json',
+          'x-zitadel-signature': sig,
+        },
+        payload: body,
+      });
+      expect(response.statusCode).toBe(200);
+      expect(response.json().status).toBe('processed');
+    });
+  });
+
+  // === Out-of-order event guard tests ===
+
+  describe('out-of-order event guard', () => {
+    it('skips stale upsert when setWhere rejects (rowCount: 0)', async () => {
+      // Upsert returns rowCount: 0 (setWhere rejected the stale update)
+      const onConflictDoUpdate = vi.fn().mockResolvedValue({ rowCount: 0 });
+      const values = vi.fn(() => ({ onConflictDoUpdate }));
+      mockTxInsert.mockImplementation(() => ({ values }));
+
+      const body = JSON.stringify(makePayload({ eventId: 'evt-stale-upsert' }));
+      const sig = signPayload(body);
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/webhooks/zitadel',
+        headers: {
+          'content-type': 'application/json',
+          'x-zitadel-signature': sig,
+        },
+        payload: body,
+      });
+      expect(response.statusCode).toBe(200);
+      expect(response.json().status).toBe('processed');
+      // No audit should be logged for stale upsert
+      expect(mockAuditLog).not.toHaveBeenCalled();
+    });
+
+    it('applies fresh upsert normally', async () => {
+      const onConflictDoUpdate = vi.fn().mockResolvedValue({ rowCount: 1 });
+      const values = vi.fn(() => ({ onConflictDoUpdate }));
+      mockTxInsert.mockImplementation(() => ({ values }));
+
+      const body = JSON.stringify(makePayload({ eventId: 'evt-fresh-upsert' }));
+      const sig = signPayload(body);
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/webhooks/zitadel',
+        headers: {
+          'content-type': 'application/json',
+          'x-zitadel-signature': sig,
+        },
+        payload: body,
+      });
+      expect(response.statusCode).toBe(200);
+      expect(response.json().status).toBe('processed');
+      expect(mockAuditLog).toHaveBeenCalledOnce();
+    });
+
+    it('skips stale update-only event when user exists', async () => {
+      // update returns rowCount: 0 (ordering condition rejected)
+      const where = vi.fn().mockResolvedValue({ rowCount: 0 });
+      const set = vi.fn(() => ({ where }));
+      mockTxUpdate.mockImplementation(() => ({ set }));
+
+      // select finds the user (exists check)
+      const limit = vi.fn().mockResolvedValue([{ id: 'existing-user-id' }]);
+      const selectWhere = vi.fn(() => ({ limit }));
+      const selectFrom = vi.fn(() => ({ where: selectWhere }));
+      mockTxSelect.mockImplementation(() => ({ from: selectFrom }));
+
+      const body = JSON.stringify(
+        makePayload({
+          eventType: 'user.deactivated',
+          eventId: 'evt-stale-update',
+        }),
+      );
+      const sig = signPayload(body);
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/webhooks/zitadel',
+        headers: {
+          'content-type': 'application/json',
+          'x-zitadel-signature': sig,
+        },
+        payload: body,
+      });
+      expect(response.statusCode).toBe(200);
+      expect(response.json().status).toBe('processed');
+      // Select should have been called for existence check
+      expect(mockTxSelect).toHaveBeenCalled();
+    });
+
+    it('processes event with invalid creationDate without crash', async () => {
+      const body = JSON.stringify(
+        makePayload({
+          eventId: 'evt-bad-date',
+          creationDate: 'not-a-date',
+        }),
+      );
+      const sig = signPayload(body);
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/webhooks/zitadel',
+        headers: {
+          'content-type': 'application/json',
+          'x-zitadel-signature': sig,
+        },
+        payload: body,
+      });
+      // Unparseable creationDate falls through freshness check and processing
+      expect(response.statusCode).toBe(200);
+      expect(response.json().status).toBe('processed');
+    });
   });
 });

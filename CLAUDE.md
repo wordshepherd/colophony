@@ -99,17 +99,18 @@ Summary: Stripe Checkout only (zero PCI scope). No Stripe handler exists yet. PC
 
 Domain-specific quirks are in per-directory CLAUDE.md files. Cross-cutting quirks below:
 
-| Quirk                                             | Details                                                                                                                                                                     |
-| ------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Docker Compose env_file**                       | `env_file:` sets container env only. For YAML `${VAR}` substitution, use `--env-file .env` on CLI                                                                           |
-| **PostgreSQL init-db.sh**                         | Only runs on first DB creation. Must `docker compose down -v` to re-run after changes                                                                                       |
-| **GitHub PAT: no Checks perm**                    | Fine-grained PATs lack `Checks` permission. Use `gh run list/view` (Actions API), NOT `gh pr checks`                                                                        |
-| **WSL husky hooks need nvm PATH**                 | Husky v9 runs hooks under `sh`/`dash`; `nvm.sh` can't be sourced. Hooks add nvm node bin to PATH directly. `lint-staged` called without `npx`                               |
-| **CI: workspace deps need build before Vitest**   | Vitest resolves workspace packages via `exports` field (pointing to `dist/`). CI must build deps before running tests                                                       |
-| **`gh pr edit` broken (Projects Classic)**        | Returns GraphQL error about Projects Classic deprecation. Use `gh api repos/{owner}/{repo}/pulls/{number} -X PATCH -f title="..." -f body="..."` instead                    |
-| **Codex CLI needs nvm in non-interactive shells** | Codex installed via npm under nvm. tmux `send-keys` runs non-interactive shells; must source nvm manually. The `/codex-review` skill handles this automatically             |
-| **Codex interactive: Enter adds newline**         | Press **Escape then Enter** to submit. Or pass prompt as argument: `codex "prompt"`. For long prompts: `codex - < /tmp/prompt.txt`                                          |
-| **Codex `review --base` excludes `[PROMPT]`**     | `--base` and `--uncommitted` are mutually exclusive with positional `[PROMPT]`. Custom instructions go in Codex rules files (`~/.codex/rules/` or `.codex/instructions.md`) |
+| Quirk                                             | Details                                                                                                                                                                          |
+| ------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Docker Compose env_file**                       | `env_file:` sets container env only. For YAML `${VAR}` substitution, use `--env-file .env` on CLI                                                                                |
+| **PostgreSQL init-db.sh**                         | Only runs on first DB creation. Must `docker compose down -v` to re-run after changes                                                                                            |
+| **GitHub PAT: no Checks perm**                    | Fine-grained PATs lack `Checks` permission. Use `gh run list/view` (Actions API), NOT `gh pr checks`                                                                             |
+| **WSL husky hooks need nvm PATH**                 | Husky v9 runs hooks under `sh`/`dash`; `nvm.sh` can't be sourced. Hooks add nvm node bin to PATH directly. `lint-staged` called without `npx`                                    |
+| **CI: workspace deps need build before Vitest**   | Vitest resolves workspace packages via `exports` field (pointing to `dist/`). CI must build deps before running tests                                                            |
+| **`gh pr edit` broken (Projects Classic)**        | Returns GraphQL error about Projects Classic deprecation. Use `gh api repos/{owner}/{repo}/pulls/{number} -X PATCH -f title="..." -f body="..."` instead                         |
+| **Codex CLI needs nvm in non-interactive shells** | Codex installed via npm under nvm. tmux `send-keys` runs non-interactive shells; must source nvm manually. The `/codex-review` skill handles this automatically                  |
+| **Codex interactive: Enter adds newline**         | Press **Escape then Enter** to submit. Or pass prompt as argument: `codex "prompt"`. For long prompts: `codex - < /tmp/prompt.txt`                                               |
+| **Codex `review --base` excludes `[PROMPT]`**     | `--base` and `--uncommitted` are mutually exclusive with positional `[PROMPT]`. Custom instructions go in Codex rules files (`~/.codex/rules/` or `.codex/instructions.md`)      |
+| **`drizzle-kit generate` TUI blocks automation**  | Interactive prompts (rename vs create) use a TUI that ignores piped stdin. Write manual migrations in non-interactive shells; snapshot files may need regeneration interactively |
 
 **Version pin (cross-cutting):**
 
@@ -136,7 +137,7 @@ All other version pins are in their respective per-directory CLAUDE.md files.
 - [x] RLS policies on all tenant tables via Drizzle `pgPolicy` with FORCE — see `packages/db/CLAUDE.md`
 - [x] Application database role is NOT superuser — see `packages/db/CLAUDE.md`
 - [ ] Input validation with Zod on all API surfaces
-- [ ] Zitadel webhook signature verification
+- [x] Zitadel webhook signature verification + timestamp freshness + event ordering + webhook rate limiting
 - [ ] Stripe webhook signature verification + idempotency
 - [ ] Storage: block public access via MinIO policy
 
