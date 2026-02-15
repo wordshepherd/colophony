@@ -25,6 +25,7 @@ export const users = pgTable(
       .notNull()
       .$defaultFn(() => new Date()),
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
+    lastEventAt: timestamp("last_event_at", { withTimezone: true }),
   },
   (table) => [
     index("users_lower_email_idx").on(sql`lower(${table.email})`),

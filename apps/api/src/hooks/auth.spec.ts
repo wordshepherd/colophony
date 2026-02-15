@@ -55,6 +55,8 @@ const baseEnv: Env = {
   RATE_LIMIT_AUTH_MAX: 200,
   RATE_LIMIT_WINDOW_SECONDS: 60,
   RATE_LIMIT_KEY_PREFIX: 'colophony:rl',
+  WEBHOOK_TIMESTAMP_MAX_AGE_SECONDS: 300,
+  WEBHOOK_RATE_LIMIT_MAX: 100,
 };
 
 describe('auth plugin', () => {
@@ -243,6 +245,7 @@ describe('auth plugin', () => {
         createdAt: new Date(),
         updatedAt: new Date(),
         deletedAt: new Date(), // deactivated
+        lastEventAt: null,
       });
 
       const response = await app.inject({
@@ -271,6 +274,7 @@ describe('auth plugin', () => {
         createdAt: new Date(),
         updatedAt: new Date(),
         deletedAt: null,
+        lastEventAt: null,
       });
 
       const response = await app.inject({
@@ -450,6 +454,7 @@ describe('auth plugin', () => {
         createdAt: new Date(),
         updatedAt: new Date(),
         deletedAt: new Date(),
+        lastEventAt: null,
       });
 
       await app.inject({

@@ -20,4 +20,16 @@ export {
 } from "./json-helpers";
 
 // Re-export commonly used drizzle-orm utilities
-export { eq, ne, gt, gte, lt, lte, and, or, not, sql } from "drizzle-orm";
+export {
+  eq,
+  ne,
+  gt,
+  gte,
+  lt,
+  lte,
+  and,
+  or,
+  not,
+  isNull,
+  sql,
+} from "drizzle-orm";

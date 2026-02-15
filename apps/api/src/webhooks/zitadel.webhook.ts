@@ -1,11 +1,12 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { drizzle } from 'drizzle-orm/node-postgres';
+import Redis from 'ioredis';
 import {
   verifyZitadelSignature,
   zitadelWebhookPayloadSchema,
 } from '@colophony/auth-client';
 import type { ZitadelWebhookPayload } from '@colophony/auth-client';
-import { eq, pool, users } from '@colophony/db';
+import { eq, and, or, lt, isNull, sql, pool, users } from '@colophony/db';
 import type { DrizzleDb } from '@colophony/db';
 import type { Env } from '../config/env.js';
 import { auditService } from '../services/audit.service.js';
@@ -14,6 +15,18 @@ import { AuditActions, AuditResources } from '@colophony/types';
 export interface ZitadelWebhookOptions {
   env: Env;
 }
+
+/**
+ * Atomic Lua script: INCR key, set PEXPIRE on first hit, return [count, pttl].
+ */
+const RATE_LIMIT_LUA = `
+local current = redis.call('INCR', KEYS[1])
+if current == 1 then
+  redis.call('PEXPIRE', KEYS[1], ARGV[1])
+end
+local ttl = redis.call('PTTL', KEYS[1])
+return { current, ttl }
+`;
 
 /**
  * Registers the Zitadel webhook endpoint.
@@ -36,11 +49,85 @@ export async function registerZitadelWebhooks(
     runFirst: true,
   });
 
+  // Lazy Redis connection for webhook rate limiting
+  let redis: Redis | null = null;
+
+  function getRedis(): Redis | null {
+    if (redis) return redis;
+    try {
+      redis = new Redis({
+        host: env.REDIS_HOST,
+        port: env.REDIS_PORT,
+        password: env.REDIS_PASSWORD || undefined,
+        lazyConnect: true,
+        enableOfflineQueue: false,
+        maxRetriesPerRequest: 0,
+        connectTimeout: 5000,
+        commandTimeout: 1000,
+      });
+      redis.connect().catch(() => {
+        // Connection failure handled per-request via graceful degradation
+      });
+      return redis;
+    } catch {
+      return null;
+    }
+  }
+
+  app.addHook('onClose', async () => {
+    if (redis) {
+      await redis.quit().catch(() => {
+        // Ignore quit errors during shutdown
+      });
+    }
+  });
+
   app.post(
     '/webhooks/zitadel',
     {
       config: { rawBody: true },
       bodyLimit: 256 * 1024, // 256kb
+      /* eslint-disable @typescript-eslint/no-misused-promises */
+      preHandler: async function webhookRateLimit(
+        request: FastifyRequest,
+        reply: FastifyReply,
+      ): Promise<void> {
+        const redisClient = getRedis();
+        if (!redisClient) return; // Graceful degradation
+
+        const windowMs = env.RATE_LIMIT_WINDOW_SECONDS * 1000;
+        const windowId = Math.floor(Date.now() / windowMs);
+        const key = `${env.RATE_LIMIT_KEY_PREFIX}:wh:${windowId}:${request.ip}`;
+
+        try {
+          const result = (await redisClient.eval(
+            RATE_LIMIT_LUA,
+            1,
+            key,
+            windowMs,
+          )) as [number, number];
+          const count = result[0];
+          const ttlMs = result[1];
+
+          if (count > env.WEBHOOK_RATE_LIMIT_MAX) {
+            const retryAfterSeconds = Math.ceil(Math.max(0, ttlMs) / 1000);
+            reply.header('Retry-After', retryAfterSeconds);
+            request.log.warn(
+              { ip: request.ip, count, limit: env.WEBHOOK_RATE_LIMIT_MAX },
+              'Webhook rate limit exceeded',
+            );
+            void reply.status(429).send({
+              error: 'rate_limit_exceeded',
+              message: 'Too many webhook requests',
+            });
+            return;
+          }
+        } catch {
+          // Graceful degradation: Redis unavailable → allow request
+          request.log.warn('Webhook rate limit Redis error — allowing request');
+        }
+      },
+      /* eslint-enable @typescript-eslint/no-misused-promises */
     },
     async function zitadelWebhookHandler(
       request: FastifyRequest,
@@ -80,6 +167,27 @@ export async function registerZitadelWebhooks(
         return reply.status(400).send({ error: 'invalid_payload' });
       }
       const payload: ZitadelWebhookPayload = parsed.data;
+
+      // Timestamp freshness check — fail fast before acquiring DB connection
+      const eventTime = new Date(payload.creationDate);
+      if (!isNaN(eventTime.getTime())) {
+        const ageSeconds = (Date.now() - eventTime.getTime()) / 1000;
+        if (ageSeconds > env.WEBHOOK_TIMESTAMP_MAX_AGE_SECONDS) {
+          request.log.warn(
+            { eventId: payload.eventId, ageSeconds: Math.round(ageSeconds) },
+            'Webhook event rejected: timestamp too old',
+          );
+          return reply.status(400).send({ error: 'event_too_old' });
+        }
+        if (ageSeconds < -60) {
+          request.log.warn(
+            { eventId: payload.eventId, ageSeconds: Math.round(ageSeconds) },
+            'Webhook event rejected: timestamp in the future',
+          );
+          return reply.status(400).send({ error: 'event_from_future' });
+        }
+      }
+      // Unparseable creationDate: fall through (Zod validated non-empty; format strictness not warranted)
 
       // SECURITY NOTE: Uses pool.connect() directly (bypasses RLS) because
       // webhooks are unauthenticated system events. The zitadel_webhook_events
@@ -141,17 +249,22 @@ async function processEvent(
     return;
   }
 
+  // Parse event timestamp for out-of-order guard
+  const eventTime = new Date(payload.creationDate);
+  const hasValidTimestamp = !isNaN(eventTime.getTime());
+
   switch (eventType) {
     case 'user.created':
     case 'user.changed': {
-      // Upsert: handles both create and out-of-order delivery
-      await tx
+      // Upsert with out-of-order guard: setWhere prevents stale overwrites
+      const upsertResult = await tx
         .insert(users)
         .values({
           email: userData.email ?? `${userData.userId}@placeholder.local`,
           zitadelUserId: userData.userId,
           emailVerified: userData.emailVerified ?? false,
           emailVerifiedAt: userData.emailVerified ? new Date() : undefined,
+          lastEventAt: hasValidTimestamp ? eventTime : undefined,
         })
         .onConflictDoUpdate({
           target: users.zitadelUserId,
@@ -166,8 +279,22 @@ async function processEvent(
                 }
               : {}),
             updatedAt: new Date(),
+            lastEventAt: hasValidTimestamp ? eventTime : undefined,
           },
+          setWhere: hasValidTimestamp
+            ? sql`${users.lastEventAt} IS NULL OR ${users.lastEventAt} < ${eventTime}`
+            : undefined,
         });
+
+      // rowCount === 0 means conflict + setWhere rejected (stale event)
+      if (upsertResult.rowCount === 0) {
+        request.log.info(
+          { zitadelUserId: userData.userId, eventType },
+          'Stale event skipped',
+        );
+        break;
+      }
+
       await auditService.log(tx, {
         resource: AuditResources.USER,
         action:
@@ -192,42 +319,90 @@ async function processEvent(
     case 'user.deactivated': {
       const result = await tx
         .update(users)
-        .set({ deletedAt: new Date(), updatedAt: new Date() })
-        .where(eq(users.zitadelUserId, userData.userId));
-      if (!result.rowCount) {
-        request.log.warn(
-          { zitadelUserId: userData.userId },
-          'user.deactivated: user not found locally',
+        .set({
+          deletedAt: new Date(),
+          updatedAt: new Date(),
+          lastEventAt: hasValidTimestamp ? eventTime : undefined,
+        })
+        .where(
+          and(
+            eq(users.zitadelUserId, userData.userId),
+            hasValidTimestamp
+              ? or(isNull(users.lastEventAt), lt(users.lastEventAt, eventTime))
+              : undefined,
+          ),
         );
+      if (result.rowCount) {
+        await auditService.log(tx, {
+          resource: AuditResources.USER,
+          action: AuditActions.USER_DEACTIVATED,
+          newValue: { zitadelUserId: userData.userId },
+          ipAddress: request.ip,
+          userAgent: request.headers['user-agent'],
+        });
+      } else {
+        const [existing] = await tx
+          .select({ id: users.id })
+          .from(users)
+          .where(eq(users.zitadelUserId, userData.userId))
+          .limit(1);
+        if (existing) {
+          request.log.info(
+            { zitadelUserId: userData.userId, eventType },
+            'Stale event skipped',
+          );
+        } else {
+          request.log.warn(
+            { zitadelUserId: userData.userId },
+            'user.deactivated: user not found locally',
+          );
+        }
       }
-      await auditService.log(tx, {
-        resource: AuditResources.USER,
-        action: AuditActions.USER_DEACTIVATED,
-        newValue: { zitadelUserId: userData.userId },
-        ipAddress: request.ip,
-        userAgent: request.headers['user-agent'],
-      });
       break;
     }
 
     case 'user.reactivated': {
       const result = await tx
         .update(users)
-        .set({ deletedAt: null, updatedAt: new Date() })
-        .where(eq(users.zitadelUserId, userData.userId));
-      if (!result.rowCount) {
-        request.log.warn(
-          { zitadelUserId: userData.userId },
-          'user.reactivated: user not found locally',
+        .set({
+          deletedAt: null,
+          updatedAt: new Date(),
+          lastEventAt: hasValidTimestamp ? eventTime : undefined,
+        })
+        .where(
+          and(
+            eq(users.zitadelUserId, userData.userId),
+            hasValidTimestamp
+              ? or(isNull(users.lastEventAt), lt(users.lastEventAt, eventTime))
+              : undefined,
+          ),
         );
+      if (result.rowCount) {
+        await auditService.log(tx, {
+          resource: AuditResources.USER,
+          action: AuditActions.USER_REACTIVATED,
+          newValue: { zitadelUserId: userData.userId },
+          ipAddress: request.ip,
+          userAgent: request.headers['user-agent'],
+        });
+      } else {
+        const [existing] = await tx
+          .select({ id: users.id })
+          .from(users)
+          .where(eq(users.zitadelUserId, userData.userId))
+          .limit(1);
+        if (existing) {
+          request.log.info(
+            { zitadelUserId: userData.userId, eventType },
+            'Stale event skipped',
+          );
+        } else {
+          request.log.warn(
+            { zitadelUserId: userData.userId },
+            'user.reactivated: user not found locally',
+          );
+        }
       }
-      await auditService.log(tx, {
-        resource: AuditResources.USER,
-        action: AuditActions.USER_REACTIVATED,
-        newValue: { zitadelUserId: userData.userId },
-        ipAddress: request.ip,
-        userAgent: request.headers['user-agent'],
-      });
       break;
     }
 
@@ -242,29 +417,49 @@ async function processEvent(
           emailVerifiedAt: null,
           deletedAt: new Date(),
           updatedAt: new Date(),
+          lastEventAt: hasValidTimestamp ? eventTime : undefined,
         })
-        .where(eq(users.zitadelUserId, userData.userId));
-      if (!result.rowCount) {
-        request.log.warn(
-          { zitadelUserId: userData.userId },
-          'user.removed: user not found locally',
+        .where(
+          and(
+            eq(users.zitadelUserId, userData.userId),
+            hasValidTimestamp
+              ? or(isNull(users.lastEventAt), lt(users.lastEventAt, eventTime))
+              : undefined,
+          ),
         );
-      } else {
+      if (result.rowCount) {
         request.log.info(
           { zitadelUserId: userData.userId },
           'User anonymized (GDPR removal)',
         );
+        await auditService.log(tx, {
+          resource: AuditResources.USER,
+          action: AuditActions.USER_REMOVED,
+          newValue: {
+            zitadelUserId: userData.userId,
+            email: anonymizedEmail,
+          },
+          ipAddress: request.ip,
+          userAgent: request.headers['user-agent'],
+        });
+      } else {
+        const [existing] = await tx
+          .select({ id: users.id })
+          .from(users)
+          .where(eq(users.zitadelUserId, userData.userId))
+          .limit(1);
+        if (existing) {
+          request.log.info(
+            { zitadelUserId: userData.userId, eventType },
+            'Stale event skipped',
+          );
+        } else {
+          request.log.warn(
+            { zitadelUserId: userData.userId },
+            'user.removed: user not found locally',
+          );
+        }
       }
-      await auditService.log(tx, {
-        resource: AuditResources.USER,
-        action: AuditActions.USER_REMOVED,
-        newValue: {
-          zitadelUserId: userData.userId,
-          email: anonymizedEmail,
-        },
-        ipAddress: request.ip,
-        userAgent: request.headers['user-agent'],
-      });
       break;
     }
 
@@ -275,21 +470,42 @@ async function processEvent(
           emailVerified: true,
           emailVerifiedAt: new Date(),
           updatedAt: new Date(),
+          lastEventAt: hasValidTimestamp ? eventTime : undefined,
         })
-        .where(eq(users.zitadelUserId, userData.userId));
-      if (!result.rowCount) {
-        request.log.warn(
-          { zitadelUserId: userData.userId },
-          'user.email.verified: user not found locally',
+        .where(
+          and(
+            eq(users.zitadelUserId, userData.userId),
+            hasValidTimestamp
+              ? or(isNull(users.lastEventAt), lt(users.lastEventAt, eventTime))
+              : undefined,
+          ),
         );
+      if (result.rowCount) {
+        await auditService.log(tx, {
+          resource: AuditResources.USER,
+          action: AuditActions.USER_EMAIL_VERIFIED,
+          newValue: { zitadelUserId: userData.userId },
+          ipAddress: request.ip,
+          userAgent: request.headers['user-agent'],
+        });
+      } else {
+        const [existing] = await tx
+          .select({ id: users.id })
+          .from(users)
+          .where(eq(users.zitadelUserId, userData.userId))
+          .limit(1);
+        if (existing) {
+          request.log.info(
+            { zitadelUserId: userData.userId, eventType },
+            'Stale event skipped',
+          );
+        } else {
+          request.log.warn(
+            { zitadelUserId: userData.userId },
+            'user.email.verified: user not found locally',
+          );
+        }
       }
-      await auditService.log(tx, {
-        resource: AuditResources.USER,
-        action: AuditActions.USER_EMAIL_VERIFIED,
-        newValue: { zitadelUserId: userData.userId },
-        ipAddress: request.ip,
-        userAgent: request.headers['user-agent'],
-      });
       break;
     }
 

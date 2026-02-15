@@ -43,6 +43,13 @@
       "when": 1771200000000,
       "tag": "0005_membership_helpers",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1771200000001,
+      "tag": "0006_add_users_last_event_at",
+      "breakpoints": true
     }
   ]
 }

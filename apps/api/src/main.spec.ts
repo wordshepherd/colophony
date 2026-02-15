@@ -71,6 +71,8 @@ const testEnv: Env = {
   RATE_LIMIT_AUTH_MAX: 200,
   RATE_LIMIT_WINDOW_SECONDS: 60,
   RATE_LIMIT_KEY_PREFIX: 'colophony:rl',
+  WEBHOOK_TIMESTAMP_MAX_AGE_SECONDS: 300,
+  WEBHOOK_RATE_LIMIT_MAX: 100,
 };
 
 describe('Fastify app', () => {
