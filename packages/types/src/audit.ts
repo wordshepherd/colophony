@@ -31,6 +31,9 @@ export const AuditActions = {
   // File lifecycle
   FILE_UPLOADED: "FILE_UPLOADED",
   FILE_DELETED: "FILE_DELETED",
+  FILE_SCAN_CLEAN: "FILE_SCAN_CLEAN",
+  FILE_SCAN_INFECTED: "FILE_SCAN_INFECTED",
+  FILE_SCAN_FAILED: "FILE_SCAN_FAILED",
 
   // Authentication failures
   AUTH_TOKEN_INVALID: "AUTH_TOKEN_INVALID",
@@ -102,7 +105,12 @@ export interface SubmissionAuditParams extends BaseAuditParams {
 
 export interface FileAuditParams extends BaseAuditParams {
   resource: typeof AuditResources.FILE;
-  action: typeof AuditActions.FILE_UPLOADED | typeof AuditActions.FILE_DELETED;
+  action:
+    | typeof AuditActions.FILE_UPLOADED
+    | typeof AuditActions.FILE_DELETED
+    | typeof AuditActions.FILE_SCAN_CLEAN
+    | typeof AuditActions.FILE_SCAN_INFECTED
+    | typeof AuditActions.FILE_SCAN_FAILED;
 }
 
 export interface AuthAuditParams extends BaseAuditParams {

@@ -44,6 +44,14 @@ const envSchema = z.object({
   S3_REGION: z.string().default('us-east-1'),
   TUS_ENDPOINT: z.string().default('http://localhost:1080'),
 
+  // ClamAV virus scanning
+  CLAMAV_HOST: z.string().default('localhost'),
+  CLAMAV_PORT: z.coerce.number().int().positive().default(3310),
+  VIRUS_SCAN_ENABLED: z
+    .enum(['true', 'false'])
+    .transform((v) => v === 'true')
+    .default('true'),
+
   // Optional — validated when modules wire up
   STRIPE_SECRET_KEY: z.string().optional(),
   STRIPE_WEBHOOK_SECRET: z.string().optional(),

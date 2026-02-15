@@ -133,7 +133,7 @@ All other version pins are in their respective per-directory CLAUDE.md files.
 - [ ] Zitadel OIDC token validation on all protected routes
 - [ ] API key authentication with scopes
 - [ ] Audit log for all sensitive actions
-- [ ] File virus scanning before production bucket (ClamAV via BullMQ)
+- [x] File virus scanning before production bucket (ClamAV via BullMQ)
 - [x] RLS policies on all tenant tables via Drizzle `pgPolicy` with FORCE — see `packages/db/CLAUDE.md`
 - [x] Application database role is NOT superuser — see `packages/db/CLAUDE.md`
 - [ ] Input validation with Zod on all API surfaces
@@ -282,6 +282,8 @@ Canonical env definition with Zod validation: `apps/api/src/config/env.ts`
 | `CORS_ORIGIN`                                                     | No       | `http://localhost:3000`     | API            |
 | `ZITADEL_AUTHORITY` / `ZITADEL_CLIENT_ID`                         | Optional | —                           | API            |
 | `ZITADEL_WEBHOOK_SECRET`                                          | Optional | —                           | API            |
+| `CLAMAV_HOST` / `CLAMAV_PORT`                                     | No       | `localhost` / `3310`        | API            |
+| `VIRUS_SCAN_ENABLED`                                              | No       | `true`                      | API            |
 | `STRIPE_SECRET_KEY` / `STRIPE_WEBHOOK_SECRET`                     | Optional | —                           | API            |
 | `NEXT_PUBLIC_API_URL`                                             | No       | `http://localhost:4000`     | Web            |
 | `NEXT_PUBLIC_ZITADEL_AUTHORITY` / `NEXT_PUBLIC_ZITADEL_CLIENT_ID` | —        | —                           | Web            |

@@ -13,6 +13,8 @@ import type { TusdPreCreateResponse } from '@colophony/types';
 import type { Env } from '../config/env.js';
 import { fileService } from '../services/file.service.js';
 import { auditService } from '../services/audit.service.js';
+import { enqueueFileScan } from '../queues/file-scan.queue.js';
+import { createS3Client, copyObject, deleteS3Object } from '../services/s3.js';
 
 export interface TusdWebhookOptions {
   env: Env;
@@ -302,10 +304,20 @@ export async function registerTusdWebhooks(
     }
 
     try {
+      // Track file info for post-commit actions
+      let fileIdToScan: string | null = null;
+      let needsScanEnqueue = false;
+
       await withRls({ orgId, userId }, async (tx: DrizzleDb) => {
         // Idempotency: check if already processed
         const existing = await fileService.getByStorageKey(tx, storageKey);
         if (existing) {
+          // If file exists but is still PENDING (prior enqueue failed),
+          // re-enqueue the scan job after commit
+          if (existing.scanStatus === 'PENDING' && env.VIRUS_SCAN_ENABLED) {
+            fileIdToScan = existing.id;
+            needsScanEnqueue = true;
+          }
           request.log.info(
             { storageKey, fileId: existing.id },
             'Post-finish already processed (idempotent)',
@@ -322,6 +334,11 @@ export async function registerTusdWebhooks(
           storageKey,
         });
 
+        // If scanning disabled, mark CLEAN immediately inside the tx
+        if (!env.VIRUS_SCAN_ENABLED) {
+          await fileService.updateScanStatus(tx, file.id, 'CLEAN');
+        }
+
         // Audit within the same transaction
         await auditService.log(tx, {
           resource: AuditResources.FILE,
@@ -334,11 +351,48 @@ export async function registerTusdWebhooks(
           newValue: { filename, mimeType, size, submissionId },
         });
 
+        fileIdToScan = file.id;
+        if (env.VIRUS_SCAN_ENABLED) {
+          needsScanEnqueue = true;
+        }
+
         request.log.info(
           { fileId: file.id, submissionId, storageKey },
           'File record created from tusd post-finish',
         );
       });
+
+      // Post-commit actions (outside tx to avoid ghost jobs/ops on rollback)
+      if (needsScanEnqueue && fileIdToScan) {
+        await enqueueFileScan(env, {
+          fileId: fileIdToScan,
+          storageKey,
+          organizationId: orgId,
+        });
+      }
+
+      // When scanning disabled, move file to submissions bucket so
+      // download/delete paths find it in the expected location
+      if (!env.VIRUS_SCAN_ENABLED && fileIdToScan && !needsScanEnqueue) {
+        try {
+          const s3Client = createS3Client(env);
+          await copyObject(
+            s3Client,
+            env.S3_QUARANTINE_BUCKET,
+            storageKey,
+            env.S3_BUCKET,
+            storageKey,
+          );
+          await deleteS3Object(s3Client, env.S3_QUARANTINE_BUCKET, storageKey);
+        } catch (s3Err) {
+          // Log but don't fail — file is still accessible from quarantine
+          // and can be moved by a reconciliation job
+          request.log.error(
+            s3Err,
+            'Failed to move file from quarantine (scan disabled)',
+          );
+        }
+      }
 
       return reply.status(200).send({ status: 'processed' });
     } catch (err) {

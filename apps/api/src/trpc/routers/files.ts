@@ -162,14 +162,14 @@ export const filesRouter = createRouter({
         },
       });
 
-      // Delete from S3 after DB commit succeeds (best-effort)
+      // Delete from correct S3 bucket based on scan status (best-effort)
       try {
         const env = getEnvConfig();
-        await deleteS3Object(
-          getS3Client(),
-          env.S3_QUARANTINE_BUCKET,
-          file.storageKey,
-        );
+        const bucket =
+          file.scanStatus === 'CLEAN'
+            ? env.S3_BUCKET
+            : env.S3_QUARANTINE_BUCKET;
+        await deleteS3Object(getS3Client(), bucket, file.storageKey);
       } catch {
         // Log but don't fail — orphaned S3 objects can be cleaned up
         // by a periodic garbage collection job

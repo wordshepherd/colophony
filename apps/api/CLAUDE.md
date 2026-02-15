@@ -102,6 +102,53 @@ When built: check processed status in `stripe_webhook_events` table before handl
 
 ---
 
+## BullMQ Workers
+
+### Queue/Worker Pattern
+
+- **Queues**: `src/queues/<name>.queue.ts` — singleton queue, `enqueue*()` helper, `close*()` for shutdown
+- **Workers**: `src/workers/<name>.worker.ts` — `start*Worker(env)` / `stop*Worker()` lifecycle functions
+- **Barrel exports**: `src/queues/index.ts` and `src/workers/index.ts`
+
+### RLS in Workers
+
+Workers have no HTTP context. Use `withRls({ orgId })` for all DB operations on tenant tables. Each logical phase (status update, audit log) should be wrapped in its own `withRls()` call. S3 operations happen outside `withRls` since they don't touch the DB.
+
+```typescript
+// Phase 1: update status
+await withRls({ orgId: job.data.organizationId }, async (tx) => {
+  await fileService.updateScanStatus(tx, fileId, 'SCANNING');
+});
+// Phase 2: S3/external ops (no RLS needed)
+// Phase 3: update status + audit
+await withRls({ orgId: job.data.organizationId }, async (tx) => {
+  await fileService.updateScanStatus(tx, fileId, 'CLEAN');
+  await auditService.log(tx, { ... });
+});
+```
+
+### Shutdown
+
+Workers and queues are started in `main.ts` and closed during graceful shutdown. Always close workers before queues.
+
+### File Scan Worker
+
+- **Queue**: `file-scan` — jobs enqueued from tusd post-finish webhook _after_ DB commit
+- **Job idempotency**: `jobId: fileId` prevents duplicate scans from duplicate webhook calls
+- **Flow**: PENDING → SCANNING → CLEAN/INFECTED/FAILED
+- **Fail closed**: ClamAV errors → FAILED status → downloads blocked → BullMQ retries (3 attempts, exponential backoff)
+- **Feature flag**: `VIRUS_SCAN_ENABLED` (default `true`). When `false`, files are marked CLEAN immediately in the tusd webhook
+
+### Env Vars
+
+| Variable             | Default     | Purpose                    |
+| -------------------- | ----------- | -------------------------- |
+| `CLAMAV_HOST`        | `localhost` | ClamAV daemon TCP host     |
+| `CLAMAV_PORT`        | `3310`      | ClamAV daemon TCP port     |
+| `VIRUS_SCAN_ENABLED` | `true`      | Enable/disable virus scans |
+
+---
+
 ## Quirks
 
 | Quirk                                 | Details                                                                                                                                                                                                                                                                                                                  |
