@@ -72,9 +72,10 @@ Key functions in `trpc.ts`:
 
 ## Quirks
 
-| Quirk                             | Details                                                                                                      |
-| --------------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| **TanStack Query v4 `isLoading`** | `isLoading` is `true` even when query is disabled (`enabled: false`). Check `fetchStatus !== 'idle'` instead |
+| Quirk                                  | Details                                                                                                                                                                                       |
+| -------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **TanStack Query v4 `isLoading`**      | `isLoading` is `true` even when query is disabled (`enabled: false`). Check `fetchStatus !== 'idle'` instead                                                                                  |
+| **React 18 + Next.js 15 async params** | Next.js 15 types require `params: Promise<>` but React 18 doesn't export `use()`. Dynamic route pages must be async server components (`await params`), not `"use client"` with `use(params)` |
 
 ## Version Pins
 
