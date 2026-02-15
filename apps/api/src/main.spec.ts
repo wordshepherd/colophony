@@ -150,4 +150,37 @@ describe('Fastify app', () => {
       'http://localhost:3000',
     );
   });
+
+  it('includes permissions-policy header on responses', async () => {
+    const response = await app.inject({ method: 'GET', url: '/health' });
+    expect(response.headers['permissions-policy']).toBe(
+      'camera=(), microphone=(), geolocation=(), interest-cohort=()',
+    );
+  });
+
+  it('sets cache-control: no-store on authenticated responses', async () => {
+    // Build a separate app instance so we can add a test route before ready
+    const authApp = await buildApp(testEnv);
+    authApp.get('/test-auth-cache', async (request, reply) => {
+      request.authContext = {
+        userId: '00000000-0000-0000-0000-000000000001',
+        zitadelUserId: 'test-zitadel-id',
+        email: 'test@example.com',
+        emailVerified: true,
+      };
+      return reply.send({ ok: true });
+    });
+
+    const response = await authApp.inject({
+      method: 'GET',
+      url: '/test-auth-cache',
+    });
+    expect(response.headers['cache-control']).toBe('no-store');
+    await authApp.close();
+  });
+
+  it('does not set cache-control: no-store on unauthenticated responses', async () => {
+    const response = await app.inject({ method: 'GET', url: '/health' });
+    expect(response.headers['cache-control']).toBeUndefined();
+  });
 });
