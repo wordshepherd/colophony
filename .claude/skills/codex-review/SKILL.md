@@ -154,3 +154,4 @@ Which findings would you like me to address? (Enter numbers, "all", or "none")
 - Plan review uses `codex exec -s read-only` since it's not a git diff operation and `exec` accepts stdin prompts
 - nvm must be sourced explicitly in every command because Bash tool runs non-interactive shells
 - For interactive Codex sessions with live progress, see the **Interactive Codex (tmux)** section in CLAUDE.md
+- **Plans enforce Codex review via task list**: Per CLAUDE.md, non-trivial plans must create `/codex-review plan` and evaluation as the first two task list entries, with all implementation tasks blocked by them via `addBlockedBy`

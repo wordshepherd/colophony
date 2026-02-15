@@ -220,6 +220,15 @@ All other version pins are in their respective per-directory CLAUDE.md files.
 
 For interactive Codex in tmux: source nvm, `nvm use v20.20.0`, then `codex`. Use `codex resume` or `codex fork --last` for follow-up.
 
+### Plan Structure: Codex Review as First Steps
+
+Every non-trivial plan **must enforce Codex review via task list entries**. When creating task list entries for a plan, always create these two tasks first:
+
+1. **"Run Codex plan review"** — Execute `/codex-review plan` to get a second opinion on the plan
+2. **"Evaluate Codex findings and adjust plan"** — Review Codex output, update the plan for any critical/important issues, note dismissed suggestions with rationale
+
+All implementation tasks **must use `addBlockedBy`** to depend on these two review tasks. This ensures the review is mechanically enforced — the implementation tasks cannot be started until the review tasks are marked completed. Skip for trivial plans (typo fix, single config change).
+
 ### MCP Servers (restart Claude Code to activate)
 
 - **postgres**: Direct DB queries (`@modelcontextprotocol/server-postgres`)
