@@ -20,6 +20,14 @@ export const AuditActions = {
   ORG_MEMBER_REMOVED: "ORG_MEMBER_REMOVED",
   ORG_MEMBER_ROLE_CHANGED: "ORG_MEMBER_ROLE_CHANGED",
 
+  // Submission lifecycle
+  SUBMISSION_CREATED: "SUBMISSION_CREATED",
+  SUBMISSION_UPDATED: "SUBMISSION_UPDATED",
+  SUBMISSION_SUBMITTED: "SUBMISSION_SUBMITTED",
+  SUBMISSION_STATUS_CHANGED: "SUBMISSION_STATUS_CHANGED",
+  SUBMISSION_DELETED: "SUBMISSION_DELETED",
+  SUBMISSION_WITHDRAWN: "SUBMISSION_WITHDRAWN",
+
   // Authentication failures
   AUTH_TOKEN_INVALID: "AUTH_TOKEN_INVALID",
   AUTH_TOKEN_EXPIRED: "AUTH_TOKEN_EXPIRED",
@@ -33,6 +41,7 @@ export type AuditAction = (typeof AuditActions)[keyof typeof AuditActions];
 export const AuditResources = {
   USER: "user",
   ORGANIZATION: "organization",
+  SUBMISSION: "submission",
   AUTH: "auth",
 } as const;
 
@@ -75,6 +84,17 @@ export interface OrgAuditParams extends BaseAuditParams {
     | typeof AuditActions.ORG_MEMBER_ROLE_CHANGED;
 }
 
+export interface SubmissionAuditParams extends BaseAuditParams {
+  resource: typeof AuditResources.SUBMISSION;
+  action:
+    | typeof AuditActions.SUBMISSION_CREATED
+    | typeof AuditActions.SUBMISSION_UPDATED
+    | typeof AuditActions.SUBMISSION_SUBMITTED
+    | typeof AuditActions.SUBMISSION_STATUS_CHANGED
+    | typeof AuditActions.SUBMISSION_DELETED
+    | typeof AuditActions.SUBMISSION_WITHDRAWN;
+}
+
 export interface AuthAuditParams extends BaseAuditParams {
   resource: typeof AuditResources.AUTH;
   action:
@@ -85,4 +105,8 @@ export interface AuthAuditParams extends BaseAuditParams {
 }
 
 /** Union of all resource-specific param types. */
-export type AuditLogParams = UserAuditParams | OrgAuditParams | AuthAuditParams;
+export type AuditLogParams =
+  | UserAuditParams
+  | OrgAuditParams
+  | SubmissionAuditParams
+  | AuthAuditParams;
