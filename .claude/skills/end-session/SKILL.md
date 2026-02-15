@@ -74,7 +74,9 @@ Check the conversation history for any `/codex-review` invocations during this s
 
 This step does NOT perform a review — it only records what happened during the session.
 
-### Step 4: Update DEVLOG
+### Step 4: Update DEVLOG and backlog
+
+#### 4a: Update DEVLOG
 
 Determine the current month's devlog file: `docs/devlog/YYYY-MM.md` (e.g., `docs/devlog/2026-02.md`). If the file doesn't exist yet, create it with the header `# Development Log — [Month Year]` followed by a blank line and `Newest entries first.`
 
@@ -90,21 +92,27 @@ Read the current month's devlog to see the latest entry format, then **prepend**
 ### Decisions
 
 - [any architectural or process decisions made]
-
-### Issues Found (optional)
-
-- [bugs or problems discovered but not yet fixed]
-
-### Next
-
-- [planned follow-up work]
 ```
+
+**Important changes from previous format:**
+
+- The DEVLOG **no longer has a "Next" section** for deferred work. Deferred items go in `docs/backlog.md` instead.
+- Only include an **"Issues Found"** section if there are bugs or problems discovered during this session that need immediate attention (e.g., "CI is broken", "test is flaky"). Routine follow-up work goes in the backlog.
+- The DEVLOG entry should capture the full session including any Codex review outcomes (e.g., "Addressed Codex review: fixed X, deferred Y").
 
 If today already has a DEVLOG entry for this session's work, **append to the existing entry's sections** rather than creating a duplicate.
 
-**Important:** The DEVLOG entry should capture the full session including any Codex review outcomes (e.g., "Addressed Codex review: fixed X, deferred Y").
-
 **File convention:** Monthly rotation in `docs/devlog/YYYY-MM.md`. Never write to `docs/DEVLOG.md` (redirect stub only).
+
+#### 4b: Update backlog
+
+Read `docs/backlog.md` and update it:
+
+1. **Check off completed items:** If any backlog items were completed in this session, mark them `[x]`.
+2. **Add new deferrals:** Any items raised during the session that were intentionally deferred (Codex review findings, ideas, discovered work) get added to the appropriate track section with a source annotation (e.g., `— (DEVLOG 2026-02-15, Codex review)`).
+3. **Add items from Codex reviews:** If a `/codex-review` was run, any findings that were noted but not addressed in this session should be added with their priority level (e.g., `- [ ] [P2] Add input validation on X endpoint — (Codex review 2026-02-15)`).
+
+**Categorize new items** into the correct track section. If unsure which track an item belongs to, add it to the track currently being worked on. Use the existing format: `- [ ] Description — (source)`.
 
 ### Step 5: Check for CLAUDE.md and other doc updates
 
@@ -138,7 +146,7 @@ Ask the user if they want to apply the suggestions before proceeding.
 This is the **final commit** on the branch. Stage all doc changes:
 
 ```bash
-git add docs/devlog/ CLAUDE.md docs/testing.md [any other docs]
+git add docs/devlog/ docs/backlog.md CLAUDE.md docs/testing.md [any other docs]
 git commit -m "docs: update devlog and docs for [session date] session"
 git push origin <branch-name>
 ```
