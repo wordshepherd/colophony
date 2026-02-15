@@ -1,0 +1,352 @@
+import {
+  submissions,
+  submissionFiles,
+  submissionHistory,
+  users,
+  eq,
+  and,
+  sql,
+  type DrizzleDb,
+} from '@colophony/db';
+import { desc, asc, ilike, count } from 'drizzle-orm';
+import type {
+  CreateSubmissionInput,
+  UpdateSubmissionInput,
+  ListSubmissionsInput,
+  SubmissionStatus,
+} from '@colophony/types';
+import {
+  isValidStatusTransition,
+  isEditorAllowedTransition,
+} from '@colophony/types';
+
+// ---------------------------------------------------------------------------
+// Error classes
+// ---------------------------------------------------------------------------
+
+export class SubmissionNotFoundError extends Error {
+  constructor(id: string) {
+    super(`Submission "${id}" not found`);
+    this.name = 'SubmissionNotFoundError';
+  }
+}
+
+export class InvalidStatusTransitionError extends Error {
+  constructor(from: string, to: string) {
+    super(`Invalid status transition from "${from}" to "${to}"`);
+    this.name = 'InvalidStatusTransitionError';
+  }
+}
+
+export class NotDraftError extends Error {
+  constructor() {
+    super('Submission must be in DRAFT status for this operation');
+    this.name = 'NotDraftError';
+  }
+}
+
+export class UnscannedFilesError extends Error {
+  constructor() {
+    super(
+      'Cannot submit: one or more files are still pending or being scanned',
+    );
+    this.name = 'UnscannedFilesError';
+  }
+}
+
+export class InfectedFilesError extends Error {
+  constructor() {
+    super('Cannot submit: one or more files have been flagged as infected');
+    this.name = 'InfectedFilesError';
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Service
+// ---------------------------------------------------------------------------
+
+export const submissionService = {
+  /**
+   * List submissions for a specific submitter (their own view).
+   * RLS handles org filtering; we add submitterId filter.
+   */
+  async listBySubmitter(
+    tx: DrizzleDb,
+    submitterId: string,
+    input: ListSubmissionsInput,
+  ) {
+    const { status, submissionPeriodId, search, page, limit } = input;
+    const offset = (page - 1) * limit;
+
+    const conditions = [eq(submissions.submitterId, submitterId)];
+    if (status) conditions.push(eq(submissions.status, status));
+    if (submissionPeriodId)
+      conditions.push(eq(submissions.submissionPeriodId, submissionPeriodId));
+    if (search) {
+      if (search.length >= 3) {
+        conditions.push(
+          sql`${submissions.searchVector} @@ plainto_tsquery('english', ${search})`,
+        );
+      } else {
+        conditions.push(ilike(submissions.title, `%${search}%`));
+      }
+    }
+
+    const where = and(...conditions);
+
+    const [items, countResult] = await Promise.all([
+      tx
+        .select()
+        .from(submissions)
+        .where(where)
+        .orderBy(desc(submissions.createdAt))
+        .limit(limit)
+        .offset(offset),
+      tx.select({ count: count() }).from(submissions).where(where),
+    ]);
+
+    const total = countResult[0]?.count ?? 0;
+    return { items, total, page, limit, totalPages: Math.ceil(total / limit) };
+  },
+
+  /**
+   * List all submissions in the org (editor view).
+   * RLS handles org filtering.
+   */
+  async listAll(tx: DrizzleDb, input: ListSubmissionsInput) {
+    const { status, submissionPeriodId, search, page, limit } = input;
+    const offset = (page - 1) * limit;
+
+    const conditions = [];
+    if (status) conditions.push(eq(submissions.status, status));
+    if (submissionPeriodId)
+      conditions.push(eq(submissions.submissionPeriodId, submissionPeriodId));
+    if (search) {
+      if (search.length >= 3) {
+        conditions.push(
+          sql`${submissions.searchVector} @@ plainto_tsquery('english', ${search})`,
+        );
+      } else {
+        conditions.push(ilike(submissions.title, `%${search}%`));
+      }
+    }
+
+    const where = conditions.length > 0 ? and(...conditions) : undefined;
+
+    const [items, countResult] = await Promise.all([
+      tx
+        .select()
+        .from(submissions)
+        .where(where)
+        .orderBy(desc(submissions.createdAt))
+        .limit(limit)
+        .offset(offset),
+      tx.select({ count: count() }).from(submissions).where(where),
+    ]);
+
+    const total = countResult[0]?.count ?? 0;
+    return { items, total, page, limit, totalPages: Math.ceil(total / limit) };
+  },
+
+  /**
+   * Create a new submission in DRAFT status with initial history record.
+   */
+  async create(
+    tx: DrizzleDb,
+    input: CreateSubmissionInput,
+    orgId: string,
+    submitterId: string,
+  ) {
+    const [submission] = await tx
+      .insert(submissions)
+      .values({
+        organizationId: orgId,
+        submitterId,
+        title: input.title,
+        content: input.content ?? null,
+        coverLetter: input.coverLetter ?? null,
+        submissionPeriodId: input.submissionPeriodId ?? null,
+        status: 'DRAFT',
+      })
+      .returning();
+
+    await tx.insert(submissionHistory).values({
+      submissionId: submission.id,
+      fromStatus: null,
+      toStatus: 'DRAFT',
+      changedBy: submitterId,
+    });
+
+    return submission;
+  },
+
+  /**
+   * Get submission by ID with files and submitter email.
+   */
+  async getById(tx: DrizzleDb, id: string) {
+    const [submission] = await tx
+      .select()
+      .from(submissions)
+      .where(eq(submissions.id, id))
+      .limit(1);
+
+    if (!submission) return null;
+
+    const [files, [submitter]] = await Promise.all([
+      tx
+        .select()
+        .from(submissionFiles)
+        .where(eq(submissionFiles.submissionId, id))
+        .orderBy(asc(submissionFiles.uploadedAt)),
+      tx
+        .select({ email: users.email })
+        .from(users)
+        .where(eq(users.id, submission.submitterId))
+        .limit(1),
+    ]);
+
+    return {
+      ...submission,
+      files,
+      submitterEmail: submitter?.email ?? null,
+    };
+  },
+
+  /**
+   * Update a submission (DRAFT only). Uses FOR UPDATE lock.
+   */
+  async update(tx: DrizzleDb, id: string, input: UpdateSubmissionInput) {
+    const rows = await tx.execute<{
+      id: string;
+      status: string;
+    }>(sql`SELECT id, status FROM submissions WHERE id = ${id} FOR UPDATE`);
+
+    const existing = rows.rows[0];
+    if (!existing) return null;
+    if (existing.status !== 'DRAFT') throw new NotDraftError();
+
+    const [updated] = await tx
+      .update(submissions)
+      .set({
+        ...(input.title !== undefined ? { title: input.title } : {}),
+        ...(input.content !== undefined ? { content: input.content } : {}),
+        ...(input.coverLetter !== undefined
+          ? { coverLetter: input.coverLetter }
+          : {}),
+        updatedAt: new Date(),
+      })
+      .where(eq(submissions.id, id))
+      .returning();
+
+    return updated ?? null;
+  },
+
+  /**
+   * Transition submission status with validation and history tracking.
+   */
+  async updateStatus(
+    tx: DrizzleDb,
+    id: string,
+    newStatus: SubmissionStatus,
+    changedBy: string,
+    comment: string | undefined,
+    callerRole: 'submitter' | 'editor',
+  ) {
+    const rows = await tx.execute<{
+      id: string;
+      status: SubmissionStatus;
+    }>(sql`SELECT id, status FROM submissions WHERE id = ${id} FOR UPDATE`);
+
+    const existing = rows.rows[0];
+    if (!existing) throw new SubmissionNotFoundError(id);
+
+    const fromStatus = existing.status;
+
+    // Validate transition based on caller role
+    if (callerRole === 'submitter') {
+      if (!isValidStatusTransition(fromStatus, newStatus)) {
+        throw new InvalidStatusTransitionError(fromStatus, newStatus);
+      }
+    } else {
+      if (!isEditorAllowedTransition(fromStatus, newStatus)) {
+        throw new InvalidStatusTransitionError(fromStatus, newStatus);
+      }
+    }
+
+    // On DRAFT→SUBMITTED, verify file scan statuses
+    if (fromStatus === 'DRAFT' && newStatus === 'SUBMITTED') {
+      const files = await tx
+        .select({ scanStatus: submissionFiles.scanStatus })
+        .from(submissionFiles)
+        .where(eq(submissionFiles.submissionId, id));
+
+      const hasUnscanned = files.some(
+        (f) => f.scanStatus === 'PENDING' || f.scanStatus === 'SCANNING',
+      );
+      if (hasUnscanned) throw new UnscannedFilesError();
+
+      const hasInfected = files.some((f) => f.scanStatus === 'INFECTED');
+      if (hasInfected) throw new InfectedFilesError();
+    }
+
+    const updateData: Record<string, unknown> = {
+      status: newStatus,
+      updatedAt: new Date(),
+    };
+    if (newStatus === 'SUBMITTED') {
+      updateData.submittedAt = new Date();
+    }
+
+    const [submission] = await tx
+      .update(submissions)
+      .set(updateData)
+      .where(eq(submissions.id, id))
+      .returning();
+
+    const [historyEntry] = await tx
+      .insert(submissionHistory)
+      .values({
+        submissionId: id,
+        fromStatus,
+        toStatus: newStatus,
+        changedBy,
+        comment: comment ?? null,
+      })
+      .returning();
+
+    return { submission, historyEntry };
+  },
+
+  /**
+   * Delete a submission (DRAFT only). Uses FOR UPDATE lock.
+   * CASCADE handles children (files, history).
+   */
+  async delete(tx: DrizzleDb, id: string) {
+    const rows = await tx.execute<{
+      id: string;
+      status: string;
+    }>(sql`SELECT id, status FROM submissions WHERE id = ${id} FOR UPDATE`);
+
+    const existing = rows.rows[0];
+    if (!existing) return null;
+    if (existing.status !== 'DRAFT') throw new NotDraftError();
+
+    const [deleted] = await tx
+      .delete(submissions)
+      .where(eq(submissions.id, id))
+      .returning();
+
+    return deleted ?? null;
+  },
+
+  /**
+   * Get submission history ordered by changedAt ASC.
+   */
+  async getHistory(tx: DrizzleDb, submissionId: string) {
+    return tx
+      .select()
+      .from(submissionHistory)
+      .where(eq(submissionHistory.submissionId, submissionId))
+      .orderBy(asc(submissionHistory.changedAt));
+  },
+};
