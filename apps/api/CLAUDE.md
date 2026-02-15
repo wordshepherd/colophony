@@ -12,6 +12,7 @@
 | tRPC client types | `src/trpc/client-types.ts`        |
 | tRPC init         | `src/trpc/init.ts`                |
 | tRPC context      | `src/trpc/context.ts`             |
+| tusd webhook      | `src/webhooks/tusd.webhook.ts`    |
 | Zitadel webhook   | `src/webhooks/zitadel.webhook.ts` |
 
 ---
@@ -90,6 +91,10 @@ Stripe Checkout only (zero PCI scope). Stripe integration is planned — no hand
 ### Zitadel (built)
 
 `src/webhooks/zitadel.webhook.ts` — verifies `x-zitadel-signature` header, registered in an isolated Fastify scope with `fastify-raw-body`.
+
+### tusd (built)
+
+`src/webhooks/tusd.webhook.ts` — pre-create validates auth/submission/limits, post-finish creates file record idempotently (checks `storageKey` exists before insert). Registered in isolated Fastify scope at `/webhooks/tusd`. Auth: validates forwarded `Authorization` header via JWKS, resolves Zitadel `sub` → local user UUID via `resolveLocalUserId()`. Fails closed when auth cannot be verified.
 
 ### Stripe (planned)
 
