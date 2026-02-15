@@ -73,6 +73,9 @@ const testEnv: Env = {
   S3_SECRET_KEY: 'minioadmin',
   S3_REGION: 'us-east-1',
   TUS_ENDPOINT: 'http://localhost:1080',
+  CLAMAV_HOST: 'localhost',
+  CLAMAV_PORT: 3310,
+  VIRUS_SCAN_ENABLED: true,
 };
 
 const VALID_ORG_ID = '11111111-1111-1111-a111-111111111111';

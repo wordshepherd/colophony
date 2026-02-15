@@ -1,5 +1,6 @@
 import { submissionFiles, eq, sql, type DrizzleDb } from '@colophony/db';
 import { asc, count } from 'drizzle-orm';
+import type { ScanStatus } from '@colophony/types';
 import {
   MAX_FILES_PER_SUBMISSION,
   MAX_TOTAL_UPLOAD_SIZE,
@@ -103,6 +104,22 @@ export const fileService = {
       })
       .returning();
     return file;
+  },
+
+  async updateScanStatus(
+    tx: DrizzleDb,
+    fileId: string,
+    scanStatus: ScanStatus,
+  ) {
+    const [updated] = await tx
+      .update(submissionFiles)
+      .set({
+        scanStatus,
+        scannedAt: scanStatus === 'PENDING' ? null : sql`now()`,
+      })
+      .where(eq(submissionFiles.id, fileId))
+      .returning();
+    return updated ?? null;
   },
 
   async delete(tx: DrizzleDb, fileId: string) {

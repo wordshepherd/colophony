@@ -13,6 +13,7 @@ import type { TusdPreCreateResponse } from '@colophony/types';
 import type { Env } from '../config/env.js';
 import { fileService } from '../services/file.service.js';
 import { auditService } from '../services/audit.service.js';
+import { enqueueFileScan } from '../queues/file-scan.queue.js';
 
 export interface TusdWebhookOptions {
   env: Env;
@@ -302,6 +303,9 @@ export async function registerTusdWebhooks(
     }
 
     try {
+      // Track file ID and whether it was newly created (for scan enqueue)
+      let createdFileId: string | null = null;
+
       await withRls({ orgId, userId }, async (tx: DrizzleDb) => {
         // Idempotency: check if already processed
         const existing = await fileService.getByStorageKey(tx, storageKey);
@@ -322,6 +326,11 @@ export async function registerTusdWebhooks(
           storageKey,
         });
 
+        // If scanning disabled, mark CLEAN immediately inside the tx
+        if (!env.VIRUS_SCAN_ENABLED) {
+          await fileService.updateScanStatus(tx, file.id, 'CLEAN');
+        }
+
         // Audit within the same transaction
         await auditService.log(tx, {
           resource: AuditResources.FILE,
@@ -334,11 +343,22 @@ export async function registerTusdWebhooks(
           newValue: { filename, mimeType, size, submissionId },
         });
 
+        createdFileId = file.id;
+
         request.log.info(
           { fileId: file.id, submissionId, storageKey },
           'File record created from tusd post-finish',
         );
       });
+
+      // Enqueue scan job AFTER commit to avoid ghost jobs on rollback
+      if (createdFileId && env.VIRUS_SCAN_ENABLED) {
+        await enqueueFileScan(env, {
+          fileId: createdFileId,
+          storageKey,
+          organizationId: orgId,
+        });
+      }
 
       return reply.status(200).send({ status: 'processed' });
     } catch (err) {

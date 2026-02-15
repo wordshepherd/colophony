@@ -136,6 +136,9 @@ const testEnv: Env = {
   S3_REGION: 'us-east-1',
   TUS_ENDPOINT: 'http://localhost:1080',
   ZITADEL_WEBHOOK_SECRET: WEBHOOK_SECRET,
+  CLAMAV_HOST: 'localhost',
+  CLAMAV_PORT: 3310,
+  VIRUS_SCAN_ENABLED: true,
 };
 
 function signPayload(body: string): string {

@@ -61,6 +61,12 @@ vi.mock('../services/audit.service.js', () => ({
   },
 }));
 
+// Mock queue
+const mockEnqueueFileScan = vi.fn();
+vi.mock('../queues/file-scan.queue.js', () => ({
+  enqueueFileScan: (...args: unknown[]) => mockEnqueueFileScan(...args),
+}));
+
 // Mock auth-client
 vi.mock('@colophony/auth-client', () => ({
   createJwksVerifier: vi.fn(),
@@ -99,6 +105,9 @@ const TEST_ENV = {
   S3_SECRET_KEY: 'minioadmin',
   S3_REGION: 'us-east-1',
   TUS_ENDPOINT: 'http://localhost:1080',
+  VIRUS_SCAN_ENABLED: true,
+  CLAMAV_HOST: 'localhost',
+  CLAMAV_PORT: 3310,
 } as unknown as Env;
 
 const SUBMISSION_ID = 'a1111111-1111-1111-1111-111111111111';
@@ -482,6 +491,66 @@ describe('tusd webhook handler', () => {
       });
 
       expect(response.statusCode).toBe(400);
+    });
+
+    it('enqueues scan job after commit when VIRUS_SCAN_ENABLED', async () => {
+      mockWithRls.mockImplementation(
+        async (_ctx: unknown, fn: (tx: unknown) => Promise<void>) => {
+          return fn({});
+        },
+      );
+      mockFileService.getByStorageKey.mockResolvedValueOnce(null as never);
+      mockFileService.create.mockResolvedValueOnce({
+        id: 'file-1',
+        submissionId: SUBMISSION_ID,
+        filename: 'poem.pdf',
+        mimeType: 'application/pdf',
+        size: 1024,
+        storageKey: 'quarantine/upload-abc123',
+        scanStatus: 'PENDING',
+        scannedAt: null,
+        uploadedAt: new Date(),
+      } as never);
+      mockAuditService.log.mockResolvedValueOnce(undefined);
+      mockEnqueueFileScan.mockResolvedValueOnce(undefined);
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/webhooks/tusd',
+        headers: { 'hook-name': 'post-finish' },
+        payload: makePostFinishBody(),
+      });
+
+      expect(response.statusCode).toBe(200);
+      expect(mockEnqueueFileScan).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({
+          fileId: 'file-1',
+          storageKey: 'quarantine/upload-abc123',
+          organizationId: 'org-1',
+        }),
+      );
+    });
+
+    it('does not enqueue scan when idempotent (file already exists)', async () => {
+      mockWithRls.mockImplementation(
+        async (_ctx: unknown, fn: (tx: unknown) => Promise<void>) => {
+          return fn({});
+        },
+      );
+      mockFileService.getByStorageKey.mockResolvedValueOnce({
+        id: 'existing-file',
+        storageKey: 'quarantine/upload-abc123',
+      } as never);
+
+      await app.inject({
+        method: 'POST',
+        url: '/webhooks/tusd',
+        headers: { 'hook-name': 'post-finish' },
+        payload: makePostFinishBody(),
+      });
+
+      expect(mockEnqueueFileScan).not.toHaveBeenCalled();
     });
 
     it('returns 500 on processing error', async () => {
