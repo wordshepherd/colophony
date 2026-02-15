@@ -38,7 +38,12 @@ export async function buildApp(env: Env): Promise<FastifyInstance> {
   // Security headers
   await app.register(helmet, {
     contentSecurityPolicy: false, // No HTML served from API
-    crossOriginResourcePolicy: { policy: 'cross-origin' },
+    strictTransportSecurity: {
+      maxAge: 31536000, // 1 year — explicit to avoid drift across helmet upgrades
+      includeSubDomains: true,
+    },
+    // CORP defaults to same-origin; no override needed for a JSON API
+    // (cross-origin fetch/XHR is governed by CORS, not CORP)
   });
 
   // CORS
