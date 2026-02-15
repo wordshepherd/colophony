@@ -358,7 +358,7 @@ describe('files tRPC router', () => {
       // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(mockDeleteS3).toHaveBeenCalledWith(
         expect.anything(),
-        'quarantine',
+        'submissions', // CLEAN files live in submissions bucket after scan
         file.storageKey,
       );
     });

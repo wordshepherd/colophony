@@ -13,6 +13,8 @@ import { registerTusdWebhooks } from './webhooks/tusd.webhook.js';
 import { fastifyTRPCPlugin } from '@trpc/server/adapters/fastify';
 import { appRouter } from './trpc/router.js';
 import { createContext } from './trpc/context.js';
+import { startFileScanWorker, stopFileScanWorker } from './workers/index.js';
+import { closeFileScanQueue } from './queues/index.js';
 
 export async function buildApp(env: Env): Promise<FastifyInstance> {
   const app = Fastify({
@@ -155,6 +157,12 @@ async function start(): Promise<void> {
   const env = validateEnv();
   const app = await buildApp(env);
 
+  // Start BullMQ workers
+  if (env.VIRUS_SCAN_ENABLED) {
+    startFileScanWorker(env);
+    app.log.info('File scan worker started');
+  }
+
   // Graceful shutdown
   const shutdown = async (signal: string) => {
     app.log.info(`Received ${signal}, shutting down gracefully...`);
@@ -166,9 +174,10 @@ async function start(): Promise<void> {
 
     try {
       await app.close();
+      await stopFileScanWorker();
+      await closeFileScanQueue();
       // TODO: Close DB pool when connection management is centralized
       // TODO: Close Redis connections
-      // TODO: Close BullMQ workers
       app.log.info('Server closed');
     } finally {
       clearTimeout(forceExit);

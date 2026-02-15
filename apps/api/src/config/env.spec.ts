@@ -99,6 +99,33 @@ describe('validateEnv', () => {
     ).toThrow();
   });
 
+  it('applies ClamAV defaults', () => {
+    const env = validateEnv(validBase);
+    expect(env.CLAMAV_HOST).toBe('localhost');
+    expect(env.CLAMAV_PORT).toBe(3310);
+    expect(env.VIRUS_SCAN_ENABLED).toBe(true);
+  });
+
+  it('transforms VIRUS_SCAN_ENABLED to boolean', () => {
+    const envTrue = validateEnv({
+      ...validBase,
+      VIRUS_SCAN_ENABLED: 'true',
+    });
+    expect(envTrue.VIRUS_SCAN_ENABLED).toBe(true);
+
+    const envFalse = validateEnv({
+      ...validBase,
+      VIRUS_SCAN_ENABLED: 'false',
+    });
+    expect(envFalse.VIRUS_SCAN_ENABLED).toBe(false);
+  });
+
+  it('coerces CLAMAV_PORT from string to number', () => {
+    const env = validateEnv({ ...validBase, CLAMAV_PORT: '3311' });
+    expect(env.CLAMAV_PORT).toBe(3311);
+    expect(typeof env.CLAMAV_PORT).toBe('number');
+  });
+
   it('transforms FEDERATION_ENABLED to boolean', () => {
     const envTrue = validateEnv({
       ...validBase,
