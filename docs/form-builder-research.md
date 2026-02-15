@@ -174,6 +174,8 @@ Given that Colophony's form builder is for non-technical magazine editors and th
 
 This approach gives Colophony full control over the form builder, no license dependencies, and a schema format optimized for literary submissions.
 
+> **Note (2026-02-15):** Reviewed external feedback suggesting JSON Forms or RJSF for "renderer-heavy paths." Decision: keep custom builder and renderer for submission forms (product-differentiating — tus/ClamAV integration, submission periods, blind submission toggles). If we later build many generic admin/settings forms (org config, publication settings), evaluate JSON Forms as a renderer for those non-domain-specific forms to reduce maintenance. No action needed now.
+
 ---
 
 ## 3. Drag-and-Drop Implementation

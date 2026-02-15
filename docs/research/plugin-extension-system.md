@@ -1331,12 +1331,16 @@ packages/plugin-sdk/
 - Managed hosting deployments reject plugins requesting `database:write` or `http:outbound` unless they are first-party or verified.
 - Self-hosted deployments default to allowing all permissions (the operator is the trust authority).
 
-### Plugin signing (Grafana-inspired, future)
+### Plugin signing and provenance
 
-- First-party and verified community plugins are signed with the Colophony project's key.
-- Managed hosting instances only load signed plugins by default.
-- Self-hosted instances can opt into `allow_unsigned_plugins` mode.
-- Signing covers the npm package tarball hash, not individual file signatures.
+> **Decision (2026-02-15):** Use industry-standard supply chain tooling rather than building custom signing infrastructure. Reviewed external feedback recommending npm trusted publishing + Sigstore Cosign + OPA.
+
+- **Provenance:** npm trusted publishing (GitHub Actions OIDC → npm provenance attestations). This provides verifiable build provenance without managing signing keys.
+- **Artifact signing:** Sigstore Cosign for plugin package tarballs and any container images. Keyless signing via OIDC identity (no long-lived signing keys to manage).
+- **Load-time policy:** OPA (Open Policy Agent) for permission policy decisions at plugin load time. Managed hosting defines Rego policies that evaluate plugin manifests (permissions, trust level, version compatibility) before allowing a plugin to load.
+- Managed hosting instances only load plugins with valid provenance by default.
+- Self-hosted instances can opt into `allow_unverified_plugins` mode (the operator is the trust authority).
+- First-party and verified community plugins must have npm provenance attestations.
 
 ### Adapter isolation
 
@@ -1356,9 +1360,12 @@ packages/plugin-sdk/
 
 ### Primary channel: npm packages
 
+> **Decision (2026-02-15):** Formalized the npm + Sigstore + OPA toolchain for plugin distribution, signing, and governance. This de-scopes building a custom marketplace or signing infrastructure.
+
 - Plugins are standard npm packages with a `colophony` field in `package.json` containing the `PluginManifest`.
 - npm is the distribution mechanism (publishing, versioning, dependency resolution are already solved).
 - No custom plugin registry infrastructure is needed initially.
+- **Provenance chain:** npm trusted publishing → Sigstore Cosign artifact signatures → OPA load-time policy evaluation. See Section 6 for details.
 
 ### Discovery
 
@@ -1524,16 +1531,18 @@ export default defineConfig({
 
 ## 12. Key Design Decisions
 
-| #   | Decision                                                          | Rationale                                                                                                                                                                                 | Alternatives Considered                                                                                               |
-| --- | ----------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
-| 1   | **Layered architecture (5 tiers)** over single extension model    | Different extension surfaces have different needs. Adapters need exactly-one semantics; workflow hooks need many-listener semantics; external integrations need zero-code webhooks.       | WordPress-style single hook system (too flat), Grafana-style typed plugins only (too rigid)                           |
-| 2   | **TypeScript-only** (no Go, no WASM)                              | Single-language contributor experience. The target audience is web developers contributing to an open-source project, not Go or Rust engineers.                                           | Grafana's Go backend plugins (raises barrier), WASM sandboxing (premature complexity)                                 |
-| 3   | **npm distribution** over custom registry                         | npm solves publishing, versioning, dependency resolution, and authentication. No need to build registry infrastructure.                                                                   | Custom registry (OJS Plugin Gallery), git submodules (poor DX), Docker images per plugin (heavyweight)                |
-| 4   | **Zod config schemas rendered as forms**                          | Adapters already use Zod. Rendering Zod schemas as form UIs means adapter authors define config once and get admin panel forms for free.                                                  | JSON Schema (requires separate form renderer), manual admin panel forms per adapter (too much work)                   |
-| 5   | **Two-phase lifecycle (register then bootstrap)**                 | Prevents circular dependency issues. All plugins declare their interfaces before any plugin tries to use another's APIs. Strapi's proven pattern.                                         | Single-phase init (ordering problems), three-phase (unnecessary complexity)                                           |
-| 6   | **Permission-scoped rather than sandboxed** for initial release   | True sandboxing (process isolation, WASM) adds enormous complexity. Permission declaration + RLS-enforced database access provides meaningful security without the engineering cost.      | Full process isolation like VS Code (overkill for npm plugins), no security model (irresponsible for managed hosting) |
-| 7   | **Adapters are classes implementing interfaces** (not functional) | Adapters have lifecycle (initialize, destroy), state (connections, clients), and configuration. Classes model this naturally. Interfaces ensure the contract is enforced at compile time. | Functional adapters (no lifecycle management), dependency injection (requires framework coupling)                     |
-| 8   | **Plugin categories** (OJS-inspired)                              | Categories make plugins discoverable and help users understand what a plugin does. They also enable category-specific validation (e.g., adapters must implement healthCheck).             | Flat list (poor discoverability), tags only (too unstructured)                                                        |
+| #   | Decision                                                               | Rationale                                                                                                                                                                                                                             | Alternatives Considered                                                                                                                                 |
+| --- | ---------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | **Layered architecture (5 tiers)** over single extension model         | Different extension surfaces have different needs. Adapters need exactly-one semantics; workflow hooks need many-listener semantics; external integrations need zero-code webhooks.                                                   | WordPress-style single hook system (too flat), Grafana-style typed plugins only (too rigid)                                                             |
+| 2   | **TypeScript-only** (no Go, no WASM)                                   | Single-language contributor experience. The target audience is web developers contributing to an open-source project, not Go or Rust engineers.                                                                                       | Grafana's Go backend plugins (raises barrier), WASM sandboxing (premature complexity)                                                                   |
+| 3   | **npm distribution** over custom registry                              | npm solves publishing, versioning, dependency resolution, and authentication. No need to build registry infrastructure.                                                                                                               | Custom registry (OJS Plugin Gallery), git submodules (poor DX), Docker images per plugin (heavyweight)                                                  |
+| 4   | **Zod config schemas rendered as forms**                               | Adapters already use Zod. Rendering Zod schemas as form UIs means adapter authors define config once and get admin panel forms for free.                                                                                              | JSON Schema (requires separate form renderer), manual admin panel forms per adapter (too much work)                                                     |
+| 5   | **Two-phase lifecycle (register then bootstrap)**                      | Prevents circular dependency issues. All plugins declare their interfaces before any plugin tries to use another's APIs. Strapi's proven pattern.                                                                                     | Single-phase init (ordering problems), three-phase (unnecessary complexity)                                                                             |
+| 6   | **Permission-scoped rather than sandboxed** for initial release        | True sandboxing (process isolation, WASM) adds enormous complexity. Permission declaration + RLS-enforced database access provides meaningful security without the engineering cost.                                                  | Full process isolation like VS Code (overkill for npm plugins), no security model (irresponsible for managed hosting)                                   |
+| 7   | **Adapters are classes implementing interfaces** (not functional)      | Adapters have lifecycle (initialize, destroy), state (connections, clients), and configuration. Classes model this naturally. Interfaces ensure the contract is enforced at compile time.                                             | Functional adapters (no lifecycle management), dependency injection (requires framework coupling)                                                       |
+| 8   | **Plugin categories** (OJS-inspired)                                   | Categories make plugins discoverable and help users understand what a plugin does. They also enable category-specific validation (e.g., adapters must implement healthCheck).                                                         | Flat list (poor discoverability), tags only (too unstructured)                                                                                          |
+| 9   | **npm + Sigstore + OPA for distribution/governance** (2026-02-15)      | De-scopes building custom marketplace, signing, and policy infrastructure. Uses battle-tested supply chain tooling: npm trusted publishing for provenance, Sigstore Cosign for artifact signing, OPA for load-time permission policy. | Custom signing infrastructure (key management burden), custom marketplace from day one (premature), no governance (irresponsible for managed hosting)   |
+| 10  | **External automation via Tier 0 webhooks, not built-in** (2026-02-15) | Tier 0 webhooks are the integration surface for external automation tools (n8n, Activepieces). Colophony doesn't embed an automation engine. Evaluate n8n/Activepieces as a recommended external target in plugin Phase 3-4 (v2.2+).  | Embedded n8n (security risk, multiple CVEs in 2025-2026), built-in automation builder (scope creep), no automation story (limits non-developer editors) |
 
 ---
 

@@ -11,12 +11,12 @@ Start-of-session orientation: load context, check environment, surface open work
 
 1. Detects incomplete previous sessions (missed /end-session) and offers catch-up
 2. Cleans up stale local branches from merged PRs
-3. Reads the latest DEVLOG entry for context and planned next steps
+3. Reads the latest DEVLOG entry for session context (what was done, open issues)
 4. Checks git state (branch, uncommitted changes, open PRs)
 5. Checks CI health and open PR status
 6. Verifies infrastructure is running (Docker, DB)
-7. Surfaces open roadmap items and pending work
-8. Prints a briefing for the user
+7. Assesses development track status and identifies the highest-priority work
+8. Prints a briefing with track-driven focus suggestions
 
 ## Usage
 
@@ -130,7 +130,7 @@ Read the most recent entry (the first entry after the header). Extract:
 - **Open issues** — the "Issues Found" or "Bugs Found" section (if any)
 - **Planned next steps** — the "Next" section
 
-This is the primary source of continuity between sessions.
+This provides session-level context (what happened last, any open bugs). Note: the DEVLOG "Next" items are **session continuity notes**, not the strategic priority. Track status (Step 6) determines the suggested focus.
 
 ### Step 3: Check git state
 
@@ -192,9 +192,17 @@ Report which services are up/down. Flag if critical services (postgres, redis) a
 
 Do NOT auto-start services — just report status so the user can decide.
 
-### Step 6: Surface open work
+### Step 6: Determine track status and priorities
 
-Read the Post-MVP Roadmap section of `CLAUDE.md` (search for `## Post-MVP Roadmap`) and list the unchecked `[ ]` items from the "Immediate (pre-launch)" and "Short-term" sections.
+The development tracks in `docs/architecture-v2-planning.md` Section 6.2 define the project's priority order. The DEVLOG "Next" items are session-level continuity notes, NOT the strategic priority. **Tracks take precedence over DEVLOG "Next" when suggesting focus.**
+
+**Primary source: `docs/backlog.md`** — Read the backlog file and identify:
+
+- Which track has the most unchecked `[ ]` code items (this is the current track)
+- The unchecked items in the current track (these are the priority suggestions)
+- Any items in later tracks that shouldn't have been started yet (track drift)
+
+**Secondary: codebase spot-checks** — For the current track, verify the backlog is accurate by spot-checking a few items against the codebase. For example, for Track 1: grep for `@fastify/helmet` in `apps/api/`, check if rate-limit hook is registered in `main.ts`, check for API key auth middleware.
 
 Also check for any `TODO(CLAUDE.md)` comments in the codebase using the Grep tool (not bash) to search for `TODO(CLAUDE.md)` in `*.ts`, `*.tsx`, and `*.js` files.
 
@@ -207,7 +215,7 @@ Format everything as a concise briefing:
 
 ### Last Session
 [Date] — [Focus]
-Next steps planned: [bullet points from DEVLOG "Next" section]
+[Brief summary of what was done — from DEVLOG "Done" section]
 
 ### Git State
 - Branch: <current branch>
@@ -221,26 +229,46 @@ Next steps planned: [bullet points from DEVLOG "Next" section]
 - MinIO: [running/stopped]
 - Codex review: [active/not started] (run /codex-review when ready)
 
-### Open Work
-- [unchecked roadmap items]
+### Track Status
+- Current track: [Track N — Name] ([X]% complete)
+- Remaining items: [list gaps in the current track]
+- Track drift: [flag if recent work has been on a later track while the current track has gaps]
+
+### Backlog (Current Track)
+- [unchecked items from docs/backlog.md for the current track — code items first, then QA, then ops]
+- [total count of remaining items in current track]
+
+### Other
 - [TODO(CLAUDE.md) items if any]
-- [open issues from DEVLOG]
+- [open issues from DEVLOG "Issues Found" if any]
 
 ### Suggested Focus
-[Based on the DEVLOG "Next" section and open PR state, suggest what to work on]
+[Based on TRACK PRIORITY first, then DEVLOG "Next" items. If the current track has
+unfinished code items, suggest those over DEVLOG "Next" items from later tracks.
+Clearly distinguish between "track priority" and "session continuity" suggestions.
+Example: "Track 1 has 3 unfinished code items (helmet, rate limiting, API key auth).
+The DEVLOG suggests E2E tests and editor dashboard (Track 3), but closing Track 1
+gaps should come first."]
 ```
 
 ### Step 8: Branch prompt (when on main)
 
-If the current branch is `main` and there is no open feature branch for the suggested focus, prompt the user to confirm what they're working on and offer to create a branch:
+If the current branch is `main` and there is no open feature branch for the suggested focus, prompt the user to confirm what they're working on and offer to create a branch.
+
+**Priority order for suggestions:**
+
+1. Unfinished code items in the current track (highest priority)
+2. Next track that's ready to start (if current track is complete or only has ops/deployment items remaining)
+3. DEVLOG "Next" items (only if they align with track priorities, or if the user explicitly wants to work on them)
 
 ```
 You're on main. What are you working on this session?
 
-Based on the DEVLOG "Next" steps, I'd suggest:
-  1. <suggested topic> → `feat/<suggested-branch>`
-  2. <other topic> → `fix/<suggested-branch>`
-  3. Something else
+Based on track priorities, I'd suggest:
+  1. [Track N item] → `feat/<suggested-branch>` (track priority)
+  2. [Track N item] → `feat/<suggested-branch>` (track priority)
+  3. [DEVLOG item, if relevant] → `feat/<suggested-branch>` (session continuity)
+  4. Something else
 
 Want me to create a branch so we're ready to go?
 ```

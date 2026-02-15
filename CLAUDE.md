@@ -44,6 +44,7 @@ Per-directory CLAUDE.md files contain domain-specific details:
 | **Next.js frontend**    | `apps/web/`                                                              |
 | **tRPC client**         | `apps/web/src/lib/trpc.ts`                                               |
 | **Env config (Zod)**    | `apps/api/src/config/env.ts`                                             |
+| **Backlog**             | `docs/backlog.md` (track-organized, drives session focus)                |
 
 Full project structure: [docs/architecture-v2-planning.md](docs/architecture-v2-planning.md)
 
