@@ -15,6 +15,8 @@ FROM deps AS builder
 RUN apk add --no-cache openssl
 ARG NEXT_PUBLIC_API_URL
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+ARG NEXT_PUBLIC_TUS_URL
+ENV NEXT_PUBLIC_TUS_URL=$NEXT_PUBLIC_TUS_URL
 COPY packages/ packages/
 COPY apps/web/ apps/web/
 # Prisma generate needed because @colophony/types may depend on Prisma types
