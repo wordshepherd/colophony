@@ -35,6 +35,15 @@ const envSchema = z.object({
     .default(300),
   WEBHOOK_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(100),
 
+  // S3 / MinIO
+  S3_ENDPOINT: z.string().default('http://localhost:9000'),
+  S3_BUCKET: z.string().default('submissions'),
+  S3_QUARANTINE_BUCKET: z.string().default('quarantine'),
+  S3_ACCESS_KEY: z.string().default('minioadmin'),
+  S3_SECRET_KEY: z.string().default('minioadmin'),
+  S3_REGION: z.string().default('us-east-1'),
+  TUS_ENDPOINT: z.string().default('http://localhost:1080'),
+
   // Optional — validated when modules wire up
   STRIPE_SECRET_KEY: z.string().optional(),
   STRIPE_WEBHOOK_SECRET: z.string().optional(),

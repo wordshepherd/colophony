@@ -9,6 +9,7 @@ import orgContextPlugin from './hooks/org-context.js';
 import dbContextPlugin from './hooks/db-context.js';
 import auditPlugin from './hooks/audit.js';
 import { registerZitadelWebhooks } from './webhooks/zitadel.webhook.js';
+import { registerTusdWebhooks } from './webhooks/tusd.webhook.js';
 import { fastifyTRPCPlugin } from '@trpc/server/adapters/fastify';
 import { appRouter } from './trpc/router.js';
 import { createContext } from './trpc/context.js';
@@ -85,9 +86,12 @@ export async function buildApp(env: Env): Promise<FastifyInstance> {
   await app.register(dbContextPlugin);
   await app.register(auditPlugin);
 
-  // Webhooks — separate scope to isolate fastify-raw-body
+  // Webhooks — separate scopes for isolation
   await app.register(async (scope) => {
     await registerZitadelWebhooks(scope, { env });
+  });
+  await app.register(async (scope) => {
+    await registerTusdWebhooks(scope, { env });
   });
 
   // tRPC adapter

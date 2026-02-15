@@ -28,6 +28,10 @@ export const AuditActions = {
   SUBMISSION_DELETED: "SUBMISSION_DELETED",
   SUBMISSION_WITHDRAWN: "SUBMISSION_WITHDRAWN",
 
+  // File lifecycle
+  FILE_UPLOADED: "FILE_UPLOADED",
+  FILE_DELETED: "FILE_DELETED",
+
   // Authentication failures
   AUTH_TOKEN_INVALID: "AUTH_TOKEN_INVALID",
   AUTH_TOKEN_EXPIRED: "AUTH_TOKEN_EXPIRED",
@@ -42,6 +46,7 @@ export const AuditResources = {
   USER: "user",
   ORGANIZATION: "organization",
   SUBMISSION: "submission",
+  FILE: "file",
   AUTH: "auth",
 } as const;
 
@@ -95,6 +100,11 @@ export interface SubmissionAuditParams extends BaseAuditParams {
     | typeof AuditActions.SUBMISSION_WITHDRAWN;
 }
 
+export interface FileAuditParams extends BaseAuditParams {
+  resource: typeof AuditResources.FILE;
+  action: typeof AuditActions.FILE_UPLOADED | typeof AuditActions.FILE_DELETED;
+}
+
 export interface AuthAuditParams extends BaseAuditParams {
   resource: typeof AuditResources.AUTH;
   action:
@@ -109,4 +119,5 @@ export type AuditLogParams =
   | UserAuditParams
   | OrgAuditParams
   | SubmissionAuditParams
+  | FileAuditParams
   | AuthAuditParams;

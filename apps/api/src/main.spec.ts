@@ -73,6 +73,13 @@ const testEnv: Env = {
   RATE_LIMIT_KEY_PREFIX: 'colophony:rl',
   WEBHOOK_TIMESTAMP_MAX_AGE_SECONDS: 300,
   WEBHOOK_RATE_LIMIT_MAX: 100,
+  S3_ENDPOINT: 'http://localhost:9000',
+  S3_BUCKET: 'submissions',
+  S3_QUARANTINE_BUCKET: 'quarantine',
+  S3_ACCESS_KEY: 'minioadmin',
+  S3_SECRET_KEY: 'minioadmin',
+  S3_REGION: 'us-east-1',
+  TUS_ENDPOINT: 'http://localhost:1080',
 };
 
 describe('Fastify app', () => {

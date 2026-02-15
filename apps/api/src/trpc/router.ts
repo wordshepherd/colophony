@@ -2,6 +2,7 @@ import { t } from './init.js';
 import { organizationsRouter } from './routers/organizations.js';
 import { usersRouter } from './routers/users.js';
 import { submissionsRouter } from './routers/submissions.js';
+import { filesRouter } from './routers/files.js';
 
 // Re-export procedure builders for convenience
 export {
@@ -22,7 +23,7 @@ export const appRouter = t.router({
   organizations: organizationsRouter,
   users: usersRouter,
   submissions: submissionsRouter,
-  files: t.router({}),
+  files: filesRouter,
   payments: t.router({}),
   gdpr: t.router({}),
   consent: t.router({}),
