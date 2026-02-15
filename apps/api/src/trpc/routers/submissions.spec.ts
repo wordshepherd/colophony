@@ -325,7 +325,8 @@ describe('submissions tRPC router', () => {
   });
 
   describe('getHistory', () => {
-    it('returns history array', async () => {
+    it('returns history array for owner', async () => {
+      const sub = makeDraftSubmission('user-1');
       const history = [
         {
           id: 'h-1',
@@ -337,6 +338,7 @@ describe('submissions tRPC router', () => {
           changedAt: new Date(),
         },
       ];
+      mockService.getById.mockResolvedValueOnce(sub as never);
       mockService.getHistory.mockResolvedValueOnce(history as never);
 
       const caller = createCaller(orgContext());
@@ -345,6 +347,37 @@ describe('submissions tRPC router', () => {
       });
       expect(result).toHaveLength(1);
       expect(result[0].toStatus).toBe('DRAFT');
+    });
+
+    it('allows EDITOR to view history of others submissions', async () => {
+      const sub = makeDraftSubmission('other-user');
+      mockService.getById.mockResolvedValueOnce(sub as never);
+      mockService.getHistory.mockResolvedValueOnce([] as never);
+
+      const caller = createCaller(editorContext());
+      const result = await caller.submissions.getHistory({
+        submissionId: SUBMISSION_ID,
+      });
+      expect(result).toEqual([]);
+    });
+
+    it('denies READER from viewing others submission history', async () => {
+      const sub = makeDraftSubmission('other-user');
+      mockService.getById.mockResolvedValueOnce(sub as never);
+
+      const caller = createCaller(orgContext('READER'));
+      await expect(
+        caller.submissions.getHistory({ submissionId: SUBMISSION_ID }),
+      ).rejects.toThrow('do not have access');
+    });
+
+    it('throws NOT_FOUND when submission missing', async () => {
+      mockService.getById.mockResolvedValueOnce(null as never);
+
+      const caller = createCaller(orgContext());
+      await expect(
+        caller.submissions.getHistory({ submissionId: SUBMISSION_ID }),
+      ).rejects.toThrow('not found');
     });
   });
 
@@ -460,6 +493,21 @@ describe('submissions tRPC router', () => {
         caller.submissions.submit({ id: SUBMISSION_ID }),
       ).rejects.toThrow('infected');
     });
+
+    it('maps SubmissionNotFoundError to NOT_FOUND on concurrent deletion', async () => {
+      const sub = makeDraftSubmission();
+      mockService.getById.mockResolvedValueOnce(sub as never);
+      const { SubmissionNotFoundError } =
+        await import('../../services/submission.service.js');
+      mockService.updateStatus.mockRejectedValueOnce(
+        new SubmissionNotFoundError(SUBMISSION_ID),
+      );
+
+      const caller = createCaller(orgContext());
+      await expect(
+        caller.submissions.submit({ id: SUBMISSION_ID }),
+      ).rejects.toThrow('not found');
+    });
   });
 
   describe('delete', () => {
@@ -524,6 +572,21 @@ describe('submissions tRPC router', () => {
       await expect(
         caller.submissions.withdraw({ id: SUBMISSION_ID }),
       ).rejects.toThrow(TRPCError);
+    });
+
+    it('maps SubmissionNotFoundError to NOT_FOUND on concurrent deletion', async () => {
+      const sub = { ...makeDraftSubmission(), status: 'SUBMITTED' as const };
+      mockService.getById.mockResolvedValueOnce(sub as never);
+      const { SubmissionNotFoundError } =
+        await import('../../services/submission.service.js');
+      mockService.updateStatus.mockRejectedValueOnce(
+        new SubmissionNotFoundError(SUBMISSION_ID),
+      );
+
+      const caller = createCaller(orgContext());
+      await expect(
+        caller.submissions.withdraw({ id: SUBMISSION_ID }),
+      ).rejects.toThrow('not found');
     });
   });
 

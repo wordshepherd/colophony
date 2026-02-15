@@ -165,6 +165,9 @@ export const submissionsRouter = createRouter({
         });
         return result;
       } catch (e) {
+        if (e instanceof SubmissionNotFoundError) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: e.message });
+        }
         if (e instanceof InvalidStatusTransitionError) {
           throw new TRPCError({ code: 'BAD_REQUEST', message: e.message });
         }
@@ -250,6 +253,9 @@ export const submissionsRouter = createRouter({
         });
         return result;
       } catch (e) {
+        if (e instanceof SubmissionNotFoundError) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: e.message });
+        }
         if (e instanceof InvalidStatusTransitionError) {
           throw new TRPCError({ code: 'BAD_REQUEST', message: e.message });
         }
@@ -292,10 +298,30 @@ export const submissionsRouter = createRouter({
       }
     }),
 
-  /** Get submission history — any org member (RLS scopes). */
+  /** Get submission history — owner or editor/admin. */
   getHistory: orgProcedure
     .input(z.object({ submissionId: z.string().uuid() }))
     .query(async ({ ctx, input }) => {
+      const submission = await submissionService.getById(
+        ctx.dbTx,
+        input.submissionId,
+      );
+      if (!submission) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Submission not found',
+        });
+      }
+      if (
+        submission.submitterId !== ctx.authContext.userId &&
+        ctx.authContext.role !== 'ADMIN' &&
+        ctx.authContext.role !== 'EDITOR'
+      ) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'You do not have access to this submission',
+        });
+      }
       return submissionService.getHistory(ctx.dbTx, input.submissionId);
     }),
 });
