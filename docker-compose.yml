@@ -107,7 +107,7 @@ services:
       - -s3-object-prefix
       - uploads/
       - -hooks-http
-      - http://host.docker.internal:4000/hooks/tusd
+      - http://host.docker.internal:4000/webhooks/tusd
       - -hooks-http-forward-headers
       - Authorization,X-Organization-Id
       - -behind-proxy

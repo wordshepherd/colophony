@@ -80,6 +80,7 @@ services:
       dockerfile: apps/web/Dockerfile
       args:
         NEXT_PUBLIC_API_URL: http://${DOMAIN:-localhost}/trpc
+        NEXT_PUBLIC_TUS_URL: http://${DOMAIN:-localhost}/upload/files/
     container_name: colophony-web
     expose:
       - "3000"
@@ -212,7 +213,7 @@ services:
       - -s3-object-prefix
       - uploads/
       - -hooks-http
-      - http://api:4000/hooks/tusd
+      - http://api:4000/webhooks/tusd
       - -hooks-http-forward-headers
       - Authorization,X-Organization-Id
       - -behind-proxy
