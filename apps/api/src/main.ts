@@ -46,6 +46,21 @@ export async function buildApp(env: Env): Promise<FastifyInstance> {
     // (cross-origin fetch/XHR is governed by CORS, not CORP)
   });
 
+  // Permissions-Policy — helmet v8 dropped support; set manually
+  app.addHook('onSend', async (_request, reply) => {
+    void reply.header(
+      'permissions-policy',
+      'camera=(), microphone=(), geolocation=(), interest-cohort=()',
+    );
+  });
+
+  // Cache-Control: no-store for authenticated responses
+  app.addHook('onSend', async (request, reply) => {
+    if (request.authContext) {
+      void reply.header('cache-control', 'no-store');
+    }
+  });
+
   // CORS
   const origins = env.CORS_ORIGIN.split(',').map((o) => o.trim());
   const hasWildcard = origins.includes('*');
