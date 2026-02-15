@@ -1,5 +1,5 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { withRls, submissions, eq } from '@colophony/db';
+import { withRls, submissions, eq, db, users } from '@colophony/db';
 import type { DrizzleDb } from '@colophony/db';
 import { createJwksVerifier } from '@colophony/auth-client';
 import {
@@ -38,6 +38,17 @@ function getForwardedHeader(
 ): string | undefined {
   const values = headers[name] ?? headers[name.toLowerCase()];
   return values?.[0];
+}
+
+/**
+ * Resolve a Zitadel subject ID to the local user UUID.
+ * Uses the shared db instance (no RLS) — same pattern as the auth hook.
+ */
+async function resolveLocalUserId(zitadelSub: string): Promise<string | null> {
+  const user = await db.query.users.findFirst({
+    where: eq(users.zitadelUserId, zitadelSub),
+  });
+  return user?.id ?? null;
 }
 
 export async function registerTusdWebhooks(
@@ -107,7 +118,7 @@ export async function registerTusdWebhooks(
       return;
     }
 
-    // Validate token
+    // Validate token and resolve local user UUID
     let userId: string;
     if (verifyToken) {
       try {
@@ -116,7 +127,15 @@ export async function registerTusdWebhooks(
           await reply.status(200).send(rejectUpload(401, 'missing_sub_claim'));
           return;
         }
-        userId = payload.sub;
+        // Resolve Zitadel sub → local user UUID (same as auth hook)
+        const localUserId = await resolveLocalUserId(payload.sub);
+        if (!localUserId) {
+          await reply
+            .status(200)
+            .send(rejectUpload(403, 'user_not_provisioned'));
+          return;
+        }
+        userId = localUserId;
       } catch {
         await reply
           .status(200)
@@ -168,7 +187,11 @@ export async function registerTusdWebhooks(
       await withRls({ orgId, userId }, async (tx: DrizzleDb) => {
         // Check submission exists and is DRAFT
         const [submission] = await tx
-          .select({ id: submissions.id, status: submissions.status })
+          .select({
+            id: submissions.id,
+            status: submissions.status,
+            submitterId: submissions.submitterId,
+          })
           .from(submissions)
           .where(eq(submissions.id, submissionId))
           .limit(1);
@@ -178,6 +201,10 @@ export async function registerTusdWebhooks(
         }
         if (submission.status !== 'DRAFT') {
           throw new Error('submission_not_draft');
+        }
+        // Only the submission owner can upload files
+        if (submission.submitterId !== userId) {
+          throw new Error('not_submission_owner');
         }
 
         // Check file count and size limits
@@ -224,20 +251,37 @@ export async function registerTusdWebhooks(
       return reply.status(400).send({ error: 'missing_org_id' });
     }
 
-    // Resolve userId from forwarded auth
-    let userId: string | undefined;
+    // Resolve userId from forwarded auth — fail closed if auth is invalid
+    let userId: string;
     if (verifyToken && authHeader) {
       const match = /^Bearer\s+(\S+)$/i.exec(authHeader);
-      if (match) {
-        try {
-          const { payload } = await verifyToken(match[1]);
-          userId = payload.sub ?? undefined;
-        } catch {
-          request.log.warn('Post-finish: token validation failed');
+      if (!match) {
+        request.log.warn('Post-finish: invalid auth header format');
+        return reply.status(401).send({ error: 'invalid_auth_header' });
+      }
+      try {
+        const { payload } = await verifyToken(match[1]);
+        if (!payload.sub) {
+          return reply.status(401).send({ error: 'missing_sub_claim' });
         }
+        const localUserId = await resolveLocalUserId(payload.sub);
+        if (!localUserId) {
+          return reply.status(403).send({ error: 'user_not_provisioned' });
+        }
+        userId = localUserId;
+      } catch {
+        request.log.warn('Post-finish: token validation failed');
+        return reply.status(401).send({ error: 'token_validation_failed' });
       }
     } else if (env.NODE_ENV === 'test') {
-      userId = getForwardedHeader(forwardedHeaders, 'X-Test-User-Id');
+      const testUserId = getForwardedHeader(forwardedHeaders, 'X-Test-User-Id');
+      if (!testUserId) {
+        return reply.status(401).send({ error: 'no_auth_configured' });
+      }
+      userId = testUserId;
+    } else {
+      request.log.warn('Post-finish: no auth available');
+      return reply.status(401).send({ error: 'no_auth_configured' });
     }
 
     const submissionId = metadata['submission-id'] ?? metadata['submissionId'];

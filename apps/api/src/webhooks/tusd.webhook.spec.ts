@@ -11,12 +11,18 @@ import Fastify, { type FastifyInstance } from 'fastify';
 
 // Mock @colophony/db
 const mockWithRls = vi.fn();
+const mockFindFirstUser = vi.fn();
 vi.mock('@colophony/db', () => ({
   pool: { query: vi.fn(), connect: vi.fn() },
-  db: { query: {} },
+  db: {
+    query: {
+      users: { findFirst: (...args: unknown[]) => mockFindFirstUser(...args) },
+    },
+  },
   withRls: (...args: unknown[]) => mockWithRls(...args),
-  submissions: { id: 'id', status: 'status' },
+  submissions: { id: 'id', status: 'status', submitterId: 'submitterId' },
   submissionFiles: {},
+  users: { zitadelUserId: 'zitadelUserId' },
   eq: vi.fn((_col: unknown, _val: unknown) => ({})),
   and: vi.fn(),
   sql: vi.fn(),
@@ -185,7 +191,13 @@ describe('tusd webhook handler', () => {
               from: () => ({
                 where: () => ({
                   limit: () =>
-                    Promise.resolve([{ id: SUBMISSION_ID, status: 'DRAFT' }]),
+                    Promise.resolve([
+                      {
+                        id: SUBMISSION_ID,
+                        status: 'DRAFT',
+                        submitterId: 'user-1',
+                      },
+                    ]),
                 }),
               }),
             }),
@@ -271,6 +283,42 @@ describe('tusd webhook handler', () => {
       expect(result.HTTPResponse.Body).toContain('submission_not_found');
     });
 
+    it('rejects when not submission owner', async () => {
+      mockWithRls.mockImplementation(
+        async (_ctx: unknown, fn: (tx: unknown) => Promise<void>) => {
+          const mockTx = {
+            select: () => ({
+              from: () => ({
+                where: () => ({
+                  limit: () =>
+                    Promise.resolve([
+                      {
+                        id: SUBMISSION_ID,
+                        status: 'DRAFT',
+                        submitterId: 'other-user',
+                      },
+                    ]),
+                }),
+              }),
+            }),
+          };
+          return fn(mockTx);
+        },
+      );
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/webhooks/tusd',
+        headers: { 'hook-name': 'pre-create' },
+        payload: makePreCreateBody(),
+      });
+
+      expect(response.statusCode).toBe(200);
+      const result = JSON.parse(response.payload);
+      expect(result.RejectUpload).toBe(true);
+      expect(result.HTTPResponse.Body).toContain('not_submission_owner');
+    });
+
     it('rejects when submission not DRAFT', async () => {
       mockWithRls.mockImplementation(
         async (_ctx: unknown, fn: (tx: unknown) => Promise<void>) => {
@@ -280,7 +328,11 @@ describe('tusd webhook handler', () => {
                 where: () => ({
                   limit: () =>
                     Promise.resolve([
-                      { id: SUBMISSION_ID, status: 'SUBMITTED' },
+                      {
+                        id: SUBMISSION_ID,
+                        status: 'SUBMITTED',
+                        submitterId: 'user-1',
+                      },
                     ]),
                 }),
               }),
@@ -395,6 +447,24 @@ describe('tusd webhook handler', () => {
       expect(response.statusCode).toBe(200);
       // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(mockFileService.create).not.toHaveBeenCalled();
+    });
+
+    it('rejects when auth is missing (fail closed)', async () => {
+      const body = makePostFinishBody();
+      body.HTTPRequest.Header = {
+        'X-Organization-Id': ['org-1'],
+      } as never;
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/webhooks/tusd',
+        headers: { 'hook-name': 'post-finish' },
+        payload: body,
+      });
+
+      expect(response.statusCode).toBe(401);
+      const result = JSON.parse(response.payload);
+      expect(result.error).toBe('no_auth_configured');
     });
 
     it('returns 400 when missing org id', async () => {
