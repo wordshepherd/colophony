@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/hooks/use-auth";
 import { useOrganization } from "@/hooks/use-organization";
-import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -35,23 +34,14 @@ import {
 } from "lucide-react";
 
 export default function SettingsPage() {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const router = useRouter();
   const { organizations, currentOrg, switchOrganization } = useOrganization();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
 
-  const deleteMutation = trpc.gdpr.requestDeletion.useMutation({
-    onSuccess: () => {
-      toast.success(
-        "Account deletion requested. You will receive a confirmation email.",
-      );
-      logout();
-    },
-    onError: (err) => {
-      toast.error(err.message);
-    },
-  });
+  // TODO: Re-enable when gdpr.requestDeletion tRPC route is built in v2
+  const deletionDisabled = true;
 
   const handleExportData = async () => {
     setIsExporting(true);
@@ -228,9 +218,12 @@ export default function SettingsPage() {
             <Button
               variant="destructive"
               onClick={() => setShowDeleteDialog(true)}
+              disabled={deletionDisabled}
             >
               <Trash2 className="mr-2 h-4 w-4" />
-              Delete Account
+              {deletionDisabled
+                ? "Delete Account (Coming Soon)"
+                : "Delete Account"}
             </Button>
           </div>
         </CardContent>
@@ -261,15 +254,13 @@ export default function SettingsPage() {
             </Button>
             <Button
               variant="destructive"
+              disabled={deletionDisabled}
               onClick={() => {
-                deleteMutation.mutate({ confirmation: "DELETE_MY_ACCOUNT" });
+                // TODO: Call gdpr.requestDeletion when built in v2
                 setShowDeleteDialog(false);
               }}
-              disabled={deleteMutation.isPending}
             >
-              {deleteMutation.isPending
-                ? "Deleting..."
-                : "Yes, delete my account"}
+              Yes, delete my account
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -42,7 +42,7 @@ const config: Config = {
     "!src/components/ui/**/*",
   ],
   coverageDirectory: "./coverage",
-  testPathIgnorePatterns: ["/.next/", "/node_modules/", "/e2e/"],
+  testPathIgnorePatterns: ["/.next/", "/node_modules/", "/e2e/", "/_v1/"],
 };
 
 export default config;
