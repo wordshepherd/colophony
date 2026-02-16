@@ -15,7 +15,7 @@
 - [x] Security headers via @fastify/helmet (CSP, HSTS, X-Content-Type-Options) — (security checklist)
 - [x] Add `Permissions-Policy` header to restrict browser features — (Codex review 2026-02-15)
 - [x] Endpoint-specific `Cache-Control` for authenticated JSON responses — (Codex review 2026-02-15)
-- [ ] Wire rate limiting globally on all API surfaces — hook exists in `apps/api/src/hooks/rate-limit.ts`, needs registration on all routes — (security checklist)
+- [x] Wire rate limiting globally on all API surfaces — hook exists in `apps/api/src/hooks/rate-limit.ts`, needs registration on all routes — (security checklist)
 - [ ] Zitadel OIDC token validation enforced on all protected routes — (security checklist)
 - [ ] API key authentication with scopes — blocks Track 2 REST API — (security checklist)
 - [ ] Input validation with Zod on all API surfaces — tRPC has it, needs enforcement on future REST/GraphQL — (security checklist)

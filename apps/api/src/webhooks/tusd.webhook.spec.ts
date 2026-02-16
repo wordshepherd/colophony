@@ -9,6 +9,24 @@ import {
 } from 'vitest';
 import Fastify, { type FastifyInstance } from 'fastify';
 
+// vi.hoisted for mock functions used in vi.mock factories
+const { mockRedisEval, mockRedisQuit } = vi.hoisted(() => {
+  const mockRedisEval = vi.fn().mockResolvedValue([1, 60000]);
+  const mockRedisQuit = vi.fn().mockResolvedValue('OK');
+  return { mockRedisEval, mockRedisQuit };
+});
+
+// Mock ioredis
+vi.mock('ioredis', () => {
+  const RedisMock = vi.fn().mockImplementation(() => ({
+    connect: vi.fn().mockResolvedValue(undefined),
+    eval: mockRedisEval,
+    quit: mockRedisQuit,
+    status: 'ready',
+  }));
+  return { default: RedisMock };
+});
+
 // Mock @colophony/db
 const mockWithRls = vi.fn();
 const mockFindFirstUser = vi.fn();
@@ -193,6 +211,9 @@ describe('tusd webhook handler', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    // Restore default: below rate limit
+    mockRedisEval.mockResolvedValue([1, 60000]);
+    mockRedisQuit.mockResolvedValue('OK');
   });
 
   // -------------------------------------------------------------------------
@@ -620,6 +641,80 @@ describe('tusd webhook handler', () => {
         payload: {},
       });
 
+      expect(response.statusCode).toBe(200);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Rate limiting
+  // -------------------------------------------------------------------------
+
+  describe('rate limiting', () => {
+    it('returns 429 when webhook rate limit exceeded', async () => {
+      mockRedisEval.mockResolvedValueOnce([101, 30000]);
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/webhooks/tusd',
+        headers: { 'hook-name': 'pre-create' },
+        payload: makePreCreateBody(),
+      });
+
+      expect(response.statusCode).toBe(429);
+      const body = JSON.parse(response.payload);
+      expect(body.error).toBe('rate_limit_exceeded');
+    });
+
+    it('sets Retry-After header on 429', async () => {
+      mockRedisEval.mockResolvedValueOnce([101, 30000]);
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/webhooks/tusd',
+        headers: { 'hook-name': 'pre-create' },
+        payload: makePreCreateBody(),
+      });
+
+      expect(response.statusCode).toBe(429);
+      const retryAfter = Number(response.headers['retry-after']);
+      expect(retryAfter).toBeGreaterThan(0);
+      expect(retryAfter).toBeLessThanOrEqual(60);
+    });
+
+    it('allows requests when Redis is unavailable (graceful degradation)', async () => {
+      mockRedisEval.mockRejectedValueOnce(new Error('Redis connection failed'));
+      // withRls resolves successfully (validation passes)
+      mockWithRls.mockImplementation(
+        async (_ctx: unknown, fn: (tx: unknown) => Promise<void>) => {
+          const mockTx = {
+            select: () => ({
+              from: () => ({
+                where: () => ({
+                  limit: () =>
+                    Promise.resolve([
+                      {
+                        id: SUBMISSION_ID,
+                        status: 'DRAFT',
+                        submitterId: 'user-1',
+                      },
+                    ]),
+                }),
+              }),
+            }),
+          };
+          return fn(mockTx);
+        },
+      );
+      mockFileService.validateLimits.mockResolvedValueOnce(undefined);
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/webhooks/tusd',
+        headers: { 'hook-name': 'pre-create' },
+        payload: makePreCreateBody(),
+      });
+
+      // Request should be allowed through despite Redis failure
       expect(response.statusCode).toBe(200);
     });
   });
