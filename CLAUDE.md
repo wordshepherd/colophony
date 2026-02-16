@@ -131,7 +131,7 @@ All other version pins are in their respective per-directory CLAUDE.md files.
 - [x] Security headers (@fastify/helmet: CSP, HSTS, X-Content-Type-Options)
 - [x] Secrets in environment only (never committed). Validate env schema with Zod at startup; canonical definition: `apps/api/src/config/env.ts`
 - [x] Pre-commit hook blocks secrets (husky + `scripts/check-secrets.sh`)
-- [ ] Zitadel OIDC token validation on all protected routes
+- [x] Zitadel OIDC token validation on all protected routes (default-deny auth hook)
 - [ ] API key authentication with scopes
 - [ ] Audit log for all sensitive actions
 - [x] File virus scanning before production bucket (ClamAV via BullMQ)
