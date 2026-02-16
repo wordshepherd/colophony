@@ -101,9 +101,10 @@ export async function buildApp(env: Env): Promise<FastifyInstance> {
     maxAge: 86400, // 24 hours
   });
 
-  // Auth + rate limit + org context + per-request RLS transaction
-  await app.register(authPlugin, { env });
+  // Rate limit → auth → org context → per-request RLS transaction
+  // Rate limit runs first so unauthenticated 401s are still throttled (DoS protection)
   await app.register(rateLimitPlugin, { env });
+  await app.register(authPlugin, { env });
   await app.register(orgContextPlugin);
   await app.register(dbContextPlugin);
   await app.register(auditPlugin);

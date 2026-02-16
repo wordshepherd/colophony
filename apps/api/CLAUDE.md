@@ -20,15 +20,15 @@
 ## Hook Registration Order (from `main.ts`)
 
 ```
-auth → rateLimit → orgContext → dbContext → audit
+rateLimit → auth → orgContext → dbContext → audit
 ```
 
 Each hook decorates the Fastify request:
 
 | Hook               | Decorates                        | Purpose                                                     |
 | ------------------ | -------------------------------- | ----------------------------------------------------------- |
+| `rateLimitPlugin`  | —                                | Redis-based sliding window rate limiting (runs before auth) |
 | `authPlugin`       | `request.authContext`            | Validates Zitadel OIDC token, extracts user identity        |
-| `rateLimitPlugin`  | —                                | Redis-based sliding window rate limiting                    |
 | `orgContextPlugin` | `request.authContext.orgId/role` | Resolves `X-Organization-Id` header, checks membership      |
 | `dbContextPlugin`  | `request.dbTx`                   | Opens RLS transaction via `SET LOCAL` with org/user context |
 | `auditPlugin`      | `request.audit`                  | Provides `audit(action, details)` helper for logging        |
@@ -41,8 +41,11 @@ Each hook decorates the Fastify request:
 
 Zitadel handles all authentication: login, signup, MFA, session management, token issuance. The API validates Zitadel-issued tokens via the `auth` hook (`onRequest`).
 
+**Default-deny model:** The auth hook rejects all requests to non-public routes that lack a valid Authorization header (returns 401). Public routes are explicitly allowlisted in `auth.ts` via `PUBLIC_EXACT` and `PUBLIC_PREFIXES`. This provides defense-in-depth — even if a tRPC procedure accidentally uses `publicProcedure`, the hook layer still requires auth unless the route is explicitly allowlisted.
+
 - **Interactive users:** Zitadel OIDC tokens (access + refresh)
 - **API consumers:** API keys (planned — stored in DB, scoped per org)
+- **Dev bypass:** Set `DEV_AUTH_BYPASS=true` to allow unauthenticated requests in development when `ZITADEL_AUTHORITY` is not configured. Never effective in production.
 
 User lifecycle events are synced from Zitadel to the local DB via webhooks.
 
@@ -141,11 +144,12 @@ Workers and queues are started in `main.ts` and closed during graceful shutdown.
 
 ### Env Vars
 
-| Variable             | Default     | Purpose                    |
-| -------------------- | ----------- | -------------------------- |
-| `CLAMAV_HOST`        | `localhost` | ClamAV daemon TCP host     |
-| `CLAMAV_PORT`        | `3310`      | ClamAV daemon TCP port     |
-| `VIRUS_SCAN_ENABLED` | `true`      | Enable/disable virus scans |
+| Variable             | Default     | Purpose                                     |
+| -------------------- | ----------- | ------------------------------------------- |
+| `CLAMAV_HOST`        | `localhost` | ClamAV daemon TCP host                      |
+| `CLAMAV_PORT`        | `3310`      | ClamAV daemon TCP port                      |
+| `VIRUS_SCAN_ENABLED` | `true`      | Enable/disable virus scans                  |
+| `DEV_AUTH_BYPASS`    | `false`     | Allow unauthed requests in dev (no Zitadel) |
 
 ---
 
