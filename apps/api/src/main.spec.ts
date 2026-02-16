@@ -83,6 +83,7 @@ const testEnv: Env = {
   CLAMAV_HOST: 'localhost',
   CLAMAV_PORT: 3310,
   VIRUS_SCAN_ENABLED: true,
+  DEV_AUTH_BYPASS: false,
 };
 
 describe('Fastify app', () => {
@@ -133,11 +134,9 @@ describe('Fastify app', () => {
     expect(body.version).toBe('2.0.0-dev');
   });
 
-  it('GET /nonexistent returns 404', async () => {
+  it('GET /nonexistent returns 401 (default-deny auth)', async () => {
     const response = await app.inject({ method: 'GET', url: '/nonexistent' });
-    expect(response.statusCode).toBe(404);
-    const body = response.json();
-    expect(body.error).toBe('not_found');
+    expect(response.statusCode).toBe(401);
   });
 
   it('includes CORS headers for allowed origins', async () => {
@@ -161,19 +160,17 @@ describe('Fastify app', () => {
   it('sets cache-control: no-store on authenticated responses', async () => {
     // Build a separate app instance so we can add a test route before ready
     const authApp = await buildApp(testEnv);
-    authApp.get('/test-auth-cache', async (request, reply) => {
-      request.authContext = {
-        userId: '00000000-0000-0000-0000-000000000001',
-        zitadelUserId: 'test-zitadel-id',
-        email: 'test@example.com',
-        emailVerified: true,
-      };
+    authApp.get('/test-auth-cache', async (_request, reply) => {
       return reply.send({ ok: true });
     });
 
     const response = await authApp.inject({
       method: 'GET',
       url: '/test-auth-cache',
+      headers: {
+        'x-test-user-id': '00000000-0000-0000-0000-000000000001',
+        'x-test-email': 'test@example.com',
+      },
     });
     expect(response.headers['cache-control']).toBe('no-store');
     await authApp.close();
