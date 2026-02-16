@@ -13,9 +13,16 @@ declare module 'fastify' {
   }
 }
 
-/** Routes that skip authentication entirely. */
+/**
+ * Routes that skip authentication entirely (default-deny allowlist).
+ *
+ * To add a new public route:
+ * 1. Add the exact path to PUBLIC_EXACT or prefix to PUBLIC_PREFIXES
+ * 2. Add a corresponding test in auth.spec.ts
+ * 3. Document in apps/api/CLAUDE.md
+ */
 const PUBLIC_PREFIXES = ['/health', '/ready', '/webhooks/', '/.well-known/'];
-const PUBLIC_EXACT = ['/', '/health', '/ready'];
+const PUBLIC_EXACT = ['/', '/health', '/ready', '/trpc/health'];
 
 function isPublicRoute(url: string): boolean {
   const path = url.split('?')[0];
@@ -44,11 +51,21 @@ export default fp(
       );
     }
 
+    // Dev bypass: only when not production, no Zitadel configured, and explicitly opted in
+    const devAuthBypass =
+      !isProduction && !env.ZITADEL_AUTHORITY && env.DEV_AUTH_BYPASS;
+
     // Development warning
     if (!isProduction && !isTest && !env.ZITADEL_AUTHORITY) {
-      app.log.warn(
-        'ZITADEL_AUTHORITY not set — auth hook will reject all authenticated requests. Set it to enable OIDC.',
-      );
+      if (devAuthBypass) {
+        app.log.warn(
+          'DEV_AUTH_BYPASS is active — unauthenticated requests allowed on all routes. Do NOT use in production.',
+        );
+      } else {
+        app.log.warn(
+          'ZITADEL_AUTHORITY not set — all non-public routes will return 401. Set ZITADEL_AUTHORITY to enable OIDC or DEV_AUTH_BYPASS=true for local development.',
+        );
+      }
     }
 
     /** Log an auth failure audit event. Never throws — swallows errors. */
@@ -103,13 +120,34 @@ export default fp(
               email: testEmail ?? 'test@example.com',
               emailVerified: true,
             };
+            return;
           }
-          return;
+          // Default-deny: no test headers on a non-public route → 401
+          return reply.status(401).send({
+            error: 'unauthorized',
+            message:
+              'Missing authentication. Provide x-test-user-id header in test mode.',
+          });
         }
 
         // Extract Bearer token
         const authHeader = request.headers.authorization;
-        if (!authHeader) return; // No auth header — routes decide if auth is required
+        if (!authHeader) {
+          // Dev bypass: allow unauthenticated requests in dev mode when explicitly enabled
+          if (devAuthBypass) {
+            request.log.debug(
+              'DEV_AUTH_BYPASS: allowing unauthenticated request',
+            );
+            return;
+          }
+          void logAuthFailure(request, AuditActions.AUTH_TOKEN_INVALID, {
+            reason: 'missing_authorization_header',
+          });
+          return reply.status(401).send({
+            error: 'unauthorized',
+            message: 'Missing Authorization header',
+          });
+        }
 
         const match = /^Bearer\s+(\S+)$/i.exec(authHeader);
         if (!match) {

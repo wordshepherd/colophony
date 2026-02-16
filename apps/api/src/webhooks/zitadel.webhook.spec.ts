@@ -139,6 +139,7 @@ const testEnv: Env = {
   CLAMAV_HOST: 'localhost',
   CLAMAV_PORT: 3310,
   VIRUS_SCAN_ENABLED: true,
+  DEV_AUTH_BYPASS: false,
 };
 
 function signPayload(body: string): string {

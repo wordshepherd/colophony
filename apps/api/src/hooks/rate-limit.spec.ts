@@ -1,6 +1,7 @@
 import { describe, it, expect, afterEach, vi, beforeEach } from 'vitest';
 import Fastify, { type FastifyInstance } from 'fastify';
 import RedisMock from 'ioredis-mock';
+import type { AuthContext } from '@colophony/types';
 import type { Env } from '../config/env.js';
 
 // Mock @colophony/db
@@ -29,8 +30,30 @@ vi.mock('@colophony/auth-client', () => ({
   createJwksVerifier: vi.fn(),
 }));
 
-import authPlugin from './auth.js';
+import fp from 'fastify-plugin';
 import rateLimitPlugin from './rate-limit.js';
+
+/** Minimal auth stub — satisfies colophony-auth dependency without real auth logic. */
+const fakeAuthPlugin = fp(
+  async function fakeAuth(app: FastifyInstance) {
+    app.decorateRequest('authContext', null);
+    app.addHook('onRequest', async (request) => {
+      const testUserId = request.headers['x-test-user-id'] as
+        | string
+        | undefined;
+      if (testUserId) {
+        request.authContext = {
+          userId: testUserId,
+          zitadelUserId: testUserId,
+          email:
+            (request.headers['x-test-email'] as string) ?? 'test@example.com',
+          emailVerified: true,
+        } satisfies AuthContext;
+      }
+    });
+  },
+  { name: 'colophony-auth', fastify: '5.x' },
+);
 
 const testEnv: Env = {
   DATABASE_URL: 'postgresql://test:test@localhost:5432/test',
@@ -58,6 +81,7 @@ const testEnv: Env = {
   CLAMAV_HOST: 'localhost',
   CLAMAV_PORT: 3310,
   VIRUS_SCAN_ENABLED: true,
+  DEV_AUTH_BYPASS: false,
 };
 
 async function buildApp(
@@ -68,7 +92,7 @@ async function buildApp(
   await redis.flushall();
   const env = { ...testEnv, ...envOverrides };
 
-  await app.register(authPlugin, { env });
+  await app.register(fakeAuthPlugin);
   await app.register(rateLimitPlugin, { env, redis: redis as never });
 
   // Test route
@@ -308,7 +332,7 @@ describe('rate-limit plugin', () => {
       const redis = new RedisMock();
       await redis.flushall();
 
-      await app.register(authPlugin, { env: testEnv });
+      await app.register(fakeAuthPlugin);
       await app.register(rateLimitPlugin, {
         env: testEnv,
         redis: redis as never,

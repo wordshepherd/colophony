@@ -67,6 +67,7 @@ const baseEnv: Env = {
   CLAMAV_HOST: 'localhost',
   CLAMAV_PORT: 3310,
   VIRUS_SCAN_ENABLED: true,
+  DEV_AUTH_BYPASS: false,
 };
 
 describe('auth plugin', () => {
@@ -110,14 +111,22 @@ describe('auth plugin', () => {
       expect(body.authContext.emailVerified).toBe(true);
     });
 
-    it('returns null authContext when no test headers', async () => {
+    it('returns 401 when no test headers on non-public route', async () => {
       const response = await app.inject({
         method: 'GET',
         url: '/protected',
       });
-      expect(response.statusCode).toBe(200);
-      const body = response.json();
-      expect(body.authContext).toBeNull();
+      expect(response.statusCode).toBe(401);
+      expect(response.json().error).toBe('unauthorized');
+    });
+
+    it('allows /trpc/health without auth', async () => {
+      const response = await app.inject({
+        method: 'GET',
+        url: '/trpc/health',
+      });
+      // 404 because no route registered, but auth hook didn't block
+      expect(response.statusCode).toBe(404);
     });
   });
 
@@ -171,14 +180,22 @@ describe('auth plugin', () => {
       expect(response.statusCode).toBe(404);
     });
 
-    it('returns null authContext when no Authorization header', async () => {
+    it('skips auth for /trpc/health', async () => {
+      const response = await app.inject({
+        method: 'GET',
+        url: '/trpc/health',
+      });
+      expect(response.statusCode).toBe(404);
+    });
+
+    it('returns 401 when no Authorization header', async () => {
       const response = await app.inject({
         method: 'GET',
         url: '/protected',
       });
-      expect(response.statusCode).toBe(200);
-      const body = response.json();
-      expect(body.authContext).toBeNull();
+      expect(response.statusCode).toBe(401);
+      expect(response.json().error).toBe('unauthorized');
+      expect(response.json().message).toBe('Missing Authorization header');
     });
 
     it('returns 401 for malformed Authorization header', async () => {
@@ -301,6 +318,76 @@ describe('auth plugin', () => {
     });
   });
 
+  describe('DEV_AUTH_BYPASS', () => {
+    it('allows unauthenticated requests when bypass is enabled in dev mode', async () => {
+      const app = Fastify({ logger: false });
+      await app.register(authPlugin, {
+        env: {
+          ...baseEnv,
+          NODE_ENV: 'development' as const,
+          DEV_AUTH_BYPASS: true,
+        },
+      });
+      app.get('/protected', async (request) => ({
+        authContext: request.authContext,
+      }));
+
+      const response = await app.inject({
+        method: 'GET',
+        url: '/protected',
+      });
+      expect(response.statusCode).toBe(200);
+      expect(response.json().authContext).toBeNull();
+      await app.close();
+    });
+
+    it('rejects unauthenticated requests when bypass is false in dev mode', async () => {
+      const app = Fastify({ logger: false });
+      await app.register(authPlugin, {
+        env: {
+          ...baseEnv,
+          NODE_ENV: 'development' as const,
+          DEV_AUTH_BYPASS: false,
+        },
+      });
+      app.get('/protected', async (request) => ({
+        authContext: request.authContext,
+      }));
+
+      const response = await app.inject({
+        method: 'GET',
+        url: '/protected',
+      });
+      expect(response.statusCode).toBe(401);
+      expect(response.json().error).toBe('unauthorized');
+      await app.close();
+    });
+
+    it('bypass is ignored when ZITADEL_AUTHORITY is set', async () => {
+      const app = Fastify({ logger: false });
+      await app.register(authPlugin, {
+        env: {
+          ...baseEnv,
+          NODE_ENV: 'development' as const,
+          DEV_AUTH_BYPASS: true,
+          ZITADEL_AUTHORITY: 'http://localhost:8080',
+          ZITADEL_CLIENT_ID: 'my-client',
+        },
+      });
+      app.get('/protected', async (request) => ({
+        authContext: request.authContext,
+      }));
+
+      const response = await app.inject({
+        method: 'GET',
+        url: '/protected',
+      });
+      // ZITADEL_AUTHORITY is set, so bypass doesn't apply — 401 for missing header
+      expect(response.statusCode).toBe(401);
+      await app.close();
+    });
+  });
+
   describe('production mode', () => {
     it('throws at registration if ZITADEL_AUTHORITY is missing', async () => {
       const app = Fastify({ logger: false });
@@ -356,6 +443,22 @@ describe('auth plugin', () => {
       expect(params.resource).toBe('auth');
       expect(params.newValue).toEqual({ reason: 'invalid_header_format' });
       expect(params.actorId).toBeUndefined();
+    });
+
+    it('audits missing Authorization header as AUTH_TOKEN_INVALID', async () => {
+      await app.inject({
+        method: 'GET',
+        url: '/protected',
+      });
+      await flushPromises();
+
+      expect(mockLogDirect).toHaveBeenCalledOnce();
+      const params = mockLogDirect.mock.calls[0][0];
+      expect(params.action).toBe('AUTH_TOKEN_INVALID');
+      expect(params.resource).toBe('auth');
+      expect(params.newValue).toEqual({
+        reason: 'missing_authorization_header',
+      });
     });
 
     it('audits token validation failure as AUTH_TOKEN_INVALID', async () => {

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import Fastify, { type FastifyInstance } from 'fastify';
-import type { Env } from '../config/env.js';
+import type { AuthContext } from '@colophony/types';
 
 const { mockClientQuery, mockClientRelease, mockPoolConnect, mockAuditLog } =
   vi.hoisted(() => {
@@ -55,38 +55,31 @@ vi.mock('../services/audit.service.js', () => ({
   auditService: { log: mockAuditLog },
 }));
 
-import authPlugin from './auth.js';
+import fp from 'fastify-plugin';
 import orgContextPlugin from './org-context.js';
 import dbContextPlugin from './db-context.js';
 import auditPlugin from './audit.js';
 
-const testEnv: Env = {
-  DATABASE_URL: 'postgresql://test:test@localhost:5432/test',
-  PORT: 0,
-  HOST: '127.0.0.1',
-  NODE_ENV: 'test',
-  LOG_LEVEL: 'fatal',
-  REDIS_HOST: 'localhost',
-  REDIS_PORT: 6379,
-  REDIS_PASSWORD: '',
-  CORS_ORIGIN: 'http://localhost:3000',
-  RATE_LIMIT_DEFAULT_MAX: 60,
-  RATE_LIMIT_AUTH_MAX: 200,
-  RATE_LIMIT_WINDOW_SECONDS: 60,
-  RATE_LIMIT_KEY_PREFIX: 'colophony:rl',
-  WEBHOOK_TIMESTAMP_MAX_AGE_SECONDS: 300,
-  WEBHOOK_RATE_LIMIT_MAX: 100,
-  S3_ENDPOINT: 'http://localhost:9000',
-  S3_BUCKET: 'submissions',
-  S3_QUARANTINE_BUCKET: 'quarantine',
-  S3_ACCESS_KEY: 'minioadmin',
-  S3_SECRET_KEY: 'minioadmin',
-  S3_REGION: 'us-east-1',
-  TUS_ENDPOINT: 'http://localhost:1080',
-  CLAMAV_HOST: 'localhost',
-  CLAMAV_PORT: 3310,
-  VIRUS_SCAN_ENABLED: true,
-};
+/** Minimal auth stub — satisfies colophony-auth dependency without real auth logic. */
+const fakeAuthPlugin = fp(
+  async function fakeAuth(app: FastifyInstance) {
+    app.decorateRequest('authContext', null);
+    app.addHook('onRequest', async (request) => {
+      const testUserId = request.headers['x-test-user-id'] as
+        | string
+        | undefined;
+      if (testUserId) {
+        request.authContext = {
+          userId: testUserId,
+          zitadelUserId: testUserId,
+          email: 'test@example.com',
+          emailVerified: true,
+        } satisfies AuthContext;
+      }
+    });
+  },
+  { name: 'colophony-auth', fastify: '5.x' },
+);
 
 describe('audit plugin', () => {
   beforeEach(() => {
@@ -102,7 +95,7 @@ describe('audit plugin', () => {
 
   async function buildApp(): Promise<FastifyInstance> {
     const app = Fastify({ logger: false });
-    await app.register(authPlugin, { env: testEnv });
+    await app.register(fakeAuthPlugin);
     await app.register(orgContextPlugin);
     await app.register(dbContextPlugin);
     await app.register(auditPlugin);

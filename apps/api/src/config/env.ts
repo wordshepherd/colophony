@@ -58,6 +58,10 @@ const envSchema = z.object({
   ZITADEL_AUTHORITY: z.string().url().optional(),
   ZITADEL_CLIENT_ID: z.string().optional(),
   ZITADEL_WEBHOOK_SECRET: z.string().optional(),
+  DEV_AUTH_BYPASS: z
+    .enum(['true', 'false'])
+    .transform((v) => v === 'true')
+    .default('false'),
   FEDERATION_DOMAIN: z.string().optional(),
   FEDERATION_ENABLED: z
     .enum(['true', 'false'])
