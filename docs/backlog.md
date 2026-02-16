@@ -17,7 +17,7 @@
 - [x] Endpoint-specific `Cache-Control` for authenticated JSON responses — (Codex review 2026-02-15)
 - [x] Wire rate limiting globally on all API surfaces — hook exists in `apps/api/src/hooks/rate-limit.ts`, needs registration on all routes — (security checklist)
 - [x] Zitadel OIDC token validation enforced on all protected routes — (security checklist, PR #72)
-- [ ] API key authentication with scopes — blocks Track 2 REST API — (security checklist)
+- [x] API key authentication with scopes — blocks Track 2 REST API — (security checklist, PR pending 2026-02-15)
 - [ ] Input validation with Zod on all API surfaces — tRPC has it, needs enforcement on future REST/GraphQL — (security checklist)
 - [ ] Storage: block public access via MinIO bucket policy — (security checklist)
 - [ ] Stripe webhook signature verification + idempotency — no Stripe handler exists yet — (security checklist)
@@ -159,6 +159,40 @@
 - [ ] Email templates + provider integration (SendGrid) — (architecture doc, Relay)
 - [ ] Webhook delivery system (outbound) — (architecture doc, Relay)
 - [ ] In-app notification center — (architecture doc, Relay)
+
+---
+
+## Dependency Upgrades
+
+> Most dependencies were not deliberately pinned — they were current-at-the-time when v2 started (Feb 2026).
+> Several were already behind at that point. Prioritized by EOL risk and security impact.
+
+### [P0] Urgent — EOL / Security
+
+- [ ] Node.js 20 → 22 LTS — Node 20 EOL is April 30, 2026; currently on v20.20.0 via `.nvmrc` — (dependabot 2026-02-15)
+- [ ] Next.js 15 → 16 + React 18 → 19 + eslint-config-next 15 → 16 — bundled upgrade; Next 16 requires React 19; Next 16 shipped Oct 2025 — (dependabot #79, #81, #75)
+
+### [P1] High — Major versions, actively maintained
+
+- [ ] Zod 3 → 4 — ground-up rewrite (stable May 2025); touches types package, all tRPC inputs, env config; largest migration surface — (dependabot #80)
+- [ ] TanStack Query 4 → 5 — `isLoading` → `isPending` split; shipped Oct 2023; requires auditing all query usages in web app — (dependabot #74)
+- [ ] tRPC 10 → 11 — currently pinned for Zod error behavior; evaluate whether Zod 4 changes the calculus — (CLAUDE.md version pin)
+
+### [P2] Medium — Dev tooling, lower risk
+
+- [ ] Vitest 3 → 4 — shipped Oct 2025; dev-only, but 261+ tests need validation — (dependabot #76)
+- [ ] @testing-library/react 14 → 16 — dev-only; skipped v15 — (dependabot #78)
+
+### [P3] Low — Unused or minimal impact
+
+- [ ] nodemailer 7 → 8 — Relay not built yet; upgrade when starting Relay — (dependabot #77)
+
+### Upgrade order notes
+
+- **Node 22** can be done independently — update `.nvmrc`, engines fields, CI matrix, test
+- **Next 16 + React 19** must move together; eslint-config-next follows
+- **Zod 4** should happen before or alongside **tRPC 11** since tRPC's Zod error behavior is the pin reason
+- **TanStack Query 5** is independent but touches the same web app files as React 19
 
 ---
 

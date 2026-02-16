@@ -118,6 +118,7 @@ function orgContext(
       zitadelUserId: 'zid-1',
       email: 'test@example.com',
       emailVerified: true,
+      authMethod: 'test',
       orgId: 'org-1',
       role,
     },
@@ -193,6 +194,7 @@ describe('files tRPC router', () => {
             zitadelUserId: 'zid-1',
             email: 'test@example.com',
             emailVerified: true,
+            authMethod: 'test',
           },
         }),
       );

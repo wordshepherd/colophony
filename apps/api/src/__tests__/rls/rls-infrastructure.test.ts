@@ -11,6 +11,7 @@ const RLS_TABLES = [
   'audit_events',
   'retention_policies',
   'user_consents',
+  'api_keys',
 ];
 
 const NON_RLS_TABLES = [
@@ -30,7 +31,7 @@ describe('RLS Infrastructure', () => {
   // No teardown — pools are shared across test files (singleFork mode)
 
   describe('Row-level security enabled', () => {
-    it('should have relrowsecurity = true on all 9 RLS tables', async () => {
+    it('should have relrowsecurity = true on all 10 RLS tables', async () => {
       const admin = getAdminPool();
       const { rows } = await admin.query<{
         relname: string;
@@ -53,7 +54,7 @@ describe('RLS Infrastructure', () => {
       }
     });
 
-    it('should have relforcerowsecurity = true on all 9 RLS tables', async () => {
+    it('should have relforcerowsecurity = true on all 10 RLS tables', async () => {
       const admin = getAdminPool();
       const { rows } = await admin.query<{
         relname: string;

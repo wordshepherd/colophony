@@ -50,6 +50,20 @@
       "when": 1771200000001,
       "tag": "0006_add_users_last_event_at",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1771208876530,
+      "tag": "0007_lonely_toxin",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1771208876531,
+      "tag": "0008_api_keys_rls",
+      "breakpoints": true
     }
   ]
 }

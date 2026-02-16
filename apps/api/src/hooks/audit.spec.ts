@@ -74,6 +74,7 @@ const fakeAuthPlugin = fp(
           zitadelUserId: testUserId,
           email: 'test@example.com',
           emailVerified: true,
+          authMethod: 'test',
         } satisfies AuthContext;
       }
     });

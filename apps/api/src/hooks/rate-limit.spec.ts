@@ -48,6 +48,7 @@ const fakeAuthPlugin = fp(
           email:
             (request.headers['x-test-email'] as string) ?? 'test@example.com',
           emailVerified: true,
+          authMethod: 'test',
         } satisfies AuthContext;
       }
     });
