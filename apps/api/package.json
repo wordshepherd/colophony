@@ -59,7 +59,7 @@
     "@types/node": "^25.2.3",
     "@types/nodemailer": "^7.0.9",
     "@types/pg": "^8.11.0",
-    "eslint-config-prettier": "^9.1.0",
+    "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-prettier": "^5.5.5",
     "globals": "^17.3.0",
     "ioredis-mock": "^8.13.1",
