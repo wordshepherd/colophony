@@ -16,6 +16,49 @@ export default fp(
         // Must run after auth hook — skip if no auth context
         if (!request.authContext) return;
 
+        // API key auth pre-sets orgId — resolve role from membership, fail closed
+        if (
+          request.authContext.orgId &&
+          request.authContext.authMethod === 'apikey'
+        ) {
+          const client = await pool.connect();
+          let role: string | undefined;
+          try {
+            await client.query('BEGIN READ ONLY');
+            await client.query('SELECT set_config($1, $2, true)', [
+              'app.current_org',
+              request.authContext.orgId,
+            ]);
+            await client.query('SELECT set_config($1, $2, true)', [
+              'app.user_id',
+              request.authContext.userId,
+            ]);
+            const memberResult = await client.query<{ role: string }>(
+              'SELECT role FROM organization_members WHERE organization_id = $1 AND user_id = $2',
+              [request.authContext.orgId, request.authContext.userId],
+            );
+            if (memberResult.rows.length > 0) {
+              role = memberResult.rows[0].role;
+            }
+            await client.query('COMMIT');
+          } catch (err) {
+            await client.query('ROLLBACK').catch(() => {});
+            throw err;
+          } finally {
+            client.release();
+          }
+
+          if (!role) {
+            return reply.status(403).send({
+              error: 'not_a_member',
+              message:
+                'API key creator is no longer a member of this organization',
+            });
+          }
+          request.authContext.role = role as 'ADMIN' | 'EDITOR' | 'READER';
+          return;
+        }
+
         const orgIdHeader = request.headers['x-organization-id'] as
           | string
           | undefined;

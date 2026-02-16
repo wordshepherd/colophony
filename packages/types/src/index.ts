@@ -6,3 +6,4 @@ export * from "./payment";
 export * from "./file";
 export * from "./common";
 export * from "./audit";
+export * from "./api-key";

@@ -8,4 +8,5 @@ export * from "./audit";
 export * from "./compliance";
 export * from "./messaging";
 export * from "./webhooks";
+export * from "./api-keys";
 export * from "./relations";
