@@ -1,4 +1,5 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import Redis from 'ioredis';
 import { withRls, submissions, eq, db, users } from '@colophony/db';
 import type { DrizzleDb } from '@colophony/db';
 import { createJwksVerifier } from '@colophony/auth-client';
@@ -53,6 +54,18 @@ async function resolveLocalUserId(zitadelSub: string): Promise<string | null> {
   return user?.id ?? null;
 }
 
+/**
+ * Atomic Lua script: INCR key, set PEXPIRE on first hit, return [count, pttl].
+ */
+const RATE_LIMIT_LUA = `
+local current = redis.call('INCR', KEYS[1])
+if current == 1 then
+  redis.call('PEXPIRE', KEYS[1], ARGV[1])
+end
+local ttl = redis.call('PTTL', KEYS[1])
+return { current, ttl }
+`;
+
 export async function registerTusdWebhooks(
   app: FastifyInstance,
   opts: TusdWebhookOptions,
@@ -67,9 +80,89 @@ export async function registerTusdWebhooks(
       })
     : null;
 
+  // Lazy Redis connection for webhook rate limiting
+  let redis: Redis | null = null;
+
+  function getRedis(): Redis | null {
+    if (redis) return redis;
+    try {
+      redis = new Redis({
+        host: env.REDIS_HOST,
+        port: env.REDIS_PORT,
+        password: env.REDIS_PASSWORD || undefined,
+        lazyConnect: true,
+        enableOfflineQueue: false,
+        maxRetriesPerRequest: 0,
+        connectTimeout: 5000,
+        commandTimeout: 1000,
+      });
+      redis.connect().catch(() => {
+        // Connection failure handled per-request via graceful degradation
+      });
+      return redis;
+    } catch {
+      return null;
+    }
+  }
+
+  app.addHook('onClose', async () => {
+    if (redis) {
+      await redis.quit().catch(() => {
+        // Ignore quit errors during shutdown
+      });
+    }
+  });
+
   app.post(
     '/webhooks/tusd',
-    { bodyLimit: 1024 * 1024 }, // 1MB
+    {
+      bodyLimit: 1024 * 1024, // 1MB
+      /* eslint-disable @typescript-eslint/no-misused-promises */
+      preHandler: async function webhookRateLimit(
+        request: FastifyRequest,
+        reply: FastifyReply,
+      ): Promise<void> {
+        const redisClient = getRedis();
+        if (!redisClient) return; // Graceful degradation
+
+        const windowMs = env.RATE_LIMIT_WINDOW_SECONDS * 1000;
+        const windowId = Math.floor(Date.now() / windowMs);
+        // Global key (no IP) — tusd is an internal sidecar, all calls share one IP
+        const key = `${env.RATE_LIMIT_KEY_PREFIX}:wh-tusd:${windowId}`;
+
+        try {
+          const result = (await redisClient.eval(
+            RATE_LIMIT_LUA,
+            1,
+            key,
+            windowMs,
+          )) as [number, number];
+          const count = result[0];
+
+          if (count > env.WEBHOOK_RATE_LIMIT_MAX) {
+            // Compute remaining time until window boundary (not key TTL)
+            const remainingMs = windowMs - (Date.now() % windowMs);
+            const retryAfterSeconds = Math.ceil(remainingMs / 1000);
+            reply.header('Retry-After', retryAfterSeconds);
+            request.log.warn(
+              { ip: request.ip, count, limit: env.WEBHOOK_RATE_LIMIT_MAX },
+              'Tusd webhook rate limit exceeded',
+            );
+            void reply.status(429).send({
+              error: 'rate_limit_exceeded',
+              message: 'Too many webhook requests',
+            });
+            return;
+          }
+        } catch {
+          // Graceful degradation: Redis unavailable → allow request
+          request.log.warn(
+            'Tusd webhook rate limit Redis error — allowing request',
+          );
+        }
+      },
+      /* eslint-enable @typescript-eslint/no-misused-promises */
+    },
     async function tusdWebhookHandler(
       request: FastifyRequest,
       reply: FastifyReply,
