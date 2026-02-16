@@ -36,7 +36,7 @@ return { current, ttl }
 /**
  * Rate limiting Fastify plugin using Redis fixed window counter.
  *
- * Hook order: helmet → cors → auth → **rate-limit** → org-context → db-context
+ * Hook order: helmet → cors → **rate-limit** → auth → org-context → db-context
  *
  * Future extensions:
  * - GraphQL cost-based rate limiting (deduct N tokens per query complexity)
@@ -161,7 +161,6 @@ export default fp(
   },
   {
     name: 'colophony-rate-limit',
-    dependencies: ['colophony-auth'],
     fastify: '5.x',
   },
 );

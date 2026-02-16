@@ -20,15 +20,15 @@
 ## Hook Registration Order (from `main.ts`)
 
 ```
-auth → rateLimit → orgContext → dbContext → audit
+rateLimit → auth → orgContext → dbContext → audit
 ```
 
 Each hook decorates the Fastify request:
 
 | Hook               | Decorates                        | Purpose                                                     |
 | ------------------ | -------------------------------- | ----------------------------------------------------------- |
+| `rateLimitPlugin`  | —                                | Redis-based sliding window rate limiting (runs before auth) |
 | `authPlugin`       | `request.authContext`            | Validates Zitadel OIDC token, extracts user identity        |
-| `rateLimitPlugin`  | —                                | Redis-based sliding window rate limiting                    |
 | `orgContextPlugin` | `request.authContext.orgId/role` | Resolves `X-Organization-Id` header, checks membership      |
 | `dbContextPlugin`  | `request.dbTx`                   | Opens RLS transaction via `SET LOCAL` with org/user context |
 | `auditPlugin`      | `request.audit`                  | Provides `audit(action, details)` helper for logging        |
