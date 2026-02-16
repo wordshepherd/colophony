@@ -14,7 +14,7 @@ RETURNS TABLE(
   creator_email varchar, creator_email_verified boolean,
   creator_deleted_at timestamptz
 )
-LANGUAGE sql STABLE
+LANGUAGE sql STABLE SECURITY DEFINER
 SET search_path = public
 AS $$
   SELECT ak.id, ak.organization_id, ak.created_by, ak.name,
@@ -32,7 +32,7 @@ GRANT EXECUTE ON FUNCTION verify_api_key(varchar) TO app_user;
 -- SECURITY DEFINER function: fire-and-forget lastUsedAt update
 CREATE OR REPLACE FUNCTION touch_api_key_last_used(p_key_id uuid, p_ts timestamptz)
 RETURNS void
-LANGUAGE sql VOLATILE
+LANGUAGE sql VOLATILE SECURITY DEFINER
 SET search_path = public
 AS $$
   UPDATE public.api_keys SET last_used_at = p_ts WHERE id = p_key_id;
