@@ -127,7 +127,8 @@ export async function registerTusdWebhooks(
 
         const windowMs = env.RATE_LIMIT_WINDOW_SECONDS * 1000;
         const windowId = Math.floor(Date.now() / windowMs);
-        const key = `${env.RATE_LIMIT_KEY_PREFIX}:wh-tusd:${windowId}:${request.ip}`;
+        // Global key (no IP) — tusd is an internal sidecar, all calls share one IP
+        const key = `${env.RATE_LIMIT_KEY_PREFIX}:wh-tusd:${windowId}`;
 
         try {
           const result = (await redisClient.eval(
@@ -137,10 +138,11 @@ export async function registerTusdWebhooks(
             windowMs,
           )) as [number, number];
           const count = result[0];
-          const ttlMs = result[1];
 
           if (count > env.WEBHOOK_RATE_LIMIT_MAX) {
-            const retryAfterSeconds = Math.ceil(Math.max(0, ttlMs) / 1000);
+            // Compute remaining time until window boundary (not key TTL)
+            const remainingMs = windowMs - (Date.now() % windowMs);
+            const retryAfterSeconds = Math.ceil(remainingMs / 1000);
             reply.header('Retry-After', retryAfterSeconds);
             request.log.warn(
               { ip: request.ip, count, limit: env.WEBHOOK_RATE_LIMIT_MAX },

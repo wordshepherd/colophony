@@ -676,7 +676,9 @@ describe('tusd webhook handler', () => {
       });
 
       expect(response.statusCode).toBe(429);
-      expect(response.headers['retry-after']).toBe('30');
+      const retryAfter = Number(response.headers['retry-after']);
+      expect(retryAfter).toBeGreaterThan(0);
+      expect(retryAfter).toBeLessThanOrEqual(60);
     });
 
     it('allows requests when Redis is unavailable (graceful degradation)', async () => {

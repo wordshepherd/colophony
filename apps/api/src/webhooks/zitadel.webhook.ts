@@ -107,10 +107,11 @@ export async function registerZitadelWebhooks(
             windowMs,
           )) as [number, number];
           const count = result[0];
-          const ttlMs = result[1];
 
           if (count > env.WEBHOOK_RATE_LIMIT_MAX) {
-            const retryAfterSeconds = Math.ceil(Math.max(0, ttlMs) / 1000);
+            // Compute remaining time until window boundary (not key TTL)
+            const remainingMs = windowMs - (Date.now() % windowMs);
+            const retryAfterSeconds = Math.ceil(remainingMs / 1000);
             reply.header('Retry-After', retryAfterSeconds);
             request.log.warn(
               { ip: request.ip, count, limit: env.WEBHOOK_RATE_LIMIT_MAX },
