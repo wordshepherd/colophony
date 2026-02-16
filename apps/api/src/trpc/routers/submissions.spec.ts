@@ -84,6 +84,7 @@ function authedContext(overrides: Partial<TRPCContext> = {}): TRPCContext {
       zitadelUserId: 'zid-1',
       email: 'test@example.com',
       emailVerified: true,
+      authMethod: 'test',
     },
     ...overrides,
   });
@@ -100,6 +101,7 @@ function orgContext(
       zitadelUserId: 'zid-1',
       email: 'test@example.com',
       emailVerified: true,
+      authMethod: 'test',
       orgId: 'org-1',
       role,
     },

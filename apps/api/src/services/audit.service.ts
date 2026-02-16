@@ -1,5 +1,9 @@
 import { auditEvents, db, type DrizzleDb } from '@colophony/db';
-import type { AuditLogParams, AuthAuditParams } from '@colophony/types';
+import type {
+  AuditLogParams,
+  AuthAuditParams,
+  ApiKeyAuditParams,
+} from '@colophony/types';
 
 const MAX_VALUE_LENGTH = 8192;
 
@@ -64,12 +68,13 @@ export const auditService = {
    * Insert an audit event directly via the shared `db` instance.
    *
    * Used for events that occur before a per-request transaction exists
-   * (e.g. auth failures). Only accepts AuthAuditParams — org-scoped
-   * events must use `log()` inside an RLS transaction context.
+   * (e.g. auth failures, API key auth failures). Only accepts
+   * AuthAuditParams or ApiKeyAuditParams — org-scoped events must
+   * use `log()` inside an RLS transaction context.
    *
    * Errors propagate — caller is responsible for try/catch.
    */
-  async logDirect(params: AuthAuditParams): Promise<void> {
+  async logDirect(params: AuthAuditParams | ApiKeyAuditParams): Promise<void> {
     if (params.organizationId) {
       throw new Error(
         'logDirect must not include organizationId — use auditService.log() inside a transaction for org-scoped events',

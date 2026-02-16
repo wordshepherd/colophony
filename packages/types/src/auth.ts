@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { ApiKeyScope } from "./api-key";
 
 // ---------------------------------------------------------------------------
 // v2 — Zitadel OIDC types
@@ -25,9 +26,15 @@ export type OidcTokenClaims = z.infer<typeof oidcTokenClaimsSchema>;
 /** Per-request auth context populated by the auth hook. */
 export interface AuthContext {
   userId: string;
-  zitadelUserId: string;
   email: string;
   emailVerified: boolean;
+  authMethod: "oidc" | "apikey" | "test";
+  /** Zitadel user ID — set for OIDC auth only. */
+  zitadelUserId?: string;
+  /** API key ID — set for API key auth only. */
+  apiKeyId?: string;
+  /** API key scopes — set for API key auth only. */
+  apiKeyScopes?: ApiKeyScope[];
   orgId?: string;
   role?: "ADMIN" | "EDITOR" | "READER";
 }

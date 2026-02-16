@@ -41,6 +41,16 @@ vi.mock('@colophony/auth-client', () => ({
   createJwksVerifier: vi.fn(() => mockVerifyToken),
 }));
 
+// Mock api-key service
+const mockVerifyKey = vi.fn();
+const mockTouchLastUsed = vi.fn().mockResolvedValue(undefined);
+vi.mock('../services/api-key.service.js', () => ({
+  apiKeyService: {
+    verifyKey: (...args: unknown[]) => mockVerifyKey(...args),
+    touchLastUsed: (...args: unknown[]) => mockTouchLastUsed(...args),
+  },
+}));
+
 const baseEnv: Env = {
   DATABASE_URL: 'postgresql://test:test@localhost:5432/test',
   PORT: 0,
@@ -617,6 +627,291 @@ describe('auth plugin', () => {
       const serialized = JSON.stringify(params);
       expect(serialized).not.toContain('super-secret-token');
       expect(serialized).not.toContain('Bearer');
+    });
+  });
+
+  describe('API key authentication', () => {
+    const flushPromises = () => new Promise((r) => process.nextTick(r));
+
+    let app: FastifyInstance;
+
+    const envWithAuth: Env = {
+      ...baseEnv,
+      NODE_ENV: 'development' as const,
+      ZITADEL_AUTHORITY: 'http://localhost:8080',
+      ZITADEL_CLIENT_ID: 'my-client',
+    };
+
+    beforeAll(async () => {
+      app = Fastify({ logger: false });
+      await app.register(authPlugin, { env: envWithAuth });
+      app.get('/protected', async (request) => ({
+        authContext: request.authContext,
+      }));
+    });
+
+    beforeEach(() => {
+      mockVerifyKey.mockReset();
+      mockTouchLastUsed.mockReset().mockResolvedValue(undefined);
+      mockLogDirect.mockClear().mockResolvedValue(undefined);
+    });
+
+    afterAll(async () => {
+      await app.close();
+    });
+
+    it('authenticates with valid X-Api-Key header', async () => {
+      mockVerifyKey.mockResolvedValueOnce({
+        apiKey: {
+          id: 'key-1',
+          organizationId: 'org-1',
+          createdBy: 'user-1',
+          name: 'Test Key',
+          scopes: ['submissions:read'],
+          expiresAt: null,
+          revokedAt: null,
+          lastUsedAt: null,
+          createdAt: new Date(),
+        },
+        creator: {
+          id: 'user-1',
+          email: 'alice@example.com',
+          emailVerified: true,
+          deletedAt: null,
+        },
+      });
+
+      const response = await app.inject({
+        method: 'GET',
+        url: '/protected',
+        headers: { 'x-api-key': 'col_live_abcdef1234567890abcdef1234567890' },
+      });
+
+      expect(response.statusCode).toBe(200);
+      const body = response.json();
+      expect(body.authContext.userId).toBe('user-1');
+      expect(body.authContext.email).toBe('alice@example.com');
+      expect(body.authContext.authMethod).toBe('apikey');
+      expect(body.authContext.apiKeyId).toBe('key-1');
+      expect(body.authContext.orgId).toBe('org-1');
+    });
+
+    it('sets authMethod to apikey', async () => {
+      mockVerifyKey.mockResolvedValueOnce({
+        apiKey: {
+          id: 'key-1',
+          organizationId: 'org-1',
+          createdBy: 'user-1',
+          name: 'Test Key',
+          scopes: ['submissions:read'],
+          expiresAt: null,
+          revokedAt: null,
+          lastUsedAt: null,
+          createdAt: new Date(),
+        },
+        creator: {
+          id: 'user-1',
+          email: 'alice@example.com',
+          emailVerified: true,
+          deletedAt: null,
+        },
+      });
+
+      const response = await app.inject({
+        method: 'GET',
+        url: '/protected',
+        headers: { 'x-api-key': 'col_live_abcdef1234567890abcdef1234567890' },
+      });
+
+      expect(response.statusCode).toBe(200);
+      expect(response.json().authContext.authMethod).toBe('apikey');
+    });
+
+    it('pre-sets orgId from API key', async () => {
+      mockVerifyKey.mockResolvedValueOnce({
+        apiKey: {
+          id: 'key-1',
+          organizationId: 'org-42',
+          createdBy: 'user-1',
+          name: 'Test Key',
+          scopes: ['submissions:read'],
+          expiresAt: null,
+          revokedAt: null,
+          lastUsedAt: null,
+          createdAt: new Date(),
+        },
+        creator: {
+          id: 'user-1',
+          email: 'alice@example.com',
+          emailVerified: true,
+          deletedAt: null,
+        },
+      });
+
+      const response = await app.inject({
+        method: 'GET',
+        url: '/protected',
+        headers: { 'x-api-key': 'col_live_abcdef1234567890abcdef1234567890' },
+      });
+
+      expect(response.statusCode).toBe(200);
+      expect(response.json().authContext.orgId).toBe('org-42');
+    });
+
+    it('rejects invalid API key', async () => {
+      mockVerifyKey.mockResolvedValueOnce(null);
+
+      const response = await app.inject({
+        method: 'GET',
+        url: '/protected',
+        headers: { 'x-api-key': 'col_live_invalid' },
+      });
+
+      expect(response.statusCode).toBe(401);
+      expect(response.json().message).toBe('Invalid API key');
+    });
+
+    it('rejects expired API key', async () => {
+      mockVerifyKey.mockResolvedValueOnce({
+        apiKey: {
+          id: 'key-1',
+          organizationId: 'org-1',
+          createdBy: 'user-1',
+          name: 'Test Key',
+          scopes: ['submissions:read'],
+          expiresAt: new Date('2020-01-01'), // expired
+          revokedAt: null,
+          lastUsedAt: null,
+          createdAt: new Date(),
+        },
+        creator: {
+          id: 'user-1',
+          email: 'alice@example.com',
+          emailVerified: true,
+          deletedAt: null,
+        },
+      });
+
+      const response = await app.inject({
+        method: 'GET',
+        url: '/protected',
+        headers: { 'x-api-key': 'col_live_abcdef1234567890abcdef1234567890' },
+      });
+
+      expect(response.statusCode).toBe(401);
+      expect(response.json().message).toBe('API key has expired');
+    });
+
+    it('rejects revoked API key', async () => {
+      mockVerifyKey.mockResolvedValueOnce({
+        apiKey: {
+          id: 'key-1',
+          organizationId: 'org-1',
+          createdBy: 'user-1',
+          name: 'Test Key',
+          scopes: ['submissions:read'],
+          expiresAt: null,
+          revokedAt: new Date(), // revoked
+          lastUsedAt: null,
+          createdAt: new Date(),
+        },
+        creator: {
+          id: 'user-1',
+          email: 'alice@example.com',
+          emailVerified: true,
+          deletedAt: null,
+        },
+      });
+
+      const response = await app.inject({
+        method: 'GET',
+        url: '/protected',
+        headers: { 'x-api-key': 'col_live_abcdef1234567890abcdef1234567890' },
+      });
+
+      expect(response.statusCode).toBe(401);
+      expect(response.json().message).toBe('API key has been revoked');
+    });
+
+    it('prefers Bearer token over X-Api-Key when both present', async () => {
+      // When Authorization header is present, API key is not checked
+      mockVerifyToken.mockResolvedValueOnce({
+        payload: { sub: 'zitadel-user-1' },
+        header: { alg: 'RS256' },
+      });
+
+      const dbModule = await import('@colophony/db');
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      vi.mocked(dbModule.db.query.users.findFirst).mockResolvedValueOnce({
+        id: 'user-1',
+        email: 'alice@example.com',
+        zitadelUserId: 'zitadel-user-1',
+        emailVerified: true,
+        emailVerifiedAt: new Date(),
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        deletedAt: null,
+        lastEventAt: null,
+      });
+
+      const response = await app.inject({
+        method: 'GET',
+        url: '/protected',
+        headers: {
+          authorization: 'Bearer valid-token',
+          'x-api-key': 'col_live_abcdef1234567890abcdef1234567890',
+        },
+      });
+
+      expect(response.statusCode).toBe(200);
+      expect(response.json().authContext.authMethod).toBe('oidc');
+      expect(mockVerifyKey).not.toHaveBeenCalled();
+    });
+
+    it('audits failed API key auth', async () => {
+      mockVerifyKey.mockResolvedValueOnce(null);
+
+      await app.inject({
+        method: 'GET',
+        url: '/protected',
+        headers: { 'x-api-key': 'col_live_invalid_key_here' },
+      });
+      await flushPromises();
+
+      expect(mockLogDirect).toHaveBeenCalledOnce();
+      const params = mockLogDirect.mock.calls[0][0];
+      expect(params.action).toBe('API_KEY_AUTH_FAILED');
+    });
+
+    it('updates lastUsedAt on successful auth', async () => {
+      mockVerifyKey.mockResolvedValueOnce({
+        apiKey: {
+          id: 'key-1',
+          organizationId: 'org-1',
+          createdBy: 'user-1',
+          name: 'Test Key',
+          scopes: ['submissions:read'],
+          expiresAt: null,
+          revokedAt: null,
+          lastUsedAt: null,
+          createdAt: new Date(),
+        },
+        creator: {
+          id: 'user-1',
+          email: 'alice@example.com',
+          emailVerified: true,
+          deletedAt: null,
+        },
+      });
+
+      await app.inject({
+        method: 'GET',
+        url: '/protected',
+        headers: { 'x-api-key': 'col_live_abcdef1234567890abcdef1234567890' },
+      });
+      await flushPromises();
+
+      expect(mockTouchLastUsed).toHaveBeenCalledWith('key-1');
     });
   });
 });

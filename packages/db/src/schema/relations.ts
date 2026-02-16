@@ -11,6 +11,7 @@ import {
 import { payments } from "./payments";
 import { auditEvents, dsarRequests } from "./audit";
 import { retentionPolicies, userConsents } from "./compliance";
+import { apiKeys } from "./api-keys";
 
 // --- organizations ---
 
@@ -22,6 +23,7 @@ export const organizationsRelations = relations(organizations, ({ many }) => ({
   auditEvents: many(auditEvents),
   retentionPolicies: many(retentionPolicies),
   userConsents: many(userConsents),
+  apiKeys: many(apiKeys),
 }));
 
 // --- users ---
@@ -32,6 +34,7 @@ export const usersRelations = relations(users, ({ many }) => ({
   auditEvents: many(auditEvents),
   dsarRequests: many(dsarRequests),
   userConsents: many(userConsents),
+  apiKeys: many(apiKeys),
 }));
 
 // --- organization_members ---
@@ -164,5 +167,18 @@ export const userConsentsRelations = relations(userConsents, ({ one }) => ({
   organization: one(organizations, {
     fields: [userConsents.organizationId],
     references: [organizations.id],
+  }),
+}));
+
+// --- api_keys ---
+
+export const apiKeysRelations = relations(apiKeys, ({ one }) => ({
+  organization: one(organizations, {
+    fields: [apiKeys.organizationId],
+    references: [organizations.id],
+  }),
+  creator: one(users, {
+    fields: [apiKeys.createdBy],
+    references: [users.id],
   }),
 }));

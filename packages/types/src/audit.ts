@@ -40,6 +40,13 @@ export const AuditActions = {
   AUTH_TOKEN_EXPIRED: "AUTH_TOKEN_EXPIRED",
   AUTH_USER_NOT_PROVISIONED: "AUTH_USER_NOT_PROVISIONED",
   AUTH_USER_DEACTIVATED: "AUTH_USER_DEACTIVATED",
+
+  // API key lifecycle
+  API_KEY_CREATED: "API_KEY_CREATED",
+  API_KEY_REVOKED: "API_KEY_REVOKED",
+  API_KEY_DELETED: "API_KEY_DELETED",
+  API_KEY_AUTH_SUCCESS: "API_KEY_AUTH_SUCCESS",
+  API_KEY_AUTH_FAILED: "API_KEY_AUTH_FAILED",
 } as const;
 
 export type AuditAction = (typeof AuditActions)[keyof typeof AuditActions];
@@ -51,6 +58,7 @@ export const AuditResources = {
   SUBMISSION: "submission",
   FILE: "file",
   AUTH: "auth",
+  API_KEY: "api_key",
 } as const;
 
 export type AuditResource =
@@ -122,10 +130,21 @@ export interface AuthAuditParams extends BaseAuditParams {
     | typeof AuditActions.AUTH_USER_DEACTIVATED;
 }
 
+export interface ApiKeyAuditParams extends BaseAuditParams {
+  resource: typeof AuditResources.API_KEY;
+  action:
+    | typeof AuditActions.API_KEY_CREATED
+    | typeof AuditActions.API_KEY_REVOKED
+    | typeof AuditActions.API_KEY_DELETED
+    | typeof AuditActions.API_KEY_AUTH_SUCCESS
+    | typeof AuditActions.API_KEY_AUTH_FAILED;
+}
+
 /** Union of all resource-specific param types. */
 export type AuditLogParams =
   | UserAuditParams
   | OrgAuditParams
   | SubmissionAuditParams
   | FileAuditParams
-  | AuthAuditParams;
+  | AuthAuditParams
+  | ApiKeyAuditParams;

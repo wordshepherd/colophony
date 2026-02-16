@@ -132,7 +132,7 @@ All other version pins are in their respective per-directory CLAUDE.md files.
 - [x] Secrets in environment only (never committed). Validate env schema with Zod at startup; canonical definition: `apps/api/src/config/env.ts`
 - [x] Pre-commit hook blocks secrets (husky + `scripts/check-secrets.sh`)
 - [x] Zitadel OIDC token validation on all protected routes (default-deny auth hook)
-- [ ] API key authentication with scopes
+- [x] API key authentication with scopes (scopes stored, enforcement deferred to Track 2)
 - [ ] Audit log for all sensitive actions
 - [x] File virus scanning before production bucket (ClamAV via BullMQ)
 - [x] RLS policies on all tenant tables via Drizzle `pgPolicy` with FORCE — see `packages/db/CLAUDE.md`

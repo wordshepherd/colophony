@@ -2,10 +2,16 @@ import fp from 'fastify-plugin';
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { createJwksVerifier } from '@colophony/auth-client';
 import { db, eq, users } from '@colophony/db';
-import type { AuthContext, AuthAuditParams } from '@colophony/types';
+import type {
+  AuthContext,
+  AuthAuditParams,
+  ApiKeyAuditParams,
+  ApiKeyScope,
+} from '@colophony/types';
 import { AuditActions, AuditResources } from '@colophony/types';
 import type { Env } from '../config/env.js';
 import { auditService } from '../services/audit.service.js';
+import { apiKeyService } from '../services/api-key.service.js';
 
 declare module 'fastify' {
   interface FastifyRequest {
@@ -71,19 +77,24 @@ export default fp(
     /** Log an auth failure audit event. Never throws — swallows errors. */
     async function logAuthFailure(
       request: FastifyRequest,
-      action: AuthAuditParams['action'],
+      action: AuthAuditParams['action'] | ApiKeyAuditParams['action'],
       details: Record<string, unknown>,
       actorId?: string,
     ): Promise<void> {
       try {
+        const isApiKeyAction = action.startsWith('API_KEY_');
+        const resource = isApiKeyAction
+          ? AuditResources.API_KEY
+          : AuditResources.AUTH;
+
         await auditService.logDirect({
           action,
-          resource: AuditResources.AUTH,
+          resource,
           ipAddress: request.ip,
           userAgent: request.headers['user-agent'],
           newValue: details,
           actorId,
-        });
+        } as AuthAuditParams | ApiKeyAuditParams);
       } catch (err) {
         request.log.warn({ err }, 'Failed to log auth failure audit event');
       }
@@ -119,6 +130,7 @@ export default fp(
                 (request.headers['x-test-zitadel-id'] as string) ?? testUserId,
               email: testEmail ?? 'test@example.com',
               emailVerified: true,
+              authMethod: 'test',
             };
             return;
           }
@@ -133,6 +145,67 @@ export default fp(
         // Extract Bearer token
         const authHeader = request.headers.authorization;
         if (!authHeader) {
+          // Check for API key before rejecting
+          const apiKeyHeader = request.headers['x-api-key'] as
+            | string
+            | undefined;
+          if (apiKeyHeader) {
+            const result = await apiKeyService.verifyKey(apiKeyHeader);
+            if (!result) {
+              void logAuthFailure(request, AuditActions.API_KEY_AUTH_FAILED, {
+                reason: 'invalid_key',
+                keyPrefix: apiKeyHeader.substring(0, 12),
+              });
+              return reply.status(401).send({
+                error: 'unauthorized',
+                message: 'Invalid API key',
+              });
+            }
+            const { apiKey, creator } = result;
+            if (apiKey.expiresAt && apiKey.expiresAt < new Date()) {
+              void logAuthFailure(request, AuditActions.API_KEY_AUTH_FAILED, {
+                reason: 'expired',
+                keyId: apiKey.id,
+              });
+              return reply.status(401).send({
+                error: 'unauthorized',
+                message: 'API key has expired',
+              });
+            }
+            if (apiKey.revokedAt) {
+              void logAuthFailure(request, AuditActions.API_KEY_AUTH_FAILED, {
+                reason: 'revoked',
+                keyId: apiKey.id,
+              });
+              return reply.status(401).send({
+                error: 'unauthorized',
+                message: 'API key has been revoked',
+              });
+            }
+            if (creator.deletedAt) {
+              void logAuthFailure(request, AuditActions.API_KEY_AUTH_FAILED, {
+                reason: 'creator_deactivated',
+                keyId: apiKey.id,
+              });
+              return reply.status(401).send({
+                error: 'unauthorized',
+                message: 'API key creator account has been deactivated',
+              });
+            }
+            request.authContext = {
+              userId: creator.id,
+              email: creator.email,
+              emailVerified: creator.emailVerified,
+              authMethod: 'apikey',
+              apiKeyId: apiKey.id,
+              apiKeyScopes: apiKey.scopes as ApiKeyScope[],
+              orgId: apiKey.organizationId,
+            };
+            // Fire-and-forget: update lastUsedAt
+            void apiKeyService.touchLastUsed(apiKey.id);
+            return;
+          }
+
           // Dev bypass: allow unauthenticated requests in dev mode when explicitly enabled
           if (devAuthBypass) {
             request.log.debug(
@@ -237,6 +310,7 @@ export default fp(
           zitadelUserId: sub,
           email: user.email,
           emailVerified: user.emailVerified,
+          authMethod: 'oidc',
         };
       },
     );
