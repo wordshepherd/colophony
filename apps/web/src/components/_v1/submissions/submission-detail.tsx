@@ -65,9 +65,10 @@ export function SubmissionDetail({ submissionId }: SubmissionDetailProps) {
   const [showWithdrawDialog, setShowWithdrawDialog] = useState(false);
   const utils = trpc.useUtils();
 
-  const { data: submission, isLoading } = trpc.submissions.getById.useQuery({
-    id: submissionId,
-  });
+  const { data: submission, isPending: isLoading } =
+    trpc.submissions.getById.useQuery({
+      id: submissionId,
+    });
 
   const { data: files } = trpc.files.getBySubmission.useQuery({
     submissionId,

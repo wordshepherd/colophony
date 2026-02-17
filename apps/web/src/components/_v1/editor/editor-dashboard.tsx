@@ -35,7 +35,11 @@ export function EditorDashboard() {
   const [page, setPage] = useState(1);
   const limit = 20;
 
-  const { data, isLoading, error } = trpc.submissions.list.useQuery({
+  const {
+    data,
+    isPending: isLoading,
+    error,
+  } = trpc.submissions.list.useQuery({
     status: statusFilter === "ALL" ? undefined : statusFilter,
     page,
     limit,

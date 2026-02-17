@@ -28,7 +28,7 @@ jest.mock("@/lib/trpc", () => ({
       list: {
         useQuery: () => ({
           data: mockData,
-          isLoading: mockIsLoading,
+          isPending: mockIsLoading,
           error: mockError,
         }),
       },

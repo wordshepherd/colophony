@@ -176,7 +176,7 @@ function ExistingFileItem({
 export function FileUpload({ submissionId, disabled }: FileUploadProps) {
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const { data: existingFiles, isLoading } =
+  const { data: existingFiles, isPending: isLoading } =
     trpc.files.getBySubmission.useQuery({ submissionId });
 
   const deleteMutation = trpc.files.delete.useMutation();

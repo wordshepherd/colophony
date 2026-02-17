@@ -50,9 +50,10 @@ function formatFileSize(bytes: number): string {
 }
 
 export function SubmissionReview({ submissionId }: SubmissionReviewProps) {
-  const { data: submission, isLoading } = trpc.submissions.getById.useQuery({
-    id: submissionId,
-  });
+  const { data: submission, isPending: isLoading } =
+    trpc.submissions.getById.useQuery({
+      id: submissionId,
+    });
 
   const { data: files } = trpc.files.getBySubmission.useQuery({
     submissionId,

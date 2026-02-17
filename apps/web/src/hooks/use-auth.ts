@@ -72,8 +72,7 @@ export function useAuth() {
   // Fetch local user profile when OIDC user is available
   const {
     data: userProfile,
-    isLoading: profileLoading,
-    fetchStatus,
+    isPending: profilePending,
     error: profileError,
   } = trpc.users.me.useQuery(undefined, {
     enabled: hasOidcToken,
@@ -85,7 +84,7 @@ export function useAuth() {
     staleTime: 5 * 60 * 1000, // 5 minutes
     // Poll every 3s while profile is null (user not provisioned yet).
     // Stops polling once profile data arrives.
-    refetchInterval: (data) => (!data ? 3000 : false),
+    refetchInterval: (query) => (!query.state.data ? 3000 : false),
   });
 
   // Build the user profile with name from OIDC claims
@@ -97,11 +96,7 @@ export function useAuth() {
       }
     : null;
 
-  // In TanStack Query v4, isLoading is true even when enabled=false
-  // (status='loading', fetchStatus='idle'). We only want true loading
-  // when a fetch is actually in progress.
-  const isQueryLoading = profileLoading && fetchStatus !== "idle";
-  const isLoading = oidcLoading || (hasOidcToken && isQueryLoading);
+  const isLoading = oidcLoading || (hasOidcToken && profilePending);
 
   // Authenticated = valid OIDC token exists. This prevents ProtectedRoute
   // from triggering a redirect loop when the user profile hasn't loaded yet
