@@ -25,6 +25,7 @@
 - [x] In-memory per-IP throttle for auth failure auditing — DoS protection — (DEVLOG 2026-02-12, 2026-02-13; done 2026-02-17 PR #89)
 - [x] Restore two-tier rate limiting (AUTH_MAX for authenticated users) via second-pass hook after auth — (DEVLOG 2026-02-15, Codex review; done 2026-02-17 PR #89)
 - [x] Request correlation columns (`requestId`, `method`, `route`) in `audit_events` — requires schema migration — (DEVLOG 2026-02-12, 2026-02-13; done 2026-02-17 PR #89)
+- [ ] Zitadel webhook two-step idempotency — current one-step pattern doesn't handle crash recovery (row inserted but `processed=false`); align with Stripe webhook's two-step pattern — (Codex review 2026-02-17)
 - [ ] Audit query/list endpoints — wait for API surfaces — (DEVLOG 2026-02-13)
 - [ ] Seed data (`packages/db/src/seed.ts` has TODO) — wait for API layer — (code TODO)
 
@@ -46,9 +47,9 @@
 
 - [x] Clean up v1 components (`_v1/` directory) — (DEVLOG 2026-02-15; done 2026-02-17)
 - [ ] Consider Playwright tsconfig extending web for E2E type-checking — nice-to-have — (DEVLOG 2026-02-15)
-- [ ] Migrate `forwardRef` → ref-as-prop in 19 shadcn/ui components — React 19 deprecation; migrate when updating shadcn/ui — (DEVLOG 2026-02-16)
-- [ ] Migrate `Context.Provider` → `Context` — React 19 deprecation; still works — (DEVLOG 2026-02-16)
-- [ ] Refactor OIDC guard `setState` in effects to satisfy `react-hooks/set-state-in-effect` — 3 files: `page.tsx`, `callback/page.tsx`, `use-auth.ts` — (DEVLOG 2026-02-16)
+- [x] Migrate `forwardRef` → ref-as-prop in 19 shadcn/ui components — React 19 deprecation — (DEVLOG 2026-02-16; done 2026-02-17)
+- [x] Migrate `Context.Provider` → `Context` — React 19 deprecation — (DEVLOG 2026-02-16; done 2026-02-17)
+- [x] Refactor OIDC guard `setState` in effects to satisfy `react-hooks/set-state-in-effect` — `callback/page.tsx` — (DEVLOG 2026-02-16; done 2026-02-17)
 
 ---
 
