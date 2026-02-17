@@ -1,11 +1,11 @@
 -- Create audit_writer role (idempotent)
+-- NOLOGIN: this role is only used as a SECURITY DEFINER function owner,
+-- never for direct connections. init-db.sh creates it with LOGIN for Docker setup.
 DO $$ BEGIN
   IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'audit_writer') THEN
-    CREATE ROLE audit_writer WITH LOGIN PASSWORD 'audit_password' NOSUPERUSER NOBYPASSRLS;
+    CREATE ROLE audit_writer WITH NOLOGIN NOSUPERUSER NOBYPASSRLS;
   END IF;
 END $$;
---> statement-breakpoint
-GRANT CONNECT ON DATABASE colophony TO audit_writer;
 --> statement-breakpoint
 GRANT USAGE ON SCHEMA public TO audit_writer;
 --> statement-breakpoint

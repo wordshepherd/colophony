@@ -88,10 +88,11 @@ export async function globalSetup(): Promise<void> {
   `);
 
   // Create audit_writer role (for insert_audit_event SECURITY DEFINER function)
+  // NOLOGIN: only used as function owner, never for direct connections
   await admin.query(`
     DO $$ BEGIN
       IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'audit_writer') THEN
-        CREATE ROLE audit_writer LOGIN PASSWORD 'audit_password'
+        CREATE ROLE audit_writer NOLOGIN
           NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS;
       ELSE
         ALTER ROLE audit_writer NOSUPERUSER NOBYPASSRLS;

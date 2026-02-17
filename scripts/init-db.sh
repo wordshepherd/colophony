@@ -25,15 +25,15 @@ psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-E
     ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT USAGE, SELECT ON SEQUENCES TO app_user;
 
     -- Create audit_writer role for tamper-proof audit trail
+    -- NOLOGIN: only used as SECURITY DEFINER function owner, never connects directly
     DO \$\$
     BEGIN
         IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'audit_writer') THEN
-            CREATE ROLE audit_writer WITH LOGIN PASSWORD '${AUDIT_USER_PASSWORD:-audit_password}' NOSUPERUSER NOBYPASSRLS;
+            CREATE ROLE audit_writer WITH NOLOGIN NOSUPERUSER NOBYPASSRLS;
         END IF;
     END
     \$\$;
 
-    GRANT CONNECT ON DATABASE $POSTGRES_DB TO audit_writer;
     GRANT USAGE ON SCHEMA public TO audit_writer;
 
     -- Verify roles are not superusers
