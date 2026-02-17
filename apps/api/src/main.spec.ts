@@ -48,12 +48,14 @@ vi.mock('drizzle-orm/node-postgres', () => ({
 
 // Mock ioredis so rate-limit plugin doesn't connect to real Redis
 vi.mock('ioredis', () => {
-  const RedisMock = vi.fn().mockImplementation(() => ({
-    connect: vi.fn().mockResolvedValue(undefined),
-    eval: vi.fn().mockResolvedValue([1, 60000]),
-    quit: vi.fn().mockResolvedValue('OK'),
-    status: 'ready',
-  }));
+  const RedisMock = vi.fn().mockImplementation(function () {
+    return {
+      connect: vi.fn().mockResolvedValue(undefined),
+      eval: vi.fn().mockResolvedValue([1, 60000]),
+      quit: vi.fn().mockResolvedValue('OK'),
+      status: 'ready',
+    };
+  });
   return { default: RedisMock };
 });
 
