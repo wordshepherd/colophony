@@ -1,5 +1,5 @@
 # Stage 1: deps — install pnpm workspace dependencies
-FROM node:20-alpine AS deps
+FROM node:22-alpine AS deps
 RUN corepack enable && corepack prepare pnpm@9.15.0 --activate
 WORKDIR /app
 COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
@@ -20,7 +20,7 @@ RUN pnpm --filter @colophony/api build
 RUN pnpm --filter @colophony/api deploy --prod /app/deploy
 
 # Stage 3: runner — production image
-FROM node:20-alpine AS runner
+FROM node:22-alpine AS runner
 RUN apk add --no-cache curl
 RUN addgroup --system --gid 1001 nodejs && adduser --system --uid 1001 colophony
 WORKDIR /app
