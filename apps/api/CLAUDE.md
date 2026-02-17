@@ -20,18 +20,19 @@
 ## Hook Registration Order (from `main.ts`)
 
 ```
-rateLimit → auth → orgContext → dbContext → audit
+rateLimit (IP) → auth → rateLimitAuth (user) → orgContext → dbContext → audit
 ```
 
 Each hook decorates the Fastify request:
 
-| Hook               | Decorates                        | Purpose                                                     |
-| ------------------ | -------------------------------- | ----------------------------------------------------------- |
-| `rateLimitPlugin`  | —                                | Redis-based sliding window rate limiting (runs before auth) |
-| `authPlugin`       | `request.authContext`            | Validates OIDC token or X-Api-Key, extracts user identity   |
-| `orgContextPlugin` | `request.authContext.orgId/role` | Resolves `X-Organization-Id` header, checks membership      |
-| `dbContextPlugin`  | `request.dbTx`                   | Opens RLS transaction via `SET LOCAL` with org/user context |
-| `auditPlugin`      | `request.audit`                  | Provides `audit(action, details)` helper for logging        |
+| Hook                  | Decorates                        | Purpose                                                                 |
+| --------------------- | -------------------------------- | ----------------------------------------------------------------------- |
+| `rateLimitPlugin`     | `app.rateLimitRedis`             | IP-based rate limiting (DEFAULT_MAX, runs before auth — DoS shield)     |
+| `rateLimitAuthPlugin` | —                                | User-based rate limiting (AUTH_MAX, runs after auth, overrides headers) |
+| `authPlugin`          | `request.authContext`            | Validates OIDC token or X-Api-Key, extracts user identity               |
+| `orgContextPlugin`    | `request.authContext.orgId/role` | Resolves `X-Organization-Id` header, checks membership                  |
+| `dbContextPlugin`     | `request.dbTx`                   | Opens RLS transaction via `SET LOCAL` with org/user context             |
+| `auditPlugin`         | `request.audit`                  | Provides `audit(action, details)` helper for logging                    |
 
 **RLS runtime contract:** `dbContext` hook calls `SET LOCAL` to set `app.current_org` and `app.user_id` inside a per-request transaction. RLS policy definitions are in `packages/db/CLAUDE.md`.
 
