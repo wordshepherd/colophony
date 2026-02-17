@@ -30,25 +30,21 @@ export const zitadelEventTypeSchema = z.enum([
 ]);
 export type ZitadelEventType = z.infer<typeof zitadelEventTypeSchema>;
 
-export const zitadelWebhookUserSchema = z
-  .object({
-    userId: z.string().optional(),
-    username: z.string().optional(),
-    email: z.string().optional(),
-    emailVerified: z.boolean().optional(),
-    displayName: z.string().optional(),
-  })
-  .passthrough();
+export const zitadelWebhookUserSchema = z.looseObject({
+  userId: z.string().optional(),
+  username: z.string().optional(),
+  email: z.string().optional(),
+  emailVerified: z.boolean().optional(),
+  displayName: z.string().optional(),
+});
 
 /** eventType is z.string() (not z.enum) so unknown types pass validation
  *  and reach the switch default case for logging + idempotency recording. */
-export const zitadelWebhookPayloadSchema = z
-  .object({
-    eventType: z.string().min(1),
-    eventId: z.string().min(1),
-    creationDate: z.string().min(1),
-    user: zitadelWebhookUserSchema.optional(),
-  })
-  .passthrough();
+export const zitadelWebhookPayloadSchema = z.looseObject({
+  eventType: z.string().min(1),
+  eventId: z.string().min(1),
+  creationDate: z.string().min(1),
+  user: zitadelWebhookUserSchema.optional(),
+});
 
 export type ZitadelWebhookPayload = z.infer<typeof zitadelWebhookPayloadSchema>;

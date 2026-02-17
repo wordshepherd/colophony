@@ -80,7 +80,7 @@ Key functions in `trpc.ts`:
 
 ## Version Pins
 
-| Package        | Pinned | Notes                              |
-| -------------- | ------ | ---------------------------------- |
-| TanStack Query | 4.36   | `isLoading` behavior changes in v5 |
-| tus-js-client  | 4.3.1  | —                                  |
+| Package        | Pinned | Notes                                             |
+| -------------- | ------ | ------------------------------------------------- |
+| TanStack Query | 4.36   | Blocked by tRPC 10 peer dep; upgrade with tRPC 11 |
+| tus-js-client  | 4.3.1  | —                                                 |
