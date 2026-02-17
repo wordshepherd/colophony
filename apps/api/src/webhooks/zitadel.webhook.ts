@@ -97,7 +97,7 @@ export async function registerZitadelWebhooks(
 
         const windowMs = env.RATE_LIMIT_WINDOW_SECONDS * 1000;
         const windowId = Math.floor(Date.now() / windowMs);
-        const key = `${env.RATE_LIMIT_KEY_PREFIX}:wh:${windowId}:${request.ip}`;
+        const key = `${env.RATE_LIMIT_KEY_PREFIX}:wh:zitadel:${windowId}:${request.ip}`;
 
         try {
           const result = (await redisClient.eval(
@@ -197,22 +197,27 @@ export async function registerZitadelWebhooks(
       try {
         await client.query('BEGIN');
 
-        // Attempt to insert — ON CONFLICT means already processed
-        const insertResult = await client.query(
+        // Two-step idempotency: INSERT then SELECT processed status.
+        // This handles crash recovery: if server crashes after INSERT but
+        // before marking processed, the row exists with processed = false.
+        // On retry, INSERT conflicts (no-op), SELECT finds processed = false,
+        // and we reprocess — preventing lost events.
+        await client.query(
           `INSERT INTO zitadel_webhook_events (id, event_id, type, payload, processed, received_at)
            VALUES (gen_random_uuid(), $1, $2, $3, false, now())
-           ON CONFLICT (event_id) DO NOTHING
-           RETURNING id`,
+           ON CONFLICT (event_id) DO NOTHING`,
           [payload.eventId, payload.eventType, JSON.stringify(payload)],
         );
 
-        // If no rows inserted, this event was already seen
-        if (insertResult.rows.length === 0) {
+        const statusResult = await client.query(
+          `SELECT processed FROM zitadel_webhook_events WHERE event_id = $1`,
+          [payload.eventId],
+        );
+
+        if (statusResult.rows[0]?.processed === true) {
           await client.query('COMMIT');
           return reply.status(200).send({ status: 'already_processed' });
         }
-
-        const webhookEventId = insertResult.rows[0].id as string;
 
         // Process event using a Drizzle instance on the same transaction client
         // so that user state changes are atomic with the idempotency record.
@@ -221,8 +226,8 @@ export async function registerZitadelWebhooks(
 
         // Mark as processed
         await client.query(
-          `UPDATE zitadel_webhook_events SET processed = true, processed_at = now() WHERE id = $1`,
-          [webhookEventId],
+          `UPDATE zitadel_webhook_events SET processed = true, processed_at = now() WHERE event_id = $1`,
+          [payload.eventId],
         );
 
         await client.query('COMMIT');
