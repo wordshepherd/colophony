@@ -14,6 +14,7 @@
 | tRPC context      | `src/trpc/context.ts`             |
 | tusd webhook      | `src/webhooks/tusd.webhook.ts`    |
 | Zitadel webhook   | `src/webhooks/zitadel.webhook.ts` |
+| Stripe webhook    | `src/webhooks/stripe.webhook.ts`  |
 
 ---
 
@@ -93,7 +94,7 @@ Also exported: `createRouter`, `mergeRouters`.
 
 ## Payments (Stripe Checkout)
 
-Stripe Checkout only (zero PCI scope). Stripe integration is planned — no handler exists yet.
+Stripe Checkout only (zero PCI scope). Webhook handler built at `src/webhooks/stripe.webhook.ts`.
 
 **NEVER:**
 
@@ -114,9 +115,9 @@ Stripe Checkout only (zero PCI scope). Stripe integration is planned — no hand
 
 `src/webhooks/tusd.webhook.ts` — pre-create validates auth/submission/limits, post-finish creates file record idempotently (checks `storageKey` exists before insert). Registered in isolated Fastify scope at `/webhooks/tusd`. Auth: validates forwarded `Authorization` header via JWKS, resolves Zitadel `sub` → local user UUID via `resolveLocalUserId()`. Fails closed when auth cannot be verified.
 
-### Stripe (planned)
+### Stripe (built)
 
-When built: check processed status in `stripe_webhook_events` table before handling. Use database transaction. Record event ID after processing.
+`src/webhooks/stripe.webhook.ts` — verifies `stripe-signature` header via `constructEvent()` (with configurable timestamp tolerance), registered in an isolated Fastify scope with `fastify-raw-body`. Two-step idempotency: INSERT event into `stripe_webhook_events`, then SELECT `processed` status. If `processed = true`, skip. If `processed = false` (crash recovery), reprocess. RLS org context set via `set_config('app.current_org', ...)` from Stripe session metadata (Zod-validated).
 
 ---
 

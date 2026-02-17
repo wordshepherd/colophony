@@ -41,6 +41,7 @@ Per-directory CLAUDE.md files contain domain-specific details:
 | **Service layer**       | `apps/api/src/services/`                                                 |
 | **tRPC (internal)**     | `apps/api/src/trpc/`                                                     |
 | **Zitadel webhook**     | `apps/api/src/webhooks/zitadel.webhook.ts`                               |
+| **Stripe webhook**      | `apps/api/src/webhooks/stripe.webhook.ts`                                |
 | **Next.js frontend**    | `apps/web/`                                                              |
 | **tRPC client**         | `apps/web/src/lib/trpc.ts`                                               |
 | **Env config (Zod)**    | `apps/api/src/config/env.ts`                                             |
@@ -139,7 +140,7 @@ All other version pins are in their respective per-directory CLAUDE.md files.
 - [x] Application database role is NOT superuser — see `packages/db/CLAUDE.md`
 - [ ] Input validation with Zod on all API surfaces
 - [x] Zitadel webhook signature verification + timestamp freshness + event ordering + webhook rate limiting
-- [ ] Stripe webhook signature verification + idempotency
+- [x] Stripe webhook signature verification + idempotency
 - [x] Storage: block public access via MinIO policy
 
 ### Production Deployment Checklist
