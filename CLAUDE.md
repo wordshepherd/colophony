@@ -127,7 +127,7 @@ All other version pins are in their respective per-directory CLAUDE.md files.
 
 ### Application Security (v2 — in progress)
 
-- [x] Rate limiting on all API surfaces (Fastify hook)
+- [x] Rate limiting on all API surfaces (two-tier: IP pre-auth + user post-auth Fastify hooks)
 - [x] Security headers (@fastify/helmet: CSP, HSTS, X-Content-Type-Options)
 - [x] Secrets in environment only (never committed). Validate env schema with Zod at startup; canonical definition: `apps/api/src/config/env.ts`
 - [x] Pre-commit hook blocks secrets (husky + `scripts/check-secrets.sh`)

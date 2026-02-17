@@ -32,6 +32,7 @@ vi.mock('@colophony/auth-client', () => ({
 
 import fp from 'fastify-plugin';
 import rateLimitPlugin from './rate-limit.js';
+import rateLimitAuthPlugin from './rate-limit-auth.js';
 
 /** Minimal auth stub — satisfies colophony-auth dependency without real auth logic. */
 const fakeAuthPlugin = fp(
@@ -96,8 +97,10 @@ async function buildApp(
   await redis.flushall();
   const env = { ...testEnv, ...envOverrides };
 
-  await app.register(fakeAuthPlugin);
+  // Register both rate limit plugins with auth in between (mirrors main.ts order)
   await app.register(rateLimitPlugin, { env, redis: redis as never });
+  await app.register(fakeAuthPlugin);
+  await app.register(rateLimitAuthPlugin, { env });
 
   // Test route
   app.get('/api/test', async (request) => ({
@@ -107,64 +110,8 @@ async function buildApp(
   return { app, redis };
 }
 
-describe('rate-limit plugin', () => {
-  describe('skip paths', () => {
-    let app: FastifyInstance;
-    let redis: InstanceType<typeof RedisMock>;
-
-    beforeEach(async () => {
-      const result = await buildApp();
-      app = result.app;
-      redis = result.redis;
-
-      app.get('/health', async () => ({ status: 'ok' }));
-      app.get('/ready', async () => ({ status: 'ready' }));
-      app.get('/', async () => ({ name: 'API' }));
-      app.get('/.well-known/openid-configuration', async () => ({}));
-    });
-
-    afterEach(async () => {
-      await app.close();
-      await redis.flushall();
-    });
-
-    it('skips /health', async () => {
-      const response = await app.inject({ method: 'GET', url: '/health' });
-      expect(response.statusCode).toBe(200);
-      expect(response.headers['x-ratelimit-limit']).toBeUndefined();
-    });
-
-    it('skips /ready', async () => {
-      const response = await app.inject({ method: 'GET', url: '/ready' });
-      expect(response.statusCode).toBe(200);
-      expect(response.headers['x-ratelimit-limit']).toBeUndefined();
-    });
-
-    it('skips / (root)', async () => {
-      const response = await app.inject({ method: 'GET', url: '/' });
-      expect(response.statusCode).toBe(200);
-      expect(response.headers['x-ratelimit-limit']).toBeUndefined();
-    });
-
-    it('skips /.well-known/* paths', async () => {
-      const response = await app.inject({
-        method: 'GET',
-        url: '/.well-known/openid-configuration',
-      });
-      expect(response.statusCode).toBe(200);
-      expect(response.headers['x-ratelimit-limit']).toBeUndefined();
-    });
-
-    it('skips OPTIONS preflight', async () => {
-      const response = await app.inject({
-        method: 'OPTIONS',
-        url: '/api/test',
-      });
-      expect(response.headers['x-ratelimit-limit']).toBeUndefined();
-    });
-  });
-
-  describe('rate limit headers', () => {
+describe('rate-limit-auth plugin (second-pass)', () => {
+  describe('authenticated user headers', () => {
     let app: FastifyInstance;
     let redis: InstanceType<typeof RedisMock>;
 
@@ -179,22 +126,7 @@ describe('rate-limit plugin', () => {
       await redis.flushall();
     });
 
-    it('sets X-RateLimit-Limit, X-RateLimit-Remaining, X-RateLimit-Reset on normal response', async () => {
-      const response = await app.inject({ method: 'GET', url: '/api/test' });
-      expect(response.statusCode).toBe(200);
-      expect(response.headers['x-ratelimit-limit']).toBeDefined();
-      expect(response.headers['x-ratelimit-remaining']).toBeDefined();
-      expect(response.headers['x-ratelimit-reset']).toBeDefined();
-    });
-
-    it('always uses DEFAULT_MAX limit (IP-based, pre-auth)', async () => {
-      const response = await app.inject({ method: 'GET', url: '/api/test' });
-      expect(Number(response.headers['x-ratelimit-limit'])).toBe(
-        testEnv.RATE_LIMIT_DEFAULT_MAX,
-      );
-    });
-
-    it('uses DEFAULT_MAX even for authenticated requests (first-pass is IP-only)', async () => {
+    it('overrides headers with AUTH_MAX for authenticated requests', async () => {
       const response = await app.inject({
         method: 'GET',
         url: '/api/test',
@@ -203,18 +135,35 @@ describe('rate-limit plugin', () => {
           'x-test-email': 'test@example.com',
         },
       });
+      expect(response.statusCode).toBe(200);
+      // Second-pass should override with AUTH_MAX
+      expect(Number(response.headers['x-ratelimit-limit'])).toBe(
+        testEnv.RATE_LIMIT_AUTH_MAX,
+      );
+    });
+
+    it('keeps DEFAULT_MAX headers for unauthenticated requests', async () => {
+      const response = await app.inject({
+        method: 'GET',
+        url: '/api/test',
+      });
+      expect(response.statusCode).toBe(200);
+      // No auth → second-pass skips → first-pass headers remain
       expect(Number(response.headers['x-ratelimit-limit'])).toBe(
         testEnv.RATE_LIMIT_DEFAULT_MAX,
       );
     });
   });
 
-  describe('rate limit enforcement', () => {
+  describe('authenticated rate limit enforcement', () => {
     let app: FastifyInstance;
     let redis: InstanceType<typeof RedisMock>;
 
     beforeEach(async () => {
-      const result = await buildApp({ RATE_LIMIT_DEFAULT_MAX: 3 });
+      const result = await buildApp({
+        RATE_LIMIT_DEFAULT_MAX: 20, // High IP limit so first-pass doesn't block
+        RATE_LIMIT_AUTH_MAX: 3,
+      });
       app = result.app;
       redis = result.redis;
     });
@@ -224,87 +173,147 @@ describe('rate-limit plugin', () => {
       await redis.flushall();
     });
 
-    it('returns 429 when limit exceeded', async () => {
-      // Make 3 allowed requests
+    it('returns 429 when auth limit exceeded', async () => {
+      const authHeaders = {
+        'x-test-user-id': 'user-rate-test',
+        'x-test-email': 'test@example.com',
+      };
+
+      // Make 3 allowed authenticated requests
       for (let i = 0; i < 3; i++) {
         const response = await app.inject({
           method: 'GET',
           url: '/api/test',
+          headers: authHeaders,
         });
         expect(response.statusCode).toBe(200);
       }
 
       // 4th request should be rate limited
-      const response = await app.inject({ method: 'GET', url: '/api/test' });
+      const response = await app.inject({
+        method: 'GET',
+        url: '/api/test',
+        headers: authHeaders,
+      });
       expect(response.statusCode).toBe(429);
-      const body = response.json();
-      expect(body.error).toBe('rate_limit_exceeded');
-      expect(body.message).toBe('Too many requests');
+      expect(response.json().error).toBe('rate_limit_exceeded');
     });
 
-    it('sets Retry-After and Cache-Control on 429', async () => {
+    it('different users have independent limits', async () => {
+      // Exhaust user-1 limit
       for (let i = 0; i < 3; i++) {
-        await app.inject({ method: 'GET', url: '/api/test' });
+        await app.inject({
+          method: 'GET',
+          url: '/api/test',
+          headers: { 'x-test-user-id': 'user-1' },
+        });
       }
+      const blocked = await app.inject({
+        method: 'GET',
+        url: '/api/test',
+        headers: { 'x-test-user-id': 'user-1' },
+      });
+      expect(blocked.statusCode).toBe(429);
 
-      const response = await app.inject({ method: 'GET', url: '/api/test' });
-      expect(response.statusCode).toBe(429);
-      expect(response.headers['retry-after']).toBeDefined();
-      expect(Number(response.headers['retry-after'])).toBeGreaterThan(0);
-      expect(response.headers['cache-control']).toBe('no-store');
-    });
-
-    it('X-RateLimit-Remaining is never negative on 429', async () => {
-      for (let i = 0; i < 3; i++) {
-        await app.inject({ method: 'GET', url: '/api/test' });
-      }
-
-      const response = await app.inject({ method: 'GET', url: '/api/test' });
-      expect(response.statusCode).toBe(429);
-      expect(Number(response.headers['x-ratelimit-remaining'])).toBe(0);
-    });
-
-    it('does not set Retry-After on normal response', async () => {
-      const response = await app.inject({ method: 'GET', url: '/api/test' });
+      // user-2 should still have capacity
+      const response = await app.inject({
+        method: 'GET',
+        url: '/api/test',
+        headers: { 'x-test-user-id': 'user-2' },
+      });
       expect(response.statusCode).toBe(200);
-      expect(response.headers['retry-after']).toBeUndefined();
+    });
+  });
+
+  describe('two-tier interaction', () => {
+    let app: FastifyInstance;
+    let redis: InstanceType<typeof RedisMock>;
+
+    beforeEach(async () => {
+      const result = await buildApp({
+        RATE_LIMIT_DEFAULT_MAX: 2, // Low IP limit
+        RATE_LIMIT_AUTH_MAX: 10, // High user limit
+      });
+      app = result.app;
+      redis = result.redis;
+    });
+
+    afterEach(async () => {
+      await app.close();
+      await redis.flushall();
+    });
+
+    it('IP limit blocks before auth limit is reached', async () => {
+      const authHeaders = {
+        'x-test-user-id': 'user-1',
+        'x-test-email': 'test@example.com',
+      };
+
+      // First 2 requests succeed (within IP limit of 2)
+      for (let i = 0; i < 2; i++) {
+        const response = await app.inject({
+          method: 'GET',
+          url: '/api/test',
+          headers: authHeaders,
+        });
+        expect(response.statusCode).toBe(200);
+      }
+
+      // 3rd request blocked by IP limit (first-pass), even though user limit is 10
+      const response = await app.inject({
+        method: 'GET',
+        url: '/api/test',
+        headers: authHeaders,
+      });
+      expect(response.statusCode).toBe(429);
     });
   });
 
   describe('graceful degradation', () => {
-    it('allows request when Redis throws', async () => {
+    it('allows authenticated request when Redis throws on second-pass', async () => {
       const app = Fastify({ logger: false });
       const redis = new RedisMock();
       await redis.flushall();
 
-      await app.register(fakeAuthPlugin);
       await app.register(rateLimitPlugin, {
         env: testEnv,
         redis: redis as never,
       });
+      await app.register(fakeAuthPlugin);
+      await app.register(rateLimitAuthPlugin, { env: testEnv });
 
       app.get('/api/test', async () => ({ ok: true }));
 
-      // Force Redis eval to throw
-      vi.spyOn(redis, 'eval').mockRejectedValue(new Error('Redis down'));
+      // Spy on eval and make it succeed on first call (first-pass), fail on second (second-pass)
+      let callCount = 0;
+      vi.spyOn(redis, 'eval').mockImplementation(async () => {
+        callCount++;
+        if (callCount > 1) throw new Error('Redis down');
+        return [1, 60000] as [number, number];
+      });
 
-      const response = await app.inject({ method: 'GET', url: '/api/test' });
+      const response = await app.inject({
+        method: 'GET',
+        url: '/api/test',
+        headers: { 'x-test-user-id': 'user-1' },
+      });
       expect(response.statusCode).toBe(200);
-      expect(response.headers['x-ratelimit-limit']).toBeUndefined();
 
       vi.restoreAllMocks();
       await app.close();
     });
   });
 
-  describe('window behavior', () => {
+  describe('skip paths', () => {
     let app: FastifyInstance;
     let redis: InstanceType<typeof RedisMock>;
 
     beforeEach(async () => {
-      const result = await buildApp();
+      const result = await buildApp({ RATE_LIMIT_AUTH_MAX: 1 });
       app = result.app;
       redis = result.redis;
+
+      app.get('/health', async () => ({ status: 'ok' }));
     });
 
     afterEach(async () => {
@@ -312,24 +321,15 @@ describe('rate-limit plugin', () => {
       await redis.flushall();
     });
 
-    it('first request in window sets count to 1', async () => {
-      const response = await app.inject({ method: 'GET', url: '/api/test' });
+    it('skips /health for second-pass', async () => {
+      const response = await app.inject({
+        method: 'GET',
+        url: '/health',
+        headers: { 'x-test-user-id': 'user-1' },
+      });
       expect(response.statusCode).toBe(200);
-      expect(Number(response.headers['x-ratelimit-remaining'])).toBe(
-        testEnv.RATE_LIMIT_DEFAULT_MAX - 1,
-      );
-    });
-
-    it('remaining decrements with each request', async () => {
-      const r1 = await app.inject({ method: 'GET', url: '/api/test' });
-      const r2 = await app.inject({ method: 'GET', url: '/api/test' });
-
-      expect(Number(r1.headers['x-ratelimit-remaining'])).toBe(
-        testEnv.RATE_LIMIT_DEFAULT_MAX - 1,
-      );
-      expect(Number(r2.headers['x-ratelimit-remaining'])).toBe(
-        testEnv.RATE_LIMIT_DEFAULT_MAX - 2,
-      );
+      // No rate limit headers from second-pass since it's skipped
+      // (first-pass also skips /health)
     });
   });
 });

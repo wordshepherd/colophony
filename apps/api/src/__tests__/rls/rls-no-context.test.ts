@@ -14,6 +14,7 @@ import {
   retentionPolicies,
   userConsents,
 } from '@colophony/db';
+import { sql } from 'drizzle-orm';
 
 let scenario: TwoOrgScenario;
 
@@ -111,16 +112,16 @@ describe('RLS No Context (empty context)', () => {
   });
 
   describe('INSERT without context on nullable tables', () => {
-    it('INSERT audit_event with NULL org_id, no context succeeds', async () => {
-      // No .returning() — the strict SELECT policy intentionally blocks
-      // reading NULL-org audit rows back (auth failure events are write-only
-      // outside org context). Verifying insert doesn't throw is sufficient.
+    it('INSERT audit_event with NULL org_id via insert_audit_event() succeeds', async () => {
+      // app_user cannot INSERT directly (revoked in migration 0010),
+      // but can call insert_audit_event() SECURITY DEFINER function.
       await withTestRls({}, (tx) =>
-        tx.insert(auditEvents).values({
-          organizationId: null,
-          action: 'SYSTEM_EVENT',
-          resource: `no_ctx_audit_${Date.now()}`,
-        }),
+        tx.execute(
+          sql`SELECT insert_audit_event(
+            ${'SYSTEM_EVENT'}::varchar,
+            ${`no_ctx_audit_${Date.now()}`}::varchar
+          )`,
+        ),
       );
     });
 
@@ -155,7 +156,8 @@ describe('RLS No Context (empty context)', () => {
       expect(rows[0].organizationId).toBeNull();
     });
 
-    it('INSERT audit_event with non-null org_id, no context throws 42501', async () => {
+    it('INSERT audit_event with non-null org_id, no context throws 42501 (direct INSERT denied)', async () => {
+      // Direct INSERT is denied at table-permission level (INSERT revoked from app_user)
       await expect(
         withTestRls({}, (tx) =>
           tx.insert(auditEvents).values({

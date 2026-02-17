@@ -50,6 +50,49 @@ export default fp(
     const isProduction = env.NODE_ENV === 'production';
     const isTest = env.NODE_ENV === 'test';
 
+    // --- Per-IP auth failure throttle ---
+    const throttleMax = env.AUTH_FAILURE_THROTTLE_MAX;
+    const throttleWindowMs = env.AUTH_FAILURE_THROTTLE_WINDOW_SECONDS * 1000;
+    const failureMap = new Map<
+      string,
+      { count: number; windowStart: number }
+    >();
+
+    function recordAuthFailure(ip: string): void {
+      const now = Date.now();
+      const entry = failureMap.get(ip);
+      if (!entry || now - entry.windowStart >= throttleWindowMs) {
+        failureMap.set(ip, { count: 1, windowStart: now });
+      } else {
+        entry.count++;
+      }
+    }
+
+    function isThrottled(ip: string): boolean {
+      const entry = failureMap.get(ip);
+      if (!entry) return false;
+      if (Date.now() - entry.windowStart >= throttleWindowMs) {
+        failureMap.delete(ip);
+        return false;
+      }
+      return entry.count >= throttleMax;
+    }
+
+    // Cleanup interval to prune expired entries (prevent memory growth)
+    const cleanupInterval = setInterval(() => {
+      const now = Date.now();
+      for (const [ip, entry] of failureMap) {
+        if (now - entry.windowStart >= throttleWindowMs) {
+          failureMap.delete(ip);
+        }
+      }
+    }, 60_000);
+
+    app.addHook('onClose', async () => {
+      clearInterval(cleanupInterval);
+      failureMap.clear();
+    });
+
     // Production guard: fail fast if Zitadel is not configured
     if (isProduction && !env.ZITADEL_AUTHORITY) {
       throw new Error(
@@ -81,6 +124,7 @@ export default fp(
       details: Record<string, unknown>,
       actorId?: string,
     ): Promise<void> {
+      recordAuthFailure(request.ip);
       try {
         const isApiKeyAction = action.startsWith('API_KEY_');
         const resource = isApiKeyAction
@@ -94,6 +138,9 @@ export default fp(
           userAgent: request.headers['user-agent'],
           newValue: details,
           actorId,
+          requestId: String(request.id),
+          method: request.method,
+          route: request.routeOptions?.url ?? request.url.split('?')[0],
         } as AuthAuditParams | ApiKeyAuditParams);
       } catch (err) {
         request.log.warn({ err }, 'Failed to log auth failure audit event');
@@ -113,6 +160,14 @@ export default fp(
       async function authHook(request: FastifyRequest, reply: FastifyReply) {
         // Skip public routes
         if (isPublicRoute(request.url)) return;
+
+        // Per-IP auth failure throttle — block before doing any work
+        if (isThrottled(request.ip)) {
+          return reply.status(429).send({
+            error: 'too_many_auth_failures',
+            message: 'Too many authentication failures. Try again later.',
+          });
+        }
 
         // Test mode: allow injection via headers when no JWKS verifier
         if (isTest && !verifyToken) {

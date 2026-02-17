@@ -27,6 +27,14 @@ const envSchema = z.object({
   RATE_LIMIT_WINDOW_SECONDS: z.coerce.number().int().positive().default(60),
   RATE_LIMIT_KEY_PREFIX: z.string().default('colophony:rl'),
 
+  // Per-IP auth failure throttle
+  AUTH_FAILURE_THROTTLE_MAX: z.coerce.number().int().positive().default(10),
+  AUTH_FAILURE_THROTTLE_WINDOW_SECONDS: z.coerce
+    .number()
+    .int()
+    .positive()
+    .default(300),
+
   // Webhook hardening
   WEBHOOK_TIMESTAMP_MAX_AGE_SECONDS: z.coerce
     .number()
