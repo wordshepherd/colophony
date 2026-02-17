@@ -140,7 +140,7 @@ All other version pins are in their respective per-directory CLAUDE.md files.
 - [ ] Input validation with Zod on all API surfaces
 - [x] Zitadel webhook signature verification + timestamp freshness + event ordering + webhook rate limiting
 - [ ] Stripe webhook signature verification + idempotency
-- [ ] Storage: block public access via MinIO policy
+- [x] Storage: block public access via MinIO policy
 
 ### Production Deployment Checklist
 
