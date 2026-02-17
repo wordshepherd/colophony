@@ -191,7 +191,7 @@ describe('Zitadel webhook handler', () => {
     mockRedisEval.mockClear().mockResolvedValue([1, 60000]);
     mockRedisQuit.mockClear();
 
-    // Default: insert returns 1 row (new event), not a duplicate
+    // Default: INSERT succeeds (new event), SELECT returns processed = false
     mockPoolConnect.mockResolvedValue({
       query: mockClientQuery,
       release: mockClientRelease,
@@ -201,13 +201,19 @@ describe('Zitadel webhook handler', () => {
         typeof sql === 'string' &&
         sql.includes('INSERT INTO zitadel_webhook_events')
       ) {
-        return { rows: [{ id: 'webhook-evt-id' }] };
+        return { rows: [] }; // INSERT ... ON CONFLICT DO NOTHING (no RETURNING)
+      }
+      if (
+        typeof sql === 'string' &&
+        sql.includes('SELECT processed FROM zitadel_webhook_events')
+      ) {
+        return { rows: [{ processed: false }] }; // New event, not yet processed
       }
       if (
         typeof sql === 'string' &&
         sql.includes('UPDATE zitadel_webhook_events')
       ) {
-        return { rows: [{ id: 'webhook-evt-id' }] };
+        return { rows: [{ processed: true }] };
       }
       return { rows: [] };
     });
@@ -270,13 +276,19 @@ describe('Zitadel webhook handler', () => {
   });
 
   it('returns 200 for duplicate event (idempotency)', async () => {
-    // Simulate: INSERT returns no rows (conflict = already seen)
+    // Simulate: INSERT conflicts, SELECT returns processed = true
     mockClientQuery.mockImplementation((sql: string) => {
       if (
         typeof sql === 'string' &&
         sql.includes('INSERT INTO zitadel_webhook_events')
       ) {
-        return { rows: [] }; // No rows = already exists
+        return { rows: [] }; // INSERT ON CONFLICT DO NOTHING
+      }
+      if (
+        typeof sql === 'string' &&
+        sql.includes('SELECT processed FROM zitadel_webhook_events')
+      ) {
+        return { rows: [{ processed: true }] }; // Already fully processed
       }
       return { rows: [] };
     });
@@ -295,6 +307,50 @@ describe('Zitadel webhook handler', () => {
     });
     expect(response.statusCode).toBe(200);
     expect(response.json().status).toBe('already_processed');
+    expect(mockClientRelease).toHaveBeenCalledOnce();
+  });
+
+  it('reprocesses event after crash recovery (processed = false)', async () => {
+    // Simulate: INSERT conflicts (row exists from prior crash), SELECT returns processed = false
+    mockClientQuery.mockImplementation((sql: string) => {
+      if (
+        typeof sql === 'string' &&
+        sql.includes('INSERT INTO zitadel_webhook_events')
+      ) {
+        return { rows: [] }; // INSERT ON CONFLICT DO NOTHING (row already exists)
+      }
+      if (
+        typeof sql === 'string' &&
+        sql.includes('SELECT processed FROM zitadel_webhook_events')
+      ) {
+        return { rows: [{ processed: false }] }; // Crash recovery: not yet processed
+      }
+      if (
+        typeof sql === 'string' &&
+        sql.includes('UPDATE zitadel_webhook_events')
+      ) {
+        return { rows: [{ processed: true }] };
+      }
+      return { rows: [] };
+    });
+
+    const body = JSON.stringify(makePayload({ eventId: 'evt-crash-recovery' }));
+    const sig = signPayload(body);
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/webhooks/zitadel',
+      headers: {
+        'content-type': 'application/json',
+        'x-zitadel-signature': sig,
+      },
+      payload: body,
+    });
+    expect(response.statusCode).toBe(200);
+    expect(response.json().status).toBe('processed');
+    // Should have called processEvent (tx.insert for user upsert)
+    expect(mockTxInsert).toHaveBeenCalled();
+    expect(mockAuditLog).toHaveBeenCalled();
     expect(mockClientRelease).toHaveBeenCalledOnce();
   });
 
@@ -479,7 +535,13 @@ describe('Zitadel webhook handler', () => {
         typeof sql === 'string' &&
         sql.includes('INSERT INTO zitadel_webhook_events')
       ) {
-        return { rows: [] }; // duplicate
+        return { rows: [] }; // INSERT ON CONFLICT DO NOTHING
+      }
+      if (
+        typeof sql === 'string' &&
+        sql.includes('SELECT processed FROM zitadel_webhook_events')
+      ) {
+        return { rows: [{ processed: true }] }; // Already fully processed
       }
       return { rows: [] };
     });
@@ -513,7 +575,13 @@ describe('Zitadel webhook handler', () => {
         typeof sql === 'string' &&
         sql.includes('INSERT INTO zitadel_webhook_events')
       ) {
-        return { rows: [{ id: 'webhook-evt-id' }] };
+        return { rows: [] }; // INSERT ON CONFLICT DO NOTHING
+      }
+      if (
+        typeof sql === 'string' &&
+        sql.includes('SELECT processed FROM zitadel_webhook_events')
+      ) {
+        return { rows: [{ processed: false }] }; // New event
       }
       return { rows: [] };
     });
