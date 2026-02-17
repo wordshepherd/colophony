@@ -12,6 +12,7 @@ export default function Home() {
   useEffect(() => {
     const userManager = getUserManager();
     if (!userManager) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- sync guard, fires once before any async work
       setChecking(false);
       return;
     }
