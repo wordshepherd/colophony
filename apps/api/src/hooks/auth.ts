@@ -94,6 +94,9 @@ export default fp(
           userAgent: request.headers['user-agent'],
           newValue: details,
           actorId,
+          requestId: String(request.id),
+          method: request.method,
+          route: request.routeOptions?.url ?? request.url.split('?')[0],
         } as AuthAuditParams | ApiKeyAuditParams);
       } catch (err) {
         request.log.warn({ err }, 'Failed to log auth failure audit event');

@@ -88,6 +88,9 @@ describe('auditService.log', () => {
       newValue: { email: 'alice@example.com' },
       ipAddress: '192.168.1.1',
       userAgent: 'TestAgent/1.0',
+      requestId: 'req-abc',
+      method: 'POST',
+      route: '/api/users',
     };
 
     await auditService.log(tx, params);
@@ -104,6 +107,9 @@ describe('auditService.log', () => {
     expect(JSON.parse(row.newValue)).toEqual({ email: 'alice@example.com' });
     expect(row.ipAddress).toBe('192.168.1.1');
     expect(row.userAgent).toBe('TestAgent/1.0');
+    expect(row.requestId).toBe('req-abc');
+    expect(row.method).toBe('POST');
+    expect(row.route).toBe('/api/users');
   });
 
   it('inserts with null optional fields', async () => {
@@ -124,6 +130,9 @@ describe('auditService.log', () => {
     expect(row.newValue).toBeNull();
     expect(row.ipAddress).toBeUndefined();
     expect(row.userAgent).toBeUndefined();
+    expect(row.requestId).toBeUndefined();
+    expect(row.method).toBeUndefined();
+    expect(row.route).toBeUndefined();
   });
 
   it('serializes object oldValue and newValue', async () => {
@@ -168,6 +177,9 @@ describe('auditService.logDirect', () => {
       ipAddress: '10.0.0.1',
       userAgent: 'TestAgent/2.0',
       newValue: { reason: 'invalid_header_format' },
+      requestId: 'req-xyz',
+      method: 'GET',
+      route: '/protected',
     };
 
     await auditService.logDirect(params);
@@ -184,6 +196,9 @@ describe('auditService.logDirect', () => {
     });
     expect(row.actorId).toBeUndefined();
     expect(row.organizationId).toBeUndefined();
+    expect(row.requestId).toBe('req-xyz');
+    expect(row.method).toBe('GET');
+    expect(row.route).toBe('/protected');
   });
 
   it('applies serializeValue to values', async () => {

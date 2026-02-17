@@ -31,6 +31,9 @@ export const auditEvents = pgTable(
     newValue: text("new_value"),
     ipAddress: varchar("ip_address", { length: 45 }),
     userAgent: text("user_agent"),
+    requestId: varchar("request_id", { length: 255 }),
+    method: varchar("method", { length: 10 }),
+    route: varchar("route", { length: 512 }),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),

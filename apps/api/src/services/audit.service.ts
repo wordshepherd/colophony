@@ -61,6 +61,9 @@ export const auditService = {
       newValue: serializeValue(params.newValue),
       ipAddress: params.ipAddress,
       userAgent: params.userAgent,
+      requestId: params.requestId,
+      method: params.method,
+      route: params.route,
     });
   },
 
@@ -90,6 +93,9 @@ export const auditService = {
       newValue: serializeValue(params.newValue),
       ipAddress: params.ipAddress,
       userAgent: params.userAgent,
+      requestId: params.requestId,
+      method: params.method,
+      route: params.route,
     });
   },
 };
