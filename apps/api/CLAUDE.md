@@ -109,7 +109,7 @@ Stripe Checkout only (zero PCI scope). Webhook handler built at `src/webhooks/st
 
 ### Zitadel (built)
 
-`src/webhooks/zitadel.webhook.ts` — verifies `x-zitadel-signature` header, registered in an isolated Fastify scope with `fastify-raw-body`.
+`src/webhooks/zitadel.webhook.ts` — verifies `x-zitadel-signature` header, registered in an isolated Fastify scope with `fastify-raw-body`. Two-step idempotency: INSERT event into `zitadel_webhook_events`, then SELECT `processed` status. If `processed = true`, skip. If `processed = false` (crash recovery or new event), reprocess. Timestamp freshness check rejects events older than `WEBHOOK_TIMESTAMP_MAX_AGE_SECONDS` or >60s in the future. Out-of-order guard via `setWhere`/`WHERE` on `lastEventAt`. Webhook-specific rate limiting via Redis Lua script (key prefix `:wh:zitadel:`).
 
 ### tusd (built)
 
