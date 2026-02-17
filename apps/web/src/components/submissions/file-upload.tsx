@@ -179,12 +179,14 @@ export function FileUpload({ submissionId, disabled }: FileUploadProps) {
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Poll while any file is still being scanned
-  const { data: existingFiles, isLoading } =
+  const { data: existingFiles, isPending: isLoading } =
     trpc.files.listBySubmission.useQuery(
       { submissionId },
       {
-        refetchInterval: (data) => {
-          const files = data as Array<{ scanStatus: ScanStatus }> | undefined;
+        refetchInterval: (query) => {
+          const files = query.state.data as
+            | Array<{ scanStatus: ScanStatus }>
+            | undefined;
           const hasPending = files?.some(
             (f) => f.scanStatus === "PENDING" || f.scanStatus === "SCANNING",
           );

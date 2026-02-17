@@ -44,7 +44,7 @@
 
 ### Housekeeping
 
-- [ ] Clean up v1 components (`_v1/` directory) — (DEVLOG 2026-02-15)
+- [x] Clean up v1 components (`_v1/` directory) — (DEVLOG 2026-02-15; done 2026-02-17)
 - [ ] Consider Playwright tsconfig extending web for E2E type-checking — nice-to-have — (DEVLOG 2026-02-15)
 - [ ] Migrate `forwardRef` → ref-as-prop in 19 shadcn/ui components — React 19 deprecation; migrate when updating shadcn/ui — (DEVLOG 2026-02-16)
 - [ ] Migrate `Context.Provider` → `Context` — React 19 deprecation; still works — (DEVLOG 2026-02-16)
@@ -178,8 +178,8 @@
 ### [P1] High — Major versions, actively maintained
 
 - [x] Zod 3 → 4 — ground-up rewrite (stable May 2025); touches types package, all tRPC inputs, env config; largest migration surface — (dependabot #80; done 2026-02-17)
-- [ ] TanStack Query 4 → 5 — blocked by tRPC 10; `@trpc/react-query@10.45` has hard peer dep on TQ4. Must upgrade tRPC first — (dependabot #74; attempted 2026-02-17)
-- [ ] tRPC 10 → 11 — unblocked by Zod 4 completion; combined tRPC 11 + TQ5 migration needed — (CLAUDE.md version pin)
+- [x] TanStack Query 4 → 5 — upgraded with tRPC 11; `isPending` alias pattern used; `fetchStatus` workaround removed from `use-auth.ts` — (dependabot #74; done 2026-02-17)
+- [x] tRPC 10 → 11 — combined tRPC 11 + TQ5 + TS 5.7.2 migration; TS2742 quirk resolved — (CLAUDE.md version pin; done 2026-02-17)
 
 ### [P2] Medium — Dev tooling, lower risk
 

@@ -124,7 +124,7 @@ export async function buildApp(env: Env): Promise<FastifyInstance> {
     trpcOptions: {
       router: appRouter,
       createContext,
-      onError({ error }: { error: Error }) {
+      onError({ error }: { error: { message: string } }) {
         app.log.error(error, 'tRPC error');
       },
     },

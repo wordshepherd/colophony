@@ -26,7 +26,11 @@ export function SubmissionList() {
   const [page, setPage] = useState(1);
   const limit = 10;
 
-  const { data, isLoading, error } = trpc.submissions.mySubmissions.useQuery({
+  const {
+    data,
+    isPending: isLoading,
+    error,
+  } = trpc.submissions.mySubmissions.useQuery({
     status: statusFilter === "ALL" ? undefined : statusFilter,
     page,
     limit,

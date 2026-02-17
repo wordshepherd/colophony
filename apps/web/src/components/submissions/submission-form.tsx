@@ -50,7 +50,7 @@ export function SubmissionForm({ mode, submissionId }: SubmissionFormProps) {
   const utils = trpc.useUtils();
 
   // Fetch existing submission for edit mode
-  const { data: existingSubmission, isLoading: isLoadingSubmission } =
+  const { data: existingSubmission, isPending: isLoadingSubmission } =
     trpc.submissions.getById.useQuery(
       { id: submissionId! },
       { enabled: mode === "edit" && !!submissionId },

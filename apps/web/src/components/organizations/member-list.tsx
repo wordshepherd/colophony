@@ -52,7 +52,11 @@ export function MemberList() {
     email: string;
   } | null>(null);
 
-  const { data, isLoading, error } = trpc.organizations.members.list.useQuery({
+  const {
+    data,
+    isPending: isLoading,
+    error,
+  } = trpc.organizations.members.list.useQuery({
     page,
     limit,
   });
