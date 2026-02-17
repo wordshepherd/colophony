@@ -4,7 +4,7 @@ export const organizationSchema = z.object({
   id: z.string().uuid(),
   name: z.string(),
   slug: z.string(),
-  settings: z.record(z.unknown()),
+  settings: z.record(z.string(), z.unknown()),
   createdAt: z.date(),
   updatedAt: z.date(),
 });
@@ -29,7 +29,7 @@ export type CreateOrganizationInput = z.infer<typeof createOrganizationSchema>;
 
 export const updateOrganizationSchema = z.object({
   name: z.string().min(1).max(255).optional(),
-  settings: z.record(z.unknown()).optional(),
+  settings: z.record(z.string(), z.unknown()).optional(),
 });
 
 export type UpdateOrganizationInput = z.infer<typeof updateOrganizationSchema>;

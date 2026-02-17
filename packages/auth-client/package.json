@@ -19,7 +19,7 @@
   },
   "dependencies": {
     "jose": "^6.0.0",
-    "zod": "^3.23.0"
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@colophony/typescript-config": "workspace:*",

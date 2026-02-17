@@ -137,7 +137,7 @@ const TEST_ENV = {
   CLAMAV_PORT: 3310,
 } as unknown as Env;
 
-const SUBMISSION_ID = 'a1111111-1111-1111-1111-111111111111';
+const SUBMISSION_ID = 'a1111111-1111-1111-a111-111111111111';
 
 function makePreCreateBody(overrides: Record<string, unknown> = {}) {
   return {

@@ -19,7 +19,7 @@ export const paymentSchema = z.object({
   amount: z.number(),
   currency: z.string(),
   status: paymentStatusSchema,
-  metadata: z.record(z.unknown()),
+  metadata: z.record(z.string(), z.unknown()),
   createdAt: z.date(),
   updatedAt: z.date(),
 });
