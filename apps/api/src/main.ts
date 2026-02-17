@@ -5,6 +5,7 @@ import { pool } from '@colophony/db';
 import { type Env, validateEnv } from './config/env.js';
 import authPlugin from './hooks/auth.js';
 import rateLimitPlugin from './hooks/rate-limit.js';
+import rateLimitAuthPlugin from './hooks/rate-limit-auth.js';
 import orgContextPlugin from './hooks/org-context.js';
 import dbContextPlugin from './hooks/db-context.js';
 import auditPlugin from './hooks/audit.js';
@@ -102,10 +103,12 @@ export async function buildApp(env: Env): Promise<FastifyInstance> {
     maxAge: 86400, // 24 hours
   });
 
-  // Rate limit → auth → org context → per-request RLS transaction
-  // Rate limit runs first so unauthenticated 401s are still throttled (DoS protection)
+  // Rate limit (IP) → auth → rate limit (user) → org context → per-request RLS transaction
+  // First-pass rate limit runs before auth so unauthenticated 401s are still throttled (DoS protection)
+  // Second-pass rate limit runs after auth to apply higher per-user limits
   await app.register(rateLimitPlugin, { env });
   await app.register(authPlugin, { env });
+  await app.register(rateLimitAuthPlugin, { env });
   await app.register(orgContextPlugin);
   await app.register(dbContextPlugin);
   await app.register(auditPlugin);
