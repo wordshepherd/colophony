@@ -46,6 +46,9 @@
 
 - [ ] Clean up v1 components (`_v1/` directory) — (DEVLOG 2026-02-15)
 - [ ] Consider Playwright tsconfig extending web for E2E type-checking — nice-to-have — (DEVLOG 2026-02-15)
+- [ ] Migrate `forwardRef` → ref-as-prop in 19 shadcn/ui components — React 19 deprecation; migrate when updating shadcn/ui — (DEVLOG 2026-02-16)
+- [ ] Migrate `Context.Provider` → `Context` — React 19 deprecation; still works — (DEVLOG 2026-02-16)
+- [ ] Refactor OIDC guard `setState` in effects to satisfy `react-hooks/set-state-in-effect` — 3 files: `page.tsx`, `callback/page.tsx`, `use-auth.ts` — (DEVLOG 2026-02-16)
 
 ---
 
