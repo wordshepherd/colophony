@@ -1,5 +1,6 @@
 import { submissionFiles, eq, sql, type DrizzleDb } from '@colophony/db';
 import { asc, count } from 'drizzle-orm';
+import type { S3Client } from '@aws-sdk/client-s3';
 import type { ScanStatus } from '@colophony/types';
 import {
   MAX_FILES_PER_SUBMISSION,
@@ -7,6 +8,7 @@ import {
   MAX_FILE_SIZE,
   ALLOWED_MIME_TYPES,
 } from '@colophony/types';
+import { getPresignedDownloadUrl, deleteS3Object } from './s3.js';
 
 // ---------------------------------------------------------------------------
 // Error classes
@@ -48,6 +50,15 @@ export class InvalidMimeTypeError extends Error {
   constructor(mimeType: string) {
     super(`MIME type "${mimeType}" is not allowed`);
     this.name = 'InvalidMimeTypeError';
+  }
+}
+
+export class FileNotCleanError extends Error {
+  constructor(fileId: string, scanStatus: string) {
+    super(
+      `File "${fileId}" has scan status "${scanStatus}" — download blocked`,
+    );
+    this.name = 'FileNotCleanError';
   }
 }
 
@@ -172,5 +183,58 @@ export const fileService = {
     if (totalSize + newFileSize > MAX_TOTAL_UPLOAD_SIZE) {
       throw new TotalSizeLimitExceededError();
     }
+  },
+
+  // ---------------------------------------------------------------------------
+  // S3-integrated methods (building blocks for access-control-aware PR 2)
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Fetch a file record and generate a presigned download URL.
+   * Returns null if the file doesn't exist. Throws if the file hasn't
+   * passed the virus scan.
+   */
+  async getDownloadUrl(
+    tx: DrizzleDb,
+    fileId: string,
+    s3Client: S3Client,
+    bucket: string,
+  ): Promise<{ url: string; filename: string; mimeType: string } | null> {
+    const file = await fileService.getById(tx, fileId);
+    if (!file) return null;
+
+    if (file.scanStatus !== 'CLEAN') {
+      throw new FileNotCleanError(fileId, file.scanStatus);
+    }
+
+    const url = await getPresignedDownloadUrl(
+      s3Client,
+      bucket,
+      file.storageKey,
+    );
+
+    return { url, filename: file.filename, mimeType: file.mimeType };
+  },
+
+  /**
+   * Delete a file's DB record and its S3 object. Determines the correct
+   * bucket based on scan status (clean → main bucket, else → quarantine).
+   * Returns the deleted record, or null if not found.
+   */
+  async deleteWithS3(
+    tx: DrizzleDb,
+    fileId: string,
+    s3Client: S3Client,
+    bucket: string,
+    quarantineBucket: string,
+  ) {
+    const deleted = await fileService.delete(tx, fileId);
+    if (!deleted) return null;
+
+    const targetBucket =
+      deleted.scanStatus === 'CLEAN' ? bucket : quarantineBucket;
+    await deleteS3Object(s3Client, targetBucket, deleted.storageKey);
+
+    return deleted;
   },
 };

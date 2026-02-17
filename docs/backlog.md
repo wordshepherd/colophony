@@ -57,7 +57,7 @@
 
 ### Code
 
-- [ ] Service layer extraction from tRPC routers — (architecture doc Track 2)
+- [ ] Service layer extraction from tRPC routers — PR 1 (foundation: types, errors, user service, error mapper) done 2026-02-17; PR 2 (router refactor: move access control + audit into services) pending — (architecture doc Track 2)
 - [ ] ts-rest REST API surface with Fastify adapter — (architecture doc Track 2)
 - [ ] Pothos + GraphQL Yoga surface — decision point at Month 3: Pothos vs TypeGraphQL — (architecture doc Track 2, Section 6.6)
 - [ ] SDK generation (TypeScript, Python) — (architecture doc Track 2)
