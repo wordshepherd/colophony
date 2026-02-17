@@ -44,3 +44,8 @@ export const checkoutSessionResponseSchema = z.object({
 export type CheckoutSessionResponse = z.infer<
   typeof checkoutSessionResponseSchema
 >;
+
+export const stripeCheckoutMetadataSchema = z.object({
+  organizationId: z.string().uuid(),
+  submissionId: z.string().uuid().optional(),
+});
