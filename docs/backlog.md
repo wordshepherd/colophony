@@ -177,13 +177,13 @@
 
 ### [P1] High — Major versions, actively maintained
 
-- [ ] Zod 3 → 4 — ground-up rewrite (stable May 2025); touches types package, all tRPC inputs, env config; largest migration surface — (dependabot #80)
-- [ ] TanStack Query 4 → 5 — `isLoading` → `isPending` split; shipped Oct 2023; requires auditing all query usages in web app — (dependabot #74)
-- [ ] tRPC 10 → 11 — currently pinned for Zod error behavior; evaluate whether Zod 4 changes the calculus — (CLAUDE.md version pin)
+- [x] Zod 3 → 4 — ground-up rewrite (stable May 2025); touches types package, all tRPC inputs, env config; largest migration surface — (dependabot #80; done 2026-02-17)
+- [ ] TanStack Query 4 → 5 — blocked by tRPC 10; `@trpc/react-query@10.45` has hard peer dep on TQ4. Must upgrade tRPC first — (dependabot #74; attempted 2026-02-17)
+- [ ] tRPC 10 → 11 — unblocked by Zod 4 completion; combined tRPC 11 + TQ5 migration needed — (CLAUDE.md version pin)
 
 ### [P2] Medium — Dev tooling, lower risk
 
-- [ ] Vitest 3 → 4 — shipped Oct 2025; dev-only, but 261+ tests need validation — (dependabot #76)
+- [x] Vitest 3 → 4 — shipped Oct 2025; dev-only, but 261+ tests need validation — (dependabot #76; done 2026-02-17)
 - [x] @testing-library/react 14 → 16 — dev-only; skipped v15; bundled with Next 16 + React 19 upgrade — (dependabot #78; done 2026-02-16)
 
 ### [P3] Low — Unused or minimal impact

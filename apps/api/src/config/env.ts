@@ -49,8 +49,8 @@ const envSchema = z.object({
   CLAMAV_PORT: z.coerce.number().int().positive().default(3310),
   VIRUS_SCAN_ENABLED: z
     .enum(['true', 'false'])
-    .transform((v) => v === 'true')
-    .default('true'),
+    .default('true')
+    .transform((v) => v === 'true'),
 
   // Optional — validated when modules wire up
   STRIPE_SECRET_KEY: z.string().optional(),
@@ -60,13 +60,13 @@ const envSchema = z.object({
   ZITADEL_WEBHOOK_SECRET: z.string().optional(),
   DEV_AUTH_BYPASS: z
     .enum(['true', 'false'])
-    .transform((v) => v === 'true')
-    .default('false'),
+    .default('false')
+    .transform((v) => v === 'true'),
   FEDERATION_DOMAIN: z.string().optional(),
   FEDERATION_ENABLED: z
     .enum(['true', 'false'])
-    .transform((v) => v === 'true')
-    .optional(),
+    .default('false')
+    .transform((v) => v === 'true'),
 });
 
 export type Env = z.infer<typeof envSchema>;

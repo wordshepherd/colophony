@@ -65,7 +65,7 @@ describe('apiKeys router', () => {
       const keys = {
         items: [
           {
-            id: 'a1111111-1111-1111-1111-111111111111',
+            id: 'a1111111-1111-1111-a111-111111111111',
             name: 'Test Key',
             scopes: ['submissions:read'],
             keyPrefix: 'col_live_',
@@ -110,7 +110,7 @@ describe('apiKeys router', () => {
   describe('create', () => {
     it('returns plain text key on creation', async () => {
       const created = {
-        id: 'a1111111-1111-1111-1111-111111111111',
+        id: 'a1111111-1111-1111-a111-111111111111',
         name: 'My Key',
         scopes: ['submissions:read'],
         keyPrefix: 'col_live_',
@@ -140,7 +140,7 @@ describe('apiKeys router', () => {
         expect.objectContaining({
           action: 'API_KEY_CREATED',
           resource: 'api_key',
-          resourceId: 'a1111111-1111-1111-1111-111111111111',
+          resourceId: 'a1111111-1111-1111-a111-111111111111',
         }),
       );
     });
@@ -169,7 +169,7 @@ describe('apiKeys router', () => {
   describe('revoke', () => {
     it('revokes a key and audits', async () => {
       mockApiKeyService.revoke.mockResolvedValueOnce({
-        id: 'a1111111-1111-1111-1111-111111111111',
+        id: 'a1111111-1111-1111-a111-111111111111',
         name: 'My Key',
         revokedAt: new Date(),
       });
@@ -177,7 +177,7 @@ describe('apiKeys router', () => {
       const ctx = orgContext('ADMIN');
       const caller = createCaller(ctx);
       const result = await caller.apiKeys.revoke({
-        keyId: 'a1111111-1111-1111-1111-111111111111',
+        keyId: 'a1111111-1111-1111-a111-111111111111',
       });
 
       expect(result.revokedAt).toBeInstanceOf(Date);
@@ -185,7 +185,7 @@ describe('apiKeys router', () => {
         expect.objectContaining({
           action: 'API_KEY_REVOKED',
           resource: 'api_key',
-          resourceId: 'a1111111-1111-1111-1111-111111111111',
+          resourceId: 'a1111111-1111-1111-a111-111111111111',
         }),
       );
     });
@@ -196,7 +196,7 @@ describe('apiKeys router', () => {
       const caller = createCaller(orgContext('ADMIN'));
       await expect(
         caller.apiKeys.revoke({
-          keyId: 'b2222222-2222-2222-2222-222222222222',
+          keyId: 'b2222222-2222-2222-a222-222222222222',
         }),
       ).rejects.toThrow('API key not found');
     });
@@ -205,7 +205,7 @@ describe('apiKeys router', () => {
       const caller = createCaller(orgContext('READER'));
       await expect(
         caller.apiKeys.revoke({
-          keyId: 'a1111111-1111-1111-1111-111111111111',
+          keyId: 'a1111111-1111-1111-a111-111111111111',
         }),
       ).rejects.toThrow('Admin role required');
     });
@@ -214,13 +214,13 @@ describe('apiKeys router', () => {
   describe('delete', () => {
     it('deletes a key and audits', async () => {
       mockApiKeyService.delete.mockResolvedValueOnce({
-        id: 'a1111111-1111-1111-1111-111111111111',
+        id: 'a1111111-1111-1111-a111-111111111111',
       });
 
       const ctx = orgContext('ADMIN');
       const caller = createCaller(ctx);
       const result = await caller.apiKeys.delete({
-        keyId: 'a1111111-1111-1111-1111-111111111111',
+        keyId: 'a1111111-1111-1111-a111-111111111111',
       });
 
       expect(result).toEqual({ success: true });
@@ -228,7 +228,7 @@ describe('apiKeys router', () => {
         expect.objectContaining({
           action: 'API_KEY_DELETED',
           resource: 'api_key',
-          resourceId: 'a1111111-1111-1111-1111-111111111111',
+          resourceId: 'a1111111-1111-1111-a111-111111111111',
         }),
       );
     });
@@ -239,7 +239,7 @@ describe('apiKeys router', () => {
       const caller = createCaller(orgContext('ADMIN'));
       await expect(
         caller.apiKeys.delete({
-          keyId: 'b2222222-2222-2222-2222-222222222222',
+          keyId: 'b2222222-2222-2222-a222-222222222222',
         }),
       ).rejects.toThrow('API key not found');
     });
@@ -248,7 +248,7 @@ describe('apiKeys router', () => {
       const caller = createCaller(orgContext('EDITOR'));
       await expect(
         caller.apiKeys.delete({
-          keyId: 'a1111111-1111-1111-1111-111111111111',
+          keyId: 'a1111111-1111-1111-a111-111111111111',
         }),
       ).rejects.toThrow('Admin role required');
     });

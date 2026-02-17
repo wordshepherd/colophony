@@ -123,17 +123,17 @@ export const tusdPreCreateHookSchema = z.object({
     Size: z.number().optional(),
     SizeIsDeferred: z.boolean().optional(),
     Offset: z.number().optional(),
-    MetaData: z.record(z.string()).optional(),
+    MetaData: z.record(z.string(), z.string()).optional(),
     IsPartial: z.boolean().optional(),
     IsFinal: z.boolean().optional(),
     PartialUploads: z.array(z.string()).optional().nullable(),
-    Storage: z.record(z.unknown()).optional().nullable(),
+    Storage: z.record(z.string(), z.unknown()).optional().nullable(),
   }),
   HTTPRequest: z.object({
     Method: z.string(),
     URI: z.string(),
     RemoteAddr: z.string(),
-    Header: z.record(z.array(z.string())),
+    Header: z.record(z.string(), z.array(z.string())),
   }),
 });
 
@@ -148,7 +148,7 @@ export const tusdPostFinishHookSchema = z.object({
     Size: z.number(),
     SizeIsDeferred: z.boolean().optional(),
     Offset: z.number(),
-    MetaData: z.record(z.string()).optional(),
+    MetaData: z.record(z.string(), z.string()).optional(),
     IsPartial: z.boolean().optional(),
     IsFinal: z.boolean().optional(),
     PartialUploads: z.array(z.string()).optional().nullable(),
@@ -165,7 +165,7 @@ export const tusdPostFinishHookSchema = z.object({
     Method: z.string(),
     URI: z.string(),
     RemoteAddr: z.string(),
-    Header: z.record(z.array(z.string())),
+    Header: z.record(z.string(), z.array(z.string())),
   }),
 });
 

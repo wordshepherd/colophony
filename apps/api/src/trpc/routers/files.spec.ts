@@ -133,8 +133,8 @@ const createCaller = (appRouter as any).createCaller as (
   ctx: TRPCContext,
 ) => any;
 
-const SUBMISSION_ID = 'a1111111-1111-1111-1111-111111111111';
-const FILE_ID = 'f1111111-1111-1111-1111-111111111111';
+const SUBMISSION_ID = 'a1111111-1111-1111-a111-111111111111';
+const FILE_ID = 'f1111111-1111-1111-a111-111111111111';
 
 function makeDraftSubmission(submitterId = 'user-1') {
   return {

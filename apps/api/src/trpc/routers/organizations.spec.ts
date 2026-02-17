@@ -312,7 +312,7 @@ describe('organizations tRPC router', () => {
       const ctx = orgContext('ADMIN');
       const caller = createCaller(ctx);
       const result = await caller.organizations.members.remove({
-        memberId: 'a1111111-1111-1111-1111-111111111111',
+        memberId: 'a1111111-1111-1111-a111-111111111111',
       });
       expect(result).toEqual({ success: true });
     });
@@ -326,7 +326,7 @@ describe('organizations tRPC router', () => {
       const caller = createCaller(orgContext('ADMIN'));
       await expect(
         caller.organizations.members.remove({
-          memberId: 'a1111111-1111-1111-1111-111111111111',
+          memberId: 'a1111111-1111-1111-a111-111111111111',
         }),
       ).rejects.toThrow('last admin');
     });
@@ -342,7 +342,7 @@ describe('organizations tRPC router', () => {
       const ctx = orgContext('ADMIN');
       const caller = createCaller(ctx);
       const result = await caller.organizations.members.updateRole({
-        memberId: 'a1111111-1111-1111-1111-111111111111',
+        memberId: 'a1111111-1111-1111-a111-111111111111',
         role: 'EDITOR',
       });
       expect(result.role).toBe('EDITOR');
