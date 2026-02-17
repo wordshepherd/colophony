@@ -83,10 +83,12 @@ services:
         condition: service_healthy
     entrypoint: >
       /bin/sh -c "
+      set -e;
       mc alias set minio http://minio:9000 minioadmin minioadmin;
       mc mb minio/submissions --ignore-existing;
       mc mb minio/quarantine --ignore-existing;
-      exit 0;
+      mc anonymous set none minio/submissions;
+      mc anonymous set none minio/quarantine;
       "
 
   # tusd for resumable file uploads (tus protocol)
