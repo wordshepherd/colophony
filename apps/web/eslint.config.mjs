@@ -1,21 +1,17 @@
-import { dirname } from "path";
-import { fileURLToPath } from "url";
-import { FlatCompat } from "@eslint/eslintrc";
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-
-const compat = new FlatCompat({
-  baseDirectory: __dirname,
-});
+import coreWebVitals from "eslint-config-next/core-web-vitals";
+import typescript from "eslint-config-next/typescript";
 
 const eslintConfig = [
-  ...compat.extends("next/core-web-vitals", "next/typescript"),
+  ...coreWebVitals,
+  ...typescript,
   {
-    ignores: [".next/**", "out/**", "build/**", "tailwind.config.js", "postcss.config.js", "next-env.d.ts"],
+    ignores: [".next/**", "out/**", "build/**", "coverage/**", "tailwind.config.js", "postcss.config.js", "next-env.d.ts"],
   },
   {
     rules: {
+      // Downgraded to warn: existing OIDC guard clauses use synchronous setState
+      // in effects for early returns. Refactor deferred — see backlog.
+      "react-hooks/set-state-in-effect": "warn",
       "no-restricted-imports": ["error", {
         patterns: [{
           group: ["@colophony/api/**"],
