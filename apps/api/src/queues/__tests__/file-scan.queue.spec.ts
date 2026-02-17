@@ -4,10 +4,9 @@ const mockAdd = vi.fn();
 const mockClose = vi.fn();
 
 vi.mock('bullmq', () => ({
-  Queue: vi.fn().mockImplementation(() => ({
-    add: mockAdd,
-    close: mockClose,
-  })),
+  Queue: vi.fn().mockImplementation(function () {
+    return { add: mockAdd, close: mockClose };
+  }),
 }));
 
 // Must import after mocks

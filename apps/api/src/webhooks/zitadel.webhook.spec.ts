@@ -99,12 +99,14 @@ vi.mock('../services/audit.service.js', () => ({
 
 // Mock ioredis
 vi.mock('ioredis', () => {
-  const RedisMock = vi.fn().mockImplementation(() => ({
-    connect: vi.fn().mockResolvedValue(undefined),
-    eval: mockRedisEval,
-    quit: mockRedisQuit,
-    status: 'ready',
-  }));
+  const RedisMock = vi.fn().mockImplementation(function () {
+    return {
+      connect: vi.fn().mockResolvedValue(undefined),
+      eval: mockRedisEval,
+      quit: mockRedisQuit,
+      status: 'ready',
+    };
+  });
   return { default: RedisMock };
 });
 
