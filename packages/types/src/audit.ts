@@ -47,6 +47,10 @@ export const AuditActions = {
   API_KEY_DELETED: "API_KEY_DELETED",
   API_KEY_AUTH_SUCCESS: "API_KEY_AUTH_SUCCESS",
   API_KEY_AUTH_FAILED: "API_KEY_AUTH_FAILED",
+
+  // Payment lifecycle
+  PAYMENT_SUCCEEDED: "PAYMENT_SUCCEEDED",
+  PAYMENT_EXPIRED: "PAYMENT_EXPIRED",
 } as const;
 
 export type AuditAction = (typeof AuditActions)[keyof typeof AuditActions];
@@ -59,6 +63,7 @@ export const AuditResources = {
   FILE: "file",
   AUTH: "auth",
   API_KEY: "api_key",
+  PAYMENT: "payment",
 } as const;
 
 export type AuditResource =
@@ -143,6 +148,13 @@ export interface ApiKeyAuditParams extends BaseAuditParams {
     | typeof AuditActions.API_KEY_AUTH_FAILED;
 }
 
+export interface PaymentAuditParams extends BaseAuditParams {
+  resource: typeof AuditResources.PAYMENT;
+  action:
+    | typeof AuditActions.PAYMENT_SUCCEEDED
+    | typeof AuditActions.PAYMENT_EXPIRED;
+}
+
 /** Union of all resource-specific param types. */
 export type AuditLogParams =
   | UserAuditParams
@@ -150,4 +162,5 @@ export type AuditLogParams =
   | SubmissionAuditParams
   | FileAuditParams
   | AuthAuditParams
-  | ApiKeyAuditParams;
+  | ApiKeyAuditParams
+  | PaymentAuditParams;
