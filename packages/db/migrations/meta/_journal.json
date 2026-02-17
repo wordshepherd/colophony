@@ -64,6 +64,20 @@
       "when": 1771208876531,
       "tag": "0008_api_keys_rls",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1771208876532,
+      "tag": "0009_audit_correlation_columns",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1771208876533,
+      "tag": "0010_audit_writer_role",
+      "breakpoints": true
     }
   ]
 }

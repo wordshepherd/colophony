@@ -65,6 +65,8 @@ const baseEnv: Env = {
   RATE_LIMIT_AUTH_MAX: 200,
   RATE_LIMIT_WINDOW_SECONDS: 60,
   RATE_LIMIT_KEY_PREFIX: 'colophony:rl',
+  AUTH_FAILURE_THROTTLE_MAX: 10,
+  AUTH_FAILURE_THROTTLE_WINDOW_SECONDS: 300,
   WEBHOOK_TIMESTAMP_MAX_AGE_SECONDS: 300,
   WEBHOOK_RATE_LIMIT_MAX: 100,
   S3_ENDPOINT: 'http://localhost:9000',
@@ -913,6 +915,167 @@ describe('auth plugin', () => {
       await flushPromises();
 
       expect(mockTouchLastUsed).toHaveBeenCalledWith('key-1');
+    });
+  });
+
+  describe('per-IP auth failure throttle', () => {
+    const flushPromises = () => new Promise((r) => process.nextTick(r));
+
+    it('returns 429 after MAX failures from the same IP', async () => {
+      const app = Fastify({ logger: false });
+      await app.register(authPlugin, {
+        env: {
+          ...baseEnv,
+          NODE_ENV: 'development' as const,
+          ZITADEL_AUTHORITY: 'http://localhost:8080',
+          ZITADEL_CLIENT_ID: 'my-client',
+          AUTH_FAILURE_THROTTLE_MAX: 3,
+          AUTH_FAILURE_THROTTLE_WINDOW_SECONDS: 300,
+        },
+      });
+      app.get('/protected', async (request) => ({
+        authContext: request.authContext,
+      }));
+
+      // Make 3 auth failures (missing header → each triggers logAuthFailure)
+      for (let i = 0; i < 3; i++) {
+        const response = await app.inject({
+          method: 'GET',
+          url: '/protected',
+        });
+        await flushPromises();
+        expect(response.statusCode).toBe(401);
+      }
+
+      // 4th request should be throttled
+      const response = await app.inject({
+        method: 'GET',
+        url: '/protected',
+      });
+      expect(response.statusCode).toBe(429);
+      expect(response.json().error).toBe('too_many_auth_failures');
+
+      await app.close();
+    });
+
+    it('allows requests from different IPs independently', async () => {
+      const app = Fastify({ logger: false, trustProxy: true });
+      await app.register(authPlugin, {
+        env: {
+          ...baseEnv,
+          NODE_ENV: 'development' as const,
+          ZITADEL_AUTHORITY: 'http://localhost:8080',
+          ZITADEL_CLIENT_ID: 'my-client',
+          AUTH_FAILURE_THROTTLE_MAX: 2,
+          AUTH_FAILURE_THROTTLE_WINDOW_SECONDS: 300,
+        },
+      });
+      app.get('/protected', async (request) => ({
+        authContext: request.authContext,
+      }));
+
+      // Exhaust throttle for default IP (127.0.0.1)
+      for (let i = 0; i < 2; i++) {
+        await app.inject({ method: 'GET', url: '/protected' });
+        await flushPromises();
+      }
+      const blocked = await app.inject({
+        method: 'GET',
+        url: '/protected',
+      });
+      expect(blocked.statusCode).toBe(429);
+
+      // Different IP should still get 401 (not 429)
+      const response = await app.inject({
+        method: 'GET',
+        url: '/protected',
+        headers: { 'x-forwarded-for': '10.0.0.99' },
+      });
+      // Should be 401 not 429 — different IP
+      expect(response.statusCode).toBe(401);
+
+      await app.close();
+    });
+
+    it('resets after window expires', async () => {
+      vi.useFakeTimers();
+      try {
+        const app = Fastify({ logger: false });
+        await app.register(authPlugin, {
+          env: {
+            ...baseEnv,
+            NODE_ENV: 'development' as const,
+            ZITADEL_AUTHORITY: 'http://localhost:8080',
+            ZITADEL_CLIENT_ID: 'my-client',
+            AUTH_FAILURE_THROTTLE_MAX: 2,
+            AUTH_FAILURE_THROTTLE_WINDOW_SECONDS: 60,
+          },
+        });
+        app.get('/protected', async (request) => ({
+          authContext: request.authContext,
+        }));
+
+        // Exhaust throttle
+        for (let i = 0; i < 2; i++) {
+          await app.inject({ method: 'GET', url: '/protected' });
+          await flushPromises();
+        }
+        const blocked = await app.inject({
+          method: 'GET',
+          url: '/protected',
+        });
+        expect(blocked.statusCode).toBe(429);
+
+        // Advance past window
+        vi.advanceTimersByTime(61_000);
+
+        // Should be allowed again (gets 401, not 429)
+        const response = await app.inject({
+          method: 'GET',
+          url: '/protected',
+        });
+        expect(response.statusCode).toBe(401);
+
+        await app.close();
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it('does not throttle public routes', async () => {
+      const app = Fastify({ logger: false });
+      await app.register(authPlugin, {
+        env: {
+          ...baseEnv,
+          NODE_ENV: 'development' as const,
+          ZITADEL_AUTHORITY: 'http://localhost:8080',
+          ZITADEL_CLIENT_ID: 'my-client',
+          AUTH_FAILURE_THROTTLE_MAX: 1,
+          AUTH_FAILURE_THROTTLE_WINDOW_SECONDS: 300,
+        },
+      });
+      app.get('/health', async () => ({ status: 'ok' }));
+      app.get('/protected', async (request) => ({
+        authContext: request.authContext,
+      }));
+
+      // Trigger throttle on protected route
+      await app.inject({ method: 'GET', url: '/protected' });
+      await flushPromises();
+      const blocked = await app.inject({
+        method: 'GET',
+        url: '/protected',
+      });
+      expect(blocked.statusCode).toBe(429);
+
+      // Public route should still work
+      const healthResponse = await app.inject({
+        method: 'GET',
+        url: '/health',
+      });
+      expect(healthResponse.statusCode).toBe(200);
+
+      await app.close();
     });
   });
 });

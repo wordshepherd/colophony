@@ -24,15 +24,27 @@ psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-E
     ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO app_user;
     ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT USAGE, SELECT ON SEQUENCES TO app_user;
 
-    -- Verify role is not superuser
+    -- Create audit_writer role for tamper-proof audit trail
+    -- NOLOGIN: only used as SECURITY DEFINER function owner, never connects directly
+    DO \$\$
+    BEGIN
+        IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'audit_writer') THEN
+            CREATE ROLE audit_writer WITH NOLOGIN NOSUPERUSER NOBYPASSRLS;
+        END IF;
+    END
+    \$\$;
+
+    GRANT USAGE ON SCHEMA public TO audit_writer;
+
+    -- Verify roles are not superusers
     SELECT usename, usesuper,
            CASE WHEN usesuper THEN '❌ ERROR: Role is superuser!'
                 ELSE '✅ Role is NOT superuser (RLS will work)'
            END as rls_status
-    FROM pg_user WHERE usename = 'app_user';
+    FROM pg_user WHERE usename IN ('app_user', 'audit_writer');
 EOSQL
 
-echo "✅ app_user role created successfully"
+echo "✅ app_user and audit_writer roles created successfully"
 
 # --- Zitadel database and user ---
 # Zitadel needs its own database and a limited-privilege user.

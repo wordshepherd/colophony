@@ -1,4 +1,4 @@
-import { auditEvents, db, type DrizzleDb } from '@colophony/db';
+import { db, sql, type DrizzleDb } from '@colophony/db';
 import type {
   AuditLogParams,
   AuthAuditParams,
@@ -44,24 +44,34 @@ export function serializeValue(value: unknown): string | null {
 }
 
 /**
+ * Build the SQL call to insert_audit_event() SECURITY DEFINER function.
+ * Used by both log() and logDirect() to ensure all writes go through the
+ * audit_writer-owned function (tamper-proof — app_user cannot INSERT directly).
+ */
+function insertAuditSql(params: AuditLogParams) {
+  return sql`SELECT insert_audit_event(
+    ${params.action}::varchar, ${params.resource}::varchar,
+    ${params.resourceId ?? null}::uuid, ${params.actorId ?? null}::uuid,
+    ${params.organizationId ?? null}::uuid,
+    ${serializeValue(params.oldValue)}::text, ${serializeValue(params.newValue)}::text,
+    ${params.ipAddress ?? null}::varchar, ${params.userAgent ?? null}::text,
+    ${params.requestId ?? null}::varchar, ${params.method ?? null}::varchar,
+    ${params.route ?? null}::varchar
+  )`;
+}
+
+/**
  * Core audit logging service.
  *
- * Inserts into the `audit_events` table using the caller's transaction.
+ * All writes use the `insert_audit_event()` SECURITY DEFINER function,
+ * owned by `audit_writer` (NOSUPERUSER, NOBYPASSRLS). This prevents
+ * application code from UPDATE/DELETE on audit_events directly.
+ *
  * Errors propagate — audit is atomic with the business operation.
  */
 export const auditService = {
   async log(tx: DrizzleDb, params: AuditLogParams): Promise<void> {
-    await tx.insert(auditEvents).values({
-      action: params.action,
-      resource: params.resource,
-      resourceId: params.resourceId,
-      actorId: params.actorId,
-      organizationId: params.organizationId,
-      oldValue: serializeValue(params.oldValue),
-      newValue: serializeValue(params.newValue),
-      ipAddress: params.ipAddress,
-      userAgent: params.userAgent,
-    });
+    await tx.execute(insertAuditSql(params));
   },
 
   /**
@@ -81,15 +91,6 @@ export const auditService = {
       );
     }
 
-    await db.insert(auditEvents).values({
-      action: params.action,
-      resource: params.resource,
-      resourceId: params.resourceId,
-      actorId: params.actorId,
-      oldValue: serializeValue(params.oldValue),
-      newValue: serializeValue(params.newValue),
-      ipAddress: params.ipAddress,
-      userAgent: params.userAgent,
-    });
+    await db.execute(insertAuditSql(params as AuditLogParams));
   },
 };

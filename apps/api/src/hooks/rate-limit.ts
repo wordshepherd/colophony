@@ -23,8 +23,9 @@ function shouldSkip(request: FastifyRequest): boolean {
 /**
  * Atomic Lua script: INCR key, set PEXPIRE on first hit, return [count, pttl].
  * Single round-trip, no race condition between INCR and EXPIRE.
+ * Shared with rate-limit-auth.ts second-pass plugin.
  */
-const LUA_SCRIPT = `
+export const LUA_SCRIPT = `
 local current = redis.call('INCR', KEYS[1])
 if current == 1 then
   redis.call('PEXPIRE', KEYS[1], ARGV[1])
@@ -34,14 +35,13 @@ return { current, ttl }
 `;
 
 /**
- * Rate limiting Fastify plugin using Redis fixed window counter.
+ * First-pass rate limiting: IP-based, runs before auth.
  *
- * Hook order: helmet → cors → **rate-limit** → auth → org-context → db-context
+ * Hook order: helmet → cors → **rate-limit** → auth → **rate-limit-auth** → org-context → db-context
  *
- * Future extensions:
- * - GraphQL cost-based rate limiting (deduct N tokens per query complexity)
- * - Per-org quotas tied to billing plans
- * - Sliding window algorithm upgrade (replace Lua script, same key format)
+ * Always uses request.ip + DEFAULT_MAX. This is a DoS shield — it protects
+ * the auth system itself. Authenticated users get a higher limit via the
+ * second-pass plugin (rate-limit-auth.ts).
  */
 export default fp(
   async function rateLimitPlugin(
@@ -51,6 +51,7 @@ export default fp(
     const { env } = opts;
     const windowMs = env.RATE_LIMIT_WINDOW_SECONDS * 1000;
     const prefix = env.RATE_LIMIT_KEY_PREFIX;
+    const limit = env.RATE_LIMIT_DEFAULT_MAX;
 
     // Dedicated Redis client for rate limiting — separate from BullMQ
     const redis =
@@ -78,6 +79,9 @@ export default fp(
       }
     }
 
+    // Expose redis instance for second-pass plugin to share
+    app.decorate('rateLimitRedis', redis);
+
     app.addHook(
       'onRequest',
       async function rateLimitHook(
@@ -86,14 +90,8 @@ export default fp(
       ) {
         if (shouldSkip(request)) return;
 
-        const isAuthenticated = !!request.authContext?.userId;
-        // request.ip uses X-Forwarded-For when trustProxy: true (set in main.ts)
-        const identifier = isAuthenticated
-          ? request.authContext!.userId
-          : request.ip;
-        const limit = isAuthenticated
-          ? env.RATE_LIMIT_AUTH_MAX
-          : env.RATE_LIMIT_DEFAULT_MAX;
+        // Always use IP — auth hasn't run yet
+        const identifier = request.ip;
 
         const windowId = Math.floor(Date.now() / windowMs);
         const key = `${prefix}:${env.RATE_LIMIT_WINDOW_SECONDS}:${windowId}:${identifier}`;
@@ -132,9 +130,7 @@ export default fp(
 
           request.log.warn(
             {
-              identifier: isAuthenticated
-                ? request.authContext!.userId
-                : request.ip,
+              identifier: request.ip,
               path: request.url,
               count,
               limit,
@@ -164,3 +160,10 @@ export default fp(
     fastify: '5.x',
   },
 );
+
+// Fastify type augmentation for shared redis instance
+declare module 'fastify' {
+  interface FastifyInstance {
+    rateLimitRedis: Redis;
+  }
+}

@@ -40,6 +40,9 @@ export default fp(
         const organizationId = request.authContext?.orgId;
         const ipAddress = request.ip;
         const userAgent = request.headers['user-agent'];
+        const requestId = String(request.id);
+        const method = request.method;
+        const route = request.routeOptions?.url ?? request.url.split('?')[0];
 
         request.audit = async (params) => {
           await auditService.log(tx, {
@@ -48,6 +51,9 @@ export default fp(
             organizationId,
             ipAddress,
             userAgent,
+            requestId,
+            method,
+            route,
           } as AuditLogParams);
         };
       },

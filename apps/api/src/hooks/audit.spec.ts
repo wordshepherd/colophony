@@ -152,6 +152,9 @@ describe('audit plugin', () => {
     expect(params.ipAddress).toBe('127.0.0.1');
     expect(params.userAgent).toBe('TestAgent/1.0');
     expect(params.newValue).toEqual({ email: 'test@example.com' });
+    expect(params.requestId).toBeDefined();
+    expect(params.method).toBe('GET');
+    expect(params.route).toBe('/test');
     await app.close();
   });
 

@@ -76,6 +76,9 @@ interface BaseAuditParams {
   organizationId?: string;
   ipAddress?: string;
   userAgent?: string;
+  requestId?: string;
+  method?: string;
+  route?: string;
 }
 
 export interface UserAuditParams extends BaseAuditParams {
