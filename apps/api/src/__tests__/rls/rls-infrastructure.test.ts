@@ -14,6 +14,9 @@ const RLS_TABLES = [
   'api_keys',
 ];
 
+/** RLS tables where app_user has full DML (excludes audit_events which is SELECT-only + function). */
+const RLS_TABLES_FULL_DML = RLS_TABLES.filter((t) => t !== 'audit_events');
+
 const NON_RLS_TABLES = [
   'organizations',
   'users',
@@ -121,9 +124,9 @@ describe('RLS Infrastructure', () => {
       expect(rows[0].rolbypassrls).toBe(false);
     });
 
-    it('should have DML permissions on all RLS tables', async () => {
+    it('should have full DML permissions on RLS tables (except audit_events)', async () => {
       const admin = getAdminPool();
-      for (const table of RLS_TABLES) {
+      for (const table of RLS_TABLES_FULL_DML) {
         const { rows } = await admin.query<{ has_priv: boolean }>(
           `
           SELECT has_table_privilege('app_user', $1, 'SELECT, INSERT, UPDATE, DELETE') as has_priv
@@ -134,6 +137,44 @@ describe('RLS Infrastructure', () => {
           true,
         );
       }
+    });
+
+    it('should have SELECT-only on audit_events (INSERT via function)', async () => {
+      const admin = getAdminPool();
+
+      // SELECT: yes
+      const { rows: selRows } = await admin.query<{ has_priv: boolean }>(
+        `SELECT has_table_privilege('app_user', 'audit_events', 'SELECT') as has_priv`,
+      );
+      expect(selRows[0].has_priv).toBe(true);
+
+      // INSERT: no
+      const { rows: insRows } = await admin.query<{ has_priv: boolean }>(
+        `SELECT has_table_privilege('app_user', 'audit_events', 'INSERT') as has_priv`,
+      );
+      expect(insRows[0].has_priv).toBe(false);
+
+      // UPDATE: no
+      const { rows: updRows } = await admin.query<{ has_priv: boolean }>(
+        `SELECT has_table_privilege('app_user', 'audit_events', 'UPDATE') as has_priv`,
+      );
+      expect(updRows[0].has_priv).toBe(false);
+
+      // DELETE: no
+      const { rows: delRows } = await admin.query<{ has_priv: boolean }>(
+        `SELECT has_table_privilege('app_user', 'audit_events', 'DELETE') as has_priv`,
+      );
+      expect(delRows[0].has_priv).toBe(false);
+
+      // EXECUTE on insert_audit_event: yes
+      const { rows: execRows } = await admin.query<{ has_priv: boolean }>(
+        `SELECT has_function_privilege(
+          'app_user',
+          'insert_audit_event(varchar, varchar, uuid, uuid, uuid, text, text, varchar, text, varchar, varchar, varchar)',
+          'EXECUTE'
+        ) as has_priv`,
+      );
+      expect(execRows[0].has_priv).toBe(true);
     });
   });
 

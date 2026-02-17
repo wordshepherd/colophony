@@ -87,6 +87,19 @@ export async function globalSetup(): Promise<void> {
     END $$;
   `);
 
+  // Create audit_writer role (for insert_audit_event SECURITY DEFINER function)
+  await admin.query(`
+    DO $$ BEGIN
+      IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'audit_writer') THEN
+        CREATE ROLE audit_writer LOGIN PASSWORD 'audit_password'
+          NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS;
+      ELSE
+        ALTER ROLE audit_writer NOSUPERUSER NOBYPASSRLS;
+      END IF;
+    END $$;
+  `);
+  await admin.query('GRANT USAGE ON SCHEMA public TO audit_writer');
+
   // Reset schema
   await admin.query('DROP SCHEMA IF EXISTS public CASCADE');
   await admin.query('CREATE SCHEMA public');
@@ -108,6 +121,12 @@ export async function globalSetup(): Promise<void> {
   );
   await admin.query(
     'ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT USAGE, SELECT ON SEQUENCES TO app_user',
+  );
+
+  // Revoke direct DML on audit_events from app_user (migration 0010 does this,
+  // but the broad GRANT above re-grants it — must revoke after)
+  await admin.query(
+    'REVOKE INSERT, UPDATE, DELETE ON "audit_events" FROM app_user',
   );
 
   // Verify app_user is NOSUPERUSER and NOBYPASSRLS

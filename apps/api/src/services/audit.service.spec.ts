@@ -1,17 +1,23 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-const mockValues = vi.fn().mockResolvedValue(undefined);
-const mockInsert = vi.fn(() => ({ values: mockValues }));
+const mockExecute = vi.fn().mockResolvedValue(undefined);
 
-const { mockDbValues, mockDbInsert } = vi.hoisted(() => {
-  const mockDbValues = vi.fn().mockResolvedValue(undefined);
-  const mockDbInsert = vi.fn().mockReturnValue({ values: mockDbValues });
-  return { mockDbValues, mockDbInsert };
+const { mockDbExecute } = vi.hoisted(() => {
+  const mockDbExecute = vi.fn().mockResolvedValue(undefined);
+  return { mockDbExecute };
 });
 
 vi.mock('@colophony/db', () => ({
   auditEvents: { _: 'audit_events_table_ref' },
-  db: { insert: mockDbInsert },
+  db: { execute: mockDbExecute },
+  sql: Object.assign(
+    (strings: TemplateStringsArray, ...values: unknown[]) => ({
+      _tag: 'sql',
+      strings,
+      values,
+    }),
+    { raw: (s: string) => ({ _tag: 'sql_raw', value: s }) },
+  ),
 }));
 
 import { auditService, serializeValue } from './audit.service.js';
@@ -19,9 +25,8 @@ import type { DrizzleDb } from '@colophony/db';
 import type { AuditLogParams } from '@colophony/types';
 
 function makeTx() {
-  mockInsert.mockClear();
-  mockValues.mockClear().mockResolvedValue(undefined);
-  return { insert: mockInsert } as unknown as DrizzleDb;
+  mockExecute.mockClear().mockResolvedValue(undefined);
+  return { execute: mockExecute } as unknown as DrizzleDb;
 }
 
 describe('serializeValue', () => {
@@ -77,7 +82,7 @@ describe('auditService.log', () => {
     tx = makeTx();
   });
 
-  it('inserts with all fields populated', async () => {
+  it('calls insert_audit_event() via tx.execute with all fields', async () => {
     const params: AuditLogParams = {
       resource: 'user',
       action: 'USER_CREATED',
@@ -95,24 +100,23 @@ describe('auditService.log', () => {
 
     await auditService.log(tx, params);
 
-    expect(mockInsert).toHaveBeenCalledOnce();
-    expect(mockValues).toHaveBeenCalledOnce();
-    const row = mockValues.mock.calls[0][0];
-    expect(row.action).toBe('USER_CREATED');
-    expect(row.resource).toBe('user');
-    expect(row.resourceId).toBe('res-1');
-    expect(row.actorId).toBe('actor-1');
-    expect(row.organizationId).toBe('org-1');
-    expect(row.oldValue).toBeNull();
-    expect(JSON.parse(row.newValue)).toEqual({ email: 'alice@example.com' });
-    expect(row.ipAddress).toBe('192.168.1.1');
-    expect(row.userAgent).toBe('TestAgent/1.0');
-    expect(row.requestId).toBe('req-abc');
-    expect(row.method).toBe('POST');
-    expect(row.route).toBe('/api/users');
+    expect(mockExecute).toHaveBeenCalledOnce();
+    const sqlObj = mockExecute.mock.calls[0][0];
+    expect(sqlObj._tag).toBe('sql');
+    // Verify key values are in the sql template values
+    expect(sqlObj.values).toContain('USER_CREATED');
+    expect(sqlObj.values).toContain('user');
+    expect(sqlObj.values).toContain('res-1');
+    expect(sqlObj.values).toContain('actor-1');
+    expect(sqlObj.values).toContain('org-1');
+    expect(sqlObj.values).toContain('192.168.1.1');
+    expect(sqlObj.values).toContain('TestAgent/1.0');
+    expect(sqlObj.values).toContain('req-abc');
+    expect(sqlObj.values).toContain('POST');
+    expect(sqlObj.values).toContain('/api/users');
   });
 
-  it('inserts with null optional fields', async () => {
+  it('passes null for omitted optional fields', async () => {
     const params: AuditLogParams = {
       resource: 'user',
       action: 'USER_DEACTIVATED',
@@ -120,19 +124,13 @@ describe('auditService.log', () => {
 
     await auditService.log(tx, params);
 
-    const row = mockValues.mock.calls[0][0];
-    expect(row.action).toBe('USER_DEACTIVATED');
-    expect(row.resource).toBe('user');
-    expect(row.resourceId).toBeUndefined();
-    expect(row.actorId).toBeUndefined();
-    expect(row.organizationId).toBeUndefined();
-    expect(row.oldValue).toBeNull();
-    expect(row.newValue).toBeNull();
-    expect(row.ipAddress).toBeUndefined();
-    expect(row.userAgent).toBeUndefined();
-    expect(row.requestId).toBeUndefined();
-    expect(row.method).toBeUndefined();
-    expect(row.route).toBeUndefined();
+    expect(mockExecute).toHaveBeenCalledOnce();
+    const sqlObj = mockExecute.mock.calls[0][0];
+    expect(sqlObj.values).toContain('USER_DEACTIVATED');
+    expect(sqlObj.values).toContain('user');
+    // Optional fields should be null
+    const nullCount = sqlObj.values.filter((v: unknown) => v === null).length;
+    expect(nullCount).toBeGreaterThanOrEqual(8); // resourceId, actorId, orgId, oldValue, newValue, ipAddress, userAgent + correlation
   });
 
   it('serializes object oldValue and newValue', async () => {
@@ -145,13 +143,13 @@ describe('auditService.log', () => {
 
     await auditService.log(tx, params);
 
-    const row = mockValues.mock.calls[0][0];
-    expect(JSON.parse(row.oldValue)).toEqual({ name: 'Old Org' });
-    expect(JSON.parse(row.newValue)).toEqual({ name: 'New Org' });
+    const sqlObj = mockExecute.mock.calls[0][0];
+    expect(sqlObj.values).toContain('{"name":"Old Org"}');
+    expect(sqlObj.values).toContain('{"name":"New Org"}');
   });
 
   it('propagates database errors', async () => {
-    mockValues.mockRejectedValue(new Error('DB write failed'));
+    mockExecute.mockRejectedValue(new Error('DB write failed'));
 
     const params: AuditLogParams = {
       resource: 'user',
@@ -166,11 +164,10 @@ describe('auditService.log', () => {
 
 describe('auditService.logDirect', () => {
   beforeEach(() => {
-    mockDbInsert.mockClear();
-    mockDbValues.mockClear().mockResolvedValue(undefined);
+    mockDbExecute.mockClear().mockResolvedValue(undefined);
   });
 
-  it('inserts via shared db with correct fields', async () => {
+  it('calls insert_audit_event() via db.execute with correct fields', async () => {
     const params: AuditLogParams = {
       resource: 'auth',
       action: 'AUTH_TOKEN_INVALID',
@@ -184,21 +181,16 @@ describe('auditService.logDirect', () => {
 
     await auditService.logDirect(params);
 
-    expect(mockDbInsert).toHaveBeenCalledOnce();
-    expect(mockDbValues).toHaveBeenCalledOnce();
-    const row = mockDbValues.mock.calls[0][0];
-    expect(row.action).toBe('AUTH_TOKEN_INVALID');
-    expect(row.resource).toBe('auth');
-    expect(row.ipAddress).toBe('10.0.0.1');
-    expect(row.userAgent).toBe('TestAgent/2.0');
-    expect(JSON.parse(row.newValue)).toEqual({
-      reason: 'invalid_header_format',
-    });
-    expect(row.actorId).toBeUndefined();
-    expect(row.organizationId).toBeUndefined();
-    expect(row.requestId).toBe('req-xyz');
-    expect(row.method).toBe('GET');
-    expect(row.route).toBe('/protected');
+    expect(mockDbExecute).toHaveBeenCalledOnce();
+    const sqlObj = mockDbExecute.mock.calls[0][0];
+    expect(sqlObj._tag).toBe('sql');
+    expect(sqlObj.values).toContain('AUTH_TOKEN_INVALID');
+    expect(sqlObj.values).toContain('auth');
+    expect(sqlObj.values).toContain('10.0.0.1');
+    expect(sqlObj.values).toContain('TestAgent/2.0');
+    expect(sqlObj.values).toContain('req-xyz');
+    expect(sqlObj.values).toContain('GET');
+    expect(sqlObj.values).toContain('/protected');
   });
 
   it('applies serializeValue to values', async () => {
@@ -211,11 +203,15 @@ describe('auditService.logDirect', () => {
 
     await auditService.logDirect(params);
 
-    const row = mockDbValues.mock.calls[0][0];
-    const newVal = JSON.parse(row.newValue);
-    expect(newVal.reason).toBe('deactivated');
-    expect(newVal.secretToken).toBe('[REDACTED]');
-    expect(JSON.parse(row.oldValue)).toEqual({ name: 'before' });
+    const sqlObj = mockDbExecute.mock.calls[0][0];
+    // Find the serialized newValue in the values array
+    const newValStr = sqlObj.values.find(
+      (v: unknown) => typeof v === 'string' && v.includes('deactivated'),
+    );
+    expect(newValStr).toBeDefined();
+    const parsed = JSON.parse(newValStr);
+    expect(parsed.reason).toBe('deactivated');
+    expect(parsed.secretToken).toBe('[REDACTED]');
   });
 
   it('rejects organizationId to prevent misuse outside RLS context', async () => {
@@ -228,11 +224,11 @@ describe('auditService.logDirect', () => {
     await expect(auditService.logDirect(params)).rejects.toThrow(
       'logDirect must not include organizationId',
     );
-    expect(mockDbInsert).not.toHaveBeenCalled();
+    expect(mockDbExecute).not.toHaveBeenCalled();
   });
 
   it('propagates insertion errors', async () => {
-    mockDbValues.mockRejectedValue(new Error('connection refused'));
+    mockDbExecute.mockRejectedValue(new Error('connection refused'));
 
     const params: AuditLogParams = {
       resource: 'auth',

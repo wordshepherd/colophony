@@ -155,20 +155,42 @@ describe('logDirect() auth failure write path', () => {
 // ===========================================================================
 
 describe('logDirect() and RLS interaction', () => {
-  it('INSERT...RETURNING for NULL-org row throws 42501 (confirms why logDirect omits .returning())', async () => {
-    // The SELECT policy requires organization_id = current_org_id(), so
-    // reading back a NULL-org row via RETURNING fails with insufficient_privilege.
+  it('direct INSERT by app_user is denied (42501 — must use insert_audit_event function)', async () => {
     const appPool = getAppPool();
     const client = await appPool.connect();
     try {
       const result = client.query(
         `INSERT INTO audit_events (action, resource)
-         VALUES ('AUTH_TOKEN_INVALID', 'auth')
-         RETURNING *`,
+         VALUES ('AUTH_TOKEN_INVALID', 'auth')`,
       );
       await expect(result).rejects.toMatchObject({
         code: '42501', // insufficient_privilege
       });
+    } finally {
+      client.release();
+    }
+  });
+
+  it('insert_audit_event() function succeeds for NULL-org events', async () => {
+    const appPool = getAppPool();
+    const client = await appPool.connect();
+    try {
+      await client.query(
+        `SELECT insert_audit_event(
+          'AUTH_TOKEN_INVALID'::varchar, 'auth'::varchar,
+          NULL::uuid, NULL::uuid, NULL::uuid,
+          NULL::text, NULL::text,
+          '10.0.0.1'::varchar, 'TestAgent'::text,
+          NULL::varchar, NULL::varchar, NULL::varchar
+        )`,
+      );
+
+      // Verify via admin pool (app_user can SELECT audit_events within RLS)
+      const { rows } = await getAdminPool().query(
+        `SELECT action, resource, ip_address FROM audit_events WHERE action = 'AUTH_TOKEN_INVALID'`,
+      );
+      expect(rows).toHaveLength(1);
+      expect(rows[0].ip_address).toBe('10.0.0.1');
     } finally {
       client.release();
     }
