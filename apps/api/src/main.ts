@@ -11,6 +11,7 @@ import dbContextPlugin from './hooks/db-context.js';
 import auditPlugin from './hooks/audit.js';
 import { registerZitadelWebhooks } from './webhooks/zitadel.webhook.js';
 import { registerTusdWebhooks } from './webhooks/tusd.webhook.js';
+import { registerStripeWebhooks } from './webhooks/stripe.webhook.js';
 import { fastifyTRPCPlugin } from '@trpc/server/adapters/fastify';
 import { appRouter } from './trpc/router.js';
 import { createContext } from './trpc/context.js';
@@ -119,6 +120,9 @@ export async function buildApp(env: Env): Promise<FastifyInstance> {
   });
   await app.register(async (scope) => {
     await registerTusdWebhooks(scope, { env });
+  });
+  await app.register(async (scope) => {
+    await registerStripeWebhooks(scope, { env });
   });
 
   // tRPC adapter

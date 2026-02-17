@@ -11,11 +11,11 @@ End-of-session housekeeping: update docs, push to PR, and summarize work.
 
 1. Gathers session context from the conversation
 2. Ensures all code changes are committed on a feature branch (not `main`)
-3. Pushes the branch and creates/updates a PR if needed
-4. Notes any Codex review findings addressed during this session
-5. Updates the current month's devlog (`docs/devlog/YYYY-MM.md`) with a session summary (captures everything including Codex review fixes addressed during this session)
-6. Checks for any `TODO(CLAUDE.md)` comments and proposes updates
-7. Commits and pushes doc updates as the final commit on the branch
+3. Notes any Codex review findings addressed during this session
+4. Updates the current month's devlog (`docs/devlog/YYYY-MM.md`) with a session summary (captures everything including Codex review fixes addressed during this session)
+5. Checks for any `TODO(CLAUDE.md)` comments and proposes updates
+6. Commits doc updates as the final commit on the branch
+7. Pushes the branch and creates/updates a PR (all commits — code + docs — land together so CI covers everything)
 8. Prints a session summary with PR link for user to merge
 
 ## Usage
@@ -37,7 +37,7 @@ Scan the conversation to identify:
 - **Issues found** — bugs discovered, quirks encountered, things that need follow-up
 - **Next steps** — open TODOs, planned follow-up work
 
-### Step 2: Ensure code is committed and pushed
+### Step 2: Ensure code is committed
 
 1. **Check branch**: Verify we are NOT on `main`. If on `main` with unpushed commits, create a feature branch first.
 
@@ -48,22 +48,7 @@ Scan the conversation to identify:
    git diff --stat
    ```
 
-   If there are uncommitted code changes from this session, stage and commit them with an appropriate conventional commit message.
-
-3. **Push the branch**:
-
-   ```bash
-   git push -u origin <branch-name>
-   ```
-
-4. **Create PR if needed**: Check if a PR already exists for this branch:
-
-   ```bash
-   gh pr list --head <branch-name> --json number --jq '.[0].number'
-   ```
-
-   - If no PR exists, create one with `gh pr create`
-   - If a PR exists, it's already updated by the push
+   If there are uncommitted code changes from this session, stage and commit them with an appropriate conventional commit message. Do NOT push yet — docs will be committed first so everything lands in one push.
 
 ### Step 3: Note Codex review status
 
@@ -141,19 +126,37 @@ If updates are warranted, propose them:
 
 Ask the user if they want to apply the suggestions before proceeding.
 
-### Step 6: Commit and push doc updates
+### Step 6: Commit doc updates
 
 This is the **final commit** on the branch. Stage all doc changes:
 
 ```bash
 git add docs/devlog/ docs/backlog.md CLAUDE.md docs/testing.md [any other docs]
 git commit -m "docs: update devlog and docs for [session date] session"
-git push origin <branch-name>
 ```
 
-### Step 7: Verify CI and report
+### Step 7: Push and create/update PR
 
-Check CI status on the branch after the doc push:
+Push all commits (code + docs) together so CI covers everything in one run:
+
+1. **Push the branch**:
+
+   ```bash
+   git push -u origin <branch-name>
+   ```
+
+2. **Create PR if needed**: Check if a PR already exists for this branch:
+
+   ```bash
+   gh pr list --head <branch-name> --json number --jq '.[0].number'
+   ```
+
+   - If no PR exists, create one with `gh pr create`
+   - If a PR exists, it's already updated by the push
+
+### Step 8: Verify CI and report
+
+Check CI status on the branch after the push:
 
 ```bash
 gh run list --branch <branch-name> --limit 1 --json status,conclusion,name
@@ -161,7 +164,7 @@ gh run list --branch <branch-name> --limit 1 --json status,conclusion,name
 
 Report the status. If CI is running, note that the user should wait for it to pass before merging.
 
-### Step 8: Session summary
+### Step 9: Session summary
 
 Print a summary for the user:
 
@@ -194,6 +197,6 @@ Print a summary for the user:
 - Use `gh run list/view` for CI status, NOT `gh pr checks` (fine-grained PAT limitation)
 - The DEVLOG entry should be concise but complete — future sessions rely on it for context
 - If the session had multiple unrelated workstreams, consider whether they should be separate PRs
-- Doc updates are always the LAST commit — after all code changes and any review fixes
+- Doc updates are always the LAST commit — after all code changes and any review fixes, but BEFORE the push/PR so CI covers everything in one run
 - Do NOT switch to `main`, delete branches, or do branch cleanup — that's handled by `/start-session`
 - The PR should be left open for the user to review and merge
