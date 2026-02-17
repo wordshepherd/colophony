@@ -26,6 +26,21 @@ export type PaginatedResponse<T> = {
 
 export const uuidSchema = z.string().uuid();
 
+// ---------------------------------------------------------------------------
+// Reusable ID param schemas for API surfaces (tRPC, REST, GraphQL)
+// ---------------------------------------------------------------------------
+
+export const idParamSchema = z.object({ id: z.string().uuid() });
+export type IdParam = z.infer<typeof idParamSchema>;
+
+export const fileIdParamSchema = z.object({ fileId: z.string().uuid() });
+export type FileIdParam = z.infer<typeof fileIdParamSchema>;
+
+export const submissionIdParamSchema = z.object({
+  submissionId: z.string().uuid(),
+});
+export type SubmissionIdParam = z.infer<typeof submissionIdParamSchema>;
+
 export const dateRangeSchema = z.object({
   from: z.date().optional(),
   to: z.date().optional(),
