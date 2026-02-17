@@ -72,15 +72,15 @@ Key functions in `trpc.ts`:
 
 ## Quirks
 
-| Quirk                              | Details                                                                                                                                                  |
-| ---------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **TanStack Query v4 `isLoading`**  | `isLoading` is `true` even when query is disabled (`enabled: false`). Check `fetchStatus !== 'idle'` instead                                             |
-| **Next.js 16 async params**        | Next.js 16 types require `params: Promise<>`. In server components use `await params`; in client components use `use(params)` (React 19 exports `use()`) |
-| **React 19 deferred deprecations** | `forwardRef` (19 shadcn/ui components) and `Context.Provider` still work in React 19 but are deprecated. Migrate when updating shadcn/ui components      |
+| Quirk                              | Details                                                                                                                                                                                                      |
+| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **TanStack Query v5 `isPending`**  | TQ5 renamed `isLoading` to `isPending`. Use `isPending: isLoading` alias pattern in destructuring to minimize downstream changes. TQ5 also fixed the disabled-query bug (no `fetchStatus` workaround needed) |
+| **Next.js 16 async params**        | Next.js 16 types require `params: Promise<>`. In server components use `await params`; in client components use `use(params)` (React 19 exports `use()`)                                                     |
+| **React 19 deferred deprecations** | `forwardRef` (19 shadcn/ui components) and `Context.Provider` still work in React 19 but are deprecated. Migrate when updating shadcn/ui components                                                          |
 
 ## Version Pins
 
-| Package        | Pinned | Notes                                             |
-| -------------- | ------ | ------------------------------------------------- |
-| TanStack Query | 4.36   | Blocked by tRPC 10 peer dep; upgrade with tRPC 11 |
-| tus-js-client  | 4.3.1  | —                                                 |
+| Package        | Pinned | Notes                 |
+| -------------- | ------ | --------------------- |
+| TanStack Query | 5.x    | Upgraded with tRPC 11 |
+| tus-js-client  | 4.3.1  | —                     |

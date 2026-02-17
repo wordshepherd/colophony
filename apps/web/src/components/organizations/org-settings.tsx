@@ -40,9 +40,12 @@ export function OrgSettings() {
   const { currentOrg, isAdmin } = useOrganization();
   const utils = trpc.useUtils();
 
-  const { data: org, isLoading } = trpc.organizations.get.useQuery(undefined, {
-    enabled: !!currentOrg,
-  });
+  const { data: org, isPending: isLoading } = trpc.organizations.get.useQuery(
+    undefined,
+    {
+      enabled: !!currentOrg,
+    },
+  );
 
   const form = useForm<NameFormData>({
     resolver: zodResolver(nameFormSchema),
