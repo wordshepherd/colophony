@@ -52,7 +52,7 @@ Full project structure: [docs/architecture-v2-planning.md](docs/architecture-v2-
 
 ## Tech Stack
 
-**Frontend:** Next.js 15, TypeScript (strict), Tailwind + shadcn/ui (New York), tRPC (internal), TanStack Query, tus-js-client, date-fns
+**Frontend:** Next.js 16, React 19, TypeScript (strict), Tailwind + shadcn/ui (New York), tRPC (internal), TanStack Query, tus-js-client, date-fns
 
 **Backend:** Fastify 5, TypeScript (strict), Drizzle ORM, BullMQ 5, Zitadel (auth), Stripe, nodemailer
 
