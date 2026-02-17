@@ -169,7 +169,7 @@
 
 ### [P0] Urgent — EOL / Security
 
-- [ ] Node.js 20 → 22 LTS — Node 20 EOL is April 30, 2026; currently on v20.20.0 via `.nvmrc` — (dependabot 2026-02-15)
+- [x] Node.js 20 → 22 LTS — Node 20 EOL is April 30, 2026; upgraded to v22.22.0 — (dependabot 2026-02-15, done 2026-02-16)
 - [ ] Next.js 15 → 16 + React 18 → 19 + eslint-config-next 15 → 16 — bundled upgrade; Next 16 requires React 19; Next 16 shipped Oct 2025 — (dependabot #79, #81, #75)
 
 ### [P1] High — Major versions, actively maintained

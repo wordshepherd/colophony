@@ -219,7 +219,7 @@ All other version pins are in their respective per-directory CLAUDE.md files.
 
 `/codex-review [plan|diff|branch]` — non-interactive Codex review. Branch review (default): `codex review --base origin/main`. Diff review: `--uncommitted`. Plan review: `codex exec -s read-only`.
 
-For interactive Codex in tmux: source nvm, `nvm use v20.20.0`, then `codex`. Use `codex resume` or `codex fork --last` for follow-up.
+For interactive Codex in tmux: source nvm, `nvm use v22.22.0`, then `codex`. Use `codex resume` or `codex fork --last` for follow-up.
 
 ### Plan Structure: Codex Review as First Steps
 
