@@ -37,28 +37,29 @@ vi.mock('../../services/s3.js', () => ({
 const mockScanStream = vi.fn();
 const mockClamInit = vi.fn();
 vi.mock('clamscan', () => ({
-  default: vi.fn().mockImplementation(() => ({
-    init: (...args: unknown[]) => {
-      mockClamInit(...args);
-      return Promise.resolve({ scanStream: mockScanStream });
-    },
-  })),
+  default: vi.fn().mockImplementation(function () {
+    return {
+      init: (...args: unknown[]) => {
+        mockClamInit(...args);
+        return Promise.resolve({ scanStream: mockScanStream });
+      },
+    };
+  }),
 }));
 
 // Mock BullMQ Worker — capture the processor function
 let capturedProcessor: ((job: unknown) => Promise<void>) | null = null;
 vi.mock('bullmq', () => ({
-  Worker: vi
-    .fn()
-    .mockImplementation(
-      (_name: string, processor: (job: unknown) => Promise<void>) => {
-        capturedProcessor = processor;
-        return {
-          on: vi.fn(),
-          close: vi.fn(),
-        };
-      },
-    ),
+  Worker: vi.fn().mockImplementation(function (
+    _name: string,
+    processor: (job: unknown) => Promise<void>,
+  ) {
+    capturedProcessor = processor;
+    return {
+      on: vi.fn(),
+      close: vi.fn(),
+    };
+  }),
 }));
 
 // ---------------------------------------------------------------------------
