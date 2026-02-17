@@ -170,7 +170,7 @@
 ### [P0] Urgent — EOL / Security
 
 - [x] Node.js 20 → 22 LTS — Node 20 EOL is April 30, 2026; upgraded to v22.22.0 — (dependabot 2026-02-15, done 2026-02-16)
-- [ ] Next.js 15 → 16 + React 18 → 19 + eslint-config-next 15 → 16 — bundled upgrade; Next 16 requires React 19; Next 16 shipped Oct 2025 — (dependabot #79, #81, #75)
+- [x] Next.js 15 → 16 + React 18 → 19 + eslint-config-next 15 → 16 — bundled upgrade; Next 16 requires React 19; Next 16 shipped Oct 2025 — (dependabot #79, #81, #75; done 2026-02-16)
 
 ### [P1] High — Major versions, actively maintained
 
@@ -181,7 +181,7 @@
 ### [P2] Medium — Dev tooling, lower risk
 
 - [ ] Vitest 3 → 4 — shipped Oct 2025; dev-only, but 261+ tests need validation — (dependabot #76)
-- [ ] @testing-library/react 14 → 16 — dev-only; skipped v15 — (dependabot #78)
+- [x] @testing-library/react 14 → 16 — dev-only; skipped v15; bundled with Next 16 + React 19 upgrade — (dependabot #78; done 2026-02-16)
 
 ### [P3] Low — Unused or minimal impact
 
