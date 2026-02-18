@@ -101,6 +101,41 @@ function orgContext(
   };
 }
 
+function apiKeyContext(
+  scopes: string[],
+  role: 'ADMIN' | 'EDITOR' | 'READER' = 'ADMIN',
+): RestContext {
+  return {
+    authContext: {
+      userId: USER_ID,
+      email: 'test@example.com',
+      emailVerified: true,
+      authMethod: 'apikey',
+      apiKeyId: 'k0000000-0000-4000-a000-000000000001',
+      apiKeyScopes: scopes as any,
+      orgId: ORG_ID,
+      role,
+    },
+    dbTx: {} as never,
+    audit: vi.fn(),
+  };
+}
+
+function apiKeyAuthedContext(scopes: string[]): RestContext {
+  return {
+    authContext: {
+      userId: USER_ID,
+      email: 'test@example.com',
+      emailVerified: true,
+      authMethod: 'apikey',
+      apiKeyId: 'k0000000-0000-4000-a000-000000000001',
+      apiKeyScopes: scopes as any,
+    },
+    dbTx: null,
+    audit: vi.fn(),
+  };
+}
+
 /**
  * Create a typed client for a single oRPC procedure.
  * This calls the handler directly (like tRPC's createCaller).
@@ -411,6 +446,44 @@ describe('organizations REST router', () => {
           role: 'READER',
         }),
       ).rejects.toThrow('last admin');
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // API key scope enforcement
+  // -------------------------------------------------------------------------
+
+  describe('API key scope enforcement', () => {
+    it('denies organizations:read route with wrong scope', async () => {
+      const ctx = apiKeyContext(['submissions:read']);
+      const call = client(organizationsRouter.get, ctx);
+      await expect(call({ orgId: ORG_ID })).rejects.toThrow(
+        'Insufficient API key scope',
+      );
+    });
+
+    it('denies organizations:write route with only read scope', async () => {
+      const ctx = apiKeyContext(['organizations:read']);
+      const call = client(organizationsRouter.update, ctx);
+      await expect(call({ orgId: ORG_ID, name: 'New' })).rejects.toThrow(
+        'Insufficient API key scope',
+      );
+    });
+
+    it('denies list orgs with wrong scope (authed-level route)', async () => {
+      const ctx = apiKeyAuthedContext(['submissions:read']);
+      const call = client(organizationsRouter.list, ctx);
+      await expect(call({})).rejects.toThrow('Insufficient API key scope');
+    });
+
+    it('allows API key with correct read scope', async () => {
+      const org = { id: ORG_ID, name: 'Org', slug: 'org' };
+      mockService.getById.mockResolvedValueOnce(org as never);
+
+      const ctx = apiKeyContext(['organizations:read']);
+      const call = client(organizationsRouter.get, ctx);
+      const result = await call({ orgId: ORG_ID });
+      expect(result).toEqual(org);
     });
   });
 });

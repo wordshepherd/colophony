@@ -66,6 +66,26 @@ function orgContext(
   };
 }
 
+function apiKeyContext(
+  scopes: string[],
+  role: 'ADMIN' | 'EDITOR' | 'READER' = 'ADMIN',
+): RestContext {
+  return {
+    authContext: {
+      userId: USER_ID,
+      email: 'test@example.com',
+      emailVerified: true,
+      authMethod: 'apikey',
+      apiKeyId: 'k0000000-0000-4000-a000-000000000001',
+      apiKeyScopes: scopes as any,
+      orgId: ORG_ID,
+      role,
+    },
+    dbTx: {} as never,
+    audit: vi.fn(),
+  };
+}
+
 function client<T>(procedure: T, context: RestContext) {
   return createProcedureClient(procedure as any, { context }) as any;
 }
@@ -239,6 +259,44 @@ describe('api-keys REST router', () => {
       await expect(call({ keyId: KEY_ID })).rejects.toThrow(
         'API key not found',
       );
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // API key scope enforcement
+  // -------------------------------------------------------------------------
+
+  describe('API key scope enforcement', () => {
+    it('denies api-keys:read with wrong scope', async () => {
+      const ctx = apiKeyContext(['submissions:read']);
+      const call = client(apiKeysRouter.list, ctx);
+      await expect(call({ page: 1, limit: 20 })).rejects.toThrow(
+        'Insufficient API key scope',
+      );
+    });
+
+    it('denies api-keys:manage with only read scope', async () => {
+      const ctx = apiKeyContext(['api-keys:read']);
+      const call = client(apiKeysRouter.create, ctx);
+      await expect(
+        call({ name: 'Test', scopes: ['submissions:read'] }),
+      ).rejects.toThrow('Insufficient API key scope');
+    });
+
+    it('allows API key with api-keys:read scope for list', async () => {
+      const response = {
+        items: [{ id: KEY_ID, name: 'Test Key' }],
+        total: 1,
+        page: 1,
+        limit: 20,
+        totalPages: 1,
+      };
+      mockService.list.mockResolvedValueOnce(response as never);
+
+      const ctx = apiKeyContext(['api-keys:read']);
+      const call = client(apiKeysRouter.list, ctx);
+      const result = await call({ page: 1, limit: 20 });
+      expect(result.items).toHaveLength(1);
     });
   });
 });

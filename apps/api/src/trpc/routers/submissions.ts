@@ -5,7 +5,7 @@ import {
   updateSubmissionStatusSchema,
   listSubmissionsSchema,
 } from '@colophony/types';
-import { orgProcedure, createRouter } from '../init.js';
+import { orgProcedure, createRouter, requireScopes } from '../init.js';
 import { submissionService } from '../../services/submission.service.js';
 import { toServiceContext } from '../../services/context.js';
 import { assertEditorOrAdmin } from '../../services/errors.js';
@@ -14,6 +14,7 @@ import { mapServiceError } from '../error-mapper.js';
 export const submissionsRouter = createRouter({
   /** Submitter's own submissions (any org member). */
   mySubmissions: orgProcedure
+    .use(requireScopes('submissions:read'))
     .input(listSubmissionsSchema)
     .query(async ({ ctx, input }) => {
       return submissionService.listBySubmitter(
@@ -25,6 +26,7 @@ export const submissionsRouter = createRouter({
 
   /** Editor/admin view of all submissions in the org. */
   list: orgProcedure
+    .use(requireScopes('submissions:read'))
     .input(listSubmissionsSchema)
     .query(async ({ ctx, input }) => {
       try {
@@ -37,6 +39,7 @@ export const submissionsRouter = createRouter({
 
   /** Create a new DRAFT submission. */
   create: orgProcedure
+    .use(requireScopes('submissions:write'))
     .input(createSubmissionSchema)
     .mutation(async ({ ctx, input }) => {
       try {
@@ -51,6 +54,7 @@ export const submissionsRouter = createRouter({
 
   /** Get submission by ID — owner or editor/admin. */
   getById: orgProcedure
+    .use(requireScopes('submissions:read'))
     .input(z.object({ id: z.string().uuid() }))
     .query(async ({ ctx, input }) => {
       try {
@@ -65,6 +69,7 @@ export const submissionsRouter = createRouter({
 
   /** Update a DRAFT submission — owner only. */
   update: orgProcedure
+    .use(requireScopes('submissions:write'))
     .input(z.object({ id: z.string().uuid() }).merge(updateSubmissionSchema))
     .mutation(async ({ ctx, input }) => {
       const { id, ...data } = input;
@@ -81,6 +86,7 @@ export const submissionsRouter = createRouter({
 
   /** Submit a DRAFT submission (DRAFT→SUBMITTED) — owner only. */
   submit: orgProcedure
+    .use(requireScopes('submissions:write'))
     .input(z.object({ id: z.string().uuid() }))
     .mutation(async ({ ctx, input }) => {
       try {
@@ -95,6 +101,7 @@ export const submissionsRouter = createRouter({
 
   /** Delete a DRAFT submission — owner only. */
   delete: orgProcedure
+    .use(requireScopes('submissions:write'))
     .input(z.object({ id: z.string().uuid() }))
     .mutation(async ({ ctx, input }) => {
       try {
@@ -109,6 +116,7 @@ export const submissionsRouter = createRouter({
 
   /** Withdraw a submission — owner only. */
   withdraw: orgProcedure
+    .use(requireScopes('submissions:write'))
     .input(z.object({ id: z.string().uuid() }))
     .mutation(async ({ ctx, input }) => {
       try {
@@ -123,6 +131,7 @@ export const submissionsRouter = createRouter({
 
   /** Editor/admin status transition. */
   updateStatus: orgProcedure
+    .use(requireScopes('submissions:write'))
     .input(
       z.object({ id: z.string().uuid() }).merge(updateSubmissionStatusSchema),
     )
@@ -142,6 +151,7 @@ export const submissionsRouter = createRouter({
 
   /** Get submission history — owner or editor/admin. */
   getHistory: orgProcedure
+    .use(requireScopes('submissions:read'))
     .input(z.object({ submissionId: z.string().uuid() }))
     .query(async ({ ctx, input }) => {
       try {

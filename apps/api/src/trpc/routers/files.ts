@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { orgProcedure, createRouter } from '../init.js';
+import { orgProcedure, createRouter, requireScopes } from '../init.js';
 import { fileService } from '../../services/file.service.js';
 import { createS3Client } from '../../services/s3.js';
 import { validateEnv } from '../../config/env.js';
@@ -24,6 +24,7 @@ function getEnvConfig() {
 export const filesRouter = createRouter({
   /** List files for a submission — owner or editor/admin. */
   listBySubmission: orgProcedure
+    .use(requireScopes('files:read'))
     .input(z.object({ submissionId: z.string().uuid() }))
     .query(async ({ ctx, input }) => {
       try {
@@ -38,6 +39,7 @@ export const filesRouter = createRouter({
 
   /** Get a presigned download URL for a file — owner or editor/admin, CLEAN only. */
   getDownloadUrl: orgProcedure
+    .use(requireScopes('files:read'))
     .input(z.object({ fileId: z.string().uuid() }))
     .query(async ({ ctx, input }) => {
       try {
@@ -55,6 +57,7 @@ export const filesRouter = createRouter({
 
   /** Delete a file — submission owner only, DRAFT only. */
   delete: orgProcedure
+    .use(requireScopes('files:write'))
     .input(z.object({ fileId: z.string().uuid() }))
     .mutation(async ({ ctx, input }) => {
       try {

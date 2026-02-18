@@ -71,7 +71,7 @@ Dual auth: Zitadel OIDC tokens for interactive users, API keys for programmatic 
 - **Storage:** SHA-256 hash stored in `api_keys` table. Plain text shown once on creation, never stored.
 - **Org-scoped:** Each key belongs to an organization. `createdBy` tracks the creating user.
 - **Auth context:** Uses the creator's `userId` for audit trail and RLS. Pre-sets `orgId` from the key.
-- **Scopes:** Stored in `scopes` JSONB column. Enforcement deferred to Track 2 (REST/GraphQL surfaces).
+- **Scopes:** Stored in `scopes` JSONB column. Enforced by `requireScopes` middleware on REST + tRPC surfaces. OIDC/test auth bypasses scope checks.
 - **Lookup:** `verify_api_key()` SECURITY DEFINER function bypasses RLS for cross-org hash lookup.
 - **`lastUsedAt`:** Updated fire-and-forget via `touch_api_key_last_used()` SECURITY DEFINER function.
 - **CRUD:** tRPC router at `apiKeys.*`. Only ADMIN can create/revoke/delete. All org members can list.

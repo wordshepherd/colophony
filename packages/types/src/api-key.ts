@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 // ---------------------------------------------------------------------------
-// API Key Scopes — stored now, enforced in Track 2
+// API Key Scopes — enforced by requireScopes middleware on REST + tRPC
 // ---------------------------------------------------------------------------
 
 export const apiKeyScopeSchema = z.enum([
@@ -9,8 +9,12 @@ export const apiKeyScopeSchema = z.enum([
   "submissions:write",
   "files:read",
   "files:write",
-  "payments:read",
   "organizations:read",
+  "organizations:write",
+  "users:read",
+  "api-keys:read",
+  "api-keys:manage",
+  "payments:read",
   "webhooks:manage",
 ]);
 
