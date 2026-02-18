@@ -60,6 +60,9 @@ export default defineConfig({
       env: {
         ...process.env,
         VIRUS_SCAN_ENABLED: "false",
+        // Raise rate limits for E2E: 20 tests × ~5 requests each can exceed default 60/min
+        RATE_LIMIT_DEFAULT_MAX: "1000",
+        RATE_LIMIT_AUTH_MAX: "1000",
       },
     },
     {
@@ -73,6 +76,8 @@ export default defineConfig({
       cwd: "../..",
       env: {
         ...process.env,
+        // Override PORT so Next.js doesn't inherit API's PORT=4000 from dotenv
+        PORT: "3000",
         NEXT_PUBLIC_ZITADEL_AUTHORITY: "http://test-idp:8080",
         NEXT_PUBLIC_ZITADEL_CLIENT_ID: "test-client",
       },

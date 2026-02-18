@@ -4,10 +4,15 @@
  * Provides authenticated page context with seed data lookups and
  * API key management. Each test gets a fresh API key that is
  * cleaned up after the test.
+ *
+ * Auth strategy: create a BrowserContext with pre-populated localStorage
+ * (storageState) so OIDC user + currentOrgId are available before any page
+ * JS executes. This eliminates the race condition between addInitScript and
+ * page JavaScript reading localStorage.
  */
 
-import { test as base, expect, type Page } from "@playwright/test";
-import { injectAuth } from "./auth";
+import { test as base, expect, type Page, devices } from "@playwright/test";
+import { buildStorageState, setupPageAuth } from "./auth";
 import { getOrgBySlug, getUserByEmail, createApiKey, deleteApiKey } from "./db";
 
 /** All scopes needed for submission flow E2E tests */
@@ -35,6 +40,12 @@ interface TestApiKey {
   id: string;
   plainKey: string;
 }
+
+const TEST_USER_PROFILE = {
+  sub: "seed-zitadel-writer-001",
+  email: "writer@example.com",
+  name: "Test Writer",
+};
 
 /**
  * Extended Playwright test with auth fixtures.
@@ -85,19 +96,28 @@ export const test = base.extend<{
     await deleteApiKey(key.id);
   },
 
-  authedPage: async ({ page, seedOrg, seedUser, testApiKey }, use) => {
-    await injectAuth({
-      page,
-      orgId: seedOrg.id,
-      apiKey: testApiKey.plainKey,
-      userProfile: {
-        sub: `seed-zitadel-writer-001`,
-        email: seedUser.email,
-        name: "Test Writer",
-      },
+  authedPage: async ({ browser, seedOrg, seedUser, testApiKey }, use) => {
+    // Create a fresh context with pre-populated localStorage.
+    // This ensures OIDC user + currentOrgId exist BEFORE any page JS runs,
+    // eliminating the race condition between addInitScript and JS execution.
+    const context = await browser.newContext({
+      ...devices["Desktop Chrome"],
+      storageState: buildStorageState(seedOrg.id, TEST_USER_PROFILE),
     });
 
+    const page = await context.newPage();
+
+    // Set up route interception + addInitScript safety net
+    await setupPageAuth(
+      page,
+      seedOrg.id,
+      testApiKey.plainKey,
+      TEST_USER_PROFILE,
+    );
+
     await use(page);
+
+    await context.close();
   },
 });
 
