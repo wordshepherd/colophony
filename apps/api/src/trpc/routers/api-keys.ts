@@ -6,6 +6,14 @@ import {
   paginationSchema,
   AuditActions,
   AuditResources,
+  apiKeyResponseSchema,
+  createApiKeyResponseSchema,
+  revokeApiKeyResponseSchema,
+  successResponseSchema,
+  paginatedResponseSchema,
+  type ApiKeyResponse,
+  type CreateApiKeyResponse,
+  type PaginatedResponse,
 } from '@colophony/types';
 import {
   orgProcedure,
@@ -19,13 +27,18 @@ export const apiKeysRouter = createRouter({
   list: orgProcedure
     .use(requireScopes('api-keys:read'))
     .input(paginationSchema)
+    .output(paginatedResponseSchema(apiKeyResponseSchema))
     .query(async ({ ctx, input }) => {
-      return apiKeyService.list(ctx.dbTx, input);
+      // Cast: Drizzle JSONB returns `scopes: string[]`; .output() validates at runtime
+      return apiKeyService.list(ctx.dbTx, input) as Promise<
+        PaginatedResponse<ApiKeyResponse>
+      >;
     }),
 
   create: adminProcedure
     .use(requireScopes('api-keys:manage'))
     .input(createApiKeySchema)
+    .output(createApiKeyResponseSchema)
     .mutation(async ({ ctx, input }) => {
       const result = await apiKeyService.create(
         ctx.dbTx,
@@ -39,12 +52,14 @@ export const apiKeysRouter = createRouter({
         resourceId: result.id,
         newValue: { name: input.name, scopes: input.scopes },
       });
-      return result;
+      // Cast: Drizzle JSONB returns `scopes: string[]`; .output() validates at runtime
+      return result as CreateApiKeyResponse;
     }),
 
   revoke: adminProcedure
     .use(requireScopes('api-keys:manage'))
     .input(revokeApiKeySchema)
+    .output(revokeApiKeyResponseSchema)
     .mutation(async ({ ctx, input }) => {
       const revoked = await apiKeyService.revoke(ctx.dbTx, input.keyId);
       if (!revoked) {
@@ -64,6 +79,7 @@ export const apiKeysRouter = createRouter({
   delete: adminProcedure
     .use(requireScopes('api-keys:manage'))
     .input(deleteApiKeySchema)
+    .output(successResponseSchema)
     .mutation(async ({ ctx, input }) => {
       const deleted = await apiKeyService.delete(ctx.dbTx, input.keyId);
       if (!deleted) {

@@ -60,11 +60,14 @@ function makeContext(overrides: Partial<TRPCContext> = {}): TRPCContext {
   };
 }
 
+const USER_ID = '00000000-0000-4000-a000-000000000001';
+const ORG_ID = '00000000-0000-4000-a000-000000000010';
+
 function authedContext(overrides: Partial<TRPCContext> = {}): TRPCContext {
   return makeContext({
     authContext: {
-      userId: 'user-1',
-      zitadelUserId: 'zid-1',
+      userId: USER_ID,
+      zitadelUserId: '00000000-0000-4000-a000-000000000099',
       email: 'test@example.com',
       emailVerified: true,
       authMethod: 'test',
@@ -90,7 +93,7 @@ describe('users tRPC router', () => {
 
     it('returns user profile with org memberships', async () => {
       const userRow = {
-        id: 'user-1',
+        id: USER_ID,
         email: 'test@example.com',
         email_verified: true,
         created_at: new Date('2025-01-01'),
@@ -99,7 +102,7 @@ describe('users tRPC router', () => {
 
       const orgs = [
         {
-          organizationId: 'org-1',
+          organizationId: ORG_ID,
           role: 'ADMIN' as const,
           name: 'Test Org',
           slug: 'test-org',
@@ -111,13 +114,13 @@ describe('users tRPC router', () => {
       const result = await caller.users.me();
 
       expect(result).toEqual({
-        id: 'user-1',
+        id: USER_ID,
         email: 'test@example.com',
         emailVerified: true,
         createdAt: new Date('2025-01-01'),
         organizations: [
           {
-            organizationId: 'org-1',
+            id: ORG_ID,
             name: 'Test Org',
             slug: 'test-org',
             role: 'ADMIN',
@@ -127,10 +130,10 @@ describe('users tRPC router', () => {
       // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(mockPool.query).toHaveBeenCalledWith(
         expect.stringContaining('SELECT'),
-        ['user-1'],
+        [USER_ID],
       );
       // eslint-disable-next-line @typescript-eslint/unbound-method
-      expect(mockService.listUserOrganizations).toHaveBeenCalledWith('user-1');
+      expect(mockService.listUserOrganizations).toHaveBeenCalledWith(USER_ID);
     });
 
     it('returns null when user not found in database', async () => {

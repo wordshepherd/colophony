@@ -58,6 +58,15 @@ export const apiKeyResponseSchema = z.object({
 
 export type ApiKeyResponse = z.infer<typeof apiKeyResponseSchema>;
 
+/** Returned from `apiKeys.revoke` — subset of key metadata with revokedAt. */
+export const revokeApiKeyResponseSchema = z.object({
+  id: z.string().uuid(),
+  name: z.string(),
+  revokedAt: z.date().nullable(),
+});
+
+export type RevokeApiKeyResponse = z.infer<typeof revokeApiKeyResponseSchema>;
+
 /** Only returned once on creation — plainTextKey is shown once, never stored. */
 export const createApiKeyResponseSchema = apiKeyResponseSchema.extend({
   plainTextKey: z.string(),

@@ -9,19 +9,19 @@ const mockUser = {
   emailVerified: true,
   organizations: [
     {
-      organizationId: "org-1",
+      id: "org-1",
       name: "Org One",
       slug: "org-one",
       role: "ADMIN" as const,
     },
     {
-      organizationId: "org-2",
+      id: "org-2",
       name: "Org Two",
       slug: "org-two",
       role: "EDITOR" as const,
     },
     {
-      organizationId: "org-3",
+      id: "org-3",
       name: "Org Three",
       slug: "org-three",
       role: "READER" as const,

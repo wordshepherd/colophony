@@ -4,6 +4,8 @@ import {
   idParamSchema,
   AuditActions,
   AuditResources,
+  auditEventResponseSchema,
+  paginatedResponseSchema,
 } from '@colophony/types';
 import { adminProcedure, createRouter, requireScopes } from '../init.js';
 import { auditService } from '../../services/audit.service.js';
@@ -12,6 +14,7 @@ export const auditRouter = createRouter({
   list: adminProcedure
     .use(requireScopes('audit:read'))
     .input(listAuditEventsSchema)
+    .output(paginatedResponseSchema(auditEventResponseSchema))
     .query(async ({ ctx, input }) => {
       const result = await auditService.list(ctx.dbTx, input);
       await ctx.audit({
@@ -24,6 +27,7 @@ export const auditRouter = createRouter({
   getById: adminProcedure
     .use(requireScopes('audit:read'))
     .input(idParamSchema)
+    .output(auditEventResponseSchema)
     .query(async ({ ctx, input }) => {
       const event = await auditService.getById(ctx.dbTx, input.id);
       if (!event) {

@@ -53,6 +53,17 @@ import type { TRPCContext } from '../context.js';
 
 const mockService = vi.mocked(organizationService);
 
+// UUID constants for consistent test data
+const USER_ID = '00000000-0000-4000-a000-000000000001';
+const ZITADEL_USER_ID = '00000000-0000-4000-a000-000000000099';
+const ORG_ID = '00000000-0000-4000-a000-000000000010';
+const ORG_NEW_ID = '00000000-0000-4000-a000-000000000011';
+const MEMBER_ID = '00000000-0000-4000-a000-000000000020';
+const MEMBER_NEW_ID = '00000000-0000-4000-a000-000000000021';
+const USER_2_ID = '00000000-0000-4000-a000-000000000002';
+
+const NOW = new Date('2026-01-01T00:00:00.000Z');
+
 function makeContext(overrides: Partial<TRPCContext> = {}): TRPCContext {
   return {
     authContext: null,
@@ -65,8 +76,8 @@ function makeContext(overrides: Partial<TRPCContext> = {}): TRPCContext {
 function authedContext(overrides: Partial<TRPCContext> = {}): TRPCContext {
   return makeContext({
     authContext: {
-      userId: 'user-1',
-      zitadelUserId: 'zid-1',
+      userId: USER_ID,
+      zitadelUserId: ZITADEL_USER_ID,
       email: 'test@example.com',
       emailVerified: true,
       authMethod: 'test',
@@ -82,12 +93,12 @@ function orgContext(
   const mockTx = {} as never;
   return makeContext({
     authContext: {
-      userId: 'user-1',
-      zitadelUserId: 'zid-1',
+      userId: USER_ID,
+      zitadelUserId: ZITADEL_USER_ID,
       email: 'test@example.com',
       emailVerified: true,
       authMethod: 'test',
-      orgId: 'org-1',
+      orgId: ORG_ID,
       role,
     },
     dbTx: mockTx,
@@ -117,7 +128,7 @@ describe('organizations tRPC router', () => {
     it('returns user organizations', async () => {
       const orgs = [
         {
-          organizationId: 'org-1',
+          organizationId: ORG_ID,
           role: 'ADMIN',
           name: 'Org 1',
           slug: 'org-1',
@@ -128,7 +139,7 @@ describe('organizations tRPC router', () => {
       const caller = createCaller(authedContext());
       const result = await caller.organizations.list();
       expect(result).toEqual(orgs);
-      expect(mockService.listUserOrganizations).toHaveBeenCalledWith('user-1'); // eslint-disable-line @typescript-eslint/unbound-method
+      expect(mockService.listUserOrganizations).toHaveBeenCalledWith(USER_ID); // eslint-disable-line @typescript-eslint/unbound-method
     });
   });
 
@@ -143,8 +154,22 @@ describe('organizations tRPC router', () => {
     it('checks slug availability and creates org via createWithAudit', async () => {
       mockService.isSlugAvailable.mockResolvedValueOnce(true);
       mockService.createWithAudit.mockResolvedValueOnce({
-        organization: { id: 'org-new', name: 'Test', slug: 'test' },
-        membership: { id: 'mem-1', role: 'ADMIN' },
+        organization: {
+          id: ORG_NEW_ID,
+          name: 'Test',
+          slug: 'test',
+          settings: {},
+          createdAt: NOW,
+          updatedAt: NOW,
+        },
+        membership: {
+          id: MEMBER_ID,
+          organizationId: ORG_NEW_ID,
+          userId: USER_ID,
+          role: 'ADMIN',
+          createdAt: NOW,
+          updatedAt: NOW,
+        },
       } as never);
 
       const ctx = authedContext();
@@ -154,13 +179,13 @@ describe('organizations tRPC router', () => {
         slug: 'test',
       });
 
-      expect(result.organization.id).toBe('org-new');
+      expect(result.organization.id).toBe(ORG_NEW_ID);
       expect(mockService.isSlugAvailable).toHaveBeenCalledWith('test'); // eslint-disable-line @typescript-eslint/unbound-method
       // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(mockService.createWithAudit).toHaveBeenCalledWith(
         expect.any(Function), // audit fn
         { name: 'Test', slug: 'test' },
-        'user-1',
+        USER_ID,
       );
     });
 
@@ -195,7 +220,14 @@ describe('organizations tRPC router', () => {
     });
 
     it('returns organization', async () => {
-      const org = { id: 'org-1', name: 'Org', slug: 'org' };
+      const org = {
+        id: ORG_ID,
+        name: 'Org',
+        slug: 'org',
+        settings: {},
+        createdAt: NOW,
+        updatedAt: NOW,
+      };
       mockService.getById.mockResolvedValueOnce(org as never);
 
       const caller = createCaller(orgContext());
@@ -220,7 +252,14 @@ describe('organizations tRPC router', () => {
     });
 
     it('updates organization via updateWithAudit', async () => {
-      const updated = { id: 'org-1', name: 'New' };
+      const updated = {
+        id: ORG_ID,
+        name: 'New',
+        slug: 'org',
+        settings: {},
+        createdAt: NOW,
+        updatedAt: NOW,
+      };
       mockService.updateWithAudit.mockResolvedValueOnce(updated as never);
 
       const ctx = orgContext('ADMIN');
@@ -270,7 +309,15 @@ describe('organizations tRPC router', () => {
 
     it('returns paginated members', async () => {
       const response = {
-        items: [{ id: 'mem-1', userId: 'u-1', role: 'ADMIN', email: 'a@b.c' }],
+        items: [
+          {
+            id: MEMBER_ID,
+            userId: USER_ID,
+            role: 'ADMIN',
+            email: 'admin@example.com',
+            createdAt: NOW,
+          },
+        ],
         total: 1,
         page: 1,
         limit: 20,
@@ -299,7 +346,14 @@ describe('organizations tRPC router', () => {
     });
 
     it('adds member via addMemberWithAudit', async () => {
-      const member = { id: 'mem-new', userId: 'u-2', role: 'READER' };
+      const member = {
+        id: MEMBER_NEW_ID,
+        organizationId: ORG_ID,
+        userId: USER_2_ID,
+        role: 'READER',
+        createdAt: NOW,
+        updatedAt: NOW,
+      };
       mockService.addMemberWithAudit.mockResolvedValueOnce(member as never);
 
       const ctx = orgContext('ADMIN');
@@ -388,8 +442,12 @@ describe('organizations tRPC router', () => {
   describe('organizations.members.updateRole', () => {
     it('updates role via updateMemberRoleWithAudit', async () => {
       mockService.updateMemberRoleWithAudit.mockResolvedValueOnce({
-        id: 'mem-1',
+        id: MEMBER_ID,
+        organizationId: ORG_ID,
+        userId: USER_ID,
         role: 'EDITOR',
+        createdAt: NOW,
+        updatedAt: NOW,
       } as never);
 
       const ctx = orgContext('ADMIN');

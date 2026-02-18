@@ -12,7 +12,7 @@ export interface UserProfile {
   emailVerified: boolean;
   createdAt: Date;
   organizations: Array<{
-    organizationId: string;
+    id: string;
     name: string;
     slug: string;
     role: "ADMIN" | "EDITOR" | "READER";
