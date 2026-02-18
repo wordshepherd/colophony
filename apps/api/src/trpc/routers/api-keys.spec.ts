@@ -49,10 +49,8 @@ function orgContext(
   });
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const createCaller = (appRouter as any).createCaller as (
   ctx: TRPCContext,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
 ) => any;
 
 describe('apiKeys router', () => {

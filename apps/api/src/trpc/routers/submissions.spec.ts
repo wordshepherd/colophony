@@ -12,6 +12,15 @@ vi.mock('../../services/submission.service.js', () => ({
     updateStatus: vi.fn(),
     delete: vi.fn(),
     getHistory: vi.fn(),
+    // Access-aware methods (PR 2)
+    getByIdWithAccess: vi.fn(),
+    createWithAudit: vi.fn(),
+    updateAsOwner: vi.fn(),
+    submitAsOwner: vi.fn(),
+    deleteAsOwner: vi.fn(),
+    withdrawAsOwner: vi.fn(),
+    updateStatusAsEditor: vi.fn(),
+    getHistoryWithAccess: vi.fn(),
   },
   SubmissionNotFoundError: class SubmissionNotFoundError extends Error {
     name = 'SubmissionNotFoundError';
@@ -63,6 +72,7 @@ vi.mock('@colophony/db', () => ({
 }));
 
 import { submissionService } from '../../services/submission.service.js';
+import { ForbiddenError } from '../../services/errors.js';
 import { appRouter } from '../router.js';
 import type { TRPCContext } from '../context.js';
 
@@ -115,7 +125,6 @@ function editorContext(overrides: Partial<TRPCContext> = {}): TRPCContext {
   return orgContext('EDITOR', overrides);
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const createCaller = (appRouter as any).createCaller as (
   ctx: TRPCContext,
 ) => any;
@@ -184,7 +193,10 @@ describe('submissions tRPC router', () => {
       expect(result.items).toEqual([]);
     });
 
-    it('updateStatus requires EDITOR or ADMIN role', async () => {
+    it('updateStatus maps ForbiddenError from service', async () => {
+      mockService.updateStatusAsEditor.mockRejectedValueOnce(
+        new ForbiddenError('Editor or admin role required'),
+      );
       const caller = createCaller(orgContext('READER'));
       await expect(
         caller.submissions.updateStatus({
@@ -194,9 +206,9 @@ describe('submissions tRPC router', () => {
       ).rejects.toThrow('Editor or admin role required');
     });
 
-    it('update requires ownership', async () => {
-      mockService.getById.mockResolvedValueOnce(
-        makeDraftSubmission('other-user') as never,
+    it('update maps ForbiddenError from service', async () => {
+      mockService.updateAsOwner.mockRejectedValueOnce(
+        new ForbiddenError('Only the submitter can update this submission'),
       );
       const caller = createCaller(orgContext());
       await expect(
@@ -204,9 +216,9 @@ describe('submissions tRPC router', () => {
       ).rejects.toThrow('Only the submitter');
     });
 
-    it('submit requires ownership', async () => {
-      mockService.getById.mockResolvedValueOnce(
-        makeDraftSubmission('other-user') as never,
+    it('submit maps ForbiddenError from service', async () => {
+      mockService.submitAsOwner.mockRejectedValueOnce(
+        new ForbiddenError('Only the submitter can submit this submission'),
       );
       const caller = createCaller(orgContext());
       await expect(
@@ -214,9 +226,9 @@ describe('submissions tRPC router', () => {
       ).rejects.toThrow('Only the submitter');
     });
 
-    it('delete requires ownership', async () => {
-      mockService.getById.mockResolvedValueOnce(
-        makeDraftSubmission('other-user') as never,
+    it('delete maps ForbiddenError from service', async () => {
+      mockService.deleteAsOwner.mockRejectedValueOnce(
+        new ForbiddenError('Only the submitter can delete this submission'),
       );
       const caller = createCaller(orgContext());
       await expect(
@@ -224,9 +236,9 @@ describe('submissions tRPC router', () => {
       ).rejects.toThrow('Only the submitter');
     });
 
-    it('withdraw requires ownership', async () => {
-      mockService.getById.mockResolvedValueOnce(
-        makeDraftSubmission('other-user') as never,
+    it('withdraw maps ForbiddenError from service', async () => {
+      mockService.withdrawAsOwner.mockRejectedValueOnce(
+        new ForbiddenError('Only the submitter can withdraw this submission'),
       );
       const caller = createCaller(orgContext());
       await expect(
@@ -236,7 +248,7 @@ describe('submissions tRPC router', () => {
 
     it('getById allows owner to view', async () => {
       const sub = makeDraftSubmission('user-1');
-      mockService.getById.mockResolvedValueOnce(sub as never);
+      mockService.getByIdWithAccess.mockResolvedValueOnce(sub as never);
       const caller = createCaller(orgContext('READER'));
       const result = await caller.submissions.getById({ id: SUBMISSION_ID });
       expect(result.id).toBe(SUBMISSION_ID);
@@ -244,15 +256,16 @@ describe('submissions tRPC router', () => {
 
     it('getById allows EDITOR to view others submissions', async () => {
       const sub = makeDraftSubmission('other-user');
-      mockService.getById.mockResolvedValueOnce(sub as never);
+      mockService.getByIdWithAccess.mockResolvedValueOnce(sub as never);
       const caller = createCaller(editorContext());
       const result = await caller.submissions.getById({ id: SUBMISSION_ID });
       expect(result.id).toBe(SUBMISSION_ID);
     });
 
-    it('getById denies READER from viewing others submissions', async () => {
-      const sub = makeDraftSubmission('other-user');
-      mockService.getById.mockResolvedValueOnce(sub as never);
+    it('getById maps ForbiddenError when READER views others', async () => {
+      mockService.getByIdWithAccess.mockRejectedValueOnce(
+        new ForbiddenError('You do not have access to this submission'),
+      );
       const caller = createCaller(orgContext('READER'));
       await expect(
         caller.submissions.getById({ id: SUBMISSION_ID }),
@@ -309,15 +322,19 @@ describe('submissions tRPC router', () => {
   describe('getById', () => {
     it('returns submission when found', async () => {
       const sub = makeDraftSubmission();
-      mockService.getById.mockResolvedValueOnce(sub as never);
+      mockService.getByIdWithAccess.mockResolvedValueOnce(sub as never);
 
       const caller = createCaller(orgContext());
       const result = await caller.submissions.getById({ id: SUBMISSION_ID });
       expect(result).toEqual(sub);
     });
 
-    it('throws NOT_FOUND when missing', async () => {
-      mockService.getById.mockResolvedValueOnce(null as never);
+    it('maps SubmissionNotFoundError to NOT_FOUND', async () => {
+      const { SubmissionNotFoundError } =
+        await import('../../services/submission.service.js');
+      mockService.getByIdWithAccess.mockRejectedValueOnce(
+        new SubmissionNotFoundError(SUBMISSION_ID),
+      );
 
       const caller = createCaller(orgContext());
       await expect(
@@ -328,7 +345,6 @@ describe('submissions tRPC router', () => {
 
   describe('getHistory', () => {
     it('returns history array for owner', async () => {
-      const sub = makeDraftSubmission('user-1');
       const history = [
         {
           id: 'h-1',
@@ -340,8 +356,7 @@ describe('submissions tRPC router', () => {
           changedAt: new Date(),
         },
       ];
-      mockService.getById.mockResolvedValueOnce(sub as never);
-      mockService.getHistory.mockResolvedValueOnce(history as never);
+      mockService.getHistoryWithAccess.mockResolvedValueOnce(history as never);
 
       const caller = createCaller(orgContext());
       const result = await caller.submissions.getHistory({
@@ -351,21 +366,10 @@ describe('submissions tRPC router', () => {
       expect(result[0].toStatus).toBe('DRAFT');
     });
 
-    it('allows EDITOR to view history of others submissions', async () => {
-      const sub = makeDraftSubmission('other-user');
-      mockService.getById.mockResolvedValueOnce(sub as never);
-      mockService.getHistory.mockResolvedValueOnce([] as never);
-
-      const caller = createCaller(editorContext());
-      const result = await caller.submissions.getHistory({
-        submissionId: SUBMISSION_ID,
-      });
-      expect(result).toEqual([]);
-    });
-
-    it('denies READER from viewing others submission history', async () => {
-      const sub = makeDraftSubmission('other-user');
-      mockService.getById.mockResolvedValueOnce(sub as never);
+    it('maps ForbiddenError when READER views others history', async () => {
+      mockService.getHistoryWithAccess.mockRejectedValueOnce(
+        new ForbiddenError('You do not have access to this submission'),
+      );
 
       const caller = createCaller(orgContext('READER'));
       await expect(
@@ -373,8 +377,12 @@ describe('submissions tRPC router', () => {
       ).rejects.toThrow('do not have access');
     });
 
-    it('throws NOT_FOUND when submission missing', async () => {
-      mockService.getById.mockResolvedValueOnce(null as never);
+    it('maps SubmissionNotFoundError to NOT_FOUND', async () => {
+      const { SubmissionNotFoundError } =
+        await import('../../services/submission.service.js');
+      mockService.getHistoryWithAccess.mockRejectedValueOnce(
+        new SubmissionNotFoundError(SUBMISSION_ID),
+      );
 
       const caller = createCaller(orgContext());
       await expect(
@@ -388,58 +396,56 @@ describe('submissions tRPC router', () => {
   // -------------------------------------------------------------------------
 
   describe('create', () => {
-    it('returns submission and calls audit', async () => {
+    it('returns submission from createWithAudit', async () => {
       const sub = {
         id: SUBMISSION_ID,
         title: 'My Poem',
         status: 'DRAFT',
       };
-      mockService.create.mockResolvedValueOnce(sub as never);
+      mockService.createWithAudit.mockResolvedValueOnce(sub as never);
 
-      const ctx = orgContext();
-      const caller = createCaller(ctx);
+      const caller = createCaller(orgContext());
       const result = await caller.submissions.create({ title: 'My Poem' });
 
       expect(result.id).toBe(SUBMISSION_ID);
       // eslint-disable-next-line @typescript-eslint/unbound-method
-      expect(mockService.create).toHaveBeenCalledWith(
-        expect.anything(),
+      expect(mockService.createWithAudit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          tx: expect.anything(),
+          actor: expect.objectContaining({ userId: 'user-1', orgId: 'org-1' }),
+          audit: expect.any(Function),
+        }),
         { title: 'My Poem' },
-        'org-1',
-        'user-1',
-      );
-      expect(ctx.audit).toHaveBeenCalledWith(
-        expect.objectContaining({ action: 'SUBMISSION_CREATED' }),
       );
     });
   });
 
   describe('update', () => {
-    it('succeeds on DRAFT and calls audit', async () => {
-      const sub = makeDraftSubmission();
-      const updated = { ...sub, title: 'Updated Title' };
-      mockService.getById.mockResolvedValueOnce(sub as never);
-      mockService.update.mockResolvedValueOnce(updated as never);
+    it('calls updateAsOwner with correct args', async () => {
+      const updated = { ...makeDraftSubmission(), title: 'Updated Title' };
+      mockService.updateAsOwner.mockResolvedValueOnce(updated as never);
 
-      const ctx = orgContext();
-      const caller = createCaller(ctx);
+      const caller = createCaller(orgContext());
       const result = await caller.submissions.update({
         id: SUBMISSION_ID,
         title: 'Updated Title',
       });
 
       expect(result.title).toBe('Updated Title');
-      expect(ctx.audit).toHaveBeenCalledWith(
-        expect.objectContaining({ action: 'SUBMISSION_UPDATED' }),
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(mockService.updateAsOwner).toHaveBeenCalledWith(
+        expect.objectContaining({
+          actor: expect.objectContaining({ userId: 'user-1' }),
+        }),
+        SUBMISSION_ID,
+        { title: 'Updated Title' },
       );
     });
 
-    it('throws BAD_REQUEST on non-DRAFT', async () => {
-      const sub = makeDraftSubmission();
-      mockService.getById.mockResolvedValueOnce(sub as never);
+    it('maps NotDraftError to BAD_REQUEST', async () => {
       const { NotDraftError } =
         await import('../../services/submission.service.js');
-      mockService.update.mockRejectedValueOnce(new NotDraftError());
+      mockService.updateAsOwner.mockRejectedValueOnce(new NotDraftError());
 
       const caller = createCaller(orgContext());
       await expect(
@@ -452,30 +458,25 @@ describe('submissions tRPC router', () => {
   });
 
   describe('submit', () => {
-    it('DRAFT→SUBMITTED succeeds and calls audit', async () => {
+    it('DRAFT→SUBMITTED succeeds', async () => {
       const sub = makeDraftSubmission();
-      mockService.getById.mockResolvedValueOnce(sub as never);
-      mockService.updateStatus.mockResolvedValueOnce({
+      mockService.submitAsOwner.mockResolvedValueOnce({
         submission: { ...sub, status: 'SUBMITTED' },
         historyEntry: { id: 'h-1' },
       } as never);
 
-      const ctx = orgContext();
-      const caller = createCaller(ctx);
+      const caller = createCaller(orgContext());
       const result = await caller.submissions.submit({ id: SUBMISSION_ID });
 
       expect(result.submission.status).toBe('SUBMITTED');
-      expect(ctx.audit).toHaveBeenCalledWith(
-        expect.objectContaining({ action: 'SUBMISSION_SUBMITTED' }),
-      );
     });
 
-    it('throws BAD_REQUEST with unscanned files', async () => {
-      const sub = makeDraftSubmission();
-      mockService.getById.mockResolvedValueOnce(sub as never);
+    it('maps UnscannedFilesError to BAD_REQUEST', async () => {
       const { UnscannedFilesError } =
         await import('../../services/submission.service.js');
-      mockService.updateStatus.mockRejectedValueOnce(new UnscannedFilesError());
+      mockService.submitAsOwner.mockRejectedValueOnce(
+        new UnscannedFilesError(),
+      );
 
       const caller = createCaller(orgContext());
       await expect(
@@ -483,12 +484,10 @@ describe('submissions tRPC router', () => {
       ).rejects.toThrow('pending or being scanned');
     });
 
-    it('throws BAD_REQUEST with infected files', async () => {
-      const sub = makeDraftSubmission();
-      mockService.getById.mockResolvedValueOnce(sub as never);
+    it('maps InfectedFilesError to BAD_REQUEST', async () => {
       const { InfectedFilesError } =
         await import('../../services/submission.service.js');
-      mockService.updateStatus.mockRejectedValueOnce(new InfectedFilesError());
+      mockService.submitAsOwner.mockRejectedValueOnce(new InfectedFilesError());
 
       const caller = createCaller(orgContext());
       await expect(
@@ -497,11 +496,9 @@ describe('submissions tRPC router', () => {
     });
 
     it('maps SubmissionNotFoundError to NOT_FOUND on concurrent deletion', async () => {
-      const sub = makeDraftSubmission();
-      mockService.getById.mockResolvedValueOnce(sub as never);
       const { SubmissionNotFoundError } =
         await import('../../services/submission.service.js');
-      mockService.updateStatus.mockRejectedValueOnce(
+      mockService.submitAsOwner.mockRejectedValueOnce(
         new SubmissionNotFoundError(SUBMISSION_ID),
       );
 
@@ -513,27 +510,21 @@ describe('submissions tRPC router', () => {
   });
 
   describe('delete', () => {
-    it('succeeds on DRAFT and calls audit', async () => {
-      const sub = makeDraftSubmission();
-      mockService.getById.mockResolvedValueOnce(sub as never);
-      mockService.delete.mockResolvedValueOnce(sub as never);
+    it('succeeds and returns success', async () => {
+      mockService.deleteAsOwner.mockResolvedValueOnce({
+        success: true,
+      } as never);
 
-      const ctx = orgContext();
-      const caller = createCaller(ctx);
+      const caller = createCaller(orgContext());
       const result = await caller.submissions.delete({ id: SUBMISSION_ID });
 
       expect(result).toEqual({ success: true });
-      expect(ctx.audit).toHaveBeenCalledWith(
-        expect.objectContaining({ action: 'SUBMISSION_DELETED' }),
-      );
     });
 
-    it('throws BAD_REQUEST on non-DRAFT', async () => {
-      const sub = makeDraftSubmission();
-      mockService.getById.mockResolvedValueOnce(sub as never);
+    it('maps NotDraftError to BAD_REQUEST', async () => {
       const { NotDraftError } =
         await import('../../services/submission.service.js');
-      mockService.delete.mockRejectedValueOnce(new NotDraftError());
+      mockService.deleteAsOwner.mockRejectedValueOnce(new NotDraftError());
 
       const caller = createCaller(orgContext());
       await expect(
@@ -543,30 +534,23 @@ describe('submissions tRPC router', () => {
   });
 
   describe('withdraw', () => {
-    it('succeeds from valid state and calls audit', async () => {
+    it('succeeds from valid state', async () => {
       const sub = { ...makeDraftSubmission(), status: 'SUBMITTED' as const };
-      mockService.getById.mockResolvedValueOnce(sub as never);
-      mockService.updateStatus.mockResolvedValueOnce({
+      mockService.withdrawAsOwner.mockResolvedValueOnce({
         submission: { ...sub, status: 'WITHDRAWN' },
         historyEntry: { id: 'h-2' },
       } as never);
 
-      const ctx = orgContext();
-      const caller = createCaller(ctx);
+      const caller = createCaller(orgContext());
       const result = await caller.submissions.withdraw({ id: SUBMISSION_ID });
 
       expect(result.submission.status).toBe('WITHDRAWN');
-      expect(ctx.audit).toHaveBeenCalledWith(
-        expect.objectContaining({ action: 'SUBMISSION_WITHDRAWN' }),
-      );
     });
 
-    it('throws BAD_REQUEST from terminal state', async () => {
-      const sub = { ...makeDraftSubmission(), status: 'ACCEPTED' as const };
-      mockService.getById.mockResolvedValueOnce(sub as never);
+    it('maps InvalidStatusTransitionError to BAD_REQUEST', async () => {
       const { InvalidStatusTransitionError } =
         await import('../../services/submission.service.js');
-      mockService.updateStatus.mockRejectedValueOnce(
+      mockService.withdrawAsOwner.mockRejectedValueOnce(
         new InvalidStatusTransitionError('ACCEPTED', 'WITHDRAWN'),
       );
 
@@ -577,11 +561,9 @@ describe('submissions tRPC router', () => {
     });
 
     it('maps SubmissionNotFoundError to NOT_FOUND on concurrent deletion', async () => {
-      const sub = { ...makeDraftSubmission(), status: 'SUBMITTED' as const };
-      mockService.getById.mockResolvedValueOnce(sub as never);
       const { SubmissionNotFoundError } =
         await import('../../services/submission.service.js');
-      mockService.updateStatus.mockRejectedValueOnce(
+      mockService.withdrawAsOwner.mockRejectedValueOnce(
         new SubmissionNotFoundError(SUBMISSION_ID),
       );
 
@@ -593,14 +575,13 @@ describe('submissions tRPC router', () => {
   });
 
   describe('updateStatus', () => {
-    it('editor transition succeeds and calls audit', async () => {
-      mockService.updateStatus.mockResolvedValueOnce({
+    it('editor transition succeeds', async () => {
+      mockService.updateStatusAsEditor.mockResolvedValueOnce({
         submission: { id: SUBMISSION_ID, status: 'UNDER_REVIEW' },
         historyEntry: { id: 'h-3' },
       } as never);
 
-      const ctx = editorContext();
-      const caller = createCaller(ctx);
+      const caller = createCaller(editorContext());
       const result = await caller.submissions.updateStatus({
         id: SUBMISSION_ID,
         status: 'UNDER_REVIEW',
@@ -608,23 +589,20 @@ describe('submissions tRPC router', () => {
 
       expect(result.submission.status).toBe('UNDER_REVIEW');
       // eslint-disable-next-line @typescript-eslint/unbound-method
-      expect(mockService.updateStatus).toHaveBeenCalledWith(
-        expect.anything(),
+      expect(mockService.updateStatusAsEditor).toHaveBeenCalledWith(
+        expect.objectContaining({
+          actor: expect.objectContaining({ userId: 'user-1' }),
+        }),
         SUBMISSION_ID,
         'UNDER_REVIEW',
-        'user-1',
         undefined,
-        'editor',
-      );
-      expect(ctx.audit).toHaveBeenCalledWith(
-        expect.objectContaining({ action: 'SUBMISSION_STATUS_CHANGED' }),
       );
     });
 
-    it('throws NOT_FOUND when submission missing', async () => {
+    it('maps SubmissionNotFoundError to NOT_FOUND', async () => {
       const { SubmissionNotFoundError } =
         await import('../../services/submission.service.js');
-      mockService.updateStatus.mockRejectedValueOnce(
+      mockService.updateStatusAsEditor.mockRejectedValueOnce(
         new SubmissionNotFoundError(SUBMISSION_ID),
       );
 
@@ -637,10 +615,10 @@ describe('submissions tRPC router', () => {
       ).rejects.toThrow(TRPCError);
     });
 
-    it('throws BAD_REQUEST on invalid transition', async () => {
+    it('maps InvalidStatusTransitionError to BAD_REQUEST', async () => {
       const { InvalidStatusTransitionError } =
         await import('../../services/submission.service.js');
-      mockService.updateStatus.mockRejectedValueOnce(
+      mockService.updateStatusAsEditor.mockRejectedValueOnce(
         new InvalidStatusTransitionError('DRAFT', 'UNDER_REVIEW'),
       );
 
@@ -654,7 +632,7 @@ describe('submissions tRPC router', () => {
     });
 
     it('passes comment to service', async () => {
-      mockService.updateStatus.mockResolvedValueOnce({
+      mockService.updateStatusAsEditor.mockResolvedValueOnce({
         submission: { id: SUBMISSION_ID, status: 'REJECTED' },
         historyEntry: { id: 'h-4' },
       } as never);
@@ -667,13 +645,11 @@ describe('submissions tRPC router', () => {
       });
 
       // eslint-disable-next-line @typescript-eslint/unbound-method
-      expect(mockService.updateStatus).toHaveBeenCalledWith(
+      expect(mockService.updateStatusAsEditor).toHaveBeenCalledWith(
         expect.anything(),
         SUBMISSION_ID,
         'REJECTED',
-        'user-1',
         'Not a good fit',
-        'editor',
       );
     });
   });

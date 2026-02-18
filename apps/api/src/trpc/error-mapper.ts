@@ -2,7 +2,10 @@ import { TRPCError } from '@trpc/server';
 import { ForbiddenError, NotFoundError } from '../services/errors.js';
 import { SubmissionNotFoundError } from '../services/submission.service.js';
 import { UserNotFoundError } from '../services/organization.service.js';
-import { FileNotFoundError } from '../services/file.service.js';
+import {
+  FileNotFoundError,
+  FileNotCleanError,
+} from '../services/file.service.js';
 import {
   NotDraftError,
   InvalidStatusTransitionError,
@@ -28,6 +31,8 @@ const errorCodeMap: [new (...args: never[]) => Error, TRPCErrorCode][] = [
   [UnscannedFilesError, 'BAD_REQUEST'],
   [InfectedFilesError, 'BAD_REQUEST'],
   [LastAdminError, 'BAD_REQUEST'],
+  // Precondition
+  [FileNotCleanError, 'PRECONDITION_FAILED'],
 ];
 
 /**

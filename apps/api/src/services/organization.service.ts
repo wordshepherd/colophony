@@ -14,6 +14,9 @@ import type {
   PaginationInput,
   Role,
 } from '@colophony/types';
+import { AuditActions, AuditResources } from '@colophony/types';
+import type { ServiceContext, AuditFn } from './types.js';
+import { NotFoundError } from './errors.js';
 
 export class UserNotFoundError extends Error {
   constructor(email: string) {
@@ -269,5 +272,106 @@ export const organizationService = {
       .where(eq(organizationMembers.id, memberId))
       .returning();
     return updated ?? null;
+  },
+
+  // ---------------------------------------------------------------------------
+  // Access-aware methods (PR 2) — bundle access control + audit
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Add a member with audit logging. Admin role enforced by tRPC middleware.
+   */
+  async addMemberWithAudit(svc: ServiceContext, email: string, role: Role) {
+    const member = await organizationService.addMember(
+      svc.tx,
+      svc.actor.orgId,
+      email,
+      role,
+    );
+    await svc.audit({
+      action: AuditActions.ORG_MEMBER_ADDED,
+      resource: AuditResources.ORGANIZATION,
+      resourceId: member.id,
+      newValue: { email, role },
+    });
+    return member;
+  },
+
+  /**
+   * Remove a member with audit logging. Admin role enforced by tRPC middleware.
+   */
+  async removeMemberWithAudit(svc: ServiceContext, memberId: string) {
+    const deleted = await organizationService.removeMember(svc.tx, memberId);
+    if (!deleted) throw new NotFoundError('Member not found');
+    await svc.audit({
+      action: AuditActions.ORG_MEMBER_REMOVED,
+      resource: AuditResources.ORGANIZATION,
+      resourceId: deleted.id,
+      oldValue: { userId: deleted.userId, role: deleted.role },
+    });
+    return { success: true as const };
+  },
+
+  /**
+   * Update a member's role with audit logging. Admin role enforced by tRPC middleware.
+   */
+  async updateMemberRoleWithAudit(
+    svc: ServiceContext,
+    memberId: string,
+    role: Role,
+  ) {
+    const updated = await organizationService.updateMemberRole(
+      svc.tx,
+      memberId,
+      role,
+    );
+    if (!updated) throw new NotFoundError('Member not found');
+    await svc.audit({
+      action: AuditActions.ORG_MEMBER_ROLE_CHANGED,
+      resource: AuditResources.ORGANIZATION,
+      resourceId: updated.id,
+      newValue: { role },
+    });
+    return updated;
+  },
+
+  /**
+   * Update an organization with audit logging. Admin role enforced by tRPC middleware.
+   */
+  async updateWithAudit(svc: ServiceContext, input: UpdateOrganizationInput) {
+    const old = await organizationService.getById(svc.tx, svc.actor.orgId);
+    const updated = await organizationService.update(
+      svc.tx,
+      svc.actor.orgId,
+      input,
+    );
+    if (!updated) throw new NotFoundError('Organization not found');
+    await svc.audit({
+      action: AuditActions.ORG_UPDATED,
+      resource: AuditResources.ORGANIZATION,
+      resourceId: updated.id,
+      oldValue: old ? { name: old.name, settings: old.settings } : undefined,
+      newValue: input,
+    });
+    return updated;
+  },
+
+  /**
+   * Create an organization with audit logging.
+   * Special case: no org context exists yet, so takes AuditFn directly.
+   */
+  async createWithAudit(
+    audit: AuditFn,
+    input: CreateOrganizationInput,
+    userId: string,
+  ) {
+    const result = await organizationService.create(input, userId);
+    await audit({
+      action: AuditActions.ORG_CREATED,
+      resource: AuditResources.ORGANIZATION,
+      resourceId: result.organization.id,
+      newValue: { name: input.name, slug: input.slug },
+    });
+    return result;
   },
 };
