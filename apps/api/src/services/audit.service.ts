@@ -1,8 +1,19 @@
-import { db, sql, type DrizzleDb } from '@colophony/db';
+import {
+  db,
+  sql,
+  auditEvents,
+  eq,
+  and,
+  gte,
+  lte,
+  type DrizzleDb,
+} from '@colophony/db';
+import { desc, count } from 'drizzle-orm';
 import type {
   AuditLogParams,
   AuthAuditParams,
   ApiKeyAuditParams,
+  ListAuditEventsInput,
 } from '@colophony/types';
 
 const MAX_VALUE_LENGTH = 8192;
@@ -61,6 +72,55 @@ function insertAuditSql(params: AuditLogParams) {
 }
 
 /**
+ * Safely parse a JSON string back to an object.
+ * Returns the raw string on parse failure to handle malformed rows gracefully.
+ */
+function safeJsonParse(value: string | null): unknown {
+  if (value == null) return null;
+  try {
+    return JSON.parse(value);
+  } catch {
+    return value;
+  }
+}
+
+/**
+ * Parse an audit event row, deserializing oldValue/newValue from JSON strings.
+ */
+function parseAuditRow(row: {
+  id: string;
+  organizationId: string | null;
+  actorId: string | null;
+  action: string;
+  resource: string;
+  resourceId: string | null;
+  oldValue: string | null;
+  newValue: string | null;
+  ipAddress: string | null;
+  userAgent: string | null;
+  requestId: string | null;
+  method: string | null;
+  route: string | null;
+  createdAt: Date;
+}) {
+  return {
+    id: row.id,
+    action: row.action,
+    resource: row.resource,
+    resourceId: row.resourceId,
+    actorId: row.actorId,
+    oldValue: safeJsonParse(row.oldValue),
+    newValue: safeJsonParse(row.newValue),
+    ipAddress: row.ipAddress,
+    userAgent: row.userAgent,
+    requestId: row.requestId,
+    method: row.method,
+    route: row.route,
+    createdAt: row.createdAt,
+  };
+}
+
+/**
  * Core audit logging service.
  *
  * All writes use the `insert_audit_event()` SECURITY DEFINER function,
@@ -72,6 +132,59 @@ function insertAuditSql(params: AuditLogParams) {
 export const auditService = {
   async log(tx: DrizzleDb, params: AuditLogParams): Promise<void> {
     await tx.execute(insertAuditSql(params));
+  },
+
+  /**
+   * List audit events with optional filters and pagination.
+   * RLS handles org scoping automatically.
+   */
+  async list(tx: DrizzleDb, input: ListAuditEventsInput) {
+    const { page, limit, action, resource, actorId, resourceId, from, to } =
+      input;
+    const offset = (page - 1) * limit;
+
+    const conditions = [];
+    if (action) conditions.push(eq(auditEvents.action, action));
+    if (resource) conditions.push(eq(auditEvents.resource, resource));
+    if (actorId) conditions.push(eq(auditEvents.actorId, actorId));
+    if (resourceId) conditions.push(eq(auditEvents.resourceId, resourceId));
+    if (from) conditions.push(gte(auditEvents.createdAt, from));
+    if (to) conditions.push(lte(auditEvents.createdAt, to));
+
+    const where = conditions.length > 0 ? and(...conditions) : undefined;
+
+    const [items, countResult] = await Promise.all([
+      tx
+        .select()
+        .from(auditEvents)
+        .where(where)
+        .orderBy(desc(auditEvents.createdAt))
+        .limit(limit)
+        .offset(offset),
+      tx.select({ count: count() }).from(auditEvents).where(where),
+    ]);
+
+    const total = countResult[0]?.count ?? 0;
+
+    return {
+      items: items.map(parseAuditRow),
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    };
+  },
+
+  /**
+   * Get a single audit event by ID. RLS scoped.
+   */
+  async getById(tx: DrizzleDb, id: string) {
+    const [row] = await tx
+      .select()
+      .from(auditEvents)
+      .where(eq(auditEvents.id, id))
+      .limit(1);
+    return row ? parseAuditRow(row) : null;
   },
 
   /**

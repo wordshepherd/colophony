@@ -16,6 +16,7 @@ export const apiKeyScopeSchema = z.enum([
   "api-keys:manage",
   "payments:read",
   "webhooks:manage",
+  "audit:read",
 ]);
 
 export type ApiKeyScope = z.infer<typeof apiKeyScopeSchema>;

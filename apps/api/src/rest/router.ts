@@ -6,6 +6,7 @@ import { submissionsRouter } from './routers/submissions.js';
 import { filesRouter } from './routers/files.js';
 import { usersRouter } from './routers/users.js';
 import { apiKeysRouter } from './routers/api-keys.js';
+import { auditRouter } from './routers/audit.js';
 import type { RestContext } from './context.js';
 
 const restRouter = {
@@ -14,6 +15,7 @@ const restRouter = {
   files: filesRouter,
   users: usersRouter,
   apiKeys: apiKeysRouter,
+  audit: auditRouter,
 };
 
 const openApiHandler = new OpenAPIHandler<RestContext>(restRouter, {
