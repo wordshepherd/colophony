@@ -41,6 +41,11 @@ export const submissionIdParamSchema = z.object({
 });
 export type SubmissionIdParam = z.infer<typeof submissionIdParamSchema>;
 
+export const memberIdParamSchema = z.object({
+  memberId: z.string().uuid(),
+});
+export type MemberIdParam = z.infer<typeof memberIdParamSchema>;
+
 export const dateRangeSchema = z.object({
   from: z.date().optional(),
   to: z.date().optional(),

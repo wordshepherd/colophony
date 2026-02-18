@@ -21,15 +21,23 @@ export const checkSlugSchema = z.object({ slug: slugSchema });
 export type CheckSlugInput = z.infer<typeof checkSlugSchema>;
 
 export const createOrganizationSchema = z.object({
-  name: z.string().min(1).max(255),
+  name: z.string().trim().min(1).max(255),
   slug: slugSchema,
 });
 
 export type CreateOrganizationInput = z.infer<typeof createOrganizationSchema>;
 
 export const updateOrganizationSchema = z.object({
-  name: z.string().min(1).max(255).optional(),
-  settings: z.record(z.string(), z.unknown()).optional(),
+  name: z.string().trim().min(1).max(255).optional(),
+  settings: z
+    .record(
+      z.string().max(100),
+      z.union([z.string().max(10_000), z.number(), z.boolean(), z.null()]),
+    )
+    .refine((obj) => Object.keys(obj).length <= 50, {
+      message: "Settings limited to 50 keys",
+    })
+    .optional(),
 });
 
 export type UpdateOrganizationInput = z.infer<typeof updateOrganizationSchema>;

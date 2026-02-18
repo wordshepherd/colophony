@@ -1,15 +1,8 @@
 import { ORPCError } from '@orpc/server';
-import { z } from 'zod';
-import { AuditActions, AuditResources } from '@colophony/types';
+import { AuditActions, AuditResources, idParamSchema } from '@colophony/types';
 import { restListAuditEventsQuery } from '@colophony/api-contracts';
 import { auditService } from '../../services/audit.service.js';
 import { adminProcedure, requireScopes } from '../context.js';
-
-// ---------------------------------------------------------------------------
-// Path param schemas
-// ---------------------------------------------------------------------------
-
-const eventIdParam = z.object({ id: z.string().uuid() });
 
 // ---------------------------------------------------------------------------
 // Audit event routes
@@ -31,7 +24,7 @@ const list = adminProcedure
 const getById = adminProcedure
   .use(requireScopes('audit:read'))
   .route({ method: 'GET', path: '/audit-events/{id}' })
-  .input(eventIdParam)
+  .input(idParamSchema)
   .handler(async ({ input, context }) => {
     const event = await auditService.getById(context.dbTx, input.id);
     if (!event) {

@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { submissionIdParamSchema, fileIdParamSchema } from '@colophony/types';
 import { orgProcedure, createRouter, requireScopes } from '../init.js';
 import { fileService } from '../../services/file.service.js';
 import { createS3Client } from '../../services/s3.js';
@@ -25,7 +25,7 @@ export const filesRouter = createRouter({
   /** List files for a submission — owner or editor/admin. */
   listBySubmission: orgProcedure
     .use(requireScopes('files:read'))
-    .input(z.object({ submissionId: z.string().uuid() }))
+    .input(submissionIdParamSchema)
     .query(async ({ ctx, input }) => {
       try {
         return await fileService.listBySubmissionWithAccess(
@@ -40,7 +40,7 @@ export const filesRouter = createRouter({
   /** Get a presigned download URL for a file — owner or editor/admin, CLEAN only. */
   getDownloadUrl: orgProcedure
     .use(requireScopes('files:read'))
-    .input(z.object({ fileId: z.string().uuid() }))
+    .input(fileIdParamSchema)
     .query(async ({ ctx, input }) => {
       try {
         const env = getEnvConfig();
@@ -58,7 +58,7 @@ export const filesRouter = createRouter({
   /** Delete a file — submission owner only, DRAFT only. */
   delete: orgProcedure
     .use(requireScopes('files:write'))
-    .input(z.object({ fileId: z.string().uuid() }))
+    .input(fileIdParamSchema)
     .mutation(async ({ ctx, input }) => {
       try {
         const env = getEnvConfig();
