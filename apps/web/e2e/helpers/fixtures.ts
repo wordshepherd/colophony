@@ -6,7 +6,7 @@
  * cleaned up after the test.
  */
 
-import { test as base, expect } from "@playwright/test";
+import { test as base, expect, type Page } from "@playwright/test";
 import { injectAuth } from "./auth";
 import { getOrgBySlug, getUserByEmail, createApiKey, deleteApiKey } from "./db";
 
@@ -36,13 +36,6 @@ interface TestApiKey {
   plainKey: string;
 }
 
-type Fixtures = {
-  seedOrg: SeedOrg;
-  seedUser: SeedUser;
-  testApiKey: TestApiKey;
-  authedPage: ReturnType<typeof base.extend> extends infer T ? never : never;
-};
-
 /**
  * Extended Playwright test with auth fixtures.
  *
@@ -56,7 +49,7 @@ export const test = base.extend<{
   seedOrg: SeedOrg;
   seedUser: SeedUser;
   testApiKey: TestApiKey;
-  authedPage: ReturnType<(typeof base)["page"]> extends infer T ? T : never;
+  authedPage: Page;
 }>({
   seedOrg: async ({}, use) => {
     const org = await getOrgBySlug("quarterly-review");
