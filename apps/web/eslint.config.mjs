@@ -26,6 +26,14 @@ const eslintConfig = [
       "no-restricted-imports": "off",
     },
   },
+  {
+    files: ["e2e/**/*.ts"],
+    rules: {
+      // Playwright fixture `use()` callback triggers false positives
+      "react-hooks/rules-of-hooks": "off",
+      "no-restricted-imports": "off",
+    },
+  },
 ];
 
 export default eslintConfig;
