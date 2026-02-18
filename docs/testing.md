@@ -49,7 +49,7 @@ pnpm --filter @colophony/web test:e2e:ui
 | Web unit tests         | 117   | 13     | `apps/web/src/**/__tests__/`             |
 | RLS integration tests  | 70    | 6      | `apps/api/src/__tests__/rls/`            |
 | API E2E tests          | 65    | 5      | `apps/api/test/e2e/` + `app.e2e-spec.ts` |
-| Playwright browser E2E | 19    | 3      | `apps/web/e2e/`                          |
+| Playwright browser E2E | 20    | 3      | `apps/web/e2e/`                          |
 
 **Unit test breakdown (API):**
 
@@ -75,9 +75,9 @@ pnpm --filter @colophony/web test:e2e:ui
 
 **Playwright E2E test breakdown:**
 
-- `auth.spec.ts` — 7 tests (login, register, verify, protected routes, logout)
-- `submissions.spec.ts` — 7 tests (create, edit, list, filter, submit, non-draft alert)
-- `editor.spec.ts` — 5 tests (dashboard, filters, review, status change, pagination)
+- `submissions/submission-list.spec.ts` — 7 tests (heading, new button, status tabs, seed data, navigation, submitted filter, rejected empty state)
+- `submissions/submission-create.spec.ts` — 5 tests (form fields, validation, title-only draft, full draft, appears in list)
+- `submissions/submission-detail.spec.ts` — 8 tests (detail view, edit/delete buttons, pre-filled edit, save changes, submit flow, withdraw flow, delete confirmation)
 
 ---
 
@@ -154,21 +154,24 @@ E2E tests use the superuser (`test:test`) for the Prisma singleton because `crea
 
 **Architecture:**
 
-- Test data setup uses superuser `PrismaClient` (`e2e/helpers/db.ts`) for direct DB operations
-- User registration uses tRPC API calls (`e2e/helpers/api-client.ts`) to avoid password hashing in test code
-- `loginAsBrowser()` sets tokens directly in localStorage (fast) — only login form test uses `loginViaForm()`
-- API helper retries on 429 with backoff (reads `retryAfter` from response body)
-- Strict selectors: `getByRole('heading', ...)`, `{ exact: true }`, `main` scoping
+- **Auth strategy:** Fake OIDC user injected into `localStorage` via `addInitScript()` (satisfies `ProtectedRoute`/`useAuth` checks), then `page.route()` intercepts tRPC requests to swap the fake Bearer token for a real API key header (`X-Api-Key`). This exercises the real API key auth path — no Zitadel instance needed.
+- **Fixtures** (`e2e/helpers/fixtures.ts`): Custom Playwright `test` provides `seedOrg`, `seedUser`, `testApiKey` (created per test, cleaned up after), and `authedPage` (page with auth injected).
+- **DB helpers** (`e2e/helpers/db.ts`): Superuser Drizzle pool for direct DB operations — org/user lookups, API key/submission CRUD for test setup/teardown.
+- **Global setup** (`e2e/global-setup.ts`): Validates seed data exists before any tests run. Requires `pnpm db:seed`.
+- **Seed data:** Read-only tests use seed data directly; mutation tests create fresh data via DB helpers and clean up after.
+- Strict selectors: `getByRole('heading', ...)`, `getByLabel()`, `getByRole('button', ...)`, `getByRole('tab', ...)`
 
 **Running:**
 
 ```bash
 npx playwright install                    # First time (downloads Chromium)
-pnpm --filter @colophony/web test:e2e    # Requires docker-compose up + dev servers
+docker-compose up -d                      # PostgreSQL required
+pnpm db:seed                              # Seed data required
+pnpm --filter @colophony/web test:e2e    # Auto-starts API + Web dev servers
 pnpm --filter @colophony/web test:e2e:ui # Interactive UI mode
 ```
 
-The `playwright.config.ts` `webServer` config can auto-start API and Web dev servers, or reuse already-running ones (`reuseExistingServer: true` in dev).
+The `playwright.config.ts` `webServer` config auto-starts API (reuses existing) and Web (always fresh — test OIDC env vars must match `injectAuth` storage key) dev servers. No Zitadel, MinIO, or Redis required (`VIRUS_SCAN_ENABLED=false` in API webServer env).
 
 ### RLS Integration Tests
 

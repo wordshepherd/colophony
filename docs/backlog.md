@@ -37,7 +37,7 @@
 ### QA / Testing
 
 - [ ] Manual testing of 4 submission pages with dev server — (DEVLOG 2026-02-15)
-- [ ] E2E tests for submission flow — (DEVLOG 2026-02-15)
+- [x] E2E tests for submission flow — (DEVLOG 2026-02-15; done 2026-02-18 PR pending)
 - [ ] E2E tests for upload flow — needs tusd + MinIO in CI — (DEVLOG 2026-02-15)
 - [ ] E2E tests for OIDC flow — requires Zitadel instance — (DEVLOG 2026-02-13)
 - [ ] Manual QA of full org management flow with Zitadel + dev services running — (DEVLOG 2026-02-13)
@@ -47,6 +47,7 @@
 
 - [x] Clean up v1 components (`_v1/` directory) — (DEVLOG 2026-02-15; done 2026-02-17)
 - [ ] Consider Playwright tsconfig extending web for E2E type-checking — nice-to-have — (DEVLOG 2026-02-15)
+- [ ] Rewrite `docs/testing.md` for v2 — still references v1 patterns (Prisma, NestJS, old test counts/tiers); Playwright section updated but rest is stale — (DEVLOG 2026-02-18)
 - [x] Migrate `forwardRef` → ref-as-prop in 19 shadcn/ui components — React 19 deprecation — (DEVLOG 2026-02-16; done 2026-02-17)
 - [x] Migrate `Context.Provider` → `Context` — React 19 deprecation — (DEVLOG 2026-02-16; done 2026-02-17)
 - [x] Refactor OIDC guard `setState` in effects to satisfy `react-hooks/set-state-in-effect` — `callback/page.tsx` — (DEVLOG 2026-02-16; done 2026-02-17)

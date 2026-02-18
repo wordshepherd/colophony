@@ -4,10 +4,14 @@ import { defineConfig, devices } from "@playwright/test";
  * Playwright configuration for browser E2E tests.
  *
  * Prerequisites:
- * - docker-compose up (PostgreSQL, Redis)
- * - pnpm db:generate && pnpm db:push
+ * - docker-compose up (PostgreSQL)
+ * - pnpm db:migrate && pnpm db:seed
  *
  * The webServer config starts both the API and Web dev servers automatically.
+ *
+ * Auth strategy: Fake OIDC user injected into localStorage (satisfies frontend
+ * auth checks), tRPC requests intercepted to swap Bearer token for API key
+ * (satisfies API auth). No Zitadel instance required.
  */
 export default defineConfig({
   testDir: "./e2e",
@@ -17,6 +21,9 @@ export default defineConfig({
   workers: 1, // Single worker to avoid DB conflicts
   reporter: process.env.CI ? "github" : "html",
   timeout: 30_000,
+
+  globalSetup: "./e2e/global-setup.ts",
+  globalTeardown: "./e2e/global-teardown.ts",
 
   use: {
     baseURL: "http://localhost:3000",
@@ -35,17 +42,27 @@ export default defineConfig({
   webServer: [
     {
       command: "pnpm --filter @colophony/api dev",
-      url: "http://localhost:4000/trpc/auth.me",
+      url: "http://localhost:4000/health",
       reuseExistingServer: !process.env.CI,
       timeout: 60_000,
       cwd: "../..",
+      env: {
+        VIRUS_SCAN_ENABLED: "false",
+      },
     },
     {
       command: "pnpm --filter @colophony/web dev",
       url: "http://localhost:3000",
-      reuseExistingServer: !process.env.CI,
+      // Always start fresh — reusing a server started without the test OIDC
+      // env vars causes an auth storage key mismatch (injectAuth writes to a
+      // key derived from NEXT_PUBLIC_ZITADEL_AUTHORITY/CLIENT_ID).
+      reuseExistingServer: false,
       timeout: 60_000,
       cwd: "../..",
+      env: {
+        NEXT_PUBLIC_ZITADEL_AUTHORITY: "http://test-idp:8080",
+        NEXT_PUBLIC_ZITADEL_CLIENT_ID: "test-client",
+      },
     },
   ],
 });
