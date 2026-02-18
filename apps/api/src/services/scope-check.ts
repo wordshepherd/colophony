@@ -26,5 +26,5 @@ export function checkApiKeyScopes(
     return { allowed: true };
   }
 
-  return { allowed: false, missing: missing as ApiKeyScope[] };
+  return { allowed: false, missing };
 }
