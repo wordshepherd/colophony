@@ -1,13 +1,37 @@
 import type { FastifyInstance } from 'fastify';
 import { OpenAPIHandler } from '@orpc/openapi/fastify';
+import { OpenAPIReferencePlugin } from '@orpc/openapi/plugins';
 import { organizationsRouter } from './routers/organizations.js';
+import { submissionsRouter } from './routers/submissions.js';
+import { filesRouter } from './routers/files.js';
+import { usersRouter } from './routers/users.js';
+import { apiKeysRouter } from './routers/api-keys.js';
 import type { RestContext } from './context.js';
 
 const restRouter = {
   organizations: organizationsRouter,
+  submissions: submissionsRouter,
+  files: filesRouter,
+  users: usersRouter,
+  apiKeys: apiKeysRouter,
 };
 
-const openApiHandler = new OpenAPIHandler<RestContext>(restRouter);
+const openApiHandler = new OpenAPIHandler<RestContext>(restRouter, {
+  plugins: [
+    new OpenAPIReferencePlugin({
+      specPath: '/openapi.json',
+      docsPath: '/docs',
+      specGenerateOptions: {
+        info: {
+          title: 'Colophony API',
+          version: '2.0.0',
+          description: 'REST API for the Colophony literary magazine platform.',
+        },
+        servers: [{ url: '/v1' }],
+      },
+    }),
+  ],
+});
 
 /**
  * Fastify plugin that registers the oRPC REST API surface at `/v1/*`.
