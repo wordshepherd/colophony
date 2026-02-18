@@ -53,7 +53,10 @@ export default defineConfig({
     {
       command: "pnpm --filter @colophony/web dev",
       url: "http://localhost:3000",
-      reuseExistingServer: !process.env.CI,
+      // Always start fresh — reusing a server started without the test OIDC
+      // env vars causes an auth storage key mismatch (injectAuth writes to a
+      // key derived from NEXT_PUBLIC_ZITADEL_AUTHORITY/CLIENT_ID).
+      reuseExistingServer: false,
       timeout: 60_000,
       cwd: "../..",
       env: {
