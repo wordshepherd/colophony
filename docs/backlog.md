@@ -57,13 +57,7 @@
 
 ### Code
 
-- [ ] Service layer extraction from tRPC routers — PR 1 (foundation: types, errors, user service, error mapper) done 2026-02-17; PR 2 (router refactor) pending — (architecture doc Track 2)
-  - **PR 2 scope:** Move access control + audit logging from routers into service methods that accept `ServiceContext`. Routers become thin: input validation → service call (wrapped in `mapServiceError`) → response shaping.
-  - **Submissions router** (`src/trpc/routers/submissions.ts`): ownership checks (`submitterId !== userId`), `assertEditorOrAdmin` role guard, audit calls on create/update/submit/delete/withdraw/updateStatus, repetitive try/catch blocks for `NotDraftError`/`SubmissionNotFoundError`/`InvalidStatusTransitionError`/`UnscannedFilesError`/`InfectedFilesError` — all move to `submissionService` methods that take `ServiceContext`; try/catch replaced by `mapServiceError`.
-  - **Files router** (`src/trpc/routers/files.ts`): `assertOwnerOrEditor` guard (checks submission ownership), scan status check for downloads, audit on delete, lazy S3 client management (`getS3Client()`/`getEnvConfig()`) — move to `fileService` methods; S3 client init stays in router or moves to a shared factory.
-  - **Organizations router** (`src/trpc/routers/organizations.ts:47-61`): try/catch for `UserNotFoundError` + PG 23505 unique violation on member add — replace with `mapServiceError`. `LastAdminError` on member remove similarly.
-  - **Pattern:** Each router mutation becomes ~3 lines: `const result = await someService.method(toServiceContext(ctx), input);` → return result, wrapped in try/catch with `mapServiceError`. Queries similarly thin.
-  - **Not moved:** `adminProcedure` role enforcement stays in tRPC middleware (it's surface-specific). Pool-based methods (`organizationService.listUserOrganizations`, `.create`, `.isSlugAvailable`) keep current signatures. BullMQ workers unchanged (use `withRls` + `auditService.log` directly).
+- [x] Service layer extraction from tRPC routers — PR 1 (foundation) done 2026-02-17 #94; PR 2 (router refactor) done 2026-02-17 — (architecture doc Track 2)
 - [ ] ts-rest REST API surface with Fastify adapter — (architecture doc Track 2)
 - [ ] Pothos + GraphQL Yoga surface — decision point at Month 3: Pothos vs TypeGraphQL — (architecture doc Track 2, Section 6.6)
 - [ ] SDK generation (TypeScript, Python) — (architecture doc Track 2)
