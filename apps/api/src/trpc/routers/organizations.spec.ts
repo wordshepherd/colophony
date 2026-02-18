@@ -13,6 +13,12 @@ vi.mock('../../services/organization.service.js', () => ({
     addMember: vi.fn(),
     removeMember: vi.fn(),
     updateMemberRole: vi.fn(),
+    // Access-aware methods (PR 2)
+    addMemberWithAudit: vi.fn(),
+    removeMemberWithAudit: vi.fn(),
+    updateMemberRoleWithAudit: vi.fn(),
+    updateWithAudit: vi.fn(),
+    createWithAudit: vi.fn(),
   },
   UserNotFoundError: class UserNotFoundError extends Error {
     name = 'UserNotFoundError';
@@ -41,6 +47,7 @@ vi.mock('@colophony/db', () => ({
 }));
 
 import { organizationService } from '../../services/organization.service.js';
+import { NotFoundError } from '../../services/errors.js';
 import { appRouter } from '../router.js';
 import type { TRPCContext } from '../context.js';
 
@@ -91,7 +98,7 @@ function orgContext(
 
 // Create a caller factory for testing.
 // Cast to any for test caller access. Procedure shapes are tested at runtime.
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+
 const createCaller = (appRouter as any).createCaller as (
   ctx: TRPCContext,
 ) => any;
@@ -133,9 +140,9 @@ describe('organizations tRPC router', () => {
       ).rejects.toThrow(TRPCError);
     });
 
-    it('checks slug availability and creates org', async () => {
+    it('checks slug availability and creates org via createWithAudit', async () => {
       mockService.isSlugAvailable.mockResolvedValueOnce(true);
-      mockService.create.mockResolvedValueOnce({
+      mockService.createWithAudit.mockResolvedValueOnce({
         organization: { id: 'org-new', name: 'Test', slug: 'test' },
         membership: { id: 'mem-1', role: 'ADMIN' },
       } as never);
@@ -150,7 +157,8 @@ describe('organizations tRPC router', () => {
       expect(result.organization.id).toBe('org-new');
       expect(mockService.isSlugAvailable).toHaveBeenCalledWith('test'); // eslint-disable-line @typescript-eslint/unbound-method
       // eslint-disable-next-line @typescript-eslint/unbound-method
-      expect(mockService.create).toHaveBeenCalledWith(
+      expect(mockService.createWithAudit).toHaveBeenCalledWith(
+        expect.any(Function), // audit fn
         { name: 'Test', slug: 'test' },
         'user-1',
       );
@@ -165,18 +173,18 @@ describe('organizations tRPC router', () => {
       ).rejects.toThrow('already taken');
     });
 
-    it('throws CONFLICT on unique constraint race (23505)', async () => {
+    it('maps 23505 to CONFLICT on unique constraint race', async () => {
       mockService.isSlugAvailable.mockResolvedValueOnce(true);
       const pgError = new Error(
         'duplicate key value violates unique constraint',
       );
       (pgError as unknown as { code: string }).code = '23505';
-      mockService.create.mockRejectedValueOnce(pgError);
+      mockService.createWithAudit.mockRejectedValueOnce(pgError);
 
       const caller = createCaller(authedContext());
       await expect(
         caller.organizations.create({ name: 'Test', slug: 'race' }),
-      ).rejects.toThrow('already taken');
+      ).rejects.toThrow('already exists');
     });
   });
 
@@ -211,19 +219,25 @@ describe('organizations tRPC router', () => {
       ).rejects.toThrow('Admin role required');
     });
 
-    it('updates organization and audits', async () => {
-      const old = { id: 'org-1', name: 'Old', settings: {} };
+    it('updates organization via updateWithAudit', async () => {
       const updated = { id: 'org-1', name: 'New' };
-      mockService.getById.mockResolvedValueOnce(old as never);
-      mockService.update.mockResolvedValueOnce(updated as never);
+      mockService.updateWithAudit.mockResolvedValueOnce(updated as never);
 
       const ctx = orgContext('ADMIN');
       const caller = createCaller(ctx);
       const result = await caller.organizations.update({ name: 'New' });
       expect(result).toEqual(updated);
-      expect(ctx.audit).toHaveBeenCalledWith(
-        expect.objectContaining({ action: 'ORG_UPDATED' }),
+    });
+
+    it('maps NotFoundError to NOT_FOUND', async () => {
+      mockService.updateWithAudit.mockRejectedValueOnce(
+        new NotFoundError('Organization not found'),
       );
+
+      const caller = createCaller(orgContext('ADMIN'));
+      await expect(
+        caller.organizations.update({ name: 'New' }),
+      ).rejects.toThrow('not found');
     });
   });
 
@@ -284,9 +298,9 @@ describe('organizations tRPC router', () => {
       ).rejects.toThrow('Admin role required');
     });
 
-    it('adds member and audits', async () => {
+    it('adds member via addMemberWithAudit', async () => {
       const member = { id: 'mem-new', userId: 'u-2', role: 'READER' };
-      mockService.addMember.mockResolvedValueOnce(member as never);
+      mockService.addMemberWithAudit.mockResolvedValueOnce(member as never);
 
       const ctx = orgContext('ADMIN');
       const caller = createCaller(ctx);
@@ -295,18 +309,43 @@ describe('organizations tRPC router', () => {
         role: 'READER',
       });
       expect(result).toEqual(member);
-      expect(ctx.audit).toHaveBeenCalledWith(
-        expect.objectContaining({ action: 'ORG_MEMBER_ADDED' }),
+    });
+
+    it('maps UserNotFoundError to NOT_FOUND', async () => {
+      const { UserNotFoundError } =
+        await import('../../services/organization.service.js');
+      mockService.addMemberWithAudit.mockRejectedValueOnce(
+        new UserNotFoundError('nobody@example.com'),
       );
+
+      const caller = createCaller(orgContext('ADMIN'));
+      await expect(
+        caller.organizations.members.add({
+          email: 'nobody@example.com',
+          role: 'READER',
+        }),
+      ).rejects.toThrow(TRPCError);
+    });
+
+    it('maps 23505 to CONFLICT', async () => {
+      const pgError = new Error('duplicate key');
+      (pgError as unknown as { code: string }).code = '23505';
+      mockService.addMemberWithAudit.mockRejectedValueOnce(pgError);
+
+      const caller = createCaller(orgContext('ADMIN'));
+      await expect(
+        caller.organizations.members.add({
+          email: 'dup@example.com',
+          role: 'READER',
+        }),
+      ).rejects.toThrow('already exists');
     });
   });
 
   describe('organizations.members.remove', () => {
-    it('removes member and audits', async () => {
-      mockService.removeMember.mockResolvedValueOnce({
-        id: 'mem-1',
-        userId: 'u-1',
-        role: 'EDITOR',
+    it('removes member via removeMemberWithAudit', async () => {
+      mockService.removeMemberWithAudit.mockResolvedValueOnce({
+        success: true,
       } as never);
 
       const ctx = orgContext('ADMIN');
@@ -317,11 +356,25 @@ describe('organizations tRPC router', () => {
       expect(result).toEqual({ success: true });
     });
 
-    it('prevents removing last admin', async () => {
-      // Service now throws LastAdminError atomically (FOR UPDATE lock)
+    it('maps NotFoundError to NOT_FOUND', async () => {
+      mockService.removeMemberWithAudit.mockRejectedValueOnce(
+        new NotFoundError('Member not found'),
+      );
+
+      const caller = createCaller(orgContext('ADMIN'));
+      await expect(
+        caller.organizations.members.remove({
+          memberId: 'a1111111-1111-1111-a111-111111111111',
+        }),
+      ).rejects.toThrow('not found');
+    });
+
+    it('maps LastAdminError to BAD_REQUEST', async () => {
       const { LastAdminError } =
         await import('../../services/organization.service.js');
-      mockService.removeMember.mockRejectedValueOnce(new LastAdminError());
+      mockService.removeMemberWithAudit.mockRejectedValueOnce(
+        new LastAdminError(),
+      );
 
       const caller = createCaller(orgContext('ADMIN'));
       await expect(
@@ -333,8 +386,8 @@ describe('organizations tRPC router', () => {
   });
 
   describe('organizations.members.updateRole', () => {
-    it('updates role and audits', async () => {
-      mockService.updateMemberRole.mockResolvedValueOnce({
+    it('updates role via updateMemberRoleWithAudit', async () => {
+      mockService.updateMemberRoleWithAudit.mockResolvedValueOnce({
         id: 'mem-1',
         role: 'EDITOR',
       } as never);
@@ -346,9 +399,22 @@ describe('organizations tRPC router', () => {
         role: 'EDITOR',
       });
       expect(result.role).toBe('EDITOR');
-      expect(ctx.audit).toHaveBeenCalledWith(
-        expect.objectContaining({ action: 'ORG_MEMBER_ROLE_CHANGED' }),
+    });
+
+    it('maps LastAdminError to BAD_REQUEST', async () => {
+      const { LastAdminError } =
+        await import('../../services/organization.service.js');
+      mockService.updateMemberRoleWithAudit.mockRejectedValueOnce(
+        new LastAdminError(),
       );
+
+      const caller = createCaller(orgContext('ADMIN'));
+      await expect(
+        caller.organizations.members.updateRole({
+          memberId: 'a1111111-1111-1111-a111-111111111111',
+          role: 'READER',
+        }),
+      ).rejects.toThrow('last admin');
     });
   });
 });

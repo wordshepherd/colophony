@@ -16,6 +16,16 @@
 | Zitadel webhook   | `src/webhooks/zitadel.webhook.ts` |
 | Stripe webhook    | `src/webhooks/stripe.webhook.ts`  |
 
+### Service Method Naming
+
+| Suffix       | Meaning                                                  |
+| ------------ | -------------------------------------------------------- |
+| `WithAccess` | Checks owner-or-editor access via `ServiceContext.actor` |
+| `AsOwner`    | Checks ownership (submitterId === actor.userId) + audits |
+| `WithAudit`  | Wraps a mutation with audit logging                      |
+
+Pure data methods keep `(tx, ...)` signatures for worker/internal use. Access-aware methods accept `ServiceContext` and throw `ForbiddenError`/`NotFoundError` — callers use `mapServiceError()` to translate to surface-specific errors.
+
 ---
 
 ## Hook Registration Order (from `main.ts`)

@@ -14,11 +14,25 @@ vi.mock('../../services/file.service.js', () => ({
     validateMimeType: vi.fn(),
     validateFileSize: vi.fn(),
     validateLimits: vi.fn(),
+    getDownloadUrl: vi.fn(),
+    deleteWithS3: vi.fn(),
+    // Access-aware methods (PR 2)
+    listBySubmissionWithAccess: vi.fn(),
+    getDownloadUrlWithAccess: vi.fn(),
+    deleteAsOwner: vi.fn(),
   },
   FileNotFoundError: class FileNotFoundError extends Error {
     name = 'FileNotFoundError';
     constructor(id = 'unknown') {
       super(`File "${id}" not found`);
+    }
+  },
+  FileNotCleanError: class FileNotCleanError extends Error {
+    name = 'FileNotCleanError';
+    constructor(fileId = 'unknown', scanStatus = 'PENDING') {
+      super(
+        `File "${fileId}" has scan status "${scanStatus}" — download blocked`,
+      );
     }
   },
 }));
@@ -34,15 +48,29 @@ vi.mock('../../services/submission.service.js', () => ({
     updateStatus: vi.fn(),
     delete: vi.fn(),
     getHistory: vi.fn(),
+    getByIdWithAccess: vi.fn(),
+    createWithAudit: vi.fn(),
+    updateAsOwner: vi.fn(),
+    submitAsOwner: vi.fn(),
+    deleteAsOwner: vi.fn(),
+    withdrawAsOwner: vi.fn(),
+    updateStatusAsEditor: vi.fn(),
+    getHistoryWithAccess: vi.fn(),
   },
   SubmissionNotFoundError: class SubmissionNotFoundError extends Error {
     name = 'SubmissionNotFoundError';
+    constructor(id = 'unknown') {
+      super(`Submission "${id}" not found`);
+    }
   },
   InvalidStatusTransitionError: class extends Error {
     name = 'InvalidStatusTransitionError';
   },
   NotDraftError: class extends Error {
     name = 'NotDraftError';
+    constructor() {
+      super('Submission must be in DRAFT status for this operation');
+    }
   },
   UnscannedFilesError: class extends Error {
     name = 'UnscannedFilesError';
@@ -89,14 +117,11 @@ vi.mock('@colophony/db', () => ({
 }));
 
 import { fileService } from '../../services/file.service.js';
-import { submissionService } from '../../services/submission.service.js';
-import { deleteS3Object } from '../../services/s3.js';
+import { ForbiddenError } from '../../services/errors.js';
 import { appRouter } from '../router.js';
 import type { TRPCContext } from '../context.js';
 
 const mockFileService = vi.mocked(fileService);
-const mockSubmissionService = vi.mocked(submissionService);
-const mockDeleteS3 = vi.mocked(deleteS3Object);
 
 function makeContext(overrides: Partial<TRPCContext> = {}): TRPCContext {
   return {
@@ -128,46 +153,12 @@ function orgContext(
   });
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const createCaller = (appRouter as any).createCaller as (
   ctx: TRPCContext,
 ) => any;
 
 const SUBMISSION_ID = 'a1111111-1111-1111-a111-111111111111';
 const FILE_ID = 'f1111111-1111-1111-a111-111111111111';
-
-function makeDraftSubmission(submitterId = 'user-1') {
-  return {
-    id: SUBMISSION_ID,
-    organizationId: 'org-1',
-    submitterId,
-    submissionPeriodId: null,
-    title: 'Test Poem',
-    content: 'Roses are red...',
-    coverLetter: null,
-    status: 'DRAFT' as const,
-    submittedAt: null,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-    files: [],
-    submitterEmail: 'test@example.com',
-  };
-}
-
-function makeFile(overrides = {}) {
-  return {
-    id: FILE_ID,
-    submissionId: SUBMISSION_ID,
-    filename: 'poem.pdf',
-    mimeType: 'application/pdf',
-    size: 1024,
-    storageKey: 'quarantine/abc123',
-    scanStatus: 'CLEAN' as const,
-    scannedAt: new Date(),
-    uploadedAt: new Date(),
-    ...overrides,
-  };
-}
 
 describe('files tRPC router', () => {
   beforeEach(() => {
@@ -203,19 +194,20 @@ describe('files tRPC router', () => {
       ).rejects.toThrow(TRPCError);
     });
 
-    it('listBySubmission denies READER from viewing others files', async () => {
-      const sub = makeDraftSubmission('other-user');
-      mockSubmissionService.getById.mockResolvedValueOnce(sub as never);
+    it('listBySubmission maps ForbiddenError from service', async () => {
+      mockFileService.listBySubmissionWithAccess.mockRejectedValueOnce(
+        new ForbiddenError('You do not have access to this submission'),
+      );
       const caller = createCaller(orgContext('READER'));
       await expect(
         caller.files.listBySubmission({ submissionId: SUBMISSION_ID }),
       ).rejects.toThrow('do not have access');
     });
 
-    it('listBySubmission allows EDITOR to view others files', async () => {
-      const sub = makeDraftSubmission('other-user');
-      mockSubmissionService.getById.mockResolvedValueOnce(sub as never);
-      mockFileService.listBySubmission.mockResolvedValueOnce([] as never);
+    it('listBySubmission succeeds for EDITOR', async () => {
+      mockFileService.listBySubmissionWithAccess.mockResolvedValueOnce(
+        [] as never,
+      );
       const caller = createCaller(orgContext('EDITOR'));
       const result = await caller.files.listBySubmission({
         submissionId: SUBMISSION_ID,
@@ -223,11 +215,10 @@ describe('files tRPC router', () => {
       expect(result).toEqual([]);
     });
 
-    it('delete requires ownership', async () => {
-      const file = makeFile();
-      const sub = makeDraftSubmission('other-user');
-      mockFileService.getById.mockResolvedValueOnce(file as never);
-      mockSubmissionService.getById.mockResolvedValueOnce(sub as never);
+    it('delete maps ForbiddenError from service', async () => {
+      mockFileService.deleteAsOwner.mockRejectedValueOnce(
+        new ForbiddenError('Only the submitter can delete files'),
+      );
       const caller = createCaller(orgContext('READER'));
       await expect(caller.files.delete({ fileId: FILE_ID })).rejects.toThrow(
         'Only the submitter',
@@ -241,10 +232,22 @@ describe('files tRPC router', () => {
 
   describe('listBySubmission', () => {
     it('returns files for the submission', async () => {
-      const sub = makeDraftSubmission();
-      const files = [makeFile()];
-      mockSubmissionService.getById.mockResolvedValueOnce(sub as never);
-      mockFileService.listBySubmission.mockResolvedValueOnce(files as never);
+      const files = [
+        {
+          id: FILE_ID,
+          submissionId: SUBMISSION_ID,
+          filename: 'poem.pdf',
+          mimeType: 'application/pdf',
+          size: 1024,
+          storageKey: 'quarantine/abc123',
+          scanStatus: 'CLEAN',
+          scannedAt: new Date(),
+          uploadedAt: new Date(),
+        },
+      ];
+      mockFileService.listBySubmissionWithAccess.mockResolvedValueOnce(
+        files as never,
+      );
 
       const caller = createCaller(orgContext());
       const result = await caller.files.listBySubmission({
@@ -254,8 +257,12 @@ describe('files tRPC router', () => {
       expect(result[0].filename).toBe('poem.pdf');
     });
 
-    it('throws NOT_FOUND when submission missing', async () => {
-      mockSubmissionService.getById.mockResolvedValueOnce(null as never);
+    it('maps SubmissionNotFoundError to NOT_FOUND', async () => {
+      const { SubmissionNotFoundError } =
+        await import('../../services/submission.service.js');
+      mockFileService.listBySubmissionWithAccess.mockRejectedValueOnce(
+        new SubmissionNotFoundError(SUBMISSION_ID),
+      );
       const caller = createCaller(orgContext());
       await expect(
         caller.files.listBySubmission({ submissionId: SUBMISSION_ID }),
@@ -269,10 +276,11 @@ describe('files tRPC router', () => {
 
   describe('getDownloadUrl', () => {
     it('returns presigned URL for CLEAN file', async () => {
-      const file = makeFile();
-      const sub = makeDraftSubmission();
-      mockFileService.getById.mockResolvedValueOnce(file as never);
-      mockSubmissionService.getById.mockResolvedValueOnce(sub as never);
+      mockFileService.getDownloadUrlWithAccess.mockResolvedValueOnce({
+        url: 'https://s3.example.com/signed-url',
+        filename: 'poem.pdf',
+        mimeType: 'application/pdf',
+      } as never);
 
       const caller = createCaller(orgContext());
       const result = await caller.files.getDownloadUrl({ fileId: FILE_ID });
@@ -280,32 +288,25 @@ describe('files tRPC router', () => {
       expect(result.filename).toBe('poem.pdf');
     });
 
-    it('rejects file not yet scanned', async () => {
-      const file = makeFile({ scanStatus: 'PENDING' });
-      const sub = makeDraftSubmission();
-      mockFileService.getById.mockResolvedValueOnce(file as never);
-      mockSubmissionService.getById.mockResolvedValueOnce(sub as never);
+    it('maps FileNotCleanError to PRECONDITION_FAILED', async () => {
+      const { FileNotCleanError } =
+        await import('../../services/file.service.js');
+      mockFileService.getDownloadUrlWithAccess.mockRejectedValueOnce(
+        new FileNotCleanError(FILE_ID, 'PENDING'),
+      );
 
       const caller = createCaller(orgContext());
       await expect(
         caller.files.getDownloadUrl({ fileId: FILE_ID }),
-      ).rejects.toThrow('virus scan');
+      ).rejects.toThrow('download blocked');
     });
 
-    it('rejects infected file', async () => {
-      const file = makeFile({ scanStatus: 'INFECTED' });
-      const sub = makeDraftSubmission();
-      mockFileService.getById.mockResolvedValueOnce(file as never);
-      mockSubmissionService.getById.mockResolvedValueOnce(sub as never);
-
-      const caller = createCaller(orgContext());
-      await expect(
-        caller.files.getDownloadUrl({ fileId: FILE_ID }),
-      ).rejects.toThrow('virus scan');
-    });
-
-    it('throws NOT_FOUND for missing file', async () => {
-      mockFileService.getById.mockResolvedValueOnce(null as never);
+    it('maps FileNotFoundError to NOT_FOUND', async () => {
+      const { FileNotFoundError } =
+        await import('../../services/file.service.js');
+      mockFileService.getDownloadUrlWithAccess.mockRejectedValueOnce(
+        new FileNotFoundError(FILE_ID),
+      );
       const caller = createCaller(orgContext());
       await expect(
         caller.files.getDownloadUrl({ fileId: FILE_ID }),
@@ -318,28 +319,22 @@ describe('files tRPC router', () => {
   // -------------------------------------------------------------------------
 
   describe('delete', () => {
-    it('succeeds on DRAFT and calls audit', async () => {
-      const file = makeFile();
-      const sub = makeDraftSubmission();
-      mockFileService.getById.mockResolvedValueOnce(file as never);
-      mockSubmissionService.getById.mockResolvedValueOnce(sub as never);
-      mockFileService.delete.mockResolvedValueOnce(file as never);
+    it('succeeds and returns success', async () => {
+      mockFileService.deleteAsOwner.mockResolvedValueOnce({
+        success: true,
+      } as never);
 
       const ctx = orgContext();
       const caller = createCaller(ctx);
       const result = await caller.files.delete({ fileId: FILE_ID });
 
       expect(result).toEqual({ success: true });
-      expect(ctx.audit).toHaveBeenCalledWith(
-        expect.objectContaining({ action: 'FILE_DELETED' }),
-      );
     });
 
-    it('rejects deletion from non-DRAFT submission', async () => {
-      const file = makeFile();
-      const sub = { ...makeDraftSubmission(), status: 'SUBMITTED' as const };
-      mockFileService.getById.mockResolvedValueOnce(file as never);
-      mockSubmissionService.getById.mockResolvedValueOnce(sub as never);
+    it('maps NotDraftError to BAD_REQUEST', async () => {
+      const { NotDraftError } =
+        await import('../../services/submission.service.js');
+      mockFileService.deleteAsOwner.mockRejectedValueOnce(new NotDraftError());
 
       const caller = createCaller(orgContext());
       await expect(caller.files.delete({ fileId: FILE_ID })).rejects.toThrow(
@@ -347,26 +342,12 @@ describe('files tRPC router', () => {
       );
     });
 
-    it('attempts S3 deletion after DB delete', async () => {
-      const file = makeFile();
-      const sub = makeDraftSubmission();
-      mockFileService.getById.mockResolvedValueOnce(file as never);
-      mockSubmissionService.getById.mockResolvedValueOnce(sub as never);
-      mockFileService.delete.mockResolvedValueOnce(file as never);
-
-      const caller = createCaller(orgContext());
-      await caller.files.delete({ fileId: FILE_ID });
-
-      // eslint-disable-next-line @typescript-eslint/unbound-method
-      expect(mockDeleteS3).toHaveBeenCalledWith(
-        expect.anything(),
-        'submissions', // CLEAN files live in submissions bucket after scan
-        file.storageKey,
+    it('maps FileNotFoundError to NOT_FOUND', async () => {
+      const { FileNotFoundError } =
+        await import('../../services/file.service.js');
+      mockFileService.deleteAsOwner.mockRejectedValueOnce(
+        new FileNotFoundError(FILE_ID),
       );
-    });
-
-    it('throws NOT_FOUND for missing file', async () => {
-      mockFileService.getById.mockResolvedValueOnce(null as never);
       const caller = createCaller(orgContext());
       await expect(caller.files.delete({ fileId: FILE_ID })).rejects.toThrow(
         'not found',

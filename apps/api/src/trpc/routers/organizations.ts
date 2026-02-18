@@ -7,8 +7,6 @@ import {
   updateMemberRoleSchema,
   paginationSchema,
   checkSlugSchema,
-  AuditActions,
-  AuditResources,
 } from '@colophony/types';
 import {
   authedProcedure,
@@ -16,11 +14,9 @@ import {
   adminProcedure,
   createRouter,
 } from '../init.js';
-import {
-  organizationService,
-  UserNotFoundError,
-  LastAdminError,
-} from '../../services/organization.service.js';
+import { organizationService } from '../../services/organization.service.js';
+import { toServiceContext } from '../../services/context.js';
+import { mapServiceError } from '../error-mapper.js';
 
 const membersRouter = createRouter({
   list: orgProcedure.input(paginationSchema).query(async ({ ctx, input }) => {
@@ -31,33 +27,13 @@ const membersRouter = createRouter({
     .input(inviteMemberSchema)
     .mutation(async ({ ctx, input }) => {
       try {
-        const member = await organizationService.addMember(
-          ctx.dbTx,
-          ctx.authContext.orgId,
+        return await organizationService.addMemberWithAudit(
+          toServiceContext(ctx),
           input.email,
           input.role,
         );
-        await ctx.audit({
-          action: AuditActions.ORG_MEMBER_ADDED,
-          resource: AuditResources.ORGANIZATION,
-          resourceId: member.id,
-          newValue: { email: input.email, role: input.role },
-        });
-        return member;
       } catch (e) {
-        if (e instanceof UserNotFoundError) {
-          throw new TRPCError({
-            code: 'NOT_FOUND',
-            message: e.message,
-          });
-        }
-        if ((e as { code?: string }).code === '23505') {
-          throw new TRPCError({
-            code: 'CONFLICT',
-            message: 'User is already a member of this organization',
-          });
-        }
-        throw e;
+        mapServiceError(e);
       }
     }),
 
@@ -65,31 +41,12 @@ const membersRouter = createRouter({
     .input(z.object({ memberId: z.string().uuid() }))
     .mutation(async ({ ctx, input }) => {
       try {
-        const deleted = await organizationService.removeMember(
-          ctx.dbTx,
+        return await organizationService.removeMemberWithAudit(
+          toServiceContext(ctx),
           input.memberId,
         );
-        if (!deleted) {
-          throw new TRPCError({
-            code: 'NOT_FOUND',
-            message: 'Member not found',
-          });
-        }
-        await ctx.audit({
-          action: AuditActions.ORG_MEMBER_REMOVED,
-          resource: AuditResources.ORGANIZATION,
-          resourceId: deleted.id,
-          oldValue: { userId: deleted.userId, role: deleted.role },
-        });
-        return { success: true };
       } catch (e) {
-        if (e instanceof LastAdminError) {
-          throw new TRPCError({
-            code: 'BAD_REQUEST',
-            message: e.message,
-          });
-        }
-        throw e;
+        mapServiceError(e);
       }
     }),
 
@@ -97,32 +54,13 @@ const membersRouter = createRouter({
     .input(updateMemberRoleSchema)
     .mutation(async ({ ctx, input }) => {
       try {
-        const updated = await organizationService.updateMemberRole(
-          ctx.dbTx,
+        return await organizationService.updateMemberRoleWithAudit(
+          toServiceContext(ctx),
           input.memberId,
           input.role,
         );
-        if (!updated) {
-          throw new TRPCError({
-            code: 'NOT_FOUND',
-            message: 'Member not found',
-          });
-        }
-        await ctx.audit({
-          action: AuditActions.ORG_MEMBER_ROLE_CHANGED,
-          resource: AuditResources.ORGANIZATION,
-          resourceId: updated.id,
-          newValue: { role: input.role },
-        });
-        return updated;
       } catch (e) {
-        if (e instanceof LastAdminError) {
-          throw new TRPCError({
-            code: 'BAD_REQUEST',
-            message: e.message,
-          });
-        }
-        throw e;
+        mapServiceError(e);
       }
     }),
 });
@@ -144,40 +82,15 @@ export const organizationsRouter = createRouter({
         });
       }
 
-      let result;
       try {
-        result = await organizationService.create(
+        return await organizationService.createWithAudit(
+          ctx.audit,
           input,
           ctx.authContext.userId,
         );
       } catch (e) {
-        // Catch unique constraint violation on slug (race between pre-check and insert)
-        if (
-          e instanceof Error &&
-          'code' in e &&
-          (e as { code: string }).code === '23505'
-        ) {
-          throw new TRPCError({
-            code: 'CONFLICT',
-            message: `Slug "${input.slug}" is already taken`,
-          });
-        }
-        throw e;
+        mapServiceError(e);
       }
-
-      // Atomicity note: create() commits org+membership in its own transaction
-      // (necessary because no org context exists yet for RLS). Audit runs in the
-      // request's separate transaction. If audit fails, org is committed but the
-      // request errors. This is acceptable: audit failure on CREATE is extremely
-      // unlikely, and the failure mode is recoverable (org exists, audit can be
-      // replayed). This is the same class of issue as Stripe charge-then-record.
-      await ctx.audit({
-        action: AuditActions.ORG_CREATED,
-        resource: AuditResources.ORGANIZATION,
-        resourceId: result.organization.id,
-        newValue: { name: input.name, slug: input.slug },
-      });
-      return result;
     }),
 
   get: orgProcedure.query(async ({ ctx }) => {
@@ -197,29 +110,14 @@ export const organizationsRouter = createRouter({
   update: adminProcedure
     .input(updateOrganizationSchema)
     .mutation(async ({ ctx, input }) => {
-      const old = await organizationService.getById(
-        ctx.dbTx,
-        ctx.authContext.orgId,
-      );
-      const updated = await organizationService.update(
-        ctx.dbTx,
-        ctx.authContext.orgId,
-        input,
-      );
-      if (!updated) {
-        throw new TRPCError({
-          code: 'NOT_FOUND',
-          message: 'Organization not found',
-        });
+      try {
+        return await organizationService.updateWithAudit(
+          toServiceContext(ctx),
+          input,
+        );
+      } catch (e) {
+        mapServiceError(e);
       }
-      await ctx.audit({
-        action: AuditActions.ORG_UPDATED,
-        resource: AuditResources.ORGANIZATION,
-        resourceId: updated.id,
-        oldValue: old ? { name: old.name, settings: old.settings } : undefined,
-        newValue: input,
-      });
-      return updated;
     }),
 
   checkSlug: authedProcedure.input(checkSlugSchema).query(async ({ input }) => {

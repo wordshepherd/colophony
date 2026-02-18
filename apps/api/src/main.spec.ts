@@ -119,7 +119,7 @@ describe('Fastify app', () => {
 
   it('GET /ready returns 503 when DB is unreachable', async () => {
     const dbModule = await import('@colophony/db');
-    // eslint-disable-next-line @typescript-eslint/unbound-method
+
     (dbModule.pool.query as ReturnType<typeof vi.fn>).mockRejectedValueOnce(
       new Error('connection refused'),
     );
