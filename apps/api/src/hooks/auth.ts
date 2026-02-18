@@ -28,10 +28,17 @@ declare module 'fastify' {
  * 3. Document in apps/api/CLAUDE.md
  */
 const PUBLIC_PREFIXES = ['/health', '/ready', '/webhooks/', '/.well-known/'];
-const PUBLIC_EXACT = ['/', '/health', '/ready', '/trpc/health'];
+const PUBLIC_EXACT = [
+  '/',
+  '/health',
+  '/ready',
+  '/trpc/health',
+  '/v1/openapi.json',
+  '/v1/docs',
+];
 
 function isPublicRoute(url: string): boolean {
-  const path = url.split('?')[0];
+  const path = url.split('?')[0].replace(/\/+$/, '') || '/';
   if (PUBLIC_EXACT.includes(path)) return true;
   return PUBLIC_PREFIXES.some((prefix) => path.startsWith(prefix));
 }
