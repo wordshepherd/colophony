@@ -1,3 +1,5 @@
+import { readFileSync } from "fs";
+import { resolve } from "path";
 import { defineConfig, devices } from "@playwright/test";
 
 /**
@@ -13,6 +15,40 @@ import { defineConfig, devices } from "@playwright/test";
  * auth checks), tRPC requests intercepted to swap Bearer token for API key
  * (satisfies API auth). No Zitadel instance required.
  */
+
+/**
+ * Load a .env file into a key-value record.
+ * Minimal parser — handles KEY=VALUE lines, skips comments and blanks.
+ */
+function loadEnvFile(path: string): Record<string, string> {
+  try {
+    const content = readFileSync(path, "utf-8");
+    const env: Record<string, string> = {};
+    for (const line of content.split("\n")) {
+      const trimmed = line.trim();
+      if (!trimmed || trimmed.startsWith("#")) continue;
+      const eqIdx = trimmed.indexOf("=");
+      if (eqIdx === -1) continue;
+      const key = trimmed.slice(0, eqIdx).trim();
+      let value = trimmed.slice(eqIdx + 1).trim();
+      // Strip surrounding quotes
+      if (
+        (value.startsWith('"') && value.endsWith('"')) ||
+        (value.startsWith("'") && value.endsWith("'"))
+      ) {
+        value = value.slice(1, -1);
+      }
+      env[key] = value;
+    }
+    return env;
+  } catch {
+    return {};
+  }
+}
+
+const apiEnv = loadEnvFile(resolve(__dirname, "../api/.env"));
+const webEnv = loadEnvFile(resolve(__dirname, ".env.local"));
+
 export default defineConfig({
   testDir: "./e2e",
   fullyParallel: false, // Run tests sequentially (shared database state)
@@ -47,6 +83,8 @@ export default defineConfig({
       timeout: 60_000,
       cwd: "../..",
       env: {
+        ...process.env,
+        ...apiEnv,
         VIRUS_SCAN_ENABLED: "false",
       },
     },
@@ -60,6 +98,8 @@ export default defineConfig({
       timeout: 60_000,
       cwd: "../..",
       env: {
+        ...process.env,
+        ...webEnv,
         NEXT_PUBLIC_ZITADEL_AUTHORITY: "http://test-idp:8080",
         NEXT_PUBLIC_ZITADEL_CLIENT_ID: "test-client",
       },

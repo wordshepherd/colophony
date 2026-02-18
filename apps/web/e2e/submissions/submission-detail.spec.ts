@@ -64,8 +64,9 @@ test.describe("Submission Detail & Edit", () => {
       authedPage.getByRole("heading", { name: "E2E Detail: View Test" }),
     ).toBeVisible({ timeout: 10_000 });
 
-    // Status badge should show DRAFT
-    await expect(authedPage.getByText("DRAFT")).toBeVisible();
+    // Status badge should show Draft (exact match to avoid colliding with
+    // "DRAFT" in history badges)
+    await expect(authedPage.getByText("Draft", { exact: true })).toBeVisible();
   });
 
   test("shows Edit and Delete buttons for DRAFT submission", async ({
@@ -151,10 +152,15 @@ test.describe("Submission Detail & Edit", () => {
       { timeout: 10_000 },
     );
 
-    // Status should now be SUBMITTED
-    await expect(authedPage.getByText("SUBMITTED")).toBeVisible({
-      timeout: 10_000,
-    });
+    // Reload to bust TanStack Query cache (staleTime=60s means the detail
+    // page may show cached DRAFT data after client-side navigation)
+    await authedPage.reload();
+
+    // Status badge should now show "Submitted" (exact match avoids
+    // colliding with "SUBMITTED" in the history badges)
+    await expect(
+      authedPage.getByText("Submitted", { exact: true }),
+    ).toBeVisible({ timeout: 10_000 });
   });
 
   test("SUBMITTED submission shows Withdraw button, no Edit button", async ({
@@ -199,10 +205,11 @@ test.describe("Submission Detail & Edit", () => {
       timeout: 5_000,
     });
 
-    // Status should now be WITHDRAWN
-    await expect(authedPage.getByText("WITHDRAWN")).toBeVisible({
-      timeout: 5_000,
-    });
+    // Status badge should now show "Withdrawn" (exact match to avoid
+    // colliding with "WITHDRAWN" in history badges)
+    await expect(
+      authedPage.getByText("Withdrawn", { exact: true }),
+    ).toBeVisible({ timeout: 5_000 });
   });
 
   test("delete confirmation dialog deletes the submission", async ({
