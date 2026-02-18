@@ -1,3 +1,5 @@
+import { z } from "zod";
+
 // ---------------------------------------------------------------------------
 // Audit logging — shared constants and typed params
 // ---------------------------------------------------------------------------
@@ -52,6 +54,9 @@ export const AuditActions = {
   // Payment lifecycle
   PAYMENT_SUCCEEDED: "PAYMENT_SUCCEEDED",
   PAYMENT_EXPIRED: "PAYMENT_EXPIRED",
+
+  // Audit access
+  AUDIT_ACCESSED: "AUDIT_ACCESSED",
 } as const;
 
 export type AuditAction = (typeof AuditActions)[keyof typeof AuditActions];
@@ -65,6 +70,7 @@ export const AuditResources = {
   AUTH: "auth",
   API_KEY: "api_key",
   PAYMENT: "payment",
+  AUDIT: "audit",
 } as const;
 
 export type AuditResource =
@@ -157,6 +163,11 @@ export interface PaymentAuditParams extends BaseAuditParams {
     | typeof AuditActions.PAYMENT_EXPIRED;
 }
 
+export interface AuditAccessAuditParams extends BaseAuditParams {
+  resource: typeof AuditResources.AUDIT;
+  action: typeof AuditActions.AUDIT_ACCESSED;
+}
+
 /** Union of all resource-specific param types. */
 export type AuditLogParams =
   | UserAuditParams
@@ -165,4 +176,42 @@ export type AuditLogParams =
   | FileAuditParams
   | AuthAuditParams
   | ApiKeyAuditParams
-  | PaymentAuditParams;
+  | PaymentAuditParams
+  | AuditAccessAuditParams;
+
+// ---------------------------------------------------------------------------
+// Query/response schemas for audit endpoints
+// ---------------------------------------------------------------------------
+
+/** List/filter input schema for audit events. */
+export const listAuditEventsSchema = z.object({
+  action: z.string().optional(),
+  resource: z.string().optional(),
+  actorId: z.string().uuid().optional(),
+  resourceId: z.string().uuid().optional(),
+  from: z.coerce.date().optional(),
+  to: z.coerce.date().optional(),
+  page: z.number().int().min(1).default(1),
+  limit: z.number().int().min(1).max(100).default(20),
+});
+
+export type ListAuditEventsInput = z.infer<typeof listAuditEventsSchema>;
+
+/** Single audit event response schema. */
+export const auditEventResponseSchema = z.object({
+  id: z.string().uuid(),
+  action: z.string(),
+  resource: z.string(),
+  resourceId: z.string().uuid().nullable(),
+  actorId: z.string().uuid().nullable(),
+  oldValue: z.unknown().nullable(),
+  newValue: z.unknown().nullable(),
+  ipAddress: z.string().nullable(),
+  userAgent: z.string().nullable(),
+  requestId: z.string().nullable(),
+  method: z.string().nullable(),
+  route: z.string().nullable(),
+  createdAt: z.date(),
+});
+
+export type AuditEventResponse = z.infer<typeof auditEventResponseSchema>;
