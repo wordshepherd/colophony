@@ -185,8 +185,8 @@ export type AuditLogParams =
 
 /** List/filter input schema for audit events. */
 export const listAuditEventsSchema = z.object({
-  action: z.string().optional(),
-  resource: z.string().optional(),
+  action: z.nativeEnum(AuditActions).optional(),
+  resource: z.nativeEnum(AuditResources).optional(),
   actorId: z.string().uuid().optional(),
   resourceId: z.string().uuid().optional(),
   from: z.coerce.date().optional(),

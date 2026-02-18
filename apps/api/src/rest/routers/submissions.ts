@@ -1,9 +1,9 @@
-import { z } from 'zod';
 import {
   createSubmissionSchema,
   updateSubmissionSchema,
   updateSubmissionStatusSchema,
   listSubmissionsSchema,
+  idParamSchema,
 } from '@colophony/types';
 import { restPaginationQuery } from '@colophony/api-contracts';
 import { submissionService } from '../../services/submission.service.js';
@@ -19,12 +19,6 @@ import { orgProcedure, requireScopes } from '../context.js';
 const restListSubmissionsQuery = listSubmissionsSchema
   .omit({ page: true, limit: true })
   .merge(restPaginationQuery);
-
-// ---------------------------------------------------------------------------
-// Path param schemas
-// ---------------------------------------------------------------------------
-
-const submissionIdParam = z.object({ id: z.string().uuid() });
 
 // ---------------------------------------------------------------------------
 // Submission routes
@@ -73,7 +67,7 @@ const create = orgProcedure
 const get = orgProcedure
   .use(requireScopes('submissions:read'))
   .route({ method: 'GET', path: '/submissions/{id}' })
-  .input(submissionIdParam)
+  .input(idParamSchema)
   .handler(async ({ input, context }) => {
     try {
       return await submissionService.getByIdWithAccess(
@@ -88,7 +82,7 @@ const get = orgProcedure
 const update = orgProcedure
   .use(requireScopes('submissions:write'))
   .route({ method: 'PATCH', path: '/submissions/{id}' })
-  .input(submissionIdParam.merge(updateSubmissionSchema))
+  .input(idParamSchema.merge(updateSubmissionSchema))
   .handler(async ({ input, context }) => {
     const { id, ...data } = input;
     try {
@@ -105,7 +99,7 @@ const update = orgProcedure
 const submit = orgProcedure
   .use(requireScopes('submissions:write'))
   .route({ method: 'POST', path: '/submissions/{id}/submit' })
-  .input(submissionIdParam)
+  .input(idParamSchema)
   .handler(async ({ input, context }) => {
     try {
       return await submissionService.submitAsOwner(
@@ -120,7 +114,7 @@ const submit = orgProcedure
 const del = orgProcedure
   .use(requireScopes('submissions:write'))
   .route({ method: 'DELETE', path: '/submissions/{id}' })
-  .input(submissionIdParam)
+  .input(idParamSchema)
   .handler(async ({ input, context }) => {
     try {
       return await submissionService.deleteAsOwner(
@@ -135,7 +129,7 @@ const del = orgProcedure
 const withdraw = orgProcedure
   .use(requireScopes('submissions:write'))
   .route({ method: 'POST', path: '/submissions/{id}/withdraw' })
-  .input(submissionIdParam)
+  .input(idParamSchema)
   .handler(async ({ input, context }) => {
     try {
       return await submissionService.withdrawAsOwner(
@@ -150,7 +144,7 @@ const withdraw = orgProcedure
 const updateStatus = orgProcedure
   .use(requireScopes('submissions:write'))
   .route({ method: 'PATCH', path: '/submissions/{id}/status' })
-  .input(submissionIdParam.merge(updateSubmissionStatusSchema))
+  .input(idParamSchema.merge(updateSubmissionStatusSchema))
   .handler(async ({ input, context }) => {
     const { id, status, comment } = input;
     try {
@@ -168,7 +162,7 @@ const updateStatus = orgProcedure
 const history = orgProcedure
   .use(requireScopes('submissions:read'))
   .route({ method: 'GET', path: '/submissions/{id}/history' })
-  .input(submissionIdParam)
+  .input(idParamSchema)
   .handler(async ({ input, context }) => {
     try {
       return await submissionService.getHistoryWithAccess(

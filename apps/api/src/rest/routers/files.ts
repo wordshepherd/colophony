@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { submissionIdParamSchema, fileIdParamSchema } from '@colophony/types';
 import { fileService } from '../../services/file.service.js';
 import { createS3Client } from '../../services/s3.js';
 import { validateEnv } from '../../config/env.js';
@@ -22,20 +22,13 @@ function getEnvConfig() {
 }
 
 // ---------------------------------------------------------------------------
-// Path param schemas
-// ---------------------------------------------------------------------------
-
-const submissionIdParam = z.object({ submissionId: z.string().uuid() });
-const fileIdParam = z.object({ fileId: z.string().uuid() });
-
-// ---------------------------------------------------------------------------
 // File routes
 // ---------------------------------------------------------------------------
 
 const list = orgProcedure
   .use(requireScopes('files:read'))
   .route({ method: 'GET', path: '/submissions/{submissionId}/files' })
-  .input(submissionIdParam)
+  .input(submissionIdParamSchema)
   .handler(async ({ input, context }) => {
     try {
       return await fileService.listBySubmissionWithAccess(
@@ -50,7 +43,7 @@ const list = orgProcedure
 const download = orgProcedure
   .use(requireScopes('files:read'))
   .route({ method: 'GET', path: '/files/{fileId}/download' })
-  .input(fileIdParam)
+  .input(fileIdParamSchema)
   .handler(async ({ input, context }) => {
     try {
       const env = getEnvConfig();
@@ -68,7 +61,7 @@ const download = orgProcedure
 const del = orgProcedure
   .use(requireScopes('files:write'))
   .route({ method: 'DELETE', path: '/files/{fileId}' })
-  .input(fileIdParam)
+  .input(fileIdParamSchema)
   .handler(async ({ input, context }) => {
     try {
       const env = getEnvConfig();

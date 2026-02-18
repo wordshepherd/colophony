@@ -34,7 +34,7 @@ export const submissionSchema = z.object({
 export type Submission = z.infer<typeof submissionSchema>;
 
 export const createSubmissionSchema = z.object({
-  title: z.string().min(1).max(500),
+  title: z.string().trim().min(1).max(500),
   content: z.string().max(50000).optional(),
   coverLetter: z.string().max(10000).optional(),
   submissionPeriodId: z.string().uuid().optional(),
@@ -43,7 +43,7 @@ export const createSubmissionSchema = z.object({
 export type CreateSubmissionInput = z.infer<typeof createSubmissionSchema>;
 
 export const updateSubmissionSchema = z.object({
-  title: z.string().min(1).max(500).optional(),
+  title: z.string().trim().min(1).max(500).optional(),
   content: z.string().max(50000).optional(),
   coverLetter: z.string().max(10000).optional(),
 });
@@ -77,7 +77,7 @@ export type UpdateSubmissionStatusInput = z.infer<
 export const listSubmissionsSchema = z.object({
   status: submissionStatusSchema.optional(),
   submissionPeriodId: z.string().uuid().optional(),
-  search: z.string().optional(),
+  search: z.string().trim().max(200).optional(),
   page: z.number().int().min(1).default(1),
   limit: z.number().int().min(1).max(100).default(20),
 });

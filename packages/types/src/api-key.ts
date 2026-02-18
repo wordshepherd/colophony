@@ -26,7 +26,7 @@ export type ApiKeyScope = z.infer<typeof apiKeyScopeSchema>;
 // ---------------------------------------------------------------------------
 
 export const createApiKeySchema = z.object({
-  name: z.string().min(1).max(255),
+  name: z.string().trim().min(1).max(255),
   scopes: z.array(apiKeyScopeSchema).min(1),
   expiresAt: z.coerce.date().optional(),
 });
