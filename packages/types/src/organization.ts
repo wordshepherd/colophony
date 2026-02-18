@@ -55,6 +55,57 @@ export const organizationMemberSchema = z.object({
 
 export type OrganizationMember = z.infer<typeof organizationMemberSchema>;
 
+/** Shape returned by `listUserOrganizations()` (uses `organizationId`, not `id`). */
+export const userOrganizationSchema = z.object({
+  organizationId: z.string().uuid(),
+  name: z.string(),
+  slug: z.string(),
+  role: roleSchema,
+});
+
+export type UserOrganization = z.infer<typeof userOrganizationSchema>;
+
+/** Slug availability check response. */
+export const slugAvailabilitySchema = z.object({
+  available: z.boolean(),
+});
+
+export type SlugAvailability = z.infer<typeof slugAvailabilitySchema>;
+
+/** Response from `organizations.create` — org + creator membership. */
+export const createOrganizationResponseSchema = z.object({
+  organization: organizationSchema,
+  membership: z.object({
+    id: z.string().uuid(),
+    organizationId: z.string().uuid(),
+    userId: z.string().uuid(),
+    role: roleSchema,
+    createdAt: z.date(),
+    updatedAt: z.date(),
+  }),
+});
+
+export type CreateOrganizationResponse = z.infer<
+  typeof createOrganizationResponseSchema
+>;
+
+/**
+ * Raw member row from `.returning()` — differs from `organizationMemberSchema`
+ * which has `email` from JOIN and lacks `organizationId`/`updatedAt`.
+ */
+export const organizationMemberMutationResponseSchema = z.object({
+  id: z.string().uuid(),
+  organizationId: z.string().uuid(),
+  userId: z.string().uuid(),
+  role: roleSchema,
+  createdAt: z.date(),
+  updatedAt: z.date(),
+});
+
+export type OrganizationMemberMutationResponse = z.infer<
+  typeof organizationMemberMutationResponseSchema
+>;
+
 export const inviteMemberSchema = z.object({
   email: z.string().email(),
   role: roleSchema,

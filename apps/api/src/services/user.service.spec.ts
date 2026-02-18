@@ -54,7 +54,7 @@ describe('userService.getProfile', () => {
       createdAt: createdAt,
       organizations: [
         {
-          organizationId: 'o1',
+          id: 'o1',
           name: 'Test Org',
           slug: 'test-org',
           role: 'ADMIN',

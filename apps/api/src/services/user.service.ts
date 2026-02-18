@@ -31,7 +31,7 @@ export const userService = {
       emailVerified: user.email_verified,
       createdAt: user.created_at,
       organizations: orgs.map((o) => ({
-        organizationId: o.organizationId,
+        id: o.organizationId,
         name: o.name,
         slug: o.slug,
         role: o.role,

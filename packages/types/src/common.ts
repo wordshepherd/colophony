@@ -24,6 +24,12 @@ export type PaginatedResponse<T> = {
   totalPages: number;
 };
 
+export const successResponseSchema = z.object({
+  success: z.literal(true),
+});
+
+export type SuccessResponse = z.infer<typeof successResponseSchema>;
+
 export const uuidSchema = z.string().uuid();
 
 // ---------------------------------------------------------------------------

@@ -67,6 +67,15 @@ export const submissionFileSchema = z.object({
 
 export type SubmissionFile = z.infer<typeof submissionFileSchema>;
 
+/** Response from `files.getDownloadUrl`. */
+export const downloadUrlResponseSchema = z.object({
+  url: z.string().url(),
+  filename: z.string(),
+  mimeType: z.string(),
+});
+
+export type DownloadUrlResponse = z.infer<typeof downloadUrlResponseSchema>;
+
 /**
  * Input for initiating a file upload.
  * Client provides metadata, server returns upload URL.

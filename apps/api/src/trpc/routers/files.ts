@@ -1,4 +1,11 @@
-import { submissionIdParamSchema, fileIdParamSchema } from '@colophony/types';
+import { z } from 'zod';
+import {
+  submissionIdParamSchema,
+  fileIdParamSchema,
+  submissionFileSchema,
+  downloadUrlResponseSchema,
+  successResponseSchema,
+} from '@colophony/types';
 import { orgProcedure, createRouter, requireScopes } from '../init.js';
 import { fileService } from '../../services/file.service.js';
 import { createS3Client } from '../../services/s3.js';
@@ -26,6 +33,7 @@ export const filesRouter = createRouter({
   listBySubmission: orgProcedure
     .use(requireScopes('files:read'))
     .input(submissionIdParamSchema)
+    .output(z.array(submissionFileSchema))
     .query(async ({ ctx, input }) => {
       try {
         return await fileService.listBySubmissionWithAccess(
@@ -41,6 +49,7 @@ export const filesRouter = createRouter({
   getDownloadUrl: orgProcedure
     .use(requireScopes('files:read'))
     .input(fileIdParamSchema)
+    .output(downloadUrlResponseSchema)
     .query(async ({ ctx, input }) => {
       try {
         const env = getEnvConfig();
@@ -59,6 +68,7 @@ export const filesRouter = createRouter({
   delete: orgProcedure
     .use(requireScopes('files:write'))
     .input(fileIdParamSchema)
+    .output(successResponseSchema)
     .mutation(async ({ ctx, input }) => {
       try {
         const env = getEnvConfig();
