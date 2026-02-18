@@ -8,8 +8,20 @@ const { mockDbExecute } = vi.hoisted(() => {
 });
 
 vi.mock('@colophony/db', () => ({
-  auditEvents: { _: 'audit_events_table_ref' },
+  auditEvents: {
+    _: 'audit_events_table_ref',
+    id: 'id',
+    action: 'action',
+    resource: 'resource',
+    actorId: 'actor_id',
+    resourceId: 'resource_id',
+    createdAt: 'created_at',
+  },
   db: { execute: mockDbExecute },
+  eq: vi.fn((_col: unknown, val: unknown) => ({ op: 'eq', val })),
+  and: vi.fn((...args: unknown[]) => ({ op: 'and', args })),
+  gte: vi.fn((_col: unknown, val: unknown) => ({ op: 'gte', val })),
+  lte: vi.fn((_col: unknown, val: unknown) => ({ op: 'lte', val })),
   sql: Object.assign(
     (strings: TemplateStringsArray, ...values: unknown[]) => ({
       _tag: 'sql',
@@ -238,5 +250,160 @@ describe('auditService.logDirect', () => {
     await expect(auditService.logDirect(params)).rejects.toThrow(
       'connection refused',
     );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// list / getById
+// ---------------------------------------------------------------------------
+
+function makeRow(overrides: Record<string, unknown> = {}) {
+  return {
+    id: 'e0000000-0000-4000-a000-000000000001',
+    organizationId: 'org-1',
+    actorId: 'user-1',
+    action: 'USER_CREATED',
+    resource: 'user',
+    resourceId: null,
+    oldValue: null,
+    newValue: '{"email":"test@example.com"}',
+    ipAddress: '127.0.0.1',
+    userAgent: null,
+    requestId: null,
+    method: 'POST',
+    route: '/users',
+    createdAt: new Date('2026-01-01'),
+    ...overrides,
+  };
+}
+
+function makeQueryTx(items: unknown[], countVal: number) {
+  let callCount = 0;
+  return {
+    execute: mockExecute,
+    select: vi.fn().mockImplementation(() => {
+      callCount++;
+      if (callCount === 1) {
+        return {
+          from: vi.fn().mockReturnValue({
+            where: vi.fn().mockReturnValue({
+              orderBy: vi.fn().mockReturnValue({
+                limit: vi.fn().mockReturnValue({
+                  offset: vi.fn().mockResolvedValue(items),
+                }),
+              }),
+            }),
+          }),
+        };
+      }
+      return {
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockResolvedValue([{ count: countVal }]),
+        }),
+      };
+    }),
+  } as unknown as DrizzleDb;
+}
+
+function makeGetByIdTx(row: unknown | null) {
+  return {
+    execute: mockExecute,
+    select: vi.fn().mockReturnValue({
+      from: vi.fn().mockReturnValue({
+        where: vi.fn().mockReturnValue({
+          limit: vi.fn().mockResolvedValue(row ? [row] : []),
+        }),
+      }),
+    }),
+  } as unknown as DrizzleDb;
+}
+
+describe('auditService.list', () => {
+  it('returns paginated results with no filters', async () => {
+    const row = makeRow();
+    const tx = makeQueryTx([row], 1);
+
+    const result = await auditService.list(tx, { page: 1, limit: 20 });
+
+    expect(result.items).toHaveLength(1);
+    expect(result.total).toBe(1);
+    expect(result.page).toBe(1);
+    expect(result.limit).toBe(20);
+    expect(result.totalPages).toBe(1);
+  });
+
+  it('parses oldValue/newValue from JSON strings', async () => {
+    const row = makeRow({
+      oldValue: '{"name":"Old"}',
+      newValue: '{"name":"New"}',
+    });
+    const tx = makeQueryTx([row], 1);
+
+    const result = await auditService.list(tx, { page: 1, limit: 20 });
+
+    expect(result.items[0].oldValue).toEqual({ name: 'Old' });
+    expect(result.items[0].newValue).toEqual({ name: 'New' });
+  });
+
+  it('handles malformed JSON gracefully', async () => {
+    const row = makeRow({ newValue: 'not-valid-json{' });
+    const tx = makeQueryTx([row], 1);
+
+    const result = await auditService.list(tx, { page: 1, limit: 20 });
+
+    // Falls back to raw string
+    expect(result.items[0].newValue).toBe('not-valid-json{');
+  });
+
+  it('returns null for null oldValue/newValue', async () => {
+    const row = makeRow({ oldValue: null, newValue: null });
+    const tx = makeQueryTx([row], 1);
+
+    const result = await auditService.list(tx, { page: 1, limit: 20 });
+
+    expect(result.items[0].oldValue).toBeNull();
+    expect(result.items[0].newValue).toBeNull();
+  });
+
+  it('computes totalPages correctly', async () => {
+    const tx = makeQueryTx([makeRow()], 45);
+
+    const result = await auditService.list(tx, { page: 1, limit: 20 });
+
+    expect(result.totalPages).toBe(3);
+  });
+
+  it('returns empty results', async () => {
+    const tx = makeQueryTx([], 0);
+
+    const result = await auditService.list(tx, { page: 1, limit: 20 });
+
+    expect(result.items).toHaveLength(0);
+    expect(result.total).toBe(0);
+    expect(result.totalPages).toBe(0);
+  });
+});
+
+describe('auditService.getById', () => {
+  it('returns parsed event when found', async () => {
+    const row = makeRow();
+    const tx = makeGetByIdTx(row);
+
+    const result = await auditService.getById(
+      tx,
+      'e0000000-0000-4000-a000-000000000001',
+    );
+
+    expect(result).not.toBeNull();
+    expect(result!.id).toBe('e0000000-0000-4000-a000-000000000001');
+    expect(result!.newValue).toEqual({ email: 'test@example.com' });
+  });
+
+  it('returns null when not found', async () => {
+    const tx = makeGetByIdTx(null);
+
+    const result = await auditService.getById(tx, 'nonexistent');
+
+    expect(result).toBeNull();
   });
 });
