@@ -57,7 +57,7 @@ Full project structure: [docs/architecture-v2-planning.md](docs/architecture-v2-
 
 **Backend:** Fastify 5, TypeScript (strict), Drizzle ORM, BullMQ 5, Zitadel (auth), Stripe, nodemailer
 
-**API surfaces:** tRPC (built), ts-rest REST + OpenAPI 3.1 (planned), GraphQL (planned)
+**API surfaces:** tRPC (built), oRPC REST + OpenAPI 3.1 (PR 1 done), GraphQL (planned)
 
 **Data:** PostgreSQL 16+ (RLS via Drizzle `pgPolicy`), Redis 7+, MinIO (S3-compatible)
 

@@ -2,19 +2,23 @@
 
 ## Key Paths
 
-| What              | Path                              |
-| ----------------- | --------------------------------- |
-| App entry         | `src/main.ts`                     |
-| Env config (Zod)  | `src/config/env.ts`               |
-| Fastify hooks     | `src/hooks/`                      |
-| Service layer     | `src/services/`                   |
-| tRPC router       | `src/trpc/router.ts`              |
-| tRPC client types | `src/trpc/client-types.ts`        |
-| tRPC init         | `src/trpc/init.ts`                |
-| tRPC context      | `src/trpc/context.ts`             |
-| tusd webhook      | `src/webhooks/tusd.webhook.ts`    |
-| Zitadel webhook   | `src/webhooks/zitadel.webhook.ts` |
-| Stripe webhook    | `src/webhooks/stripe.webhook.ts`  |
+| What              | Path                                |
+| ----------------- | ----------------------------------- |
+| App entry         | `src/main.ts`                       |
+| Env config (Zod)  | `src/config/env.ts`                 |
+| Fastify hooks     | `src/hooks/`                        |
+| Service layer     | `src/services/`                     |
+| tRPC router       | `src/trpc/router.ts`                |
+| tRPC client types | `src/trpc/client-types.ts`          |
+| tRPC init         | `src/trpc/init.ts`                  |
+| tRPC context      | `src/trpc/context.ts`               |
+| REST router       | `src/rest/router.ts`                |
+| REST context      | `src/rest/context.ts`               |
+| REST error mapper | `src/rest/error-mapper.ts`          |
+| REST org handlers | `src/rest/routers/organizations.ts` |
+| tusd webhook      | `src/webhooks/tusd.webhook.ts`      |
+| Zitadel webhook   | `src/webhooks/zitadel.webhook.ts`   |
+| Stripe webhook    | `src/webhooks/stripe.webhook.ts`    |
 
 ### Service Method Naming
 
@@ -79,11 +83,11 @@ User lifecycle events are synced from Zitadel to the local DB via webhooks.
 
 ## API Surfaces
 
-| Surface     | Audience              | Status    | Auth               |
-| ----------- | --------------------- | --------- | ------------------ |
-| **tRPC**    | Internal web frontend | **Built** | Zitadel OIDC token |
-| **REST**    | Public API, Zapier    | _Planned_ | API key or OIDC    |
-| **GraphQL** | Power users           | _Planned_ | API key or OIDC    |
+| Surface     | Audience              | Status               | Auth               |
+| ----------- | --------------------- | -------------------- | ------------------ |
+| **tRPC**    | Internal web frontend | **Built**            | Zitadel OIDC token |
+| **REST**    | Public API, Zapier    | **PR 1 done** (oRPC) | API key or OIDC    |
+| **GraphQL** | Power users           | _Planned_            | API key or OIDC    |
 
 All surfaces share the same service layer and Zod schemas from `@colophony/types`.
 
