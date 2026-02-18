@@ -1,0 +1,115 @@
+import { os, ORPCError } from '@orpc/server';
+import type { AuthContext, Role } from '@colophony/types';
+import type { DrizzleDb } from '@colophony/db';
+import type { AuditFn } from '../services/types.js';
+
+/**
+ * Initial oRPC context populated by Fastify hooks.
+ * Mirrors the tRPC context but typed for oRPC middleware.
+ */
+export interface RestContext {
+  authContext: AuthContext | null;
+  dbTx: DrizzleDb | null;
+  audit: AuditFn;
+}
+
+/** Context after requireAuth middleware narrows authContext to non-null. */
+export interface AuthedContext extends RestContext {
+  authContext: AuthContext;
+}
+
+/** Context after requireOrgContext middleware narrows orgId, role, and dbTx. */
+export interface OrgContext extends RestContext {
+  authContext: AuthContext & { orgId: string; role: Role };
+  dbTx: DrizzleDb;
+}
+
+/**
+ * Base oRPC procedure builder with RestContext.
+ * All REST route handlers start from this base.
+ */
+export const restBase = os.$context<RestContext>();
+
+// ---------------------------------------------------------------------------
+// Middleware
+// ---------------------------------------------------------------------------
+
+/** Requires an authenticated user (authContext populated by auth hook). */
+export const requireAuth = restBase.middleware(async ({ context, next }) => {
+  if (!context.authContext) {
+    throw new ORPCError('UNAUTHORIZED', {
+      message: 'Not authenticated',
+    });
+  }
+  return next({
+    context: { authContext: context.authContext },
+  });
+});
+
+/** Requires org context (X-Organization-Id resolved by org-context hook). */
+export const requireOrgContext = restBase.middleware(
+  async ({ context, next }) => {
+    if (!context.authContext) {
+      throw new ORPCError('UNAUTHORIZED', {
+        message: 'Not authenticated',
+      });
+    }
+    if (!context.authContext.orgId || !context.authContext.role) {
+      throw new ORPCError('BAD_REQUEST', {
+        message: 'X-Organization-Id header is required',
+      });
+    }
+    if (!context.dbTx) {
+      throw new ORPCError('INTERNAL_SERVER_ERROR', {
+        message: 'Database transaction not available',
+      });
+    }
+    return next({
+      context: {
+        authContext: context.authContext as AuthContext & {
+          orgId: string;
+          role: Role;
+        },
+        dbTx: context.dbTx,
+      },
+    });
+  },
+);
+
+/** Requires ADMIN role within the current org context. */
+export const requireAdmin = restBase.middleware(async ({ context, next }) => {
+  if (!context.authContext) {
+    throw new ORPCError('UNAUTHORIZED', {
+      message: 'Not authenticated',
+    });
+  }
+  if (!context.authContext.orgId || !context.authContext.role) {
+    throw new ORPCError('BAD_REQUEST', {
+      message: 'X-Organization-Id header is required',
+    });
+  }
+  if (context.authContext.role !== 'ADMIN') {
+    throw new ORPCError('FORBIDDEN', {
+      message: 'Admin role required',
+    });
+  }
+  if (!context.dbTx) {
+    throw new ORPCError('INTERNAL_SERVER_ERROR', {
+      message: 'Database transaction not available',
+    });
+  }
+  return next({
+    context: {
+      authContext: context.authContext as AuthContext & {
+        orgId: string;
+        role: Role;
+      },
+      dbTx: context.dbTx,
+    },
+  });
+});
+
+// Procedure builders (analogous to tRPC's authedProcedure, orgProcedure, adminProcedure)
+export const authedProcedure = restBase.use(requireAuth);
+export const orgProcedure = restBase.use(requireOrgContext);
+export const adminProcedure = restBase.use(requireAdmin);

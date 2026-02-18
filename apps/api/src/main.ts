@@ -15,6 +15,7 @@ import { registerStripeWebhooks } from './webhooks/stripe.webhook.js';
 import { fastifyTRPCPlugin } from '@trpc/server/adapters/fastify';
 import { appRouter } from './trpc/router.js';
 import { createContext } from './trpc/context.js';
+import { registerRestRoutes } from './rest/router.js';
 import { startFileScanWorker, stopFileScanWorker } from './workers/index.js';
 import { closeFileScanQueue } from './queues/index.js';
 
@@ -136,6 +137,9 @@ export async function buildApp(env: Env): Promise<FastifyInstance> {
       },
     },
   });
+
+  // REST API (oRPC) — child scope inherits all hooks
+  await app.register(registerRestRoutes);
 
   // Routes
   app.get('/health', async () => ({
