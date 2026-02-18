@@ -205,6 +205,16 @@ describe('organizations REST router', () => {
     });
   });
 
+  describe('orgId path/header mismatch', () => {
+    it('rejects when path orgId does not match header org context', async () => {
+      const WRONG_ORG = 'c0000000-0000-4000-a000-000000000099';
+      const call = client(organizationsRouter.get, orgContext());
+      await expect(call({ orgId: WRONG_ORG })).rejects.toThrow(
+        'does not match',
+      );
+    });
+  });
+
   describe('GET /organizations/{orgId} (get)', () => {
     it('requires org context', async () => {
       const call = client(organizationsRouter.get, authedContext());

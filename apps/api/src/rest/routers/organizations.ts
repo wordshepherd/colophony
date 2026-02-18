@@ -23,6 +23,20 @@ const memberIdParam = z.object({
   memberId: z.string().uuid(),
 });
 
+/**
+ * Enforce that the orgId path parameter matches the org context from the
+ * X-Organization-Id header. Prevents URL/resource mismatch where a client
+ * could request /organizations/{A} but operate on organization B.
+ */
+function assertOrgIdMatch(pathOrgId: string, contextOrgId: string): void {
+  if (pathOrgId !== contextOrgId) {
+    throw new ORPCError('BAD_REQUEST', {
+      message:
+        'Path orgId does not match X-Organization-Id header. Ensure the URL and header reference the same organization.',
+    });
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Members routes
 // ---------------------------------------------------------------------------
@@ -31,6 +45,7 @@ const membersList = orgProcedure
   .route({ method: 'GET', path: '/organizations/{orgId}/members' })
   .input(orgIdParam.merge(restPaginationQuery))
   .handler(async ({ input, context }) => {
+    assertOrgIdMatch(input.orgId, context.authContext.orgId);
     return organizationService.listMembers(context.dbTx, {
       page: input.page,
       limit: input.limit,
@@ -45,6 +60,7 @@ const membersAdd = adminProcedure
   })
   .input(orgIdParam.merge(inviteMemberSchema))
   .handler(async ({ input, context }) => {
+    assertOrgIdMatch(input.orgId, context.authContext.orgId);
     try {
       return await organizationService.addMemberWithAudit(
         toServiceContext(context),
@@ -63,6 +79,7 @@ const membersRemove = adminProcedure
   })
   .input(memberIdParam)
   .handler(async ({ context, input }) => {
+    assertOrgIdMatch(input.orgId, context.authContext.orgId);
     try {
       return await organizationService.removeMemberWithAudit(
         toServiceContext(context),
@@ -80,6 +97,7 @@ const membersUpdateRole = adminProcedure
   })
   .input(memberIdParam.merge(z.object({ role: roleSchema })))
   .handler(async ({ context, input }) => {
+    assertOrgIdMatch(input.orgId, context.authContext.orgId);
     try {
       return await organizationService.updateMemberRoleWithAudit(
         toServiceContext(context),
@@ -136,7 +154,8 @@ const orgsCheckSlug = authedProcedure
 const orgsGet = orgProcedure
   .route({ method: 'GET', path: '/organizations/{orgId}' })
   .input(orgIdParam)
-  .handler(async ({ context }) => {
+  .handler(async ({ input, context }) => {
+    assertOrgIdMatch(input.orgId, context.authContext.orgId);
     const org = await organizationService.getById(
       context.dbTx,
       context.authContext.orgId,
@@ -151,6 +170,7 @@ const orgsUpdate = adminProcedure
   .route({ method: 'PATCH', path: '/organizations/{orgId}' })
   .input(orgIdParam.merge(updateOrganizationSchema))
   .handler(async ({ context, input }) => {
+    assertOrgIdMatch(input.orgId, context.authContext.orgId);
     try {
       return await organizationService.updateWithAudit(
         toServiceContext(context),

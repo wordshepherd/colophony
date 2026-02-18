@@ -10,6 +10,20 @@ import {
   updateMemberRoleSchema,
   roleSchema,
 } from "@colophony/types";
+
+/**
+ * Schema for member mutation responses (add, update role).
+ * Matches the raw `organization_members` DB row shape — no email join,
+ * includes organizationId and updatedAt unlike the list query schema.
+ */
+const memberMutationResponseSchema = z.object({
+  id: z.string().uuid(),
+  organizationId: z.string().uuid(),
+  userId: z.string().uuid(),
+  role: roleSchema,
+  createdAt: z.date(),
+  updatedAt: z.date(),
+});
 import { restPaginationQuery } from "./shared.js";
 
 // ---------------------------------------------------------------------------
@@ -81,7 +95,7 @@ export const organizationMembersContract = {
       successStatus: 201,
     })
     .input(orgIdParam.merge(inviteMemberSchema))
-    .output(organizationMemberSchema),
+    .output(memberMutationResponseSchema),
 
   remove: oc
     .route({
@@ -97,7 +111,7 @@ export const organizationMembersContract = {
       path: "/organizations/{orgId}/members/{memberId}",
     })
     .input(memberIdParam.merge(updateMemberRoleSchema.omit({ memberId: true })))
-    .output(organizationMemberSchema),
+    .output(memberMutationResponseSchema),
 };
 
 export const organizationsContract = {
