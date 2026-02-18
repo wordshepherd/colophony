@@ -7,8 +7,17 @@ import {
   MAX_TOTAL_UPLOAD_SIZE,
   MAX_FILE_SIZE,
   ALLOWED_MIME_TYPES,
+  AuditActions,
+  AuditResources,
 } from '@colophony/types';
 import { getPresignedDownloadUrl, deleteS3Object } from './s3.js';
+import type { ServiceContext } from './types.js';
+import { ForbiddenError, assertOwnerOrEditor } from './errors.js';
+import {
+  submissionService,
+  SubmissionNotFoundError,
+  NotDraftError,
+} from './submission.service.js';
 
 // ---------------------------------------------------------------------------
 // Error classes
@@ -236,5 +245,117 @@ export const fileService = {
     await deleteS3Object(s3Client, targetBucket, deleted.storageKey);
 
     return deleted;
+  },
+
+  // ---------------------------------------------------------------------------
+  // Access-aware methods (PR 2) — bundle access control + audit
+  // ---------------------------------------------------------------------------
+
+  /**
+   * List files for a submission — owner or editor/admin access check.
+   */
+  async listBySubmissionWithAccess(svc: ServiceContext, submissionId: string) {
+    const submission = await submissionService.getById(svc.tx, submissionId);
+    if (!submission) throw new SubmissionNotFoundError(submissionId);
+    assertOwnerOrEditor(
+      svc.actor.userId,
+      svc.actor.role,
+      submission.submitterId,
+    );
+    return fileService.listBySubmission(svc.tx, submissionId);
+  },
+
+  /**
+   * Get a presigned download URL — owner or editor/admin, CLEAN files only.
+   */
+  async getDownloadUrlWithAccess(
+    svc: ServiceContext,
+    fileId: string,
+    s3Client: S3Client,
+    bucket: string,
+  ) {
+    const file = await fileService.getById(svc.tx, fileId);
+    if (!file) throw new FileNotFoundError(fileId);
+
+    const submission = await submissionService.getById(
+      svc.tx,
+      file.submissionId,
+    );
+    if (!submission) throw new SubmissionNotFoundError(file.submissionId);
+    assertOwnerOrEditor(
+      svc.actor.userId,
+      svc.actor.role,
+      submission.submitterId,
+    );
+
+    if (file.scanStatus !== 'CLEAN') {
+      throw new FileNotCleanError(fileId, file.scanStatus);
+    }
+
+    const url = await getPresignedDownloadUrl(
+      s3Client,
+      bucket,
+      file.storageKey,
+    );
+    return { url, filename: file.filename, mimeType: file.mimeType };
+  },
+
+  /**
+   * Delete a file — submission owner only, DRAFT only, with audit + S3 cleanup.
+   */
+  async deleteAsOwner(
+    svc: ServiceContext,
+    fileId: string,
+    s3Client: S3Client,
+    bucket: string,
+    quarantineBucket: string,
+  ) {
+    const file = await fileService.getById(svc.tx, fileId);
+    if (!file) throw new FileNotFoundError(fileId);
+
+    const submission = await submissionService.getById(
+      svc.tx,
+      file.submissionId,
+    );
+    if (!submission) throw new SubmissionNotFoundError(file.submissionId);
+    if (submission.submitterId !== svc.actor.userId) {
+      throw new ForbiddenError('Only the submitter can delete files');
+    }
+    if (submission.status !== 'DRAFT') {
+      throw new NotDraftError();
+    }
+
+    const deleted = await fileService.delete(svc.tx, fileId);
+    if (!deleted) throw new FileNotFoundError(fileId);
+
+    await svc.audit({
+      action: AuditActions.FILE_DELETED,
+      resource: AuditResources.FILE,
+      resourceId: fileId,
+      newValue: {
+        filename: file.filename,
+        submissionId: file.submissionId,
+      },
+    });
+
+    // S3 cleanup — best-effort
+    try {
+      const targetBucket =
+        file.scanStatus === 'CLEAN' ? bucket : quarantineBucket;
+      await deleteS3Object(s3Client, targetBucket, file.storageKey);
+    } catch {
+      // Log but don't fail — orphaned S3 objects can be cleaned up
+      // by a periodic garbage collection job
+      svc
+        .audit({
+          action: AuditActions.FILE_DELETED,
+          resource: AuditResources.FILE,
+          resourceId: fileId,
+          newValue: { s3DeleteFailed: true, storageKey: file.storageKey },
+        })
+        .catch(() => {});
+    }
+
+    return { success: true as const };
   },
 };

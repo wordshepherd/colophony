@@ -1,31 +1,15 @@
 import { z } from 'zod';
-import { TRPCError } from '@trpc/server';
 import {
   createSubmissionSchema,
   updateSubmissionSchema,
   updateSubmissionStatusSchema,
   listSubmissionsSchema,
-  AuditActions,
-  AuditResources,
 } from '@colophony/types';
 import { orgProcedure, createRouter } from '../init.js';
-import {
-  submissionService,
-  SubmissionNotFoundError,
-  InvalidStatusTransitionError,
-  NotDraftError,
-  UnscannedFilesError,
-  InfectedFilesError,
-} from '../../services/submission.service.js';
-
-function assertEditorOrAdmin(role: string): void {
-  if (role !== 'ADMIN' && role !== 'EDITOR') {
-    throw new TRPCError({
-      code: 'FORBIDDEN',
-      message: 'Editor or admin role required',
-    });
-  }
-}
+import { submissionService } from '../../services/submission.service.js';
+import { toServiceContext } from '../../services/context.js';
+import { assertEditorOrAdmin } from '../../services/errors.js';
+import { mapServiceError } from '../error-mapper.js';
 
 export const submissionsRouter = createRouter({
   /** Submitter's own submissions (any org member). */
@@ -43,52 +27,40 @@ export const submissionsRouter = createRouter({
   list: orgProcedure
     .input(listSubmissionsSchema)
     .query(async ({ ctx, input }) => {
-      assertEditorOrAdmin(ctx.authContext.role);
-      return submissionService.listAll(ctx.dbTx, input);
+      try {
+        assertEditorOrAdmin(ctx.authContext.role);
+        return await submissionService.listAll(ctx.dbTx, input);
+      } catch (e) {
+        mapServiceError(e);
+      }
     }),
 
   /** Create a new DRAFT submission. */
   create: orgProcedure
     .input(createSubmissionSchema)
     .mutation(async ({ ctx, input }) => {
-      const submission = await submissionService.create(
-        ctx.dbTx,
-        input,
-        ctx.authContext.orgId,
-        ctx.authContext.userId,
-      );
-      await ctx.audit({
-        action: AuditActions.SUBMISSION_CREATED,
-        resource: AuditResources.SUBMISSION,
-        resourceId: submission.id,
-        newValue: { title: input.title },
-      });
-      return submission;
+      try {
+        return await submissionService.createWithAudit(
+          toServiceContext(ctx),
+          input,
+        );
+      } catch (e) {
+        mapServiceError(e);
+      }
     }),
 
   /** Get submission by ID — owner or editor/admin. */
   getById: orgProcedure
     .input(z.object({ id: z.string().uuid() }))
     .query(async ({ ctx, input }) => {
-      const submission = await submissionService.getById(ctx.dbTx, input.id);
-      if (!submission) {
-        throw new TRPCError({
-          code: 'NOT_FOUND',
-          message: 'Submission not found',
-        });
+      try {
+        return await submissionService.getByIdWithAccess(
+          toServiceContext(ctx),
+          input.id,
+        );
+      } catch (e) {
+        mapServiceError(e);
       }
-      // Owner or editor/admin can view
-      if (
-        submission.submitterId !== ctx.authContext.userId &&
-        ctx.authContext.role !== 'ADMIN' &&
-        ctx.authContext.role !== 'EDITOR'
-      ) {
-        throw new TRPCError({
-          code: 'FORBIDDEN',
-          message: 'You do not have access to this submission',
-        });
-      }
-      return submission;
     }),
 
   /** Update a DRAFT submission — owner only. */
@@ -96,39 +68,14 @@ export const submissionsRouter = createRouter({
     .input(z.object({ id: z.string().uuid() }).merge(updateSubmissionSchema))
     .mutation(async ({ ctx, input }) => {
       const { id, ...data } = input;
-      const existing = await submissionService.getById(ctx.dbTx, id);
-      if (!existing) {
-        throw new TRPCError({
-          code: 'NOT_FOUND',
-          message: 'Submission not found',
-        });
-      }
-      if (existing.submitterId !== ctx.authContext.userId) {
-        throw new TRPCError({
-          code: 'FORBIDDEN',
-          message: 'Only the submitter can update this submission',
-        });
-      }
       try {
-        const updated = await submissionService.update(ctx.dbTx, id, data);
-        if (!updated) {
-          throw new TRPCError({
-            code: 'NOT_FOUND',
-            message: 'Submission not found',
-          });
-        }
-        await ctx.audit({
-          action: AuditActions.SUBMISSION_UPDATED,
-          resource: AuditResources.SUBMISSION,
-          resourceId: id,
-          newValue: data,
-        });
-        return updated;
+        return await submissionService.updateAsOwner(
+          toServiceContext(ctx),
+          id,
+          data,
+        );
       } catch (e) {
-        if (e instanceof NotDraftError) {
-          throw new TRPCError({ code: 'BAD_REQUEST', message: e.message });
-        }
-        throw e;
+        mapServiceError(e);
       }
     }),
 
@@ -136,48 +83,13 @@ export const submissionsRouter = createRouter({
   submit: orgProcedure
     .input(z.object({ id: z.string().uuid() }))
     .mutation(async ({ ctx, input }) => {
-      const existing = await submissionService.getById(ctx.dbTx, input.id);
-      if (!existing) {
-        throw new TRPCError({
-          code: 'NOT_FOUND',
-          message: 'Submission not found',
-        });
-      }
-      if (existing.submitterId !== ctx.authContext.userId) {
-        throw new TRPCError({
-          code: 'FORBIDDEN',
-          message: 'Only the submitter can submit this submission',
-        });
-      }
       try {
-        const result = await submissionService.updateStatus(
-          ctx.dbTx,
+        return await submissionService.submitAsOwner(
+          toServiceContext(ctx),
           input.id,
-          'SUBMITTED',
-          ctx.authContext.userId,
-          undefined,
-          'submitter',
         );
-        await ctx.audit({
-          action: AuditActions.SUBMISSION_SUBMITTED,
-          resource: AuditResources.SUBMISSION,
-          resourceId: input.id,
-        });
-        return result;
       } catch (e) {
-        if (e instanceof SubmissionNotFoundError) {
-          throw new TRPCError({ code: 'NOT_FOUND', message: e.message });
-        }
-        if (e instanceof InvalidStatusTransitionError) {
-          throw new TRPCError({ code: 'BAD_REQUEST', message: e.message });
-        }
-        if (e instanceof UnscannedFilesError) {
-          throw new TRPCError({ code: 'BAD_REQUEST', message: e.message });
-        }
-        if (e instanceof InfectedFilesError) {
-          throw new TRPCError({ code: 'BAD_REQUEST', message: e.message });
-        }
-        throw e;
+        mapServiceError(e);
       }
     }),
 
@@ -185,38 +97,13 @@ export const submissionsRouter = createRouter({
   delete: orgProcedure
     .input(z.object({ id: z.string().uuid() }))
     .mutation(async ({ ctx, input }) => {
-      const existing = await submissionService.getById(ctx.dbTx, input.id);
-      if (!existing) {
-        throw new TRPCError({
-          code: 'NOT_FOUND',
-          message: 'Submission not found',
-        });
-      }
-      if (existing.submitterId !== ctx.authContext.userId) {
-        throw new TRPCError({
-          code: 'FORBIDDEN',
-          message: 'Only the submitter can delete this submission',
-        });
-      }
       try {
-        const deleted = await submissionService.delete(ctx.dbTx, input.id);
-        if (!deleted) {
-          throw new TRPCError({
-            code: 'NOT_FOUND',
-            message: 'Submission not found',
-          });
-        }
-        await ctx.audit({
-          action: AuditActions.SUBMISSION_DELETED,
-          resource: AuditResources.SUBMISSION,
-          resourceId: input.id,
-        });
-        return { success: true };
+        return await submissionService.deleteAsOwner(
+          toServiceContext(ctx),
+          input.id,
+        );
       } catch (e) {
-        if (e instanceof NotDraftError) {
-          throw new TRPCError({ code: 'BAD_REQUEST', message: e.message });
-        }
-        throw e;
+        mapServiceError(e);
       }
     }),
 
@@ -224,42 +111,13 @@ export const submissionsRouter = createRouter({
   withdraw: orgProcedure
     .input(z.object({ id: z.string().uuid() }))
     .mutation(async ({ ctx, input }) => {
-      const existing = await submissionService.getById(ctx.dbTx, input.id);
-      if (!existing) {
-        throw new TRPCError({
-          code: 'NOT_FOUND',
-          message: 'Submission not found',
-        });
-      }
-      if (existing.submitterId !== ctx.authContext.userId) {
-        throw new TRPCError({
-          code: 'FORBIDDEN',
-          message: 'Only the submitter can withdraw this submission',
-        });
-      }
       try {
-        const result = await submissionService.updateStatus(
-          ctx.dbTx,
+        return await submissionService.withdrawAsOwner(
+          toServiceContext(ctx),
           input.id,
-          'WITHDRAWN',
-          ctx.authContext.userId,
-          undefined,
-          'submitter',
         );
-        await ctx.audit({
-          action: AuditActions.SUBMISSION_WITHDRAWN,
-          resource: AuditResources.SUBMISSION,
-          resourceId: input.id,
-        });
-        return result;
       } catch (e) {
-        if (e instanceof SubmissionNotFoundError) {
-          throw new TRPCError({ code: 'NOT_FOUND', message: e.message });
-        }
-        if (e instanceof InvalidStatusTransitionError) {
-          throw new TRPCError({ code: 'BAD_REQUEST', message: e.message });
-        }
-        throw e;
+        mapServiceError(e);
       }
     }),
 
@@ -269,32 +127,16 @@ export const submissionsRouter = createRouter({
       z.object({ id: z.string().uuid() }).merge(updateSubmissionStatusSchema),
     )
     .mutation(async ({ ctx, input }) => {
-      assertEditorOrAdmin(ctx.authContext.role);
       const { id, status, comment } = input;
       try {
-        const result = await submissionService.updateStatus(
-          ctx.dbTx,
+        return await submissionService.updateStatusAsEditor(
+          toServiceContext(ctx),
           id,
           status,
-          ctx.authContext.userId,
           comment,
-          'editor',
         );
-        await ctx.audit({
-          action: AuditActions.SUBMISSION_STATUS_CHANGED,
-          resource: AuditResources.SUBMISSION,
-          resourceId: id,
-          newValue: { status, comment },
-        });
-        return result;
       } catch (e) {
-        if (e instanceof SubmissionNotFoundError) {
-          throw new TRPCError({ code: 'NOT_FOUND', message: e.message });
-        }
-        if (e instanceof InvalidStatusTransitionError) {
-          throw new TRPCError({ code: 'BAD_REQUEST', message: e.message });
-        }
-        throw e;
+        mapServiceError(e);
       }
     }),
 
@@ -302,26 +144,13 @@ export const submissionsRouter = createRouter({
   getHistory: orgProcedure
     .input(z.object({ submissionId: z.string().uuid() }))
     .query(async ({ ctx, input }) => {
-      const submission = await submissionService.getById(
-        ctx.dbTx,
-        input.submissionId,
-      );
-      if (!submission) {
-        throw new TRPCError({
-          code: 'NOT_FOUND',
-          message: 'Submission not found',
-        });
+      try {
+        return await submissionService.getHistoryWithAccess(
+          toServiceContext(ctx),
+          input.submissionId,
+        );
+      } catch (e) {
+        mapServiceError(e);
       }
-      if (
-        submission.submitterId !== ctx.authContext.userId &&
-        ctx.authContext.role !== 'ADMIN' &&
-        ctx.authContext.role !== 'EDITOR'
-      ) {
-        throw new TRPCError({
-          code: 'FORBIDDEN',
-          message: 'You do not have access to this submission',
-        });
-      }
-      return submissionService.getHistory(ctx.dbTx, input.submissionId);
     }),
 });

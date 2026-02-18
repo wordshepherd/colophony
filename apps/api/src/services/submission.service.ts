@@ -18,7 +18,15 @@ import type {
 import {
   isValidStatusTransition,
   isEditorAllowedTransition,
+  AuditActions,
+  AuditResources,
 } from '@colophony/types';
+import type { ServiceContext } from './types.js';
+import {
+  ForbiddenError,
+  assertOwnerOrEditor,
+  assertEditorOrAdmin,
+} from './errors.js';
 
 // ---------------------------------------------------------------------------
 // Error classes
@@ -348,5 +356,178 @@ export const submissionService = {
       .from(submissionHistory)
       .where(eq(submissionHistory.submissionId, submissionId))
       .orderBy(asc(submissionHistory.changedAt));
+  },
+
+  // ---------------------------------------------------------------------------
+  // Access-aware methods (PR 2) — bundle access control + audit
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Get submission by ID with owner-or-editor access check.
+   */
+  async getByIdWithAccess(svc: ServiceContext, id: string) {
+    const submission = await submissionService.getById(svc.tx, id);
+    if (!submission) throw new SubmissionNotFoundError(id);
+    assertOwnerOrEditor(
+      svc.actor.userId,
+      svc.actor.role,
+      submission.submitterId,
+    );
+    return submission;
+  },
+
+  /**
+   * Create a new submission with audit logging.
+   */
+  async createWithAudit(svc: ServiceContext, input: CreateSubmissionInput) {
+    const submission = await submissionService.create(
+      svc.tx,
+      input,
+      svc.actor.orgId,
+      svc.actor.userId,
+    );
+    await svc.audit({
+      action: AuditActions.SUBMISSION_CREATED,
+      resource: AuditResources.SUBMISSION,
+      resourceId: submission.id,
+      newValue: { title: input.title },
+    });
+    return submission;
+  },
+
+  /**
+   * Update a DRAFT submission — owner only, with audit.
+   */
+  async updateAsOwner(
+    svc: ServiceContext,
+    id: string,
+    data: UpdateSubmissionInput,
+  ) {
+    const existing = await submissionService.getById(svc.tx, id);
+    if (!existing) throw new SubmissionNotFoundError(id);
+    if (existing.submitterId !== svc.actor.userId) {
+      throw new ForbiddenError('Only the submitter can update this submission');
+    }
+    const updated = await submissionService.update(svc.tx, id, data);
+    if (!updated) throw new SubmissionNotFoundError(id);
+    await svc.audit({
+      action: AuditActions.SUBMISSION_UPDATED,
+      resource: AuditResources.SUBMISSION,
+      resourceId: id,
+      newValue: data,
+    });
+    return updated;
+  },
+
+  /**
+   * Submit a DRAFT submission (DRAFT→SUBMITTED) — owner only, with audit.
+   */
+  async submitAsOwner(svc: ServiceContext, id: string) {
+    const existing = await submissionService.getById(svc.tx, id);
+    if (!existing) throw new SubmissionNotFoundError(id);
+    if (existing.submitterId !== svc.actor.userId) {
+      throw new ForbiddenError('Only the submitter can submit this submission');
+    }
+    const result = await submissionService.updateStatus(
+      svc.tx,
+      id,
+      'SUBMITTED',
+      svc.actor.userId,
+      undefined,
+      'submitter',
+    );
+    await svc.audit({
+      action: AuditActions.SUBMISSION_SUBMITTED,
+      resource: AuditResources.SUBMISSION,
+      resourceId: id,
+    });
+    return result;
+  },
+
+  /**
+   * Delete a DRAFT submission — owner only, with audit.
+   */
+  async deleteAsOwner(svc: ServiceContext, id: string) {
+    const existing = await submissionService.getById(svc.tx, id);
+    if (!existing) throw new SubmissionNotFoundError(id);
+    if (existing.submitterId !== svc.actor.userId) {
+      throw new ForbiddenError('Only the submitter can delete this submission');
+    }
+    const deleted = await submissionService.delete(svc.tx, id);
+    if (!deleted) throw new SubmissionNotFoundError(id);
+    await svc.audit({
+      action: AuditActions.SUBMISSION_DELETED,
+      resource: AuditResources.SUBMISSION,
+      resourceId: id,
+    });
+    return { success: true as const };
+  },
+
+  /**
+   * Withdraw a submission — owner only, with audit.
+   */
+  async withdrawAsOwner(svc: ServiceContext, id: string) {
+    const existing = await submissionService.getById(svc.tx, id);
+    if (!existing) throw new SubmissionNotFoundError(id);
+    if (existing.submitterId !== svc.actor.userId) {
+      throw new ForbiddenError(
+        'Only the submitter can withdraw this submission',
+      );
+    }
+    const result = await submissionService.updateStatus(
+      svc.tx,
+      id,
+      'WITHDRAWN',
+      svc.actor.userId,
+      undefined,
+      'submitter',
+    );
+    await svc.audit({
+      action: AuditActions.SUBMISSION_WITHDRAWN,
+      resource: AuditResources.SUBMISSION,
+      resourceId: id,
+    });
+    return result;
+  },
+
+  /**
+   * Editor/admin status transition with audit.
+   */
+  async updateStatusAsEditor(
+    svc: ServiceContext,
+    id: string,
+    status: SubmissionStatus,
+    comment: string | undefined,
+  ) {
+    assertEditorOrAdmin(svc.actor.role);
+    const result = await submissionService.updateStatus(
+      svc.tx,
+      id,
+      status,
+      svc.actor.userId,
+      comment,
+      'editor',
+    );
+    await svc.audit({
+      action: AuditActions.SUBMISSION_STATUS_CHANGED,
+      resource: AuditResources.SUBMISSION,
+      resourceId: id,
+      newValue: { status, comment },
+    });
+    return result;
+  },
+
+  /**
+   * Get submission history — owner or editor/admin access check.
+   */
+  async getHistoryWithAccess(svc: ServiceContext, submissionId: string) {
+    const submission = await submissionService.getById(svc.tx, submissionId);
+    if (!submission) throw new SubmissionNotFoundError(submissionId);
+    assertOwnerOrEditor(
+      svc.actor.userId,
+      svc.actor.role,
+      submission.submitterId,
+    );
+    return submissionService.getHistory(svc.tx, submissionId);
   },
 };

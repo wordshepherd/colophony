@@ -22,3 +22,35 @@ export class NotFoundError extends Error {
     super(message);
   }
 }
+
+// ---------------------------------------------------------------------------
+// Access-control helpers — shared across service methods
+// ---------------------------------------------------------------------------
+
+/**
+ * Assert the caller is the resource owner, or has EDITOR/ADMIN role.
+ * Throws {@link ForbiddenError} if neither condition is met.
+ */
+export function assertOwnerOrEditor(
+  actorUserId: string,
+  actorRole: string,
+  resourceOwnerId: string,
+): void {
+  if (
+    resourceOwnerId !== actorUserId &&
+    actorRole !== 'ADMIN' &&
+    actorRole !== 'EDITOR'
+  ) {
+    throw new ForbiddenError('You do not have access to this submission');
+  }
+}
+
+/**
+ * Assert the caller has EDITOR or ADMIN role.
+ * Throws {@link ForbiddenError} if the role is insufficient.
+ */
+export function assertEditorOrAdmin(role: string): void {
+  if (role !== 'ADMIN' && role !== 'EDITOR') {
+    throw new ForbiddenError('Editor or admin role required');
+  }
+}
