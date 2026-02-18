@@ -201,6 +201,39 @@ describe('auth plugin', () => {
       expect(response.statusCode).toBe(404);
     });
 
+    it('skips auth for /v1/openapi.json', async () => {
+      const response = await app.inject({
+        method: 'GET',
+        url: '/v1/openapi.json',
+      });
+      // 404 because no route registered in this test, but auth hook didn't block
+      expect(response.statusCode).toBe(404);
+    });
+
+    it('skips auth for /v1/docs', async () => {
+      const response = await app.inject({
+        method: 'GET',
+        url: '/v1/docs',
+      });
+      expect(response.statusCode).toBe(404);
+    });
+
+    it('skips auth for /v1/docs/ (trailing slash)', async () => {
+      const response = await app.inject({
+        method: 'GET',
+        url: '/v1/docs/',
+      });
+      expect(response.statusCode).toBe(404);
+    });
+
+    it('skips auth for /v1/openapi.json/ (trailing slash)', async () => {
+      const response = await app.inject({
+        method: 'GET',
+        url: '/v1/openapi.json/',
+      });
+      expect(response.statusCode).toBe(404);
+    });
+
     it('returns 401 when no Authorization header', async () => {
       const response = await app.inject({
         method: 'GET',
