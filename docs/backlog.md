@@ -63,7 +63,7 @@
 - [x] oRPC REST API surface — PR 3: typed client package — (DEVLOG 2026-02-18; done 2026-02-18)
 - [x] API key scope enforcement on REST + tRPC endpoints — (DEVLOG 2026-02-18, done 2026-02-18)
 - [ ] API key scope enforcement on GraphQL surface — when Pothos/GraphQL Yoga is built — (DEVLOG 2026-02-18)
-- [ ] tRPC `.output()` runtime response validation — blocked by response shape mismatches (userService.getProfile, submissions.getById, apiKeys.delete, list endpoints); needs `paginatedResponseSchema()` wrapper — (input validation audit 2026-02-18)
+- [x] tRPC `.output()` runtime response validation — all 30 procedures wired with Zod output schemas; 9 new response schemas added — (input validation audit 2026-02-18; done 2026-02-18)
 - [ ] Pothos + GraphQL Yoga surface — decision point at Month 3: Pothos vs TypeGraphQL — (architecture doc Track 2, Section 6.6)
 - [ ] SDK generation (TypeScript, Python) — (architecture doc Track 2)
 - [ ] API documentation — (architecture doc Track 2)
