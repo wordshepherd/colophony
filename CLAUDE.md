@@ -138,7 +138,7 @@ All other version pins are in their respective per-directory CLAUDE.md files.
 - [x] File virus scanning before production bucket (ClamAV via BullMQ)
 - [x] RLS policies on all tenant tables via Drizzle `pgPolicy` with FORCE — see `packages/db/CLAUDE.md`
 - [x] Application database role is NOT superuser — see `packages/db/CLAUDE.md`
-- [ ] Input validation with Zod on all API surfaces
+- [x] Input validation with Zod on all API surfaces
 - [x] Zitadel webhook signature verification + timestamp freshness + event ordering + webhook rate limiting
 - [x] Stripe webhook signature verification + idempotency
 - [x] Storage: block public access via MinIO policy

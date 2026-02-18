@@ -1,4 +1,3 @@
-import { z } from 'zod';
 import { TRPCError } from '@trpc/server';
 import {
   createOrganizationSchema,
@@ -7,6 +6,7 @@ import {
   updateMemberRoleSchema,
   paginationSchema,
   checkSlugSchema,
+  memberIdParamSchema,
 } from '@colophony/types';
 import {
   authedProcedure,
@@ -44,7 +44,7 @@ const membersRouter = createRouter({
 
   remove: adminProcedure
     .use(requireScopes('organizations:write'))
-    .input(z.object({ memberId: z.string().uuid() }))
+    .input(memberIdParamSchema)
     .mutation(async ({ ctx, input }) => {
       try {
         return await organizationService.removeMemberWithAudit(
