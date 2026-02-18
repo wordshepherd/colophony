@@ -47,6 +47,21 @@ function authedContext(): RestContext {
   };
 }
 
+function apiKeyAuthedContext(scopes: string[]): RestContext {
+  return {
+    authContext: {
+      userId: USER_ID,
+      email: 'test@example.com',
+      emailVerified: true,
+      authMethod: 'apikey',
+      apiKeyId: 'k0000000-0000-4000-a000-000000000001',
+      apiKeyScopes: scopes as any,
+    },
+    dbTx: null,
+    audit: vi.fn(),
+  };
+}
+
 function client<T>(procedure: T, context: RestContext) {
   return createProcedureClient(procedure as any, { context }) as any;
 }
@@ -83,6 +98,34 @@ describe('users REST router', () => {
 
       const call = client(usersRouter.me, authedContext());
       await expect(call({})).rejects.toThrow('User not found');
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // API key scope enforcement
+  // -------------------------------------------------------------------------
+
+  describe('API key scope enforcement', () => {
+    it('denies users:read with wrong scope', async () => {
+      const ctx = apiKeyAuthedContext(['submissions:read']);
+      const call = client(usersRouter.me, ctx);
+      await expect(call({})).rejects.toThrow('Insufficient API key scope');
+    });
+
+    it('allows API key with users:read scope', async () => {
+      const profile = {
+        id: USER_ID,
+        email: 'test@example.com',
+        emailVerified: true,
+        createdAt: new Date(),
+        organizations: [],
+      };
+      mockUserService.getProfile.mockResolvedValueOnce(profile as never);
+
+      const ctx = apiKeyAuthedContext(['users:read']);
+      const call = client(usersRouter.me, ctx);
+      const result = await call({});
+      expect(result.id).toBe(USER_ID);
     });
   });
 });

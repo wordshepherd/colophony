@@ -111,6 +111,26 @@ function orgContext(
   };
 }
 
+function apiKeyContext(
+  scopes: string[],
+  role: 'ADMIN' | 'EDITOR' | 'READER' = 'ADMIN',
+): RestContext {
+  return {
+    authContext: {
+      userId: USER_ID,
+      email: 'test@example.com',
+      emailVerified: true,
+      authMethod: 'apikey',
+      apiKeyId: 'k0000000-0000-4000-a000-000000000001',
+      apiKeyScopes: scopes as any,
+      orgId: ORG_ID,
+      role,
+    },
+    dbTx: {} as never,
+    audit: vi.fn(),
+  };
+}
+
 function client<T>(procedure: T, context: RestContext) {
   return createProcedureClient(procedure as any, { context }) as any;
 }
@@ -244,6 +264,40 @@ describe('files REST router', () => {
 
       const call = client(filesRouter.delete, orgContext('READER'));
       await expect(call({ fileId: FILE_ID })).rejects.toThrow(ORPCError);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // API key scope enforcement
+  // -------------------------------------------------------------------------
+
+  describe('API key scope enforcement', () => {
+    it('denies files:read route with wrong scope', async () => {
+      const ctx = apiKeyContext(['submissions:read']);
+      const call = client(filesRouter.list, ctx);
+      await expect(call({ submissionId: SUBMISSION_ID })).rejects.toThrow(
+        'Insufficient API key scope',
+      );
+    });
+
+    it('denies files:write route with only read scope', async () => {
+      const ctx = apiKeyContext(['files:read']);
+      const call = client(filesRouter.delete, ctx);
+      await expect(call({ fileId: FILE_ID })).rejects.toThrow(
+        'Insufficient API key scope',
+      );
+    });
+
+    it('allows API key with correct read scope', async () => {
+      const files = [{ id: FILE_ID, filename: 'test.pdf' }];
+      mockFileService.listBySubmissionWithAccess.mockResolvedValueOnce(
+        files as never,
+      );
+
+      const ctx = apiKeyContext(['files:read']);
+      const call = client(filesRouter.list, ctx);
+      const result = await call({ submissionId: SUBMISSION_ID });
+      expect(result).toHaveLength(1);
     });
   });
 });

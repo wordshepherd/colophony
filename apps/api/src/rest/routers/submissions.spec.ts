@@ -121,6 +121,26 @@ function client<T>(procedure: T, context: RestContext) {
   return createProcedureClient(procedure as any, { context }) as any;
 }
 
+function apiKeyContext(
+  scopes: string[],
+  role: 'ADMIN' | 'EDITOR' | 'READER' = 'ADMIN',
+): RestContext {
+  return {
+    authContext: {
+      userId: USER_ID,
+      email: 'test@example.com',
+      emailVerified: true,
+      authMethod: 'apikey',
+      apiKeyId: 'k0000000-0000-4000-a000-000000000001',
+      apiKeyScopes: scopes as any,
+      orgId: ORG_ID,
+      role,
+    },
+    dbTx: {} as never,
+    audit: vi.fn(),
+  };
+}
+
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
@@ -550,6 +570,56 @@ describe('submissions REST router', () => {
       const call = client(submissionsRouter.history, orgContext('READER'));
       await expect(call({ id: SUBMISSION_ID })).rejects.toThrow(
         'You do not have access',
+      );
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // API key scope enforcement
+  // -------------------------------------------------------------------------
+
+  describe('API key scope enforcement', () => {
+    it('denies submissions:read route with wrong scope', async () => {
+      const ctx = apiKeyContext(['files:read']);
+      const call = client(submissionsRouter.mine, ctx);
+      await expect(call({ page: 1, limit: 20 })).rejects.toThrow(
+        'Insufficient API key scope',
+      );
+    });
+
+    it('denies submissions:write route with only read scope', async () => {
+      const ctx = apiKeyContext(['submissions:read']);
+      const call = client(submissionsRouter.create, ctx);
+      await expect(call({ title: 'Test' })).rejects.toThrow(
+        'Insufficient API key scope',
+      );
+    });
+
+    it('allows API key with correct read scope', async () => {
+      const response = {
+        items: [],
+        total: 0,
+        page: 1,
+        limit: 20,
+        totalPages: 0,
+      };
+      mockService.listBySubmitter.mockResolvedValueOnce(response as never);
+
+      const ctx = apiKeyContext(['submissions:read']);
+      const call = client(submissionsRouter.mine, ctx);
+      const result = await call({ page: 1, limit: 20 });
+      expect(result.items).toHaveLength(0);
+    });
+
+    it('calls audit on scope denial', async () => {
+      const ctx = apiKeyContext(['files:read']);
+      const call = client(submissionsRouter.mine, ctx);
+      await expect(call({ page: 1, limit: 20 })).rejects.toThrow();
+      expect(ctx.audit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          action: 'API_KEY_SCOPE_DENIED',
+          resource: 'api_key',
+        }),
       );
     });
   });

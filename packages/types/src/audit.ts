@@ -47,6 +47,7 @@ export const AuditActions = {
   API_KEY_DELETED: "API_KEY_DELETED",
   API_KEY_AUTH_SUCCESS: "API_KEY_AUTH_SUCCESS",
   API_KEY_AUTH_FAILED: "API_KEY_AUTH_FAILED",
+  API_KEY_SCOPE_DENIED: "API_KEY_SCOPE_DENIED",
 
   // Payment lifecycle
   PAYMENT_SUCCEEDED: "PAYMENT_SUCCEEDED",
@@ -145,7 +146,8 @@ export interface ApiKeyAuditParams extends BaseAuditParams {
     | typeof AuditActions.API_KEY_REVOKED
     | typeof AuditActions.API_KEY_DELETED
     | typeof AuditActions.API_KEY_AUTH_SUCCESS
-    | typeof AuditActions.API_KEY_AUTH_FAILED;
+    | typeof AuditActions.API_KEY_AUTH_FAILED
+    | typeof AuditActions.API_KEY_SCOPE_DENIED;
 }
 
 export interface PaymentAuditParams extends BaseAuditParams {

@@ -1,7 +1,9 @@
 import { os, ORPCError } from '@orpc/server';
-import type { AuthContext, Role } from '@colophony/types';
+import type { AuthContext, Role, ApiKeyScope } from '@colophony/types';
+import { AuditActions, AuditResources } from '@colophony/types';
 import type { DrizzleDb } from '@colophony/db';
 import type { AuditFn } from '../services/types.js';
+import { checkApiKeyScopes } from '../services/scope-check.js';
 
 /**
  * Initial oRPC context populated by Fastify hooks.
@@ -108,6 +110,41 @@ export const requireAdmin = restBase.middleware(async ({ context, next }) => {
     },
   });
 });
+
+/**
+ * Factory: returns oRPC middleware that enforces API key scopes.
+ * OIDC/test auth bypasses the check (scopes are API-key-only).
+ * Must be chained after requireAuth or requireOrgContext.
+ */
+export function requireScopes(...scopes: ApiKeyScope[]) {
+  return restBase.middleware(async ({ context, next }) => {
+    if (!context.authContext) {
+      throw new ORPCError('UNAUTHORIZED', {
+        message: 'Not authenticated',
+      });
+    }
+
+    const result = checkApiKeyScopes(context.authContext, scopes);
+    if (!result.allowed) {
+      await context.audit({
+        action: AuditActions.API_KEY_SCOPE_DENIED,
+        resource: AuditResources.API_KEY,
+        resourceId: context.authContext.apiKeyId,
+        newValue: { required: scopes, missing: result.missing },
+      });
+      throw new ORPCError('FORBIDDEN', {
+        message: 'Insufficient API key scope',
+        data: {
+          error: 'insufficient_scope',
+          required: scopes,
+          missing: result.missing,
+        },
+      });
+    }
+
+    return next({});
+  });
+}
 
 // Procedure builders (analogous to tRPC's authedProcedure, orgProcedure, adminProcedure)
 export const authedProcedure = restBase.use(requireAuth);

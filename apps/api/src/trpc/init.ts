@@ -1,5 +1,8 @@
 import { initTRPC, TRPCError } from '@trpc/server';
+import type { ApiKeyScope } from '@colophony/types';
+import { AuditActions, AuditResources } from '@colophony/types';
 import type { TRPCContext } from './context.js';
+import { checkApiKeyScopes } from '../services/scope-check.js';
 
 export const t = initTRPC.context<TRPCContext>().create();
 
@@ -78,6 +81,38 @@ const isAdmin = t.middleware(({ ctx, next }) => {
     },
   });
 });
+
+/**
+ * Factory: returns tRPC middleware that enforces API key scopes.
+ * OIDC/test auth bypasses the check (scopes are API-key-only).
+ * Must be chained after isAuthed or hasOrgContext.
+ */
+export function requireScopes(...scopes: ApiKeyScope[]) {
+  return t.middleware(async ({ ctx, next }) => {
+    if (!ctx.authContext) {
+      throw new TRPCError({
+        code: 'UNAUTHORIZED',
+        message: 'Not authenticated',
+      });
+    }
+
+    const result = checkApiKeyScopes(ctx.authContext, scopes);
+    if (!result.allowed) {
+      await ctx.audit?.({
+        action: AuditActions.API_KEY_SCOPE_DENIED,
+        resource: AuditResources.API_KEY,
+        resourceId: ctx.authContext.apiKeyId,
+        newValue: { required: scopes, missing: result.missing },
+      });
+      throw new TRPCError({
+        code: 'FORBIDDEN',
+        message: `Insufficient API key scope. Required: ${scopes.join(', ')}. Missing: ${result.missing.join(', ')}`,
+      });
+    }
+
+    return next();
+  });
+}
 
 // ---------------------------------------------------------------------------
 // Procedure builders
