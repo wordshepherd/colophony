@@ -21,7 +21,7 @@
     "migrate": "drizzle-kit migrate",
     "check": "drizzle-kit check",
     "studio": "drizzle-kit studio",
-    "seed": "tsx src/seed.ts",
+    "seed": "tsx --env-file=.env src/seed.ts",
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
