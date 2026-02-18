@@ -150,6 +150,7 @@ describe('audit REST router', () => {
         limit: 10,
       });
 
+      // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(mockService.list).toHaveBeenCalledWith(
         expect.anything(),
         expect.objectContaining({
