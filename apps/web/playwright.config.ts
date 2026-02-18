@@ -1,5 +1,5 @@
-import { readFileSync } from "fs";
 import { resolve } from "path";
+import dotenv from "dotenv";
 import { defineConfig, devices } from "@playwright/test";
 
 /**
@@ -14,40 +14,15 @@ import { defineConfig, devices } from "@playwright/test";
  * Auth strategy: Fake OIDC user injected into localStorage (satisfies frontend
  * auth checks), tRPC requests intercepted to swap Bearer token for API key
  * (satisfies API auth). No Zitadel instance required.
+ *
+ * IMPORTANT: Playwright's webServer.env replaces process.env entirely for child
+ * processes. We must load .env files and spread process.env to ensure DATABASE_URL
+ * and other vars reach the dev servers.
  */
 
-/**
- * Load a .env file into a key-value record.
- * Minimal parser — handles KEY=VALUE lines, skips comments and blanks.
- */
-function loadEnvFile(path: string): Record<string, string> {
-  try {
-    const content = readFileSync(path, "utf-8");
-    const env: Record<string, string> = {};
-    for (const line of content.split("\n")) {
-      const trimmed = line.trim();
-      if (!trimmed || trimmed.startsWith("#")) continue;
-      const eqIdx = trimmed.indexOf("=");
-      if (eqIdx === -1) continue;
-      const key = trimmed.slice(0, eqIdx).trim();
-      let value = trimmed.slice(eqIdx + 1).trim();
-      // Strip surrounding quotes
-      if (
-        (value.startsWith('"') && value.endsWith('"')) ||
-        (value.startsWith("'") && value.endsWith("'"))
-      ) {
-        value = value.slice(1, -1);
-      }
-      env[key] = value;
-    }
-    return env;
-  } catch {
-    return {};
-  }
-}
-
-const apiEnv = loadEnvFile(resolve(__dirname, "../api/.env"));
-const webEnv = loadEnvFile(resolve(__dirname, ".env.local"));
+// Load .env files from both app packages (does not override existing process.env)
+dotenv.config({ path: resolve(__dirname, "../api/.env") });
+dotenv.config({ path: resolve(__dirname, ".env.local") });
 
 export default defineConfig({
   testDir: "./e2e",
@@ -84,7 +59,6 @@ export default defineConfig({
       cwd: "../..",
       env: {
         ...process.env,
-        ...apiEnv,
         VIRUS_SCAN_ENABLED: "false",
       },
     },
@@ -99,7 +73,6 @@ export default defineConfig({
       cwd: "../..",
       env: {
         ...process.env,
-        ...webEnv,
         NEXT_PUBLIC_ZITADEL_AUTHORITY: "http://test-idp:8080",
         NEXT_PUBLIC_ZITADEL_CLIENT_ID: "test-client",
       },
