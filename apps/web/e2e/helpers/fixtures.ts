@@ -96,12 +96,13 @@ export const test = base.extend<{
     await deleteApiKey(key.id);
   },
 
-  authedPage: async ({ browser, seedOrg, seedUser, testApiKey }, use) => {
+  authedPage: async ({ browser, seedOrg, testApiKey, baseURL }, use) => {
     // Create a fresh context with pre-populated localStorage.
     // This ensures OIDC user + currentOrgId exist BEFORE any page JS runs,
     // eliminating the race condition between addInitScript and JS execution.
     const context = await browser.newContext({
       ...devices["Desktop Chrome"],
+      baseURL: baseURL ?? undefined,
       storageState: buildStorageState(seedOrg.id, TEST_USER_PROFILE),
     });
 
