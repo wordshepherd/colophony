@@ -38,7 +38,7 @@ const PUBLIC_EXACT = [
 ];
 
 function isPublicRoute(url: string): boolean {
-  const path = url.split('?')[0];
+  const path = url.split('?')[0].replace(/\/+$/, '') || '/';
   if (PUBLIC_EXACT.includes(path)) return true;
   return PUBLIC_PREFIXES.some((prefix) => path.startsWith(prefix));
 }

@@ -218,6 +218,22 @@ describe('auth plugin', () => {
       expect(response.statusCode).toBe(404);
     });
 
+    it('skips auth for /v1/docs/ (trailing slash)', async () => {
+      const response = await app.inject({
+        method: 'GET',
+        url: '/v1/docs/',
+      });
+      expect(response.statusCode).toBe(404);
+    });
+
+    it('skips auth for /v1/openapi.json/ (trailing slash)', async () => {
+      const response = await app.inject({
+        method: 'GET',
+        url: '/v1/openapi.json/',
+      });
+      expect(response.statusCode).toBe(404);
+    });
+
     it('returns 401 when no Authorization header', async () => {
       const response = await app.inject({
         method: 'GET',
