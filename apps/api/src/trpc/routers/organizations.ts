@@ -13,17 +13,22 @@ import {
   orgProcedure,
   adminProcedure,
   createRouter,
+  requireScopes,
 } from '../init.js';
 import { organizationService } from '../../services/organization.service.js';
 import { toServiceContext } from '../../services/context.js';
 import { mapServiceError } from '../error-mapper.js';
 
 const membersRouter = createRouter({
-  list: orgProcedure.input(paginationSchema).query(async ({ ctx, input }) => {
-    return organizationService.listMembers(ctx.dbTx, input);
-  }),
+  list: orgProcedure
+    .use(requireScopes('organizations:read'))
+    .input(paginationSchema)
+    .query(async ({ ctx, input }) => {
+      return organizationService.listMembers(ctx.dbTx, input);
+    }),
 
   add: adminProcedure
+    .use(requireScopes('organizations:write'))
     .input(inviteMemberSchema)
     .mutation(async ({ ctx, input }) => {
       try {
@@ -38,6 +43,7 @@ const membersRouter = createRouter({
     }),
 
   remove: adminProcedure
+    .use(requireScopes('organizations:write'))
     .input(z.object({ memberId: z.string().uuid() }))
     .mutation(async ({ ctx, input }) => {
       try {
@@ -51,6 +57,7 @@ const membersRouter = createRouter({
     }),
 
   updateRole: adminProcedure
+    .use(requireScopes('organizations:write'))
     .input(updateMemberRoleSchema)
     .mutation(async ({ ctx, input }) => {
       try {
@@ -66,11 +73,14 @@ const membersRouter = createRouter({
 });
 
 export const organizationsRouter = createRouter({
-  list: authedProcedure.query(async ({ ctx }) => {
-    return organizationService.listUserOrganizations(ctx.authContext.userId);
-  }),
+  list: authedProcedure
+    .use(requireScopes('organizations:read'))
+    .query(async ({ ctx }) => {
+      return organizationService.listUserOrganizations(ctx.authContext.userId);
+    }),
 
   create: authedProcedure
+    .use(requireScopes('organizations:write'))
     .input(createOrganizationSchema)
     .mutation(async ({ ctx, input }) => {
       // Pre-check is a UX optimization; the unique constraint is the real safety net.
@@ -93,21 +103,24 @@ export const organizationsRouter = createRouter({
       }
     }),
 
-  get: orgProcedure.query(async ({ ctx }) => {
-    const org = await organizationService.getById(
-      ctx.dbTx,
-      ctx.authContext.orgId,
-    );
-    if (!org) {
-      throw new TRPCError({
-        code: 'NOT_FOUND',
-        message: 'Organization not found',
-      });
-    }
-    return org;
-  }),
+  get: orgProcedure
+    .use(requireScopes('organizations:read'))
+    .query(async ({ ctx }) => {
+      const org = await organizationService.getById(
+        ctx.dbTx,
+        ctx.authContext.orgId,
+      );
+      if (!org) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Organization not found',
+        });
+      }
+      return org;
+    }),
 
   update: adminProcedure
+    .use(requireScopes('organizations:write'))
     .input(updateOrganizationSchema)
     .mutation(async ({ ctx, input }) => {
       try {
@@ -120,10 +133,13 @@ export const organizationsRouter = createRouter({
       }
     }),
 
-  checkSlug: authedProcedure.input(checkSlugSchema).query(async ({ input }) => {
-    const available = await organizationService.isSlugAvailable(input.slug);
-    return { available };
-  }),
+  checkSlug: authedProcedure
+    .use(requireScopes('organizations:read'))
+    .input(checkSlugSchema)
+    .query(async ({ input }) => {
+      const available = await organizationService.isSlugAvailable(input.slug);
+      return { available };
+    }),
 
   members: membersRouter,
 });

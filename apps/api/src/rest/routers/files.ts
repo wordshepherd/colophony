@@ -4,7 +4,7 @@ import { createS3Client } from '../../services/s3.js';
 import { validateEnv } from '../../config/env.js';
 import { toServiceContext } from '../../services/context.js';
 import { mapServiceError } from '../error-mapper.js';
-import { orgProcedure } from '../context.js';
+import { orgProcedure, requireScopes } from '../context.js';
 
 // Lazily create S3 client (avoid creating at module load for tests)
 let s3ClientInstance: ReturnType<typeof createS3Client> | null = null;
@@ -33,6 +33,7 @@ const fileIdParam = z.object({ fileId: z.string().uuid() });
 // ---------------------------------------------------------------------------
 
 const list = orgProcedure
+  .use(requireScopes('files:read'))
   .route({ method: 'GET', path: '/submissions/{submissionId}/files' })
   .input(submissionIdParam)
   .handler(async ({ input, context }) => {
@@ -47,6 +48,7 @@ const list = orgProcedure
   });
 
 const download = orgProcedure
+  .use(requireScopes('files:read'))
   .route({ method: 'GET', path: '/files/{fileId}/download' })
   .input(fileIdParam)
   .handler(async ({ input, context }) => {
@@ -64,6 +66,7 @@ const download = orgProcedure
   });
 
 const del = orgProcedure
+  .use(requireScopes('files:write'))
   .route({ method: 'DELETE', path: '/files/{fileId}' })
   .input(fileIdParam)
   .handler(async ({ input, context }) => {

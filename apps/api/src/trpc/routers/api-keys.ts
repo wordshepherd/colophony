@@ -7,15 +7,24 @@ import {
   AuditActions,
   AuditResources,
 } from '@colophony/types';
-import { orgProcedure, adminProcedure, createRouter } from '../init.js';
+import {
+  orgProcedure,
+  adminProcedure,
+  createRouter,
+  requireScopes,
+} from '../init.js';
 import { apiKeyService } from '../../services/api-key.service.js';
 
 export const apiKeysRouter = createRouter({
-  list: orgProcedure.input(paginationSchema).query(async ({ ctx, input }) => {
-    return apiKeyService.list(ctx.dbTx, input);
-  }),
+  list: orgProcedure
+    .use(requireScopes('api-keys:read'))
+    .input(paginationSchema)
+    .query(async ({ ctx, input }) => {
+      return apiKeyService.list(ctx.dbTx, input);
+    }),
 
   create: adminProcedure
+    .use(requireScopes('api-keys:manage'))
     .input(createApiKeySchema)
     .mutation(async ({ ctx, input }) => {
       const result = await apiKeyService.create(
@@ -34,6 +43,7 @@ export const apiKeysRouter = createRouter({
     }),
 
   revoke: adminProcedure
+    .use(requireScopes('api-keys:manage'))
     .input(revokeApiKeySchema)
     .mutation(async ({ ctx, input }) => {
       const revoked = await apiKeyService.revoke(ctx.dbTx, input.keyId);
@@ -52,6 +62,7 @@ export const apiKeysRouter = createRouter({
     }),
 
   delete: adminProcedure
+    .use(requireScopes('api-keys:manage'))
     .input(deleteApiKeySchema)
     .mutation(async ({ ctx, input }) => {
       const deleted = await apiKeyService.delete(ctx.dbTx, input.keyId);

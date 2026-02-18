@@ -7,7 +7,7 @@ import {
 } from '@colophony/types';
 import { restPaginationQuery } from '@colophony/api-contracts';
 import { apiKeyService } from '../../services/api-key.service.js';
-import { orgProcedure, adminProcedure } from '../context.js';
+import { orgProcedure, adminProcedure, requireScopes } from '../context.js';
 
 // ---------------------------------------------------------------------------
 // Path param schemas
@@ -20,6 +20,7 @@ const keyIdParam = z.object({ keyId: z.string().uuid() });
 // ---------------------------------------------------------------------------
 
 const list = orgProcedure
+  .use(requireScopes('api-keys:read'))
   .route({ method: 'GET', path: '/api-keys' })
   .input(restPaginationQuery)
   .handler(async ({ input, context }) => {
@@ -27,6 +28,7 @@ const list = orgProcedure
   });
 
 const create = adminProcedure
+  .use(requireScopes('api-keys:manage'))
   .route({ method: 'POST', path: '/api-keys', successStatus: 201 })
   .input(createApiKeySchema)
   .handler(async ({ input, context }) => {
@@ -46,6 +48,7 @@ const create = adminProcedure
   });
 
 const revoke = adminProcedure
+  .use(requireScopes('api-keys:manage'))
   .route({ method: 'POST', path: '/api-keys/{keyId}/revoke' })
   .input(keyIdParam)
   .handler(async ({ input, context }) => {
@@ -62,6 +65,7 @@ const revoke = adminProcedure
   });
 
 const del = adminProcedure
+  .use(requireScopes('api-keys:manage'))
   .route({ method: 'DELETE', path: '/api-keys/{keyId}' })
   .input(keyIdParam)
   .handler(async ({ input, context }) => {

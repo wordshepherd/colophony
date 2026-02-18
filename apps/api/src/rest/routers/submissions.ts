@@ -10,7 +10,7 @@ import { submissionService } from '../../services/submission.service.js';
 import { toServiceContext } from '../../services/context.js';
 import { assertEditorOrAdmin } from '../../services/errors.js';
 import { mapServiceError } from '../error-mapper.js';
-import { orgProcedure } from '../context.js';
+import { orgProcedure, requireScopes } from '../context.js';
 
 // ---------------------------------------------------------------------------
 // Query schemas — override page/limit with z.coerce for REST query strings
@@ -31,6 +31,7 @@ const submissionIdParam = z.object({ id: z.string().uuid() });
 // ---------------------------------------------------------------------------
 
 const mine = orgProcedure
+  .use(requireScopes('submissions:read'))
   .route({ method: 'GET', path: '/submissions/mine' })
   .input(restListSubmissionsQuery)
   .handler(async ({ input, context }) => {
@@ -42,6 +43,7 @@ const mine = orgProcedure
   });
 
 const list = orgProcedure
+  .use(requireScopes('submissions:read'))
   .route({ method: 'GET', path: '/submissions' })
   .input(restListSubmissionsQuery)
   .handler(async ({ input, context }) => {
@@ -54,6 +56,7 @@ const list = orgProcedure
   });
 
 const create = orgProcedure
+  .use(requireScopes('submissions:write'))
   .route({ method: 'POST', path: '/submissions', successStatus: 201 })
   .input(createSubmissionSchema)
   .handler(async ({ input, context }) => {
@@ -68,6 +71,7 @@ const create = orgProcedure
   });
 
 const get = orgProcedure
+  .use(requireScopes('submissions:read'))
   .route({ method: 'GET', path: '/submissions/{id}' })
   .input(submissionIdParam)
   .handler(async ({ input, context }) => {
@@ -82,6 +86,7 @@ const get = orgProcedure
   });
 
 const update = orgProcedure
+  .use(requireScopes('submissions:write'))
   .route({ method: 'PATCH', path: '/submissions/{id}' })
   .input(submissionIdParam.merge(updateSubmissionSchema))
   .handler(async ({ input, context }) => {
@@ -98,6 +103,7 @@ const update = orgProcedure
   });
 
 const submit = orgProcedure
+  .use(requireScopes('submissions:write'))
   .route({ method: 'POST', path: '/submissions/{id}/submit' })
   .input(submissionIdParam)
   .handler(async ({ input, context }) => {
@@ -112,6 +118,7 @@ const submit = orgProcedure
   });
 
 const del = orgProcedure
+  .use(requireScopes('submissions:write'))
   .route({ method: 'DELETE', path: '/submissions/{id}' })
   .input(submissionIdParam)
   .handler(async ({ input, context }) => {
@@ -126,6 +133,7 @@ const del = orgProcedure
   });
 
 const withdraw = orgProcedure
+  .use(requireScopes('submissions:write'))
   .route({ method: 'POST', path: '/submissions/{id}/withdraw' })
   .input(submissionIdParam)
   .handler(async ({ input, context }) => {
@@ -140,6 +148,7 @@ const withdraw = orgProcedure
   });
 
 const updateStatus = orgProcedure
+  .use(requireScopes('submissions:write'))
   .route({ method: 'PATCH', path: '/submissions/{id}/status' })
   .input(submissionIdParam.merge(updateSubmissionStatusSchema))
   .handler(async ({ input, context }) => {
@@ -157,6 +166,7 @@ const updateStatus = orgProcedure
   });
 
 const history = orgProcedure
+  .use(requireScopes('submissions:read'))
   .route({ method: 'GET', path: '/submissions/{id}/history' })
   .input(submissionIdParam)
   .handler(async ({ input, context }) => {

@@ -11,7 +11,12 @@ import { restPaginationQuery } from '@colophony/api-contracts';
 import { organizationService } from '../../services/organization.service.js';
 import { toServiceContext } from '../../services/context.js';
 import { mapServiceError } from '../error-mapper.js';
-import { authedProcedure, orgProcedure, adminProcedure } from '../context.js';
+import {
+  authedProcedure,
+  orgProcedure,
+  adminProcedure,
+  requireScopes,
+} from '../context.js';
 
 // ---------------------------------------------------------------------------
 // Path param schemas
@@ -42,6 +47,7 @@ function assertOrgIdMatch(pathOrgId: string, contextOrgId: string): void {
 // ---------------------------------------------------------------------------
 
 const membersList = orgProcedure
+  .use(requireScopes('organizations:read'))
   .route({ method: 'GET', path: '/organizations/{orgId}/members' })
   .input(orgIdParam.merge(restPaginationQuery))
   .handler(async ({ input, context }) => {
@@ -53,6 +59,7 @@ const membersList = orgProcedure
   });
 
 const membersAdd = adminProcedure
+  .use(requireScopes('organizations:write'))
   .route({
     method: 'POST',
     path: '/organizations/{orgId}/members',
@@ -73,6 +80,7 @@ const membersAdd = adminProcedure
   });
 
 const membersRemove = adminProcedure
+  .use(requireScopes('organizations:write'))
   .route({
     method: 'DELETE',
     path: '/organizations/{orgId}/members/{memberId}',
@@ -91,6 +99,7 @@ const membersRemove = adminProcedure
   });
 
 const membersUpdateRole = adminProcedure
+  .use(requireScopes('organizations:write'))
   .route({
     method: 'PATCH',
     path: '/organizations/{orgId}/members/{memberId}',
@@ -114,6 +123,7 @@ const membersUpdateRole = adminProcedure
 // ---------------------------------------------------------------------------
 
 const orgsList = authedProcedure
+  .use(requireScopes('organizations:read'))
   .route({ method: 'GET', path: '/organizations' })
   .handler(async ({ context }) => {
     return organizationService.listUserOrganizations(
@@ -122,6 +132,7 @@ const orgsList = authedProcedure
   });
 
 const orgsCreate = authedProcedure
+  .use(requireScopes('organizations:write'))
   .route({ method: 'POST', path: '/organizations', successStatus: 201 })
   .input(createOrganizationSchema)
   .handler(async ({ context, input }) => {
@@ -144,6 +155,7 @@ const orgsCreate = authedProcedure
   });
 
 const orgsCheckSlug = authedProcedure
+  .use(requireScopes('organizations:read'))
   .route({ method: 'GET', path: '/organizations/check-slug' })
   .input(checkSlugSchema)
   .handler(async ({ input }) => {
@@ -152,6 +164,7 @@ const orgsCheckSlug = authedProcedure
   });
 
 const orgsGet = orgProcedure
+  .use(requireScopes('organizations:read'))
   .route({ method: 'GET', path: '/organizations/{orgId}' })
   .input(orgIdParam)
   .handler(async ({ input, context }) => {
@@ -167,6 +180,7 @@ const orgsGet = orgProcedure
   });
 
 const orgsUpdate = adminProcedure
+  .use(requireScopes('organizations:write'))
   .route({ method: 'PATCH', path: '/organizations/{orgId}' })
   .input(orgIdParam.merge(updateOrganizationSchema))
   .handler(async ({ context, input }) => {
