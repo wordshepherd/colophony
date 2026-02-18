@@ -55,7 +55,7 @@ export function buildStorageState(orgId: string, userProfile: UserProfile) {
     cookies: [],
     origins: [
       {
-        origin: "http://localhost:3000",
+        origin: "http://localhost:3010",
         localStorage: [
           { name: OIDC_STORAGE_KEY, value: JSON.stringify(oidcUser) },
           { name: "currentOrgId", value: orgId },
