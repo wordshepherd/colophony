@@ -13,7 +13,7 @@ const userProfileSchema = z.object({
   createdAt: z.date(),
   organizations: z.array(
     z.object({
-      organizationId: z.string().uuid(),
+      id: z.string().uuid(),
       name: z.string(),
       slug: z.string(),
       role: roleSchema,

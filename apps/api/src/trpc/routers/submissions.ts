@@ -1,3 +1,4 @@
+import { z } from 'zod';
 import {
   createSubmissionSchema,
   updateSubmissionSchema,
@@ -5,6 +6,12 @@ import {
   listSubmissionsSchema,
   idParamSchema,
   submissionIdParamSchema,
+  submissionSchema,
+  submissionDetailSchema,
+  submissionStatusChangeResponseSchema,
+  submissionHistorySchema,
+  successResponseSchema,
+  paginatedResponseSchema,
 } from '@colophony/types';
 import { orgProcedure, createRouter, requireScopes } from '../init.js';
 import { submissionService } from '../../services/submission.service.js';
@@ -17,6 +24,7 @@ export const submissionsRouter = createRouter({
   mySubmissions: orgProcedure
     .use(requireScopes('submissions:read'))
     .input(listSubmissionsSchema)
+    .output(paginatedResponseSchema(submissionSchema))
     .query(async ({ ctx, input }) => {
       return submissionService.listBySubmitter(
         ctx.dbTx,
@@ -29,6 +37,7 @@ export const submissionsRouter = createRouter({
   list: orgProcedure
     .use(requireScopes('submissions:read'))
     .input(listSubmissionsSchema)
+    .output(paginatedResponseSchema(submissionSchema))
     .query(async ({ ctx, input }) => {
       try {
         assertEditorOrAdmin(ctx.authContext.role);
@@ -42,6 +51,7 @@ export const submissionsRouter = createRouter({
   create: orgProcedure
     .use(requireScopes('submissions:write'))
     .input(createSubmissionSchema)
+    .output(submissionSchema)
     .mutation(async ({ ctx, input }) => {
       try {
         return await submissionService.createWithAudit(
@@ -57,6 +67,7 @@ export const submissionsRouter = createRouter({
   getById: orgProcedure
     .use(requireScopes('submissions:read'))
     .input(idParamSchema)
+    .output(submissionDetailSchema)
     .query(async ({ ctx, input }) => {
       try {
         return await submissionService.getByIdWithAccess(
@@ -72,6 +83,7 @@ export const submissionsRouter = createRouter({
   update: orgProcedure
     .use(requireScopes('submissions:write'))
     .input(idParamSchema.merge(updateSubmissionSchema))
+    .output(submissionSchema)
     .mutation(async ({ ctx, input }) => {
       const { id, ...data } = input;
       try {
@@ -89,6 +101,7 @@ export const submissionsRouter = createRouter({
   submit: orgProcedure
     .use(requireScopes('submissions:write'))
     .input(idParamSchema)
+    .output(submissionStatusChangeResponseSchema)
     .mutation(async ({ ctx, input }) => {
       try {
         return await submissionService.submitAsOwner(
@@ -104,6 +117,7 @@ export const submissionsRouter = createRouter({
   delete: orgProcedure
     .use(requireScopes('submissions:write'))
     .input(idParamSchema)
+    .output(successResponseSchema)
     .mutation(async ({ ctx, input }) => {
       try {
         return await submissionService.deleteAsOwner(
@@ -119,6 +133,7 @@ export const submissionsRouter = createRouter({
   withdraw: orgProcedure
     .use(requireScopes('submissions:write'))
     .input(idParamSchema)
+    .output(submissionStatusChangeResponseSchema)
     .mutation(async ({ ctx, input }) => {
       try {
         return await submissionService.withdrawAsOwner(
@@ -134,6 +149,7 @@ export const submissionsRouter = createRouter({
   updateStatus: orgProcedure
     .use(requireScopes('submissions:write'))
     .input(idParamSchema.merge(updateSubmissionStatusSchema))
+    .output(submissionStatusChangeResponseSchema)
     .mutation(async ({ ctx, input }) => {
       const { id, status, comment } = input;
       try {
@@ -152,6 +168,7 @@ export const submissionsRouter = createRouter({
   getHistory: orgProcedure
     .use(requireScopes('submissions:read'))
     .input(submissionIdParamSchema)
+    .output(z.array(submissionHistorySchema))
     .query(async ({ ctx, input }) => {
       try {
         return await submissionService.getHistoryWithAccess(

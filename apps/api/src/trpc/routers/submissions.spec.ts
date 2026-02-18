@@ -78,6 +78,19 @@ import type { TRPCContext } from '../context.js';
 
 const mockService = vi.mocked(submissionService);
 
+// ---------------------------------------------------------------------------
+// UUID constants
+// ---------------------------------------------------------------------------
+const SUBMISSION_ID = 'a1111111-1111-4111-a111-111111111111';
+const ORG_ID = 'b2222222-2222-4222-b222-222222222222';
+const USER_ID = 'c3333333-3333-4333-a333-333333333333';
+const OTHER_USER_ID = 'd4444444-4444-4444-a444-444444444444';
+const ZITADEL_USER_ID = 'e5555555-5555-4555-a555-555555555555';
+const HISTORY_ID_1 = 'f6666666-6666-4666-a666-666666666666';
+const HISTORY_ID_2 = 'f7777777-7777-4777-a777-777777777777';
+const HISTORY_ID_3 = 'f8888888-8888-4888-a888-888888888888';
+const HISTORY_ID_4 = 'f9999999-9999-4999-a999-999999999999';
+
 function makeContext(overrides: Partial<TRPCContext> = {}): TRPCContext {
   return {
     authContext: null,
@@ -90,8 +103,8 @@ function makeContext(overrides: Partial<TRPCContext> = {}): TRPCContext {
 function authedContext(overrides: Partial<TRPCContext> = {}): TRPCContext {
   return makeContext({
     authContext: {
-      userId: 'user-1',
-      zitadelUserId: 'zid-1',
+      userId: USER_ID,
+      zitadelUserId: ZITADEL_USER_ID,
       email: 'test@example.com',
       emailVerified: true,
       authMethod: 'test',
@@ -107,12 +120,12 @@ function orgContext(
   const mockTx = {} as never;
   return makeContext({
     authContext: {
-      userId: 'user-1',
-      zitadelUserId: 'zid-1',
+      userId: USER_ID,
+      zitadelUserId: ZITADEL_USER_ID,
       email: 'test@example.com',
       emailVerified: true,
       authMethod: 'test',
-      orgId: 'org-1',
+      orgId: ORG_ID,
       role,
     },
     dbTx: mockTx,
@@ -129,12 +142,10 @@ const createCaller = (appRouter as any).createCaller as (
   ctx: TRPCContext,
 ) => any;
 
-const SUBMISSION_ID = 'a1111111-1111-1111-a111-111111111111';
-
-function makeDraftSubmission(submitterId = 'user-1') {
+function makeSubmissionBase(submitterId = USER_ID) {
   return {
     id: SUBMISSION_ID,
-    organizationId: 'org-1',
+    organizationId: ORG_ID,
     submitterId,
     submissionPeriodId: null,
     title: 'Test Poem',
@@ -144,8 +155,37 @@ function makeDraftSubmission(submitterId = 'user-1') {
     submittedAt: null,
     createdAt: new Date(),
     updatedAt: new Date(),
+  };
+}
+
+function makeDraftSubmission(submitterId = USER_ID) {
+  return {
+    ...makeSubmissionBase(submitterId),
     files: [],
     submitterEmail: 'test@example.com',
+  };
+}
+
+function makeHistoryEntry(
+  overrides: Partial<{
+    id: string;
+    submissionId: string;
+    fromStatus: string | null;
+    toStatus: string;
+    changedBy: string | null;
+    comment: string | null;
+    changedAt: Date;
+  }> = {},
+) {
+  return {
+    id: HISTORY_ID_1,
+    submissionId: SUBMISSION_ID,
+    fromStatus: null,
+    toStatus: 'DRAFT' as const,
+    changedBy: USER_ID,
+    comment: null,
+    changedAt: new Date(),
+    ...overrides,
   };
 }
 
@@ -247,7 +287,7 @@ describe('submissions tRPC router', () => {
     });
 
     it('getById allows owner to view', async () => {
-      const sub = makeDraftSubmission('user-1');
+      const sub = makeDraftSubmission(USER_ID);
       mockService.getByIdWithAccess.mockResolvedValueOnce(sub as never);
       const caller = createCaller(orgContext('READER'));
       const result = await caller.submissions.getById({ id: SUBMISSION_ID });
@@ -255,7 +295,7 @@ describe('submissions tRPC router', () => {
     });
 
     it('getById allows EDITOR to view others submissions', async () => {
-      const sub = makeDraftSubmission('other-user');
+      const sub = makeDraftSubmission(OTHER_USER_ID);
       mockService.getByIdWithAccess.mockResolvedValueOnce(sub as never);
       const caller = createCaller(editorContext());
       const result = await caller.submissions.getById({ id: SUBMISSION_ID });
@@ -293,7 +333,7 @@ describe('submissions tRPC router', () => {
       // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(mockService.listBySubmitter).toHaveBeenCalledWith(
         expect.anything(),
-        'user-1',
+        USER_ID,
         { page: 1, limit: 20 },
       );
     });
@@ -345,17 +385,7 @@ describe('submissions tRPC router', () => {
 
   describe('getHistory', () => {
     it('returns history array for owner', async () => {
-      const history = [
-        {
-          id: 'h-1',
-          submissionId: SUBMISSION_ID,
-          fromStatus: null,
-          toStatus: 'DRAFT',
-          changedBy: 'user-1',
-          comment: null,
-          changedAt: new Date(),
-        },
-      ];
+      const history = [makeHistoryEntry()];
       mockService.getHistoryWithAccess.mockResolvedValueOnce(history as never);
 
       const caller = createCaller(orgContext());
@@ -398,9 +428,8 @@ describe('submissions tRPC router', () => {
   describe('create', () => {
     it('returns submission from createWithAudit', async () => {
       const sub = {
-        id: SUBMISSION_ID,
+        ...makeSubmissionBase(),
         title: 'My Poem',
-        status: 'DRAFT',
       };
       mockService.createWithAudit.mockResolvedValueOnce(sub as never);
 
@@ -412,7 +441,7 @@ describe('submissions tRPC router', () => {
       expect(mockService.createWithAudit).toHaveBeenCalledWith(
         expect.objectContaining({
           tx: expect.anything(),
-          actor: expect.objectContaining({ userId: 'user-1', orgId: 'org-1' }),
+          actor: expect.objectContaining({ userId: USER_ID, orgId: ORG_ID }),
           audit: expect.any(Function),
         }),
         { title: 'My Poem' },
@@ -422,7 +451,7 @@ describe('submissions tRPC router', () => {
 
   describe('update', () => {
     it('calls updateAsOwner with correct args', async () => {
-      const updated = { ...makeDraftSubmission(), title: 'Updated Title' };
+      const updated = { ...makeSubmissionBase(), title: 'Updated Title' };
       mockService.updateAsOwner.mockResolvedValueOnce(updated as never);
 
       const caller = createCaller(orgContext());
@@ -435,7 +464,7 @@ describe('submissions tRPC router', () => {
       // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(mockService.updateAsOwner).toHaveBeenCalledWith(
         expect.objectContaining({
-          actor: expect.objectContaining({ userId: 'user-1' }),
+          actor: expect.objectContaining({ userId: USER_ID }),
         }),
         SUBMISSION_ID,
         { title: 'Updated Title' },
@@ -459,10 +488,17 @@ describe('submissions tRPC router', () => {
 
   describe('submit', () => {
     it('DRAFT→SUBMITTED succeeds', async () => {
-      const sub = makeDraftSubmission();
+      const sub = makeSubmissionBase();
       mockService.submitAsOwner.mockResolvedValueOnce({
-        submission: { ...sub, status: 'SUBMITTED' },
-        historyEntry: { id: 'h-1' },
+        submission: {
+          ...sub,
+          status: 'SUBMITTED' as const,
+          submittedAt: new Date(),
+        },
+        historyEntry: makeHistoryEntry({
+          fromStatus: 'DRAFT',
+          toStatus: 'SUBMITTED' as const,
+        }),
       } as never);
 
       const caller = createCaller(orgContext());
@@ -535,10 +571,14 @@ describe('submissions tRPC router', () => {
 
   describe('withdraw', () => {
     it('succeeds from valid state', async () => {
-      const sub = { ...makeDraftSubmission(), status: 'SUBMITTED' as const };
+      const sub = { ...makeSubmissionBase(), status: 'SUBMITTED' as const };
       mockService.withdrawAsOwner.mockResolvedValueOnce({
-        submission: { ...sub, status: 'WITHDRAWN' },
-        historyEntry: { id: 'h-2' },
+        submission: { ...sub, status: 'WITHDRAWN' as const },
+        historyEntry: makeHistoryEntry({
+          id: HISTORY_ID_2,
+          fromStatus: 'SUBMITTED',
+          toStatus: 'WITHDRAWN' as const,
+        }),
       } as never);
 
       const caller = createCaller(orgContext());
@@ -577,8 +617,15 @@ describe('submissions tRPC router', () => {
   describe('updateStatus', () => {
     it('editor transition succeeds', async () => {
       mockService.updateStatusAsEditor.mockResolvedValueOnce({
-        submission: { id: SUBMISSION_ID, status: 'UNDER_REVIEW' },
-        historyEntry: { id: 'h-3' },
+        submission: {
+          ...makeSubmissionBase(),
+          status: 'UNDER_REVIEW' as const,
+        },
+        historyEntry: makeHistoryEntry({
+          id: HISTORY_ID_3,
+          fromStatus: 'SUBMITTED',
+          toStatus: 'UNDER_REVIEW' as const,
+        }),
       } as never);
 
       const caller = createCaller(editorContext());
@@ -591,7 +638,7 @@ describe('submissions tRPC router', () => {
       // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(mockService.updateStatusAsEditor).toHaveBeenCalledWith(
         expect.objectContaining({
-          actor: expect.objectContaining({ userId: 'user-1' }),
+          actor: expect.objectContaining({ userId: USER_ID }),
         }),
         SUBMISSION_ID,
         'UNDER_REVIEW',
@@ -633,8 +680,16 @@ describe('submissions tRPC router', () => {
 
     it('passes comment to service', async () => {
       mockService.updateStatusAsEditor.mockResolvedValueOnce({
-        submission: { id: SUBMISSION_ID, status: 'REJECTED' },
-        historyEntry: { id: 'h-4' },
+        submission: {
+          ...makeSubmissionBase(),
+          status: 'REJECTED' as const,
+        },
+        historyEntry: makeHistoryEntry({
+          id: HISTORY_ID_4,
+          fromStatus: 'UNDER_REVIEW',
+          toStatus: 'REJECTED' as const,
+          comment: 'Not a good fit',
+        }),
       } as never);
 
       const caller = createCaller(orgContext('ADMIN'));

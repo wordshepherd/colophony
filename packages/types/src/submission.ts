@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { scanStatusSchema } from "./file";
+import { scanStatusSchema, submissionFileSchema } from "./file";
 
 export const submissionStatusSchema = z.enum([
   "DRAFT",
@@ -22,7 +22,7 @@ export const submissionSchema = z.object({
   organizationId: z.string().uuid(),
   submitterId: z.string().uuid(),
   submissionPeriodId: z.string().uuid().nullable(),
-  title: z.string(),
+  title: z.string().nullable(),
   content: z.string().nullable(),
   coverLetter: z.string().nullable(),
   status: submissionStatusSchema,
@@ -64,6 +64,24 @@ export const submissionHistorySchema = z.object({
 });
 
 export type SubmissionHistory = z.infer<typeof submissionHistorySchema>;
+
+/** Submission detail — includes files and submitter email (for `getById`). */
+export const submissionDetailSchema = submissionSchema.extend({
+  files: z.array(submissionFileSchema),
+  submitterEmail: z.string().email().nullable(),
+});
+
+export type SubmissionDetail = z.infer<typeof submissionDetailSchema>;
+
+/** Response from status-change mutations (submit, withdraw, updateStatus). */
+export const submissionStatusChangeResponseSchema = z.object({
+  submission: submissionSchema,
+  historyEntry: submissionHistorySchema,
+});
+
+export type SubmissionStatusChangeResponse = z.infer<
+  typeof submissionStatusChangeResponseSchema
+>;
 
 export const updateSubmissionStatusSchema = z.object({
   status: submissionStatusSchema,

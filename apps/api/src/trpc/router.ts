@@ -1,3 +1,4 @@
+import { z } from 'zod';
 import { t } from './init.js';
 import { organizationsRouter } from './routers/organizations.js';
 import { usersRouter } from './routers/users.js';
@@ -21,7 +22,9 @@ export {
 // ---------------------------------------------------------------------------
 
 export const appRouter = t.router({
-  health: t.procedure.query(() => ({ status: 'ok' as const })),
+  health: t.procedure
+    .output(z.object({ status: z.literal('ok') }))
+    .query(() => ({ status: 'ok' as const })),
   organizations: organizationsRouter,
   users: usersRouter,
   submissions: submissionsRouter,
