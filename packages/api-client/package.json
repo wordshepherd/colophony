@@ -1,0 +1,32 @@
+{
+  "name": "@colophony/api-client",
+  "version": "0.0.0",
+  "private": true,
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "clean": "rm -rf dist",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@colophony/api-contracts": "workspace:*",
+    "@orpc/client": "^1.13.5",
+    "@orpc/contract": "^1.13.5",
+    "@orpc/openapi-client": "^1.13.5"
+  },
+  "devDependencies": {
+    "@colophony/typescript-config": "workspace:*",
+    "@types/node": "^25.2.3",
+    "typescript": "^5.7.2",
+    "vitest": "^4.0.18"
+  }
+}
