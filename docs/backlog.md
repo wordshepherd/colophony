@@ -37,11 +37,11 @@
 
 ### QA / Testing
 
-- [ ] Manual testing of 4 submission pages with dev server — (DEVLOG 2026-02-15)
+- [x] Manual testing of 4 submission pages with dev server — (DEVLOG 2026-02-15; done 2026-02-19)
 - [x] E2E tests for submission flow — (DEVLOG 2026-02-15; done 2026-02-18 PR pending)
 - [x] E2E tests for upload flow — needs tusd + MinIO in CI — (DEVLOG 2026-02-15; done 2026-02-18)
 - [x] E2E tests for OIDC flow — requires Zitadel instance — (DEVLOG 2026-02-13; done 2026-02-18)
-- [ ] Manual QA of full org management flow with Zitadel + dev services running — (DEVLOG 2026-02-13)
+- [x] Manual QA of full org management flow with Zitadel + dev services running — (DEVLOG 2026-02-13; done 2026-02-19)
 - [ ] Manual QA: webhook freshness/rate-limit/ordering with Docker Compose + Zitadel — (DEVLOG 2026-02-15)
 - [x] Web unit tests: auth hooks (`use-auth`, `use-organization`, `use-slug-check`) — (DEVLOG 2026-02-18; done 2026-02-19)
 - [x] Web unit tests: `ProtectedRoute` rendering states (loading, no org, authenticated, error) — (DEVLOG 2026-02-18; done 2026-02-19)
@@ -54,8 +54,8 @@
 - [x] Webhook integration tests: tusd webhook → file record → BullMQ job with real database — (DEVLOG 2026-02-18; done 2026-02-19)
 - [x] CI: enable `@colophony/web` in type-check, build, and unit-test jobs — excluded during rewrite, rewrite is done — (DEVLOG 2026-02-18; done 2026-02-19)
 - [x] CI: add Playwright submission E2E job (20 tests, needs Postgres service) — (DEVLOG 2026-02-18; done 2026-02-19)
-- [ ] CI: add Playwright uploads E2E job (6 tests, needs tusd + MinIO services) — (DEVLOG 2026-02-19)
-- [ ] CI: add Playwright OIDC E2E job (6 tests, needs Zitadel service) — (DEVLOG 2026-02-19)
+- [x] CI: add Playwright uploads E2E job (6 tests, needs tusd + MinIO services) — (DEVLOG 2026-02-19; done 2026-02-19 PR #115)
+- [x] CI: add Playwright OIDC E2E job (6 tests, needs Zitadel service) — (DEVLOG 2026-02-19; done 2026-02-19 PR #115)
 
 ### Housekeeping
 
@@ -101,7 +101,7 @@
 - [ ] Embeddable forms (iframe) — (architecture doc Track 3, form-builder-research.md)
 - [ ] Submission periods UI — schema exists, no UI — (DEVLOG 2026-02-15)
 - [ ] Editor dashboard rewrite (`/editor` pages) — current pages are stubs — (DEVLOG 2026-02-15)
-- [ ] Fix stale cache after submit: `submission-form.tsx` `submitMutation.onSuccess` does `router.push` but doesn't invalidate `getById` query — detail page shows stale DRAFT status — (DEVLOG 2026-02-18, E2E test run)
+- [x] Fix stale cache after submit: `submission-form.tsx` `submitMutation.onSuccess` does `router.push` but doesn't invalidate `getById` query — detail page shows stale DRAFT status — (DEVLOG 2026-02-18, E2E test run; done 2026-02-19)
 - [ ] GDPR deletion mutation — stubbed with TODO — (DEVLOG 2026-02-15)
 - [ ] GDPR tools finalization from MVP — (architecture doc Track 3)
 - [ ] Org deletion — needs careful cascade handling — (DEVLOG 2026-02-13)

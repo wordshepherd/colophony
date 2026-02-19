@@ -280,21 +280,22 @@ pnpm db:reset                 # Drop and recreate with migrations + RLS
 
 Canonical env definition with Zod validation: `apps/api/src/config/env.ts`
 
-| Variable                                                          | Required | Default                     | Used by        |
-| ----------------------------------------------------------------- | -------- | --------------------------- | -------------- |
-| `DATABASE_URL`                                                    | Yes      | —                           | API            |
-| `PORT` / `HOST`                                                   | No       | `4000` / `0.0.0.0`          | API            |
-| `NODE_ENV`                                                        | No       | `development`               | API            |
-| `REDIS_HOST` / `REDIS_PORT` / `REDIS_PASSWORD`                    | No       | `localhost` / `6379` / `""` | API            |
-| `CORS_ORIGIN`                                                     | No       | `http://localhost:3000`     | API            |
-| `ZITADEL_AUTHORITY` / `ZITADEL_CLIENT_ID`                         | Optional | —                           | API            |
-| `ZITADEL_WEBHOOK_SECRET`                                          | Optional | —                           | API            |
-| `CLAMAV_HOST` / `CLAMAV_PORT`                                     | No       | `localhost` / `3310`        | API            |
-| `VIRUS_SCAN_ENABLED`                                              | No       | `true`                      | API            |
-| `STRIPE_SECRET_KEY` / `STRIPE_WEBHOOK_SECRET`                     | Optional | —                           | API            |
-| `NEXT_PUBLIC_API_URL`                                             | No       | `http://localhost:4000`     | Web            |
-| `NEXT_PUBLIC_ZITADEL_AUTHORITY` / `NEXT_PUBLIC_ZITADEL_CLIENT_ID` | —        | —                           | Web            |
-| `API_URL`                                                         | —        | —                           | Web (SSR only) |
+| Variable                                                          | Required | Default                      | Used by        |
+| ----------------------------------------------------------------- | -------- | ---------------------------- | -------------- |
+| `DATABASE_URL`                                                    | Yes      | —                            | API            |
+| `DATABASE_APP_URL`                                                | No       | Falls back to `DATABASE_URL` | API (RLS)      |
+| `PORT` / `HOST`                                                   | No       | `4000` / `0.0.0.0`           | API            |
+| `NODE_ENV`                                                        | No       | `development`                | API            |
+| `REDIS_HOST` / `REDIS_PORT` / `REDIS_PASSWORD`                    | No       | `localhost` / `6379` / `""`  | API            |
+| `CORS_ORIGIN`                                                     | No       | `http://localhost:3000`      | API            |
+| `ZITADEL_AUTHORITY` / `ZITADEL_CLIENT_ID`                         | Optional | —                            | API            |
+| `ZITADEL_WEBHOOK_SECRET`                                          | Optional | —                            | API            |
+| `CLAMAV_HOST` / `CLAMAV_PORT`                                     | No       | `localhost` / `3310`         | API            |
+| `VIRUS_SCAN_ENABLED`                                              | No       | `true`                       | API            |
+| `STRIPE_SECRET_KEY` / `STRIPE_WEBHOOK_SECRET`                     | Optional | —                            | API            |
+| `NEXT_PUBLIC_API_URL`                                             | No       | `http://localhost:4000`      | Web            |
+| `NEXT_PUBLIC_ZITADEL_AUTHORITY` / `NEXT_PUBLIC_ZITADEL_CLIENT_ID` | —        | —                            | Web            |
+| `API_URL`                                                         | —        | —                            | Web (SSR only) |
 
 ---
 
