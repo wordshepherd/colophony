@@ -33,7 +33,7 @@
 
 - [ ] Coolify + Hetzner managed hosting setup — (architecture doc Track 1)
 - [ ] Monitoring stack: Prometheus + Grafana + Loki — (architecture doc Track 1)
-- [ ] Diagnose GitHub GraphQL rate limit exhaustion — at session start, run `watch -n 10 'gh api rate_limit --jq ".resources.graphql.remaining"'` for 5 min with nothing else active; if count drops, an external OAuth app is consuming points. Check https://github.com/settings/applications for authorized apps — (DEVLOG 2026-02-19)
+- [~] Diagnose GitHub GraphQL rate limit exhaustion — **Diagnosed 2026-02-19:** ~60 pts/hr passive drain confirmed (2 pts/2 min with zero local activity). Ruled out: Copilot Chat App (revoked, drain continued), old fine-grained PAT (revoked, drain continued), background processes (none found), `gh` CLI internals (drain continues with pure `curl`), cron/timers (none hit GitHub). PAT vs OAuth token doesn't matter — GraphQL rate limit is per-user, not per-token. Drain is likely GitHub-internal (Dependabot, security scanning, notifications). At ~1.2% of budget/hr, not the primary exhaustion source. **Next:** monitor over future sessions; if large exhaustion recurs, convert skills from `gh pr list/create` (GraphQL) to `gh api repos/.../pulls` (REST) — (DEVLOG 2026-02-19)
 
 ### QA / Testing
 
