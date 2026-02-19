@@ -96,6 +96,16 @@ vi.mock('../services/s3.js', () => ({
   deleteS3Object: (...args: unknown[]) => mockDeleteS3Object(...args),
 }));
 
+// Mock API key service
+const mockVerifyKey = vi.fn();
+const mockTouchLastUsed = vi.fn();
+vi.mock('../services/api-key.service.js', () => ({
+  apiKeyService: {
+    verifyKey: (...args: unknown[]) => mockVerifyKey(...args),
+    touchLastUsed: (...args: unknown[]) => mockTouchLastUsed(...args),
+  },
+}));
+
 // Mock auth-client
 vi.mock('@colophony/auth-client', () => ({
   createJwksVerifier: vi.fn(),
@@ -216,6 +226,7 @@ describe('tusd webhook handler', () => {
     // Restore default: below rate limit
     mockRedisEval.mockResolvedValue([1, 60000]);
     mockRedisQuit.mockResolvedValue('OK');
+    mockVerifyKey.mockResolvedValue(null);
   });
 
   // -------------------------------------------------------------------------
@@ -627,6 +638,301 @@ describe('tusd webhook handler', () => {
       });
 
       expect(response.statusCode).toBe(500);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // API key auth
+  // -------------------------------------------------------------------------
+
+  describe('API key auth', () => {
+    const VALID_API_KEY_RESULT = {
+      apiKey: {
+        id: 'key-1',
+        organizationId: 'org-from-key',
+        createdBy: 'user-1',
+        name: 'test-key',
+        scopes: ['files:read', 'files:write'],
+        expiresAt: null,
+        revokedAt: null,
+        lastUsedAt: null,
+        createdAt: new Date(),
+      },
+      creator: {
+        id: 'user-1',
+        email: 'test@example.com',
+        emailVerified: true,
+        deletedAt: null,
+      },
+    };
+
+    function makeApiKeyPreCreateBody() {
+      return {
+        Upload: {
+          Size: 1024,
+          MetaData: {
+            'submission-id': SUBMISSION_ID,
+            filetype: 'application/pdf',
+            filename: 'poem.pdf',
+          },
+        },
+        HTTPRequest: {
+          Method: 'POST',
+          URI: '/files/',
+          RemoteAddr: '127.0.0.1',
+          Header: {
+            'X-Api-Key': ['col_test_abc123'],
+            'X-Organization-Id': ['org-from-header-should-be-ignored'],
+          },
+        },
+      };
+    }
+
+    function makeApiKeyPostFinishBody() {
+      return {
+        Upload: {
+          ID: 'upload-abc123',
+          Size: 1024,
+          Offset: 1024,
+          MetaData: {
+            'submission-id': SUBMISSION_ID,
+            filetype: 'application/pdf',
+            filename: 'poem.pdf',
+          },
+          Storage: {
+            Key: 'quarantine/upload-abc123',
+            Bucket: 'quarantine',
+            Type: 's3store',
+          },
+        },
+        HTTPRequest: {
+          Method: 'POST',
+          URI: '/files/upload-abc123',
+          RemoteAddr: '127.0.0.1',
+          Header: {
+            'X-Api-Key': ['col_test_abc123'],
+            'X-Organization-Id': ['org-from-header-should-be-ignored'],
+          },
+        },
+      };
+    }
+
+    it('pre-create: allows upload with valid API key', async () => {
+      mockVerifyKey.mockResolvedValueOnce(VALID_API_KEY_RESULT);
+      mockWithRls.mockImplementation(
+        async (_ctx: unknown, fn: (tx: unknown) => Promise<void>) => {
+          const mockTx = {
+            select: () => ({
+              from: () => ({
+                where: () => ({
+                  limit: () =>
+                    Promise.resolve([
+                      {
+                        id: SUBMISSION_ID,
+                        status: 'DRAFT',
+                        submitterId: 'user-1',
+                      },
+                    ]),
+                }),
+              }),
+            }),
+          };
+          return fn(mockTx);
+        },
+      );
+      mockFileService.validateLimits.mockResolvedValueOnce(undefined);
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/webhooks/tusd',
+        headers: { 'hook-name': 'pre-create' },
+        payload: makeApiKeyPreCreateBody(),
+      });
+
+      expect(response.statusCode).toBe(200);
+      const body = JSON.parse(response.payload);
+      expect(body.RejectUpload).toBeUndefined();
+      // Verify org comes from key, not header
+      expect(mockWithRls).toHaveBeenCalledWith(
+        expect.objectContaining({ orgId: 'org-from-key', userId: 'user-1' }),
+        expect.any(Function),
+      );
+    });
+
+    it('pre-create: rejects invalid API key', async () => {
+      mockVerifyKey.mockResolvedValueOnce(null);
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/webhooks/tusd',
+        headers: { 'hook-name': 'pre-create' },
+        payload: makeApiKeyPreCreateBody(),
+      });
+
+      expect(response.statusCode).toBe(200);
+      const body = JSON.parse(response.payload);
+      expect(body.RejectUpload).toBe(true);
+      expect(body.HTTPResponse.Body).toContain('invalid_key');
+    });
+
+    it('pre-create: rejects expired API key', async () => {
+      mockVerifyKey.mockResolvedValueOnce({
+        ...VALID_API_KEY_RESULT,
+        apiKey: {
+          ...VALID_API_KEY_RESULT.apiKey,
+          expiresAt: new Date('2020-01-01'),
+        },
+      });
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/webhooks/tusd',
+        headers: { 'hook-name': 'pre-create' },
+        payload: makeApiKeyPreCreateBody(),
+      });
+
+      expect(response.statusCode).toBe(200);
+      const body = JSON.parse(response.payload);
+      expect(body.RejectUpload).toBe(true);
+      expect(body.HTTPResponse.Body).toContain('key_expired');
+    });
+
+    it('pre-create: rejects revoked API key', async () => {
+      mockVerifyKey.mockResolvedValueOnce({
+        ...VALID_API_KEY_RESULT,
+        apiKey: {
+          ...VALID_API_KEY_RESULT.apiKey,
+          revokedAt: new Date(),
+        },
+      });
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/webhooks/tusd',
+        headers: { 'hook-name': 'pre-create' },
+        payload: makeApiKeyPreCreateBody(),
+      });
+
+      expect(response.statusCode).toBe(200);
+      const body = JSON.parse(response.payload);
+      expect(body.RejectUpload).toBe(true);
+      expect(body.HTTPResponse.Body).toContain('key_revoked');
+    });
+
+    it('pre-create: rejects when creator is deactivated', async () => {
+      mockVerifyKey.mockResolvedValueOnce({
+        ...VALID_API_KEY_RESULT,
+        creator: {
+          ...VALID_API_KEY_RESULT.creator,
+          deletedAt: new Date(),
+        },
+      });
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/webhooks/tusd',
+        headers: { 'hook-name': 'pre-create' },
+        payload: makeApiKeyPreCreateBody(),
+      });
+
+      expect(response.statusCode).toBe(200);
+      const body = JSON.parse(response.payload);
+      expect(body.RejectUpload).toBe(true);
+      expect(body.HTTPResponse.Body).toContain('creator_deactivated');
+    });
+
+    it('pre-create: rejects API key without files:write scope', async () => {
+      mockVerifyKey.mockResolvedValueOnce({
+        ...VALID_API_KEY_RESULT,
+        apiKey: {
+          ...VALID_API_KEY_RESULT.apiKey,
+          scopes: ['files:read'],
+        },
+      });
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/webhooks/tusd',
+        headers: { 'hook-name': 'pre-create' },
+        payload: makeApiKeyPreCreateBody(),
+      });
+
+      expect(response.statusCode).toBe(200);
+      const body = JSON.parse(response.payload);
+      expect(body.RejectUpload).toBe(true);
+      expect(body.HTTPResponse.Body).toContain('insufficient_scopes');
+    });
+
+    it('post-finish: creates file record with valid API key', async () => {
+      mockVerifyKey.mockResolvedValueOnce(VALID_API_KEY_RESULT);
+      mockWithRls.mockImplementation(
+        async (_ctx: unknown, fn: (tx: unknown) => Promise<void>) => {
+          return fn({});
+        },
+      );
+      mockFileService.getByStorageKey.mockResolvedValueOnce(null as never);
+      mockFileService.create.mockResolvedValueOnce({
+        id: 'file-1',
+        submissionId: SUBMISSION_ID,
+        filename: 'poem.pdf',
+        mimeType: 'application/pdf',
+        size: 1024,
+        storageKey: 'quarantine/upload-abc123',
+        scanStatus: 'PENDING',
+        scannedAt: null,
+        uploadedAt: new Date(),
+      } as never);
+      mockAuditService.log.mockResolvedValueOnce(undefined);
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/webhooks/tusd',
+        headers: { 'hook-name': 'post-finish' },
+        payload: makeApiKeyPostFinishBody(),
+      });
+
+      expect(response.statusCode).toBe(200);
+      // Verify org comes from key, not header
+      expect(mockWithRls).toHaveBeenCalledWith(
+        expect.objectContaining({ orgId: 'org-from-key', userId: 'user-1' }),
+        expect.any(Function),
+      );
+    });
+
+    it('post-finish: rejects API key without files:write scope', async () => {
+      mockVerifyKey.mockResolvedValueOnce({
+        ...VALID_API_KEY_RESULT,
+        apiKey: {
+          ...VALID_API_KEY_RESULT.apiKey,
+          scopes: ['files:read'],
+        },
+      });
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/webhooks/tusd',
+        headers: { 'hook-name': 'post-finish' },
+        payload: makeApiKeyPostFinishBody(),
+      });
+
+      expect(response.statusCode).toBe(403);
+      const body = JSON.parse(response.payload);
+      expect(body.error).toBe('insufficient_scopes');
+    });
+
+    it('post-finish: rejects invalid API key', async () => {
+      mockVerifyKey.mockResolvedValueOnce(null);
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/webhooks/tusd',
+        headers: { 'hook-name': 'post-finish' },
+        payload: makeApiKeyPostFinishBody(),
+      });
+
+      expect(response.statusCode).toBe(401);
+      const body = JSON.parse(response.payload);
+      expect(body.error).toBe('invalid_key');
     });
   });
 

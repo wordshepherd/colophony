@@ -9,6 +9,7 @@ test-results/
 playwright-report/
 blob-report/
 *.log
+apps/web/e2e/.zitadel-e2e-config.json
 
 # Next.js
 .next/

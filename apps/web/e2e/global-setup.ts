@@ -1,10 +1,34 @@
 /**
- * Playwright global setup — validates seed data exists before running tests.
+ * Playwright global setup — validates seed data and infrastructure health.
+ *
+ * Checks:
+ * 1. Seed data exists (all projects)
+ * 2. tusd + MinIO reachable (uploads project)
+ * 3. Zitadel reachable + config exists (oidc project)
  */
 
+import { existsSync } from "fs";
+import { resolve } from "path";
+import type { FullConfig } from "@playwright/test";
 import { getOrgBySlug, getUserByEmail, disconnectDb } from "./helpers/db";
 
-export default async function globalSetup() {
+async function isReachable(url: string, timeoutMs = 5000): Promise<boolean> {
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    const res = await fetch(url, { signal: controller.signal });
+    clearTimeout(timer);
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
+export default async function globalSetup(config: FullConfig) {
+  // Determine which projects are being run
+  const projectNames = config.projects.map((p) => p.name);
+
+  // 1. Seed data validation (required by all projects)
   const org = await getOrgBySlug("quarterly-review");
   if (!org) {
     await disconnectDb();
@@ -21,6 +45,50 @@ export default async function globalSetup() {
       'E2E prerequisite failed: seed user "writer@example.com" not found.\n' +
         "Run `pnpm db:seed` to populate seed data before running E2E tests.",
     );
+  }
+
+  // 2. Upload infrastructure health check
+  if (projectNames.includes("uploads")) {
+    const tusdOk = await isReachable("http://localhost:1080");
+    if (!tusdOk) {
+      await disconnectDb();
+      throw new Error(
+        "E2E prerequisite failed: tusd not reachable at http://localhost:1080.\n" +
+          "Run `docker compose -f docker-compose.yml -f docker-compose.e2e.yml up tusd minio minio-setup -d`",
+      );
+    }
+
+    const minioOk = await isReachable(
+      "http://localhost:9000/minio/health/live",
+    );
+    if (!minioOk) {
+      await disconnectDb();
+      throw new Error(
+        "E2E prerequisite failed: MinIO not reachable at http://localhost:9000.\n" +
+          "Run `docker compose -f docker-compose.yml -f docker-compose.e2e.yml up minio minio-setup -d`",
+      );
+    }
+  }
+
+  // 3. OIDC infrastructure health check
+  if (projectNames.includes("oidc")) {
+    const zitadelOk = await isReachable("http://localhost:8080/debug/healthz");
+    if (!zitadelOk) {
+      await disconnectDb();
+      throw new Error(
+        "E2E prerequisite failed: Zitadel not reachable at http://localhost:8080.\n" +
+          "Run `docker compose --profile auth up -d`",
+      );
+    }
+
+    const configPath = resolve(__dirname, ".zitadel-e2e-config.json");
+    if (!existsSync(configPath)) {
+      await disconnectDb();
+      throw new Error(
+        "E2E prerequisite failed: .zitadel-e2e-config.json not found.\n" +
+          "Run `pnpm --filter @colophony/web e2e:setup-oidc` to provision Zitadel test data.",
+      );
+    }
   }
 
   await disconnectDb();

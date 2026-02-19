@@ -11,8 +11,12 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
-    "test:e2e": "playwright test",
+    "test:e2e": "playwright test --project submissions",
+    "test:e2e:uploads": "playwright test --project uploads",
+    "test:e2e:oidc": "OIDC_E2E=true playwright test --project oidc",
+    "test:e2e:all": "OIDC_E2E=true playwright test",
     "test:e2e:ui": "playwright test --ui",
+    "e2e:setup-oidc": "tsx ../../scripts/setup-zitadel-e2e.ts",
     "clean": "rm -rf .next"
   },
   "dependencies": {
