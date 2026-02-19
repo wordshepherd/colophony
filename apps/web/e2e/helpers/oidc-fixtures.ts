@@ -47,6 +47,7 @@ export async function loginViaZitadel(
   page: Page,
   email: string,
   password: string,
+  orgId?: string,
 ): Promise<void> {
   // Step 1: Enter email
   const loginInput = page.locator(
@@ -68,8 +69,25 @@ export async function loginViaZitadel(
   // Click Next (second step — submits login)
   await page.getByRole("button", { name: /next/i }).click();
 
+  // Zitadel may show a 2-Factor Setup page (skippable). Handle it.
+  try {
+    const skipButton = page.getByRole("button", { name: /skip/i });
+    await skipButton.waitFor({ state: "visible", timeout: 3_000 });
+    await skipButton.click();
+  } catch {
+    // No MFA prompt — already redirecting
+  }
+
   // Wait for redirect back to app
   await page.waitForURL(/localhost:3010/, { timeout: 15_000 });
+
+  // Set organization context so ProtectedRoute renders content
+  if (orgId) {
+    await page.evaluate(
+      (id) => localStorage.setItem("currentOrgId", id),
+      orgId,
+    );
+  }
 }
 
 /**

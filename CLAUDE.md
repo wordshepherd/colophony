@@ -114,6 +114,7 @@ Domain-specific quirks are in per-directory CLAUDE.md files. Cross-cutting quirk
 | **Codex `review --base` excludes `[PROMPT]`**         | `--base` and `--uncommitted` are mutually exclusive with positional `[PROMPT]`. Custom instructions go in Codex rules files (`~/.codex/rules/` or `.codex/instructions.md`)              |
 | **`drizzle-kit generate` TUI blocks automation**      | Interactive prompts (rename vs create) use a TUI that ignores piped stdin. Write manual migrations in non-interactive shells; snapshot files may need regeneration interactively         |
 | **Playwright `webServer.env` replaces `process.env`** | `webServer.env` **replaces** (not merges) the child process environment. Must load `.env` files via `dotenv` and spread `...process.env` to ensure `DATABASE_URL` etc. reach dev servers |
+| **Zitadel issuer ± trailing slash**                   | Zitadel v4.10.1 omits trailing slash in JWT `iss` claim. JWKS verifier uses array issuer `[base, base + "/"]` to match both. Don't normalize to one form                                 |
 
 **Version pin (cross-cutting):**
 

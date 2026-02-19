@@ -143,6 +143,20 @@ services:
       ZITADEL_EXTERNALSECURE: 'false'
       ZITADEL_EXTERNALPORT: 8080
       ZITADEL_TLS_ENABLED: 'false'
+      # Use Login V1 (built-in). Login V2 requires a separate frontend app.
+      ZITADEL_DEFAULTINSTANCE_FEATURES_LOGINV2_REQUIRED: 'false'
+      # Disable MFA requirement for dev/E2E (no TOTP prompts during login)
+      ZITADEL_DEFAULTINSTANCE_LOGINPOLICY_FORCEMFA: 'false'
+      ZITADEL_DEFAULTINSTANCE_LOGINPOLICY_FORCEMFALOCALONLY: 'false'
+      ZITADEL_DEFAULTINSTANCE_LOGINPOLICY_SECONDFACTORS: ''
+      ZITADEL_DEFAULTINSTANCE_LOGINPOLICY_MULTIFACTORS: ''
+      # Create machine user with IAM_OWNER role + PAT on first init (E2E provisioning)
+      ZITADEL_FIRSTINSTANCE_PATPATH: /machinekey/admin.pat
+      ZITADEL_FIRSTINSTANCE_ORG_MACHINE_MACHINE_USERNAME: e2e-admin
+      ZITADEL_FIRSTINSTANCE_ORG_MACHINE_MACHINE_NAME: E2E Admin Service Account
+      ZITADEL_FIRSTINSTANCE_ORG_MACHINE_PAT_EXPIRATIONDATE: '2030-01-01T00:00:00Z'
+    volumes:
+      - ./.docker/zitadel/machinekey:/machinekey
     depends_on:
       postgres:
         condition: service_healthy

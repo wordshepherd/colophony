@@ -37,16 +37,20 @@ test.describe("OIDC Login Flow", () => {
       unauthPage,
       oidcConfig.testUserEmail,
       oidcConfig.testUserPassword,
+      oidcConfig.testOrgId,
     );
+
+    // Reload so ProtectedRoute picks up the org context from localStorage
+    await unauthPage.reload();
 
     // Should be redirected back to the app
     await expect(unauthPage).toHaveURL(/\/submissions|\//, {
       timeout: 15_000,
     });
 
-    // Authenticated UI should be visible (e.g., heading or user menu)
+    // Authenticated UI should be visible
     await expect(
-      unauthPage.getByRole("heading", { name: /submissions/i }),
+      unauthPage.getByRole("heading", { name: "My Submissions" }),
     ).toBeVisible({ timeout: 10_000 });
   });
 
@@ -65,6 +69,7 @@ test.describe("OIDC Login Flow", () => {
       unauthPage,
       oidcConfig.testUserEmail,
       oidcConfig.testUserPassword,
+      oidcConfig.testOrgId,
     );
 
     // Should be redirected back to the original path
@@ -81,34 +86,46 @@ test.describe("OIDC Login Flow", () => {
       unauthPage,
       oidcConfig.testUserEmail,
       oidcConfig.testUserPassword,
+      oidcConfig.testOrgId,
     );
+
+    // Reload so ProtectedRoute picks up the org context from localStorage
+    await unauthPage.reload();
 
     // Wait for authenticated state
     await expect(unauthPage).toHaveURL(/\/submissions|\//, {
       timeout: 15_000,
     });
 
-    // Click logout (look for common logout patterns)
-    const logoutButton = unauthPage.getByRole("button", {
-      name: /log\s*out|sign\s*out/i,
-    });
-    if (await logoutButton.isVisible()) {
-      await logoutButton.click();
-    } else {
-      // Try user menu dropdown first
-      const userMenu = unauthPage.getByRole("button", {
-        name: /user|account|profile/i,
-      });
-      if (await userMenu.isVisible()) {
-        await userMenu.click();
-        await unauthPage
-          .getByRole("menuitem", { name: /log\s*out|sign\s*out/i })
-          .click();
-      }
-    }
+    // Open user menu dropdown via data-testid (avatar button has no accessible name)
+    const userMenu = unauthPage.getByTestId("user-menu-trigger");
+    await userMenu.waitFor({ state: "visible", timeout: 10_000 });
+    await userMenu.click();
 
-    // Navigate to a protected route — should redirect to login again
-    await unauthPage.goto("/submissions");
-    await unauthPage.waitForURL(/localhost:8080/, { timeout: 15_000 });
+    // Click "Sign out" menu item — triggers OIDC end-session redirect
+    await Promise.all([
+      unauthPage.waitForURL(/localhost:8080|localhost:3010/, {
+        timeout: 15_000,
+      }),
+      unauthPage.getByRole("menuitem", { name: /sign\s*out/i }).click(),
+    ]);
+
+    // Wait for post-logout redirect back to the app
+    await unauthPage.waitForURL(/localhost:3010/, { timeout: 15_000 });
+
+    // Verify the client-side OIDC session was cleared (no access token).
+    // Note: Zitadel may preserve its own SSO session (browser cookie), so
+    // navigating to a protected route could silently re-authenticate.
+    // We verify logout by checking that OIDC client state is gone.
+    const hasOidcUser = await unauthPage.evaluate(() => {
+      // oidc-client-ts stores user data in sessionStorage under a key
+      // starting with "oidc."
+      for (let i = 0; i < sessionStorage.length; i++) {
+        const key = sessionStorage.key(i);
+        if (key?.startsWith("oidc.")) return true;
+      }
+      return false;
+    });
+    expect(hasOidcUser).toBe(false);
   });
 });

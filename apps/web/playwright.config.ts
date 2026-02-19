@@ -36,15 +36,21 @@ const isOidcE2e = process.env.OIDC_E2E === "true";
 let oidcAuthority = "http://test-idp:8080";
 let oidcClientId = "test-client";
 
+// projectId is used for API audience validation: Zitadel JWT tokens put
+// the project ID (not client_id) in the `aud` claim.
+let oidcProjectId = "";
+
 if (isOidcE2e) {
   const configPath = resolve(__dirname, "e2e/.zitadel-e2e-config.json");
   if (existsSync(configPath)) {
     const config = JSON.parse(readFileSync(configPath, "utf-8")) as {
       authority: string;
       clientId: string;
+      projectId: string;
     };
     oidcAuthority = config.authority;
     oidcClientId = config.clientId;
+    oidcProjectId = config.projectId;
   }
 }
 
@@ -102,7 +108,8 @@ export default defineConfig({
         RATE_LIMIT_AUTH_MAX: "1000",
         ...(isOidcE2e && {
           ZITADEL_AUTHORITY: oidcAuthority,
-          ZITADEL_CLIENT_ID: oidcClientId,
+          // Zitadel JWT aud contains the project_id as the resource audience
+          ZITADEL_CLIENT_ID: oidcProjectId,
         }),
       },
     },
