@@ -377,7 +377,7 @@ describe('Stripe webhook handler', () => {
       expect(params.action).toBe('PAYMENT_SUCCEEDED');
       expect(params.resource).toBe('payment');
       expect(params.organizationId).toBe(TEST_ORG_ID);
-      expect(params.resourceId).toBe('cs_test_session');
+      expect(params.resourceId).toBeUndefined();
     });
 
     it('sets RLS org context via set_config', async () => {

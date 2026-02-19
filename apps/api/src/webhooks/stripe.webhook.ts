@@ -190,7 +190,10 @@ export async function registerStripeWebhooks(
       try {
         await client.query('BEGIN');
 
-        // Step 1: Attempt to insert the event record
+        // Step 1: Attempt to insert the event record.
+        // PCI note: Checkout Session events contain amounts, currency, payment_intent
+        // ID, and metadata — never card numbers, CVV, or cardholder data. Stripe does
+        // not include PCI-sensitive fields in webhook payloads. Safe to store raw.
         await client.query(
           `INSERT INTO stripe_webhook_events (id, stripe_id, type, payload, processed, received_at)
            VALUES (gen_random_uuid(), $1, $2, $3, false, now())
@@ -296,7 +299,6 @@ async function processStripeEvent(
       await auditService.log(tx, {
         resource: AuditResources.PAYMENT,
         action: AuditActions.PAYMENT_SUCCEEDED,
-        resourceId: session.id,
         organizationId,
         newValue: {
           stripeSessionId: session.id,
@@ -367,7 +369,6 @@ async function processStripeEvent(
       await auditService.log(tx, {
         resource: AuditResources.PAYMENT,
         action: AuditActions.PAYMENT_EXPIRED,
-        resourceId: session.id,
         organizationId,
         newValue: {
           stripeSessionId: session.id,
