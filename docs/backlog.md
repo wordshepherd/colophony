@@ -8,7 +8,9 @@
 
 ---
 
-## Track 1 — Core Infrastructure
+## Track 1 — Core Infrastructure ✓
+
+> **Status:** Code and QA complete. Remaining ops items moved to Production Deployment Checklist.
 
 ### Code
 
@@ -28,12 +30,6 @@
 - [x] Zitadel webhook two-step idempotency — current one-step pattern doesn't handle crash recovery (row inserted but `processed=false`); align with Stripe webhook's two-step pattern — (Codex review 2026-02-17; done 2026-02-17)
 - [x] Audit query/list endpoints — wait for API surfaces — (DEVLOG 2026-02-13; done 2026-02-18 PR #101)
 - [x] Seed data (`packages/db/src/seed.ts` has TODO) — wait for API layer — (code TODO; done 2026-02-18 PR #104)
-
-### Ops / Deployment
-
-- [ ] Coolify + Hetzner managed hosting setup — (architecture doc Track 1)
-- [ ] Monitoring stack: Prometheus + Grafana + Loki — (architecture doc Track 1)
-- [~] Diagnose GitHub GraphQL rate limit exhaustion — **Diagnosed 2026-02-19:** ~60 pts/hr passive drain confirmed (2 pts/2 min with zero local activity). Ruled out: Copilot Chat App (revoked, drain continued), old fine-grained PAT (revoked, drain continued), background processes (none found), `gh` CLI internals (drain continues with pure `curl`), cron/timers (none hit GitHub). PAT vs OAuth token doesn't matter — GraphQL rate limit is per-user, not per-token. Drain is likely GitHub-internal (Dependabot, security scanning, notifications). At ~1.2% of budget/hr, not the primary exhaustion source. **Next:** monitor over future sessions; if large exhaustion recurs, convert skills from `gh pr list/create` (GraphQL) to `gh api repos/.../pulls` (REST) — (DEVLOG 2026-02-19)
 
 ### QA / Testing
 
@@ -77,11 +73,12 @@
 - [x] oRPC REST API surface — PR 2: submissions, files, users, API keys contracts + OpenAPI spec endpoint — (DEVLOG 2026-02-18; done 2026-02-18)
 - [x] oRPC REST API surface — PR 3: typed client package — (DEVLOG 2026-02-18; done 2026-02-18)
 - [x] API key scope enforcement on REST + tRPC endpoints — (DEVLOG 2026-02-18, done 2026-02-18)
-- [ ] API key scope enforcement on GraphQL surface — when Pothos/GraphQL Yoga is built — (DEVLOG 2026-02-18)
+- [x] API key scope enforcement on GraphQL surface — `requireScopes` guard wired on all 10 query resolvers — (DEVLOG 2026-02-18; done 2026-02-19)
 - [x] Stripe webhook: audit raw payload storage for PCI compliance — `stripe.webhook.ts` stores raw event payload in `stripe_webhook_events`; verified: Checkout Session events contain amounts/currency/payment_intent ID/metadata only, never card numbers/CVV/cardholder data. Added PCI note comment. — (Codex review 2026-02-18; done 2026-02-19)
 - [x] Stripe webhook: `resourceId` passed to `insert_audit_event()` is Stripe session ID (`cs_...`), not UUID — fails `::uuid` cast in production. Fixed: removed `resourceId` from audit calls (session ID already in `newValue.stripeSessionId`); updated tests to use realistic `cs_test_` IDs. — (DEVLOG 2026-02-19; done 2026-02-19)
 - [x] tRPC `.output()` runtime response validation — all 30 procedures wired with Zod output schemas; 9 new response schemas added — (input validation audit 2026-02-18; done 2026-02-18)
-- [ ] Pothos + GraphQL Yoga surface — decision point at Month 3: Pothos vs TypeGraphQL — (architecture doc Track 2, Section 6.6)
+- [x] Pothos + GraphQL Yoga surface — PR 1: foundation (types, queries, DataLoaders, scope enforcement, Fastify integration) done 2026-02-19; PR 2: mutations pending — (architecture doc Track 2, Section 6.6)
+- [ ] GraphQL mutations (PR 2) — create/update submissions, file operations, org management — (DEVLOG 2026-02-19)
 - [ ] SDK generation (TypeScript, Python) — (architecture doc Track 2)
 - [ ] API documentation — (architecture doc Track 2)
 
@@ -225,11 +222,25 @@
 
 ## Production Deployment Checklist
 
+### Infrastructure Setup
+
+- [ ] Coolify + Hetzner managed hosting setup — (architecture doc Track 1)
+- [ ] Monitoring stack: Prometheus + Grafana + Loki — (architecture doc Track 1)
+
+### Database Hardening
+
 - [ ] Change `app_user` password from default — (CLAUDE.md)
 - [ ] PostgreSQL SSL/TLS (`sslmode=require`) — (CLAUDE.md)
 - [ ] Connection pooling (PgBouncer) — (CLAUDE.md)
 - [ ] Backups (WAL-G to S3) — (CLAUDE.md)
 - [ ] `pg_stat_statements` for query monitoring — (CLAUDE.md)
+- [ ] Verify RLS in production — see `packages/db/CLAUDE.md` for verification queries — (CLAUDE.md)
+
+### Security & Compliance
+
 - [ ] Rotate credentials quarterly — (CLAUDE.md)
 - [ ] AGPL license boundary documented (Zitadel is AGPL) — (CLAUDE.md)
-- [ ] Verify RLS in production — see `packages/db/CLAUDE.md` for verification queries — (CLAUDE.md)
+
+### Monitoring
+
+- [~] GitHub GraphQL rate limit passive drain (~60 pts/hr) — diagnosed 2026-02-19, likely GitHub-internal (Dependabot, security scanning). At ~1.2% budget/hr, not actionable unless large exhaustion recurs. If so, convert skills from `gh pr list/create` (GraphQL) to `gh api` (REST) — (DEVLOG 2026-02-19)

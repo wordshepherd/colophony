@@ -16,6 +16,11 @@
 | REST context      | `src/rest/context.ts`               |
 | REST error mapper | `src/rest/error-mapper.ts`          |
 | REST org handlers | `src/rest/routers/organizations.ts` |
+| GraphQL schema    | `src/graphql/schema.ts`             |
+| GraphQL builder   | `src/graphql/builder.ts`            |
+| GraphQL guards    | `src/graphql/guards.ts`             |
+| GraphQL resolvers | `src/graphql/resolvers/`            |
+| GraphQL router    | `src/graphql/router.ts`             |
 | tusd webhook      | `src/webhooks/tusd.webhook.ts`      |
 | Zitadel webhook   | `src/webhooks/zitadel.webhook.ts`   |
 | Stripe webhook    | `src/webhooks/stripe.webhook.ts`    |
@@ -71,7 +76,7 @@ Dual auth: Zitadel OIDC tokens for interactive users, API keys for programmatic 
 - **Storage:** SHA-256 hash stored in `api_keys` table. Plain text shown once on creation, never stored.
 - **Org-scoped:** Each key belongs to an organization. `createdBy` tracks the creating user.
 - **Auth context:** Uses the creator's `userId` for audit trail and RLS. Pre-sets `orgId` from the key.
-- **Scopes:** Stored in `scopes` JSONB column. Enforced by `requireScopes` middleware on REST + tRPC surfaces. OIDC/test auth bypasses scope checks.
+- **Scopes:** Stored in `scopes` JSONB column. Enforced by `requireScopes` middleware on REST + tRPC + GraphQL surfaces. OIDC/test auth bypasses scope checks.
 - **Lookup:** `verify_api_key()` SECURITY DEFINER function bypasses RLS for cross-org hash lookup.
 - **`lastUsedAt`:** Updated fire-and-forget via `touch_api_key_last_used()` SECURITY DEFINER function.
 - **CRUD:** tRPC router at `apiKeys.*`. Only ADMIN can create/revoke/delete. All org members can list.
@@ -83,11 +88,11 @@ User lifecycle events are synced from Zitadel to the local DB via webhooks.
 
 ## API Surfaces
 
-| Surface     | Audience              | Status               | Auth               |
-| ----------- | --------------------- | -------------------- | ------------------ |
-| **tRPC**    | Internal web frontend | **Built**            | Zitadel OIDC token |
-| **REST**    | Public API, Zapier    | **PR 1 done** (oRPC) | API key or OIDC    |
-| **GraphQL** | Power users           | _Planned_            | API key or OIDC    |
+| Surface     | Audience              | Status                                      | Auth               |
+| ----------- | --------------------- | ------------------------------------------- | ------------------ |
+| **tRPC**    | Internal web frontend | **Built**                                   | Zitadel OIDC token |
+| **REST**    | Public API, Zapier    | **PR 1 done** (oRPC)                        | API key or OIDC    |
+| **GraphQL** | Power users           | **PR 1 done** (Pothos + Yoga, queries only) | API key or OIDC    |
 
 All surfaces share the same service layer and Zod schemas from `@colophony/types`.
 
