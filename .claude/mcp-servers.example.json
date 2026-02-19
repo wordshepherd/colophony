@@ -69,6 +69,17 @@
         "Can list containers, read logs, inspect health checks, and view stats",
         "Replaces manual 'docker compose logs' and 'docker stats' commands"
       ]
+    },
+    "chrome-devtools": {
+      "description": "Chrome DevTools bridge — browser automation, network inspection, screenshots, console, performance tracing",
+      "command": "npx",
+      "args": ["-y", "chrome-devtools-mcp@latest"],
+      "notes": [
+        "Launch Chrome with: google-chrome --remote-debugging-port=9222",
+        "Chrome 144+ supports automatic connection to existing browser sessions",
+        "26 tools: click, fill, navigate, screenshot, network requests, console messages, performance tracing",
+        "Useful for manual QA assistance — navigate flows, inspect requests, capture issues"
+      ]
     }
   },
   "notes": {
