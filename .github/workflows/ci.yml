@@ -456,19 +456,6 @@ jobs:
             ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO app_user;
             ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT USAGE, SELECT ON SEQUENCES TO app_user;
           "
-      - name: Create Zitadel database
-        run: |
-          PGPASSWORD=password psql -h localhost -p 5432 -U colophony -d colophony -c "
-            DO \$\$
-            BEGIN
-              IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'zitadel') THEN
-                CREATE ROLE zitadel WITH LOGIN PASSWORD 'zitadel_password' CREATEDB;
-              END IF;
-            END
-            \$\$;
-          "
-          echo "SELECT 'CREATE DATABASE zitadel OWNER zitadel' WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'zitadel') \gexec" | \
-            PGPASSWORD=password psql -h localhost -p 5432 -U colophony
       - name: Run Drizzle migrations
         run: pnpm db:migrate
         env:
@@ -480,6 +467,7 @@ jobs:
       - name: Start Zitadel
         run: |
           mkdir -p .docker/zitadel/machinekey
+          chmod 777 .docker/zitadel/machinekey
           docker run -d --name zitadel --network host \
             -v ${{ github.workspace }}/.docker/zitadel/machinekey:/machinekey \
             -e ZITADEL_DATABASE_POSTGRES_HOST=localhost \
