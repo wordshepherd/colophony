@@ -96,6 +96,7 @@ export function SubmissionDetail({ submissionId }: SubmissionDetailProps) {
     onSuccess: () => {
       toast.success("Submission withdrawn");
       utils.submissions.getById.invalidate({ id: submissionId });
+      utils.submissions.getHistory.invalidate({ submissionId });
     },
     onError: (err) => {
       toast.error(err.message);
