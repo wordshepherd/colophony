@@ -326,7 +326,7 @@ export function SubmissionDetail({ submissionId }: SubmissionDetailProps) {
                       <div className="flex gap-3">
                         <div className="w-4 h-4 mt-1 rounded-full bg-primary flex-shrink-0" />
                         <div className="space-y-1">
-                          <p className="text-sm">
+                          <span className="text-sm">
                             {event.fromStatus ? (
                               <>
                                 Changed from{" "}
@@ -346,7 +346,7 @@ export function SubmissionDetail({ submissionId }: SubmissionDetailProps) {
                                 </Badge>
                               </>
                             )}
-                          </p>
+                          </span>
                           {event.comment && (
                             <p className="text-sm text-muted-foreground">
                               &ldquo;{event.comment}&rdquo;
