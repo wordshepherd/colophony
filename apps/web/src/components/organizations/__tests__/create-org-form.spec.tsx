@@ -7,6 +7,7 @@ import { mockPush } from "../../../../test/setup";
 let mockIsChecking = false;
 let mockIsAvailable: boolean | null = null;
 let mockHasOrganizations = false;
+let mockDebouncedSlug = "";
 const mockMutate = jest.fn();
 const mockInvalidate = jest.fn();
 
@@ -15,7 +16,7 @@ jest.mock("@/hooks/use-slug-check", () => ({
     return {
       isChecking: mockIsChecking,
       isAvailable: mockIsAvailable,
-      debouncedSlug: slug,
+      debouncedSlug: mockDebouncedSlug,
     };
   },
 }));

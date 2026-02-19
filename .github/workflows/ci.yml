@@ -76,8 +76,8 @@ jobs:
       - name: Lint
         run: pnpm lint
 
-      - name: Type check (scoped — web app excluded during rewrite)
-        run: pnpm turbo run type-check --filter=@colophony/db --filter=@colophony/auth-client --filter=@colophony/api-contracts --filter=@colophony/api
+      - name: Type check
+        run: pnpm turbo run type-check --filter=@colophony/db --filter=@colophony/auth-client --filter=@colophony/api-contracts --filter=@colophony/api --filter=@colophony/web
 
       - name: Audit dependencies
         run: pnpm audit --audit-level=high
@@ -103,8 +103,8 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - name: Build workspace dependencies
         run: pnpm turbo run build --filter=@colophony/db --filter=@colophony/auth-client --filter=@colophony/types --filter=@colophony/api-contracts
-      - name: Run unit tests (scoped — web app excluded during rewrite)
-        run: pnpm --filter @colophony/db test && pnpm --filter @colophony/auth-client test && pnpm --filter @colophony/api test
+      - name: Run unit tests
+        run: pnpm --filter @colophony/db test && pnpm --filter @colophony/auth-client test && pnpm --filter @colophony/api test && pnpm --filter @colophony/web test
 
   # ──────────────────────────────────────────────────
   # API E2E tests (~5 min): needs Postgres + Redis
@@ -239,5 +239,5 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'pnpm'
       - run: pnpm install --frozen-lockfile
-      - name: Build packages (scoped — web app excluded during rewrite)
-        run: pnpm turbo run build --filter=@colophony/db --filter=@colophony/auth-client --filter=@colophony/api-contracts --filter=@colophony/api --filter=@colophony/types
+      - name: Build packages
+        run: pnpm turbo run build --filter=@colophony/db --filter=@colophony/auth-client --filter=@colophony/api-contracts --filter=@colophony/api --filter=@colophony/types --filter=@colophony/web
