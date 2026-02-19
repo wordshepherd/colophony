@@ -281,7 +281,7 @@ jobs:
           echo 'DATABASE_URL="postgresql://colophony:password@localhost:5432/colophony"' > packages/db/.env
           pnpm db:seed
       - name: Install Playwright browsers
-        run: npx playwright install --with-deps chromium
+        run: pnpm --filter @colophony/web exec playwright install --with-deps chromium
       - name: Run Playwright E2E tests
         run: pnpm --filter @colophony/web test:e2e
         env:
