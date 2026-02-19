@@ -272,10 +272,7 @@ export async function registerTusdWebhooks(
         return;
       }
       // Scope check: require files:write for upload
-      if (
-        !apiKey.scopes ||
-        !(apiKey.scopes as string[]).includes('files:write')
-      ) {
+      if (!apiKey.scopes || !apiKey.scopes.includes('files:write')) {
         await reply.status(200).send(rejectUpload(403, 'insufficient_scopes'));
         return;
       }
@@ -443,10 +440,7 @@ export async function registerTusdWebhooks(
         return reply.status(401).send({ error: 'creator_deactivated' });
       }
       // Scope check: require files:write for post-finish
-      if (
-        !apiKey.scopes ||
-        !(apiKey.scopes as string[]).includes('files:write')
-      ) {
+      if (!apiKey.scopes || !apiKey.scopes.includes('files:write')) {
         return reply.status(403).send({ error: 'insufficient_scopes' });
       }
       userId = creator.id;

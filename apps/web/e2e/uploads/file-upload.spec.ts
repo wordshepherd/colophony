@@ -27,13 +27,11 @@ import {
 
 test.describe("File Upload (/submissions/:id — edit mode)", () => {
   let submissionId: string;
-  let orgId: string;
 
   test.beforeAll(async () => {
     // Look up seed data directly (fixtures not available in beforeAll)
     const org = await getOrgBySlug("quarterly-review");
     if (!org) throw new Error("Seed org not found");
-    orgId = org.id;
 
     const user = await getUserByEmail("writer@example.com");
     if (!user) throw new Error("Seed user not found");
