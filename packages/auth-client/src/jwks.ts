@@ -8,9 +8,12 @@ import type { JwksConfig, VerifiedToken } from "./types.js";
  * Validates issuer, audience, signing algorithm, and azp (for multi-audience tokens).
  */
 export function createJwksVerifier(config: JwksConfig) {
-  // Zitadel issues tokens with trailing slash on issuer
-  const issuer = config.authority.replace(/\/+$/, "") + "/";
-  const jwksUrl = new URL("/oauth/v2/keys", issuer);
+  // Normalize issuer: strip trailing slash for matching. jose v5+ accepts
+  // string or string[] for the issuer check, so we accept both with and
+  // without trailing slash to handle Zitadel version differences.
+  const base = config.authority.replace(/\/+$/, "");
+  const issuer = [base, base + "/"];
+  const jwksUrl = new URL("/oauth/v2/keys", base + "/");
 
   const JWKS = createRemoteJWKSet(jwksUrl, {
     cooldownDuration: 30_000, // 30s between refetches
@@ -25,9 +28,11 @@ export function createJwksVerifier(config: JwksConfig) {
       clockTolerance: config.clockTolerance ?? 5,
     });
 
-    // Enforce azp when aud is multi-valued (OIDC spec)
-    if (config.clientId && Array.isArray(payload.aud)) {
-      if (!payload.azp || payload.azp !== config.clientId) {
+    // Enforce azp when aud is multi-valued (OIDC spec §2).
+    // Zitadel's JWT access tokens may omit azp, so only reject when azp is
+    // present but doesn't match — don't reject tokens that simply lack azp.
+    if (config.clientId && Array.isArray(payload.aud) && payload.azp) {
+      if (payload.azp !== config.clientId) {
         throw new Error("invalid_azp");
       }
     }
