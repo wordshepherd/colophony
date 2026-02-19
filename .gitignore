@@ -43,3 +43,6 @@ Thumbs.db
 
 # Turbo
 .turbo/
+
+# Docker bind mounts (Zitadel PAT, etc.)
+.docker/

@@ -104,12 +104,12 @@ describe("createJwksVerifier", () => {
     });
     await expect(verify(badToken)).rejects.toThrow("invalid_azp");
 
-    // Multi-aud token with no azp
+    // Multi-aud token with no azp — allowed (Zitadel omits azp in JWT access tokens)
     const noAzpToken = await signToken({
       sub: "user-123",
       aud: ["my-client", "other-service"],
     });
-    await expect(verify(noAzpToken)).rejects.toThrow("invalid_azp");
+    await expect(verify(noAzpToken)).resolves.toBeDefined();
   });
 
   it("rejects expired token", async () => {
