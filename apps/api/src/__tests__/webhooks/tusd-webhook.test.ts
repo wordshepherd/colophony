@@ -220,7 +220,7 @@ describe('tusd webhook integration', () => {
       expect(res.json()).toEqual({ status: 'processed' });
 
       const db = adminDb();
-      const storageKey = payload.Event.Upload.Storage!.Key!;
+      const storageKey = payload.Event.Upload.Storage.Key;
       const [file] = await db
         .select()
         .from(submissionFiles)
@@ -253,7 +253,7 @@ describe('tusd webhook integration', () => {
       expect(res2.statusCode).toBe(200);
 
       const db = adminDb();
-      const storageKey = payload.Event.Upload.Storage!.Key!;
+      const storageKey = payload.Event.Upload.Storage.Key;
       const files = await db
         .select()
         .from(submissionFiles)
@@ -283,7 +283,7 @@ describe('tusd webhook integration', () => {
       expect(mockEnqueueFileScan).toHaveBeenCalledOnce();
       const callArgs = mockEnqueueFileScan.mock.calls[0];
       expect(callArgs[1]).toMatchObject({
-        storageKey: payload.Event.Upload.Storage!.Key,
+        storageKey: payload.Event.Upload.Storage.Key,
         organizationId: org.id,
       });
 
@@ -301,7 +301,7 @@ describe('tusd webhook integration', () => {
       await postTusd(payload);
 
       const db = adminDb();
-      const storageKey = payload.Event.Upload.Storage!.Key!;
+      const storageKey = payload.Event.Upload.Storage.Key;
       const [file] = await db
         .select()
         .from(submissionFiles)
