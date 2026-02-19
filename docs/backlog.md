@@ -48,11 +48,11 @@
 - [x] Web unit tests: form components (org creation) — (DEVLOG 2026-02-18; done 2026-02-19)
 - [x] Web unit tests: layout components with data states (user menu, sidebar, org switcher) — (DEVLOG 2026-02-18; done 2026-02-19)
 - [x] Web unit tests: `SubmissionForm` + `FileUpload` — complex component with 5 tRPC queries/mutations, deferred from org/layout test PR — (DEVLOG 2026-02-19; done 2026-02-19)
-- [ ] Fix `create-org-form.spec.tsx` broken mocks — `mockDebouncedSlug` referenced in `beforeEach` but never declared; `slug` used in `useSlugCheck` mock factory instead of `_slug` parameter. All 7 tests fail. — (discovered 2026-02-19)
+- [x] Fix `create-org-form.spec.tsx` broken mocks — `mockDebouncedSlug` referenced in `beforeEach` but never declared; `slug` used in `useSlugCheck` mock factory instead of `_slug` parameter. All 7 tests fail. — (discovered 2026-02-19; done 2026-02-19)
 - [x] Webhook integration tests: Stripe webhook → DB → side-effects with real database — (DEVLOG 2026-02-18; done 2026-02-19)
 - [x] Webhook integration tests: Zitadel webhook → user sync → DB with real database — (DEVLOG 2026-02-18; done 2026-02-19)
 - [x] Webhook integration tests: tusd webhook → file record → BullMQ job with real database — (DEVLOG 2026-02-18; done 2026-02-19)
-- [ ] CI: enable `@colophony/web` in type-check, build, and unit-test jobs — excluded during rewrite, rewrite is done — (DEVLOG 2026-02-18)
+- [x] CI: enable `@colophony/web` in type-check, build, and unit-test jobs — excluded during rewrite, rewrite is done — (DEVLOG 2026-02-18; done 2026-02-19)
 - [ ] CI: add Playwright submission E2E job (20 tests, needs Postgres + Redis services) — (DEVLOG 2026-02-18)
 
 ### Housekeeping
