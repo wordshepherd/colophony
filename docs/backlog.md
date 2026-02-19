@@ -39,9 +39,18 @@
 - [ ] Manual testing of 4 submission pages with dev server — (DEVLOG 2026-02-15)
 - [x] E2E tests for submission flow — (DEVLOG 2026-02-15; done 2026-02-18 PR pending)
 - [x] E2E tests for upload flow — needs tusd + MinIO in CI — (DEVLOG 2026-02-15; done 2026-02-18)
-- [ ] E2E tests for OIDC flow — requires Zitadel instance — (DEVLOG 2026-02-13)
+- [x] E2E tests for OIDC flow — requires Zitadel instance — (DEVLOG 2026-02-13; done 2026-02-18)
 - [ ] Manual QA of full org management flow with Zitadel + dev services running — (DEVLOG 2026-02-13)
 - [ ] Manual QA: webhook freshness/rate-limit/ordering with Docker Compose + Zitadel — (DEVLOG 2026-02-15)
+- [ ] Web unit tests: auth hooks (`use-auth`, `use-organization`, `use-slug-check`) — (DEVLOG 2026-02-18)
+- [ ] Web unit tests: `ProtectedRoute` rendering states (loading, no org, authenticated, error) — (DEVLOG 2026-02-18)
+- [ ] Web unit tests: form components (submission form validation, org creation) — (DEVLOG 2026-02-18)
+- [ ] Web unit tests: layout components with data states (user menu, sidebar, org switcher) — (DEVLOG 2026-02-18)
+- [ ] Webhook integration tests: Stripe webhook → DB → side-effects with real database — (DEVLOG 2026-02-18)
+- [ ] Webhook integration tests: Zitadel webhook → user sync → DB with real database — (DEVLOG 2026-02-18)
+- [ ] Webhook integration tests: tusd webhook → file record → BullMQ job with real database — (DEVLOG 2026-02-18)
+- [ ] CI: enable `@colophony/web` in type-check, build, and unit-test jobs — excluded during rewrite, rewrite is done — (DEVLOG 2026-02-18)
+- [ ] CI: add Playwright submission E2E job (20 tests, needs Postgres + Redis services) — (DEVLOG 2026-02-18)
 
 ### Housekeeping
 

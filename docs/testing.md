@@ -8,7 +8,7 @@ For architecture details, see [docs/architecture-v2-planning.md](./architecture-
 ## Running Tests
 
 ```bash
-# Unit tests — API + packages (~516 tests, 40 suites)
+# Unit tests — API + packages (~537 tests, 40 suites)
 pnpm test
 
 # Watch mode
@@ -50,11 +50,11 @@ pnpm --filter @colophony/web test:e2e:ui
 
 ## Current Test Status
 
-**~660 tests passing** across 5 tiers:
+**~693 tests passing** across 5 tiers:
 
 | Tier                   | Files | Tests | Runner          | Location                      |
 | ---------------------- | ----- | ----- | --------------- | ----------------------------- |
-| API unit tests         | 36    | ~478  | Vitest          | `apps/api/src/**/*.spec.ts`   |
+| API unit tests         | 36    | ~499  | Vitest          | `apps/api/src/**/*.spec.ts`   |
 | Package unit tests     | 4     | ~38   | Vitest          | `packages/*/src/**/*.spec.ts` |
 | Web unit tests         | 4     | ~35   | Jest + jsdom    | `apps/web/src/**/*.spec.*`    |
 | RLS integration tests  | 8     | ~89   | Vitest (custom) | `apps/api/src/__tests__/rls/` |
