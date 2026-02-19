@@ -31,8 +31,13 @@ const PAT_FILE_PATH =
 
 const E2E_PROJECT_NAME = "colophony-e2e";
 const E2E_APP_NAME = "colophony-e2e-web";
-const E2E_REDIRECT_URI = "http://localhost:3010/auth/callback";
-const E2E_POST_LOGOUT_URI = "http://localhost:3010";
+const E2E_WEB_PORT = process.env.E2E_WEB_PORT || "3010";
+const E2E_REDIRECT_URI = `http://localhost:${E2E_WEB_PORT}/auth/callback`;
+const E2E_POST_LOGOUT_URI = `http://localhost:${E2E_WEB_PORT}`;
+
+// Also allow port 3000 (dev server) so the same Zitadel app works for manual QA
+const DEV_REDIRECT_URI = "http://localhost:3000/auth/callback";
+const DEV_POST_LOGOUT_URI = "http://localhost:3000";
 
 const TEST_USER_EMAIL = "e2e-test@colophony.dev";
 const TEST_USER_PASSWORD = "E2eTestPassword1!";
@@ -175,6 +180,24 @@ async function findOrCreateOidcApp(
   const existing = search.data.result?.find((a) => a.name === E2E_APP_NAME);
   if (existing?.oidcConfig) {
     console.log(`Found existing OIDC app: ${existing.oidcConfig.clientId}`);
+    // Ensure redirect URIs include both E2E and dev ports
+    await zitadelApi(
+      token,
+      `/management/v1/projects/${projectId}/apps/${existing.id}/oidc`,
+      "PUT",
+      {
+        redirectUris: [E2E_REDIRECT_URI, DEV_REDIRECT_URI],
+        postLogoutRedirectUris: [E2E_POST_LOGOUT_URI, DEV_POST_LOGOUT_URI],
+        responseTypes: ["OIDC_RESPONSE_TYPE_CODE"],
+        grantTypes: ["OIDC_GRANT_TYPE_AUTHORIZATION_CODE"],
+        appType: "OIDC_APP_TYPE_USER_AGENT",
+        authMethodType: "OIDC_AUTH_METHOD_TYPE_NONE",
+        accessTokenType: "OIDC_TOKEN_TYPE_JWT",
+        accessTokenRoleAssertion: true,
+        devMode: true,
+      },
+    );
+    console.log("Updated OIDC app redirect URIs.");
     return { appId: existing.id, clientId: existing.oidcConfig.clientId };
   }
 
@@ -184,8 +207,8 @@ async function findOrCreateOidcApp(
     clientId: string;
   }>(token, `/management/v1/projects/${projectId}/apps/oidc`, "POST", {
     name: E2E_APP_NAME,
-    redirectUris: [E2E_REDIRECT_URI],
-    postLogoutRedirectUris: [E2E_POST_LOGOUT_URI],
+    redirectUris: [E2E_REDIRECT_URI, DEV_REDIRECT_URI],
+    postLogoutRedirectUris: [E2E_POST_LOGOUT_URI, DEV_POST_LOGOUT_URI],
     responseTypes: ["OIDC_RESPONSE_TYPE_CODE"],
     grantTypes: ["OIDC_GRANT_TYPE_AUTHORIZATION_CODE"],
     appType: "OIDC_APP_TYPE_USER_AGENT",

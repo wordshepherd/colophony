@@ -32,6 +32,10 @@ vi.mock('@colophony/db', () => ({
     connect: mockPoolConnect,
     query: vi.fn().mockResolvedValue({ rows: [{ '?column?': 1 }] }),
   },
+  appPool: {
+    connect: mockPoolConnect,
+    query: vi.fn().mockResolvedValue({ rows: [{ '?column?': 1 }] }),
+  },
   DrizzleDb: {},
 }));
 

@@ -1,5 +1,5 @@
 import { drizzle, type NodePgDatabase } from "drizzle-orm/node-postgres";
-import { pool } from "./client";
+import { appPool } from "./client";
 
 export type DrizzleDb = NodePgDatabase<Record<string, never>>;
 
@@ -29,7 +29,7 @@ export async function withRls<T>(
   if (ctx.orgId) validateUuid(ctx.orgId, "orgId");
   if (ctx.userId) validateUuid(ctx.userId, "userId");
 
-  const client = await pool.connect();
+  const client = await appPool.connect();
   try {
     await client.query("BEGIN");
 

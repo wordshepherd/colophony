@@ -106,8 +106,12 @@ export function SubmissionForm({ mode, submissionId }: SubmissionFormProps) {
 
   // Submit mutation (for submitting draft)
   const submitMutation = trpc.submissions.submit.useMutation({
-    onSuccess: () => {
+    onSuccess: async () => {
       toast.success("Submission submitted!");
+      await utils.submissions.getById.invalidate({ id: submissionId! });
+      await utils.submissions.getHistory.invalidate({
+        submissionId: submissionId!,
+      });
       router.push(`/submissions/${submissionId}`);
     },
     onError: (err) => {

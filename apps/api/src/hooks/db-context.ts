@@ -1,7 +1,7 @@
 import fp from 'fastify-plugin';
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { drizzle } from 'drizzle-orm/node-postgres';
-import { pool, type DrizzleDb } from '@colophony/db';
+import { appPool, type DrizzleDb } from '@colophony/db';
 import type { PoolClient } from 'pg';
 
 declare module 'fastify' {
@@ -39,7 +39,7 @@ export default fp(
         // Only set up transaction if we have an authenticated user
         if (!request.authContext?.userId) return;
 
-        const client = await pool.connect();
+        const client = await appPool.connect();
         clientMap.set(request, client);
 
         await client.query('BEGIN');

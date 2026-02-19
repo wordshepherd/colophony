@@ -2,7 +2,7 @@
 export * from "./schema/index";
 
 // Client
-export { db, pool } from "./client";
+export { db, pool, appPool } from "./client";
 
 // RLS context helper
 export { withRls, type DrizzleDb } from "./context";

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { getCurrentOrgId, setCurrentOrgId, trpc } from "@/lib/trpc";
 import { useAuth } from "./use-auth";
 
@@ -29,8 +29,10 @@ export function useOrganization() {
     [user?.organizations],
   );
 
-  // Get current org ID from storage
-  const currentOrgId = typeof window !== "undefined" ? getCurrentOrgId() : null;
+  // Reactive org ID state — initialized from localStorage, updated on switch
+  const [currentOrgId, _setCurrentOrgId] = useState<string | null>(() =>
+    typeof window !== "undefined" ? getCurrentOrgId() : null,
+  );
 
   // Find current organization
   const currentOrg =
@@ -39,7 +41,9 @@ export function useOrganization() {
   // If no current org but user has orgs, select the first one
   useEffect(() => {
     if (isAuthenticated && organizations.length > 0 && !currentOrgId) {
-      setCurrentOrgId(organizations[0].id);
+      const firstId = organizations[0].id;
+      setCurrentOrgId(firstId);
+      _setCurrentOrgId(firstId);
     }
   }, [isAuthenticated, organizations, currentOrgId]);
 
@@ -53,6 +57,7 @@ export function useOrganization() {
       }
 
       setCurrentOrgId(orgId);
+      _setCurrentOrgId(orgId);
 
       // Invalidate queries that depend on org context
       utils.invalidate();
