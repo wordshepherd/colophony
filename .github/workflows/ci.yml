@@ -222,6 +222,62 @@ jobs:
           DATABASE_APP_URL: postgresql://app_user:app_password@localhost:5433/colophony_test
 
   # ──────────────────────────────────────────────────
+  # Playwright E2E tests (~5 min): submissions project
+  # ──────────────────────────────────────────────────
+  playwright-tests:
+    name: Playwright E2E Tests
+    needs: changes
+    if: needs.changes.outputs.docs_only != 'true'
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: colophony
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: colophony
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U colophony"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v6
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+      - uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+      - run: pnpm install --frozen-lockfile
+      - name: Build workspace dependencies
+        run: pnpm turbo run build --filter=@colophony/db --filter=@colophony/auth-client --filter=@colophony/types --filter=@colophony/api-contracts
+      - name: Run Drizzle migrations
+        run: pnpm db:migrate
+        env:
+          DATABASE_URL: postgresql://colophony:password@localhost:5432/colophony
+      - name: Seed test data
+        run: pnpm db:seed
+        env:
+          DATABASE_URL: postgresql://colophony:password@localhost:5432/colophony
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+      - name: Run Playwright E2E tests
+        run: pnpm --filter @colophony/web test:e2e
+        env:
+          DATABASE_URL: postgresql://colophony:password@localhost:5432/colophony
+      - name: Upload Playwright report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: apps/web/playwright-report/
+          retention-days: 30
+
+  # ──────────────────────────────────────────────────
   # Build verification (~2 min)
   # ──────────────────────────────────────────────────
   build:
