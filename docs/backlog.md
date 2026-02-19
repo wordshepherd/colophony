@@ -85,6 +85,7 @@
 - [ ] Embeddable forms (iframe) — (architecture doc Track 3, form-builder-research.md)
 - [ ] Submission periods UI — schema exists, no UI — (DEVLOG 2026-02-15)
 - [ ] Editor dashboard rewrite (`/editor` pages) — current pages are stubs — (DEVLOG 2026-02-15)
+- [ ] Fix stale cache after submit: `submission-form.tsx` `submitMutation.onSuccess` does `router.push` but doesn't invalidate `getById` query — detail page shows stale DRAFT status — (DEVLOG 2026-02-18, E2E test run)
 - [ ] GDPR deletion mutation — stubbed with TODO — (DEVLOG 2026-02-15)
 - [ ] GDPR tools finalization from MVP — (architecture doc Track 3)
 - [ ] Org deletion — needs careful cascade handling — (DEVLOG 2026-02-13)

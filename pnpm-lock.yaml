@@ -298,6 +298,9 @@ importers:
       autoprefixer:
         specifier: ^10.4.0
         version: 10.4.24(postcss@8.5.6)
+      dotenv:
+        specifier: ^17.3.1
+        version: 17.3.1
       jest:
         specifier: ^30.2.0
         version: 30.2.0(@types/node@25.2.3)(esbuild-register@3.6.0(esbuild@0.27.3))(ts-node@10.9.2(@types/node@25.2.3)(typescript@5.9.3))
@@ -3626,6 +3629,10 @@ packages:
     resolution: {integrity: sha512-A2is4PLG+eeSfoTMA95/s4pvAoSo2mKtiM5jlHkAVewmiO8ISFTFKZjH7UAM1Atli/OT/7JHOrJRJiMKUZKYBw==}
     engines: {node: '>=12'}
     deprecated: Use your platform's native DOMException instead
+
+  dotenv@17.3.1:
+    resolution: {integrity: sha512-IO8C/dzEb6O3F9/twg6ZLXz164a2fhTnEWb95H23Dm4OuN+92NmEAlTrupP9VW6Jm3sO26tQlqyvyi4CsnY9GA==}
+    engines: {node: '>=12'}
 
   drizzle-kit@0.31.9:
     resolution: {integrity: sha512-GViD3IgsXn7trFyBUUHyTFBpH/FsHTxYJ66qdbVggxef4UBPHRYxQaRzYLTuekYnk9i5FIEL9pbBIwMqX/Uwrg==}
@@ -9969,6 +9976,8 @@ snapshots:
   domexception@4.0.0:
     dependencies:
       webidl-conversions: 7.0.0
+
+  dotenv@17.3.1: {}
 
   drizzle-kit@0.31.9:
     dependencies:
