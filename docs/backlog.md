@@ -47,7 +47,7 @@
 
 - [x] Clean up v1 components (`_v1/` directory) — (DEVLOG 2026-02-15; done 2026-02-17)
 - [ ] Consider Playwright tsconfig extending web for E2E type-checking — nice-to-have — (DEVLOG 2026-02-15)
-- [ ] Rewrite `docs/testing.md` for v2 — still references v1 patterns (Prisma, NestJS, old test counts/tiers); Playwright section updated but rest is stale — (DEVLOG 2026-02-18)
+- [x] Rewrite `docs/testing.md` for v2 — still references v1 patterns (Prisma, NestJS, old test counts/tiers); Playwright section updated but rest is stale — (DEVLOG 2026-02-18; done 2026-02-18)
 - [x] Migrate `forwardRef` → ref-as-prop in 19 shadcn/ui components — React 19 deprecation — (DEVLOG 2026-02-16; done 2026-02-17)
 - [x] Migrate `Context.Provider` → `Context` — React 19 deprecation — (DEVLOG 2026-02-16; done 2026-02-17)
 - [x] Refactor OIDC guard `setState` in effects to satisfy `react-hooks/set-state-in-effect` — `callback/page.tsx` — (DEVLOG 2026-02-16; done 2026-02-17)
@@ -64,6 +64,7 @@
 - [x] oRPC REST API surface — PR 3: typed client package — (DEVLOG 2026-02-18; done 2026-02-18)
 - [x] API key scope enforcement on REST + tRPC endpoints — (DEVLOG 2026-02-18, done 2026-02-18)
 - [ ] API key scope enforcement on GraphQL surface — when Pothos/GraphQL Yoga is built — (DEVLOG 2026-02-18)
+- [ ] Stripe webhook: audit raw payload storage for PCI compliance — `stripe.webhook.ts` stores raw event payload in `stripe_webhook_events`; verify no card data leaks through Checkout Session objects — (Codex review 2026-02-18)
 - [x] tRPC `.output()` runtime response validation — all 30 procedures wired with Zod output schemas; 9 new response schemas added — (input validation audit 2026-02-18; done 2026-02-18)
 - [ ] Pothos + GraphQL Yoga surface — decision point at Month 3: Pothos vs TypeGraphQL — (architecture doc Track 2, Section 6.6)
 - [ ] SDK generation (TypeScript, Python) — (architecture doc Track 2)
