@@ -274,6 +274,7 @@ async function processEvent(
         })
         .onConflictDoUpdate({
           target: users.zitadelUserId,
+          targetWhere: sql`${users.zitadelUserId} IS NOT NULL`,
           set: {
             ...(userData.email ? { email: userData.email } : {}),
             ...(userData.emailVerified !== undefined
