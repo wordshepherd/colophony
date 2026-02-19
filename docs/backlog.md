@@ -38,7 +38,7 @@
 
 - [ ] Manual testing of 4 submission pages with dev server — (DEVLOG 2026-02-15)
 - [x] E2E tests for submission flow — (DEVLOG 2026-02-15; done 2026-02-18 PR pending)
-- [ ] E2E tests for upload flow — needs tusd + MinIO in CI — (DEVLOG 2026-02-15)
+- [x] E2E tests for upload flow — needs tusd + MinIO in CI — (DEVLOG 2026-02-15; done 2026-02-18)
 - [ ] E2E tests for OIDC flow — requires Zitadel instance — (DEVLOG 2026-02-13)
 - [ ] Manual QA of full org management flow with Zitadel + dev services running — (DEVLOG 2026-02-13)
 - [ ] Manual QA: webhook freshness/rate-limit/ordering with Docker Compose + Zitadel — (DEVLOG 2026-02-15)

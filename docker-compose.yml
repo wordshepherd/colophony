@@ -102,6 +102,8 @@ services:
       AWS_SECRET_ACCESS_KEY: minioadmin
       AWS_REGION: us-east-1
     command:
+      - -port
+      - "1080"
       - -s3-endpoint
       - http://minio:9000
       - -s3-bucket

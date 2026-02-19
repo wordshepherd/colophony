@@ -23,8 +23,17 @@ pnpm --filter @colophony/web test
 # RLS integration tests (~89 tests, requires postgres-test container)
 pnpm --filter @colophony/api test:rls
 
-# Playwright browser E2E tests (20 tests, requires dev servers)
+# Playwright browser E2E — submissions only (20 tests, requires dev servers)
 pnpm --filter @colophony/web test:e2e
+
+# Playwright — upload flow (6 tests, requires tusd + MinIO)
+pnpm --filter @colophony/web test:e2e:uploads
+
+# Playwright — OIDC flow (6 tests, requires Zitadel)
+pnpm --filter @colophony/web test:e2e:oidc
+
+# Playwright — all projects
+pnpm --filter @colophony/web test:e2e:all
 
 # Playwright interactive UI mode
 pnpm --filter @colophony/web test:e2e:ui
@@ -49,7 +58,7 @@ pnpm --filter @colophony/web test:e2e:ui
 | Package unit tests     | 4     | ~38   | Vitest          | `packages/*/src/**/*.spec.ts` |
 | Web unit tests         | 4     | ~35   | Jest + jsdom    | `apps/web/src/**/*.spec.*`    |
 | RLS integration tests  | 8     | ~89   | Vitest (custom) | `apps/api/src/__tests__/rls/` |
-| Playwright browser E2E | 3     | 20    | Playwright      | `apps/web/e2e/`               |
+| Playwright browser E2E | 6     | ~32   | Playwright      | `apps/web/e2e/`               |
 
 > Counts use `~` prefix because they shift as tests are added. Run `pnpm test` to get exact numbers.
 
@@ -79,6 +88,9 @@ pnpm --filter @colophony/web test:e2e:ui
 - `submissions/submission-list.spec.ts` — 7 tests (heading, new button, status tabs, seed data, navigation, submitted filter, rejected empty state)
 - `submissions/submission-create.spec.ts` — 5 tests (form fields, validation, title-only draft, full draft, appears in list)
 - `submissions/submission-detail.spec.ts` — 8 tests (detail view, edit/delete buttons, pre-filled edit, save changes, submit flow, withdraw flow, delete confirmation)
+- `uploads/file-upload.spec.ts` — 6 tests (upload + list, progress, DB scan status, delete, MIME reject, multi-file)
+- `oidc/login.spec.ts` — 4 tests (redirect to Zitadel, login flow, return path, logout)
+- `oidc/auth-guard.spec.ts` — 2 tests (protected route redirect, callback error UI)
 
 ---
 
@@ -235,7 +247,38 @@ pnpm --filter @colophony/web test:e2e    # Auto-starts API + Web dev servers
 pnpm --filter @colophony/web test:e2e:ui # Interactive UI mode
 ```
 
-The `playwright.config.ts` `webServer` config auto-starts API (port 4010) and Web (port 3010) dev servers on dedicated E2E ports. No Zitadel, MinIO, or Redis required (`VIRUS_SCAN_ENABLED=false` in API webServer env).
+The `playwright.config.ts` `webServer` config auto-starts API (port 4010) and Web (port 3010) dev servers on dedicated E2E ports. The `submissions` project requires no Zitadel, MinIO, or Redis (`VIRUS_SCAN_ENABLED=false` in API webServer env).
+
+#### Upload E2E Tests (uploads project)
+
+Requires tusd + MinIO for real file upload flow:
+
+```bash
+# Start tusd + MinIO with E2E overrides (webhook→port 4010, forwards X-Api-Key)
+docker compose -f docker-compose.yml -f docker-compose.e2e.yml up tusd minio minio-setup -d
+
+# Run upload tests
+pnpm --filter @colophony/web test:e2e:uploads
+```
+
+Auth strategy: API key interception on tus requests (same pattern as tRPC). The tusd webhook validates API keys via `X-Api-Key` forwarded header.
+
+#### OIDC E2E Tests (oidc project)
+
+Requires a real Zitadel instance for actual OIDC login flow:
+
+```bash
+# Start Zitadel
+docker compose --profile auth up -d
+
+# Provision Zitadel project, OIDC app, and test user (idempotent)
+pnpm --filter @colophony/web e2e:setup-oidc
+
+# Run OIDC tests
+pnpm --filter @colophony/web test:e2e:oidc
+```
+
+The setup script creates a Zitadel project, OIDC app (Authorization Code + PKCE), and test user, then inserts the user into the Colophony DB. Config is written to `apps/web/e2e/.zitadel-e2e-config.json` (gitignored).
 
 **CI environment variables:**
 

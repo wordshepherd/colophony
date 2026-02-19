@@ -170,9 +170,17 @@ export function useFileUpload({
               scanStatus: "PENDING",
             });
             tusInstances.current.delete(uploadId);
-            // Invalidate file queries to pick up the new file
-            utils.files.listBySubmission.invalidate({ submissionId });
-            onUploadComplete?.(uploadId);
+            // The post-finish webhook creates the file record asynchronously
+            // after tusd reports the upload complete. Delay the first
+            // invalidation to give the webhook time to process, then retry
+            // in case the first attempt was still too early.
+            setTimeout(() => {
+              utils.files.listBySubmission.invalidate({ submissionId });
+              onUploadComplete?.(uploadId);
+            }, 1500);
+            setTimeout(() => {
+              utils.files.listBySubmission.invalidate({ submissionId });
+            }, 4000);
           },
           onError: (error) => {
             const message = mapTusError(error);

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { trpc } from "@/lib/trpc";
 import { useFileUpload, type UploadingFile } from "@/hooks/use-file-upload";
 import { Button } from "@/components/ui/button";
@@ -177,8 +177,30 @@ function ExistingFileItem({
 
 export function FileUpload({ submissionId, disabled }: FileUploadProps) {
   const inputRef = useRef<HTMLInputElement>(null);
+  // Track whether uploads are in "processing" state (waiting for post-finish
+  // webhook to create the file record). Used by refetchInterval below.
+  const hasProcessingUploadsRef = useRef(false);
 
-  // Poll while any file is still being scanned
+  const deleteMutation = trpc.files.delete.useMutation();
+  const utils = trpc.useUtils();
+
+  const { uploads, uploadFiles, removeUpload, cancelUpload } = useFileUpload({
+    submissionId,
+    onUploadComplete: () => {
+      utils.files.listBySubmission.invalidate({ submissionId });
+    },
+  });
+
+  // Keep ref in sync with upload state so the query's refetchInterval
+  // can read it without stale closures.
+  useEffect(() => {
+    hasProcessingUploadsRef.current = uploads.some(
+      (u) => u.status === "processing",
+    );
+  }, [uploads]);
+
+  // Poll while any file is still being scanned OR while uploads are waiting
+  // for the post-finish webhook to create their DB records.
   const { data: existingFiles, isPending: isLoading } =
     trpc.files.listBySubmission.useQuery(
       { submissionId },
@@ -190,20 +212,25 @@ export function FileUpload({ submissionId, disabled }: FileUploadProps) {
           const hasPending = files?.some(
             (f) => f.scanStatus === "PENDING" || f.scanStatus === "SCANNING",
           );
-          return hasPending ? 3000 : false;
+          return hasPending || hasProcessingUploadsRef.current ? 3000 : false;
         },
       },
     );
 
-  const deleteMutation = trpc.files.delete.useMutation();
-  const utils = trpc.useUtils();
-
-  const { uploads, uploadFiles, removeUpload, cancelUpload } = useFileUpload({
-    submissionId,
-    onUploadComplete: () => {
-      utils.files.listBySubmission.invalidate({ submissionId });
-    },
-  });
+  // Auto-remove "processing" upload items once their file record appears
+  // in the DB query results (i.e., the post-finish webhook has completed).
+  useEffect(() => {
+    if (!existingFiles) return;
+    const existingNames = new Set(existingFiles.map((f) => f.filename));
+    for (const upload of uploads) {
+      if (
+        upload.status === "processing" &&
+        existingNames.has(upload.file.name)
+      ) {
+        removeUpload(upload.id);
+      }
+    }
+  }, [existingFiles, uploads, removeUpload]);
 
   const handleFileSelect = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {

@@ -104,6 +104,7 @@ describe("useFileUpload", () => {
   });
 
   it("should handle upload success", async () => {
+    jest.useFakeTimers();
     const { result } = renderHook(() => useFileUpload(defaultOptions));
     const file = new File(["content"], "test.pdf", {
       type: "application/pdf",
@@ -119,10 +120,19 @@ describe("useFileUpload", () => {
 
     expect(result.current.uploads[0].status).toBe("processing");
     expect(result.current.uploads[0].scanStatus).toBe("PENDING");
+
+    // Invalidation is delayed to allow post-finish webhook to complete
+    expect(mockInvalidateFiles).not.toHaveBeenCalled();
+
+    await act(async () => {
+      jest.advanceTimersByTime(1500);
+    });
+
     expect(mockInvalidateFiles).toHaveBeenCalledWith({
       submissionId: "sub-123",
     });
     expect(defaultOptions.onUploadComplete).toHaveBeenCalled();
+    jest.useRealTimers();
   });
 
   it("should handle upload error", async () => {
