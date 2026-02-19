@@ -222,6 +222,79 @@ jobs:
           DATABASE_APP_URL: postgresql://app_user:app_password@localhost:5433/colophony_test
 
   # ──────────────────────────────────────────────────
+  # Playwright E2E tests (~5 min): submissions project
+  # ──────────────────────────────────────────────────
+  playwright-tests:
+    name: Playwright E2E Tests
+    needs: changes
+    if: needs.changes.outputs.docs_only != 'true'
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: colophony
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: colophony
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U colophony"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v6
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+      - uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+      - run: pnpm install --frozen-lockfile
+      - name: Build workspace dependencies
+        run: pnpm turbo run build --filter=@colophony/db --filter=@colophony/auth-client --filter=@colophony/types --filter=@colophony/api-contracts
+      - name: Create app_user role
+        run: |
+          PGPASSWORD=password psql -h localhost -p 5432 -U colophony -d colophony -c "
+            DO \$\$
+            BEGIN
+              IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'app_user') THEN
+                CREATE ROLE app_user WITH LOGIN PASSWORD 'app_password' NOSUPERUSER NOBYPASSRLS;
+              END IF;
+            END
+            \$\$;
+            GRANT CONNECT ON DATABASE colophony TO app_user;
+            GRANT USAGE ON SCHEMA public TO app_user;
+            GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO app_user;
+            GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO app_user;
+            ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO app_user;
+            ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT USAGE, SELECT ON SEQUENCES TO app_user;
+          "
+      - name: Run Drizzle migrations
+        run: pnpm db:migrate
+        env:
+          DATABASE_URL: postgresql://colophony:password@localhost:5432/colophony
+      - name: Seed test data
+        run: |
+          echo 'DATABASE_URL="postgresql://colophony:password@localhost:5432/colophony"' > packages/db/.env
+          pnpm db:seed
+      - name: Install Playwright browsers
+        run: pnpm --filter @colophony/web exec playwright install --with-deps chromium
+      - name: Run Playwright E2E tests
+        run: pnpm --filter @colophony/web test:e2e
+        env:
+          DATABASE_URL: postgresql://colophony:password@localhost:5432/colophony
+      - name: Upload Playwright report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: apps/web/playwright-report/
+          retention-days: 30
+
+  # ──────────────────────────────────────────────────
   # Build verification (~2 min)
   # ──────────────────────────────────────────────────
   build:
