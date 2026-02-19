@@ -1,68 +1,103 @@
 /**
  * Auth injection helper for Playwright E2E tests.
  *
- * Injects a fake OIDC user into localStorage (satisfies frontend ProtectedRoute
- * and useAuth checks) and intercepts tRPC requests to swap the fake Bearer token
- * for a real API key header (satisfies API auth).
+ * Provides two layers of auth state injection:
+ * 1. BrowserContext storageState — pre-populates localStorage BEFORE any page
+ *    loads (zero race condition with page JS)
+ * 2. addInitScript — re-sets localStorage on every subsequent navigation as a
+ *    safety net (handles client-side navigations that could clear storage)
+ * 3. Route interception — swaps the fake OIDC Bearer token for a real API key
+ *    on all tRPC requests
  *
  * This uses the real API key auth path — no API code changes needed.
  */
 
 import type { Page } from "@playwright/test";
 
-const OIDC_AUTHORITY = "http://test-idp:8080";
-const OIDC_CLIENT_ID = "test-client";
-const OIDC_STORAGE_KEY = `oidc.user:${OIDC_AUTHORITY}:${OIDC_CLIENT_ID}`;
+export const OIDC_AUTHORITY = "http://test-idp:8080";
+export const OIDC_CLIENT_ID = "test-client";
+export const OIDC_STORAGE_KEY = `oidc.user:${OIDC_AUTHORITY}:${OIDC_CLIENT_ID}`;
 
-interface InjectAuthOptions {
-  page: Page;
-  orgId: string;
-  apiKey: string;
-  userProfile: {
-    sub: string;
-    email: string;
-    name: string;
+interface UserProfile {
+  sub: string;
+  email: string;
+  name: string;
+}
+
+/**
+ * Build the OIDC user object for localStorage injection.
+ */
+export function buildOidcUser(userProfile: UserProfile) {
+  return {
+    access_token: "e2e-fake-token",
+    token_type: "Bearer",
+    expires_at: Math.floor(Date.now() / 1000) + 3600, // 1 hour ahead
+    scope: "openid profile email offline_access",
+    profile: {
+      sub: userProfile.sub,
+      email: userProfile.email,
+      name: userProfile.name,
+      email_verified: true,
+    },
   };
 }
 
 /**
- * Inject fake OIDC auth state and API key route interception.
+ * Build Playwright storageState for BrowserContext creation.
  *
- * Must be called BEFORE navigating to any page. Sets up:
- * 1. localStorage entries for OIDC user + currentOrgId (via addInitScript)
- * 2. Route interception to swap Authorization header for X-Api-Key on tRPC calls
+ * Pre-populates localStorage with OIDC user + currentOrgId so that auth
+ * state is available before any page JavaScript executes.
  */
-export async function injectAuth({
-  page,
-  orgId,
-  apiKey,
-  userProfile,
-}: InjectAuthOptions): Promise<void> {
-  // 1. Inject OIDC user + org context into localStorage before any page JS runs
+export function buildStorageState(orgId: string, userProfile: UserProfile) {
+  const oidcUser = buildOidcUser(userProfile);
+
+  return {
+    cookies: [],
+    origins: [
+      {
+        origin: "http://localhost:3010",
+        localStorage: [
+          { name: OIDC_STORAGE_KEY, value: JSON.stringify(oidcUser) },
+          { name: "currentOrgId", value: orgId },
+        ],
+      },
+    ],
+  };
+}
+
+/**
+ * Set up route interception and addInitScript on a page.
+ *
+ * Must be called after the page is created but before navigating to any URL.
+ * - addInitScript re-sets localStorage on every page load (safety net)
+ * - page.route intercepts tRPC calls to swap Bearer for API key
+ */
+export async function setupPageAuth(
+  page: Page,
+  orgId: string,
+  apiKey: string,
+  userProfile: UserProfile,
+): Promise<void> {
+  const oidcUserJson = JSON.stringify(buildOidcUser(userProfile));
+
+  // Re-set localStorage on every page load as safety net
   await page.addInitScript(
-    ({ storageKey, orgId, userProfile }) => {
-      const expiresAt = Math.floor(Date.now() / 1000) + 3600; // 1 hour ahead
-
-      const oidcUser = {
-        access_token: "e2e-fake-token",
-        token_type: "Bearer",
-        expires_at: expiresAt,
-        scope: "openid profile email offline_access",
-        profile: {
-          sub: userProfile.sub,
-          email: userProfile.email,
-          name: userProfile.name,
-          email_verified: true,
-        },
-      };
-
-      localStorage.setItem(storageKey, JSON.stringify(oidcUser));
-      localStorage.setItem("currentOrgId", orgId);
+    ({
+      storageKey,
+      orgId: oid,
+      json,
+    }: {
+      storageKey: string;
+      orgId: string;
+      json: string;
+    }) => {
+      localStorage.setItem(storageKey, json);
+      localStorage.setItem("currentOrgId", oid);
     },
-    { storageKey: OIDC_STORAGE_KEY, orgId, userProfile },
+    { storageKey: OIDC_STORAGE_KEY, orgId, json: oidcUserJson },
   );
 
-  // 2. Intercept tRPC requests: remove fake Bearer token, add real API key
+  // Intercept tRPC requests: remove fake Bearer token, add real API key
   await page.route("**/trpc/**", async (route) => {
     const request = route.request();
     const headers = { ...request.headers() };
