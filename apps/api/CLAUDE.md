@@ -185,12 +185,13 @@ Workers and queues are started in `main.ts` and closed during graceful shutdown.
 
 ## Quirks
 
-| Quirk                                 | Details                                                                                                                                                                                                                                             |
-| ------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Zitadel webhook signatures**        | Verify `x-zitadel-signature` header on all webhook payloads. Use shared secret from Zitadel Actions config                                                                                                                                          |
-| **BullMQ Redis password**             | Uses `REDIS_HOST`/`REDIS_PORT`/`REDIS_PASSWORD` (not `REDIS_URL`). Pass password in worker/queue config                                                                                                                                             |
-| **tRPC TS2742 under NodeNext**        | Resolved in tRPC v11. `declaration: true` now works in API tsconfig. Web app still resolves `AppRouter` via source path alias pointing to `src/trpc/client-types.ts` (bundler resolution). All web-facing type exports go through `client-types.ts` |
-| **`@fastify/raw-body` doesn't exist** | Official `@fastify/` scoped package not published on npm. Use `fastify-raw-body` (community package, v5.0.0 for Fastify 5)                                                                                                                          |
+| Quirk                                 | Details                                                                                                                                                                                                                                              |
+| ------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Zitadel webhook signatures**        | Verify `x-zitadel-signature` header on all webhook payloads. Use shared secret from Zitadel Actions config                                                                                                                                           |
+| **BullMQ Redis password**             | Uses `REDIS_HOST`/`REDIS_PORT`/`REDIS_PASSWORD` (not `REDIS_URL`). Pass password in worker/queue config                                                                                                                                              |
+| **tRPC TS2742 under NodeNext**        | Resolved in tRPC v11. `declaration: true` now works in API tsconfig. Web app still resolves `AppRouter` via source path alias pointing to `src/trpc/client-types.ts` (bundler resolution). All web-facing type exports go through `client-types.ts`  |
+| **`@fastify/raw-body` doesn't exist** | Official `@fastify/` scoped package not published on npm. Use `fastify-raw-body` (community package, v5.0.0 for Fastify 5)                                                                                                                           |
+| **tusd v2 webhook payload format**    | tusd v2.8.0 sends `{ Type: "pre-create"\|"post-finish", Event: { Upload, HTTPRequest } }` instead of v1's `Hook-Name` header + `{ Upload, HTTPRequest }` body. Our handler supports both formats. The `Event` envelope is unwrapped before dispatch. |
 
 ## Version Pins
 

@@ -1,0 +1,26 @@
+# Docker Compose override for E2E tests requiring tusd + MinIO.
+#
+# Usage:
+#   docker compose -f docker-compose.yml -f docker-compose.e2e.yml up tusd minio minio-setup -d
+#
+# Overrides:
+# - tusd webhook URL points to E2E API port (4010)
+# - tusd forwards X-Api-Key header (for API key auth in E2E tests)
+
+services:
+  tusd:
+    command:
+      - -port
+      - "1080"
+      - -s3-endpoint
+      - http://minio:9000
+      - -s3-bucket
+      - quarantine
+      - -s3-object-prefix
+      - uploads/
+      - -hooks-http
+      - http://host.docker.internal:4010/webhooks/tusd
+      - -hooks-http-forward-headers
+      - Authorization,X-Organization-Id,X-Api-Key
+      - -behind-proxy
+      - -verbose

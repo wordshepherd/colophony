@@ -1,0 +1,121 @@
+/**
+ * Upload-specific E2E test helpers.
+ *
+ * Provides utilities for file upload tests that interact with tusd + MinIO:
+ * - Test file generation
+ * - DB queries for file assertions
+ * - tus request interception to swap Bearer→API key
+ */
+
+import type { Page } from "@playwright/test";
+import { Pool } from "pg";
+import { drizzle } from "drizzle-orm/node-postgres";
+import { eq } from "drizzle-orm";
+import { submissionFiles } from "@colophony/db";
+
+const DATABASE_URL =
+  process.env.DATABASE_URL ||
+  "postgresql://colophony:password@localhost:5432/colophony";
+
+let pool: Pool | null = null;
+
+function getPool(): Pool {
+  if (!pool) {
+    pool = new Pool({
+      connectionString: DATABASE_URL,
+      max: 3,
+      idleTimeoutMillis: 5000,
+    });
+  }
+  return pool;
+}
+
+function getDb() {
+  return drizzle(getPool());
+}
+
+/**
+ * Create a test file buffer for use with Playwright's `setInputFiles`.
+ */
+export function createTestFile(
+  name: string,
+  mimeType: string,
+  sizeKB: number = 1,
+): { name: string; mimeType: string; buffer: Buffer } {
+  const buffer = Buffer.alloc(sizeKB * 1024, "a");
+  return { name, mimeType, buffer };
+}
+
+/**
+ * Query files associated with a submission from the database.
+ */
+export async function getFilesBySubmissionId(submissionId: string): Promise<
+  Array<{
+    id: string;
+    filename: string;
+    mimeType: string;
+    size: number;
+    scanStatus: string;
+    storageKey: string;
+  }>
+> {
+  const db = getDb();
+  return db
+    .select({
+      id: submissionFiles.id,
+      filename: submissionFiles.filename,
+      mimeType: submissionFiles.mimeType,
+      size: submissionFiles.size,
+      scanStatus: submissionFiles.scanStatus,
+      storageKey: submissionFiles.storageKey,
+    })
+    .from(submissionFiles)
+    .where(eq(submissionFiles.submissionId, submissionId));
+}
+
+/**
+ * Delete all files associated with a submission (test cleanup).
+ */
+export async function deleteFilesBySubmissionId(
+  submissionId: string,
+): Promise<void> {
+  const db = getDb();
+  await db
+    .delete(submissionFiles)
+    .where(eq(submissionFiles.submissionId, submissionId))
+    .catch(() => {
+      // Ignore if already deleted
+    });
+}
+
+/**
+ * Disconnect the upload helper's DB pool.
+ */
+export async function disconnectUploadDb(): Promise<void> {
+  if (pool) {
+    await pool.end();
+    pool = null;
+  }
+}
+
+/**
+ * Set up tus request interception to swap Bearer token for API key.
+ *
+ * Mirrors the tRPC interception pattern in auth.ts — intercepts all
+ * requests to tusd (localhost:1080) and replaces the Authorization
+ * header with X-Api-Key.
+ */
+export async function setupTusAuth(page: Page, apiKey: string): Promise<void> {
+  await page.route("**/localhost:1080/**", async (route) => {
+    const request = route.request();
+    const headers = { ...request.headers() };
+
+    // Remove the fake OIDC Bearer token
+    delete headers["authorization"];
+
+    // Add the real API key
+    headers["x-api-key"] = apiKey;
+
+    await route.continue({ headers });
+  });
+}

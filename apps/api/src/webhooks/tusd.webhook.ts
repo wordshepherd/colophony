@@ -12,6 +12,7 @@ import {
 } from '@colophony/types';
 import type { TusdPreCreateResponse } from '@colophony/types';
 import type { Env } from '../config/env.js';
+import { apiKeyService } from '../services/api-key.service.js';
 import { fileService } from '../services/file.service.js';
 import { auditService } from '../services/audit.service.js';
 import { enqueueFileScan } from '../queues/file-scan.queue.js';
@@ -167,7 +168,20 @@ export async function registerTusdWebhooks(
       request: FastifyRequest,
       reply: FastifyReply,
     ) {
-      const hookName = request.headers['hook-name'] as string | undefined;
+      // tusd v2 sends { Type: "pre-create"|"post-finish"|..., Event: { Upload, HTTPRequest } }
+      // tusd v1 sent the hook name as a Hook-Name header and Upload/HTTPRequest at top level.
+      // Support both formats for compatibility.
+      const body = request.body as Record<string, unknown>;
+      let hookName: string | undefined;
+
+      if (body && typeof body.Type === 'string' && body.Event) {
+        // tusd v2 format: unwrap Event into request body for handler functions
+        hookName = body.Type;
+        (request as unknown as { body: unknown }).body = body.Event;
+      } else {
+        // tusd v1 format: hook name in header, Upload/HTTPRequest at top level
+        hookName = request.headers['hook-name'] as string | undefined;
+      }
 
       if (hookName === 'pre-create') {
         return handlePreCreate(request, reply);
@@ -198,26 +212,26 @@ export async function registerTusdWebhooks(
     const metadata = Upload.MetaData ?? {};
     const forwardedHeaders = HTTPRequest.Header;
 
-    // Extract auth token from forwarded headers
+    // Extract auth from forwarded headers
     const authHeader = getForwardedHeader(forwardedHeaders, 'Authorization');
-    const orgId = getForwardedHeader(forwardedHeaders, 'X-Organization-Id');
-
-    if (!authHeader || !orgId) {
-      await reply.status(200).send(rejectUpload(401, 'missing_auth_or_org'));
-      return;
-    }
-
-    const match = /^Bearer\s+(\S+)$/i.exec(authHeader);
-    if (!match) {
-      await reply.status(200).send(rejectUpload(401, 'invalid_auth_header'));
-      return;
-    }
+    const apiKeyHeader = getForwardedHeader(forwardedHeaders, 'X-Api-Key');
+    let orgId = getForwardedHeader(forwardedHeaders, 'X-Organization-Id');
 
     // Validate token and resolve local user UUID
     let userId: string;
-    if (verifyToken) {
+
+    const bearerMatch = authHeader
+      ? /^Bearer\s+(\S+)$/i.exec(authHeader)
+      : null;
+
+    if (verifyToken && bearerMatch) {
+      // OIDC token auth (interactive users)
+      if (!orgId) {
+        await reply.status(200).send(rejectUpload(401, 'missing_auth_or_org'));
+        return;
+      }
       try {
-        const { payload } = await verifyToken(match[1]);
+        const { payload } = await verifyToken(bearerMatch[1]);
         if (!payload.sub) {
           await reply.status(200).send(rejectUpload(401, 'missing_sub_claim'));
           return;
@@ -237,8 +251,43 @@ export async function registerTusdWebhooks(
           .send(rejectUpload(401, 'token_validation_failed'));
         return;
       }
+    } else if (apiKeyHeader) {
+      // API key auth (programmatic consumers)
+      const result = await apiKeyService.verifyKey(apiKeyHeader);
+      if (!result) {
+        await reply.status(200).send(rejectUpload(401, 'invalid_key'));
+        return;
+      }
+      const { apiKey, creator } = result;
+      if (apiKey.expiresAt && apiKey.expiresAt < new Date()) {
+        await reply.status(200).send(rejectUpload(401, 'key_expired'));
+        return;
+      }
+      if (apiKey.revokedAt) {
+        await reply.status(200).send(rejectUpload(401, 'key_revoked'));
+        return;
+      }
+      if (creator.deletedAt) {
+        await reply.status(200).send(rejectUpload(401, 'creator_deactivated'));
+        return;
+      }
+      // Scope check: require files:write for upload
+      if (!apiKey.scopes || !apiKey.scopes.includes('files:write')) {
+        await reply.status(200).send(rejectUpload(403, 'insufficient_scopes'));
+        return;
+      }
+      userId = creator.id;
+      // CRITICAL: Use org from the key, NOT from the forwarded X-Organization-Id
+      // header. This mirrors auth.ts and prevents tenant isolation bypass.
+      orgId = apiKey.organizationId;
+      // Fire-and-forget: update lastUsedAt (mirrors auth.ts)
+      void apiKeyService.touchLastUsed(apiKey.id);
     } else if (env.NODE_ENV === 'test') {
       // Test mode: extract from forwarded test headers
+      if (!orgId) {
+        await reply.status(200).send(rejectUpload(401, 'missing_auth_or_org'));
+        return;
+      }
       const testUserId = getForwardedHeader(forwardedHeaders, 'X-Test-User-Id');
       if (!testUserId) {
         await reply.status(200).send(rejectUpload(401, 'no_auth_configured'));
@@ -247,6 +296,11 @@ export async function registerTusdWebhooks(
       userId = testUserId;
     } else {
       await reply.status(200).send(rejectUpload(401, 'no_auth_configured'));
+      return;
+    }
+
+    if (!orgId) {
+      await reply.status(200).send(rejectUpload(401, 'missing_auth_or_org'));
       return;
     }
 
@@ -338,24 +392,25 @@ export async function registerTusdWebhooks(
     const metadata = Upload.MetaData ?? {};
     const forwardedHeaders = HTTPRequest.Header;
 
-    const orgId = getForwardedHeader(forwardedHeaders, 'X-Organization-Id');
+    let orgId = getForwardedHeader(forwardedHeaders, 'X-Organization-Id');
     const authHeader = getForwardedHeader(forwardedHeaders, 'Authorization');
-
-    if (!orgId) {
-      request.log.error('Post-finish webhook missing X-Organization-Id');
-      return reply.status(400).send({ error: 'missing_org_id' });
-    }
+    const apiKeyHeader = getForwardedHeader(forwardedHeaders, 'X-Api-Key');
 
     // Resolve userId from forwarded auth — fail closed if auth is invalid
     let userId: string;
-    if (verifyToken && authHeader) {
-      const match = /^Bearer\s+(\S+)$/i.exec(authHeader);
-      if (!match) {
-        request.log.warn('Post-finish: invalid auth header format');
-        return reply.status(401).send({ error: 'invalid_auth_header' });
+
+    const bearerMatch = authHeader
+      ? /^Bearer\s+(\S+)$/i.exec(authHeader)
+      : null;
+
+    if (verifyToken && bearerMatch) {
+      // OIDC token auth
+      if (!orgId) {
+        request.log.error('Post-finish webhook missing X-Organization-Id');
+        return reply.status(400).send({ error: 'missing_org_id' });
       }
       try {
-        const { payload } = await verifyToken(match[1]);
+        const { payload } = await verifyToken(bearerMatch[1]);
         if (!payload.sub) {
           return reply.status(401).send({ error: 'missing_sub_claim' });
         }
@@ -368,7 +423,36 @@ export async function registerTusdWebhooks(
         request.log.warn('Post-finish: token validation failed');
         return reply.status(401).send({ error: 'token_validation_failed' });
       }
+    } else if (apiKeyHeader) {
+      // API key auth (programmatic consumers)
+      const result = await apiKeyService.verifyKey(apiKeyHeader);
+      if (!result) {
+        return reply.status(401).send({ error: 'invalid_key' });
+      }
+      const { apiKey, creator } = result;
+      if (apiKey.expiresAt && apiKey.expiresAt < new Date()) {
+        return reply.status(401).send({ error: 'key_expired' });
+      }
+      if (apiKey.revokedAt) {
+        return reply.status(401).send({ error: 'key_revoked' });
+      }
+      if (creator.deletedAt) {
+        return reply.status(401).send({ error: 'creator_deactivated' });
+      }
+      // Scope check: require files:write for post-finish
+      if (!apiKey.scopes || !apiKey.scopes.includes('files:write')) {
+        return reply.status(403).send({ error: 'insufficient_scopes' });
+      }
+      userId = creator.id;
+      // CRITICAL: Use org from the key, NOT from the forwarded header
+      orgId = apiKey.organizationId;
+      // Fire-and-forget: update lastUsedAt (mirrors auth.ts)
+      void apiKeyService.touchLastUsed(apiKey.id);
     } else if (env.NODE_ENV === 'test') {
+      if (!orgId) {
+        request.log.error('Post-finish webhook missing X-Organization-Id');
+        return reply.status(400).send({ error: 'missing_org_id' });
+      }
       const testUserId = getForwardedHeader(forwardedHeaders, 'X-Test-User-Id');
       if (!testUserId) {
         return reply.status(401).send({ error: 'no_auth_configured' });
@@ -377,6 +461,11 @@ export async function registerTusdWebhooks(
     } else {
       request.log.warn('Post-finish: no auth available');
       return reply.status(401).send({ error: 'no_auth_configured' });
+    }
+
+    if (!orgId) {
+      request.log.error('Post-finish webhook missing org context');
+      return reply.status(400).send({ error: 'missing_org_id' });
     }
 
     const submissionId = metadata['submission-id'] ?? metadata['submissionId'];
