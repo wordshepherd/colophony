@@ -14,9 +14,8 @@ interface CheckoutEventOptions {
 export function createCheckoutCompletedEvent(
   opts: CheckoutEventOptions = {},
 ): Stripe.Event {
-  // Use UUIDs for sessionId so it passes the audit_events resourceId::uuid cast.
-  // Real Stripe session IDs (cs_...) would cause a Postgres type error.
-  const sessionId = opts.sessionId ?? faker.string.uuid();
+  const sessionId =
+    opts.sessionId ?? `cs_test_${faker.string.alphanumeric(24)}`;
   const eventId = opts.eventId ?? `evt_${faker.string.alphanumeric(24)}`;
   const organizationId = opts.organizationId ?? faker.string.uuid();
 
@@ -49,7 +48,8 @@ export function createCheckoutCompletedEvent(
 export function createCheckoutExpiredEvent(
   opts: CheckoutEventOptions = {},
 ): Stripe.Event {
-  const sessionId = opts.sessionId ?? faker.string.uuid();
+  const sessionId =
+    opts.sessionId ?? `cs_test_${faker.string.alphanumeric(24)}`;
   const eventId = opts.eventId ?? `evt_${faker.string.alphanumeric(24)}`;
   const organizationId = opts.organizationId ?? faker.string.uuid();
 
@@ -82,7 +82,8 @@ export function createCheckoutExpiredEvent(
 export function createInvalidMetadataEvent(
   opts: { eventId?: string; sessionId?: string } = {},
 ): Stripe.Event {
-  const sessionId = opts.sessionId ?? faker.string.uuid();
+  const sessionId =
+    opts.sessionId ?? `cs_test_${faker.string.alphanumeric(24)}`;
   const eventId = opts.eventId ?? `evt_${faker.string.alphanumeric(24)}`;
 
   return {

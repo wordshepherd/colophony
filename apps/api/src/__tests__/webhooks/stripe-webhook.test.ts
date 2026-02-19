@@ -103,10 +103,11 @@ describe('Stripe webhook integration', () => {
       .where(
         and(
           eq(auditEvents.action, 'PAYMENT_SUCCEEDED'),
-          eq(auditEvents.resourceId, session.id),
+          eq(auditEvents.organizationId, org.id),
         ),
       );
     expect(audit).toBeDefined();
+    expect(audit.resourceId).toBeNull();
 
     // Webhook event marked processed
     const [webhookEvent] = await db
@@ -166,10 +167,11 @@ describe('Stripe webhook integration', () => {
       .where(
         and(
           eq(auditEvents.action, 'PAYMENT_EXPIRED'),
-          eq(auditEvents.resourceId, session.id),
+          eq(auditEvents.organizationId, org.id),
         ),
       );
     expect(audit).toBeDefined();
+    expect(audit.resourceId).toBeNull();
   });
 
   it('idempotency: same event twice → second returns already_processed, 1 payment row', async () => {
