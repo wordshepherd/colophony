@@ -500,7 +500,7 @@ jobs:
           timeout 180 bash -c 'until curl -sf http://localhost:8080/debug/healthz; do sleep 5; done'
           echo "Zitadel is ready."
       - name: Provision Zitadel E2E config
-        run: pnpm --filter @colophony/web e2e:setup-oidc
+        run: pnpm --filter @colophony/db exec tsx ../../scripts/setup-zitadel-e2e.ts
         env:
           DATABASE_URL: postgresql://colophony:password@localhost:5432/colophony
           ZITADEL_URL: http://localhost:8080
