@@ -33,6 +33,7 @@
 
 - [ ] Coolify + Hetzner managed hosting setup — (architecture doc Track 1)
 - [ ] Monitoring stack: Prometheus + Grafana + Loki — (architecture doc Track 1)
+- [ ] Diagnose GitHub GraphQL rate limit exhaustion — at session start, run `watch -n 10 'gh api rate_limit --jq ".resources.graphql.remaining"'` for 5 min with nothing else active; if count drops, an external OAuth app is consuming points. Check https://github.com/settings/applications for authorized apps — (DEVLOG 2026-02-19)
 
 ### QA / Testing
 
