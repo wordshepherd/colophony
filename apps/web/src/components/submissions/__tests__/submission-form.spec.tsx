@@ -1,7 +1,8 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { SubmissionForm } from "../submission-form";
-import { mockPush, mockBack } from "../../../../test/setup";
+// Navigation mocks imported to ensure setup.ts runs (registers next/navigation mock)
+import "../../../../test/setup";
 
 // --- Mutable mock state ---
 let mockExistingSubmission: Record<string, unknown> | undefined;
@@ -10,18 +11,13 @@ let mockExistingFiles: Array<Record<string, unknown>> | undefined;
 
 let mockCreateMutateAsync: jest.Mock;
 let mockCreateIsPending: boolean;
-let mockCreateOnSuccess: ((data: { id: string }) => void) | undefined;
 let mockCreateOnError: ((err: { message: string }) => void) | undefined;
 
 let mockUpdateMutateAsync: jest.Mock;
 let mockUpdateIsPending: boolean;
-let mockUpdateOnSuccess: (() => void) | undefined;
-let mockUpdateOnError: ((err: { message: string }) => void) | undefined;
 
 let mockSubmitMutateAsync: jest.Mock;
 let mockSubmitIsPending: boolean;
-let mockSubmitOnSuccess: (() => void) | undefined;
-let mockSubmitOnError: ((err: { message: string }) => void) | undefined;
 
 const mockInvalidateGetById = jest.fn();
 
@@ -32,18 +28,13 @@ function resetMocks() {
 
   mockCreateMutateAsync = jest.fn().mockResolvedValue({ id: "new-sub-1" });
   mockCreateIsPending = false;
-  mockCreateOnSuccess = undefined;
   mockCreateOnError = undefined;
 
   mockUpdateMutateAsync = jest.fn().mockResolvedValue({});
   mockUpdateIsPending = false;
-  mockUpdateOnSuccess = undefined;
-  mockUpdateOnError = undefined;
 
   mockSubmitMutateAsync = jest.fn().mockResolvedValue({});
   mockSubmitIsPending = false;
-  mockSubmitOnSuccess = undefined;
-  mockSubmitOnError = undefined;
 }
 
 jest.mock("@/lib/trpc", () => ({
@@ -53,14 +44,14 @@ jest.mock("@/lib/trpc", () => ({
     }),
     submissions: {
       getById: {
-        useQuery: (_input: unknown, _opts?: Record<string, unknown>) => ({
+        useQuery: () => ({
           data: mockExistingSubmission,
           isPending: mockIsLoadingSubmission,
         }),
       },
       create: {
-        useMutation: (opts: Record<string, Function>) => {
-          mockCreateOnSuccess = opts.onSuccess as typeof mockCreateOnSuccess;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        useMutation: (opts: any) => {
           mockCreateOnError = opts.onError as typeof mockCreateOnError;
           return {
             mutateAsync: mockCreateMutateAsync,
@@ -69,24 +60,18 @@ jest.mock("@/lib/trpc", () => ({
         },
       },
       update: {
-        useMutation: (opts: Record<string, Function>) => {
-          mockUpdateOnSuccess = opts.onSuccess as typeof mockUpdateOnSuccess;
-          mockUpdateOnError = opts.onError as typeof mockUpdateOnError;
-          return {
-            mutateAsync: mockUpdateMutateAsync,
-            isPending: mockUpdateIsPending,
-          };
-        },
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        useMutation: (_opts: any) => ({
+          mutateAsync: mockUpdateMutateAsync,
+          isPending: mockUpdateIsPending,
+        }),
       },
       submit: {
-        useMutation: (opts: Record<string, Function>) => {
-          mockSubmitOnSuccess = opts.onSuccess as typeof mockSubmitOnSuccess;
-          mockSubmitOnError = opts.onError as typeof mockSubmitOnError;
-          return {
-            mutateAsync: mockSubmitMutateAsync,
-            isPending: mockSubmitIsPending,
-          };
-        },
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        useMutation: (_opts: any) => ({
+          mutateAsync: mockSubmitMutateAsync,
+          isPending: mockSubmitIsPending,
+        }),
       },
     },
     files: {
