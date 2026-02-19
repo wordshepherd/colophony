@@ -177,12 +177,13 @@ All other version pins are in their respective per-directory CLAUDE.md files.
 
 ### CI Pipeline (GitHub Actions)
 
-| Job            | Checks                                             |
-| -------------- | -------------------------------------------------- |
-| **quality**    | `format:check`, `lint`, `type-check`, `pnpm audit` |
-| **unit-tests** | `pnpm test`                                        |
-| **rls-tests**  | RLS tenant isolation integration tests             |
-| **build**      | `pnpm build` (API + Web production build)          |
+| Job                  | Checks                                             |
+| -------------------- | -------------------------------------------------- |
+| **quality**          | `format:check`, `lint`, `type-check`, `pnpm audit` |
+| **unit-tests**       | `pnpm test`                                        |
+| **rls-tests**        | RLS tenant isolation integration tests             |
+| **playwright-tests** | Playwright E2E submissions project (20 tests)      |
+| **build**            | `pnpm build` (API + Web production build)          |
 
 ---
 
