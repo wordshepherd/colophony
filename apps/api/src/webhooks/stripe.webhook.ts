@@ -101,7 +101,7 @@ export async function registerStripeWebhooks(
       preHandler: async function webhookRateLimit(
         request: FastifyRequest,
         reply: FastifyReply,
-      ): Promise<void> {
+      ) {
         const redisClient = getRedis();
         if (!redisClient) return; // Graceful degradation
 
@@ -126,11 +126,10 @@ export async function registerStripeWebhooks(
               { ip: request.ip, count, limit: env.WEBHOOK_RATE_LIMIT_MAX },
               'Stripe webhook rate limit exceeded',
             );
-            void reply.status(429).send({
+            return reply.status(429).send({
               error: 'rate_limit_exceeded',
               message: 'Too many webhook requests',
             });
-            return;
           }
         } catch {
           // Graceful degradation: Redis unavailable → allow request
