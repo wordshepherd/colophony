@@ -17,7 +17,7 @@ pnpm test:watch
 # Coverage report
 pnpm test:cov
 
-# Web unit tests — Jest (35 tests, 4 suites)
+# Web unit tests — Jest (108 tests, 11 suites)
 pnpm --filter @colophony/web test
 
 # RLS integration tests (~89 tests, requires postgres-test container)
@@ -56,7 +56,7 @@ pnpm --filter @colophony/web test:e2e:ui
 | ---------------------- | ----- | ----- | --------------- | ----------------------------- |
 | API unit tests         | 36    | ~499  | Vitest          | `apps/api/src/**/*.spec.ts`   |
 | Package unit tests     | 4     | ~38   | Vitest          | `packages/*/src/**/*.spec.ts` |
-| Web unit tests         | 4     | ~35   | Jest + jsdom    | `apps/web/src/**/*.spec.*`    |
+| Web unit tests         | 11    | ~108  | Jest + jsdom    | `apps/web/src/**/*.spec.*`    |
 | RLS integration tests  | 8     | ~89   | Vitest (custom) | `apps/api/src/__tests__/rls/` |
 | Playwright browser E2E | 6     | ~32   | Playwright      | `apps/web/e2e/`               |
 
@@ -81,7 +81,9 @@ pnpm --filter @colophony/web test:e2e:ui
 
 **Web unit tests:**
 
-- `use-file-upload.spec.ts`, `use-organization.spec.tsx`, `trpc.spec.ts`, `utils.spec.ts`
+- Hooks: `use-auth.spec.ts`, `use-slug-check.spec.ts`, `use-file-upload.spec.ts`, `use-organization.spec.tsx`
+- Components: `protected-route.spec.tsx`, `user-menu.spec.tsx`, `sidebar.spec.tsx`, `org-switcher.spec.tsx`, `create-org-form.spec.tsx`
+- Lib: `trpc.spec.ts`, `utils.spec.ts`
 
 **Playwright E2E test breakdown:**
 

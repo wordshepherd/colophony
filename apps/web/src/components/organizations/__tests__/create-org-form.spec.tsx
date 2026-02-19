@@ -6,14 +6,12 @@ import { mockPush } from "../../../../test/setup";
 // --- Mutable mock state ---
 let mockIsChecking = false;
 let mockIsAvailable: boolean | null = null;
-let mockDebouncedSlug = "";
 let mockHasOrganizations = false;
 const mockMutate = jest.fn();
 const mockInvalidate = jest.fn();
 
 jest.mock("@/hooks/use-slug-check", () => ({
-  useSlugCheck: (slug: string) => {
-    mockDebouncedSlug = slug;
+  useSlugCheck: (_slug: string) => {
     return {
       isChecking: mockIsChecking,
       isAvailable: mockIsAvailable,
@@ -35,7 +33,7 @@ jest.mock("@/lib/trpc", () => ({
     }),
     organizations: {
       create: {
-        useMutation: (opts: Record<string, unknown>) => ({
+        useMutation: (_opts: Record<string, unknown>) => ({
           mutate: (data: unknown) => {
             mockMutate(data);
             // Simulate success for onSuccess tests if needed
