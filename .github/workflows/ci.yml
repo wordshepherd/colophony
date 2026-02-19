@@ -225,7 +225,7 @@ jobs:
   # Playwright E2E tests (~5 min): submissions project
   # ──────────────────────────────────────────────────
   playwright-tests:
-    name: Playwright E2E Tests
+    name: Playwright Submissions E2E
     needs: changes
     if: needs.changes.outputs.docs_only != 'true'
     runs-on: ubuntu-latest
@@ -363,7 +363,7 @@ jobs:
           timeout 30 bash -c 'until curl -sf http://localhost:9000/minio/health/live; do sleep 2; done'
       - name: Create MinIO buckets
         run: |
-          docker run --rm --network host minio/mc:latest sh -c "
+          docker run --rm --network host --entrypoint /bin/sh minio/mc:latest -c "
             mc alias set minio http://localhost:9000 minioadmin minioadmin;
             mc mb minio/submissions --ignore-existing;
             mc mb minio/quarantine --ignore-existing;
@@ -467,10 +467,8 @@ jobs:
             END
             \$\$;
           "
-          PGPASSWORD=password psql -h localhost -p 5432 -U colophony -c "
-            SELECT 'CREATE DATABASE zitadel OWNER zitadel'
-            WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'zitadel')\gexec
-          "
+          echo "SELECT 'CREATE DATABASE zitadel OWNER zitadel' WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'zitadel') \gexec" | \
+            PGPASSWORD=password psql -h localhost -p 5432 -U colophony
       - name: Run Drizzle migrations
         run: pnpm db:migrate
         env:
