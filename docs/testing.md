@@ -20,8 +20,11 @@ pnpm test:cov
 # Web unit tests — Jest (108 tests, 11 suites)
 pnpm --filter @colophony/web test
 
-# RLS integration tests (~89 tests, requires postgres-test container)
+# RLS integration tests (~93 tests, requires postgres-test container)
 pnpm --filter @colophony/api test:rls
+
+# Webhook integration tests (~28 tests, requires postgres-test container)
+pnpm --filter @colophony/api test:webhooks
 
 # Playwright browser E2E — submissions only (20 tests, requires dev servers)
 pnpm --filter @colophony/web test:e2e
@@ -41,7 +44,7 @@ pnpm --filter @colophony/web test:e2e:ui
 
 **Prerequisites:**
 
-- PostgreSQL test DB: `docker compose up -d postgres-test` (RLS tests)
+- PostgreSQL test DB: `docker compose up -d postgres-test` (RLS + webhook tests)
 - For Playwright: `npx playwright install` (first time only, downloads Chromium)
 - For Playwright: `pnpm db:seed` (seed data required for read-only tests)
 - Dev servers auto-started by `playwright.config.ts` — or run `pnpm dev` manually
@@ -50,15 +53,16 @@ pnpm --filter @colophony/web test:e2e:ui
 
 ## Current Test Status
 
-**~693 tests passing** across 5 tiers:
+**~721 tests passing** across 6 tiers:
 
-| Tier                   | Files | Tests | Runner          | Location                      |
-| ---------------------- | ----- | ----- | --------------- | ----------------------------- |
-| API unit tests         | 36    | ~499  | Vitest          | `apps/api/src/**/*.spec.ts`   |
-| Package unit tests     | 4     | ~38   | Vitest          | `packages/*/src/**/*.spec.ts` |
-| Web unit tests         | 11    | ~108  | Jest + jsdom    | `apps/web/src/**/*.spec.*`    |
-| RLS integration tests  | 8     | ~89   | Vitest (custom) | `apps/api/src/__tests__/rls/` |
-| Playwright browser E2E | 6     | ~32   | Playwright      | `apps/web/e2e/`               |
+| Tier                      | Files | Tests | Runner          | Location                           |
+| ------------------------- | ----- | ----- | --------------- | ---------------------------------- |
+| API unit tests            | 36    | ~499  | Vitest          | `apps/api/src/**/*.spec.ts`        |
+| Package unit tests        | 4     | ~38   | Vitest          | `packages/*/src/**/*.spec.ts`      |
+| Web unit tests            | 11    | ~108  | Jest + jsdom    | `apps/web/src/**/*.spec.*`         |
+| RLS integration tests     | 8     | ~93   | Vitest (custom) | `apps/api/src/__tests__/rls/`      |
+| Webhook integration tests | 3     | ~28   | Vitest (custom) | `apps/api/src/__tests__/webhooks/` |
+| Playwright browser E2E    | 6     | ~32   | Playwright      | `apps/web/e2e/`                    |
 
 > Counts use `~` prefix because they shift as tests are added. Run `pnpm test` to get exact numbers.
 
@@ -225,6 +229,33 @@ pnpm --filter @colophony/api test:rls
 - `withTestRls()` helper sets `app.current_org`/`app.user_id` via `set_config` inside a transaction
 - Faker-based factories (`createTwoOrgScenario`) prevent collision errors in watch mode
 - `DATABASE_URL` overridden in vitest config to point at `app_user` connection — exercises real RLS on `@colophony/db` shared exports
+
+### Webhook Integration Tests
+
+**Location:** `apps/api/src/__tests__/webhooks/` (3 test files, ~28 tests)
+
+Tests verify the full webhook handler path: HTTP request → signature/auth verification → idempotency check → DB writes → audit logging.
+
+**Real:** PostgreSQL (test DB, `app_user` connection), Fastify instance with webhook routes, Drizzle ORM, audit logging via `insert_audit_event()` SECURITY DEFINER function.
+
+**Mocked:** Stripe SDK (`constructEvent`), Zitadel signature verification, BullMQ (`enqueueFileScan`), S3 operations. Redis rate limiting degrades gracefully when unavailable.
+
+**Config:** `apps/api/vitest.config.webhooks.ts` — `singleFork: true`, `fileParallelism: false`, `DATABASE_URL` pointed at test DB, `NODE_ENV: 'test'`.
+
+**Running:**
+
+```bash
+# Requires postgres-test container
+docker compose up -d postgres-test
+pnpm --filter @colophony/api test:webhooks
+```
+
+**Key design:**
+
+- Reuses RLS test helpers (db-setup, factories, cleanup) — no duplication
+- `buildWebhookApp()` creates a Fastify instance with all 3 webhook scopes (same registration as `main.ts`)
+- DB assertions use admin pool (bypasses RLS) to verify state changes
+- tusd tests exercise RLS via `withRls()` on submissions/submission_files tables
 
 ### Playwright Browser E2E Tests
 
