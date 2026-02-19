@@ -33,6 +33,7 @@
 
 - [ ] Coolify + Hetzner managed hosting setup — (architecture doc Track 1)
 - [ ] Monitoring stack: Prometheus + Grafana + Loki — (architecture doc Track 1)
+- [~] Diagnose GitHub GraphQL rate limit exhaustion — **Diagnosed 2026-02-19:** ~60 pts/hr passive drain confirmed (2 pts/2 min with zero local activity). Ruled out: Copilot Chat App (revoked, drain continued), old fine-grained PAT (revoked, drain continued), background processes (none found), `gh` CLI internals (drain continues with pure `curl`), cron/timers (none hit GitHub). PAT vs OAuth token doesn't matter — GraphQL rate limit is per-user, not per-token. Drain is likely GitHub-internal (Dependabot, security scanning, notifications). At ~1.2% of budget/hr, not the primary exhaustion source. **Next:** monitor over future sessions; if large exhaustion recurs, convert skills from `gh pr list/create` (GraphQL) to `gh api repos/.../pulls` (REST) — (DEVLOG 2026-02-19)
 
 ### QA / Testing
 
@@ -42,10 +43,11 @@
 - [x] E2E tests for OIDC flow — requires Zitadel instance — (DEVLOG 2026-02-13; done 2026-02-18)
 - [ ] Manual QA of full org management flow with Zitadel + dev services running — (DEVLOG 2026-02-13)
 - [ ] Manual QA: webhook freshness/rate-limit/ordering with Docker Compose + Zitadel — (DEVLOG 2026-02-15)
-- [ ] Web unit tests: auth hooks (`use-auth`, `use-organization`, `use-slug-check`) — (DEVLOG 2026-02-18)
-- [ ] Web unit tests: `ProtectedRoute` rendering states (loading, no org, authenticated, error) — (DEVLOG 2026-02-18)
-- [ ] Web unit tests: form components (submission form validation, org creation) — (DEVLOG 2026-02-18)
-- [ ] Web unit tests: layout components with data states (user menu, sidebar, org switcher) — (DEVLOG 2026-02-18)
+- [x] Web unit tests: auth hooks (`use-auth`, `use-organization`, `use-slug-check`) — (DEVLOG 2026-02-18; done 2026-02-19)
+- [x] Web unit tests: `ProtectedRoute` rendering states (loading, no org, authenticated, error) — (DEVLOG 2026-02-18; done 2026-02-19)
+- [x] Web unit tests: form components (org creation) — (DEVLOG 2026-02-18; done 2026-02-19)
+- [x] Web unit tests: layout components with data states (user menu, sidebar, org switcher) — (DEVLOG 2026-02-18; done 2026-02-19)
+- [ ] Web unit tests: `SubmissionForm` + `FileUpload` — complex component with 5 tRPC queries/mutations, deferred from org/layout test PR — (DEVLOG 2026-02-19)
 - [ ] Webhook integration tests: Stripe webhook → DB → side-effects with real database — (DEVLOG 2026-02-18)
 - [ ] Webhook integration tests: Zitadel webhook → user sync → DB with real database — (DEVLOG 2026-02-18)
 - [ ] Webhook integration tests: tusd webhook → file record → BullMQ job with real database — (DEVLOG 2026-02-18)
