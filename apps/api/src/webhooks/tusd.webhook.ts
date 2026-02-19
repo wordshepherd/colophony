@@ -168,7 +168,20 @@ export async function registerTusdWebhooks(
       request: FastifyRequest,
       reply: FastifyReply,
     ) {
-      const hookName = request.headers['hook-name'] as string | undefined;
+      // tusd v2 sends { Type: "pre-create"|"post-finish"|..., Event: { Upload, HTTPRequest } }
+      // tusd v1 sent the hook name as a Hook-Name header and Upload/HTTPRequest at top level.
+      // Support both formats for compatibility.
+      const body = request.body as Record<string, unknown>;
+      let hookName: string | undefined;
+
+      if (body && typeof body.Type === 'string' && body.Event) {
+        // tusd v2 format: unwrap Event into request body for handler functions
+        hookName = body.Type;
+        (request as unknown as { body: unknown }).body = body.Event;
+      } else {
+        // tusd v1 format: hook name in header, Upload/HTTPRequest at top level
+        hookName = request.headers['hook-name'] as string | undefined;
+      }
 
       if (hookName === 'pre-create') {
         return handlePreCreate(request, reply);

@@ -13,6 +13,8 @@ import { test, expect } from "../helpers/fixtures";
 import {
   createSubmission,
   deleteSubmission,
+  getOrgBySlug,
+  getUserByEmail,
   getOpenSubmissionPeriod,
 } from "../helpers/db";
 import {
@@ -25,13 +27,21 @@ import {
 
 test.describe("File Upload (/submissions/:id — edit mode)", () => {
   let submissionId: string;
+  let orgId: string;
 
-  test.beforeAll(async ({ seedOrg, seedUser }) => {
-    // Create a DRAFT submission for upload tests
-    const period = await getOpenSubmissionPeriod(seedOrg.id);
+  test.beforeAll(async () => {
+    // Look up seed data directly (fixtures not available in beforeAll)
+    const org = await getOrgBySlug("quarterly-review");
+    if (!org) throw new Error("Seed org not found");
+    orgId = org.id;
+
+    const user = await getUserByEmail("writer@example.com");
+    if (!user) throw new Error("Seed user not found");
+
+    const period = await getOpenSubmissionPeriod(org.id);
     const submission = await createSubmission({
-      orgId: seedOrg.id,
-      submitterId: seedUser.id,
+      orgId: org.id,
+      submitterId: user.id,
       submissionPeriodId: period?.id,
       title: "E2E Upload Test Submission",
       status: "DRAFT",
@@ -40,14 +50,18 @@ test.describe("File Upload (/submissions/:id — edit mode)", () => {
   });
 
   test.afterAll(async () => {
-    await deleteFilesBySubmissionId(submissionId);
-    await deleteSubmission(submissionId);
+    if (submissionId) {
+      await deleteFilesBySubmissionId(submissionId);
+      await deleteSubmission(submissionId);
+    }
     await disconnectUploadDb();
   });
 
   test.afterEach(async () => {
     // Clean up files between tests to avoid file count limit issues
-    await deleteFilesBySubmissionId(submissionId);
+    if (submissionId) {
+      await deleteFilesBySubmissionId(submissionId);
+    }
   });
 
   test("uploads a file and shows it in file list", async ({
@@ -147,7 +161,10 @@ test.describe("File Upload (/submissions/:id — edit mode)", () => {
       buffer: testFile.buffer,
     });
 
-    // Wait for it to appear
+    // Wait for it to appear in uploaded files
+    await expect(authedPage.getByText("Uploaded files")).toBeVisible({
+      timeout: 15_000,
+    });
     await expect(authedPage.getByText("to-delete.txt")).toBeVisible({
       timeout: 15_000,
     });
@@ -218,7 +235,10 @@ test.describe("File Upload (/submissions/:id — edit mode)", () => {
       { name: file2.name, mimeType: file2.mimeType, buffer: file2.buffer },
     ]);
 
-    // Both files should appear with Clean badge
+    // Wait for both files to appear in the "Uploaded files" section (not just "Uploading")
+    await expect(authedPage.getByText("Uploaded files")).toBeVisible({
+      timeout: 15_000,
+    });
     await expect(authedPage.getByText("poem-1.txt")).toBeVisible({
       timeout: 15_000,
     });

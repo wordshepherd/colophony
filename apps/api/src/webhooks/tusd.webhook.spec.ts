@@ -151,56 +151,64 @@ const TEST_ENV = {
 
 const SUBMISSION_ID = 'a1111111-1111-1111-a111-111111111111';
 
+/** Build a tusd v2 pre-create webhook payload: { Type, Event: { Upload, HTTPRequest } } */
 function makePreCreateBody(overrides: Record<string, unknown> = {}) {
   return {
-    Upload: {
-      Size: 1024,
-      MetaData: {
-        'submission-id': SUBMISSION_ID,
-        filetype: 'application/pdf',
-        filename: 'poem.pdf',
+    Type: 'pre-create',
+    Event: {
+      Upload: {
+        Size: 1024,
+        MetaData: {
+          'submission-id': SUBMISSION_ID,
+          filetype: 'application/pdf',
+          filename: 'poem.pdf',
+        },
+        ...overrides,
       },
-      ...overrides,
-    },
-    HTTPRequest: {
-      Method: 'POST',
-      URI: '/files/',
-      RemoteAddr: '127.0.0.1',
-      Header: {
-        Authorization: ['Bearer test-token'],
-        'X-Organization-Id': ['org-1'],
-        'X-Test-User-Id': ['user-1'],
+      HTTPRequest: {
+        Method: 'POST',
+        URI: '/files/',
+        RemoteAddr: '127.0.0.1',
+        Header: {
+          Authorization: ['Bearer test-token'],
+          'X-Organization-Id': ['org-1'],
+          'X-Test-User-Id': ['user-1'],
+        },
       },
     },
   };
 }
 
+/** Build a tusd v2 post-finish webhook payload: { Type, Event: { Upload, HTTPRequest } } */
 function makePostFinishBody(overrides: Record<string, unknown> = {}) {
   return {
-    Upload: {
-      ID: 'upload-abc123',
-      Size: 1024,
-      Offset: 1024,
-      MetaData: {
-        'submission-id': SUBMISSION_ID,
-        filetype: 'application/pdf',
-        filename: 'poem.pdf',
+    Type: 'post-finish',
+    Event: {
+      Upload: {
+        ID: 'upload-abc123',
+        Size: 1024,
+        Offset: 1024,
+        MetaData: {
+          'submission-id': SUBMISSION_ID,
+          filetype: 'application/pdf',
+          filename: 'poem.pdf',
+        },
+        Storage: {
+          Key: 'quarantine/upload-abc123',
+          Bucket: 'quarantine',
+          Type: 's3store',
+        },
+        ...overrides,
       },
-      Storage: {
-        Key: 'quarantine/upload-abc123',
-        Bucket: 'quarantine',
-        Type: 's3store',
-      },
-      ...overrides,
-    },
-    HTTPRequest: {
-      Method: 'POST',
-      URI: '/files/upload-abc123',
-      RemoteAddr: '127.0.0.1',
-      Header: {
-        Authorization: ['Bearer test-token'],
-        'X-Organization-Id': ['org-1'],
-        'X-Test-User-Id': ['user-1'],
+      HTTPRequest: {
+        Method: 'POST',
+        URI: '/files/upload-abc123',
+        RemoteAddr: '127.0.0.1',
+        Header: {
+          Authorization: ['Bearer test-token'],
+          'X-Organization-Id': ['org-1'],
+          'X-Test-User-Id': ['user-1'],
+        },
       },
     },
   };
@@ -262,7 +270,7 @@ describe('tusd webhook handler', () => {
       const response = await app.inject({
         method: 'POST',
         url: '/webhooks/tusd',
-        headers: { 'hook-name': 'pre-create' },
+        headers: {},
         payload: makePreCreateBody(),
       });
 
@@ -273,14 +281,14 @@ describe('tusd webhook handler', () => {
 
     it('rejects when missing auth', async () => {
       const body = makePreCreateBody();
-      body.HTTPRequest.Header = {
+      body.Event.HTTPRequest.Header = {
         'X-Organization-Id': ['org-1'],
       } as never;
 
       const response = await app.inject({
         method: 'POST',
         url: '/webhooks/tusd',
-        headers: { 'hook-name': 'pre-create' },
+        headers: {},
         payload: body,
       });
 
@@ -297,7 +305,7 @@ describe('tusd webhook handler', () => {
       const response = await app.inject({
         method: 'POST',
         url: '/webhooks/tusd',
-        headers: { 'hook-name': 'pre-create' },
+        headers: {},
         payload: makePreCreateBody(),
       });
 
@@ -325,7 +333,7 @@ describe('tusd webhook handler', () => {
       const response = await app.inject({
         method: 'POST',
         url: '/webhooks/tusd',
-        headers: { 'hook-name': 'pre-create' },
+        headers: {},
         payload: makePreCreateBody(),
       });
 
@@ -361,7 +369,7 @@ describe('tusd webhook handler', () => {
       const response = await app.inject({
         method: 'POST',
         url: '/webhooks/tusd',
-        headers: { 'hook-name': 'pre-create' },
+        headers: {},
         payload: makePreCreateBody(),
       });
 
@@ -397,7 +405,7 @@ describe('tusd webhook handler', () => {
       const response = await app.inject({
         method: 'POST',
         url: '/webhooks/tusd',
-        headers: { 'hook-name': 'pre-create' },
+        headers: {},
         payload: makePreCreateBody(),
       });
 
@@ -415,7 +423,7 @@ describe('tusd webhook handler', () => {
       const response = await app.inject({
         method: 'POST',
         url: '/webhooks/tusd',
-        headers: { 'hook-name': 'pre-create' },
+        headers: {},
         payload: body,
       });
 
@@ -453,7 +461,7 @@ describe('tusd webhook handler', () => {
       const response = await app.inject({
         method: 'POST',
         url: '/webhooks/tusd',
-        headers: { 'hook-name': 'post-finish' },
+        headers: {},
         payload: makePostFinishBody(),
       });
 
@@ -492,7 +500,7 @@ describe('tusd webhook handler', () => {
       const response = await app.inject({
         method: 'POST',
         url: '/webhooks/tusd',
-        headers: { 'hook-name': 'post-finish' },
+        headers: {},
         payload: makePostFinishBody(),
       });
 
@@ -503,14 +511,14 @@ describe('tusd webhook handler', () => {
 
     it('rejects when auth is missing (fail closed)', async () => {
       const body = makePostFinishBody();
-      body.HTTPRequest.Header = {
+      body.Event.HTTPRequest.Header = {
         'X-Organization-Id': ['org-1'],
       } as never;
 
       const response = await app.inject({
         method: 'POST',
         url: '/webhooks/tusd',
-        headers: { 'hook-name': 'post-finish' },
+        headers: {},
         payload: body,
       });
 
@@ -521,7 +529,7 @@ describe('tusd webhook handler', () => {
 
     it('returns 400 when missing org id', async () => {
       const body = makePostFinishBody();
-      body.HTTPRequest.Header = {
+      body.Event.HTTPRequest.Header = {
         Authorization: ['Bearer test-token'],
         'X-Test-User-Id': ['user-1'],
       } as never;
@@ -529,7 +537,7 @@ describe('tusd webhook handler', () => {
       const response = await app.inject({
         method: 'POST',
         url: '/webhooks/tusd',
-        headers: { 'hook-name': 'post-finish' },
+        headers: {},
         payload: body,
       });
 
@@ -560,7 +568,7 @@ describe('tusd webhook handler', () => {
       const response = await app.inject({
         method: 'POST',
         url: '/webhooks/tusd',
-        headers: { 'hook-name': 'post-finish' },
+        headers: {},
         payload: makePostFinishBody(),
       });
 
@@ -590,7 +598,7 @@ describe('tusd webhook handler', () => {
       await app.inject({
         method: 'POST',
         url: '/webhooks/tusd',
-        headers: { 'hook-name': 'post-finish' },
+        headers: {},
         payload: makePostFinishBody(),
       });
 
@@ -613,7 +621,7 @@ describe('tusd webhook handler', () => {
       const response = await app.inject({
         method: 'POST',
         url: '/webhooks/tusd',
-        headers: { 'hook-name': 'post-finish' },
+        headers: {},
         payload: makePostFinishBody(),
       });
 
@@ -633,7 +641,7 @@ describe('tusd webhook handler', () => {
       const response = await app.inject({
         method: 'POST',
         url: '/webhooks/tusd',
-        headers: { 'hook-name': 'post-finish' },
+        headers: {},
         payload: makePostFinishBody(),
       });
 
@@ -668,21 +676,24 @@ describe('tusd webhook handler', () => {
 
     function makeApiKeyPreCreateBody() {
       return {
-        Upload: {
-          Size: 1024,
-          MetaData: {
-            'submission-id': SUBMISSION_ID,
-            filetype: 'application/pdf',
-            filename: 'poem.pdf',
+        Type: 'pre-create',
+        Event: {
+          Upload: {
+            Size: 1024,
+            MetaData: {
+              'submission-id': SUBMISSION_ID,
+              filetype: 'application/pdf',
+              filename: 'poem.pdf',
+            },
           },
-        },
-        HTTPRequest: {
-          Method: 'POST',
-          URI: '/files/',
-          RemoteAddr: '127.0.0.1',
-          Header: {
-            'X-Api-Key': ['col_test_abc123'],
-            'X-Organization-Id': ['org-from-header-should-be-ignored'],
+          HTTPRequest: {
+            Method: 'POST',
+            URI: '/files/',
+            RemoteAddr: '127.0.0.1',
+            Header: {
+              'X-Api-Key': ['col_test_abc123'],
+              'X-Organization-Id': ['org-from-header-should-be-ignored'],
+            },
           },
         },
       };
@@ -690,28 +701,31 @@ describe('tusd webhook handler', () => {
 
     function makeApiKeyPostFinishBody() {
       return {
-        Upload: {
-          ID: 'upload-abc123',
-          Size: 1024,
-          Offset: 1024,
-          MetaData: {
-            'submission-id': SUBMISSION_ID,
-            filetype: 'application/pdf',
-            filename: 'poem.pdf',
+        Type: 'post-finish',
+        Event: {
+          Upload: {
+            ID: 'upload-abc123',
+            Size: 1024,
+            Offset: 1024,
+            MetaData: {
+              'submission-id': SUBMISSION_ID,
+              filetype: 'application/pdf',
+              filename: 'poem.pdf',
+            },
+            Storage: {
+              Key: 'quarantine/upload-abc123',
+              Bucket: 'quarantine',
+              Type: 's3store',
+            },
           },
-          Storage: {
-            Key: 'quarantine/upload-abc123',
-            Bucket: 'quarantine',
-            Type: 's3store',
-          },
-        },
-        HTTPRequest: {
-          Method: 'POST',
-          URI: '/files/upload-abc123',
-          RemoteAddr: '127.0.0.1',
-          Header: {
-            'X-Api-Key': ['col_test_abc123'],
-            'X-Organization-Id': ['org-from-header-should-be-ignored'],
+          HTTPRequest: {
+            Method: 'POST',
+            URI: '/files/upload-abc123',
+            RemoteAddr: '127.0.0.1',
+            Header: {
+              'X-Api-Key': ['col_test_abc123'],
+              'X-Organization-Id': ['org-from-header-should-be-ignored'],
+            },
           },
         },
       };
@@ -745,7 +759,7 @@ describe('tusd webhook handler', () => {
       const response = await app.inject({
         method: 'POST',
         url: '/webhooks/tusd',
-        headers: { 'hook-name': 'pre-create' },
+        headers: {},
         payload: makeApiKeyPreCreateBody(),
       });
 
@@ -765,7 +779,7 @@ describe('tusd webhook handler', () => {
       const response = await app.inject({
         method: 'POST',
         url: '/webhooks/tusd',
-        headers: { 'hook-name': 'pre-create' },
+        headers: {},
         payload: makeApiKeyPreCreateBody(),
       });
 
@@ -787,7 +801,7 @@ describe('tusd webhook handler', () => {
       const response = await app.inject({
         method: 'POST',
         url: '/webhooks/tusd',
-        headers: { 'hook-name': 'pre-create' },
+        headers: {},
         payload: makeApiKeyPreCreateBody(),
       });
 
@@ -809,7 +823,7 @@ describe('tusd webhook handler', () => {
       const response = await app.inject({
         method: 'POST',
         url: '/webhooks/tusd',
-        headers: { 'hook-name': 'pre-create' },
+        headers: {},
         payload: makeApiKeyPreCreateBody(),
       });
 
@@ -831,7 +845,7 @@ describe('tusd webhook handler', () => {
       const response = await app.inject({
         method: 'POST',
         url: '/webhooks/tusd',
-        headers: { 'hook-name': 'pre-create' },
+        headers: {},
         payload: makeApiKeyPreCreateBody(),
       });
 
@@ -853,7 +867,7 @@ describe('tusd webhook handler', () => {
       const response = await app.inject({
         method: 'POST',
         url: '/webhooks/tusd',
-        headers: { 'hook-name': 'pre-create' },
+        headers: {},
         payload: makeApiKeyPreCreateBody(),
       });
 
@@ -887,7 +901,7 @@ describe('tusd webhook handler', () => {
       const response = await app.inject({
         method: 'POST',
         url: '/webhooks/tusd',
-        headers: { 'hook-name': 'post-finish' },
+        headers: {},
         payload: makeApiKeyPostFinishBody(),
       });
 
@@ -911,7 +925,7 @@ describe('tusd webhook handler', () => {
       const response = await app.inject({
         method: 'POST',
         url: '/webhooks/tusd',
-        headers: { 'hook-name': 'post-finish' },
+        headers: {},
         payload: makeApiKeyPostFinishBody(),
       });
 
@@ -926,7 +940,7 @@ describe('tusd webhook handler', () => {
       const response = await app.inject({
         method: 'POST',
         url: '/webhooks/tusd',
-        headers: { 'hook-name': 'post-finish' },
+        headers: {},
         payload: makeApiKeyPostFinishBody(),
       });
 
@@ -941,7 +955,18 @@ describe('tusd webhook handler', () => {
   // -------------------------------------------------------------------------
 
   describe('unknown hook', () => {
-    it('returns 200 for unknown hook name', async () => {
+    it('returns 200 for unknown hook type (v2 format)', async () => {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/webhooks/tusd',
+        headers: {},
+        payload: { Type: 'post-create', Event: {} },
+      });
+
+      expect(response.statusCode).toBe(200);
+    });
+
+    it('returns 200 for unknown hook name (v1 format)', async () => {
       const response = await app.inject({
         method: 'POST',
         url: '/webhooks/tusd',
@@ -964,7 +989,7 @@ describe('tusd webhook handler', () => {
       const response = await app.inject({
         method: 'POST',
         url: '/webhooks/tusd',
-        headers: { 'hook-name': 'pre-create' },
+        headers: {},
         payload: makePreCreateBody(),
       });
 
@@ -979,7 +1004,7 @@ describe('tusd webhook handler', () => {
       const response = await app.inject({
         method: 'POST',
         url: '/webhooks/tusd',
-        headers: { 'hook-name': 'pre-create' },
+        headers: {},
         payload: makePreCreateBody(),
       });
 
@@ -1018,7 +1043,7 @@ describe('tusd webhook handler', () => {
       const response = await app.inject({
         method: 'POST',
         url: '/webhooks/tusd',
-        headers: { 'hook-name': 'pre-create' },
+        headers: {},
         payload: makePreCreateBody(),
       });
 

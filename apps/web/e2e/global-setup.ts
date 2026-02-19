@@ -5,12 +5,45 @@
  * 1. Seed data exists (all projects)
  * 2. tusd + MinIO reachable (uploads project)
  * 3. Zitadel reachable + config exists (oidc project)
+ *
+ * NOTE: Playwright passes ALL configured projects to globalSetup, even when
+ * `--project` filters the run. We parse process.argv to detect which project
+ * was actually requested, falling back to "all" if no --project flag is found.
  */
 
 import { existsSync } from "fs";
 import { resolve } from "path";
-import type { FullConfig } from "@playwright/test";
 import { getOrgBySlug, getUserByEmail, disconnectDb } from "./helpers/db";
+
+/**
+ * Determine which projects are being run by checking process.argv.
+ * Playwright doesn't filter FullConfig.projects for globalSetup,
+ * so we parse the CLI args directly.
+ */
+function getRequestedProjects(): Set<string> {
+  const args = process.argv;
+  const projects = new Set<string>();
+
+  for (let i = 0; i < args.length; i++) {
+    if (args[i] === "--project" && args[i + 1]) {
+      projects.add(args[i + 1]);
+    }
+    // Handle --project=name format
+    const match = args[i]?.match(/^--project=(.+)$/);
+    if (match) {
+      projects.add(match[1]);
+    }
+  }
+
+  // If no --project flag, all projects will run
+  if (projects.size === 0) {
+    projects.add("submissions");
+    projects.add("uploads");
+    projects.add("oidc");
+  }
+
+  return projects;
+}
 
 async function isReachable(url: string, timeoutMs = 5000): Promise<boolean> {
   try {
@@ -24,9 +57,8 @@ async function isReachable(url: string, timeoutMs = 5000): Promise<boolean> {
   }
 }
 
-export default async function globalSetup(config: FullConfig) {
-  // Determine which projects are being run
-  const projectNames = config.projects.map((p) => p.name);
+export default async function globalSetup() {
+  const requestedProjects = getRequestedProjects();
 
   // 1. Seed data validation (required by all projects)
   const org = await getOrgBySlug("quarterly-review");
@@ -48,7 +80,7 @@ export default async function globalSetup(config: FullConfig) {
   }
 
   // 2. Upload infrastructure health check
-  if (projectNames.includes("uploads")) {
+  if (requestedProjects.has("uploads")) {
     const tusdOk = await isReachable("http://localhost:1080");
     if (!tusdOk) {
       await disconnectDb();
@@ -71,7 +103,7 @@ export default async function globalSetup(config: FullConfig) {
   }
 
   // 3. OIDC infrastructure health check
-  if (projectNames.includes("oidc")) {
+  if (requestedProjects.has("oidc")) {
     const zitadelOk = await isReachable("http://localhost:8080/debug/healthz");
     if (!zitadelOk) {
       await disconnectDb();
