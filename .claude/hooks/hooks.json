@@ -86,6 +86,38 @@
       {
         "event": "Bash(git commit*)",
         "script": ".claude/hooks/post-commit-devlog.js"
+      },
+      {
+        "event": "Edit(**/*.spec.ts)",
+        "script": ".claude/hooks/post-test-file.js"
+      },
+      {
+        "event": "Write(**/*.spec.ts)",
+        "script": ".claude/hooks/post-test-file.js"
+      },
+      {
+        "event": "Edit(**/*.spec.tsx)",
+        "script": ".claude/hooks/post-test-file.js"
+      },
+      {
+        "event": "Write(**/*.spec.tsx)",
+        "script": ".claude/hooks/post-test-file.js"
+      },
+      {
+        "event": "Edit(**/*.test.ts)",
+        "script": ".claude/hooks/post-test-file.js"
+      },
+      {
+        "event": "Write(**/*.test.ts)",
+        "script": ".claude/hooks/post-test-file.js"
+      },
+      {
+        "event": "Edit(**/e2e/**/*.ts)",
+        "script": ".claude/hooks/post-test-file.js"
+      },
+      {
+        "event": "Write(**/e2e/**/*.ts)",
+        "script": ".claude/hooks/post-test-file.js"
       }
     ]
   }
