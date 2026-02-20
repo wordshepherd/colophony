@@ -21,19 +21,56 @@ export const AuditEventType = builder
     createdAt: Date;
   }>('AuditEvent')
   .implement({
+    description: 'An immutable record of a security-relevant action.',
     fields: (t) => ({
-      id: t.exposeString('id'),
-      actorId: t.exposeString('actorId', { nullable: true }),
-      action: t.exposeString('action'),
-      resource: t.exposeString('resource'),
-      resourceId: t.exposeString('resourceId', { nullable: true }),
-      oldValue: t.expose('oldValue', { type: 'JSON', nullable: true }),
-      newValue: t.expose('newValue', { type: 'JSON', nullable: true }),
-      ipAddress: t.exposeString('ipAddress', { nullable: true }),
-      userAgent: t.exposeString('userAgent', { nullable: true }),
-      requestId: t.exposeString('requestId', { nullable: true }),
-      method: t.exposeString('method', { nullable: true }),
-      route: t.exposeString('route', { nullable: true }),
-      createdAt: t.expose('createdAt', { type: 'DateTime' }),
+      id: t.exposeString('id', { description: 'Unique identifier.' }),
+      actorId: t.exposeString('actorId', {
+        nullable: true,
+        description: 'ID of the user who performed the action.',
+      }),
+      action: t.exposeString('action', {
+        description: 'Action that was performed (e.g. ORG_CREATED).',
+      }),
+      resource: t.exposeString('resource', {
+        description: 'Resource type affected (e.g. organization).',
+      }),
+      resourceId: t.exposeString('resourceId', {
+        nullable: true,
+        description: 'ID of the affected resource.',
+      }),
+      oldValue: t.expose('oldValue', {
+        type: 'JSON',
+        nullable: true,
+        description: 'Previous state before the change.',
+      }),
+      newValue: t.expose('newValue', {
+        type: 'JSON',
+        nullable: true,
+        description: 'New state after the change.',
+      }),
+      ipAddress: t.exposeString('ipAddress', {
+        nullable: true,
+        description: 'IP address of the request.',
+      }),
+      userAgent: t.exposeString('userAgent', {
+        nullable: true,
+        description: 'User-Agent header from the request.',
+      }),
+      requestId: t.exposeString('requestId', {
+        nullable: true,
+        description: 'Correlation ID for the request.',
+      }),
+      method: t.exposeString('method', {
+        nullable: true,
+        description: 'HTTP method of the request.',
+      }),
+      route: t.exposeString('route', {
+        nullable: true,
+        description: 'API route that was called.',
+      }),
+      createdAt: t.expose('createdAt', {
+        type: 'DateTime',
+        description: 'When the event was recorded.',
+      }),
     }),
   });

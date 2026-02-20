@@ -99,6 +99,8 @@ builder.queryFields((t) => ({
    */
   myOrganizations: t.field({
     type: [UserOrganizationType],
+    description:
+      "List the current user's organizations (cross-org, no org context needed).",
     resolve: async (_root, _args, ctx) => {
       const authed = requireAuth(ctx);
       await requireScopes(ctx, 'organizations:read');
@@ -114,6 +116,8 @@ builder.queryFields((t) => ({
   organization: t.field({
     type: OrganizationType,
     nullable: true,
+    description:
+      'Get the current organization (requires X-Organization-Id header).',
     resolve: async (_root, _args, ctx) => {
       const orgCtx = requireOrgContext(ctx);
       await requireScopes(ctx, 'organizations:read');
@@ -126,9 +130,18 @@ builder.queryFields((t) => ({
    */
   organizationMembers: t.field({
     type: PaginatedOrganizationMembers,
+    description: 'List members of the current organization.',
     args: {
-      page: t.arg.int({ required: false, defaultValue: 1 }),
-      limit: t.arg.int({ required: false, defaultValue: 20 }),
+      page: t.arg.int({
+        required: false,
+        defaultValue: 1,
+        description: 'Page number (1-based).',
+      }),
+      limit: t.arg.int({
+        required: false,
+        defaultValue: 20,
+        description: 'Items per page (1-100).',
+      }),
     },
     resolve: async (_root, args, ctx) => {
       const orgCtx = requireOrgContext(ctx);
@@ -152,9 +165,18 @@ builder.mutationFields((t) => ({
    */
   createOrganization: t.field({
     type: CreateOrganizationPayload,
+    description:
+      'Create a new organization. The caller becomes the first ADMIN.',
     args: {
-      name: t.arg.string({ required: true }),
-      slug: t.arg.string({ required: true }),
+      name: t.arg.string({
+        required: true,
+        description: 'Display name of the organization.',
+      }),
+      slug: t.arg.string({
+        required: true,
+        description:
+          'URL-friendly identifier (3-63 chars, lowercase alphanumeric with hyphens).',
+      }),
     },
     resolve: async (_root, args, ctx) => {
       const authed = requireAuth(ctx);
@@ -180,9 +202,15 @@ builder.mutationFields((t) => ({
    */
   updateOrganization: t.field({
     type: OrganizationType,
+    description:
+      "Update the current organization's name or settings. Requires ADMIN role.",
     args: {
-      name: t.arg.string({ required: false }),
-      settings: t.arg({ type: 'JSON', required: false }),
+      name: t.arg.string({ required: false, description: 'New display name.' }),
+      settings: t.arg({
+        type: 'JSON',
+        required: false,
+        description: 'Organization settings as key-value pairs.',
+      }),
     },
     resolve: async (_root, args, ctx) => {
       const orgCtx = requireAdmin(ctx);
@@ -207,9 +235,17 @@ builder.mutationFields((t) => ({
    */
   addOrganizationMember: t.field({
     type: OrganizationMemberType,
+    description:
+      'Add a member to the current organization by email. Requires ADMIN role.',
     args: {
-      email: t.arg.string({ required: true }),
-      role: t.arg.string({ required: true }),
+      email: t.arg.string({
+        required: true,
+        description: 'Email address of the user to invite.',
+      }),
+      role: t.arg.string({
+        required: true,
+        description: 'Role to assign (ADMIN, EDITOR, or READER).',
+      }),
     },
     resolve: async (_root, args, ctx) => {
       const orgCtx = requireAdmin(ctx);
@@ -235,8 +271,13 @@ builder.mutationFields((t) => ({
    */
   removeOrganizationMember: t.field({
     type: SuccessPayload,
+    description:
+      'Remove a member from the current organization. Requires ADMIN role.',
     args: {
-      memberId: t.arg.string({ required: true }),
+      memberId: t.arg.string({
+        required: true,
+        description: 'ID of the membership record to remove.',
+      }),
     },
     resolve: async (_root, args, ctx) => {
       const orgCtx = requireAdmin(ctx);
@@ -260,9 +301,17 @@ builder.mutationFields((t) => ({
    */
   updateOrganizationMemberRole: t.field({
     type: OrganizationMemberType,
+    description:
+      "Change a member's role in the current organization. Requires ADMIN role.",
     args: {
-      memberId: t.arg.string({ required: true }),
-      role: t.arg.string({ required: true }),
+      memberId: t.arg.string({
+        required: true,
+        description: 'ID of the membership record to update.',
+      }),
+      role: t.arg.string({
+        required: true,
+        description: 'New role (ADMIN, EDITOR, or READER).',
+      }),
     },
     resolve: async (_root, args, ctx) => {
       const orgCtx = requireAdmin(ctx);

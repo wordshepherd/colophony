@@ -1,34 +1,40 @@
 import { z } from "zod";
 
 export const userSchema = z.object({
-  id: z.string().uuid(),
-  email: z.string().email(),
-  emailVerified: z.boolean(),
-  createdAt: z.date(),
-  updatedAt: z.date(),
+  id: z.string().uuid().describe("Unique identifier for the user"),
+  email: z.string().email().describe("Primary email address"),
+  emailVerified: z
+    .boolean()
+    .describe("Whether the email has been verified via Zitadel"),
+  createdAt: z.date().describe("When the user account was created"),
+  updatedAt: z.date().describe("When the user account was last updated"),
 });
 
 export type User = z.infer<typeof userSchema>;
 
 export const updateUserSchema = z.object({
-  email: z.string().email().optional(),
+  email: z.string().email().optional().describe("New email address"),
 });
 
 export type UpdateUserInput = z.infer<typeof updateUserSchema>;
 
 export const userProfileSchema = z.object({
-  id: z.string().uuid(),
-  email: z.string().email(),
-  emailVerified: z.boolean(),
-  createdAt: z.date(),
-  organizations: z.array(
-    z.object({
-      id: z.string().uuid(),
-      name: z.string(),
-      slug: z.string(),
-      role: z.enum(["ADMIN", "EDITOR", "READER"]),
-    }),
-  ),
+  id: z.string().uuid().describe("Unique identifier for the user"),
+  email: z.string().email().describe("Primary email address"),
+  emailVerified: z.boolean().describe("Whether the email has been verified"),
+  createdAt: z.date().describe("When the user account was created"),
+  organizations: z
+    .array(
+      z.object({
+        id: z.string().uuid().describe("Organization ID"),
+        name: z.string().describe("Organization name"),
+        slug: z.string().describe("Organization slug"),
+        role: z
+          .enum(["ADMIN", "EDITOR", "READER"])
+          .describe("User's role in this organization"),
+      }),
+    )
+    .describe("Organizations the user belongs to"),
 });
 
 export type UserProfile = z.infer<typeof userProfileSchema>;

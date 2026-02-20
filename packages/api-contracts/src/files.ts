@@ -34,17 +34,40 @@ const deleteResponseSchema = z.object({
 
 export const filesContract = {
   list: oc
-    .route({ method: "GET", path: "/submissions/{submissionId}/files" })
+    .route({
+      method: "GET",
+      path: "/submissions/{submissionId}/files",
+      summary: "List submission files",
+      description: "Returns all files attached to a submission.",
+      operationId: "listSubmissionFiles",
+      tags: ["Files"],
+    })
     .input(submissionIdParam)
     .output(z.array(submissionFileSchema)),
 
   download: oc
-    .route({ method: "GET", path: "/files/{fileId}/download" })
+    .route({
+      method: "GET",
+      path: "/files/{fileId}/download",
+      summary: "Get download URL",
+      description:
+        "Generate a pre-signed download URL for a file. Only available for files with CLEAN scan status.",
+      operationId: "getFileDownloadUrl",
+      tags: ["Files"],
+    })
     .input(fileIdParam)
     .output(downloadUrlResponseSchema),
 
   delete: oc
-    .route({ method: "DELETE", path: "/files/{fileId}" })
+    .route({
+      method: "DELETE",
+      path: "/files/{fileId}",
+      summary: "Delete a file",
+      description:
+        "Delete a file from a DRAFT submission. Only the submission owner can delete files.",
+      operationId: "deleteFile",
+      tags: ["Files"],
+    })
     .input(fileIdParam)
     .output(deleteResponseSchema),
 };

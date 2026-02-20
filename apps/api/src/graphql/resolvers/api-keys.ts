@@ -58,9 +58,18 @@ builder.queryFields((t) => ({
    */
   apiKeys: t.field({
     type: PaginatedApiKeys,
+    description: 'List API keys for the current organization.',
     args: {
-      page: t.arg.int({ required: false, defaultValue: 1 }),
-      limit: t.arg.int({ required: false, defaultValue: 20 }),
+      page: t.arg.int({
+        required: false,
+        defaultValue: 1,
+        description: 'Page number (1-based).',
+      }),
+      limit: t.arg.int({
+        required: false,
+        defaultValue: 20,
+        description: 'Items per page (1-100).',
+      }),
     },
     resolve: async (_root, args, ctx) => {
       const orgCtx = requireOrgContext(ctx);
@@ -84,10 +93,22 @@ builder.mutationFields((t) => ({
    */
   createApiKey: t.field({
     type: CreateApiKeyPayload,
+    description:
+      'Create a new API key. The plain-text key is returned only once. Requires ADMIN role.',
     args: {
-      name: t.arg.string({ required: true }),
-      scopes: t.arg.stringList({ required: true }),
-      expiresAt: t.arg({ type: 'DateTime', required: false }),
+      name: t.arg.string({
+        required: true,
+        description: 'Human-readable name for the key.',
+      }),
+      scopes: t.arg.stringList({
+        required: true,
+        description: 'Permission scopes to grant.',
+      }),
+      expiresAt: t.arg({
+        type: 'DateTime',
+        required: false,
+        description: 'Optional expiration date.',
+      }),
     },
     resolve: async (_root, args, ctx) => {
       const orgCtx = requireAdmin(ctx);
@@ -118,8 +139,13 @@ builder.mutationFields((t) => ({
    */
   revokeApiKey: t.field({
     type: RevokeApiKeyPayload,
+    description:
+      'Revoke an active API key, preventing further use. Requires ADMIN role.',
     args: {
-      keyId: t.arg.string({ required: true }),
+      keyId: t.arg.string({
+        required: true,
+        description: 'ID of the API key to revoke.',
+      }),
     },
     resolve: async (_root, args, ctx) => {
       const orgCtx = requireAdmin(ctx);
@@ -145,8 +171,12 @@ builder.mutationFields((t) => ({
    */
   deleteApiKey: t.field({
     type: SuccessPayload,
+    description: 'Permanently delete an API key record. Requires ADMIN role.',
     args: {
-      keyId: t.arg.string({ required: true }),
+      keyId: t.arg.string({
+        required: true,
+        description: 'ID of the API key to delete.',
+      }),
     },
     resolve: async (_root, args, ctx) => {
       const orgCtx = requireAdmin(ctx);

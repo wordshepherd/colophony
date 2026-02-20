@@ -10,7 +10,15 @@ import { adminProcedure, requireScopes } from '../context.js';
 
 const list = adminProcedure
   .use(requireScopes('audit:read'))
-  .route({ method: 'GET', path: '/audit-events' })
+  .route({
+    method: 'GET',
+    path: '/audit-events',
+    summary: 'List audit events',
+    description:
+      'Returns a paginated, filterable list of audit events for the current organization. Requires ADMIN role.',
+    operationId: 'listAuditEvents',
+    tags: ['Audit'],
+  })
   .input(restListAuditEventsQuery)
   .handler(async ({ input, context }) => {
     const result = await auditService.list(context.dbTx, input);
@@ -23,7 +31,15 @@ const list = adminProcedure
 
 const getById = adminProcedure
   .use(requireScopes('audit:read'))
-  .route({ method: 'GET', path: '/audit-events/{id}' })
+  .route({
+    method: 'GET',
+    path: '/audit-events/{id}',
+    summary: 'Get an audit event',
+    description:
+      'Retrieve a single audit event by its ID. Requires ADMIN role.',
+    operationId: 'getAuditEvent',
+    tags: ['Audit'],
+  })
   .input(idParamSchema)
   .handler(async ({ input, context }) => {
     const event = await auditService.getById(context.dbTx, input.id);

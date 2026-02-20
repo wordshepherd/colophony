@@ -21,6 +21,8 @@
     "db:studio": "pnpm --filter @colophony/db studio",
     "db:seed": "pnpm --filter @colophony/db seed",
     "db:reset": "bash scripts/db-reset.sh",
+    "sdk:export-spec": "pnpm --filter @colophony/api exec tsx ../../scripts/export-openapi.ts",
+    "sdk:export-schema": "pnpm --filter @colophony/api exec tsx ../../scripts/export-schema.ts",
     "clean": "turbo run clean && rm -rf node_modules",
     "prepare": "husky"
   },

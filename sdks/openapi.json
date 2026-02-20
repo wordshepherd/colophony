@@ -1,0 +1,1689 @@
+{
+  "servers": [
+    {
+      "url": "/v1",
+      "description": "Current version"
+    }
+  ],
+  "info": {
+    "title": "Colophony API",
+    "version": "2.0.0",
+    "description": "REST API for Colophony, the open-source infrastructure suite for literary magazines. Covers submission intake, review pipelines, file management, and organization administration.\n\n## Authentication\n\nAll endpoints require authentication via one of:\n- **Bearer token** \u2014 Zitadel OIDC access token in the `Authorization` header\n- **API key** \u2014 Organization-scoped key in the `X-Api-Key` header\n\nMost endpoints also require the `X-Organization-Id` header to set the organization context.",
+    "contact": {
+      "name": "Colophony",
+      "url": "https://github.com/colophony/colophony"
+    },
+    "license": {
+      "name": "MIT"
+    }
+  },
+  "tags": [
+    {
+      "name": "Organizations",
+      "description": "Manage organizations and their members. Organizations are the top-level tenant in Colophony."
+    },
+    {
+      "name": "Submissions",
+      "description": "Create, review, and manage literary submissions through the editorial workflow."
+    },
+    {
+      "name": "Files",
+      "description": "List, download, and delete files attached to submissions. Uploads use the tus protocol."
+    },
+    {
+      "name": "Users",
+      "description": "User profile and account information. User lifecycle is managed via Zitadel."
+    },
+    {
+      "name": "API Keys",
+      "description": "Create and manage organization-scoped API keys for programmatic access."
+    },
+    {
+      "name": "Audit",
+      "description": "Query the audit log for security and compliance. Admin-only."
+    }
+  ],
+  "externalDocs": {
+    "description": "Colophony source code and documentation",
+    "url": "https://github.com/colophony/colophony"
+  },
+  "openapi": "3.1.1",
+  "paths": {
+    "/organizations": {
+      "get": {
+        "operationId": "listOrganizations",
+        "summary": "List organizations",
+        "description": "Returns all organizations the authenticated user is a member of.",
+        "tags": ["Organizations"],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {},
+                    {
+                      "not": {}
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "createOrganization",
+        "summary": "Create an organization",
+        "description": "Create a new organization. The authenticated user becomes the first ADMIN member.",
+        "tags": ["Organizations"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 255,
+                    "description": "Display name of the organization"
+                  },
+                  "slug": {
+                    "type": "string",
+                    "minLength": 3,
+                    "maxLength": 63,
+                    "pattern": "^[a-z0-9-]+$",
+                    "description": "URL-friendly identifier (3-63 chars, lowercase alphanumeric with hyphens)"
+                  }
+                },
+                "required": ["name", "slug"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {},
+                    {
+                      "not": {}
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/organizations/check-slug": {
+      "get": {
+        "operationId": "checkSlugAvailability",
+        "summary": "Check slug availability",
+        "description": "Check whether a slug is available for use when creating an organization.",
+        "tags": ["Organizations"],
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 3,
+              "maxLength": 63,
+              "pattern": "^[a-z0-9-]+$",
+              "description": "Slug to check availability for"
+            },
+            "allowEmptyValue": true,
+            "allowReserved": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {},
+                    {
+                      "not": {}
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/organizations/{orgId}": {
+      "get": {
+        "operationId": "getOrganization",
+        "summary": "Get an organization",
+        "description": "Retrieve a single organization by its ID.",
+        "tags": ["Organizations"],
+        "parameters": [
+          {
+            "name": "orgId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {},
+                    {
+                      "not": {}
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "operationId": "updateOrganization",
+        "summary": "Update an organization",
+        "description": "Update an organization's name or settings. Requires ADMIN role.",
+        "tags": ["Organizations"],
+        "parameters": [
+          {
+            "name": "orgId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 255,
+                    "description": "New display name"
+                  },
+                  "settings": {
+                    "type": "object",
+                    "propertyNames": {
+                      "type": "string",
+                      "maxLength": 100
+                    },
+                    "additionalProperties": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "maxLength": 10000
+                        },
+                        {
+                          "type": "number"
+                        },
+                        {
+                          "type": "boolean"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "description": "Organization settings (max 50 keys)"
+                  }
+                },
+                "required": []
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {},
+                    {
+                      "not": {}
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/organizations/{orgId}/members": {
+      "get": {
+        "operationId": "listOrganizationMembers",
+        "summary": "List organization members",
+        "description": "Returns a paginated list of members for the specified organization.",
+        "tags": ["Organizations"],
+        "parameters": [
+          {
+            "name": "orgId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991,
+              "default": 1,
+              "description": "Page number (1-based)"
+            },
+            "allowEmptyValue": true,
+            "allowReserved": true
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "description": "Items per page (1-100, default 20)"
+            },
+            "allowEmptyValue": true,
+            "allowReserved": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {},
+                    {
+                      "not": {}
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "addOrganizationMember",
+        "summary": "Add a member",
+        "description": "Invite a user to the organization by email. The user must already have an account. Requires ADMIN role.",
+        "tags": ["Organizations"],
+        "parameters": [
+          {
+            "name": "orgId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "format": "email",
+                    "description": "Email address of the user to invite"
+                  },
+                  "role": {
+                    "enum": ["ADMIN", "EDITOR", "READER"],
+                    "description": "Role to assign to the new member"
+                  }
+                },
+                "required": ["email", "role"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {},
+                    {
+                      "not": {}
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/organizations/{orgId}/members/{memberId}": {
+      "delete": {
+        "operationId": "removeOrganizationMember",
+        "summary": "Remove a member",
+        "description": "Remove a member from the organization. Requires ADMIN role.",
+        "tags": ["Organizations"],
+        "parameters": [
+          {
+            "name": "orgId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "memberId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {},
+                "required": []
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {},
+                    {
+                      "not": {}
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "operationId": "updateOrganizationMemberRole",
+        "summary": "Update member role",
+        "description": "Change a member's role within the organization. Requires ADMIN role.",
+        "tags": ["Organizations"],
+        "parameters": [
+          {
+            "name": "orgId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "memberId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "role": {
+                    "enum": ["ADMIN", "EDITOR", "READER"],
+                    "description": "Member role within an organization"
+                  }
+                },
+                "required": ["role"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {},
+                    {
+                      "not": {}
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/submissions/mine": {
+      "get": {
+        "operationId": "listMySubmissions",
+        "summary": "List my submissions",
+        "description": "Returns submissions created by the authenticated user in the current organization.",
+        "tags": ["Submissions"],
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "enum": [
+                "DRAFT",
+                "SUBMITTED",
+                "UNDER_REVIEW",
+                "ACCEPTED",
+                "REJECTED",
+                "HOLD",
+                "WITHDRAWN"
+              ],
+              "description": "Filter by submission status"
+            },
+            "style": "deepObject",
+            "explode": true,
+            "allowEmptyValue": true,
+            "allowReserved": true
+          },
+          {
+            "name": "submissionPeriodId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Filter by submission period"
+            },
+            "allowEmptyValue": true,
+            "allowReserved": true
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "maxLength": 200,
+              "description": "Full-text search query (max 200 chars)"
+            },
+            "allowEmptyValue": true,
+            "allowReserved": true
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991,
+              "default": 1,
+              "description": "Page number (1-based)"
+            },
+            "allowEmptyValue": true,
+            "allowReserved": true
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "description": "Items per page (1-100, default 20)"
+            },
+            "allowEmptyValue": true,
+            "allowReserved": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {},
+                    {
+                      "not": {}
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/submissions": {
+      "get": {
+        "operationId": "listSubmissions",
+        "summary": "List all submissions",
+        "description": "Returns all submissions in the organization. Requires EDITOR or ADMIN role.",
+        "tags": ["Submissions"],
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "enum": [
+                "DRAFT",
+                "SUBMITTED",
+                "UNDER_REVIEW",
+                "ACCEPTED",
+                "REJECTED",
+                "HOLD",
+                "WITHDRAWN"
+              ],
+              "description": "Filter by submission status"
+            },
+            "style": "deepObject",
+            "explode": true,
+            "allowEmptyValue": true,
+            "allowReserved": true
+          },
+          {
+            "name": "submissionPeriodId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Filter by submission period"
+            },
+            "allowEmptyValue": true,
+            "allowReserved": true
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "maxLength": 200,
+              "description": "Full-text search query (max 200 chars)"
+            },
+            "allowEmptyValue": true,
+            "allowReserved": true
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991,
+              "default": 1,
+              "description": "Page number (1-based)"
+            },
+            "allowEmptyValue": true,
+            "allowReserved": true
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "description": "Items per page (1-100, default 20)"
+            },
+            "allowEmptyValue": true,
+            "allowReserved": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {},
+                    {
+                      "not": {}
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "createSubmission",
+        "summary": "Create a submission",
+        "description": "Create a new submission in DRAFT status.",
+        "tags": ["Submissions"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "title": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 500,
+                    "description": "Title of the submission (1-500 chars)"
+                  },
+                  "content": {
+                    "type": "string",
+                    "maxLength": 50000,
+                    "description": "Body content (max 50,000 chars)"
+                  },
+                  "coverLetter": {
+                    "type": "string",
+                    "maxLength": 10000,
+                    "description": "Optional cover letter (max 10,000 chars)"
+                  },
+                  "submissionPeriodId": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "Submission period to associate with"
+                  }
+                },
+                "required": ["title"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {},
+                    {
+                      "not": {}
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/submissions/{id}": {
+      "get": {
+        "operationId": "getSubmission",
+        "summary": "Get a submission",
+        "description": "Retrieve a single submission by ID, including attached files and submitter email.",
+        "tags": ["Submissions"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Resource UUID"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {},
+                    {
+                      "not": {}
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "operationId": "updateSubmission",
+        "summary": "Update a submission",
+        "description": "Update a submission's title, content, or cover letter. Only allowed while in DRAFT status.",
+        "tags": ["Submissions"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Resource UUID"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "title": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 500,
+                    "description": "New title for the submission"
+                  },
+                  "content": {
+                    "type": "string",
+                    "maxLength": 50000,
+                    "description": "New body content"
+                  },
+                  "coverLetter": {
+                    "type": "string",
+                    "maxLength": 10000,
+                    "description": "New cover letter"
+                  }
+                },
+                "required": []
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {},
+                    {
+                      "not": {}
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deleteSubmission",
+        "summary": "Delete a submission",
+        "description": "Permanently delete a DRAFT submission and its attached files.",
+        "tags": ["Submissions"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Resource UUID"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {},
+                "required": []
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {},
+                    {
+                      "not": {}
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/submissions/{id}/submit": {
+      "post": {
+        "operationId": "submitSubmission",
+        "summary": "Submit a submission",
+        "description": "Transition a DRAFT submission to SUBMITTED status. Validates that all files have passed virus scanning.",
+        "tags": ["Submissions"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Resource UUID"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {},
+                "required": []
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {},
+                    {
+                      "not": {}
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/submissions/{id}/withdraw": {
+      "post": {
+        "operationId": "withdrawSubmission",
+        "summary": "Withdraw a submission",
+        "description": "Withdraw a submission from consideration. Allowed from DRAFT, SUBMITTED, UNDER_REVIEW, or HOLD status.",
+        "tags": ["Submissions"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Resource UUID"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {},
+                "required": []
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {},
+                    {
+                      "not": {}
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/submissions/{id}/status": {
+      "patch": {
+        "operationId": "updateSubmissionStatus",
+        "summary": "Update submission status",
+        "description": "Transition a submission to a new status. Requires EDITOR or ADMIN role. Valid transitions depend on current status.",
+        "tags": ["Submissions"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Resource UUID"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "status": {
+                    "enum": [
+                      "DRAFT",
+                      "SUBMITTED",
+                      "UNDER_REVIEW",
+                      "ACCEPTED",
+                      "REJECTED",
+                      "HOLD",
+                      "WITHDRAWN"
+                    ],
+                    "description": "Target status for the transition"
+                  },
+                  "comment": {
+                    "type": "string",
+                    "maxLength": 1000,
+                    "description": "Optional comment for the status change (max 1,000 chars)"
+                  }
+                },
+                "required": ["status"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {},
+                    {
+                      "not": {}
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/submissions/{id}/history": {
+      "get": {
+        "operationId": "getSubmissionHistory",
+        "summary": "Get submission history",
+        "description": "Returns the status change history for a submission.",
+        "tags": ["Submissions"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Resource UUID"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {},
+                    {
+                      "not": {}
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/submissions/{submissionId}/files": {
+      "get": {
+        "operationId": "listSubmissionFiles",
+        "summary": "List submission files",
+        "description": "Returns all files attached to a submission.",
+        "tags": ["Files"],
+        "parameters": [
+          {
+            "name": "submissionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Submission UUID"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {},
+                    {
+                      "not": {}
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/files/{fileId}/download": {
+      "get": {
+        "operationId": "getFileDownloadUrl",
+        "summary": "Get file download URL",
+        "description": "Returns a pre-signed download URL for a file. Only available for files with CLEAN scan status.",
+        "tags": ["Files"],
+        "parameters": [
+          {
+            "name": "fileId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "File UUID"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {},
+                    {
+                      "not": {}
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/files/{fileId}": {
+      "delete": {
+        "operationId": "deleteFile",
+        "summary": "Delete a file",
+        "description": "Delete a file from a submission. Only allowed while the submission is in DRAFT status.",
+        "tags": ["Files"],
+        "parameters": [
+          {
+            "name": "fileId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "File UUID"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {},
+                "required": []
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {},
+                    {
+                      "not": {}
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/users/me": {
+      "get": {
+        "operationId": "getCurrentUser",
+        "summary": "Get current user profile",
+        "description": "Returns the authenticated user's profile including organization memberships.",
+        "tags": ["Users"],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {},
+                    {
+                      "not": {}
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api-keys": {
+      "get": {
+        "operationId": "listApiKeys",
+        "summary": "List API keys",
+        "description": "Returns all API keys for the current organization. Key values are masked.",
+        "tags": ["API Keys"],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991,
+              "default": 1,
+              "description": "Page number (1-based)"
+            },
+            "allowEmptyValue": true,
+            "allowReserved": true
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "description": "Items per page (1-100, default 20)"
+            },
+            "allowEmptyValue": true,
+            "allowReserved": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {},
+                    {
+                      "not": {}
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "createApiKey",
+        "summary": "Create an API key",
+        "description": "Create a new API key for the organization. The plain-text key is returned only once. Requires ADMIN role.",
+        "tags": ["API Keys"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 255,
+                    "description": "Human-readable name for the API key"
+                  },
+                  "scopes": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                      "enum": [
+                        "submissions:read",
+                        "submissions:write",
+                        "files:read",
+                        "files:write",
+                        "organizations:read",
+                        "organizations:write",
+                        "users:read",
+                        "api-keys:read",
+                        "api-keys:manage",
+                        "payments:read",
+                        "webhooks:manage",
+                        "audit:read"
+                      ],
+                      "description": "Permission scope for the API key"
+                    },
+                    "description": "Permission scopes to grant (at least one)"
+                  },
+                  "expiresAt": {
+                    "type": "string",
+                    "format": "date-time",
+                    "x-native-type": "date",
+                    "description": "Optional expiration date (ISO-8601)"
+                  }
+                },
+                "required": ["name", "scopes"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {},
+                    {
+                      "not": {}
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api-keys/{keyId}/revoke": {
+      "post": {
+        "operationId": "revokeApiKey",
+        "summary": "Revoke an API key",
+        "description": "Revoke an API key so it can no longer be used for authentication. Requires ADMIN role.",
+        "tags": ["API Keys"],
+        "parameters": [
+          {
+            "name": "keyId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {},
+                "required": []
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {},
+                    {
+                      "not": {}
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api-keys/{keyId}": {
+      "delete": {
+        "operationId": "deleteApiKey",
+        "summary": "Delete an API key",
+        "description": "Permanently delete an API key. Requires ADMIN role.",
+        "tags": ["API Keys"],
+        "parameters": [
+          {
+            "name": "keyId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {},
+                "required": []
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {},
+                    {
+                      "not": {}
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/audit-events": {
+      "get": {
+        "operationId": "listAuditEvents",
+        "summary": "List audit events",
+        "description": "Returns a paginated, filterable list of audit events for the current organization. Requires ADMIN role.",
+        "tags": ["Audit"],
+        "parameters": [
+          {
+            "name": "action",
+            "in": "query",
+            "schema": {
+              "enum": [
+                "USER_CREATED",
+                "USER_UPDATED",
+                "USER_DEACTIVATED",
+                "USER_REACTIVATED",
+                "USER_REMOVED",
+                "USER_EMAIL_VERIFIED",
+                "ORG_CREATED",
+                "ORG_UPDATED",
+                "ORG_DELETED",
+                "ORG_MEMBER_ADDED",
+                "ORG_MEMBER_REMOVED",
+                "ORG_MEMBER_ROLE_CHANGED",
+                "SUBMISSION_CREATED",
+                "SUBMISSION_UPDATED",
+                "SUBMISSION_SUBMITTED",
+                "SUBMISSION_STATUS_CHANGED",
+                "SUBMISSION_DELETED",
+                "SUBMISSION_WITHDRAWN",
+                "FILE_UPLOADED",
+                "FILE_DELETED",
+                "FILE_SCAN_CLEAN",
+                "FILE_SCAN_INFECTED",
+                "FILE_SCAN_FAILED",
+                "AUTH_TOKEN_INVALID",
+                "AUTH_TOKEN_EXPIRED",
+                "AUTH_USER_NOT_PROVISIONED",
+                "AUTH_USER_DEACTIVATED",
+                "API_KEY_CREATED",
+                "API_KEY_REVOKED",
+                "API_KEY_DELETED",
+                "API_KEY_AUTH_SUCCESS",
+                "API_KEY_AUTH_FAILED",
+                "API_KEY_SCOPE_DENIED",
+                "PAYMENT_SUCCEEDED",
+                "PAYMENT_EXPIRED",
+                "AUDIT_ACCESSED"
+              ],
+              "description": "Filter by audit action (e.g. ORG_CREATED)"
+            },
+            "style": "deepObject",
+            "explode": true,
+            "allowEmptyValue": true,
+            "allowReserved": true
+          },
+          {
+            "name": "resource",
+            "in": "query",
+            "schema": {
+              "enum": [
+                "user",
+                "organization",
+                "submission",
+                "file",
+                "auth",
+                "api_key",
+                "payment",
+                "audit"
+              ],
+              "description": "Filter by resource type (e.g. organization)"
+            },
+            "style": "deepObject",
+            "explode": true,
+            "allowEmptyValue": true,
+            "allowReserved": true
+          },
+          {
+            "name": "actorId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Filter by the user who performed the action"
+            },
+            "allowEmptyValue": true,
+            "allowReserved": true
+          },
+          {
+            "name": "resourceId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Filter by the affected resource ID"
+            },
+            "allowEmptyValue": true,
+            "allowReserved": true
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date-time",
+              "x-native-type": "date",
+              "description": "Start of date range (ISO-8601)"
+            },
+            "allowEmptyValue": true,
+            "allowReserved": true
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date-time",
+              "x-native-type": "date",
+              "description": "End of date range (ISO-8601)"
+            },
+            "allowEmptyValue": true,
+            "allowReserved": true
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991,
+              "default": 1,
+              "description": "Page number (1-based)"
+            },
+            "allowEmptyValue": true,
+            "allowReserved": true
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "description": "Items per page (1-100, default 20)"
+            },
+            "allowEmptyValue": true,
+            "allowReserved": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {},
+                    {
+                      "not": {}
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/audit-events/{id}": {
+      "get": {
+        "operationId": "getAuditEvent",
+        "summary": "Get an audit event",
+        "description": "Retrieve a single audit event by its ID. Requires ADMIN role.",
+        "tags": ["Audit"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Resource UUID"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {},
+                    {
+                      "not": {}
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
