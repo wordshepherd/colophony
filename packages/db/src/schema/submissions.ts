@@ -8,6 +8,7 @@ import {
   integer,
   bigint,
   numeric,
+  jsonb,
   index,
   customType,
 } from "drizzle-orm/pg-core";
@@ -15,6 +16,7 @@ import { sql } from "drizzle-orm";
 import { submissionStatusEnum, scanStatusEnum } from "./enums";
 import { organizations } from "./organizations";
 import { users } from "./users";
+import { formDefinitions } from "./forms";
 
 const tsvector = customType<{ data: string }>({
   dataType() {
@@ -42,6 +44,10 @@ export const submissionPeriods = pgTable(
     closesAt: timestamp("closes_at", { withTimezone: true }).notNull(),
     fee: numeric("fee", { precision: 10, scale: 2 }),
     maxSubmissions: integer("max_submissions"),
+    formDefinitionId: uuid("form_definition_id").references(
+      () => formDefinitions.id,
+      { onDelete: "set null" },
+    ),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
@@ -56,6 +62,9 @@ export const submissionPeriods = pgTable(
       table.organizationId,
       table.opensAt,
       table.closesAt,
+    ),
+    index("submission_periods_form_definition_id_idx").on(
+      table.formDefinitionId,
     ),
     orgIsolationPolicy,
   ],
@@ -77,9 +86,14 @@ export const submissions = pgTable(
       () => submissionPeriods.id,
       { onDelete: "set null" },
     ),
+    formDefinitionId: uuid("form_definition_id").references(
+      () => formDefinitions.id,
+      { onDelete: "set null" },
+    ),
     title: varchar("title", { length: 500 }),
     content: text("content"),
     coverLetter: text("cover_letter"),
+    formData: jsonb("form_data").$type<Record<string, unknown>>(),
     status: submissionStatusEnum("status").notNull().default("DRAFT"),
     submittedAt: timestamp("submitted_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true })
@@ -99,6 +113,7 @@ export const submissions = pgTable(
       table.status,
     ),
     index("submissions_submission_period_id_idx").on(table.submissionPeriodId),
+    index("submissions_form_definition_id_idx").on(table.formDefinitionId),
     index("submissions_org_status_submitted_idx").on(
       table.organizationId,
       table.status,

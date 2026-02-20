@@ -7,6 +7,12 @@ export { SubmissionFileType } from './file.js';
 export { AuditEventType } from './audit.js';
 export { ApiKeyType } from './api-key.js';
 export {
+  FormDefinitionType,
+  FormFieldType as FormFieldObjectType,
+  FormStatusEnum,
+  FormFieldTypeEnum,
+} from './form.js';
+export {
   SubmissionStatusChangePayload,
   CreateOrganizationPayload,
   CreateApiKeyPayload,
