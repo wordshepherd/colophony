@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -31,6 +31,13 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { FileUpload } from "./file-upload";
 import { toast } from "sonner";
@@ -40,6 +47,7 @@ const formSchema = z.object({
   title: z.string().min(1, "Title is required").max(500),
   content: z.string().max(50000).optional(),
   coverLetter: z.string().max(10000).optional(),
+  formDefinitionId: z.string().uuid().optional().or(z.literal("__none__")),
 });
 
 interface SubmissionFormProps {
@@ -50,6 +58,7 @@ interface SubmissionFormProps {
 export function SubmissionForm({ mode, submissionId }: SubmissionFormProps) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
+  const [selectedFormId, setSelectedFormId] = useState<string | undefined>();
   const utils = trpc.useUtils();
 
   // Fetch existing submission for edit mode
@@ -65,8 +74,17 @@ export function SubmissionForm({ mode, submissionId }: SubmissionFormProps) {
     { enabled: mode === "edit" && !!submissionId },
   );
 
-  // Fetch form definition when submission has one
-  const formDefinitionId = existingSubmission?.formDefinitionId;
+  // Fetch published forms for create-mode selector
+  const { data: publishedForms } = trpc.forms.list.useQuery(
+    { status: "PUBLISHED", limit: 100 },
+    { enabled: mode === "create" },
+  );
+
+  // Determine active formDefinitionId: from state in create mode, from submission in edit mode
+  const formDefinitionId =
+    mode === "edit" ? existingSubmission?.formDefinitionId : selectedFormId;
+
+  // Fetch form definition when one is active
   const { data: formDefinition } = trpc.forms.getById.useQuery(
     { id: formDefinitionId ?? "" },
     { enabled: !!formDefinitionId },
@@ -109,6 +127,18 @@ export function SubmissionForm({ mode, submissionId }: SubmissionFormProps) {
       });
     }
   }, [existingSubmission, mode, form, formDefinition, formDataDefaults]);
+
+  // Reset formData defaults when a different form is selected in create mode.
+  // Track previous selection to avoid resetting on background query refetches.
+  const prevSelectedFormRef = useRef<string | undefined>(undefined);
+  useEffect(() => {
+    if (mode === "create" && selectedFormId !== prevSelectedFormRef.current) {
+      prevSelectedFormRef.current = selectedFormId;
+      if (formDefinition) {
+        form.setValue("formData", formDataDefaults, { shouldValidate: false });
+      }
+    }
+  }, [formDefinition, formDataDefaults, mode, form, selectedFormId]);
 
   // Create mutation
   const createMutation = trpc.submissions.create.useMutation({
@@ -153,10 +183,15 @@ export function SubmissionForm({ mode, submissionId }: SubmissionFormProps) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const onSubmit = async (data: any) => {
     setError(null);
-    const { formData, ...rest } = data;
+    const { formData, formDefinitionId: selectedId, ...rest } = data;
+    const hasForm = selectedId && selectedId !== "__none__";
 
     if (mode === "create") {
-      await createMutation.mutateAsync({ ...rest, formData });
+      await createMutation.mutateAsync({
+        ...rest,
+        ...(hasForm ? { formDefinitionId: selectedId } : {}),
+        formData: hasForm ? formData : undefined,
+      });
     } else if (submissionId) {
       // v2: flattened input — { id, ...data } instead of { id, data }
       await updateMutation.mutateAsync({
@@ -249,6 +284,55 @@ export function SubmissionForm({ mode, submissionId }: SubmissionFormProps) {
 
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          {mode === "create" && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Submission Form</CardTitle>
+                <CardDescription>
+                  Select the form for this submission, if applicable
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <FormField
+                  control={form.control}
+                  name="formDefinitionId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Form</FormLabel>
+                      <Select
+                        onValueChange={(value) => {
+                          field.onChange(value);
+                          setSelectedFormId(
+                            value === "__none__" ? undefined : value,
+                          );
+                        }}
+                        value={field.value ?? "__none__"}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="None (no form)" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="__none__">None</SelectItem>
+                          {publishedForms?.items.map((f) => (
+                            <SelectItem key={f.id} value={f.id}>
+                              {f.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormDescription>
+                        Choose a published form to include additional fields
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </CardContent>
+            </Card>
+          )}
+
           <Card>
             <CardHeader>
               <CardTitle>Submission Details</CardTitle>
