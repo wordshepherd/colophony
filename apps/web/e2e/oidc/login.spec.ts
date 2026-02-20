@@ -110,8 +110,10 @@ test.describe("OIDC Login Flow", () => {
       unauthPage.getByRole("menuitem", { name: /sign\s*out/i }).click(),
     ]);
 
-    // Wait for post-logout redirect back to the app
+    // Wait for post-logout redirect back to the app and for the page to
+    // fully settle (client-side router may trigger additional navigations).
     await unauthPage.waitForURL(/localhost:3010/, { timeout: 15_000 });
+    await unauthPage.waitForLoadState("networkidle");
 
     // Verify the client-side OIDC session was cleared (no access token).
     // Note: Zitadel may preserve its own SSO session (browser cookie), so
