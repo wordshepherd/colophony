@@ -182,10 +182,10 @@ Run these commands in parallel:
 docker compose ps --format '{{.Name}}\t{{.Status}}' 2>/dev/null || echo "Docker Compose not running"
 ```
 
-Also check if a Codex review tmux session is active:
+Also check if the Codex review tmux window is available (part of the `colophony` tmux session):
 
 ```bash
-tmux has-session -t codex-review 2>/dev/null && echo "active" || echo "not started"
+tmux list-windows -t colophony -F '#{window_name}' 2>/dev/null | grep -q codex-review && echo "available" || echo "not found (start with: cc)"
 ```
 
 Report which services are up/down. Flag if critical services (postgres, redis) are not running.
