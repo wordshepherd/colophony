@@ -27,7 +27,14 @@ function getEnvConfig() {
 
 const list = orgProcedure
   .use(requireScopes('files:read'))
-  .route({ method: 'GET', path: '/submissions/{submissionId}/files' })
+  .route({
+    method: 'GET',
+    path: '/submissions/{submissionId}/files',
+    summary: 'List submission files',
+    description: 'Returns all files attached to a submission.',
+    operationId: 'listSubmissionFiles',
+    tags: ['Files'],
+  })
   .input(submissionIdParamSchema)
   .handler(async ({ input, context }) => {
     try {
@@ -42,7 +49,15 @@ const list = orgProcedure
 
 const download = orgProcedure
   .use(requireScopes('files:read'))
-  .route({ method: 'GET', path: '/files/{fileId}/download' })
+  .route({
+    method: 'GET',
+    path: '/files/{fileId}/download',
+    summary: 'Get file download URL',
+    description:
+      'Returns a pre-signed download URL for a file. Only available for files with CLEAN scan status.',
+    operationId: 'getFileDownloadUrl',
+    tags: ['Files'],
+  })
   .input(fileIdParamSchema)
   .handler(async ({ input, context }) => {
     try {
@@ -60,7 +75,15 @@ const download = orgProcedure
 
 const del = orgProcedure
   .use(requireScopes('files:write'))
-  .route({ method: 'DELETE', path: '/files/{fileId}' })
+  .route({
+    method: 'DELETE',
+    path: '/files/{fileId}',
+    summary: 'Delete a file',
+    description:
+      'Delete a file from a submission. Only allowed while the submission is in DRAFT status.',
+    operationId: 'deleteFile',
+    tags: ['Files'],
+  })
   .input(fileIdParamSchema)
   .handler(async ({ input, context }) => {
     try {

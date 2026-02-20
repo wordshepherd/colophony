@@ -36,8 +36,13 @@ builder.mutationFields((t) => ({
    */
   deleteFile: t.field({
     type: SuccessPayload,
+    description:
+      'Delete a file from a DRAFT submission. Only the submission owner can delete.',
     args: {
-      fileId: t.arg.string({ required: true }),
+      fileId: t.arg.string({
+        required: true,
+        description: 'ID of the file to delete.',
+      }),
     },
     resolve: async (_root, args, ctx) => {
       const orgCtx = requireOrgContext(ctx);

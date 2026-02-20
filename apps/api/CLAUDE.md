@@ -88,11 +88,11 @@ User lifecycle events are synced from Zitadel to the local DB via webhooks.
 
 ## API Surfaces
 
-| Surface     | Audience              | Status                                      | Auth               |
-| ----------- | --------------------- | ------------------------------------------- | ------------------ |
-| **tRPC**    | Internal web frontend | **Built**                                   | Zitadel OIDC token |
-| **REST**    | Public API, Zapier    | **PR 1 done** (oRPC)                        | API key or OIDC    |
-| **GraphQL** | Power users           | **PR 1 done** (Pothos + Yoga, queries only) | API key or OIDC    |
+| Surface     | Audience              | Status                                         | Auth               |
+| ----------- | --------------------- | ---------------------------------------------- | ------------------ |
+| **tRPC**    | Internal web frontend | **Built**                                      | Zitadel OIDC token |
+| **REST**    | Public API, Zapier    | **Built** (oRPC + OpenAPI 3.1 at `/v1/docs`)   | API key or OIDC    |
+| **GraphQL** | Power users           | **Built** (Pothos + Yoga, queries + mutations) | API key or OIDC    |
 
 All surfaces share the same service layer and Zod schemas from `@colophony/types`.
 
@@ -198,6 +198,7 @@ Workers and queues are started in `main.ts` and closed during graceful shutdown.
 | **`@fastify/raw-body` doesn't exist**  | Official `@fastify/` scoped package not published on npm. Use `fastify-raw-body` (community package, v5.0.0 for Fastify 5)                                                                                                                                      |
 | **tusd v2 webhook payload format**     | tusd v2.8.0 sends `{ Type: "pre-create"\|"post-finish", Event: { Upload, HTTPRequest } }` instead of v1's `Hook-Name` header + `{ Upload, HTTPRequest }` body. Our handler supports both formats. The `Event` envelope is unwrapped before dispatch.            |
 | **Fastify 5 preHandler short-circuit** | To stop request processing in a `preHandler` hook, you MUST `return reply.status(N).send(...)`. Using `void reply.send(); return;` does NOT work — Fastify still runs the handler, causing `ERR_HTTP_HEADERS_SENT` crash. This bit us in webhook rate limiters. |
+| **oRPC OpenAPI needs Zod 4 converter** | `OpenAPIReferencePlugin` requires explicit `schemaConverters: [new ZodToJsonSchemaConverter()]` from `@orpc/zod/zod4`. Without it, all schemas become `{}` and routes with path params throw 500. The default `@orpc/zod` export is Zod 3 only.                 |
 
 ## Version Pins
 

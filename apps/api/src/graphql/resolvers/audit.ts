@@ -58,15 +58,45 @@ builder.queryFields((t) => ({
    */
   auditEvents: t.field({
     type: PaginatedAuditEvents,
+    description:
+      'List audit events for the current organization. Requires ADMIN role.',
     args: {
-      action: t.arg.string({ required: false }),
-      resource: t.arg.string({ required: false }),
-      actorId: t.arg.string({ required: false }),
-      resourceId: t.arg.string({ required: false }),
-      from: t.arg({ type: 'DateTime', required: false }),
-      to: t.arg({ type: 'DateTime', required: false }),
-      page: t.arg.int({ required: false, defaultValue: 1 }),
-      limit: t.arg.int({ required: false, defaultValue: 20 }),
+      action: t.arg.string({
+        required: false,
+        description: 'Filter by audit action (e.g. ORG_CREATED).',
+      }),
+      resource: t.arg.string({
+        required: false,
+        description: 'Filter by resource type (e.g. organization).',
+      }),
+      actorId: t.arg.string({
+        required: false,
+        description: 'Filter by the user who performed the action.',
+      }),
+      resourceId: t.arg.string({
+        required: false,
+        description: 'Filter by the affected resource ID.',
+      }),
+      from: t.arg({
+        type: 'DateTime',
+        required: false,
+        description: 'Start of date range.',
+      }),
+      to: t.arg({
+        type: 'DateTime',
+        required: false,
+        description: 'End of date range.',
+      }),
+      page: t.arg.int({
+        required: false,
+        defaultValue: 1,
+        description: 'Page number (1-based).',
+      }),
+      limit: t.arg.int({
+        required: false,
+        defaultValue: 20,
+        description: 'Items per page (1-100).',
+      }),
     },
     resolve: async (_root, args, ctx) => {
       const adminCtx = requireAdmin(ctx);
@@ -96,8 +126,9 @@ builder.queryFields((t) => ({
   auditEvent: t.field({
     type: AuditEventType,
     nullable: true,
+    description: 'Get a single audit event by ID. Requires ADMIN role.',
     args: {
-      id: t.arg.string({ required: true }),
+      id: t.arg.string({ required: true, description: 'Audit event ID.' }),
     },
     resolve: async (_root, args, ctx) => {
       const adminCtx = requireAdmin(ctx);

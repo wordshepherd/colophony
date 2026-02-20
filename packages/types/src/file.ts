@@ -1,12 +1,8 @@
 import { z } from "zod";
 
-export const scanStatusSchema = z.enum([
-  "PENDING",
-  "SCANNING",
-  "CLEAN",
-  "INFECTED",
-  "FAILED",
-]);
+export const scanStatusSchema = z
+  .enum(["PENDING", "SCANNING", "CLEAN", "INFECTED", "FAILED"])
+  .describe("Virus scan status for an uploaded file");
 
 export type ScanStatus = z.infer<typeof scanStatusSchema>;
 
@@ -54,24 +50,30 @@ export const MAX_TOTAL_UPLOAD_SIZE = 200 * 1024 * 1024;
 export const MAX_FILES_PER_SUBMISSION = 10;
 
 export const submissionFileSchema = z.object({
-  id: z.string().uuid(),
-  submissionId: z.string().uuid(),
-  filename: z.string(),
-  mimeType: z.string(),
-  size: z.number(),
-  storageKey: z.string(),
+  id: z.string().uuid().describe("Unique identifier for the file"),
+  submissionId: z
+    .string()
+    .uuid()
+    .describe("ID of the submission this file belongs to"),
+  filename: z.string().describe("Original filename as uploaded"),
+  mimeType: z.string().describe("MIME type of the file (e.g. application/pdf)"),
+  size: z.number().describe("File size in bytes"),
+  storageKey: z.string().describe("Object storage key"),
   scanStatus: scanStatusSchema,
-  scannedAt: z.date().nullable(),
-  uploadedAt: z.date(),
+  scannedAt: z.date().nullable().describe("When the virus scan completed"),
+  uploadedAt: z.date().describe("When the file was uploaded"),
 });
 
 export type SubmissionFile = z.infer<typeof submissionFileSchema>;
 
 /** Response from `files.getDownloadUrl`. */
 export const downloadUrlResponseSchema = z.object({
-  url: z.string().url(),
-  filename: z.string(),
-  mimeType: z.string(),
+  url: z
+    .string()
+    .url()
+    .describe("Pre-signed download URL (expires in minutes)"),
+  filename: z.string().describe("Original filename"),
+  mimeType: z.string().describe("MIME type of the file"),
 });
 
 export type DownloadUrlResponse = z.infer<typeof downloadUrlResponseSchema>;
@@ -81,10 +83,22 @@ export type DownloadUrlResponse = z.infer<typeof downloadUrlResponseSchema>;
  * Client provides metadata, server returns upload URL.
  */
 export const initiateUploadSchema = z.object({
-  submissionId: z.string().uuid(),
-  filename: z.string().min(1).max(255),
-  mimeType: z.string(),
-  size: z.number().int().positive().max(MAX_FILE_SIZE),
+  submissionId: z
+    .string()
+    .uuid()
+    .describe("ID of the submission to attach the file to"),
+  filename: z
+    .string()
+    .min(1)
+    .max(255)
+    .describe("Original filename (1-255 chars)"),
+  mimeType: z.string().describe("MIME type of the file"),
+  size: z
+    .number()
+    .int()
+    .positive()
+    .max(MAX_FILE_SIZE)
+    .describe("File size in bytes (max 50MB)"),
 });
 
 export type InitiateUploadInput = z.infer<typeof initiateUploadSchema>;
@@ -94,9 +108,9 @@ export type InitiateUploadInput = z.infer<typeof initiateUploadSchema>;
  * Contains the tus upload URL and file ID.
  */
 export const initiateUploadResponseSchema = z.object({
-  fileId: z.string().uuid(),
-  uploadUrl: z.string().url(),
-  expiresAt: z.date(),
+  fileId: z.string().uuid().describe("ID assigned to the new file record"),
+  uploadUrl: z.string().url().describe("tus upload endpoint URL"),
+  expiresAt: z.date().describe("When the upload URL expires"),
 });
 
 export type InitiateUploadResponse = z.infer<
