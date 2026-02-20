@@ -120,7 +120,22 @@ Report what was cleaned up in the briefing.
 
 If no stale branches are found, skip this step silently.
 
-### Step 2: Load session context from DEVLOG
+### Step 2: Load session context
+
+**Primary source: `session-handoff.md`** (project root). Check if this file exists. If it does, read it for instant context restoration:
+
+- Branch and PR status
+- Files touched (scope of recent changes)
+- Decisions made during last session
+- Open questions and next action (immediate focus)
+
+After reading, delete the handoff file so it doesn't persist across sessions:
+
+```bash
+rm session-handoff.md
+```
+
+**Fallback: DEVLOG** — If `session-handoff.md` does not exist (previous session ended without `/end-session`, or first session), fall back to the DEVLOG.
 
 Determine the current month's devlog file: `docs/devlog/YYYY-MM.md` (e.g., `docs/devlog/2026-02.md`). If the file for the current month doesn't exist yet, check the previous month's file instead.
 
@@ -128,9 +143,8 @@ Read the most recent entry (the first entry after the header). Extract:
 
 - **What was done last** — the "Done" section
 - **Open issues** — the "Issues Found" or "Bugs Found" section (if any)
-- **Planned next steps** — the "Next" section
 
-This provides session-level context (what happened last, any open bugs). Note: the DEVLOG "Next" items are **session continuity notes**, not the strategic priority. Track status (Step 6) determines the suggested focus.
+Report which source was used in the briefing (handoff file or DEVLOG fallback). Note: Track status (Step 6) determines the suggested focus, not the handoff or DEVLOG.
 
 ### Step 3: Check git state
 

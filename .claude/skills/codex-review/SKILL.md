@@ -72,6 +72,64 @@ Format your review as markdown:
 - Be concise — skip formatting nits (handled by linters)
 ```
 
+### Step 3.5: Plan drift check (branch review only)
+
+For **branch** reviews only, check whether the implementation matches an approved plan:
+
+1. **Find the plan file:** Look for the most recent plan file in `~/.claude/plans/*.md`:
+
+   ```bash
+   ls -t ~/.claude/plans/*.md 2>/dev/null | head -1
+   ```
+
+   If no plan file exists, skip this step entirely.
+
+2. **Find the PR description:** Check if a PR exists for the current branch:
+
+   ```bash
+   gh pr view --json body --jq '.body' 2>/dev/null
+   ```
+
+3. **Extract plan overrides:** If the PR body contains a `## Plan Overrides` section, parse the table entries. These are acknowledged divergences that should not be flagged.
+
+4. **Build drift check prompt:** Run a separate `codex exec` call before the main review:
+
+   ```bash
+   cat > /tmp/codex-drift-prompt.txt << 'DRIFT_EOF'
+   Compare the plan file at [path] against the actual branch changes.
+
+   Run: git diff origin/main...HEAD --stat
+   Then read the plan file and check each planned item:
+
+   For each item in the plan:
+   - Verify the specified file exists
+   - Verify expected exports/functions are present
+   - Verify test cases match (by name or intent)
+
+   Exclude these acknowledged overrides: [parsed overrides from PR body, or "none"]
+
+   Report as a table:
+   - MATCH: plan item implemented as specified
+   - OVERRIDE: divergence acknowledged in Plan Overrides table
+   - DRIFT: unacknowledged divergence (flag for review)
+   - MISSING: plan item not implemented
+   DRIFT_EOF
+
+   export NVM_DIR="$HOME/.nvm" && [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh" && nvm use v22.22.0 > /dev/null 2>&1 && cd /home/dmahaffey/projects/colophony && codex exec -s read-only - < /tmp/codex-drift-prompt.txt
+   ```
+
+5. **Present drift findings** in a separate section before the main Codex review output:
+
+   ```
+   ## Plan Drift Check
+   - N items matched
+   - N overrides acknowledged
+   - N items drifted (details below)
+   - N items missing
+   ```
+
+**When this step produces no plan file:** Skip silently. Not all branches have an associated plan.
+
 ### Step 4: Run the review
 
 **For branch review:**
@@ -154,4 +212,5 @@ Which findings would you like me to address? (Enter numbers, "all", or "none")
 - Plan review uses `codex exec -s read-only` since it's not a git diff operation and `exec` accepts stdin prompts
 - nvm must be sourced explicitly in every command because Bash tool runs non-interactive shells
 - For interactive Codex sessions with live progress, see the **Interactive Codex (tmux)** section in CLAUDE.md
-- **Plans enforce Codex review via task list**: Per CLAUDE.md, non-trivial plans must create `/codex-review plan` and evaluation as the first two task list entries, with all implementation tasks blocked by them via `addBlockedBy`
+- **Branch reviews include plan drift detection** when a plan file exists in `~/.claude/plans/`. Acknowledged overrides in the PR's `## Plan Overrides` section are excluded from drift findings
+- **Plan reviews run automatically during plan mode**: Per CLAUDE.md, non-trivial plans must run `/codex-review plan` before presenting to the user for approval
