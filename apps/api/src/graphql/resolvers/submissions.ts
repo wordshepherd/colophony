@@ -51,12 +51,31 @@ builder.queryFields((t) => ({
    */
   submissions: t.field({
     type: PaginatedSubmissions,
+    description:
+      'List all submissions in the organization. Requires EDITOR or ADMIN role.',
     args: {
-      status: t.arg.string({ required: false }),
-      submissionPeriodId: t.arg.string({ required: false }),
-      search: t.arg.string({ required: false }),
-      page: t.arg.int({ required: false, defaultValue: 1 }),
-      limit: t.arg.int({ required: false, defaultValue: 20 }),
+      status: t.arg.string({
+        required: false,
+        description: 'Filter by submission status.',
+      }),
+      submissionPeriodId: t.arg.string({
+        required: false,
+        description: 'Filter by submission period.',
+      }),
+      search: t.arg.string({
+        required: false,
+        description: 'Full-text search query.',
+      }),
+      page: t.arg.int({
+        required: false,
+        defaultValue: 1,
+        description: 'Page number (1-based).',
+      }),
+      limit: t.arg.int({
+        required: false,
+        defaultValue: 20,
+        description: 'Items per page (1-100).',
+      }),
     },
     resolve: async (_root, args, ctx) => {
       const orgCtx = requireOrgContext(ctx);
@@ -82,12 +101,30 @@ builder.queryFields((t) => ({
    */
   mySubmissions: t.field({
     type: PaginatedSubmissions,
+    description: "List the current user's own submissions.",
     args: {
-      status: t.arg.string({ required: false }),
-      submissionPeriodId: t.arg.string({ required: false }),
-      search: t.arg.string({ required: false }),
-      page: t.arg.int({ required: false, defaultValue: 1 }),
-      limit: t.arg.int({ required: false, defaultValue: 20 }),
+      status: t.arg.string({
+        required: false,
+        description: 'Filter by submission status.',
+      }),
+      submissionPeriodId: t.arg.string({
+        required: false,
+        description: 'Filter by submission period.',
+      }),
+      search: t.arg.string({
+        required: false,
+        description: 'Full-text search query.',
+      }),
+      page: t.arg.int({
+        required: false,
+        defaultValue: 1,
+        description: 'Page number (1-based).',
+      }),
+      limit: t.arg.int({
+        required: false,
+        defaultValue: 20,
+        description: 'Items per page (1-100).',
+      }),
     },
     resolve: async (_root, args, ctx) => {
       const orgCtx = requireOrgContext(ctx);
@@ -113,8 +150,10 @@ builder.queryFields((t) => ({
   submission: t.field({
     type: SubmissionType,
     nullable: true,
+    description:
+      'Get a single submission by ID. Editors can view any; submitters can view their own.',
     args: {
-      id: t.arg.string({ required: true }),
+      id: t.arg.string({ required: true, description: 'Submission ID.' }),
     },
     resolve: async (_root, args, ctx) => {
       const orgCtx = requireOrgContext(ctx);
@@ -135,8 +174,12 @@ builder.queryFields((t) => ({
    */
   submissionHistory: t.field({
     type: [SubmissionHistoryType],
+    description: 'Get the full status change history for a submission.',
     args: {
-      submissionId: t.arg.string({ required: true }),
+      submissionId: t.arg.string({
+        required: true,
+        description: 'Submission ID.',
+      }),
     },
     resolve: async (_root, args, ctx) => {
       const orgCtx = requireOrgContext(ctx);
@@ -163,11 +206,21 @@ builder.mutationFields((t) => ({
    */
   createSubmission: t.field({
     type: SubmissionType,
+    description: 'Create a new submission in DRAFT status.',
     args: {
-      title: t.arg.string({ required: true }),
-      content: t.arg.string({ required: false }),
-      coverLetter: t.arg.string({ required: false }),
-      submissionPeriodId: t.arg.string({ required: false }),
+      title: t.arg.string({
+        required: true,
+        description: 'Title of the submission.',
+      }),
+      content: t.arg.string({ required: false, description: 'Body content.' }),
+      coverLetter: t.arg.string({
+        required: false,
+        description: 'Optional cover letter.',
+      }),
+      submissionPeriodId: t.arg.string({
+        required: false,
+        description: 'Submission period to associate with.',
+      }),
     },
     resolve: async (_root, args, ctx) => {
       const orgCtx = requireOrgContext(ctx);
@@ -194,11 +247,18 @@ builder.mutationFields((t) => ({
    */
   updateSubmission: t.field({
     type: SubmissionType,
+    description: 'Update a DRAFT submission. Only the submitter can update.',
     args: {
-      id: t.arg.string({ required: true }),
-      title: t.arg.string({ required: false }),
-      content: t.arg.string({ required: false }),
-      coverLetter: t.arg.string({ required: false }),
+      id: t.arg.string({ required: true, description: 'Submission ID.' }),
+      title: t.arg.string({ required: false, description: 'New title.' }),
+      content: t.arg.string({
+        required: false,
+        description: 'New body content.',
+      }),
+      coverLetter: t.arg.string({
+        required: false,
+        description: 'New cover letter.',
+      }),
     },
     resolve: async (_root, args, ctx) => {
       const orgCtx = requireOrgContext(ctx);
@@ -226,8 +286,10 @@ builder.mutationFields((t) => ({
    */
   submitSubmission: t.field({
     type: SubmissionStatusChangePayload,
+    description:
+      'Submit a DRAFT (DRAFT → SUBMITTED). Only the submitter can submit.',
     args: {
-      id: t.arg.string({ required: true }),
+      id: t.arg.string({ required: true, description: 'Submission ID.' }),
     },
     resolve: async (_root, args, ctx) => {
       const orgCtx = requireOrgContext(ctx);
@@ -249,8 +311,10 @@ builder.mutationFields((t) => ({
    */
   deleteSubmission: t.field({
     type: SuccessPayload,
+    description:
+      'Delete a DRAFT submission and its files. Only the submitter can delete.',
     args: {
-      id: t.arg.string({ required: true }),
+      id: t.arg.string({ required: true, description: 'Submission ID.' }),
     },
     resolve: async (_root, args, ctx) => {
       const orgCtx = requireOrgContext(ctx);
@@ -272,8 +336,10 @@ builder.mutationFields((t) => ({
    */
   withdrawSubmission: t.field({
     type: SubmissionStatusChangePayload,
+    description:
+      'Withdraw a submission from consideration. Only the submitter can withdraw.',
     args: {
-      id: t.arg.string({ required: true }),
+      id: t.arg.string({ required: true, description: 'Submission ID.' }),
     },
     resolve: async (_root, args, ctx) => {
       const orgCtx = requireOrgContext(ctx);
@@ -295,10 +361,18 @@ builder.mutationFields((t) => ({
    */
   updateSubmissionStatus: t.field({
     type: SubmissionStatusChangePayload,
+    description:
+      "Transition a submission's status. Requires EDITOR or ADMIN role. Invalid transitions are rejected.",
     args: {
-      id: t.arg.string({ required: true }),
-      status: t.arg.string({ required: true }),
-      comment: t.arg.string({ required: false }),
+      id: t.arg.string({ required: true, description: 'Submission ID.' }),
+      status: t.arg.string({
+        required: true,
+        description: 'Target status (e.g. UNDER_REVIEW, ACCEPTED).',
+      }),
+      comment: t.arg.string({
+        required: false,
+        description: 'Optional comment explaining the decision.',
+      }),
     },
     resolve: async (_root, args, ctx) => {
       const orgCtx = requireOrgContext(ctx);

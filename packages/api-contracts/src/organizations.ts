@@ -84,7 +84,15 @@ const memberIdParam = z.object({
 
 export const organizationMembersContract = {
   list: oc
-    .route({ method: "GET", path: "/organizations/{orgId}/members" })
+    .route({
+      method: "GET",
+      path: "/organizations/{orgId}/members",
+      summary: "List organization members",
+      description:
+        "Returns a paginated list of members for the specified organization.",
+      operationId: "listOrganizationMembers",
+      tags: ["Organizations"],
+    })
     .input(orgIdParam.merge(restPaginationQuery))
     .output(paginatedMembersSchema),
 
@@ -93,6 +101,11 @@ export const organizationMembersContract = {
       method: "POST",
       path: "/organizations/{orgId}/members",
       successStatus: 201,
+      summary: "Add a member",
+      description:
+        "Invite a user to the organization by email. The user must already have an account. Requires ADMIN role.",
+      operationId: "addOrganizationMember",
+      tags: ["Organizations"],
     })
     .input(orgIdParam.merge(inviteMemberSchema))
     .output(memberMutationResponseSchema),
@@ -101,6 +114,11 @@ export const organizationMembersContract = {
     .route({
       method: "DELETE",
       path: "/organizations/{orgId}/members/{memberId}",
+      summary: "Remove a member",
+      description:
+        "Remove a member from the organization. Requires ADMIN role.",
+      operationId: "removeOrganizationMember",
+      tags: ["Organizations"],
     })
     .input(memberIdParam)
     .output(memberRemovedSchema),
@@ -109,6 +127,11 @@ export const organizationMembersContract = {
     .route({
       method: "PATCH",
       path: "/organizations/{orgId}/members/{memberId}",
+      summary: "Update member role",
+      description:
+        "Change a member's role within the organization. Requires ADMIN role.",
+      operationId: "updateOrganizationMemberRole",
+      tags: ["Organizations"],
     })
     .input(memberIdParam.merge(updateMemberRoleSchema.omit({ memberId: true })))
     .output(memberMutationResponseSchema),
@@ -116,26 +139,66 @@ export const organizationMembersContract = {
 
 export const organizationsContract = {
   list: oc
-    .route({ method: "GET", path: "/organizations" })
+    .route({
+      method: "GET",
+      path: "/organizations",
+      summary: "List organizations",
+      description:
+        "Returns all organizations the authenticated user is a member of.",
+      operationId: "listOrganizations",
+      tags: ["Organizations"],
+    })
     .output(z.array(orgListItemSchema)),
 
   create: oc
-    .route({ method: "POST", path: "/organizations", successStatus: 201 })
+    .route({
+      method: "POST",
+      path: "/organizations",
+      successStatus: 201,
+      summary: "Create an organization",
+      description:
+        "Create a new organization. The authenticated user becomes the first ADMIN member.",
+      operationId: "createOrganization",
+      tags: ["Organizations"],
+    })
     .input(createOrganizationSchema)
     .output(createOrgResponseSchema),
 
   checkSlug: oc
-    .route({ method: "GET", path: "/organizations/check-slug" })
+    .route({
+      method: "GET",
+      path: "/organizations/check-slug",
+      summary: "Check slug availability",
+      description:
+        "Check whether a slug is available for use when creating an organization.",
+      operationId: "checkSlugAvailability",
+      tags: ["Organizations"],
+    })
     .input(checkSlugSchema)
     .output(checkSlugResponseSchema),
 
   get: oc
-    .route({ method: "GET", path: "/organizations/{orgId}" })
+    .route({
+      method: "GET",
+      path: "/organizations/{orgId}",
+      summary: "Get an organization",
+      description: "Retrieve a single organization by its ID.",
+      operationId: "getOrganization",
+      tags: ["Organizations"],
+    })
     .input(orgIdParam)
     .output(organizationSchema),
 
   update: oc
-    .route({ method: "PATCH", path: "/organizations/{orgId}" })
+    .route({
+      method: "PATCH",
+      path: "/organizations/{orgId}",
+      summary: "Update an organization",
+      description:
+        "Update an organization's name or settings. Requires ADMIN role.",
+      operationId: "updateOrganization",
+      tags: ["Organizations"],
+    })
     .input(orgIdParam.merge(updateOrganizationSchema))
     .output(organizationSchema),
 

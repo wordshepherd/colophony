@@ -26,5 +26,15 @@ const userProfileSchema = z.object({
 // ---------------------------------------------------------------------------
 
 export const usersContract = {
-  me: oc.route({ method: "GET", path: "/users/me" }).output(userProfileSchema),
+  me: oc
+    .route({
+      method: "GET",
+      path: "/users/me",
+      summary: "Get current user profile",
+      description:
+        "Returns the authenticated user's profile including their organization memberships.",
+      operationId: "getCurrentUser",
+      tags: ["Users"],
+    })
+    .output(userProfileSchema),
 };

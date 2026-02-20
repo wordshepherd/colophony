@@ -185,33 +185,66 @@ export type AuditLogParams =
 
 /** List/filter input schema for audit events. */
 export const listAuditEventsSchema = z.object({
-  action: z.nativeEnum(AuditActions).optional(),
-  resource: z.nativeEnum(AuditResources).optional(),
-  actorId: z.string().uuid().optional(),
-  resourceId: z.string().uuid().optional(),
-  from: z.coerce.date().optional(),
-  to: z.coerce.date().optional(),
-  page: z.number().int().min(1).default(1),
-  limit: z.number().int().min(1).max(100).default(20),
+  action: z
+    .nativeEnum(AuditActions)
+    .optional()
+    .describe("Filter by audit action (e.g. ORG_CREATED)"),
+  resource: z
+    .nativeEnum(AuditResources)
+    .optional()
+    .describe("Filter by resource type (e.g. organization)"),
+  actorId: z
+    .string()
+    .uuid()
+    .optional()
+    .describe("Filter by the user who performed the action"),
+  resourceId: z
+    .string()
+    .uuid()
+    .optional()
+    .describe("Filter by the affected resource ID"),
+  from: z.coerce.date().optional().describe("Start of date range (ISO-8601)"),
+  to: z.coerce.date().optional().describe("End of date range (ISO-8601)"),
+  page: z.number().int().min(1).default(1).describe("Page number (1-based)"),
+  limit: z
+    .number()
+    .int()
+    .min(1)
+    .max(100)
+    .default(20)
+    .describe("Items per page (1-100, default 20)"),
 });
 
 export type ListAuditEventsInput = z.infer<typeof listAuditEventsSchema>;
 
 /** Single audit event response schema. */
 export const auditEventResponseSchema = z.object({
-  id: z.string().uuid(),
-  action: z.string(),
-  resource: z.string(),
-  resourceId: z.string().uuid().nullable(),
-  actorId: z.string().uuid().nullable(),
-  oldValue: z.unknown().nullable(),
-  newValue: z.unknown().nullable(),
-  ipAddress: z.string().nullable(),
-  userAgent: z.string().nullable(),
-  requestId: z.string().nullable(),
-  method: z.string().nullable(),
-  route: z.string().nullable(),
-  createdAt: z.date(),
+  id: z.string().uuid().describe("Unique identifier for the audit event"),
+  action: z.string().describe("Action that was performed (e.g. ORG_CREATED)"),
+  resource: z
+    .string()
+    .describe("Resource type that was affected (e.g. organization)"),
+  resourceId: z
+    .string()
+    .uuid()
+    .nullable()
+    .describe("ID of the affected resource"),
+  actorId: z
+    .string()
+    .uuid()
+    .nullable()
+    .describe("ID of the user who performed the action"),
+  oldValue: z.unknown().nullable().describe("Previous state before the change"),
+  newValue: z.unknown().nullable().describe("New state after the change"),
+  ipAddress: z.string().nullable().describe("IP address of the request"),
+  userAgent: z
+    .string()
+    .nullable()
+    .describe("User-Agent header from the request"),
+  requestId: z.string().nullable().describe("Correlation ID for the request"),
+  method: z.string().nullable().describe("HTTP method of the request"),
+  route: z.string().nullable().describe("API route that was called"),
+  createdAt: z.date().describe("When the audit event was recorded"),
 });
 
 export type AuditEventResponse = z.infer<typeof auditEventResponseSchema>;

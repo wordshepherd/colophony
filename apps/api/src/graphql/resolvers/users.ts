@@ -56,6 +56,8 @@ builder.queryFields((t) => ({
   me: t.field({
     type: UserProfileType,
     nullable: true,
+    description:
+      "Get the current user's profile with organization memberships.",
     resolve: async (_root, _args, ctx) => {
       const authed = requireAuth(ctx);
       await requireScopes(ctx, 'users:read');
