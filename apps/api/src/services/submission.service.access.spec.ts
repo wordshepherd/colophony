@@ -13,10 +13,26 @@ vi.mock('@colophony/db', () => ({
   submissions: {},
   submissionFiles: {},
   submissionHistory: {},
+  submissionPeriods: {},
+  formDefinitions: {},
   users: {},
   eq: vi.fn(),
   and: vi.fn(),
   sql: vi.fn(),
+}));
+
+// Mock form.service.js (imported by submission.service.ts)
+vi.mock('./form.service.js', () => ({
+  formService: { validateFormData: vi.fn() },
+  FormNotFoundError: class extends Error {
+    override name = 'FormNotFoundError';
+  },
+  FormNotPublishedError: class extends Error {
+    override name = 'FormNotPublishedError';
+  },
+  InvalidFormDataError: class extends Error {
+    override name = 'InvalidFormDataError';
+  },
 }));
 
 // Mock drizzle-orm

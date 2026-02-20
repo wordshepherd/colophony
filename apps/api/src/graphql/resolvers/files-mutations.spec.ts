@@ -57,6 +57,9 @@ vi.mock('../../services/submission.service.js', () => ({
   InfectedFilesError: class extends Error {
     name = 'InfectedFilesError';
   },
+  FormDefinitionMismatchError: class extends Error {
+    name = 'FormDefinitionMismatchError';
+  },
 }));
 
 vi.mock('../../services/organization.service.js', () => ({
