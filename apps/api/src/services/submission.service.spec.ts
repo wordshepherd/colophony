@@ -353,6 +353,7 @@ describe('submissionService.updateStatus() — form validation', () => {
     mockWhere.mockReturnValueOnce([]);
 
     // formService.validateFormData returns errors
+    // eslint-disable-next-line @typescript-eslint/unbound-method
     vi.mocked(formService.validateFormData).mockResolvedValueOnce([
       { fieldKey: 'bio', message: 'Bio is required' },
     ]);
@@ -387,6 +388,7 @@ describe('submissionService.updateStatus() — form validation', () => {
     mockWhere.mockReturnValueOnce([]);
 
     // formService.validateFormData returns no errors
+    // eslint-disable-next-line @typescript-eslint/unbound-method
     vi.mocked(formService.validateFormData).mockResolvedValueOnce([]);
 
     // update().set().where().returning()
@@ -415,6 +417,7 @@ describe('submissionService.updateStatus() — form validation', () => {
     );
 
     expect(result.submission.status).toBe('SUBMITTED');
+    // eslint-disable-next-line @typescript-eslint/unbound-method
     expect(formService.validateFormData).toHaveBeenCalledWith(mockTx, FORM_ID, {
       bio: 'Valid bio text',
     });
@@ -450,6 +453,7 @@ describe('submissionService.updateStatus() — form validation', () => {
       'submitter',
     );
 
+    // eslint-disable-next-line @typescript-eslint/unbound-method
     expect(formService.validateFormData).not.toHaveBeenCalled();
   });
 });
