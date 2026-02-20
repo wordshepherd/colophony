@@ -4,7 +4,13 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { useOrganization } from "@/hooks/use-organization";
-import { Building2, FileText, LayoutDashboard, Settings } from "lucide-react";
+import {
+  Building2,
+  ClipboardList,
+  FileText,
+  LayoutDashboard,
+  Settings,
+} from "lucide-react";
 
 const navigation = [
   { name: "My Submissions", href: "/submissions", icon: FileText },
@@ -13,6 +19,7 @@ const navigation = [
 
 const editorNavigation = [
   { name: "Editor Dashboard", href: "/editor", icon: LayoutDashboard },
+  { name: "Forms", href: "/editor/forms", icon: ClipboardList },
 ];
 
 const adminNavigation = [
@@ -22,6 +29,11 @@ const adminNavigation = [
     icon: Building2,
   },
 ];
+
+function isActiveLink(pathname: string, href: string): boolean {
+  if (href === "/editor") return pathname === "/editor";
+  return pathname.startsWith(href);
+}
 
 export function Sidebar() {
   const pathname = usePathname();
@@ -40,7 +52,7 @@ export function Sidebar() {
       <nav className="flex-1 space-y-1 p-2">
         {/* Main navigation */}
         {navigation.map((item) => {
-          const isActive = pathname.startsWith(item.href);
+          const isActive = isActiveLink(pathname, item.href);
           return (
             <Link
               key={item.name}
@@ -66,7 +78,7 @@ export function Sidebar() {
               Editor
             </p>
             {editorNavigation.map((item) => {
-              const isActive = pathname.startsWith(item.href);
+              const isActive = isActiveLink(pathname, item.href);
               return (
                 <Link
                   key={item.name}
@@ -94,7 +106,7 @@ export function Sidebar() {
               Admin
             </p>
             {adminNavigation.map((item) => {
-              const isActive = pathname.startsWith(item.href);
+              const isActive = isActiveLink(pathname, item.href);
               return (
                 <Link
                   key={item.name}
