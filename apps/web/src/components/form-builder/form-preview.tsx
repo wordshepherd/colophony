@@ -13,7 +13,6 @@ import {
 } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import { FIELD_TYPE_META } from "./field-type-meta";
 import type { FormFieldType } from "@colophony/types";
 
 interface PreviewFieldData {
