@@ -84,8 +84,8 @@
 
 ### Design Decisions
 
-- [ ] Submitter role architecture: per-org role assignment vs global identity with per-org role bindings — (architecture doc Open Question #1)
-- [ ] Self-serve org creation: managed hosting provisioning model vs self-hosted admin — (architecture doc Open Question #2)
+- [x] Submitter role architecture: per-org role assignment vs global identity with per-org role bindings — **Resolved 2026-02-19:** Submitter is a global user capability, not an org role. Staff roles (`ADMIN/EDITOR/READER`) unchanged. Manuscript library is user-owned and cross-org. Follow/subscribe for org-to-writer comms. — (architecture doc Open Question #1)
+- [x] Self-serve org creation: managed hosting provisioning model vs self-hosted admin — **Partially resolved 2026-02-19:** Self-serve in both contexts. Managed hosting: free tier with quotas, paid upgrade, all features on all tiers. Self-hosted: no billing. Managed hosting infra deferred to post-Track 3. — (architecture doc Open Question #2)
 
 ---
 
