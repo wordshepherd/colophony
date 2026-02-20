@@ -59,6 +59,49 @@ Check the conversation history for any `/codex-review` invocations during this s
 
 This step does NOT perform a review — it only records what happened during the session.
 
+### Step 3.5: Write session handoff
+
+Write a machine-readable `session-handoff.md` in the project root. This file is gitignored and provides instant context restoration for the next session. Overwrite any existing file.
+
+Use this exact format:
+
+```markdown
+# Session Handoff
+
+## Meta
+
+- Date: YYYY-MM-DD
+- Branch: <branch-name>
+- PR: <PR URL or "none">
+
+## Status
+
+- [ ] or [x] All code committed
+- [ ] or [x] Tests passing
+- [ ] or [x] Codex review done
+- [ ] or [x] DEVLOG updated
+- [ ] or [x] PR created/updated
+
+## Files Touched
+
+- `path/to/file1.ts` — [what changed]
+- `path/to/file2.ts` — [what changed]
+
+## Decisions Made
+
+- [Decision 1]: [choice made and brief rationale]
+
+## Open Questions
+
+- [Question that needs resolution next session]
+
+## Next Action
+
+[Single most important thing to do next session — be specific]
+```
+
+**Important:** This file is for **machine consumption** by `/start-session`. Keep values terse and factual. The DEVLOG entry (Step 4) provides the human-readable narrative.
+
 ### Step 4: Update DEVLOG and backlog
 
 #### 4a: Update DEVLOG
@@ -134,6 +177,28 @@ This is the **final commit** on the branch. Stage all doc changes:
 git add docs/devlog/ docs/backlog.md CLAUDE.md docs/testing.md [any other docs]
 git commit -m "docs: update devlog and docs for [session date] session"
 ```
+
+### Step 6.5: Run Codex branch review
+
+After all commits (code + docs) are complete but before pushing, run a Codex branch review:
+
+1. **Check prerequisites:** Verify all code changes are committed (no uncommitted changes except `session-handoff.md` which is gitignored).
+
+2. **Run the review:** Execute `/codex-review branch` (which includes plan drift detection if a plan file exists).
+
+3. **Present findings to the user:** Show the Codex review results and ask which findings (if any) to address before the PR.
+
+4. **If findings are addressed:** Make the fixes, commit them (new commit, not amend), then proceed to Step 7.
+
+5. **If no findings or user says "none":** Proceed to Step 7.
+
+**Skip this step when:**
+
+- The session had no code changes (doc-only update)
+- The user explicitly says to skip review (e.g., "just push it")
+- A `/codex-review` was already run manually during this session and no code changes were made after it
+
+Update the session summary (Step 9) to include the Codex review outcome under "Code Review".
 
 ### Step 7: Push and create/update PR
 
