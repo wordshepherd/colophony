@@ -1,0 +1,23 @@
+# Build outputs
+dist/
+.next/
+out/
+build/
+
+# Dependencies
+node_modules/
+
+# Generated types (read source schemas instead)
+**/*.d.ts
+
+# Lock file (large, low signal)
+pnpm-lock.yaml
+
+# Test artifacts
+coverage/
+test-results/
+playwright-report/
+blob-report/
+
+# Turbo cache
+.turbo/
