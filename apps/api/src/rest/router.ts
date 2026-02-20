@@ -1,6 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import { OpenAPIHandler } from '@orpc/openapi/fastify';
 import { OpenAPIReferencePlugin } from '@orpc/openapi/plugins';
+import { ZodToJsonSchemaConverter } from '@orpc/zod/zod4';
 import { organizationsRouter } from './routers/organizations.js';
 import { submissionsRouter } from './routers/submissions.js';
 import { filesRouter } from './routers/files.js';
@@ -21,6 +22,7 @@ const restRouter = {
 const openApiHandler = new OpenAPIHandler<RestContext>(restRouter, {
   plugins: [
     new OpenAPIReferencePlugin({
+      schemaConverters: [new ZodToJsonSchemaConverter()],
       specPath: '/openapi.json',
       docsPath: '/docs',
       specGenerateOptions: {

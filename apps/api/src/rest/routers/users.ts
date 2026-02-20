@@ -8,7 +8,15 @@ import { authedProcedure, requireScopes } from '../context.js';
 
 const me = authedProcedure
   .use(requireScopes('users:read'))
-  .route({ method: 'GET', path: '/users/me' })
+  .route({
+    method: 'GET',
+    path: '/users/me',
+    summary: 'Get current user profile',
+    description:
+      "Returns the authenticated user's profile including organization memberships.",
+    operationId: 'getCurrentUser',
+    tags: ['Users'],
+  })
   .handler(async ({ context }) => {
     const profile = await userService.getProfile(context.authContext.userId);
     if (!profile) {

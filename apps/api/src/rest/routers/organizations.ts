@@ -48,7 +48,15 @@ function assertOrgIdMatch(pathOrgId: string, contextOrgId: string): void {
 
 const membersList = orgProcedure
   .use(requireScopes('organizations:read'))
-  .route({ method: 'GET', path: '/organizations/{orgId}/members' })
+  .route({
+    method: 'GET',
+    path: '/organizations/{orgId}/members',
+    summary: 'List organization members',
+    description:
+      'Returns a paginated list of members for the specified organization.',
+    operationId: 'listOrganizationMembers',
+    tags: ['Organizations'],
+  })
   .input(orgIdParam.merge(restPaginationQuery))
   .handler(async ({ input, context }) => {
     assertOrgIdMatch(input.orgId, context.authContext.orgId);
@@ -64,6 +72,11 @@ const membersAdd = adminProcedure
     method: 'POST',
     path: '/organizations/{orgId}/members',
     successStatus: 201,
+    summary: 'Add a member',
+    description:
+      'Invite a user to the organization by email. The user must already have an account. Requires ADMIN role.',
+    operationId: 'addOrganizationMember',
+    tags: ['Organizations'],
   })
   .input(orgIdParam.merge(inviteMemberSchema))
   .handler(async ({ input, context }) => {
@@ -84,6 +97,10 @@ const membersRemove = adminProcedure
   .route({
     method: 'DELETE',
     path: '/organizations/{orgId}/members/{memberId}',
+    summary: 'Remove a member',
+    description: 'Remove a member from the organization. Requires ADMIN role.',
+    operationId: 'removeOrganizationMember',
+    tags: ['Organizations'],
   })
   .input(memberIdParam)
   .handler(async ({ context, input }) => {
@@ -103,6 +120,11 @@ const membersUpdateRole = adminProcedure
   .route({
     method: 'PATCH',
     path: '/organizations/{orgId}/members/{memberId}',
+    summary: 'Update member role',
+    description:
+      "Change a member's role within the organization. Requires ADMIN role.",
+    operationId: 'updateOrganizationMemberRole',
+    tags: ['Organizations'],
   })
   .input(memberIdParam.merge(z.object({ role: roleSchema })))
   .handler(async ({ context, input }) => {
@@ -124,7 +146,15 @@ const membersUpdateRole = adminProcedure
 
 const orgsList = authedProcedure
   .use(requireScopes('organizations:read'))
-  .route({ method: 'GET', path: '/organizations' })
+  .route({
+    method: 'GET',
+    path: '/organizations',
+    summary: 'List organizations',
+    description:
+      'Returns all organizations the authenticated user is a member of.',
+    operationId: 'listOrganizations',
+    tags: ['Organizations'],
+  })
   .handler(async ({ context }) => {
     return organizationService.listUserOrganizations(
       context.authContext.userId,
@@ -133,7 +163,16 @@ const orgsList = authedProcedure
 
 const orgsCreate = authedProcedure
   .use(requireScopes('organizations:write'))
-  .route({ method: 'POST', path: '/organizations', successStatus: 201 })
+  .route({
+    method: 'POST',
+    path: '/organizations',
+    successStatus: 201,
+    summary: 'Create an organization',
+    description:
+      'Create a new organization. The authenticated user becomes the first ADMIN member.',
+    operationId: 'createOrganization',
+    tags: ['Organizations'],
+  })
   .input(createOrganizationSchema)
   .handler(async ({ context, input }) => {
     const available = await organizationService.isSlugAvailable(input.slug);
@@ -156,7 +195,15 @@ const orgsCreate = authedProcedure
 
 const orgsCheckSlug = authedProcedure
   .use(requireScopes('organizations:read'))
-  .route({ method: 'GET', path: '/organizations/check-slug' })
+  .route({
+    method: 'GET',
+    path: '/organizations/check-slug',
+    summary: 'Check slug availability',
+    description:
+      'Check whether a slug is available for use when creating an organization.',
+    operationId: 'checkSlugAvailability',
+    tags: ['Organizations'],
+  })
   .input(checkSlugSchema)
   .handler(async ({ input }) => {
     const available = await organizationService.isSlugAvailable(input.slug);
@@ -165,7 +212,14 @@ const orgsCheckSlug = authedProcedure
 
 const orgsGet = orgProcedure
   .use(requireScopes('organizations:read'))
-  .route({ method: 'GET', path: '/organizations/{orgId}' })
+  .route({
+    method: 'GET',
+    path: '/organizations/{orgId}',
+    summary: 'Get an organization',
+    description: 'Retrieve a single organization by its ID.',
+    operationId: 'getOrganization',
+    tags: ['Organizations'],
+  })
   .input(orgIdParam)
   .handler(async ({ input, context }) => {
     assertOrgIdMatch(input.orgId, context.authContext.orgId);
@@ -181,7 +235,15 @@ const orgsGet = orgProcedure
 
 const orgsUpdate = adminProcedure
   .use(requireScopes('organizations:write'))
-  .route({ method: 'PATCH', path: '/organizations/{orgId}' })
+  .route({
+    method: 'PATCH',
+    path: '/organizations/{orgId}',
+    summary: 'Update an organization',
+    description:
+      "Update an organization's name or settings. Requires ADMIN role.",
+    operationId: 'updateOrganization',
+    tags: ['Organizations'],
+  })
   .input(orgIdParam.merge(updateOrganizationSchema))
   .handler(async ({ context, input }) => {
     assertOrgIdMatch(input.orgId, context.authContext.orgId);

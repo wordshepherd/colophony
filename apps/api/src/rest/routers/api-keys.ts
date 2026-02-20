@@ -21,7 +21,15 @@ const keyIdParam = z.object({ keyId: z.string().uuid() });
 
 const list = orgProcedure
   .use(requireScopes('api-keys:read'))
-  .route({ method: 'GET', path: '/api-keys' })
+  .route({
+    method: 'GET',
+    path: '/api-keys',
+    summary: 'List API keys',
+    description:
+      'Returns all API keys for the current organization. Key values are masked.',
+    operationId: 'listApiKeys',
+    tags: ['API Keys'],
+  })
   .input(restPaginationQuery)
   .handler(async ({ input, context }) => {
     return apiKeyService.list(context.dbTx, input);
@@ -29,7 +37,16 @@ const list = orgProcedure
 
 const create = adminProcedure
   .use(requireScopes('api-keys:manage'))
-  .route({ method: 'POST', path: '/api-keys', successStatus: 201 })
+  .route({
+    method: 'POST',
+    path: '/api-keys',
+    successStatus: 201,
+    summary: 'Create an API key',
+    description:
+      'Create a new API key for the organization. The plain-text key is returned only once. Requires ADMIN role.',
+    operationId: 'createApiKey',
+    tags: ['API Keys'],
+  })
   .input(createApiKeySchema)
   .handler(async ({ input, context }) => {
     const result = await apiKeyService.create(
@@ -49,7 +66,15 @@ const create = adminProcedure
 
 const revoke = adminProcedure
   .use(requireScopes('api-keys:manage'))
-  .route({ method: 'POST', path: '/api-keys/{keyId}/revoke' })
+  .route({
+    method: 'POST',
+    path: '/api-keys/{keyId}/revoke',
+    summary: 'Revoke an API key',
+    description:
+      'Revoke an API key so it can no longer be used for authentication. Requires ADMIN role.',
+    operationId: 'revokeApiKey',
+    tags: ['API Keys'],
+  })
   .input(keyIdParam)
   .handler(async ({ input, context }) => {
     const revoked = await apiKeyService.revoke(context.dbTx, input.keyId);
@@ -66,7 +91,14 @@ const revoke = adminProcedure
 
 const del = adminProcedure
   .use(requireScopes('api-keys:manage'))
-  .route({ method: 'DELETE', path: '/api-keys/{keyId}' })
+  .route({
+    method: 'DELETE',
+    path: '/api-keys/{keyId}',
+    summary: 'Delete an API key',
+    description: 'Permanently delete an API key. Requires ADMIN role.',
+    operationId: 'deleteApiKey',
+    tags: ['API Keys'],
+  })
   .input(keyIdParam)
   .handler(async ({ input, context }) => {
     const deleted = await apiKeyService.delete(context.dbTx, input.keyId);
