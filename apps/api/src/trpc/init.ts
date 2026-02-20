@@ -4,7 +4,24 @@ import { AuditActions, AuditResources } from '@colophony/types';
 import type { TRPCContext } from './context.js';
 import { checkApiKeyScopes } from '../services/scope-check.js';
 
-export const t = initTRPC.context<TRPCContext>().create();
+export const t = initTRPC.context<TRPCContext>().create({
+  errorFormatter({ shape, error }) {
+    const cause = error.cause;
+    return {
+      ...shape,
+      data: {
+        ...shape.data,
+        fieldErrors:
+          cause &&
+          typeof cause === 'object' &&
+          'fieldErrors' in cause &&
+          Array.isArray(cause.fieldErrors)
+            ? cause.fieldErrors
+            : undefined,
+      },
+    };
+  },
+});
 
 // ---------------------------------------------------------------------------
 // Middleware

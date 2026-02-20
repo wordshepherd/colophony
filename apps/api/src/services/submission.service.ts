@@ -2,6 +2,8 @@ import {
   submissions,
   submissionFiles,
   submissionHistory,
+  submissionPeriods,
+  formDefinitions,
   users,
   eq,
   and,
@@ -24,9 +26,16 @@ import {
 import type { ServiceContext } from './types.js';
 import {
   ForbiddenError,
+  NotFoundError,
   assertOwnerOrEditor,
   assertEditorOrAdmin,
 } from './errors.js';
+import {
+  formService,
+  FormNotFoundError,
+  FormNotPublishedError,
+  InvalidFormDataError,
+} from './form.service.js';
 
 // ---------------------------------------------------------------------------
 // Error classes
@@ -50,6 +59,15 @@ export class NotDraftError extends Error {
   constructor() {
     super('Submission must be in DRAFT status for this operation');
     this.name = 'NotDraftError';
+  }
+}
+
+export class FormDefinitionMismatchError extends Error {
+  constructor(formId: string, periodFormId: string) {
+    super(
+      `formDefinitionId "${formId}" does not match the submission period's form "${periodFormId}"`,
+    );
+    this.name = 'FormDefinitionMismatchError';
   }
 }
 
@@ -165,6 +183,52 @@ export const submissionService = {
     orgId: string,
     submitterId: string,
   ) {
+    let resolvedFormDefinitionId = input.formDefinitionId ?? null;
+
+    // Validate submission period exists under RLS (prevents cross-tenant refs)
+    if (input.submissionPeriodId) {
+      const [period] = await tx
+        .select()
+        .from(submissionPeriods)
+        .where(eq(submissionPeriods.id, input.submissionPeriodId))
+        .limit(1);
+
+      if (!period) {
+        throw new NotFoundError(
+          `Submission period "${input.submissionPeriodId}" not found`,
+        );
+      }
+
+      // Inherit formDefinitionId from period if not explicitly provided
+      if (!resolvedFormDefinitionId && period.formDefinitionId) {
+        resolvedFormDefinitionId = period.formDefinitionId;
+      }
+
+      // Enforce match when both are provided and period has a form
+      if (
+        resolvedFormDefinitionId &&
+        period.formDefinitionId &&
+        resolvedFormDefinitionId !== period.formDefinitionId
+      ) {
+        throw new FormDefinitionMismatchError(
+          resolvedFormDefinitionId,
+          period.formDefinitionId,
+        );
+      }
+    }
+
+    // Validate form reference exists and is PUBLISHED
+    if (resolvedFormDefinitionId) {
+      const [form] = await tx
+        .select()
+        .from(formDefinitions)
+        .where(eq(formDefinitions.id, resolvedFormDefinitionId))
+        .limit(1);
+
+      if (!form) throw new FormNotFoundError(resolvedFormDefinitionId);
+      if (form.status !== 'PUBLISHED') throw new FormNotPublishedError();
+    }
+
     const [submission] = await tx
       .insert(submissions)
       .values({
@@ -174,6 +238,8 @@ export const submissionService = {
         content: input.content ?? null,
         coverLetter: input.coverLetter ?? null,
         submissionPeriodId: input.submissionPeriodId ?? null,
+        formDefinitionId: resolvedFormDefinitionId,
+        formData: input.formData ?? null,
         status: 'DRAFT',
       })
       .returning();
@@ -241,6 +307,7 @@ export const submissionService = {
         ...(input.coverLetter !== undefined
           ? { coverLetter: input.coverLetter }
           : {}),
+        ...(input.formData !== undefined ? { formData: input.formData } : {}),
         updatedAt: new Date(),
       })
       .where(eq(submissions.id, id))
@@ -263,7 +330,11 @@ export const submissionService = {
     const rows = await tx.execute<{
       id: string;
       status: SubmissionStatus;
-    }>(sql`SELECT id, status FROM submissions WHERE id = ${id} FOR UPDATE`);
+      form_definition_id: string | null;
+      form_data: Record<string, unknown> | null;
+    }>(
+      sql`SELECT id, status, form_definition_id, form_data FROM submissions WHERE id = ${id} FOR UPDATE`,
+    );
 
     const existing = rows.rows[0];
     if (!existing) throw new SubmissionNotFoundError(id);
@@ -295,6 +366,16 @@ export const submissionService = {
 
       const hasInfected = files.some((f) => f.scanStatus === 'INFECTED');
       if (hasInfected) throw new InfectedFilesError();
+
+      // Validate form data against the form definition
+      if (existing.form_definition_id) {
+        const errors = await formService.validateFormData(
+          tx,
+          existing.form_definition_id,
+          (existing.form_data as Record<string, unknown>) ?? {},
+        );
+        if (errors.length > 0) throw new InvalidFormDataError(errors);
+      }
     }
 
     const updateData: Record<string, unknown> = {

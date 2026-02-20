@@ -48,6 +48,9 @@ vi.mock('../../services/submission.service.js', () => ({
   InfectedFilesError: class extends Error {
     name = 'InfectedFilesError';
   },
+  FormDefinitionMismatchError: class extends Error {
+    name = 'FormDefinitionMismatchError';
+  },
 }));
 
 vi.mock('../../services/errors.js', () => ({
@@ -87,6 +90,50 @@ vi.mock('../../services/organization.service.js', () => ({
   },
   LastAdminError: class extends Error {
     name = 'LastAdminError';
+  },
+}));
+
+vi.mock('../../services/form.service.js', () => ({
+  formService: {
+    list: vi.fn(),
+    getById: vi.fn(),
+    createWithAudit: vi.fn(),
+    updateWithAudit: vi.fn(),
+    publishWithAudit: vi.fn(),
+    archiveWithAudit: vi.fn(),
+    duplicateWithAudit: vi.fn(),
+    deleteWithAudit: vi.fn(),
+    addFieldWithAudit: vi.fn(),
+    updateFieldWithAudit: vi.fn(),
+    removeFieldWithAudit: vi.fn(),
+    reorderFieldsWithAudit: vi.fn(),
+    getFieldsByFormIds: vi.fn(),
+    validateFormData: vi.fn(),
+  },
+  FormNotFoundError: class extends Error {
+    name = 'FormNotFoundError';
+  },
+  FormFieldNotFoundError: class extends Error {
+    name = 'FormFieldNotFoundError';
+  },
+  FormNotDraftError: class extends Error {
+    name = 'FormNotDraftError';
+  },
+  FormNotPublishedError: class extends Error {
+    name = 'FormNotPublishedError';
+  },
+  DuplicateFieldKeyError: class extends Error {
+    name = 'DuplicateFieldKeyError';
+  },
+  FormHasNoFieldsError: class extends Error {
+    name = 'FormHasNoFieldsError';
+  },
+  FormInUseError: class extends Error {
+    name = 'FormInUseError';
+  },
+  InvalidFormDataError: class extends Error {
+    name = 'InvalidFormDataError';
+    fieldErrors = [];
   },
 }));
 
@@ -177,19 +224,22 @@ function getMutationField(name: string) {
 // ---------------------------------------------------------------------------
 
 describe('Submission mutations — schema', () => {
-  it('registers createSubmission mutation', () => {
+  it('registers createSubmission mutation with form args', () => {
     const field = getMutationField('createSubmission');
     expect(field).toBeDefined();
     const argNames = field.args.map((a) => a.name);
     expect(argNames).toContain('title');
+    expect(argNames).toContain('formDefinitionId');
+    expect(argNames).toContain('formData');
   });
 
-  it('registers updateSubmission mutation', () => {
+  it('registers updateSubmission mutation with formData arg', () => {
     const field = getMutationField('updateSubmission');
     expect(field).toBeDefined();
     const argNames = field.args.map((a) => a.name);
     expect(argNames).toContain('id');
     expect(argNames).toContain('title');
+    expect(argNames).toContain('formData');
   });
 
   it('registers submitSubmission mutation', () => {
@@ -383,5 +433,97 @@ describe('Submission mutations — resolver wiring', () => {
       field.resolve!({}, { title: 'Test' }, makeCtx(), {} as never),
     ).rejects.toThrow();
     expect(mapServiceError).toHaveBeenCalledWith(error);
+  });
+
+  it('createSubmission passes formDefinitionId and formData to service', async () => {
+    const formDefId = 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11';
+    const submission = {
+      id: 'sub-1',
+      organizationId: 'org-1',
+      submitterId: 'user-1',
+      submissionPeriodId: null,
+      title: 'Test',
+      content: null,
+      coverLetter: null,
+      status: 'DRAFT' as const,
+      formDefinitionId: formDefId,
+      formData: { bio: 'Hello' },
+      submittedAt: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      searchVector: null,
+    };
+    // eslint-disable-next-line @typescript-eslint/unbound-method
+    vi.mocked(submissionService.createWithAudit).mockResolvedValue(submission);
+
+    const field = getMutationField('createSubmission');
+    const result = await field.resolve!(
+      {},
+      {
+        title: 'Test',
+        content: null,
+        coverLetter: null,
+        submissionPeriodId: null,
+        formDefinitionId: formDefId,
+        formData: { bio: 'Hello' },
+      },
+      makeCtx(),
+      {} as never,
+    );
+
+    // eslint-disable-next-line @typescript-eslint/unbound-method
+    expect(submissionService.createWithAudit).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        formDefinitionId: formDefId,
+        formData: { bio: 'Hello' },
+      }),
+    );
+    expect(result).toEqual(submission);
+  });
+
+  it('updateSubmission passes formData to service', async () => {
+    const submission = {
+      id: 'sub-1',
+      organizationId: 'org-1',
+      submitterId: 'user-1',
+      submissionPeriodId: null,
+      title: 'Test',
+      content: null,
+      coverLetter: null,
+      status: 'DRAFT' as const,
+      formDefinitionId: null,
+      formData: { bio: 'Updated' },
+      submittedAt: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      searchVector: null,
+    };
+    // eslint-disable-next-line @typescript-eslint/unbound-method
+    vi.mocked(submissionService.updateAsOwner).mockResolvedValue(submission);
+
+    const field = getMutationField('updateSubmission');
+    const result = await field.resolve!(
+      {},
+      {
+        id: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',
+        title: null,
+        content: null,
+        coverLetter: null,
+        formData: { bio: 'Updated' },
+      },
+      makeCtx(),
+      {} as never,
+    );
+
+    // eslint-disable-next-line @typescript-eslint/unbound-method
+    expect(submissionService.updateAsOwner).toHaveBeenCalledWith(
+      expect.anything(),
+      'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',
+      expect.objectContaining({
+        formData: { bio: 'Updated' },
+      }),
+    );
+    expect(result).toEqual(submission);
   });
 });
