@@ -95,7 +95,8 @@
 
 - [x] Form builder backend — DB schema (form_definitions + form_fields), Zod types, service layer, tRPC + REST + GraphQL endpoints, validateFormData, audit constants, API key scopes — (architecture doc Track 3; done 2026-02-20)
 - [ ] Form builder frontend — editor UI for creating/editing form definitions, field drag-and-drop, field config panels — (architecture doc Track 3, form-builder-research.md)
-- [ ] Form builder integration — wire validateFormData into submission create/update flow, replace hardcoded title/content/coverLetter with formData — (architecture doc Track 3, deferred from backend PR 2026-02-20)
+- [x] Form builder integration — wire validateFormData into submission create/update flow, formData persistence + validation on submit — (architecture doc Track 3, deferred from backend PR 2026-02-20; done 2026-02-20)
+- [ ] Add `formDefinitionId` to `createSubmissionPeriodSchema` — deferred, no active consumer yet — (DEVLOG 2026-02-20)
 - [ ] Conditional logic engine — (architecture doc Track 3, form-builder-research.md)
 - [ ] Embeddable forms (iframe) — (architecture doc Track 3, form-builder-research.md)
 - [ ] Submission periods UI — schema exists, no UI — (DEVLOG 2026-02-15)
