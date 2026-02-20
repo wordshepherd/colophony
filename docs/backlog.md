@@ -108,6 +108,8 @@
 - [ ] GDPR deletion mutation — stubbed with TODO — (DEVLOG 2026-02-15)
 - [ ] GDPR tools finalization from MVP — (architecture doc Track 3)
 - [ ] Org deletion — needs careful cascade handling — (DEVLOG 2026-02-13)
+- [ ] [P3] Form editor: debounce or batch field add/update API calls to avoid 429 rate limiting on rapid edits — (manual QA 2026-02-20)
+- [ ] Form selector UI in submission creation — submitters need a way to select a published form when creating a submission (currently requires DB linkage) — (manual QA 2026-02-20)
 
 ---
 
