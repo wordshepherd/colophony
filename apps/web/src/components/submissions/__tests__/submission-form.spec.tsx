@@ -1,14 +1,76 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { SubmissionForm } from "../submission-form";
 // Navigation mocks imported to ensure setup.ts runs (registers next/navigation mock)
 import "../../../../test/setup";
+
+// Mock shadcn Select with native HTML elements (Radix Select doesn't work in jsdom)
+jest.mock("@/components/ui/select", () => {
+  const React = require("react");
+  const SelectContext = React.createContext({
+    onValueChange: (_v: string) => {},
+    value: undefined as string | undefined,
+  });
+  return {
+    Select: ({
+      children,
+      onValueChange,
+      value,
+    }: {
+      children: React.ReactNode;
+      onValueChange: (v: string) => void;
+      value?: string;
+    }) => (
+      <SelectContext.Provider value={{ onValueChange, value }}>
+        <div data-testid="mock-select" data-value={value}>
+          {children}
+        </div>
+      </SelectContext.Provider>
+    ),
+    SelectTrigger: ({ children }: { children: React.ReactNode }) => (
+      <button type="button" role="combobox">
+        {children}
+      </button>
+    ),
+    SelectValue: ({ placeholder }: { placeholder?: string }) => (
+      <span>{placeholder}</span>
+    ),
+    SelectContent: ({ children }: { children: React.ReactNode }) => (
+      <div role="listbox">{children}</div>
+    ),
+    SelectItem: ({
+      children,
+      value,
+    }: {
+      children: React.ReactNode;
+      value: string;
+    }) => {
+      const ctx = React.useContext(SelectContext);
+      return (
+        <div
+          role="option"
+          data-value={value}
+          onClick={() => ctx.onValueChange(value)}
+        >
+          {children}
+        </div>
+      );
+    },
+  };
+});
 
 // --- Mutable mock state ---
 let mockExistingSubmission: Record<string, unknown> | undefined;
 let mockIsLoadingSubmission: boolean;
 let mockExistingFiles: Array<Record<string, unknown>> | undefined;
 let mockFormDefinition: Record<string, unknown> | undefined;
+let mockPublishedForms: {
+  items: Array<{ id: string; name: string }>;
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+};
 
 let mockCreateMutateAsync: jest.Mock;
 let mockCreateIsPending: boolean;
@@ -30,6 +92,13 @@ function resetMocks() {
   mockIsLoadingSubmission = false;
   mockExistingFiles = undefined;
   mockFormDefinition = undefined;
+  mockPublishedForms = {
+    items: [],
+    total: 0,
+    page: 1,
+    limit: 100,
+    totalPages: 0,
+  };
 
   mockCreateMutateAsync = jest.fn().mockResolvedValue({ id: "new-sub-1" });
   mockCreateIsPending = false;
@@ -96,6 +165,12 @@ jest.mock("@/lib/trpc", () => ({
           data: mockFormDefinition,
           isPending: false,
           error: null,
+        }),
+      },
+      list: {
+        useQuery: () => ({
+          data: mockPublishedForms,
+          isPending: false,
         }),
       },
     },
@@ -213,7 +288,7 @@ describe("SubmissionForm", () => {
           title: "My Story",
           content: "Once upon a time",
           coverLetter: "Please consider",
-          formData: {},
+          formData: undefined,
         });
       });
     });
@@ -430,10 +505,10 @@ describe("SubmissionForm", () => {
   describe("dynamic form fields", () => {
     it("renders DynamicFormFields when submission has formDefinitionId", () => {
       mockExistingSubmission = makeDraftSubmission({
-        formDefinitionId: "form-def-1",
+        formDefinitionId: "00000000-0000-4000-8000-000000000001",
       });
       mockFormDefinition = {
-        id: "form-def-1",
+        id: "00000000-0000-4000-8000-000000000001",
         name: "Poetry Submission Form",
         description: "Standard poetry form",
         fields: [
@@ -456,7 +531,7 @@ describe("SubmissionForm", () => {
       expect(dynamicFields).toBeInTheDocument();
       expect(dynamicFields).toHaveAttribute(
         "data-form-definition-id",
-        "form-def-1",
+        "00000000-0000-4000-8000-000000000001",
       );
       expect(dynamicFields).toHaveAttribute("data-disabled", "false");
     });
@@ -472,11 +547,11 @@ describe("SubmissionForm", () => {
 
     it("passes formData in update mutation", async () => {
       mockExistingSubmission = makeDraftSubmission({
-        formDefinitionId: "form-def-1",
+        formDefinitionId: "00000000-0000-4000-8000-000000000001",
         formData: { bio: "A poet" },
       });
       mockFormDefinition = {
-        id: "form-def-1",
+        id: "00000000-0000-4000-8000-000000000001",
         name: "Form",
         description: null,
         fields: [
@@ -510,10 +585,10 @@ describe("SubmissionForm", () => {
 
     it("maps field errors from submit rejection to form fields", () => {
       mockExistingSubmission = makeDraftSubmission({
-        formDefinitionId: "form-def-1",
+        formDefinitionId: "00000000-0000-4000-8000-000000000001",
       });
       mockFormDefinition = {
-        id: "form-def-1",
+        id: "00000000-0000-4000-8000-000000000001",
         name: "Form",
         description: null,
         fields: [],
@@ -534,6 +609,154 @@ describe("SubmissionForm", () => {
 
       // Generic error should not be shown (mapFieldErrorsToForm returns true)
       expect(screen.queryByText("Validation failed")).not.toBeInTheDocument();
+    });
+  });
+
+  // --- Form selector (create mode) ---
+  describe("form selector", () => {
+    it("renders form selector card with published forms in create mode", () => {
+      mockPublishedForms = {
+        items: [
+          { id: "form-1", name: "Poetry Form" },
+          { id: "form-2", name: "Fiction Form" },
+        ],
+        total: 2,
+        page: 1,
+        limit: 100,
+        totalPages: 1,
+      };
+
+      render(<SubmissionForm mode="create" />);
+
+      // Card title renders
+      expect(screen.getByText("Submission Form")).toBeInTheDocument();
+      // Options are rendered (mock Select renders them directly)
+      expect(screen.getByText("Poetry Form")).toBeInTheDocument();
+      expect(screen.getByText("Fiction Form")).toBeInTheDocument();
+      // None option rendered
+      expect(screen.getByRole("option", { name: "None" })).toBeInTheDocument();
+    });
+
+    it("does not render form selector in edit mode", () => {
+      mockExistingSubmission = makeDraftSubmission();
+
+      render(<SubmissionForm mode="edit" submissionId="sub-1" />);
+
+      expect(screen.queryByText("Submission Form")).not.toBeInTheDocument();
+    });
+
+    it("shows DynamicFormFields when a form is selected in create mode", async () => {
+      mockPublishedForms = {
+        items: [
+          { id: "00000000-0000-4000-8000-000000000001", name: "Poetry Form" },
+        ],
+        total: 1,
+        page: 1,
+        limit: 100,
+        totalPages: 1,
+      };
+      mockFormDefinition = {
+        id: "00000000-0000-4000-8000-000000000001",
+        name: "Poetry Form",
+        description: null,
+        fields: [
+          {
+            fieldKey: "bio",
+            fieldType: "text",
+            label: "Bio",
+            description: null,
+            placeholder: null,
+            required: true,
+            sortOrder: 0,
+            config: null,
+          },
+        ],
+      };
+
+      render(<SubmissionForm mode="create" />);
+
+      // Click the form option (mock Select calls onValueChange directly)
+      fireEvent.click(screen.getByRole("option", { name: "Poetry Form" }));
+
+      await waitFor(() => {
+        const dynamicFields = screen.getByTestId("dynamic-form-fields");
+        expect(dynamicFields).toBeInTheDocument();
+        expect(dynamicFields).toHaveAttribute(
+          "data-form-definition-id",
+          "00000000-0000-4000-8000-000000000001",
+        );
+      });
+    });
+
+    it("includes formDefinitionId in create mutation when form selected", async () => {
+      mockPublishedForms = {
+        items: [
+          { id: "00000000-0000-4000-8000-000000000001", name: "Poetry Form" },
+        ],
+        total: 1,
+        page: 1,
+        limit: 100,
+        totalPages: 1,
+      };
+      mockFormDefinition = {
+        id: "00000000-0000-4000-8000-000000000001",
+        name: "Poetry Form",
+        description: null,
+        fields: [],
+      };
+
+      const user = userEvent.setup();
+      render(<SubmissionForm mode="create" />);
+
+      // Select the form option
+      fireEvent.click(screen.getByRole("option", { name: "Poetry Form" }));
+
+      // Fill title
+      await user.type(
+        screen.getByPlaceholderText("Enter submission title"),
+        "My Poem",
+      );
+
+      await user.click(screen.getByRole("button", { name: "Create Draft" }));
+
+      await waitFor(() => {
+        expect(mockCreateMutateAsync).toHaveBeenCalledWith(
+          expect.objectContaining({
+            title: "My Poem",
+            formDefinitionId: "00000000-0000-4000-8000-000000000001",
+          }),
+        );
+      });
+    });
+
+    it("omits formDefinitionId when no form selected", async () => {
+      mockPublishedForms = {
+        items: [
+          { id: "00000000-0000-4000-8000-000000000001", name: "Poetry Form" },
+        ],
+        total: 1,
+        page: 1,
+        limit: 100,
+        totalPages: 1,
+      };
+
+      const user = userEvent.setup();
+      render(<SubmissionForm mode="create" />);
+
+      // Fill title without selecting a form
+      await user.type(
+        screen.getByPlaceholderText("Enter submission title"),
+        "My Story",
+      );
+
+      await user.click(screen.getByRole("button", { name: "Create Draft" }));
+
+      await waitFor(() => {
+        expect(mockCreateMutateAsync).toHaveBeenCalled();
+        const callArgs = mockCreateMutateAsync.mock.calls[0][0];
+        expect(callArgs.title).toBe("My Story");
+        expect(callArgs).not.toHaveProperty("formDefinitionId");
+      });
     });
   });
 });
