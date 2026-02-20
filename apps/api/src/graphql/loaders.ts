@@ -1,15 +1,23 @@
 import DataLoader from 'dataloader';
+import { asc } from 'drizzle-orm';
 import {
   submissionFiles,
+  formFields,
   users,
   organizationMembers,
   inArray,
   type DrizzleDb,
 } from '@colophony/db';
-import type { SubmissionFile, User, OrganizationMember } from '@colophony/db';
+import type {
+  SubmissionFile,
+  FormField,
+  User,
+  OrganizationMember,
+} from '@colophony/db';
 
 export interface Loaders {
   submissionFiles: DataLoader<string, SubmissionFile[]>;
+  formFields: DataLoader<string, FormField[]>;
   user: DataLoader<string, User | null>;
   orgMembers: DataLoader<string, OrganizationMember[]>;
 }
@@ -43,6 +51,29 @@ export function createLoaders(dbTx: DrizzleDb | null): Loaders {
         return submissionIds.map((id) => grouped.get(id) ?? []);
       },
     ),
+
+    /**
+     * Batch-load form fields by form definition ID.
+     * Returns an array of fields per form (may be empty), ordered by sortOrder.
+     */
+    formFields: new DataLoader<string, FormField[]>(async (formIds) => {
+      if (!dbTx) return formIds.map(() => []);
+
+      const rows = await dbTx
+        .select()
+        .from(formFields)
+        .where(inArray(formFields.formDefinitionId, [...formIds]))
+        .orderBy(asc(formFields.sortOrder));
+
+      const grouped = new Map<string, FormField[]>();
+      for (const row of rows) {
+        const list = grouped.get(row.formDefinitionId) ?? [];
+        list.push(row);
+        grouped.set(row.formDefinitionId, list);
+      }
+
+      return formIds.map((id) => grouped.get(id) ?? []);
+    }),
 
     /**
      * Batch-load users by user ID.

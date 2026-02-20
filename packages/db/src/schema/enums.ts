@@ -41,3 +41,27 @@ export const dsarStatusEnum = pgEnum("DsarStatus", [
   "COMPLETED",
   "REJECTED",
 ]);
+
+export const formStatusEnum = pgEnum("FormStatus", [
+  "DRAFT",
+  "PUBLISHED",
+  "ARCHIVED",
+]);
+
+export const formFieldTypeEnum = pgEnum("FormFieldType", [
+  "text",
+  "textarea",
+  "rich_text",
+  "number",
+  "email",
+  "url",
+  "date",
+  "select",
+  "multi_select",
+  "radio",
+  "checkbox",
+  "checkbox_group",
+  "file_upload",
+  "section_header",
+  "info_text",
+]);

@@ -20,6 +20,48 @@ vi.mock('../../services/context.js', () => ({
   toServiceContext: vi.fn((ctx: unknown) => ctx),
 }));
 
+vi.mock('../../services/form.service.js', () => ({
+  formService: {
+    list: vi.fn(),
+    getById: vi.fn(),
+    createWithAudit: vi.fn(),
+    updateWithAudit: vi.fn(),
+    publishWithAudit: vi.fn(),
+    archiveWithAudit: vi.fn(),
+    duplicateWithAudit: vi.fn(),
+    deleteWithAudit: vi.fn(),
+    addFieldWithAudit: vi.fn(),
+    updateFieldWithAudit: vi.fn(),
+    removeFieldWithAudit: vi.fn(),
+    reorderFieldsWithAudit: vi.fn(),
+    getFieldsByFormIds: vi.fn(),
+  },
+  FormNotFoundError: class extends Error {
+    name = 'FormNotFoundError';
+  },
+  FormFieldNotFoundError: class extends Error {
+    name = 'FormFieldNotFoundError';
+  },
+  FormNotDraftError: class extends Error {
+    name = 'FormNotDraftError';
+  },
+  FormNotPublishedError: class extends Error {
+    name = 'FormNotPublishedError';
+  },
+  DuplicateFieldKeyError: class extends Error {
+    name = 'DuplicateFieldKeyError';
+  },
+  FormHasNoFieldsError: class extends Error {
+    name = 'FormHasNoFieldsError';
+  },
+  FormInUseError: class extends Error {
+    name = 'FormInUseError';
+  },
+  InvalidFormDataError: class extends Error {
+    name = 'InvalidFormDataError';
+  },
+}));
+
 vi.mock('../../services/submission.service.js', () => ({
   submissionService: {
     listAll: vi.fn(),
@@ -125,7 +167,7 @@ vi.mock('../../config/env.js', () => ({
 }));
 
 import { requireOrgContext, requireScopes } from '../guards.js';
-import { submissionService } from '../../services/submission.service.js';
+import { formService } from '../../services/form.service.js';
 import { mapServiceError } from '../error-mapper.js';
 
 const mockRequireOrgContext = vi.mocked(requireOrgContext);
@@ -136,6 +178,9 @@ import { schema } from '../schema.js';
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
+
+const FORM_ID = 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11';
+const FIELD_ID = 'b0eebc99-9c0b-4ef8-bb6d-6bb9bd380a22';
 
 function makeCtx(): GraphQLContext {
   return {
@@ -165,97 +210,128 @@ function makeOrgCtx() {
   };
 }
 
+function getQueryField(name: string) {
+  const queryType = schema.getQueryType();
+  expect(queryType).toBeDefined();
+  return queryType!.getFields()[name];
+}
+
 function getMutationField(name: string) {
   const mutationType = schema.getMutationType();
   expect(mutationType).toBeDefined();
-  const fields = mutationType!.getFields();
-  return fields[name];
+  return mutationType!.getFields()[name];
+}
+
+function makeFormDefinition(overrides: Record<string, unknown> = {}) {
+  return {
+    id: FORM_ID,
+    organizationId: 'org-1',
+    name: 'Test Form',
+    description: null,
+    status: 'DRAFT' as const,
+    version: 1,
+    duplicatedFromId: null,
+    createdBy: 'user-1',
+    publishedAt: null,
+    archivedAt: null,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    ...overrides,
+  };
+}
+
+function makeFormField(overrides: Record<string, unknown> = {}) {
+  return {
+    id: FIELD_ID,
+    formDefinitionId: FORM_ID,
+    fieldKey: 'test_field',
+    fieldType: 'text' as const,
+    label: 'Test Field',
+    description: null,
+    placeholder: null,
+    required: false,
+    sortOrder: 0,
+    config: null,
+    conditionalRules: null,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    ...overrides,
+  };
 }
 
 // ---------------------------------------------------------------------------
-// Tests
+// Tests — schema registration
 // ---------------------------------------------------------------------------
 
-describe('Submission mutations — schema', () => {
-  it('registers createSubmission mutation', () => {
-    const field = getMutationField('createSubmission');
+describe('Form resolvers — schema', () => {
+  it('registers formDefinitions query', () => {
+    const field = getQueryField('formDefinitions');
     expect(field).toBeDefined();
-    const argNames = field.args.map((a) => a.name);
-    expect(argNames).toContain('title');
   });
 
-  it('registers updateSubmission mutation', () => {
-    const field = getMutationField('updateSubmission');
-    expect(field).toBeDefined();
-    const argNames = field.args.map((a) => a.name);
-    expect(argNames).toContain('id');
-    expect(argNames).toContain('title');
-  });
-
-  it('registers submitSubmission mutation', () => {
-    const field = getMutationField('submitSubmission');
+  it('registers formDefinition query', () => {
+    const field = getQueryField('formDefinition');
     expect(field).toBeDefined();
     expect(field.args.map((a) => a.name)).toContain('id');
   });
 
-  it('registers deleteSubmission mutation', () => {
-    const field = getMutationField('deleteSubmission');
+  it('registers createFormDefinition mutation', () => {
+    const field = getMutationField('createFormDefinition');
+    expect(field).toBeDefined();
+    expect(field.args.map((a) => a.name)).toContain('name');
+  });
+
+  it('registers publishFormDefinition mutation', () => {
+    const field = getMutationField('publishFormDefinition');
     expect(field).toBeDefined();
     expect(field.args.map((a) => a.name)).toContain('id');
   });
 
-  it('registers withdrawSubmission mutation', () => {
-    const field = getMutationField('withdrawSubmission');
+  it('registers deleteFormDefinition mutation', () => {
+    const field = getMutationField('deleteFormDefinition');
     expect(field).toBeDefined();
     expect(field.args.map((a) => a.name)).toContain('id');
   });
 
-  it('registers updateSubmissionStatus mutation', () => {
-    const field = getMutationField('updateSubmissionStatus');
+  it('registers addFormField mutation', () => {
+    const field = getMutationField('addFormField');
     expect(field).toBeDefined();
     const argNames = field.args.map((a) => a.name);
-    expect(argNames).toContain('id');
-    expect(argNames).toContain('status');
-    expect(argNames).toContain('comment');
+    expect(argNames).toContain('formId');
+    expect(argNames).toContain('fieldKey');
+    expect(argNames).toContain('fieldType');
+    expect(argNames).toContain('label');
+  });
+
+  it('registers reorderFormFields mutation', () => {
+    const field = getMutationField('reorderFormFields');
+    expect(field).toBeDefined();
+    const argNames = field.args.map((a) => a.name);
+    expect(argNames).toContain('formId');
+    expect(argNames).toContain('fieldIds');
   });
 });
 
-describe('Submission mutations — resolver wiring', () => {
+// ---------------------------------------------------------------------------
+// Tests — resolver wiring
+// ---------------------------------------------------------------------------
+
+describe('Form resolvers — wiring', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockRequireOrgContext.mockReturnValue(makeOrgCtx());
     mockRequireScopes.mockResolvedValue(undefined);
   });
 
-  it('createSubmission calls requireOrgContext + service', async () => {
-    const submission = {
-      id: 'sub-1',
-      organizationId: 'org-1',
-      submitterId: 'user-1',
-      submissionPeriodId: null,
-      title: 'Test',
-      content: null,
-      coverLetter: null,
-      status: 'DRAFT' as const,
-      formDefinitionId: null,
-      formData: null,
-      submittedAt: null,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      searchVector: null,
-    };
+  it('createFormDefinition calls requireOrgContext + service', async () => {
+    const form = makeFormDefinition();
     // eslint-disable-next-line @typescript-eslint/unbound-method
-    vi.mocked(submissionService.createWithAudit).mockResolvedValue(submission);
+    vi.mocked(formService.createWithAudit).mockResolvedValue(form);
 
-    const field = getMutationField('createSubmission');
+    const field = getMutationField('createFormDefinition');
     const result = await field.resolve!(
       {},
-      {
-        title: 'Test',
-        content: null,
-        coverLetter: null,
-        submissionPeriodId: null,
-      },
+      { name: 'Test Form' },
       makeCtx(),
       {} as never,
     );
@@ -263,124 +339,106 @@ describe('Submission mutations — resolver wiring', () => {
     expect(mockRequireOrgContext).toHaveBeenCalled();
     expect(mockRequireScopes).toHaveBeenCalledWith(
       expect.anything(),
-      'submissions:write',
+      'forms:write',
     );
     // eslint-disable-next-line @typescript-eslint/unbound-method
-    expect(submissionService.createWithAudit).toHaveBeenCalled();
-    expect(result).toEqual(submission);
+    expect(formService.createWithAudit).toHaveBeenCalled();
+    expect(result).toEqual(form);
   });
 
-  it('createSubmission guard failure prevents service call', async () => {
+  it('createFormDefinition guard failure prevents service call', async () => {
     mockRequireOrgContext.mockImplementation(() => {
       throw new GraphQLError('Not authenticated', {
         extensions: { code: 'UNAUTHENTICATED' },
       });
     });
 
-    const field = getMutationField('createSubmission');
+    const field = getMutationField('createFormDefinition');
     await expect(
-      field.resolve!({}, { title: 'X' }, makeCtx(), {} as never),
+      field.resolve!({}, { name: 'X' }, makeCtx(), {} as never),
     ).rejects.toThrow('Not authenticated');
     // eslint-disable-next-line @typescript-eslint/unbound-method
-    expect(submissionService.createWithAudit).not.toHaveBeenCalled();
+    expect(formService.createWithAudit).not.toHaveBeenCalled();
   });
 
-  it('createSubmission validates input via Zod', async () => {
-    const field = getMutationField('createSubmission');
+  it('createFormDefinition validates input via Zod', async () => {
+    const field = getMutationField('createFormDefinition');
     await expect(
-      field.resolve!({}, { title: '' }, makeCtx(), {} as never),
-    ).rejects.toThrow(); // Zod rejects empty title
+      field.resolve!({}, { name: '' }, makeCtx(), {} as never),
+    ).rejects.toThrow(); // Zod rejects empty name
   });
 
-  it('updateSubmission validates id as UUID', async () => {
-    const field = getMutationField('updateSubmission');
-    await expect(
-      field.resolve!(
-        {},
-        { id: 'not-a-uuid', title: 'X' },
-        makeCtx(),
-        {} as never,
-      ),
-    ).rejects.toThrow();
-  });
-
-  it('deleteSubmission calls deleteAsOwner', async () => {
+  it('deleteFormDefinition calls deleteWithAudit', async () => {
     // eslint-disable-next-line @typescript-eslint/unbound-method
-    vi.mocked(submissionService.deleteAsOwner).mockResolvedValue({
+    vi.mocked(formService.deleteWithAudit).mockResolvedValue({
       success: true,
     });
 
-    const field = getMutationField('deleteSubmission');
+    const field = getMutationField('deleteFormDefinition');
     const result = await field.resolve!(
       {},
-      { id: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11' },
+      { id: FORM_ID },
       makeCtx(),
       {} as never,
     );
 
     // eslint-disable-next-line @typescript-eslint/unbound-method
-    expect(submissionService.deleteAsOwner).toHaveBeenCalled();
+    expect(formService.deleteWithAudit).toHaveBeenCalled();
     expect(result).toEqual({ success: true });
   });
 
-  it('updateSubmissionStatus calls updateStatusAsEditor', async () => {
-    const payload = {
-      submission: {
-        id: 'sub-1',
-        organizationId: 'org-1',
-        submitterId: 'user-1',
-        submissionPeriodId: null,
-        formDefinitionId: null,
-        formData: null,
-        title: 'Test',
-        content: null,
-        coverLetter: null,
-        status: 'UNDER_REVIEW' as const,
-        submittedAt: new Date(),
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        searchVector: null,
-      },
-      historyEntry: {
-        id: 'hist-1',
-        submissionId: 'sub-1',
-        fromStatus: 'SUBMITTED' as const,
-        toStatus: 'UNDER_REVIEW' as const,
-        changedBy: 'user-1',
-        comment: 'test',
-        changedAt: new Date(),
-      },
-    };
+  it('publishFormDefinition calls publishWithAudit', async () => {
+    const published = makeFormDefinition({
+      status: 'PUBLISHED',
+      publishedAt: new Date(),
+    });
     // eslint-disable-next-line @typescript-eslint/unbound-method
-    vi.mocked(submissionService.updateStatusAsEditor).mockResolvedValue(
-      payload,
+    vi.mocked(formService.publishWithAudit).mockResolvedValue(published);
+
+    const field = getMutationField('publishFormDefinition');
+    const result = await field.resolve!(
+      {},
+      { id: FORM_ID },
+      makeCtx(),
+      {} as never,
     );
 
-    const field = getMutationField('updateSubmissionStatus');
+    // eslint-disable-next-line @typescript-eslint/unbound-method
+    expect(formService.publishWithAudit).toHaveBeenCalled();
+    expect(result).toEqual(published);
+  });
+
+  it('addFormField calls addFieldWithAudit', async () => {
+    const formField = makeFormField();
+    // eslint-disable-next-line @typescript-eslint/unbound-method
+    vi.mocked(formService.addFieldWithAudit).mockResolvedValue(formField);
+
+    const field = getMutationField('addFormField');
     const result = await field.resolve!(
       {},
       {
-        id: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',
-        status: 'UNDER_REVIEW',
-        comment: 'test',
+        formId: FORM_ID,
+        fieldKey: 'test_field',
+        fieldType: 'text',
+        label: 'Test Field',
       },
       makeCtx(),
       {} as never,
     );
 
     // eslint-disable-next-line @typescript-eslint/unbound-method
-    expect(submissionService.updateStatusAsEditor).toHaveBeenCalled();
-    expect(result).toBe(payload);
+    expect(formService.addFieldWithAudit).toHaveBeenCalled();
+    expect(result).toEqual(formField);
   });
 
   it('mapServiceError is called on service failure', async () => {
     const error = new Error('Service failed');
     // eslint-disable-next-line @typescript-eslint/unbound-method
-    vi.mocked(submissionService.createWithAudit).mockRejectedValue(error);
+    vi.mocked(formService.createWithAudit).mockRejectedValue(error);
 
-    const field = getMutationField('createSubmission');
+    const field = getMutationField('createFormDefinition');
     await expect(
-      field.resolve!({}, { title: 'Test' }, makeCtx(), {} as never),
+      field.resolve!({}, { name: 'Test' }, makeCtx(), {} as never),
     ).rejects.toThrow();
     expect(mapServiceError).toHaveBeenCalledWith(error);
   });

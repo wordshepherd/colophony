@@ -2,6 +2,7 @@ export * from "./enums";
 export * from "./organizations";
 export * from "./users";
 export * from "./members";
+export * from "./forms";
 export * from "./submissions";
 export * from "./payments";
 export * from "./audit";

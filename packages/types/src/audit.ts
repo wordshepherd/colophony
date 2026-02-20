@@ -51,6 +51,18 @@ export const AuditActions = {
   API_KEY_AUTH_FAILED: "API_KEY_AUTH_FAILED",
   API_KEY_SCOPE_DENIED: "API_KEY_SCOPE_DENIED",
 
+  // Form lifecycle
+  FORM_CREATED: "FORM_CREATED",
+  FORM_UPDATED: "FORM_UPDATED",
+  FORM_PUBLISHED: "FORM_PUBLISHED",
+  FORM_ARCHIVED: "FORM_ARCHIVED",
+  FORM_DUPLICATED: "FORM_DUPLICATED",
+  FORM_DELETED: "FORM_DELETED",
+  FORM_FIELD_ADDED: "FORM_FIELD_ADDED",
+  FORM_FIELD_UPDATED: "FORM_FIELD_UPDATED",
+  FORM_FIELD_REMOVED: "FORM_FIELD_REMOVED",
+  FORM_FIELDS_REORDERED: "FORM_FIELDS_REORDERED",
+
   // Payment lifecycle
   PAYMENT_SUCCEEDED: "PAYMENT_SUCCEEDED",
   PAYMENT_EXPIRED: "PAYMENT_EXPIRED",
@@ -67,6 +79,7 @@ export const AuditResources = {
   ORGANIZATION: "organization",
   SUBMISSION: "submission",
   FILE: "file",
+  FORM: "form",
   AUTH: "auth",
   API_KEY: "api_key",
   PAYMENT: "payment",
@@ -156,6 +169,21 @@ export interface ApiKeyAuditParams extends BaseAuditParams {
     | typeof AuditActions.API_KEY_SCOPE_DENIED;
 }
 
+export interface FormAuditParams extends BaseAuditParams {
+  resource: typeof AuditResources.FORM;
+  action:
+    | typeof AuditActions.FORM_CREATED
+    | typeof AuditActions.FORM_UPDATED
+    | typeof AuditActions.FORM_PUBLISHED
+    | typeof AuditActions.FORM_ARCHIVED
+    | typeof AuditActions.FORM_DUPLICATED
+    | typeof AuditActions.FORM_DELETED
+    | typeof AuditActions.FORM_FIELD_ADDED
+    | typeof AuditActions.FORM_FIELD_UPDATED
+    | typeof AuditActions.FORM_FIELD_REMOVED
+    | typeof AuditActions.FORM_FIELDS_REORDERED;
+}
+
 export interface PaymentAuditParams extends BaseAuditParams {
   resource: typeof AuditResources.PAYMENT;
   action:
@@ -174,6 +202,7 @@ export type AuditLogParams =
   | OrgAuditParams
   | SubmissionAuditParams
   | FileAuditParams
+  | FormAuditParams
   | AuthAuditParams
   | ApiKeyAuditParams
   | PaymentAuditParams

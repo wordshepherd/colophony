@@ -37,6 +37,15 @@ export const submissionSchema = z.object({
   title: z.string().nullable().describe("Title of the submission"),
   content: z.string().nullable().describe("Body content of the submission"),
   coverLetter: z.string().nullable().describe("Optional cover letter"),
+  formDefinitionId: z
+    .string()
+    .uuid()
+    .nullable()
+    .describe("ID of the form definition used, if applicable"),
+  formData: z
+    .record(z.string(), z.unknown())
+    .nullable()
+    .describe("Structured form data keyed by field key"),
   status: submissionStatusSchema,
   submittedAt: z
     .date()
@@ -70,6 +79,15 @@ export const createSubmissionSchema = z.object({
     .uuid()
     .optional()
     .describe("Submission period to associate with"),
+  formDefinitionId: z
+    .string()
+    .uuid()
+    .optional()
+    .describe("Form definition to use for structured data"),
+  formData: z
+    .record(z.string(), z.unknown())
+    .optional()
+    .describe("Structured form data keyed by field key"),
 });
 
 export type CreateSubmissionInput = z.infer<typeof createSubmissionSchema>;
@@ -195,6 +213,11 @@ export const submissionPeriodSchema = z.object({
     .number()
     .nullable()
     .describe("Max submissions allowed (null = unlimited)"),
+  formDefinitionId: z
+    .string()
+    .uuid()
+    .nullable()
+    .describe("ID of the form definition linked to this period"),
   createdAt: z.date().describe("When the period was created"),
   updatedAt: z.date().describe("When the period was last updated"),
 });

@@ -8,6 +8,7 @@ import {
   filesContract,
   usersContract,
   apiKeysContract,
+  formsContract,
 } from "@colophony/api-contracts";
 
 export const colophonyContract = {
@@ -16,4 +17,5 @@ export const colophonyContract = {
   files: filesContract,
   users: usersContract,
   apiKeys: apiKeysContract,
+  forms: formsContract,
 };
