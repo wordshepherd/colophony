@@ -111,4 +111,47 @@ describe("Sidebar", () => {
     render(<Sidebar />);
     expect(screen.getByText("Editor")).toBeInTheDocument();
   });
+
+  it("should show Forms link when isEditor", () => {
+    mockIsEditor = true;
+    render(<Sidebar />);
+    expect(screen.getByText("Forms")).toBeInTheDocument();
+    const formsLink = screen.getByText("Forms").closest("a");
+    expect(formsLink).toHaveAttribute("href", "/editor/forms");
+  });
+
+  it("should not highlight Editor Dashboard when on /editor/forms", () => {
+    mockIsEditor = true;
+    mockPathname = "/editor/forms";
+    render(<Sidebar />);
+
+    const dashboardLink = screen.getByText("Editor Dashboard").closest("a");
+    // /editor uses exact match — should NOT be active on /editor/forms
+    expect(dashboardLink?.className).not.toMatch(/(?:^|\s)bg-accent(?:\s|$)/);
+
+    const formsLink = screen.getByText("Forms").closest("a");
+    // /editor/forms uses startsWith — should be active
+    expect(formsLink?.className).toMatch(/(?:^|\s)bg-accent(?:\s|$)/);
+  });
+
+  it("should highlight Editor Dashboard only on exact /editor path", () => {
+    mockIsEditor = true;
+    mockPathname = "/editor";
+    render(<Sidebar />);
+
+    const dashboardLink = screen.getByText("Editor Dashboard").closest("a");
+    expect(dashboardLink?.className).toMatch(/(?:^|\s)bg-accent(?:\s|$)/);
+  });
+
+  it("should highlight Forms on sub-routes like /editor/forms/new", () => {
+    mockIsEditor = true;
+    mockPathname = "/editor/forms/new";
+    render(<Sidebar />);
+
+    const formsLink = screen.getByText("Forms").closest("a");
+    expect(formsLink?.className).toMatch(/(?:^|\s)bg-accent(?:\s|$)/);
+
+    const dashboardLink = screen.getByText("Editor Dashboard").closest("a");
+    expect(dashboardLink?.className).not.toMatch(/(?:^|\s)bg-accent(?:\s|$)/);
+  });
 });
