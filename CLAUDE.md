@@ -228,14 +228,83 @@ All other version pins are in their respective per-directory CLAUDE.md files.
 
 For interactive Codex in tmux: source nvm, `nvm use v22.22.0`, then `codex`. Use `codex resume` or `codex fork --last` for follow-up.
 
-### Plan Structure: Codex Review as First Steps
+### Decision Surfacing in Plan Mode
 
-Every non-trivial plan **must enforce Codex review via task list entries**. When creating task list entries for a plan, always create these two tasks first:
+After exploring the codebase but **before writing the implementation plan**, enumerate any architectural gray areas discovered during exploration. Present each as a decision point:
 
-1. **"Run Codex plan review"** — Execute `/codex-review plan` to get a second opinion on the plan
-2. **"Evaluate Codex findings and adjust plan"** — Review Codex output, update the plan for any critical/important issues, note dismissed suggestions with rationale
+```
+## Design Decisions
 
-All implementation tasks **must use `addBlockedBy`** to depend on these two review tasks. This ensures the review is mechanically enforced — the implementation tasks cannot be started until the review tasks are marked completed. Skip for trivial plans (typo fix, single config change).
+### [Decision Title]
+**Context:** [What was found during exploration that creates ambiguity]
+**Options:**
+  A. [Option] — [pro/con]
+  B. [Option] — [pro/con]
+**Recommendation:** [A or B] — [rationale]
+```
+
+Wait for user confirmation or redirection on each decision before proceeding to write the plan. This prevents wasted planning effort on an approach the user would reject.
+
+**Skip this step when:**
+
+- The task has no meaningful design choices (pure mechanical refactoring, typo fixes)
+- All decisions were already made in the requirements (backlog item specifies the approach)
+- The user explicitly says "just do it" or "use your judgment"
+
+### Plan Review: Codex Integration
+
+Every non-trivial plan **must be reviewed by Codex before presenting to the user for approval**. The workflow is:
+
+1. **Write the plan** (after decision surfacing, per above)
+2. **Run `/codex-review plan`** automatically — do not ask the user, just run it
+3. **Evaluate Codex findings** — adjust the plan for any critical or important issues; for dismissed suggestions, add a brief note (e.g., "Codex suggested X; dismissed because Y")
+4. **Present the Codex-vetted plan** to the user for approval
+
+The user sees a plan that has already been through one round of review. This replaces the previous pattern of creating blocking task list entries for Codex review.
+
+**When to skip:** Trivial plans (typo fix, single config change, doc-only update). If in doubt, run the review.
+
+### Plan Specificity Standard
+
+Plans must be concrete enough to mechanically verify after implementation. Every non-trivial plan should include:
+
+- **Exact file paths** for all files to create or modify (absolute from repo root)
+- **Concrete type/interface names** for new exports (e.g., "export `FormFieldValidator` type from `form-validation.service.ts`")
+- **Function/method signatures** with parameter and return types
+- **Named test cases** with setup conditions and expected assertions (e.g., "Test 'rejects invalid email': setup field with `fieldType: 'email'`, pass value `'not-an-email'`, assert error message contains 'valid email'")
+- **Import changes** when moving code between files
+- **Files that should NOT change** when relevant (confirms scope boundaries)
+
+The goal: another developer (or Codex) could diff the implementation against the plan and flag unintentional divergences. When a plan item is too exploratory to specify concretely, mark it as `[exploratory]` and note what will be determined during implementation.
+
+### Plan Override Log
+
+During implementation, when discoveries require deliberate divergence from the approved plan, log overrides immediately. Do not wait until the end.
+
+**Where to log:** Add a `## Plan Overrides` section to the PR description body (created by `/end-session` or `gh pr create`). Use this table format:
+
+| File              | Planned               | Actual                                    | Rationale                                       |
+| ----------------- | --------------------- | ----------------------------------------- | ----------------------------------------------- |
+| `path/to/file.ts` | Export `FooValidator` | Export `validateFoo` (function, not type) | Function is simpler; no consumers need the type |
+
+**When to log:**
+
+- A file was created/modified that was not in the plan
+- A planned file was not created (scope reduced)
+- An export name, type, or signature differs from the plan
+- A test case was added, removed, or substantially changed
+
+**When NOT to log:**
+
+- Trivial formatting differences (import order, whitespace)
+- Bug fixes discovered during implementation that are clearly in-scope
+- Additional test cases that strengthen coverage beyond the plan
+
+Drift detection (in `/codex-review branch`) reads this section and excludes acknowledged overrides from its findings.
+
+### File Size Guideline
+
+Soft limit of 500 lines per source file. Files exceeding 500 lines should be flagged during `/codex-review` for potential extraction. This is a review trigger, not a hard gate — some files (e.g., schema definitions, test suites) naturally exceed this. When flagged, evaluate whether there is a natural seam for extraction (pure logic vs DB-dependent, CRUD vs validation, etc.).
 
 ### MCP Servers (restart Claude Code to activate)
 

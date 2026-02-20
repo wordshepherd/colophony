@@ -46,3 +46,6 @@ Thumbs.db
 
 # Docker bind mounts (Zitadel PAT, etc.)
 .docker/
+
+# Session handoff (machine-readable, not for version control)
+session-handoff.md
