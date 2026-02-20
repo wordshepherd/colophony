@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -128,12 +128,17 @@ export function SubmissionForm({ mode, submissionId }: SubmissionFormProps) {
     }
   }, [existingSubmission, mode, form, formDefinition, formDataDefaults]);
 
-  // Reset formData defaults when a different form is selected in create mode
+  // Reset formData defaults when a different form is selected in create mode.
+  // Track previous selection to avoid resetting on background query refetches.
+  const prevSelectedFormRef = useRef<string | undefined>(undefined);
   useEffect(() => {
-    if (mode === "create" && formDefinition) {
-      form.setValue("formData", formDataDefaults, { shouldValidate: false });
+    if (mode === "create" && selectedFormId !== prevSelectedFormRef.current) {
+      prevSelectedFormRef.current = selectedFormId;
+      if (formDefinition) {
+        form.setValue("formData", formDataDefaults, { shouldValidate: false });
+      }
     }
-  }, [formDefinition, formDataDefaults, mode, form]);
+  }, [formDefinition, formDataDefaults, mode, form, selectedFormId]);
 
   // Create mutation
   const createMutation = trpc.submissions.create.useMutation({
