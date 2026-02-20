@@ -131,13 +131,14 @@ describe("useFormBuilder", () => {
     expect(result.current.selectedFieldId).toBeNull();
   });
 
-  it("addField calls mutation with generated key and label", () => {
+  it("addField derives key from max existing suffix to avoid collisions", () => {
     const { result } = renderHook(() => useFormBuilder("form-1"));
 
     act(() => {
       result.current.addField("text");
     });
 
+    // text_1 already exists, so next suffix is max(1) + 1 = 2
     expect(mockMutate).toHaveBeenCalledWith(
       expect.objectContaining({
         id: "form-1",
@@ -149,7 +150,7 @@ describe("useFormBuilder", () => {
     );
   });
 
-  it("addField uses base label when no existing fields of that type", () => {
+  it("addField uses suffix 1 when no existing fields of that type", () => {
     const { result } = renderHook(() => useFormBuilder("form-1"));
 
     act(() => {
@@ -161,6 +162,31 @@ describe("useFormBuilder", () => {
         fieldKey: "number_1",
         fieldType: "number",
         label: "Number",
+      }),
+    );
+  });
+
+  it("addField avoids key collision after deletion (max suffix logic)", () => {
+    // Simulate: text_1 deleted, only text_3 remains
+    mockFormData = {
+      id: "form-1",
+      name: "Test Form",
+      fields: [
+        { id: "f3", fieldType: "text", fieldKey: "text_3", label: "Text 3" },
+      ],
+    };
+    const { result } = renderHook(() => useFormBuilder("form-1"));
+
+    act(() => {
+      result.current.addField("text");
+    });
+
+    // Should use max(3) + 1 = 4, not count(1) + 1 = 2
+    expect(mockMutate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        fieldKey: "text_4",
+        fieldType: "text",
+        label: "Text 4",
       }),
     );
   });

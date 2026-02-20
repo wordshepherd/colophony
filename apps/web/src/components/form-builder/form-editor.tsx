@@ -74,6 +74,7 @@ export function FormEditor({ formId }: FormEditorProps) {
     (event: DragEndEvent) => {
       const { active, over } = event;
       if (!over || active.id === over.id || !form) return;
+      if (form.status !== "DRAFT") return;
 
       const fieldIds = form.fields.map((f) => f.id);
       const oldIndex = fieldIds.indexOf(active.id as string);
@@ -273,11 +274,16 @@ export function FormEditor({ formId }: FormEditorProps) {
                 fields={form.fields}
                 selectedFieldId={selectedFieldId}
                 onSelectField={setSelectedFieldId}
-                onRemoveField={(fieldId) =>
-                  removeField.mutate({ id: formId, fieldId })
+                onRemoveField={
+                  canEdit
+                    ? (fieldId) => removeField.mutate({ id: formId, fieldId })
+                    : () => {}
                 }
-                onReorder={(fieldIds) =>
-                  reorderFields.mutate({ id: formId, fieldIds })
+                onReorder={
+                  canEdit
+                    ? (fieldIds) =>
+                        reorderFields.mutate({ id: formId, fieldIds })
+                    : () => {}
                 }
               />
             </div>

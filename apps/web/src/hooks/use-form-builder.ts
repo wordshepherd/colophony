@@ -80,11 +80,19 @@ export function useFormBuilder(formId: string) {
   const addField = useCallback(
     (fieldType: FormFieldType) => {
       const fields = formQuery.data?.fields ?? [];
-      const typeCount = fields.filter((f) => f.fieldType === fieldType).length;
-      const fieldKey = `${fieldType}_${typeCount + 1}`;
+      const prefix = `${fieldType}_`;
+      // Derive next suffix from max existing suffix to avoid collisions after deletions
+      const maxSuffix = fields
+        .filter((f) => f.fieldKey.startsWith(prefix))
+        .reduce((max, f) => {
+          const num = parseInt(f.fieldKey.slice(prefix.length), 10);
+          return Number.isNaN(num) ? max : Math.max(max, num);
+        }, 0);
+      const nextNum = maxSuffix + 1;
+      const fieldKey = `${prefix}${nextNum}`;
       const label =
         fieldType.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()) +
-        (typeCount > 0 ? ` ${typeCount + 1}` : "");
+        (nextNum > 1 ? ` ${nextNum}` : "");
 
       addFieldMutation.mutate({
         id: formId,
