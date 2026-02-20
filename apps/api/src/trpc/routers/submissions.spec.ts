@@ -54,6 +54,12 @@ vi.mock('../../services/submission.service.js', () => ({
       super('Cannot submit: one or more files have been flagged as infected');
     }
   },
+  FormDefinitionMismatchError: class FormDefinitionMismatchError extends Error {
+    name = 'FormDefinitionMismatchError';
+    constructor() {
+      super('Form definition mismatch');
+    }
+  },
 }));
 
 // Mock @colophony/db

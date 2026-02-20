@@ -221,6 +221,11 @@ builder.mutationFields((t) => ({
         required: false,
         description: 'Submission period to associate with.',
       }),
+      formDefinitionId: t.arg.string({
+        required: false,
+        description: 'Form definition to use for structured data.',
+      }),
+      formData: t.arg({ type: 'JSON', required: false }),
     },
     resolve: async (_root, args, ctx) => {
       const orgCtx = requireOrgContext(ctx);
@@ -230,6 +235,8 @@ builder.mutationFields((t) => ({
         content: args.content ?? undefined,
         coverLetter: args.coverLetter ?? undefined,
         submissionPeriodId: args.submissionPeriodId ?? undefined,
+        formDefinitionId: args.formDefinitionId ?? undefined,
+        formData: args.formData ?? undefined,
       });
       try {
         return await submissionService.createWithAudit(
@@ -259,6 +266,7 @@ builder.mutationFields((t) => ({
         required: false,
         description: 'New cover letter.',
       }),
+      formData: t.arg({ type: 'JSON', required: false }),
     },
     resolve: async (_root, args, ctx) => {
       const orgCtx = requireOrgContext(ctx);
@@ -268,6 +276,7 @@ builder.mutationFields((t) => ({
         title: args.title ?? undefined,
         content: args.content ?? undefined,
         coverLetter: args.coverLetter ?? undefined,
+        formData: args.formData ?? undefined,
       });
       try {
         return await submissionService.updateAsOwner(

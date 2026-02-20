@@ -102,6 +102,10 @@ export const updateSubmissionSchema = z.object({
     .describe("New title for the submission"),
   content: z.string().max(50000).optional().describe("New body content"),
   coverLetter: z.string().max(10000).optional().describe("New cover letter"),
+  formData: z
+    .record(z.string(), z.unknown())
+    .optional()
+    .describe("Updated structured form data keyed by field key"),
 });
 
 export type UpdateSubmissionInput = z.infer<typeof updateSubmissionSchema>;

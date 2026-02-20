@@ -11,6 +11,7 @@ import {
   InvalidStatusTransitionError,
   UnscannedFilesError,
   InfectedFilesError,
+  FormDefinitionMismatchError,
 } from '../services/submission.service.js';
 import { LastAdminError } from '../services/organization.service.js';
 import {
@@ -40,6 +41,7 @@ const errorCodeMap: [new (...args: never[]) => Error, GraphQLErrorCode][] = [
   [InvalidStatusTransitionError, 'BAD_REQUEST'],
   [UnscannedFilesError, 'BAD_REQUEST'],
   [InfectedFilesError, 'BAD_REQUEST'],
+  [FormDefinitionMismatchError, 'BAD_REQUEST'],
   [LastAdminError, 'BAD_REQUEST'],
   // Form errors
   [FormNotFoundError, 'NOT_FOUND'],
@@ -67,6 +69,13 @@ export function mapServiceError(error: unknown): never {
   }
 
   if (error instanceof Error) {
+    // Surface fieldErrors for form validation failures
+    if (error instanceof InvalidFormDataError) {
+      throw new GraphQLError(error.message, {
+        extensions: { code: 'BAD_REQUEST', fieldErrors: error.fieldErrors },
+      });
+    }
+
     for (const [ErrorClass, code] of errorCodeMap) {
       if (error instanceof ErrorClass) {
         throw new GraphQLError(error.message, {
