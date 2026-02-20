@@ -63,3 +63,6 @@ builder.addScalarType('JSON', JSONScalar);
 
 // Query root — resolvers add fields via builder.queryFields()
 builder.queryType({});
+
+// Mutation root — resolvers add fields via builder.mutationFields()
+builder.mutationType({});

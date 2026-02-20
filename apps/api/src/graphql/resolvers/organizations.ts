@@ -1,8 +1,26 @@
-import { paginationSchema } from '@colophony/types';
+import {
+  paginationSchema,
+  createOrganizationSchema,
+  updateOrganizationSchema,
+  inviteMemberSchema,
+  updateMemberRoleSchema,
+  memberIdParamSchema,
+} from '@colophony/types';
 import { builder } from '../builder.js';
-import { requireAuth, requireOrgContext, requireScopes } from '../guards.js';
+import {
+  requireAuth,
+  requireOrgContext,
+  requireAdmin,
+  requireScopes,
+} from '../guards.js';
+import { toServiceContext } from '../../services/context.js';
 import { organizationService } from '../../services/organization.service.js';
-import { OrganizationType } from '../types/index.js';
+import { mapServiceError } from '../error-mapper.js';
+import { OrganizationType, OrganizationMemberType } from '../types/index.js';
+import {
+  CreateOrganizationPayload,
+  SuccessPayload,
+} from '../types/payloads.js';
 
 // ---------------------------------------------------------------------------
 // Paginated response types
@@ -120,6 +138,148 @@ builder.queryFields((t) => ({
         limit: args.limit,
       });
       return organizationService.listMembers(orgCtx.dbTx, input);
+    },
+  }),
+}));
+
+// ---------------------------------------------------------------------------
+// Mutation fields
+// ---------------------------------------------------------------------------
+
+builder.mutationFields((t) => ({
+  /**
+   * Create a new organization. No org context needed (it doesn't exist yet).
+   */
+  createOrganization: t.field({
+    type: CreateOrganizationPayload,
+    args: {
+      name: t.arg.string({ required: true }),
+      slug: t.arg.string({ required: true }),
+    },
+    resolve: async (_root, args, ctx) => {
+      const authed = requireAuth(ctx);
+      await requireScopes(ctx, 'organizations:write');
+      const input = createOrganizationSchema.parse({
+        name: args.name,
+        slug: args.slug,
+      });
+      try {
+        return await organizationService.createWithAudit(
+          authed.audit,
+          input,
+          authed.authContext.userId,
+        );
+      } catch (e) {
+        mapServiceError(e);
+      }
+    },
+  }),
+
+  /**
+   * Update the current organization (admin only).
+   */
+  updateOrganization: t.field({
+    type: OrganizationType,
+    args: {
+      name: t.arg.string({ required: false }),
+      settings: t.arg({ type: 'JSON', required: false }),
+    },
+    resolve: async (_root, args, ctx) => {
+      const orgCtx = requireAdmin(ctx);
+      await requireScopes(ctx, 'organizations:write');
+      const input = updateOrganizationSchema.parse({
+        name: args.name ?? undefined,
+        settings: args.settings ?? undefined,
+      });
+      try {
+        return await organizationService.updateWithAudit(
+          toServiceContext(orgCtx),
+          input,
+        );
+      } catch (e) {
+        mapServiceError(e);
+      }
+    },
+  }),
+
+  /**
+   * Add a member to the current organization (admin only).
+   */
+  addOrganizationMember: t.field({
+    type: OrganizationMemberType,
+    args: {
+      email: t.arg.string({ required: true }),
+      role: t.arg.string({ required: true }),
+    },
+    resolve: async (_root, args, ctx) => {
+      const orgCtx = requireAdmin(ctx);
+      await requireScopes(ctx, 'organizations:write');
+      const { email, role } = inviteMemberSchema.parse({
+        email: args.email,
+        role: args.role,
+      });
+      try {
+        return await organizationService.addMemberWithAudit(
+          toServiceContext(orgCtx),
+          email,
+          role,
+        );
+      } catch (e) {
+        mapServiceError(e);
+      }
+    },
+  }),
+
+  /**
+   * Remove a member from the current organization (admin only).
+   */
+  removeOrganizationMember: t.field({
+    type: SuccessPayload,
+    args: {
+      memberId: t.arg.string({ required: true }),
+    },
+    resolve: async (_root, args, ctx) => {
+      const orgCtx = requireAdmin(ctx);
+      await requireScopes(ctx, 'organizations:write');
+      const { memberId } = memberIdParamSchema.parse({
+        memberId: args.memberId,
+      });
+      try {
+        return await organizationService.removeMemberWithAudit(
+          toServiceContext(orgCtx),
+          memberId,
+        );
+      } catch (e) {
+        mapServiceError(e);
+      }
+    },
+  }),
+
+  /**
+   * Update a member's role in the current organization (admin only).
+   */
+  updateOrganizationMemberRole: t.field({
+    type: OrganizationMemberType,
+    args: {
+      memberId: t.arg.string({ required: true }),
+      role: t.arg.string({ required: true }),
+    },
+    resolve: async (_root, args, ctx) => {
+      const orgCtx = requireAdmin(ctx);
+      await requireScopes(ctx, 'organizations:write');
+      const { memberId, role } = updateMemberRoleSchema.parse({
+        memberId: args.memberId,
+        role: args.role,
+      });
+      try {
+        return await organizationService.updateMemberRoleWithAudit(
+          toServiceContext(orgCtx),
+          memberId,
+          role,
+        );
+      } catch (e) {
+        mapServiceError(e);
+      }
     },
   }),
 }));

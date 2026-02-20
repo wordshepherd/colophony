@@ -1,5 +1,11 @@
 import type { Submission } from '@colophony/db';
-import { listSubmissionsSchema } from '@colophony/types';
+import {
+  listSubmissionsSchema,
+  createSubmissionSchema,
+  updateSubmissionSchema,
+  updateSubmissionStatusSchema,
+  idParamSchema,
+} from '@colophony/types';
 import { builder } from '../builder.js';
 import { requireOrgContext, requireScopes } from '../guards.js';
 import { toServiceContext } from '../../services/context.js';
@@ -7,6 +13,10 @@ import { assertEditorOrAdmin } from '../../services/errors.js';
 import { submissionService } from '../../services/submission.service.js';
 import { mapServiceError } from '../error-mapper.js';
 import { SubmissionType, SubmissionHistoryType } from '../types/index.js';
+import {
+  SubmissionStatusChangePayload,
+  SuccessPayload,
+} from '../types/payloads.js';
 
 // ---------------------------------------------------------------------------
 // Paginated response types
@@ -135,6 +145,175 @@ builder.queryFields((t) => ({
         return await submissionService.getHistoryWithAccess(
           toServiceContext(orgCtx),
           args.submissionId,
+        );
+      } catch (e) {
+        mapServiceError(e);
+      }
+    },
+  }),
+}));
+
+// ---------------------------------------------------------------------------
+// Mutation fields
+// ---------------------------------------------------------------------------
+
+builder.mutationFields((t) => ({
+  /**
+   * Create a new submission in DRAFT status.
+   */
+  createSubmission: t.field({
+    type: SubmissionType,
+    args: {
+      title: t.arg.string({ required: true }),
+      content: t.arg.string({ required: false }),
+      coverLetter: t.arg.string({ required: false }),
+      submissionPeriodId: t.arg.string({ required: false }),
+    },
+    resolve: async (_root, args, ctx) => {
+      const orgCtx = requireOrgContext(ctx);
+      await requireScopes(ctx, 'submissions:write');
+      const input = createSubmissionSchema.parse({
+        title: args.title,
+        content: args.content ?? undefined,
+        coverLetter: args.coverLetter ?? undefined,
+        submissionPeriodId: args.submissionPeriodId ?? undefined,
+      });
+      try {
+        return await submissionService.createWithAudit(
+          toServiceContext(orgCtx),
+          input,
+        );
+      } catch (e) {
+        mapServiceError(e);
+      }
+    },
+  }),
+
+  /**
+   * Update a DRAFT submission (owner only).
+   */
+  updateSubmission: t.field({
+    type: SubmissionType,
+    args: {
+      id: t.arg.string({ required: true }),
+      title: t.arg.string({ required: false }),
+      content: t.arg.string({ required: false }),
+      coverLetter: t.arg.string({ required: false }),
+    },
+    resolve: async (_root, args, ctx) => {
+      const orgCtx = requireOrgContext(ctx);
+      await requireScopes(ctx, 'submissions:write');
+      const { id } = idParamSchema.parse({ id: args.id });
+      const data = updateSubmissionSchema.parse({
+        title: args.title ?? undefined,
+        content: args.content ?? undefined,
+        coverLetter: args.coverLetter ?? undefined,
+      });
+      try {
+        return await submissionService.updateAsOwner(
+          toServiceContext(orgCtx),
+          id,
+          data,
+        );
+      } catch (e) {
+        mapServiceError(e);
+      }
+    },
+  }),
+
+  /**
+   * Submit a DRAFT submission (DRAFT → SUBMITTED, owner only).
+   */
+  submitSubmission: t.field({
+    type: SubmissionStatusChangePayload,
+    args: {
+      id: t.arg.string({ required: true }),
+    },
+    resolve: async (_root, args, ctx) => {
+      const orgCtx = requireOrgContext(ctx);
+      await requireScopes(ctx, 'submissions:write');
+      const { id } = idParamSchema.parse({ id: args.id });
+      try {
+        return await submissionService.submitAsOwner(
+          toServiceContext(orgCtx),
+          id,
+        );
+      } catch (e) {
+        mapServiceError(e);
+      }
+    },
+  }),
+
+  /**
+   * Delete a DRAFT submission (owner only).
+   */
+  deleteSubmission: t.field({
+    type: SuccessPayload,
+    args: {
+      id: t.arg.string({ required: true }),
+    },
+    resolve: async (_root, args, ctx) => {
+      const orgCtx = requireOrgContext(ctx);
+      await requireScopes(ctx, 'submissions:write');
+      const { id } = idParamSchema.parse({ id: args.id });
+      try {
+        return await submissionService.deleteAsOwner(
+          toServiceContext(orgCtx),
+          id,
+        );
+      } catch (e) {
+        mapServiceError(e);
+      }
+    },
+  }),
+
+  /**
+   * Withdraw a submission (owner only).
+   */
+  withdrawSubmission: t.field({
+    type: SubmissionStatusChangePayload,
+    args: {
+      id: t.arg.string({ required: true }),
+    },
+    resolve: async (_root, args, ctx) => {
+      const orgCtx = requireOrgContext(ctx);
+      await requireScopes(ctx, 'submissions:write');
+      const { id } = idParamSchema.parse({ id: args.id });
+      try {
+        return await submissionService.withdrawAsOwner(
+          toServiceContext(orgCtx),
+          id,
+        );
+      } catch (e) {
+        mapServiceError(e);
+      }
+    },
+  }),
+
+  /**
+   * Update submission status (editor/admin transition with comment).
+   */
+  updateSubmissionStatus: t.field({
+    type: SubmissionStatusChangePayload,
+    args: {
+      id: t.arg.string({ required: true }),
+      status: t.arg.string({ required: true }),
+      comment: t.arg.string({ required: false }),
+    },
+    resolve: async (_root, args, ctx) => {
+      const orgCtx = requireOrgContext(ctx);
+      await requireScopes(ctx, 'submissions:write');
+      const { id } = idParamSchema.parse({ id: args.id });
+      const { status, comment } = updateSubmissionStatusSchema.parse({
+        status: args.status,
+        comment: args.comment ?? undefined,
+      });
+      try {
+        return await submissionService.updateStatusAsEditor(
+          toServiceContext(orgCtx),
+          id,
+          status,
+          comment,
         );
       } catch (e) {
         mapServiceError(e);
