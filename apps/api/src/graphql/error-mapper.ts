@@ -13,6 +13,16 @@ import {
   InfectedFilesError,
 } from '../services/submission.service.js';
 import { LastAdminError } from '../services/organization.service.js';
+import {
+  FormNotFoundError,
+  FormFieldNotFoundError,
+  FormNotDraftError,
+  FormNotPublishedError,
+  DuplicateFieldKeyError,
+  FormHasNoFieldsError,
+  FormInUseError,
+  InvalidFormDataError,
+} from '../services/form.service.js';
 
 type GraphQLErrorCode = string;
 
@@ -31,6 +41,15 @@ const errorCodeMap: [new (...args: never[]) => Error, GraphQLErrorCode][] = [
   [UnscannedFilesError, 'BAD_REQUEST'],
   [InfectedFilesError, 'BAD_REQUEST'],
   [LastAdminError, 'BAD_REQUEST'],
+  // Form errors
+  [FormNotFoundError, 'NOT_FOUND'],
+  [FormFieldNotFoundError, 'NOT_FOUND'],
+  [FormNotDraftError, 'BAD_REQUEST'],
+  [FormNotPublishedError, 'BAD_REQUEST'],
+  [DuplicateFieldKeyError, 'CONFLICT'],
+  [FormHasNoFieldsError, 'BAD_REQUEST'],
+  [FormInUseError, 'BAD_REQUEST'],
+  [InvalidFormDataError, 'BAD_REQUEST'],
   // Precondition
   [FileNotCleanError, 'BAD_REQUEST'],
 ];

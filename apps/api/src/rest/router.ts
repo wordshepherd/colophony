@@ -8,6 +8,7 @@ import { filesRouter } from './routers/files.js';
 import { usersRouter } from './routers/users.js';
 import { apiKeysRouter } from './routers/api-keys.js';
 import { auditRouter } from './routers/audit.js';
+import { formsRouter } from './routers/forms.js';
 import type { RestContext } from './context.js';
 
 const restRouter = {
@@ -16,6 +17,7 @@ const restRouter = {
   files: filesRouter,
   users: usersRouter,
   apiKeys: apiKeysRouter,
+  forms: formsRouter,
   audit: auditRouter,
 };
 
@@ -71,6 +73,11 @@ const openApiHandler = new OpenAPIHandler<RestContext>(restRouter, {
             name: 'API Keys',
             description:
               'Create and manage organization-scoped API keys for programmatic access.',
+          },
+          {
+            name: 'Forms',
+            description:
+              'Create and manage dynamic form definitions for submission intake. Forms define the fields submitters fill out.',
           },
           {
             name: 'Audit',

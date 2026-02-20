@@ -3,6 +3,8 @@ import { globalSetup, getAdminPool, getAppPool } from './helpers/db-setup';
 
 const RLS_TABLES = [
   'organization_members',
+  'form_definitions',
+  'form_fields',
   'submission_periods',
   'submissions',
   'submission_files',
@@ -34,7 +36,7 @@ describe('RLS Infrastructure', () => {
   // No teardown — pools are shared across test files (singleFork mode)
 
   describe('Row-level security enabled', () => {
-    it('should have relrowsecurity = true on all 10 RLS tables', async () => {
+    it('should have relrowsecurity = true on all RLS tables', async () => {
       const admin = getAdminPool();
       const { rows } = await admin.query<{
         relname: string;
@@ -57,7 +59,7 @@ describe('RLS Infrastructure', () => {
       }
     });
 
-    it('should have relforcerowsecurity = true on all 10 RLS tables', async () => {
+    it('should have relforcerowsecurity = true on all RLS tables', async () => {
       const admin = getAdminPool();
       const { rows } = await admin.query<{
         relname: string;
@@ -272,7 +274,12 @@ describe('RLS Infrastructure', () => {
 
     it('direct isolation policies reference current_org_id()', async () => {
       const admin = getAdminPool();
-      const directTables = ['submissions', 'submission_periods', 'payments'];
+      const directTables = [
+        'submissions',
+        'submission_periods',
+        'payments',
+        'form_definitions',
+      ];
       const { rows } = await admin.query<{
         tablename: string;
         qual: string;

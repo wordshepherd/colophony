@@ -152,6 +152,8 @@ function makeSubmissionBase(submitterId = USER_ID) {
     content: 'Roses are red...',
     coverLetter: null,
     status: 'DRAFT' as const,
+    formDefinitionId: null,
+    formData: null,
     submittedAt: null,
     createdAt: new Date(),
     updatedAt: new Date(),

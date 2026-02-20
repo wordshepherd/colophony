@@ -2,6 +2,7 @@ import { relations } from "drizzle-orm";
 import { organizations } from "./organizations";
 import { users } from "./users";
 import { organizationMembers } from "./members";
+import { formDefinitions, formFields } from "./forms";
 import {
   submissionPeriods,
   submissions,
@@ -17,6 +18,7 @@ import { apiKeys } from "./api-keys";
 
 export const organizationsRelations = relations(organizations, ({ many }) => ({
   members: many(organizationMembers),
+  formDefinitions: many(formDefinitions),
   submissionPeriods: many(submissionPeriods),
   submissions: many(submissions),
   payments: many(payments),
@@ -30,6 +32,7 @@ export const organizationsRelations = relations(organizations, ({ many }) => ({
 
 export const usersRelations = relations(users, ({ many }) => ({
   memberships: many(organizationMembers),
+  formDefinitions: many(formDefinitions),
   submissions: many(submissions),
   auditEvents: many(auditEvents),
   dsarRequests: many(dsarRequests),
@@ -53,6 +56,34 @@ export const organizationMembersRelations = relations(
   }),
 );
 
+// --- form_definitions ---
+
+export const formDefinitionsRelations = relations(
+  formDefinitions,
+  ({ one, many }) => ({
+    organization: one(organizations, {
+      fields: [formDefinitions.organizationId],
+      references: [organizations.id],
+    }),
+    creator: one(users, {
+      fields: [formDefinitions.createdBy],
+      references: [users.id],
+    }),
+    fields: many(formFields),
+    submissionPeriods: many(submissionPeriods),
+    submissions: many(submissions),
+  }),
+);
+
+// --- form_fields ---
+
+export const formFieldsRelations = relations(formFields, ({ one }) => ({
+  formDefinition: one(formDefinitions, {
+    fields: [formFields.formDefinitionId],
+    references: [formDefinitions.id],
+  }),
+}));
+
 // --- submission_periods ---
 
 export const submissionPeriodsRelations = relations(
@@ -61,6 +92,10 @@ export const submissionPeriodsRelations = relations(
     organization: one(organizations, {
       fields: [submissionPeriods.organizationId],
       references: [organizations.id],
+    }),
+    formDefinition: one(formDefinitions, {
+      fields: [submissionPeriods.formDefinitionId],
+      references: [formDefinitions.id],
     }),
     submissions: many(submissions),
   }),
@@ -80,6 +115,10 @@ export const submissionsRelations = relations(submissions, ({ one, many }) => ({
   submissionPeriod: one(submissionPeriods, {
     fields: [submissions.submissionPeriodId],
     references: [submissionPeriods.id],
+  }),
+  formDefinition: one(formDefinitions, {
+    fields: [submissions.formDefinitionId],
+    references: [formDefinitions.id],
   }),
   files: many(submissionFiles),
   history: many(submissionHistory),

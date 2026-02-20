@@ -33,6 +33,16 @@ export const SubmissionType = builder
         nullable: true,
         description: 'Optional cover letter.',
       }),
+      formDefinitionId: t.exposeString('formDefinitionId', {
+        nullable: true,
+        description: 'ID of the form definition used for this submission.',
+      }),
+      formData: t.expose('formData', {
+        type: 'JSON',
+        nullable: true,
+        description:
+          'Structured form data keyed by field key (used when form is attached).',
+      }),
       status: t.expose('status', {
         type: SubmissionStatusEnum,
         description: 'Current workflow status.',

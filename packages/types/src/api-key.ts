@@ -10,6 +10,8 @@ export const apiKeyScopeSchema = z
     "submissions:write",
     "files:read",
     "files:write",
+    "forms:read",
+    "forms:write",
     "organizations:read",
     "organizations:write",
     "users:read",
