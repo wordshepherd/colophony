@@ -121,7 +121,11 @@ function buildFieldSchema(field: FormFieldForRenderer): z.ZodTypeAny | null {
         }
       }
       if (field.required) {
-        return s;
+        // Reject empty strings before coercion — z.coerce.number() turns "" into 0
+        return z.preprocess((val) => {
+          if (val === "" || val === undefined || val === null) return NaN; // NaN fails z.coerce.number()
+          return val;
+        }, s);
       }
       return z.preprocess(
         (val) => (val === "" || val === undefined ? undefined : val),

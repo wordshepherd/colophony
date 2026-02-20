@@ -106,6 +106,24 @@ describe("buildFormFieldsSchema", () => {
     expect(schema.safeParse({ age: 50 }).success).toBe(true);
   });
 
+  it("required number field rejects empty string (not coerced to 0)", () => {
+    const { schema } = buildFormFieldsSchema([
+      makeField({
+        fieldKey: "count",
+        fieldType: "number",
+        label: "Count",
+        required: true,
+      }),
+    ]);
+
+    // Empty string should NOT coerce to 0 and pass — it should fail
+    expect(schema.safeParse({ count: "" }).success).toBe(false);
+    expect(schema.safeParse({ count: undefined }).success).toBe(false);
+    // Actual numbers should work
+    expect(schema.safeParse({ count: 0 }).success).toBe(true);
+    expect(schema.safeParse({ count: 42 }).success).toBe(true);
+  });
+
   it("select field validates against options", () => {
     const { schema } = buildFormFieldsSchema([
       makeField({

@@ -102,7 +102,10 @@ export function SubmissionForm({ mode, submissionId }: SubmissionFormProps) {
         title: existingSubmission.title ?? "",
         content: existingSubmission.content ?? "",
         coverLetter: existingSubmission.coverLetter ?? "",
-        formData: existingSubmission.formData ?? formDataDefaults,
+        formData: {
+          ...formDataDefaults,
+          ...(existingSubmission.formData as Record<string, unknown> | null),
+        },
       });
     }
   }, [existingSubmission, mode, form, formDefinition, formDataDefaults]);
