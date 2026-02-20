@@ -1,11 +1,16 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { trpc } from "@/lib/trpc";
+import {
+  DynamicFormFields,
+  buildFormFieldsSchema,
+  mapFieldErrorsToForm,
+} from "./form-renderer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -37,8 +42,6 @@ const formSchema = z.object({
   coverLetter: z.string().max(10000).optional(),
 });
 
-type FormData = z.infer<typeof formSchema>;
-
 interface SubmissionFormProps {
   mode: "create" | "edit";
   submissionId?: string;
@@ -62,25 +65,50 @@ export function SubmissionForm({ mode, submissionId }: SubmissionFormProps) {
     { enabled: mode === "edit" && !!submissionId },
   );
 
-  const form = useForm<FormData>({
-    resolver: zodResolver(formSchema),
+  // Fetch form definition when submission has one
+  const formDefinitionId = existingSubmission?.formDefinitionId;
+  const { data: formDefinition } = trpc.forms.getById.useQuery(
+    { id: formDefinitionId ?? "" },
+    { enabled: !!formDefinitionId },
+  );
+
+  // Build dynamic schema from form definition fields
+  const { schema: formDataSchema, defaultValues: formDataDefaults } = useMemo(
+    () =>
+      formDefinition
+        ? buildFormFieldsSchema(formDefinition.fields)
+        : { schema: z.object({}), defaultValues: {} },
+    [formDefinition],
+  );
+  const fullSchema = useMemo(
+    () => formSchema.extend({ formData: formDataSchema }),
+    [formDataSchema],
+  );
+
+  const form = useForm({
+    resolver: zodResolver(fullSchema),
     defaultValues: {
       title: "",
       content: "",
       coverLetter: "",
+      formData: formDataDefaults,
     },
   });
 
-  // Populate form when editing
+  // Populate form when editing (re-runs when formDefinition loads to apply defaults)
   useEffect(() => {
     if (existingSubmission && mode === "edit") {
       form.reset({
         title: existingSubmission.title ?? "",
         content: existingSubmission.content ?? "",
         coverLetter: existingSubmission.coverLetter ?? "",
+        formData: {
+          ...formDataDefaults,
+          ...(existingSubmission.formData as Record<string, unknown> | null),
+        },
       });
     }
-  }, [existingSubmission, mode, form]);
+  }, [existingSubmission, mode, form, formDefinition, formDataDefaults]);
 
   // Create mutation
   const createMutation = trpc.submissions.create.useMutation({
@@ -115,20 +143,26 @@ export function SubmissionForm({ mode, submissionId }: SubmissionFormProps) {
       router.push(`/submissions/${submissionId}`);
     },
     onError: (err) => {
-      setError(err.message);
+      // Map field-level validation errors to form fields; fall back to generic error
+      if (!mapFieldErrorsToForm(err, form.setError)) {
+        setError(err.message);
+      }
     },
   });
 
-  const onSubmit = async (data: FormData) => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const onSubmit = async (data: any) => {
     setError(null);
+    const { formData, ...rest } = data;
 
     if (mode === "create") {
-      await createMutation.mutateAsync(data);
+      await createMutation.mutateAsync({ ...rest, formData });
     } else if (submissionId) {
       // v2: flattened input — { id, ...data } instead of { id, data }
       await updateMutation.mutateAsync({
         id: submissionId,
-        ...data,
+        ...rest,
+        formData,
       });
     }
   };
@@ -142,9 +176,11 @@ export function SubmissionForm({ mode, submissionId }: SubmissionFormProps) {
 
     // Save changes first (v2: flattened input)
     const data = form.getValues();
+    const { formData, ...rest } = data;
     await updateMutation.mutateAsync({
       id: submissionId,
-      ...data,
+      ...rest,
+      formData,
     });
 
     // Check for pending/infected files
@@ -162,7 +198,7 @@ export function SubmissionForm({ mode, submissionId }: SubmissionFormProps) {
       return;
     }
 
-    // Submit
+    // Submit (field errors mapped in onError callback)
     await submitMutation.mutateAsync({ id: submissionId });
   };
 
@@ -281,6 +317,14 @@ export function SubmissionForm({ mode, submissionId }: SubmissionFormProps) {
               />
             </CardContent>
           </Card>
+
+          {/* Dynamic form fields — shown when submission links to a form */}
+          {formDefinitionId && (
+            <DynamicFormFields
+              formDefinitionId={formDefinitionId}
+              disabled={!canEdit}
+            />
+          )}
 
           {/* File upload - only shown after creation */}
           {mode === "edit" && submissionId && (

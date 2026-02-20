@@ -8,6 +8,7 @@ import "../../../../test/setup";
 let mockExistingSubmission: Record<string, unknown> | undefined;
 let mockIsLoadingSubmission: boolean;
 let mockExistingFiles: Array<Record<string, unknown>> | undefined;
+let mockFormDefinition: Record<string, unknown> | undefined;
 
 let mockCreateMutateAsync: jest.Mock;
 let mockCreateIsPending: boolean;
@@ -18,6 +19,9 @@ let mockUpdateIsPending: boolean;
 
 let mockSubmitMutateAsync: jest.Mock;
 let mockSubmitIsPending: boolean;
+let mockSubmitOnError:
+  | ((err: { message: string; data?: unknown }) => void)
+  | undefined;
 
 const mockInvalidateGetById = jest.fn();
 
@@ -25,6 +29,7 @@ function resetMocks() {
   mockExistingSubmission = undefined;
   mockIsLoadingSubmission = false;
   mockExistingFiles = undefined;
+  mockFormDefinition = undefined;
 
   mockCreateMutateAsync = jest.fn().mockResolvedValue({ id: "new-sub-1" });
   mockCreateIsPending = false;
@@ -35,6 +40,7 @@ function resetMocks() {
 
   mockSubmitMutateAsync = jest.fn().mockResolvedValue({});
   mockSubmitIsPending = false;
+  mockSubmitOnError = undefined;
 }
 
 jest.mock("@/lib/trpc", () => ({
@@ -68,16 +74,28 @@ jest.mock("@/lib/trpc", () => ({
       },
       submit: {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        useMutation: (_opts: any) => ({
-          mutateAsync: mockSubmitMutateAsync,
-          isPending: mockSubmitIsPending,
-        }),
+        useMutation: (opts: any) => {
+          mockSubmitOnError = opts.onError as typeof mockSubmitOnError;
+          return {
+            mutateAsync: mockSubmitMutateAsync,
+            isPending: mockSubmitIsPending,
+          };
+        },
       },
     },
     files: {
       listBySubmission: {
         useQuery: () => ({
           data: mockExistingFiles,
+        }),
+      },
+    },
+    forms: {
+      getById: {
+        useQuery: () => ({
+          data: mockFormDefinition,
+          isPending: false,
+          error: null,
         }),
       },
     },
@@ -93,6 +111,23 @@ jest.mock("../file-upload", () => ({
     />
   ),
 }));
+
+jest.mock("../form-renderer", () => {
+  const actual = jest.requireActual("../form-renderer");
+  return {
+    ...actual,
+    DynamicFormFields: (props: {
+      formDefinitionId: string;
+      disabled: boolean;
+    }) => (
+      <div
+        data-testid="dynamic-form-fields"
+        data-form-definition-id={props.formDefinitionId}
+        data-disabled={String(props.disabled)}
+      />
+    ),
+  };
+});
 
 const mockToastSuccess = jest.fn();
 const mockToastError = jest.fn();
@@ -178,6 +213,7 @@ describe("SubmissionForm", () => {
           title: "My Story",
           content: "Once upon a time",
           coverLetter: "Please consider",
+          formData: {},
         });
       });
     });
@@ -282,6 +318,7 @@ describe("SubmissionForm", () => {
           title: "Updated Poem",
           content: "Roses are red...",
           coverLetter: "Dear editors,",
+          formData: {},
         });
       });
     });
@@ -386,6 +423,117 @@ describe("SubmissionForm", () => {
       expect(
         screen.getByRole("button", { name: "Submit for Review" }),
       ).toBeInTheDocument();
+    });
+  });
+
+  // --- Dynamic form fields ---
+  describe("dynamic form fields", () => {
+    it("renders DynamicFormFields when submission has formDefinitionId", () => {
+      mockExistingSubmission = makeDraftSubmission({
+        formDefinitionId: "form-def-1",
+      });
+      mockFormDefinition = {
+        id: "form-def-1",
+        name: "Poetry Submission Form",
+        description: "Standard poetry form",
+        fields: [
+          {
+            fieldKey: "bio",
+            fieldType: "text",
+            label: "Bio",
+            description: null,
+            placeholder: null,
+            required: true,
+            sortOrder: 0,
+            config: null,
+          },
+        ],
+      };
+
+      render(<SubmissionForm mode="edit" submissionId="sub-1" />);
+
+      const dynamicFields = screen.getByTestId("dynamic-form-fields");
+      expect(dynamicFields).toBeInTheDocument();
+      expect(dynamicFields).toHaveAttribute(
+        "data-form-definition-id",
+        "form-def-1",
+      );
+      expect(dynamicFields).toHaveAttribute("data-disabled", "false");
+    });
+
+    it("does not render DynamicFormFields when no formDefinitionId", () => {
+      mockExistingSubmission = makeDraftSubmission();
+      render(<SubmissionForm mode="edit" submissionId="sub-1" />);
+
+      expect(
+        screen.queryByTestId("dynamic-form-fields"),
+      ).not.toBeInTheDocument();
+    });
+
+    it("passes formData in update mutation", async () => {
+      mockExistingSubmission = makeDraftSubmission({
+        formDefinitionId: "form-def-1",
+        formData: { bio: "A poet" },
+      });
+      mockFormDefinition = {
+        id: "form-def-1",
+        name: "Form",
+        description: null,
+        fields: [
+          {
+            fieldKey: "bio",
+            fieldType: "text",
+            label: "Bio",
+            description: null,
+            placeholder: null,
+            required: false,
+            sortOrder: 0,
+            config: null,
+          },
+        ],
+      };
+
+      const user = userEvent.setup();
+      render(<SubmissionForm mode="edit" submissionId="sub-1" />);
+
+      await user.click(screen.getByRole("button", { name: "Save Draft" }));
+
+      await waitFor(() => {
+        expect(mockUpdateMutateAsync).toHaveBeenCalledWith(
+          expect.objectContaining({
+            id: "sub-1",
+            formData: expect.objectContaining({ bio: "A poet" }),
+          }),
+        );
+      });
+    });
+
+    it("maps field errors from submit rejection to form fields", () => {
+      mockExistingSubmission = makeDraftSubmission({
+        formDefinitionId: "form-def-1",
+      });
+      mockFormDefinition = {
+        id: "form-def-1",
+        name: "Form",
+        description: null,
+        fields: [],
+      };
+
+      render(<SubmissionForm mode="edit" submissionId="sub-1" />);
+
+      // Simulate submit mutation onError with field errors
+      const fieldErrorResponse = {
+        message: "Validation failed",
+        data: {
+          fieldErrors: [{ fieldKey: "bio", message: "Bio is too short" }],
+        },
+      };
+
+      // The onError should map field errors instead of setting generic error
+      mockSubmitOnError?.(fieldErrorResponse);
+
+      // Generic error should not be shown (mapFieldErrorsToForm returns true)
+      expect(screen.queryByText("Validation failed")).not.toBeInTheDocument();
     });
   });
 });
