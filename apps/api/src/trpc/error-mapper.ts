@@ -24,6 +24,10 @@ import {
   FormInUseError,
   InvalidFormDataError,
 } from '../services/form.service.js';
+import {
+  PeriodNotFoundError,
+  PeriodHasSubmissionsError,
+} from '../services/period.service.js';
 
 type TRPCErrorCode = ConstructorParameters<typeof TRPCError>[0]['code'];
 
@@ -52,6 +56,9 @@ const errorCodeMap: [new (...args: never[]) => Error, TRPCErrorCode][] = [
   [FormHasNoFieldsError, 'BAD_REQUEST'],
   [FormInUseError, 'BAD_REQUEST'],
   [InvalidFormDataError, 'BAD_REQUEST'],
+  // Period errors
+  [PeriodNotFoundError, 'NOT_FOUND'],
+  [PeriodHasSubmissionsError, 'BAD_REQUEST'],
   // Precondition
   [FileNotCleanError, 'PRECONDITION_FAILED'],
 ];

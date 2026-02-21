@@ -51,6 +51,11 @@ export const AuditActions = {
   API_KEY_AUTH_FAILED: "API_KEY_AUTH_FAILED",
   API_KEY_SCOPE_DENIED: "API_KEY_SCOPE_DENIED",
 
+  // Period lifecycle
+  PERIOD_CREATED: "PERIOD_CREATED",
+  PERIOD_UPDATED: "PERIOD_UPDATED",
+  PERIOD_DELETED: "PERIOD_DELETED",
+
   // Form lifecycle
   FORM_CREATED: "FORM_CREATED",
   FORM_UPDATED: "FORM_UPDATED",
@@ -79,6 +84,7 @@ export const AuditResources = {
   ORGANIZATION: "organization",
   SUBMISSION: "submission",
   FILE: "file",
+  PERIOD: "period",
   FORM: "form",
   AUTH: "auth",
   API_KEY: "api_key",
@@ -169,6 +175,14 @@ export interface ApiKeyAuditParams extends BaseAuditParams {
     | typeof AuditActions.API_KEY_SCOPE_DENIED;
 }
 
+export interface PeriodAuditParams extends BaseAuditParams {
+  resource: typeof AuditResources.PERIOD;
+  action:
+    | typeof AuditActions.PERIOD_CREATED
+    | typeof AuditActions.PERIOD_UPDATED
+    | typeof AuditActions.PERIOD_DELETED;
+}
+
 export interface FormAuditParams extends BaseAuditParams {
   resource: typeof AuditResources.FORM;
   action:
@@ -202,6 +216,7 @@ export type AuditLogParams =
   | OrgAuditParams
   | SubmissionAuditParams
   | FileAuditParams
+  | PeriodAuditParams
   | FormAuditParams
   | AuthAuditParams
   | ApiKeyAuditParams
