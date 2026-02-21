@@ -482,6 +482,31 @@ describe('Submission mutations — resolver wiring', () => {
     expect(result).toEqual(submission);
   });
 
+  it('submission query validates id as UUID', async () => {
+    const queryType = schema.getQueryType();
+    const field = queryType!.getFields()['submission'];
+    await expect(
+      field.resolve!({}, { id: 'not-a-uuid' }, makeCtx(), {} as never),
+    ).rejects.toThrow();
+    // eslint-disable-next-line @typescript-eslint/unbound-method
+    expect(submissionService.getByIdWithAccess).not.toHaveBeenCalled();
+  });
+
+  it('submissionHistory query validates submissionId as UUID', async () => {
+    const queryType = schema.getQueryType();
+    const field = queryType!.getFields()['submissionHistory'];
+    await expect(
+      field.resolve!(
+        {},
+        { submissionId: 'not-a-uuid' },
+        makeCtx(),
+        {} as never,
+      ),
+    ).rejects.toThrow();
+    // eslint-disable-next-line @typescript-eslint/unbound-method
+    expect(submissionService.getHistoryWithAccess).not.toHaveBeenCalled();
+  });
+
   it('updateSubmission passes formData to service', async () => {
     const submission = {
       id: 'sub-1',
