@@ -250,8 +250,8 @@ export const createSubmissionPeriodSchema = z.object({
     .max(2000)
     .optional()
     .describe("Description of the period (max 2,000 chars)"),
-  opensAt: z.date().describe("When submissions open (ISO-8601)"),
-  closesAt: z.date().describe("When submissions close (ISO-8601)"),
+  opensAt: z.coerce.date().describe("When submissions open (ISO-8601)"),
+  closesAt: z.coerce.date().describe("When submissions close (ISO-8601)"),
   fee: z
     .number()
     .min(0)
@@ -263,10 +263,70 @@ export const createSubmissionPeriodSchema = z.object({
     .min(1)
     .optional()
     .describe("Maximum number of submissions (omit for unlimited)"),
+  formDefinitionId: z
+    .string()
+    .uuid()
+    .optional()
+    .describe("Form definition to link to this period"),
 });
 
 export type CreateSubmissionPeriodInput = z.infer<
   typeof createSubmissionPeriodSchema
+>;
+
+export const updateSubmissionPeriodSchema = createSubmissionPeriodSchema
+  .partial()
+  .extend({
+    formDefinitionId: z
+      .string()
+      .uuid()
+      .nullable()
+      .optional()
+      .describe("Form definition to link (null to unlink)"),
+  });
+export type UpdateSubmissionPeriodInput = z.infer<
+  typeof updateSubmissionPeriodSchema
+>;
+
+export const periodStatusSchema = z.enum(["UPCOMING", "OPEN", "CLOSED"]);
+export type PeriodStatus = z.infer<typeof periodStatusSchema>;
+
+/**
+ * Compute the status of a submission period from its date range.
+ * UPCOMING = not yet open, OPEN = currently accepting, CLOSED = past deadline.
+ */
+export function computePeriodStatus(
+  opensAt: Date,
+  closesAt: Date,
+): PeriodStatus {
+  const now = new Date();
+  if (now < opensAt) return "UPCOMING";
+  if (now <= closesAt) return "OPEN";
+  return "CLOSED";
+}
+
+export const listSubmissionPeriodsSchema = z.object({
+  status: periodStatusSchema
+    .optional()
+    .describe("Filter by computed period status"),
+  search: z
+    .string()
+    .trim()
+    .max(200)
+    .optional()
+    .describe("Search period name (max 200 chars)"),
+  page: z.number().int().min(1).default(1).describe("Page number (1-based)"),
+  limit: z
+    .number()
+    .int()
+    .min(1)
+    .max(100)
+    .default(20)
+    .describe("Items per page (1-100, default 20)"),
+});
+
+export type ListSubmissionPeriodsInput = z.infer<
+  typeof listSubmissionPeriodsSchema
 >;
 
 /**
