@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { formatDistanceToNow, format } from "date-fns";
 import { trpc } from "@/lib/trpc";
-import { useAuth } from "@/hooks/use-auth";
 import { useOrganization } from "@/hooks/use-organization";
 import { StatusBadge } from "./status-badge";
 import { StatusTransition } from "./status-transition";
@@ -68,8 +67,7 @@ export function SubmissionDetail({
   backHref = "/submissions",
 }: SubmissionDetailProps) {
   const router = useRouter();
-  const { user } = useAuth();
-  const { isEditor, isAdmin } = useOrganization();
+  const { user, isEditor, isAdmin } = useOrganization();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showWithdrawDialog, setShowWithdrawDialog] = useState(false);
   const utils = trpc.useUtils();
