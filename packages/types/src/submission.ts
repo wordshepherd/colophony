@@ -250,8 +250,8 @@ export const createSubmissionPeriodSchema = z.object({
     .max(2000)
     .optional()
     .describe("Description of the period (max 2,000 chars)"),
-  opensAt: z.date().describe("When submissions open (ISO-8601)"),
-  closesAt: z.date().describe("When submissions close (ISO-8601)"),
+  opensAt: z.coerce.date().describe("When submissions open (ISO-8601)"),
+  closesAt: z.coerce.date().describe("When submissions close (ISO-8601)"),
   fee: z
     .number()
     .min(0)
