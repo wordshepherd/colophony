@@ -9,6 +9,7 @@ import { usersRouter } from './routers/users.js';
 import { apiKeysRouter } from './routers/api-keys.js';
 import { auditRouter } from './routers/audit.js';
 import { formsRouter } from './routers/forms.js';
+import { periodsRouter } from './routers/periods.js';
 import type { RestContext } from './context.js';
 
 const restRouter = {
@@ -18,6 +19,7 @@ const restRouter = {
   users: usersRouter,
   apiKeys: apiKeysRouter,
   forms: formsRouter,
+  periods: periodsRouter,
   audit: auditRouter,
 };
 
@@ -78,6 +80,11 @@ const openApiHandler = new OpenAPIHandler<RestContext>(restRouter, {
             name: 'Forms',
             description:
               'Create and manage dynamic form definitions for submission intake. Forms define the fields submitters fill out.',
+          },
+          {
+            name: 'Periods',
+            description:
+              'Manage submission periods — time windows during which submissions are accepted.',
           },
           {
             name: 'Audit',
