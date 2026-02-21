@@ -256,7 +256,7 @@
 
 ### QA Observations
 
-- [ ] [P2] Submission detail page: display custom form field data — `/submissions/[id]` detail view only shows Title, Content, and History. Custom form fields (Category, Word Count, Bio from form definitions) are not rendered. Form data is persisted and visible on edit page but not on read-only detail view. — (manual QA 2026-02-21, conditional logic testing)
+- [x] [P2] Submission detail page: display custom form field data — `/submissions/[id]` detail view only shows Title, Content, and History. Custom form fields (Category, Word Count, Bio from form definitions) are not rendered. Form data is persisted and visible on edit page but not on read-only detail view. — (manual QA 2026-02-21, conditional logic testing; done 2026-02-21)
 - [ ] [P3] Submissions list stale cache after create — after creating a new submission via "Create Draft", navigating to My Submissions shows "No submissions" until page reload. Likely TanStack Query cache not invalidated on create mutation success. Submission does exist (API returned 200, detail page loads). — (manual QA 2026-02-21, conditional logic testing)
 
 ---
