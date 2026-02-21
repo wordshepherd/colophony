@@ -9,6 +9,7 @@ import { trpc } from "@/lib/trpc";
 import {
   DynamicFormFields,
   buildFormFieldsSchema,
+  buildConditionalFormSchema,
   mapFieldErrorsToForm,
 } from "./form-renderer";
 import { Button } from "@/components/ui/button";
@@ -90,21 +91,27 @@ export function SubmissionForm({ mode, submissionId }: SubmissionFormProps) {
     { enabled: !!formDefinitionId },
   );
 
-  // Build dynamic schema from form definition fields
-  const { schema: formDataSchema, defaultValues: formDataDefaults } = useMemo(
+  // Build static default values from form definition
+  const { defaultValues: formDataDefaults } = useMemo(
     () =>
       formDefinition
         ? buildFormFieldsSchema(formDefinition.fields)
         : { schema: z.object({}), defaultValues: {} },
     [formDefinition],
   );
-  const fullSchema = useMemo(
-    () => formSchema.extend({ formData: formDataSchema }),
-    [formDataSchema],
+
+  // Use a ref to hold the latest full schema so the resolver always validates
+  // against the current conditional visibility state without re-creating useForm.
+  const schemaRef = useRef(
+    formSchema.extend({ formData: z.object({}).passthrough() }),
   );
 
   const form = useForm({
-    resolver: zodResolver(fullSchema),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    resolver: async (values: any, context: any, options: any) => {
+      const resolver = zodResolver(schemaRef.current);
+      return resolver(values, context, options);
+    },
     defaultValues: {
       title: "",
       content: "",
@@ -112,6 +119,24 @@ export function SubmissionForm({ mode, submissionId }: SubmissionFormProps) {
       formData: formDataDefaults,
     },
   });
+
+  // Watch formData to reactively rebuild the conditional validation schema
+  const watchedFormData = form.watch("formData") as Record<string, unknown>;
+
+  // Rebuild schema reactively when form values change conditional visibility
+  useEffect(() => {
+    if (!formDefinition) {
+      schemaRef.current = formSchema.extend({
+        formData: z.object({}).passthrough(),
+      });
+      return;
+    }
+    const { schema: conditionalSchema } = buildConditionalFormSchema(
+      formDefinition.fields,
+      watchedFormData ?? {},
+    );
+    schemaRef.current = formSchema.extend({ formData: conditionalSchema });
+  }, [formDefinition, watchedFormData]);
 
   // Populate form when editing (re-runs when formDefinition loads to apply defaults)
   useEffect(() => {

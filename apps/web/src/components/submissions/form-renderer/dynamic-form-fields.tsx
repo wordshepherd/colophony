@@ -1,6 +1,8 @@
 "use client";
 
 import { trpc } from "@/lib/trpc";
+import { useFormContext } from "react-hook-form";
+import { useConditionalFields } from "@/hooks/use-conditional-fields";
 import {
   Card,
   CardContent,
@@ -54,11 +56,41 @@ export function DynamicFormFields({
     );
   }
 
+  // Get live form values for conditional evaluation
+  const formCtx = useFormContext();
+  const watchedFormData = formCtx?.watch("formData") as
+    | Record<string, unknown>
+    | undefined;
+
   if (!formDefinition) return null;
 
   const fields = [...formDefinition.fields].sort(
     (a, b) => a.sortOrder - b.sortOrder,
   ) as FormFieldForRenderer[];
+
+  return (
+    <ConditionalFieldRenderer
+      formDefinition={formDefinition}
+      fields={fields}
+      formValues={watchedFormData ?? {}}
+      disabled={disabled}
+    />
+  );
+}
+
+/** Inner component to use the hook unconditionally. */
+function ConditionalFieldRenderer({
+  formDefinition,
+  fields,
+  formValues,
+  disabled,
+}: {
+  formDefinition: { name: string; description: string | null };
+  fields: FormFieldForRenderer[];
+  formValues: Record<string, unknown>;
+  disabled: boolean;
+}) {
+  const visibilityMap = useConditionalFields(fields, formValues);
 
   return (
     <Card>
@@ -69,13 +101,23 @@ export function DynamicFormFields({
         )}
       </CardHeader>
       <CardContent className="space-y-6">
-        {fields.map((field) => (
-          <DynamicFormField
-            key={field.fieldKey}
-            field={field}
-            disabled={disabled}
-          />
-        ))}
+        {fields.map((field) => {
+          const vis = visibilityMap.get(field.fieldKey);
+          if (vis && !vis.visible) return null;
+
+          const effectiveField =
+            vis?.required && !field.required
+              ? { ...field, required: true }
+              : field;
+
+          return (
+            <DynamicFormField
+              key={field.fieldKey}
+              field={effectiveField}
+              disabled={disabled}
+            />
+          );
+        })}
       </CardContent>
     </Card>
   );
