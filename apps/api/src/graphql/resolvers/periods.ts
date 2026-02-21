@@ -97,9 +97,10 @@ builder.queryFields((t) => ({
     resolve: async (_root, args, ctx) => {
       const orgCtx = requireOrgContext(ctx);
       await requireScopes(ctx, 'periods:read');
+      const { id } = idParamSchema.parse({ id: args.id });
       try {
-        const period = await periodService.getById(orgCtx.dbTx, args.id);
-        if (!period) throw new PeriodNotFoundError(args.id);
+        const period = await periodService.getById(orgCtx.dbTx, id);
+        if (!period) throw new PeriodNotFoundError(id);
         return period;
       } catch (e) {
         mapServiceError(e);
@@ -202,7 +203,10 @@ builder.mutationFields((t) => ({
         closesAt: args.closesAt ?? undefined,
         fee: args.fee ?? undefined,
         maxSubmissions: args.maxSubmissions ?? undefined,
-        formDefinitionId: args.formDefinitionId ?? undefined,
+        formDefinitionId:
+          args.formDefinitionId === null
+            ? null
+            : (args.formDefinitionId ?? undefined),
       });
       try {
         return await periodService.updateWithAudit(
