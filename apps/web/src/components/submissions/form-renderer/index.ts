@@ -1,4 +1,5 @@
 export { DynamicFormFields } from "./dynamic-form-fields";
+export { ReadOnlyFormFields } from "./read-only-form-fields";
 export {
   buildFormFieldsSchema,
   buildConditionalFormSchema,

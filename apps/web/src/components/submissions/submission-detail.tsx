@@ -43,6 +43,7 @@ import {
   type ScanStatus,
   type SubmissionStatus,
 } from "@colophony/types";
+import { ReadOnlyFormFields } from "./form-renderer/read-only-form-fields";
 
 interface SubmissionDetailProps {
   submissionId: string;
@@ -241,6 +242,14 @@ export function SubmissionDetail({
               )}
             </CardContent>
           </Card>
+
+          {/* Custom form fields */}
+          {submission.formDefinitionId && (
+            <ReadOnlyFormFields
+              formDefinitionId={submission.formDefinitionId}
+              formData={(submission.formData as Record<string, unknown>) ?? {}}
+            />
+          )}
 
           {/* Cover letter */}
           {submission.coverLetter && (
