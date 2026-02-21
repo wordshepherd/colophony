@@ -249,9 +249,9 @@
 
 ### Dev Environment
 
-- [ ] [P1] Add Overmind as process manager for dev servers — replaces `turbo run dev` for persistent server lifecycle (API + web); Turbo stays for build graph. Overmind manages tmux session so killing it kills entire process group — eliminates orphaned `tsx watch` / `next-server` / `postcss` processes that accumulate across sessions. Turbo's SIGINT forwarding is a known open issue (#9666, #9694). — (manual QA session 2026-02-21, found 60 orphaned processes)
-- [ ] [P2] Add `dev:clean` script — kill processes on ports 4000/3000, remove stale lock files (`apps/web/.next/dev/lock`). Fallback for when Overmind isn't running or crashes. Add as `pnpm dev:clean` in root package.json. — (manual QA session 2026-02-21)
-- [ ] [P2] Simplify Docker profile handling — wrapper script or Makefile target that always includes `--profile auth` for Zitadel. Current setup requires remembering `docker compose --profile auth up -d zitadel` separately from `docker compose up -d`. — (manual QA session 2026-02-21)
+- [x] [P1] Add Overmind as process manager for dev servers — replaces `turbo run dev` for persistent server lifecycle (API + web); Turbo stays for build graph. Overmind manages tmux session so killing it kills entire process group — eliminates orphaned `tsx watch` / `next-server` / `postcss` processes that accumulate across sessions. Turbo's SIGINT forwarding is a known open issue (#9666, #9694). — (manual QA session 2026-02-21, found 60 orphaned processes; done 2026-02-21)
+- [x] [P2] Add `dev:clean` script — kill processes on ports 4000/3000, remove stale lock files (`apps/web/.next/dev/lock`). Fallback for when Overmind isn't running or crashes. Add as `pnpm dev:clean` in root package.json. — (manual QA session 2026-02-21; done 2026-02-21)
+- [x] [P2] Simplify Docker profile handling — wrapper script or Makefile target that always includes `--profile auth` for Zitadel. Current setup requires remembering `docker compose --profile auth up -d zitadel` separately from `docker compose up -d`. — (manual QA session 2026-02-21; done 2026-02-21)
 - [ ] [P3] Docker Compose staging override — `docker-compose.staging.yml` with built API/web production images alongside shared infra services. For local staging testing and future deployed staging. Do NOT use `docker compose watch` for Next.js (Turbopack hot-reload bug, docker/compose#12827). — (manual QA session 2026-02-21)
 
 ### QA Observations

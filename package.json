@@ -7,7 +7,8 @@
   },
   "scripts": {
     "build": "turbo run build",
-    "dev": "turbo run dev",
+    "dev": "bash scripts/dev.sh",
+    "dev:clean": "bash scripts/dev-clean.sh",
     "lint": "turbo run lint",
     "test": "turbo run test",
     "test:cov": "turbo run test:cov",
@@ -23,6 +24,7 @@
     "db:reset": "bash scripts/db-reset.sh",
     "sdk:export-spec": "pnpm --filter @colophony/api exec tsx ../../scripts/export-openapi.ts",
     "sdk:export-schema": "pnpm --filter @colophony/api exec tsx ../../scripts/export-schema.ts",
+    "docker:up": "bash scripts/docker-up.sh",
     "clean": "turbo run clean && rm -rf node_modules",
     "prepare": "husky"
   },
