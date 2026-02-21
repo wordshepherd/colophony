@@ -1,0 +1,2 @@
+api: pnpm --filter @colophony/api dev
+web: pnpm --filter @colophony/web dev
