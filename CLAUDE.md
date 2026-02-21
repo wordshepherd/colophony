@@ -116,6 +116,7 @@ Domain-specific quirks are in per-directory CLAUDE.md files. Cross-cutting quirk
 | **`drizzle-kit generate` TUI blocks automation**      | Interactive prompts (rename vs create) use a TUI that ignores piped stdin. Write manual migrations in non-interactive shells; snapshot files may need regeneration interactively                                                                                                                           |
 | **Playwright `webServer.env` replaces `process.env`** | `webServer.env` **replaces** (not merges) the child process environment. Must load `.env` files via `dotenv` and spread `...process.env` to ensure `DATABASE_URL` etc. reach dev servers                                                                                                                   |
 | **Zitadel issuer ± trailing slash**                   | Zitadel v4.10.1 omits trailing slash in JWT `iss` claim. JWKS verifier uses array issuer `[base, base + "/"]` to match both. Don't normalize to one form                                                                                                                                                   |
+| **Overmind requires tmux**                            | `pnpm dev` uses Overmind (tmux-based process manager). Install both `tmux` and `overmind`. Turbo stays for builds; Overmind replaces it for persistent dev servers only. Use `pnpm dev:clean` to kill orphans if Overmind crashes                                                                          |
 
 **Version pin (cross-cutting):**
 
@@ -320,10 +321,20 @@ Config template: `.claude/mcp-servers.example.json`
 ### Starting Development
 
 ```bash
-docker-compose up -d          # PostgreSQL, Redis, MinIO, Zitadel
+pnpm docker:up                # Core infra + Zitadel (or --full for ClamAV, --core to skip Zitadel)
 pnpm install
 pnpm db:migrate               # Run Drizzle migrations
-pnpm dev                      # API: 4000, Web: 3000
+pnpm dev                      # Overmind: builds packages, then API: 4000, Web: 3000
+```
+
+**Overmind commands** (run from project root while `pnpm dev` is running):
+
+```bash
+overmind connect api           # Attach to API logs (detach: Ctrl+B D)
+overmind connect web           # Attach to Web logs
+overmind restart api           # Restart API only (Web continues)
+overmind kill                  # Stop all dev servers
+pnpm dev:clean                # Kill orphaned processes + stale files (fallback)
 ```
 
 ### Running Tests
