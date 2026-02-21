@@ -5,6 +5,8 @@ import {
   selectFieldConfigSchema,
   richTextFieldConfigSchema,
   PRESENTATIONAL_FIELD_TYPES,
+  evaluateFieldVisibility,
+  type ConditionalRule,
 } from "@colophony/types";
 
 // ---------------------------------------------------------------------------
@@ -19,6 +21,7 @@ export interface FormFieldForRenderer {
   placeholder: string | null;
   required: boolean;
   config: Record<string, unknown> | null;
+  conditionalRules?: ConditionalRule[] | null;
 }
 
 export interface FormSchemaResult {
@@ -219,6 +222,45 @@ export function buildFormFieldsSchema(
 
   for (const field of fields) {
     const schema = buildFieldSchema(field);
+    if (schema === null) continue;
+
+    shape[field.fieldKey] = schema;
+    defaultValues[field.fieldKey] = getDefaultValue(field);
+  }
+
+  return {
+    schema: z.object(shape),
+    defaultValues,
+  };
+}
+
+/**
+ * Build a Zod schema that accounts for conditional visibility.
+ * Hidden fields get optional schemas; REQUIRE-affected fields get required schemas.
+ */
+export function buildConditionalFormSchema(
+  fields: FormFieldForRenderer[],
+  formValues: Record<string, unknown>,
+): FormSchemaResult {
+  const shape: Record<string, z.ZodTypeAny> = {};
+  const defaultValues: Record<string, unknown> = {};
+
+  for (const field of fields) {
+    const { visible, required: conditionallyRequired } =
+      evaluateFieldVisibility(field.conditionalRules ?? null, formValues);
+
+    // Hidden fields: make optional so they don't block validation
+    if (!visible) {
+      const schema = buildFieldSchema({ ...field, required: false });
+      if (schema === null) continue;
+      shape[field.fieldKey] = schema.optional();
+      defaultValues[field.fieldKey] = getDefaultValue(field);
+      continue;
+    }
+
+    // Visible fields: respect conditional required override
+    const effectiveRequired = field.required || conditionallyRequired;
+    const schema = buildFieldSchema({ ...field, required: effectiveRequired });
     if (schema === null) continue;
 
     shape[field.fieldKey] = schema;

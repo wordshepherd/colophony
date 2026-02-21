@@ -150,6 +150,154 @@ describe('formService.validateFormData', () => {
     expect(errors).toEqual([]);
   });
 
+  // -------------------------------------------------------------------------
+  // Conditional logic tests
+  // -------------------------------------------------------------------------
+
+  it('skips validation for hidden field', async () => {
+    const form = makeFormWithFields([
+      {
+        fieldKey: 'category',
+        fieldType: 'select',
+        label: 'Category',
+        required: false,
+      },
+      {
+        fieldKey: 'genre',
+        fieldType: 'text',
+        label: 'Genre',
+        required: true,
+        conditionalRules: [
+          {
+            effect: 'SHOW',
+            condition: {
+              operator: 'AND',
+              rules: [
+                { field: 'category', comparator: 'eq', value: 'fiction' },
+              ],
+            },
+          },
+        ],
+      },
+    ]);
+    vi.spyOn(formService, 'getById').mockResolvedValueOnce(form);
+
+    // Category is "poetry" → genre is hidden → no required error
+    const errors = await formService.validateFormData(mockTx, 'form-1', {
+      category: 'poetry',
+    });
+    expect(errors).toEqual([]);
+  });
+
+  it('validates visible field normally', async () => {
+    const form = makeFormWithFields([
+      {
+        fieldKey: 'category',
+        fieldType: 'select',
+        label: 'Category',
+        required: false,
+      },
+      {
+        fieldKey: 'genre',
+        fieldType: 'text',
+        label: 'Genre',
+        required: true,
+        conditionalRules: [
+          {
+            effect: 'SHOW',
+            condition: {
+              operator: 'AND',
+              rules: [
+                { field: 'category', comparator: 'eq', value: 'fiction' },
+              ],
+            },
+          },
+        ],
+      },
+    ]);
+    vi.spyOn(formService, 'getById').mockResolvedValueOnce(form);
+
+    // Category is "fiction" → genre is visible and required → error
+    const errors = await formService.validateFormData(mockTx, 'form-1', {
+      category: 'fiction',
+    });
+    expect(errors).toHaveLength(1);
+    expect(errors[0].fieldKey).toBe('genre');
+    expect(errors[0].message).toContain('required');
+  });
+
+  it('enforces conditional REQUIRE', async () => {
+    const form = makeFormWithFields([
+      {
+        fieldKey: 'category',
+        fieldType: 'select',
+        label: 'Category',
+        required: false,
+      },
+      {
+        fieldKey: 'genre',
+        fieldType: 'text',
+        label: 'Genre',
+        required: false, // not statically required
+        conditionalRules: [
+          {
+            effect: 'REQUIRE',
+            condition: {
+              operator: 'AND',
+              rules: [
+                { field: 'category', comparator: 'eq', value: 'fiction' },
+              ],
+            },
+          },
+        ],
+      },
+    ]);
+    vi.spyOn(formService, 'getById').mockResolvedValueOnce(form);
+
+    // Category is "fiction" → genre is conditionally required → error
+    const errors = await formService.validateFormData(mockTx, 'form-1', {
+      category: 'fiction',
+    });
+    expect(errors).toHaveLength(1);
+    expect(errors[0].fieldKey).toBe('genre');
+    expect(errors[0].message).toContain('required');
+  });
+
+  it('does not enforce REQUIRE when condition is false', async () => {
+    const form = makeFormWithFields([
+      {
+        fieldKey: 'category',
+        fieldType: 'select',
+        label: 'Category',
+        required: false,
+      },
+      {
+        fieldKey: 'genre',
+        fieldType: 'text',
+        label: 'Genre',
+        required: false,
+        conditionalRules: [
+          {
+            effect: 'REQUIRE',
+            condition: {
+              operator: 'AND',
+              rules: [
+                { field: 'category', comparator: 'eq', value: 'fiction' },
+              ],
+            },
+          },
+        ],
+      },
+    ]);
+    vi.spyOn(formService, 'getById').mockResolvedValueOnce(form);
+
+    // Category is "poetry" → REQUIRE not triggered → no error
+    const errors = await formService.validateFormData(mockTx, 'form-1', {
+      category: 'poetry',
+    });
+    expect(errors).toEqual([]);
+  });
+
   it('validates multiple fields at once', async () => {
     const form = makeFormWithFields([
       {

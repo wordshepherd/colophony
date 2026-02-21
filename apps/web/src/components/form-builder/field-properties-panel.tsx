@@ -11,22 +11,37 @@ import { TextConfig } from "./field-config/text-config";
 import { NumberConfig } from "./field-config/number-config";
 import { SelectConfig } from "./field-config/select-config";
 import { FileUploadConfig } from "./field-config/file-upload-config";
+import { ConditionalRulesConfig } from "./field-config/conditional-rules-config";
 import { FIELD_TYPE_META } from "./field-type-meta";
 import { Loader2, Check } from "lucide-react";
-import type { FormFieldType, UpdateFormFieldInput } from "@colophony/types";
+import type {
+  FormFieldType,
+  UpdateFormFieldInput,
+  ConditionalRule,
+} from "@colophony/types";
 
 interface PropertiesField {
   id: string;
+  fieldKey: string;
   fieldType: FormFieldType;
   label: string;
   description: string | null;
   placeholder: string | null;
   required: boolean;
   config: Record<string, unknown> | null;
+  conditionalRules: ConditionalRule[] | null;
+}
+
+interface AllFieldInfo {
+  fieldKey: string;
+  fieldType: string;
+  label: string;
+  config: Record<string, unknown> | null;
 }
 
 interface FieldPropertiesPanelProps {
   field: PropertiesField;
+  allFields: AllFieldInfo[];
   onUpdate: (fieldId: string, data: UpdateFormFieldInput) => void;
   isSaving: boolean;
 }
@@ -43,6 +58,7 @@ const SELECT_TYPES = [
 
 export function FieldPropertiesPanel({
   field,
+  allFields,
   onUpdate,
   isSaving,
 }: FieldPropertiesPanelProps) {
@@ -120,6 +136,10 @@ export function FieldPropertiesPanel({
   function handleConfigChange(newConfig: Record<string, unknown>) {
     setConfig(newConfig);
     debouncedSave({ config: newConfig });
+  }
+
+  function handleConditionalRulesChange(newRules: ConditionalRule[] | null) {
+    debouncedSave({ conditionalRules: newRules });
   }
 
   const meta = FIELD_TYPE_META[field.fieldType];
@@ -232,6 +252,20 @@ export function FieldPropertiesPanel({
             </div>
           </>
         )}
+
+        {/* Conditional logic */}
+        <Separator />
+        <div className="space-y-3">
+          <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+            Conditions
+          </h3>
+          <ConditionalRulesConfig
+            rules={field.conditionalRules}
+            onChange={handleConditionalRulesChange}
+            fields={allFields}
+            currentFieldKey={field.fieldKey}
+          />
+        </div>
       </div>
     </ScrollArea>
   );

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { conditionalRulesSchema } from "./conditional-rules";
 
 // ---------------------------------------------------------------------------
 // Enums
@@ -108,10 +109,9 @@ export const formFieldSchema = z.object({
     .record(z.string(), z.unknown())
     .nullable()
     .describe("Type-specific configuration for the field"),
-  conditionalRules: z
-    .array(z.record(z.string(), z.unknown()))
+  conditionalRules: conditionalRulesSchema
     .nullable()
-    .describe("Conditional display rules (Phase 2)"),
+    .describe("Conditional display rules"),
   createdAt: z.date().describe("When the field was created"),
   updatedAt: z.date().describe("When the field was last updated"),
 });
@@ -230,6 +230,10 @@ export const updateFormFieldSchema = z.object({
   placeholder: z.string().max(500).optional().describe("New placeholder"),
   required: z.boolean().optional().describe("New required state"),
   config: fieldConfigSchema.optional().describe("New configuration"),
+  conditionalRules: conditionalRulesSchema
+    .nullable()
+    .optional()
+    .describe("Conditional display rules"),
 });
 
 export type UpdateFormFieldInput = z.infer<typeof updateFormFieldSchema>;
