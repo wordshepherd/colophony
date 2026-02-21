@@ -38,7 +38,11 @@ import {
   AlertCircle,
   Loader2,
 } from "lucide-react";
-import type { ScanStatus, SubmissionStatus } from "@colophony/types";
+import {
+  EDITOR_ALLOWED_TRANSITIONS,
+  type ScanStatus,
+  type SubmissionStatus,
+} from "@colophony/types";
 
 interface SubmissionDetailProps {
   submissionId: string;
@@ -198,22 +202,24 @@ export function SubmissionDetail({
       </div>
 
       {/* Editor status transitions */}
-      {(isEditor || isAdmin) && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Editor Actions</CardTitle>
-            <CardDescription>
-              Change the status of this submission
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <StatusTransition
-              submissionId={submissionId}
-              currentStatus={submission.status as SubmissionStatus}
-            />
-          </CardContent>
-        </Card>
-      )}
+      {(isEditor || isAdmin) &&
+        EDITOR_ALLOWED_TRANSITIONS[submission.status as SubmissionStatus]
+          ?.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Editor Actions</CardTitle>
+              <CardDescription>
+                Change the status of this submission
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <StatusTransition
+                submissionId={submissionId}
+                currentStatus={submission.status as SubmissionStatus}
+              />
+            </CardContent>
+          </Card>
+        )}
 
       {/* Content */}
       <div className="grid gap-6 md:grid-cols-3">
