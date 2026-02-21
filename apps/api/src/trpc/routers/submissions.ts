@@ -7,6 +7,7 @@ import {
   idParamSchema,
   submissionIdParamSchema,
   submissionSchema,
+  submissionListItemSchema,
   submissionDetailSchema,
   submissionStatusChangeResponseSchema,
   submissionHistorySchema,
@@ -37,7 +38,7 @@ export const submissionsRouter = createRouter({
   list: orgProcedure
     .use(requireScopes('submissions:read'))
     .input(listSubmissionsSchema)
-    .output(paginatedResponseSchema(submissionSchema))
+    .output(paginatedResponseSchema(submissionListItemSchema))
     .query(async ({ ctx, input }) => {
       try {
         assertEditorOrAdmin(ctx.authContext.role);

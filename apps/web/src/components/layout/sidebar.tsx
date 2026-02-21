@@ -8,6 +8,7 @@ import {
   Building2,
   ClipboardList,
   FileText,
+  Inbox,
   LayoutDashboard,
   Settings,
 } from "lucide-react";
@@ -19,6 +20,7 @@ const navigation = [
 
 const editorNavigation = [
   { name: "Editor Dashboard", href: "/editor", icon: LayoutDashboard },
+  { name: "Submissions", href: "/editor/submissions", icon: Inbox },
   { name: "Forms", href: "/editor/forms", icon: ClipboardList },
 ];
 

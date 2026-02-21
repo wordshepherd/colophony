@@ -42,6 +42,7 @@ import type { ScanStatus, SubmissionStatus } from "@colophony/types";
 
 interface SubmissionDetailProps {
   submissionId: string;
+  backHref?: string;
 }
 
 const scanStatusIcons: Record<
@@ -61,9 +62,12 @@ function formatFileSize(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-export function SubmissionDetail({ submissionId }: SubmissionDetailProps) {
+export function SubmissionDetail({
+  submissionId,
+  backHref = "/submissions",
+}: SubmissionDetailProps) {
   const router = useRouter();
-  const { isEditor, isAdmin } = useOrganization();
+  const { user, isEditor, isAdmin } = useOrganization();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showWithdrawDialog, setShowWithdrawDialog] = useState(false);
   const utils = trpc.useUtils();
@@ -85,7 +89,7 @@ export function SubmissionDetail({ submissionId }: SubmissionDetailProps) {
   const deleteMutation = trpc.submissions.delete.useMutation({
     onSuccess: () => {
       toast.success("Submission deleted");
-      router.push("/submissions");
+      router.push(backHref);
     },
     onError: (err) => {
       toast.error(err.message);
@@ -126,18 +130,19 @@ export function SubmissionDetail({ submissionId }: SubmissionDetailProps) {
     return (
       <div className="text-center py-12">
         <p className="text-muted-foreground">Submission not found</p>
-        <Link href="/submissions">
+        <Link href={backHref}>
           <Button variant="link">Back to submissions</Button>
         </Link>
       </div>
     );
   }
 
-  const canEdit = submission.status === "DRAFT";
-  const canDelete = submission.status === "DRAFT";
-  const canWithdraw = ["SUBMITTED", "UNDER_REVIEW", "HOLD"].includes(
-    submission.status,
-  );
+  const isOwner = user?.id === submission.submitterId;
+  const canEdit = isOwner && submission.status === "DRAFT";
+  const canDelete = isOwner && submission.status === "DRAFT";
+  const canWithdraw =
+    isOwner &&
+    ["SUBMITTED", "UNDER_REVIEW", "HOLD"].includes(submission.status);
 
   return (
     <div className="space-y-6">
@@ -145,7 +150,7 @@ export function SubmissionDetail({ submissionId }: SubmissionDetailProps) {
       <div className="flex items-start justify-between">
         <div className="space-y-1">
           <Link
-            href="/submissions"
+            href={backHref}
             className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground"
           >
             <ArrowLeft className="mr-1 h-4 w-4" />
