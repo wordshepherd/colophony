@@ -434,6 +434,86 @@ describe('Form resolvers — wiring', () => {
     expect(result).toEqual(formField);
   });
 
+  it('formDefinition query validates id as UUID', async () => {
+    const field = getQueryField('formDefinition');
+    await expect(
+      field.resolve!({}, { id: 'not-a-uuid' }, makeCtx(), {} as never),
+    ).rejects.toThrow();
+    // eslint-disable-next-line @typescript-eslint/unbound-method
+    expect(formService.getById).not.toHaveBeenCalled();
+  });
+
+  it('addFormField validates formId as UUID', async () => {
+    const field = getMutationField('addFormField');
+    await expect(
+      field.resolve!(
+        {},
+        { formId: 'not-a-uuid', fieldKey: 'k', fieldType: 'text', label: 'L' },
+        makeCtx(),
+        {} as never,
+      ),
+    ).rejects.toThrow();
+    // eslint-disable-next-line @typescript-eslint/unbound-method
+    expect(formService.addFieldWithAudit).not.toHaveBeenCalled();
+  });
+
+  it('updateFormField validates formId and fieldId as UUID', async () => {
+    const field = getMutationField('updateFormField');
+    await expect(
+      field.resolve!(
+        {},
+        { formId: 'not-a-uuid', fieldId: FIELD_ID, label: 'X' },
+        makeCtx(),
+        {} as never,
+      ),
+    ).rejects.toThrow();
+    await expect(
+      field.resolve!(
+        {},
+        { formId: FORM_ID, fieldId: 'not-a-uuid', label: 'X' },
+        makeCtx(),
+        {} as never,
+      ),
+    ).rejects.toThrow();
+    // eslint-disable-next-line @typescript-eslint/unbound-method
+    expect(formService.updateFieldWithAudit).not.toHaveBeenCalled();
+  });
+
+  it('removeFormField validates formId and fieldId as UUID', async () => {
+    const field = getMutationField('removeFormField');
+    await expect(
+      field.resolve!(
+        {},
+        { formId: 'not-a-uuid', fieldId: FIELD_ID },
+        makeCtx(),
+        {} as never,
+      ),
+    ).rejects.toThrow();
+    // eslint-disable-next-line @typescript-eslint/unbound-method
+    expect(formService.removeFieldWithAudit).not.toHaveBeenCalled();
+  });
+
+  it('reorderFormFields validates formId as UUID', async () => {
+    const field = getMutationField('reorderFormFields');
+    await expect(
+      field.resolve!(
+        {},
+        { formId: 'not-a-uuid', fieldIds: [FIELD_ID] },
+        makeCtx(),
+        {} as never,
+      ),
+    ).rejects.toThrow();
+    // eslint-disable-next-line @typescript-eslint/unbound-method
+    expect(formService.reorderFieldsWithAudit).not.toHaveBeenCalled();
+  });
+
+  it('auditEvent query validates id as UUID', async () => {
+    const field = getQueryField('auditEvent');
+    await expect(
+      field.resolve!({}, { id: 'not-a-uuid' }, makeCtx(), {} as never),
+    ).rejects.toThrow();
+  });
+
   it('mapServiceError is called on service failure', async () => {
     const error = new Error('Service failed');
     // eslint-disable-next-line @typescript-eslint/unbound-method

@@ -158,10 +158,11 @@ builder.queryFields((t) => ({
     resolve: async (_root, args, ctx) => {
       const orgCtx = requireOrgContext(ctx);
       await requireScopes(ctx, 'submissions:read');
+      const { id } = idParamSchema.parse({ id: args.id });
       try {
         return await submissionService.getByIdWithAccess(
           toServiceContext(orgCtx),
-          args.id,
+          id,
         );
       } catch (e) {
         mapServiceError(e);
@@ -184,10 +185,13 @@ builder.queryFields((t) => ({
     resolve: async (_root, args, ctx) => {
       const orgCtx = requireOrgContext(ctx);
       await requireScopes(ctx, 'submissions:read');
+      const { id: submissionId } = idParamSchema.parse({
+        id: args.submissionId,
+      });
       try {
         return await submissionService.getHistoryWithAccess(
           toServiceContext(orgCtx),
-          args.submissionId,
+          submissionId,
         );
       } catch (e) {
         mapServiceError(e);
