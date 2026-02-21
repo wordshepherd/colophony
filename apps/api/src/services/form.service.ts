@@ -22,6 +22,7 @@ import {
   AuditActions,
   AuditResources,
   PRESENTATIONAL_FIELD_TYPES,
+  evaluateFieldVisibility,
 } from '@colophony/types';
 import type { ServiceContext } from './types.js';
 import { assertEditorOrAdmin } from './errors.js';
@@ -510,6 +511,9 @@ export const formService = {
           : {}),
         ...(input.required !== undefined ? { required: input.required } : {}),
         ...(input.config !== undefined ? { config: input.config } : {}),
+        ...(input.conditionalRules !== undefined
+          ? { conditionalRules: input.conditionalRules }
+          : {}),
         updatedAt: new Date(),
       })
       .where(eq(formFields.id, fieldId))
@@ -647,11 +651,19 @@ export const formService = {
         continue;
       }
 
+      // Evaluate conditional visibility
+      const { visible, required: conditionallyRequired } =
+        evaluateFieldVisibility(field.conditionalRules, data);
+
+      // Skip hidden fields entirely — no validation
+      if (!visible) continue;
+
+      const isRequired = field.required || conditionallyRequired;
       const value = data[field.fieldKey];
 
       // Required check
       if (
-        field.required &&
+        isRequired &&
         (value === undefined || value === null || value === '')
       ) {
         errors.push({

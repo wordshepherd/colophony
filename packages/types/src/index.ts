@@ -5,6 +5,7 @@ export * from "./submission";
 export * from "./payment";
 export * from "./file";
 export * from "./form";
+export * from "./conditional-rules";
 export * from "./common";
 export * from "./audit";
 export * from "./api-key";

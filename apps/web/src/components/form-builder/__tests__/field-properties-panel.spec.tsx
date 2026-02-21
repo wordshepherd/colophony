@@ -18,12 +18,17 @@ const baseField = {
   updatedAt: new Date(),
 };
 
+const allFields = [
+  { fieldKey: "title", fieldType: "text", label: "Title", config: null },
+];
+
 describe("FieldPropertiesPanel", () => {
   it("renders common fields for any field type", () => {
     const onUpdate = jest.fn();
     render(
       <FieldPropertiesPanel
         field={baseField}
+        allFields={allFields}
         onUpdate={onUpdate}
         isSaving={false}
       />,
@@ -41,6 +46,7 @@ describe("FieldPropertiesPanel", () => {
     render(
       <FieldPropertiesPanel
         field={baseField}
+        allFields={allFields}
         onUpdate={onUpdate}
         isSaving={false}
       />,
@@ -61,6 +67,7 @@ describe("FieldPropertiesPanel", () => {
     render(
       <FieldPropertiesPanel
         field={numberField}
+        allFields={allFields}
         onUpdate={onUpdate}
         isSaving={false}
       />,
@@ -86,6 +93,7 @@ describe("FieldPropertiesPanel", () => {
     render(
       <FieldPropertiesPanel
         field={selectField}
+        allFields={allFields}
         onUpdate={onUpdate}
         isSaving={false}
       />,
@@ -106,6 +114,7 @@ describe("FieldPropertiesPanel", () => {
     render(
       <FieldPropertiesPanel
         field={fileField}
+        allFields={allFields}
         onUpdate={onUpdate}
         isSaving={false}
       />,
@@ -121,6 +130,7 @@ describe("FieldPropertiesPanel", () => {
     render(
       <FieldPropertiesPanel
         field={baseField}
+        allFields={allFields}
         onUpdate={jest.fn()}
         isSaving={true}
       />,
@@ -136,6 +146,7 @@ describe("FieldPropertiesPanel", () => {
     render(
       <FieldPropertiesPanel
         field={baseField}
+        allFields={allFields}
         onUpdate={jest.fn()}
         isSaving={false}
       />,
@@ -153,6 +164,7 @@ describe("FieldPropertiesPanel", () => {
     render(
       <FieldPropertiesPanel
         field={headerField}
+        allFields={allFields}
         onUpdate={jest.fn()}
         isSaving={false}
       />,

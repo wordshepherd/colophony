@@ -1,6 +1,8 @@
 "use client";
 
 import { trpc } from "@/lib/trpc";
+import { useFormContext } from "react-hook-form";
+import { useConditionalFields } from "@/hooks/use-conditional-fields";
 import {
   Card,
   CardContent,
@@ -27,6 +29,12 @@ export function DynamicFormFields({
     isPending,
     error,
   } = trpc.forms.getById.useQuery({ id: formDefinitionId });
+
+  // Must call hooks before any early returns (rules of hooks)
+  const formCtx = useFormContext();
+  const watchedFormData = formCtx?.watch("formData") as
+    | Record<string, unknown>
+    | undefined;
 
   if (isPending) {
     return (
@@ -61,6 +69,30 @@ export function DynamicFormFields({
   ) as FormFieldForRenderer[];
 
   return (
+    <ConditionalFieldRenderer
+      formDefinition={formDefinition}
+      fields={fields}
+      formValues={watchedFormData ?? {}}
+      disabled={disabled}
+    />
+  );
+}
+
+/** Inner component to use the hook unconditionally. */
+function ConditionalFieldRenderer({
+  formDefinition,
+  fields,
+  formValues,
+  disabled,
+}: {
+  formDefinition: { name: string; description: string | null };
+  fields: FormFieldForRenderer[];
+  formValues: Record<string, unknown>;
+  disabled: boolean;
+}) {
+  const visibilityMap = useConditionalFields(fields, formValues);
+
+  return (
     <Card>
       <CardHeader>
         <CardTitle>{formDefinition.name}</CardTitle>
@@ -69,13 +101,23 @@ export function DynamicFormFields({
         )}
       </CardHeader>
       <CardContent className="space-y-6">
-        {fields.map((field) => (
-          <DynamicFormField
-            key={field.fieldKey}
-            field={field}
-            disabled={disabled}
-          />
-        ))}
+        {fields.map((field) => {
+          const vis = visibilityMap.get(field.fieldKey);
+          if (vis && !vis.visible) return null;
+
+          const effectiveField =
+            vis?.required && !field.required
+              ? { ...field, required: true }
+              : field;
+
+          return (
+            <DynamicFormField
+              key={field.fieldKey}
+              field={effectiveField}
+              disabled={disabled}
+            />
+          );
+        })}
       </CardContent>
     </Card>
   );

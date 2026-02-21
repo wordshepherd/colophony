@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useCallback } from "react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -13,7 +14,8 @@ import {
 } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import type { FormFieldType } from "@colophony/types";
+import { useConditionalFields } from "@/hooks/use-conditional-fields";
+import type { FormFieldType, ConditionalRule } from "@colophony/types";
 
 interface PreviewFieldData {
   id: string;
@@ -24,6 +26,7 @@ interface PreviewFieldData {
   placeholder: string | null;
   required: boolean;
   config: Record<string, unknown> | null;
+  conditionalRules?: ConditionalRule[] | null;
 }
 
 interface FormPreviewProps {
@@ -34,7 +37,15 @@ interface FormPreviewProps {
   };
 }
 
-function PreviewField({ field }: { field: PreviewFieldData }) {
+function PreviewField({
+  field,
+  value,
+  onChange,
+}: {
+  field: PreviewFieldData;
+  value?: unknown;
+  onChange?: (value: unknown) => void;
+}) {
   const config = (field.config ?? {}) as Record<string, unknown>;
   const options =
     (config.options as Array<{ label: string; value: string }>) ?? [];
@@ -69,7 +80,12 @@ function PreviewField({ field }: { field: PreviewFieldData }) {
           {field.description && (
             <p className="text-xs text-muted-foreground">{field.description}</p>
           )}
-          <Textarea placeholder={field.placeholder ?? ""} disabled rows={4} />
+          <Textarea
+            placeholder={field.placeholder ?? ""}
+            rows={4}
+            value={(value as string) ?? ""}
+            onChange={(e) => onChange?.(e.target.value)}
+          />
         </div>
       );
 
@@ -83,7 +99,10 @@ function PreviewField({ field }: { field: PreviewFieldData }) {
           {field.description && (
             <p className="text-xs text-muted-foreground">{field.description}</p>
           )}
-          <Select disabled>
+          <Select
+            value={(value as string) ?? ""}
+            onValueChange={(v) => onChange?.(v)}
+          >
             <SelectTrigger>
               <SelectValue placeholder={field.placeholder ?? "Select..."} />
             </SelectTrigger>
@@ -111,7 +130,12 @@ function PreviewField({ field }: { field: PreviewFieldData }) {
           <div className="space-y-2">
             {options.map((opt) => (
               <div key={opt.value} className="flex items-center gap-2">
-                <input type="radio" name={field.fieldKey} disabled />
+                <input
+                  type="radio"
+                  name={field.fieldKey}
+                  checked={(value as string) === opt.value}
+                  onChange={() => onChange?.(opt.value)}
+                />
                 <Label className="font-normal">{opt.label}</Label>
               </div>
             ))}
@@ -122,7 +146,10 @@ function PreviewField({ field }: { field: PreviewFieldData }) {
     case "checkbox":
       return (
         <div className="flex items-center gap-2">
-          <Checkbox disabled />
+          <Checkbox
+            checked={!!value}
+            onCheckedChange={(checked) => onChange?.(checked === true)}
+          />
           <Label className="font-normal">
             {field.label}
             {field.required && <span className="text-destructive ml-1">*</span>}
@@ -191,7 +218,8 @@ function PreviewField({ field }: { field: PreviewFieldData }) {
                       : "text"
             }
             placeholder={field.placeholder ?? ""}
-            disabled
+            value={(value as string) ?? ""}
+            onChange={(e) => onChange?.(e.target.value)}
           />
         </div>
       );
@@ -199,6 +227,19 @@ function PreviewField({ field }: { field: PreviewFieldData }) {
 }
 
 export function FormPreview({ form }: FormPreviewProps) {
+  const [previewValues, setPreviewValues] = useState<Record<string, unknown>>(
+    {},
+  );
+
+  const handlePreviewChange = useCallback(
+    (fieldKey: string, value: unknown) => {
+      setPreviewValues((prev) => ({ ...prev, [fieldKey]: value }));
+    },
+    [],
+  );
+
+  const visibilityMap = useConditionalFields(form.fields, previewValues);
+
   return (
     <ScrollArea className="flex-1">
       <div className="max-w-2xl mx-auto p-6 space-y-6">
@@ -210,9 +251,22 @@ export function FormPreview({ form }: FormPreviewProps) {
         </div>
         <Separator />
         <div className="space-y-6">
-          {form.fields.map((field) => (
-            <PreviewField key={field.id} field={field} />
-          ))}
+          {form.fields.map((field) => {
+            const vis = visibilityMap.get(field.fieldKey);
+            if (vis && !vis.visible) return null;
+
+            const effectiveRequired =
+              field.required || (vis?.required ?? false);
+
+            return (
+              <PreviewField
+                key={field.id}
+                field={{ ...field, required: effectiveRequired }}
+                value={previewValues[field.fieldKey]}
+                onChange={(val) => handlePreviewChange(field.fieldKey, val)}
+              />
+            );
+          })}
         </div>
         {form.fields.length === 0 && (
           <p className="text-center text-muted-foreground py-12">

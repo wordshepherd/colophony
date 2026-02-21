@@ -293,6 +293,7 @@ export function FormEditor({ formId }: FormEditorProps) {
               {selectedField ? (
                 <FieldPropertiesPanel
                   field={selectedField}
+                  allFields={form.fields}
                   onUpdate={handleUpdateField}
                   isSaving={updateField.isPending}
                 />

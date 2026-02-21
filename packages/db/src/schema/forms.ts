@@ -13,6 +13,34 @@ import {
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import { formStatusEnum, formFieldTypeEnum } from "./enums";
+
+/** Inline type for conditional rules JSONB column — mirrors ConditionalRule from @colophony/types. */
+export type RuleComparatorJson =
+  | "eq"
+  | "neq"
+  | "gt"
+  | "lt"
+  | "gte"
+  | "lte"
+  | "contains"
+  | "not_contains"
+  | "starts_with"
+  | "ends_with"
+  | "is_empty"
+  | "is_not_empty"
+  | "in"
+  | "not_in";
+export interface ConditionalRuleJson {
+  effect: "SHOW" | "HIDE" | "REQUIRE";
+  condition: {
+    operator: "AND" | "OR";
+    rules: Array<{
+      field: string;
+      comparator: RuleComparatorJson;
+      value?: string | number | boolean | string[];
+    }>;
+  };
+}
 import { organizations } from "./organizations";
 import { users } from "./users";
 
@@ -73,8 +101,7 @@ export const formFields = pgTable(
     required: boolean("required").notNull().default(false),
     sortOrder: integer("sort_order").notNull().default(0),
     config: jsonb("config").$type<Record<string, unknown>>().default({}),
-    conditionalRules:
-      jsonb("conditional_rules").$type<Record<string, unknown>[]>(),
+    conditionalRules: jsonb("conditional_rules").$type<ConditionalRuleJson[]>(),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),

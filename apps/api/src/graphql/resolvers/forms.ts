@@ -7,6 +7,7 @@ import {
   updateFormFieldSchema,
   reorderFormFieldsSchema,
   idParamSchema,
+  type ConditionalRule,
 } from '@colophony/types';
 import { builder } from '../builder.js';
 import { requireOrgContext, requireScopes } from '../guards.js';
@@ -355,6 +356,11 @@ builder.mutationFields((t) => ({
         required: false,
         description: 'New configuration.',
       }),
+      conditionalRules: t.arg({
+        type: 'JSON',
+        required: false,
+        description: 'Conditional display rules.',
+      }),
     },
     resolve: async (_root, args, ctx) => {
       const orgCtx = requireOrgContext(ctx);
@@ -365,6 +371,10 @@ builder.mutationFields((t) => ({
         placeholder: args.placeholder ?? undefined,
         required: args.required ?? undefined,
         config: (args.config as Record<string, unknown>) ?? undefined,
+        conditionalRules:
+          args.conditionalRules !== undefined
+            ? (args.conditionalRules as ConditionalRule[] | null)
+            : undefined,
       });
       const { id: formId } = idParamSchema.parse({ id: args.formId });
       const { id: fieldId } = idParamSchema.parse({ id: args.fieldId });
