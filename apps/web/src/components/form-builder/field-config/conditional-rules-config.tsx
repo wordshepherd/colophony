@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -178,7 +178,15 @@ export function ConditionalRulesConfig({
   fields,
   currentFieldKey,
 }: ConditionalRulesConfigProps) {
+  // Local state for responsive editing — synced from props on field change
+  const [localRules, setLocalRules] = useState<ConditionalRule[] | null>(rules);
   const [enabled, setEnabled] = useState(rules !== null && rules.length > 0);
+
+  // Sync from props when the selected field changes (currentFieldKey drives this)
+  useEffect(() => {
+    setLocalRules(rules);
+    setEnabled(rules !== null && rules.length > 0);
+  }, [currentFieldKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const availableFields = fields.filter(
     (f) =>
@@ -188,34 +196,42 @@ export function ConditionalRulesConfig({
       ),
   );
 
+  const commit = useCallback(
+    (newRules: ConditionalRule[] | null) => {
+      setLocalRules(newRules);
+      onChange(newRules);
+    },
+    [onChange],
+  );
+
   function handleToggle(checked: boolean) {
     setEnabled(checked);
     if (checked) {
-      if (!rules || rules.length === 0) {
-        onChange([makeEmptyRule(availableFields)]);
+      if (!localRules || localRules.length === 0) {
+        commit([makeEmptyRule(availableFields)]);
       }
     } else {
-      onChange(null);
+      commit(null);
     }
   }
 
   function updateRule(index: number, updatedRule: ConditionalRule) {
-    const newRules = [...(rules ?? [])];
+    const newRules = [...(localRules ?? [])];
     newRules[index] = updatedRule;
-    onChange(newRules);
+    commit(newRules);
   }
 
   function addRule() {
-    onChange([...(rules ?? []), makeEmptyRule(availableFields)]);
+    commit([...(localRules ?? []), makeEmptyRule(availableFields)]);
   }
 
   function removeRule(index: number) {
-    const newRules = (rules ?? []).filter((_, i) => i !== index);
+    const newRules = (localRules ?? []).filter((_, i) => i !== index);
     if (newRules.length === 0) {
       setEnabled(false);
-      onChange(null);
+      commit(null);
     } else {
-      onChange(newRules);
+      commit(newRules);
     }
   }
 
@@ -226,26 +242,26 @@ export function ConditionalRulesConfig({
         <Switch
           checked={enabled}
           onCheckedChange={handleToggle}
-          disabled={availableFields.length === 0}
+          disabled={!enabled && availableFields.length === 0}
         />
       </div>
 
-      {availableFields.length === 0 && (
+      {!enabled && availableFields.length === 0 && (
         <p className="text-xs text-muted-foreground">
           Add more fields to the form to use conditional logic.
         </p>
       )}
 
-      {enabled && rules && rules.length > 0 && (
+      {enabled && localRules && localRules.length > 0 && (
         <div className="space-y-3">
-          {rules.map((rule, ruleIdx) => (
+          {localRules.map((rule, ruleIdx) => (
             <RuleEditor
               key={ruleIdx}
               rule={rule}
               availableFields={availableFields}
               onUpdate={(updated) => updateRule(ruleIdx, updated)}
               onRemove={() => removeRule(ruleIdx)}
-              canRemove={rules.length > 1}
+              canRemove={localRules.length > 1}
             />
           ))}
 

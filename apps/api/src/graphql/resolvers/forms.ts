@@ -372,7 +372,9 @@ builder.mutationFields((t) => ({
         required: args.required ?? undefined,
         config: (args.config as Record<string, unknown>) ?? undefined,
         conditionalRules:
-          (args.conditionalRules as ConditionalRule[] | null) ?? undefined,
+          args.conditionalRules !== undefined
+            ? (args.conditionalRules as ConditionalRule[] | null)
+            : undefined,
       });
       const { id: formId } = idParamSchema.parse({ id: args.formId });
       const { id: fieldId } = idParamSchema.parse({ id: args.fieldId });
