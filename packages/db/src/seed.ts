@@ -378,6 +378,8 @@ async function main() {
         "api-keys:read",
         "payments:read",
         "audit:read",
+        "periods:read",
+        "periods:write",
       ],
     });
 
