@@ -274,8 +274,16 @@ export type CreateSubmissionPeriodInput = z.infer<
   typeof createSubmissionPeriodSchema
 >;
 
-export const updateSubmissionPeriodSchema =
-  createSubmissionPeriodSchema.partial();
+export const updateSubmissionPeriodSchema = createSubmissionPeriodSchema
+  .partial()
+  .extend({
+    formDefinitionId: z
+      .string()
+      .uuid()
+      .nullable()
+      .optional()
+      .describe("Form definition to link (null to unlink)"),
+  });
 export type UpdateSubmissionPeriodInput = z.infer<
   typeof updateSubmissionPeriodSchema
 >;

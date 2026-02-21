@@ -92,7 +92,7 @@ export function PeriodFormDialog({
       closesAt: "",
       fee: "",
       maxSubmissions: "",
-      formDefinitionId: "",
+      formDefinitionId: "__none__",
     },
   });
 
@@ -106,7 +106,7 @@ export function PeriodFormDialog({
         fee: period.fee != null ? String(period.fee) : "",
         maxSubmissions:
           period.maxSubmissions != null ? String(period.maxSubmissions) : "",
-        formDefinitionId: period.formDefinitionId ?? "",
+        formDefinitionId: period.formDefinitionId ?? "__none__",
       });
     } else if (open) {
       form.reset({
@@ -116,7 +116,7 @@ export function PeriodFormDialog({
         closesAt: "",
         fee: "",
         maxSubmissions: "",
-        formDefinitionId: "",
+        formDefinitionId: "__none__",
       });
     }
   }, [open, period, form]);
@@ -156,7 +156,10 @@ export function PeriodFormDialog({
       maxSubmissions: data.maxSubmissions
         ? Number(data.maxSubmissions)
         : undefined,
-      formDefinitionId: data.formDefinitionId || undefined,
+      formDefinitionId:
+        data.formDefinitionId && data.formDefinitionId !== "__none__"
+          ? data.formDefinitionId
+          : undefined,
     };
 
     if (isEdit) {
@@ -299,7 +302,7 @@ export function PeriodFormDialog({
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="">None</SelectItem>
+                      <SelectItem value="__none__">None</SelectItem>
                       {formsQuery.data?.items.map((f) => (
                         <SelectItem key={f.id} value={f.id}>
                           {f.name}
