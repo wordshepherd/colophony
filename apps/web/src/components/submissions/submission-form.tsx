@@ -169,6 +169,7 @@ export function SubmissionForm({ mode, submissionId }: SubmissionFormProps) {
   const createMutation = trpc.submissions.create.useMutation({
     onSuccess: (data) => {
       toast.success("Submission created");
+      utils.submissions.mySubmissions.invalidate();
       router.push(`/submissions/${data.id}`);
     },
     onError: (err) => {
