@@ -100,6 +100,7 @@
 - [x] Add `formDefinitionId` to `createSubmissionPeriodSchema` — done 2026-02-21 as part of submission periods UI PR
 - [x] [P2] GraphQL resolvers: add `idParamSchema` validation on all raw string ID args passed to services — forms (query + field mutations), submissions (query + history), audit (query) — (Codex plan review 2026-02-20; done 2026-02-21)
 - [x] Conditional logic engine — (architecture doc Track 3, form-builder-research.md; done 2026-02-21)
+- [ ] Form branching logic — multi-page forms with conditional page navigation based on field values (e.g., skip to section 3 if "Category" is "Poetry"); builds on conditional logic engine — (roadmap idea 2026-02-21)
 - [ ] Embeddable forms (iframe) — (architecture doc Track 3, form-builder-research.md)
 - [x] Submission periods UI — schema exists, no UI — (DEVLOG 2026-02-15; done 2026-02-21)
 - [x] Submission periods: REST oRPC router + GraphQL resolvers for parity with forms/submissions — (DEVLOG 2026-02-21, deferred from submission periods PR; done 2026-02-21)
@@ -245,6 +246,18 @@
 - [x] Plan drift detection — after implementation, verify that the delivered code matches the approved plan. Check that specified files exist, export expected symbols, and follow specified patterns. Run as part of `/codex-review branch` or as a standalone `/plan-drift` skill — (dev workflow session 2026-02-20; done 2026-02-20)
 - [x] Plan override log for drift detection — during implementation, when discoveries require deliberate divergence from the plan, log overrides with rationale (file, what changed, why) in a structured format (e.g., task list metadata or a plan-overrides section in the PR). Drift detection reads the override log and excludes acknowledged divergences, only flagging unlogged drift — (dev workflow session 2026-02-20; done 2026-02-20)
 - [x] Automatic Codex branch review before PR — run `/codex-review branch` automatically after implementation is complete (all tasks done, tests passing) but before creating the PR; incorporate findings before presenting the PR for user review. Mirrors the plan review integration: user sees a Codex-vetted PR, not a raw first draft — (dev workflow session 2026-02-20; done 2026-02-20)
+
+### Dev Environment
+
+- [ ] [P1] Add Overmind as process manager for dev servers — replaces `turbo run dev` for persistent server lifecycle (API + web); Turbo stays for build graph. Overmind manages tmux session so killing it kills entire process group — eliminates orphaned `tsx watch` / `next-server` / `postcss` processes that accumulate across sessions. Turbo's SIGINT forwarding is a known open issue (#9666, #9694). — (manual QA session 2026-02-21, found 60 orphaned processes)
+- [ ] [P2] Add `dev:clean` script — kill processes on ports 4000/3000, remove stale lock files (`apps/web/.next/dev/lock`). Fallback for when Overmind isn't running or crashes. Add as `pnpm dev:clean` in root package.json. — (manual QA session 2026-02-21)
+- [ ] [P2] Simplify Docker profile handling — wrapper script or Makefile target that always includes `--profile auth` for Zitadel. Current setup requires remembering `docker compose --profile auth up -d zitadel` separately from `docker compose up -d`. — (manual QA session 2026-02-21)
+- [ ] [P3] Docker Compose staging override — `docker-compose.staging.yml` with built API/web production images alongside shared infra services. For local staging testing and future deployed staging. Do NOT use `docker compose watch` for Next.js (Turbopack hot-reload bug, docker/compose#12827). — (manual QA session 2026-02-21)
+
+### QA Observations
+
+- [ ] [P2] Submission detail page: display custom form field data — `/submissions/[id]` detail view only shows Title, Content, and History. Custom form fields (Category, Word Count, Bio from form definitions) are not rendered. Form data is persisted and visible on edit page but not on read-only detail view. — (manual QA 2026-02-21, conditional logic testing)
+- [ ] [P3] Submissions list stale cache after create — after creating a new submission via "Create Draft", navigating to My Submissions shows "No submissions" until page reload. Likely TanStack Query cache not invalidated on create mutation success. Submission does exist (API returned 200, detail page loads). — (manual QA 2026-02-21, conditional logic testing)
 
 ---
 
