@@ -1,10 +1,14 @@
-export default function SubmissionReviewPage() {
+import { SubmissionDetail } from "@/components/submissions/submission-detail";
+
+export default async function EditorSubmissionDetailPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
   return (
     <div className="p-6">
-      <h1 className="text-2xl font-bold">Submission Review</h1>
-      <p className="text-muted-foreground mt-2">
-        Coming soon — v2 submission review under development.
-      </p>
+      <SubmissionDetail submissionId={id} backHref="/editor/submissions" />
     </div>
   );
 }

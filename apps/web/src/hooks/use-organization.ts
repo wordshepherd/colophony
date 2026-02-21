@@ -72,6 +72,7 @@ export function useOrganization() {
   const isReader = !!currentOrg;
 
   return {
+    user,
     currentOrg,
     organizations,
     switchOrganization,

@@ -7,7 +7,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { ClipboardList } from "lucide-react";
+import { ClipboardList, Inbox } from "lucide-react";
 
 export default function EditorPage() {
   return (
@@ -20,6 +20,29 @@ export default function EditorPage() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <Link href="/editor/submissions">
+          <Card className="hover:border-primary/50 transition-colors cursor-pointer">
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <div className="rounded-lg bg-primary/10 p-2">
+                  <Inbox className="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                  <CardTitle className="text-base">Submissions</CardTitle>
+                  <CardDescription>
+                    Review and manage incoming submissions
+                  </CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <Button variant="outline" size="sm" className="w-full">
+                View Queue
+              </Button>
+            </CardContent>
+          </Card>
+        </Link>
+
         <Link href="/editor/forms">
           <Card className="hover:border-primary/50 transition-colors cursor-pointer">
             <CardHeader>
