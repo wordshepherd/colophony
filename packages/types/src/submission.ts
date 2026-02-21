@@ -57,6 +57,17 @@ export const submissionSchema = z.object({
 
 export type Submission = z.infer<typeof submissionSchema>;
 
+/** Submission list item — includes submitter email for editor list view. */
+export const submissionListItemSchema = submissionSchema.extend({
+  submitterEmail: z
+    .string()
+    .email()
+    .nullable()
+    .describe("Email address of the submitter"),
+});
+
+export type SubmissionListItem = z.infer<typeof submissionListItemSchema>;
+
 export const createSubmissionSchema = z.object({
   title: z
     .string()

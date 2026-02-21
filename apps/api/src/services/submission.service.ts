@@ -161,8 +161,25 @@ export const submissionService = {
 
     const [items, countResult] = await Promise.all([
       tx
-        .select()
+        .select({
+          id: submissions.id,
+          organizationId: submissions.organizationId,
+          submitterId: submissions.submitterId,
+          submissionPeriodId: submissions.submissionPeriodId,
+          title: submissions.title,
+          content: submissions.content,
+          coverLetter: submissions.coverLetter,
+          formDefinitionId: submissions.formDefinitionId,
+          formData: submissions.formData,
+          status: submissions.status,
+          submittedAt: submissions.submittedAt,
+          createdAt: submissions.createdAt,
+          updatedAt: submissions.updatedAt,
+          searchVector: submissions.searchVector,
+          submitterEmail: users.email,
+        })
         .from(submissions)
+        .leftJoin(users, eq(users.id, submissions.submitterId))
         .where(where)
         .orderBy(desc(submissions.createdAt))
         .limit(limit)
