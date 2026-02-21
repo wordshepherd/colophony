@@ -24,6 +24,10 @@ import {
   FormInUseError,
   InvalidFormDataError,
 } from '../services/form.service.js';
+import {
+  PeriodNotFoundError,
+  PeriodHasSubmissionsError,
+} from '../services/period.service.js';
 
 type ORPCErrorCode = ConstructorParameters<typeof ORPCError>[0];
 
@@ -52,6 +56,9 @@ const errorCodeMap: [new (...args: never[]) => Error, ORPCErrorCode][] = [
   [FormHasNoFieldsError, 'BAD_REQUEST'],
   [FormInUseError, 'BAD_REQUEST'],
   [InvalidFormDataError, 'BAD_REQUEST'],
+  // Period errors
+  [PeriodNotFoundError, 'NOT_FOUND'],
+  [PeriodHasSubmissionsError, 'BAD_REQUEST'],
   // Precondition
   [FileNotCleanError, 'BAD_REQUEST'],
 ];
