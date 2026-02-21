@@ -1,6 +1,7 @@
 import { GraphQLError } from 'graphql';
 import {
   listAuditEventsSchema,
+  idParamSchema,
   AuditActions,
   AuditResources,
 } from '@colophony/types';
@@ -133,7 +134,8 @@ builder.queryFields((t) => ({
     resolve: async (_root, args, ctx) => {
       const adminCtx = requireAdmin(ctx);
       await requireScopes(ctx, 'audit:read');
-      const event = await auditService.getById(adminCtx.dbTx, args.id);
+      const { id } = idParamSchema.parse({ id: args.id });
+      const event = await auditService.getById(adminCtx.dbTx, id);
       if (!event) {
         throw new GraphQLError('Audit event not found', {
           extensions: { code: 'NOT_FOUND' },

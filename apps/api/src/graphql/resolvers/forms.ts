@@ -97,9 +97,10 @@ builder.queryFields((t) => ({
     resolve: async (_root, args, ctx) => {
       const orgCtx = requireOrgContext(ctx);
       await requireScopes(ctx, 'forms:read');
+      const { id } = idParamSchema.parse({ id: args.id });
       try {
-        const form = await formService.getById(orgCtx.dbTx, args.id);
-        if (!form) throw new FormNotFoundError(args.id);
+        const form = await formService.getById(orgCtx.dbTx, id);
+        if (!form) throw new FormNotFoundError(id);
         return form;
       } catch (e) {
         mapServiceError(e);
@@ -313,10 +314,11 @@ builder.mutationFields((t) => ({
         sortOrder: args.sortOrder ?? undefined,
         config: (args.config as Record<string, unknown>) ?? undefined,
       });
+      const { id: formId } = idParamSchema.parse({ id: args.formId });
       try {
         return await formService.addFieldWithAudit(
           toServiceContext(orgCtx),
-          args.formId,
+          formId,
           input,
         );
       } catch (e) {
@@ -364,11 +366,13 @@ builder.mutationFields((t) => ({
         required: args.required ?? undefined,
         config: (args.config as Record<string, unknown>) ?? undefined,
       });
+      const { id: formId } = idParamSchema.parse({ id: args.formId });
+      const { id: fieldId } = idParamSchema.parse({ id: args.fieldId });
       try {
         return await formService.updateFieldWithAudit(
           toServiceContext(orgCtx),
-          args.formId,
-          args.fieldId,
+          formId,
+          fieldId,
           data,
         );
       } catch (e) {
@@ -391,11 +395,13 @@ builder.mutationFields((t) => ({
     resolve: async (_root, args, ctx) => {
       const orgCtx = requireOrgContext(ctx);
       await requireScopes(ctx, 'forms:write');
+      const { id: formId } = idParamSchema.parse({ id: args.formId });
+      const { id: fieldId } = idParamSchema.parse({ id: args.fieldId });
       try {
         return await formService.removeFieldWithAudit(
           toServiceContext(orgCtx),
-          args.formId,
-          args.fieldId,
+          formId,
+          fieldId,
         );
       } catch (e) {
         mapServiceError(e);
@@ -423,10 +429,11 @@ builder.mutationFields((t) => ({
       const input = reorderFormFieldsSchema.parse({
         fieldIds: args.fieldIds,
       });
+      const { id: formId } = idParamSchema.parse({ id: args.formId });
       try {
         return await formService.reorderFieldsWithAudit(
           toServiceContext(orgCtx),
-          args.formId,
+          formId,
           input,
         );
       } catch (e) {
