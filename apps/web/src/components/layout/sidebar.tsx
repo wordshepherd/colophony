@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import { useOrganization } from "@/hooks/use-organization";
 import {
   Building2,
+  Calendar,
   ClipboardList,
   FileText,
   Inbox,
@@ -22,6 +23,7 @@ const editorNavigation = [
   { name: "Editor Dashboard", href: "/editor", icon: LayoutDashboard },
   { name: "Submissions", href: "/editor/submissions", icon: Inbox },
   { name: "Forms", href: "/editor/forms", icon: ClipboardList },
+  { name: "Periods", href: "/editor/periods", icon: Calendar },
 ];
 
 const adminNavigation = [
