@@ -51,8 +51,14 @@ vi.mock('../../services/form.service.js', () => ({
   FormFieldNotFoundError: class FormFieldNotFoundError extends Error {
     name = 'FormFieldNotFoundError';
   },
+  FormPageNotFoundError: class FormPageNotFoundError extends Error {
+    name = 'FormPageNotFoundError';
+  },
   InvalidFormDataError: class InvalidFormDataError extends Error {
     name = 'InvalidFormDataError';
+  },
+  InvalidBranchReferenceError: class InvalidBranchReferenceError extends Error {
+    name = 'InvalidBranchReferenceError';
   },
 }));
 

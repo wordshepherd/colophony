@@ -292,7 +292,11 @@ export const createFormFieldSchema = z.object({
     .optional()
     .describe("Display order (auto-assigned if omitted)"),
   config: fieldConfigSchema.optional().describe("Type-specific configuration"),
-  branchId: z.string().optional().describe("Branch ID to assign this field to"),
+  branchId: z
+    .string()
+    .uuid()
+    .optional()
+    .describe("Branch ID to assign this field to"),
 });
 
 export type CreateFormFieldInput = z.infer<typeof createFormFieldSchema>;
@@ -309,6 +313,7 @@ export const updateFormFieldSchema = z.object({
     .describe("Conditional display rules"),
   branchId: z
     .string()
+    .uuid()
     .nullable()
     .optional()
     .describe("Branch ID to assign this field to"),

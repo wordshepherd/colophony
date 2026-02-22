@@ -15,10 +15,7 @@ import {
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Plus, Pencil, Trash2, GitBranch } from "lucide-react";
-import {
-  extractBranchingConfig,
-  type BranchDefinition,
-} from "@colophony/types";
+import type { BranchDefinition } from "@colophony/types";
 
 interface SelectOption {
   label: string;
@@ -36,9 +33,14 @@ export function BranchingConfig({
   onChange,
   fieldId: _fieldId,
 }: BranchingConfigProps) {
-  const branching = extractBranchingConfig(config);
-  const enabled = branching?.enabled ?? false;
-  const branches = branching?.branches ?? [];
+  // Read branching state directly from config rather than via extractBranchingConfig,
+  // because the schema rejects empty branches arrays — but we need to support the
+  // intermediate state where branching is enabled but no branches exist yet.
+  const rawBranching = config.branching as
+    | { enabled?: boolean; branches?: BranchDefinition[] }
+    | undefined;
+  const enabled = rawBranching?.enabled ?? false;
+  const branches: BranchDefinition[] = rawBranching?.branches ?? [];
   const options = (config.options as SelectOption[] | undefined) ?? [];
 
   const [newBranchName, setNewBranchName] = useState("");

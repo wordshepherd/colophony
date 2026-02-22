@@ -60,11 +60,23 @@ vi.mock('../../services/form.service.js', () => ({
       super('Field not found');
     }
   },
+  FormPageNotFoundError: class FormPageNotFoundError extends Error {
+    name = 'FormPageNotFoundError';
+    constructor(id = 'unknown') {
+      super(`Form page "${id}" not found`);
+    }
+  },
   InvalidFormDataError: class InvalidFormDataError extends Error {
     name = 'InvalidFormDataError';
     fieldErrors: { fieldKey: string; message: string }[] = [];
     constructor() {
       super('Invalid form data');
+    }
+  },
+  InvalidBranchReferenceError: class InvalidBranchReferenceError extends Error {
+    name = 'InvalidBranchReferenceError';
+    constructor(details = '') {
+      super(`Invalid branch reference: ${details}`);
     }
   },
 }));
