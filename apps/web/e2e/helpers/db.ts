@@ -16,6 +16,8 @@ import {
   apiKeys,
   submissions,
   submissionPeriods,
+  manuscripts,
+  manuscriptVersions,
 } from "@colophony/db";
 
 const DATABASE_URL =
@@ -217,12 +219,70 @@ export async function deleteApiKey(keyId: string): Promise<void> {
 }
 
 /**
+ * Create a manuscript for testing.
+ */
+export async function createManuscript(data: {
+  ownerId: string;
+  title: string;
+  description?: string;
+}): Promise<{ id: string }> {
+  const db = getDb();
+  const [row] = await db
+    .insert(manuscripts)
+    .values({
+      ownerId: data.ownerId,
+      title: data.title,
+      description: data.description ?? null,
+    })
+    .returning({
+      id: manuscripts.id,
+    });
+  return row;
+}
+
+/**
+ * Create a manuscript version for testing.
+ */
+export async function createManuscriptVersion(data: {
+  manuscriptId: string;
+  versionNumber: number;
+  label?: string;
+}): Promise<{ id: string }> {
+  const db = getDb();
+  const [row] = await db
+    .insert(manuscriptVersions)
+    .values({
+      manuscriptId: data.manuscriptId,
+      versionNumber: data.versionNumber,
+      label: data.label ?? null,
+    })
+    .returning({
+      id: manuscriptVersions.id,
+    });
+  return row;
+}
+
+/**
+ * Delete a manuscript and all associated versions/files (cascade).
+ */
+export async function deleteManuscript(manuscriptId: string): Promise<void> {
+  const db = getDb();
+  await db
+    .delete(manuscripts)
+    .where(eq(manuscripts.id, manuscriptId))
+    .catch(() => {
+      // Ignore if already deleted
+    });
+}
+
+/**
  * Create a submission for testing.
  */
 export async function createSubmission(data: {
   orgId: string;
   submitterId: string;
   submissionPeriodId?: string;
+  manuscriptVersionId?: string;
   title: string;
   content?: string;
   coverLetter?: string;
@@ -235,6 +295,7 @@ export async function createSubmission(data: {
       organizationId: data.orgId,
       submitterId: data.submitterId,
       submissionPeriodId: data.submissionPeriodId ?? null,
+      manuscriptVersionId: data.manuscriptVersionId ?? null,
       title: data.title,
       content: data.content ?? null,
       coverLetter: data.coverLetter ?? null,

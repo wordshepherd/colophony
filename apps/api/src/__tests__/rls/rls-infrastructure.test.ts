@@ -8,13 +8,15 @@ const RLS_TABLES = [
   'form_pages',
   'submission_periods',
   'submissions',
-  'submission_files',
   'submission_history',
   'payments',
   'audit_events',
   'retention_policies',
   'user_consents',
   'api_keys',
+  'manuscripts',
+  'manuscript_versions',
+  'files',
 ];
 
 /** RLS tables where app_user has full DML (excludes audit_events which is SELECT-only + function). */
@@ -283,10 +285,11 @@ describe('RLS Infrastructure', () => {
       ];
       const { rows } = await admin.query<{
         tablename: string;
+        policyname: string;
         qual: string;
       }>(
         `
-        SELECT tablename, qual
+        SELECT tablename, policyname, qual
         FROM pg_policies
         WHERE schemaname = 'public'
           AND tablename = ANY($1)
@@ -294,11 +297,24 @@ describe('RLS Infrastructure', () => {
         [directTables],
       );
 
+      // Each direct table should have at least one policy referencing current_org_id().
+      // Some tables (e.g., submissions) also have user-scoped policies (submitter_read)
+      // that reference current_user_id() instead — those are excluded from this check.
+      const tableMap = new Map<string, typeof rows>();
       for (const row of rows) {
+        if (!tableMap.has(row.tablename)) tableMap.set(row.tablename, []);
+        tableMap.get(row.tablename)!.push(row);
+      }
+
+      for (const table of directTables) {
+        const policies = tableMap.get(table) ?? [];
+        const hasOrgPolicy = policies.some((p) =>
+          p.qual.includes('current_org_id()'),
+        );
         expect(
-          row.qual,
-          `${row.tablename} policy should reference current_org_id()`,
-        ).toContain('current_org_id()');
+          hasOrgPolicy,
+          `${table} should have at least one policy referencing current_org_id()`,
+        ).toBe(true);
       }
     });
 
