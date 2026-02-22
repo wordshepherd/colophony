@@ -6,17 +6,17 @@ import {
   text,
   timestamp,
   integer,
-  bigint,
   numeric,
   jsonb,
   index,
   customType,
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
-import { submissionStatusEnum, scanStatusEnum } from "./enums";
+import { submissionStatusEnum } from "./enums";
 import { organizations } from "./organizations";
 import { users } from "./users";
 import { formDefinitions } from "./forms";
+import { manuscriptVersions } from "./manuscripts";
 
 const tsvector = customType<{ data: string }>({
   dataType() {
@@ -90,6 +90,10 @@ export const submissions = pgTable(
       () => formDefinitions.id,
       { onDelete: "set null" },
     ),
+    manuscriptVersionId: uuid("manuscript_version_id").references(
+      () => manuscriptVersions.id,
+      { onDelete: "set null" },
+    ),
     title: varchar("title", { length: 500 }),
     content: text("content"),
     coverLetter: text("cover_letter"),
@@ -114,6 +118,9 @@ export const submissions = pgTable(
     ),
     index("submissions_submission_period_id_idx").on(table.submissionPeriodId),
     index("submissions_form_definition_id_idx").on(table.formDefinitionId),
+    index("submissions_manuscript_version_id_idx").on(
+      table.manuscriptVersionId,
+    ),
     index("submissions_org_status_submitted_idx").on(
       table.organizationId,
       table.status,
@@ -121,41 +128,10 @@ export const submissions = pgTable(
     ),
     index("submissions_search_vector_idx").using("gin", table.searchVector),
     orgIsolationPolicy,
-  ],
-).enableRLS();
-
-// --- submission_files ---
-
-export const submissionFiles = pgTable(
-  "submission_files",
-  {
-    id: uuid("id").defaultRandom().primaryKey(),
-    submissionId: uuid("submission_id")
-      .notNull()
-      .references(() => submissions.id, { onDelete: "cascade" }),
-    filename: varchar("filename", { length: 500 }).notNull(),
-    mimeType: varchar("mime_type", { length: 255 }).notNull(),
-    size: bigint("size", { mode: "number" }).notNull(),
-    storageKey: varchar("storage_key", { length: 1000 }).notNull(),
-    scanStatus: scanStatusEnum("scan_status").notNull().default("PENDING"),
-    scannedAt: timestamp("scanned_at", { withTimezone: true }),
-    uploadedAt: timestamp("uploaded_at", { withTimezone: true })
-      .defaultNow()
-      .notNull(),
-  },
-  (table) => [
-    index("submission_files_submission_id_idx").on(table.submissionId),
-    index("submission_files_scan_status_idx").on(
-      table.submissionId,
-      table.scanStatus,
-      table.uploadedAt,
-    ),
-    pgPolicy("submission_files_org_isolation", {
-      for: "all",
-      using: sql`submission_id IN (
-        SELECT id FROM submissions
-        WHERE organization_id = current_org_id()
-      )`,
+    // Submitter-scoped read: submitters can see their own submissions cross-org
+    pgPolicy("submissions_submitter_read", {
+      for: "select",
+      using: sql`submitter_id = current_user_id()`,
     }),
   ],
 ).enableRLS();

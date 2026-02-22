@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { scanStatusSchema, submissionFileSchema } from "./file";
+import { scanStatusSchema, fileSchema } from "./file";
 
 export const submissionStatusSchema = z
   .enum([
@@ -46,6 +46,11 @@ export const submissionSchema = z.object({
     .record(z.string(), z.unknown())
     .nullable()
     .describe("Structured form data keyed by field key"),
+  manuscriptVersionId: z
+    .string()
+    .uuid()
+    .nullable()
+    .describe("ID of the manuscript version attached to this submission"),
   status: submissionStatusSchema,
   submittedAt: z
     .date()
@@ -99,6 +104,11 @@ export const createSubmissionSchema = z.object({
     .record(z.string(), z.unknown())
     .optional()
     .describe("Structured form data keyed by field key"),
+  manuscriptVersionId: z
+    .string()
+    .uuid()
+    .optional()
+    .describe("Manuscript version to attach to this submission"),
 });
 
 export type CreateSubmissionInput = z.infer<typeof createSubmissionSchema>;
@@ -121,8 +131,8 @@ export const updateSubmissionSchema = z.object({
 
 export type UpdateSubmissionInput = z.infer<typeof updateSubmissionSchema>;
 
-// Re-export submissionFileSchema from file.ts for backwards compatibility
-export { submissionFileSchema, type SubmissionFile } from "./file";
+// Backwards-compatible aliases are exported from file.ts directly
+// (submissionFileSchema, SubmissionFile) — no re-export needed here.
 
 export const submissionHistorySchema = z.object({
   id: z.string().uuid().describe("History entry ID"),
@@ -148,8 +158,8 @@ export type SubmissionHistory = z.infer<typeof submissionHistorySchema>;
 /** Submission detail — includes files and submitter email (for `getById`). */
 export const submissionDetailSchema = submissionSchema.extend({
   files: z
-    .array(submissionFileSchema)
-    .describe("Files attached to this submission"),
+    .array(fileSchema)
+    .describe("Files attached to this submission (via manuscript version)"),
   submitterEmail: z
     .string()
     .email()

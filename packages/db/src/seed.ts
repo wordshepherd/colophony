@@ -17,7 +17,9 @@ import {
   organizationMembers,
   submissionPeriods,
   submissions,
-  submissionFiles,
+  manuscripts,
+  manuscriptVersions,
+  files,
   submissionHistory,
   payments,
   apiKeys,
@@ -267,29 +269,56 @@ async function main() {
 
     console.log("  Submissions: 4 (3 in quarterly-review, 1 in inkwell-press)");
 
-    // ----- Submission Files (on the SUBMITTED submission) -----
-    await tx.insert(submissionFiles).values([
+    // ----- Manuscripts + Versions + Files -----
+    // Create a manuscript for the writer's submitted work
+    const [manuscript1] = await tx
+      .insert(manuscripts)
+      .values({
+        ownerId: writerUser!.id,
+        title: "The Weight of Small Things",
+        description:
+          "A short story about the objects we carry and the memories they hold.",
+      })
+      .returning();
+
+    const [version1] = await tx
+      .insert(manuscriptVersions)
+      .values({
+        manuscriptId: manuscript1!.id,
+        versionNumber: 1,
+        label: "Initial submission",
+      })
+      .returning();
+
+    // Link the submitted submission to this manuscript version
+    await tx
+      .update(submissions)
+      .set({ manuscriptVersionId: version1!.id })
+      .where(eq(submissions.id, submittedSub!.id));
+
+    // Create files on the manuscript version (replaces submission_files)
+    await tx.insert(files).values([
       {
-        submissionId: submittedSub!.id,
+        manuscriptVersionId: version1!.id,
         filename: "the-weight-of-small-things.pdf",
         mimeType: "application/pdf",
         size: 245_760,
-        storageKey: `submissions/${org1!.id}/${submittedSub!.id}/the-weight-of-small-things.pdf`,
+        storageKey: `manuscripts/${writerUser!.id}/${manuscript1!.id}/v1/the-weight-of-small-things.pdf`,
         scanStatus: "CLEAN",
         scannedAt: daysAgo(4),
       },
       {
-        submissionId: submittedSub!.id,
+        manuscriptVersionId: version1!.id,
         filename: "cover-letter.pdf",
         mimeType: "application/pdf",
         size: 51_200,
-        storageKey: `submissions/${org1!.id}/${submittedSub!.id}/cover-letter.pdf`,
+        storageKey: `manuscripts/${writerUser!.id}/${manuscript1!.id}/v1/cover-letter.pdf`,
         scanStatus: "CLEAN",
         scannedAt: daysAgo(4),
       },
     ]);
 
-    console.log("  Submission files: 2");
+    console.log("  Manuscripts: 1, versions: 1, files: 2");
 
     // ----- Submission History -----
     // SUBMITTED submission: DRAFT → SUBMITTED

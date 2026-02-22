@@ -3,10 +3,10 @@ import { organizations } from "./organizations";
 import { users } from "./users";
 import { organizationMembers } from "./members";
 import { formDefinitions, formFields, formPages } from "./forms";
+import { manuscripts, manuscriptVersions, files } from "./manuscripts";
 import {
   submissionPeriods,
   submissions,
-  submissionFiles,
   submissionHistory,
 } from "./submissions";
 import { payments } from "./payments";
@@ -34,6 +34,7 @@ export const usersRelations = relations(users, ({ many }) => ({
   memberships: many(organizationMembers),
   formDefinitions: many(formDefinitions),
   submissions: many(submissions),
+  manuscripts: many(manuscripts),
   auditEvents: many(auditEvents),
   dsarRequests: many(dsarRequests),
   userConsents: many(userConsents),
@@ -99,6 +100,39 @@ export const formPagesRelations = relations(formPages, ({ one, many }) => ({
   fields: many(formFields),
 }));
 
+// --- manuscripts ---
+
+export const manuscriptsRelations = relations(manuscripts, ({ one, many }) => ({
+  owner: one(users, {
+    fields: [manuscripts.ownerId],
+    references: [users.id],
+  }),
+  versions: many(manuscriptVersions),
+}));
+
+// --- manuscript_versions ---
+
+export const manuscriptVersionsRelations = relations(
+  manuscriptVersions,
+  ({ one, many }) => ({
+    manuscript: one(manuscripts, {
+      fields: [manuscriptVersions.manuscriptId],
+      references: [manuscripts.id],
+    }),
+    files: many(files),
+    submissions: many(submissions),
+  }),
+);
+
+// --- files ---
+
+export const filesRelations = relations(files, ({ one }) => ({
+  manuscriptVersion: one(manuscriptVersions, {
+    fields: [files.manuscriptVersionId],
+    references: [manuscriptVersions.id],
+  }),
+}));
+
 // --- submission_periods ---
 
 export const submissionPeriodsRelations = relations(
@@ -135,22 +169,13 @@ export const submissionsRelations = relations(submissions, ({ one, many }) => ({
     fields: [submissions.formDefinitionId],
     references: [formDefinitions.id],
   }),
-  files: many(submissionFiles),
+  manuscriptVersion: one(manuscriptVersions, {
+    fields: [submissions.manuscriptVersionId],
+    references: [manuscriptVersions.id],
+  }),
   history: many(submissionHistory),
   payments: many(payments),
 }));
-
-// --- submission_files ---
-
-export const submissionFilesRelations = relations(
-  submissionFiles,
-  ({ one }) => ({
-    submission: one(submissions, {
-      fields: [submissionFiles.submissionId],
-      references: [submissions.id],
-    }),
-  }),
-);
 
 // --- submission_history ---
 

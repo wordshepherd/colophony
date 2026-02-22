@@ -4,6 +4,7 @@ export * from "./organization";
 export * from "./submission";
 export * from "./payment";
 export * from "./file";
+export * from "./manuscript";
 export * from "./form";
 export * from "./conditional-rules";
 export * from "./common";
