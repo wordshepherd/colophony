@@ -26,3 +26,16 @@ export interface ServiceContext {
   /** Request-scoped audit function from the audit hook. */
   audit: AuditFn;
 }
+
+/**
+ * User-scoped service context — for operations that need auth + DB transaction
+ * but NOT org context (e.g., manuscripts are user-scoped, not org-scoped).
+ */
+export interface UserServiceContext {
+  /** RLS-scoped Drizzle transaction from the dbContext hook. */
+  tx: DrizzleDb;
+  /** Authenticated user ID. */
+  userId: string;
+  /** Request-scoped audit function from the audit hook. */
+  audit: AuditFn;
+}

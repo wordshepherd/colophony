@@ -1,6 +1,13 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import Redis from 'ioredis';
-import { withRls, submissions, eq, db, users } from '@colophony/db';
+import {
+  withRls,
+  manuscriptVersions,
+  manuscripts,
+  eq,
+  db,
+  users,
+} from '@colophony/db';
 import type { DrizzleDb } from '@colophony/db';
 import { createJwksVerifier } from '@colophony/auth-client';
 import {
@@ -214,9 +221,9 @@ export async function registerTusdWebhooks(
     // Extract auth from forwarded headers
     const authHeader = getForwardedHeader(forwardedHeaders, 'Authorization');
     const apiKeyHeader = getForwardedHeader(forwardedHeaders, 'X-Api-Key');
-    let orgId = getForwardedHeader(forwardedHeaders, 'X-Organization-Id');
 
     // Validate token and resolve local user UUID
+    // Note: orgId is NOT required for manuscript uploads (user-scoped)
     let userId: string;
 
     const bearerMatch = authHeader
@@ -225,10 +232,6 @@ export async function registerTusdWebhooks(
 
     if (verifyToken && bearerMatch) {
       // OIDC token auth (interactive users)
-      if (!orgId) {
-        await reply.status(200).send(rejectUpload(401, 'missing_auth_or_org'));
-        return;
-      }
       try {
         const { payload } = await verifyToken(bearerMatch[1]);
         if (!payload.sub) {
@@ -276,17 +279,10 @@ export async function registerTusdWebhooks(
         return;
       }
       userId = creator.id;
-      // CRITICAL: Use org from the key, NOT from the forwarded X-Organization-Id
-      // header. This mirrors auth.ts and prevents tenant isolation bypass.
-      orgId = apiKey.organizationId;
       // Fire-and-forget: update lastUsedAt (mirrors auth.ts)
       void apiKeyService.touchLastUsed(apiKey.id);
     } else if (env.NODE_ENV === 'test') {
       // Test mode: extract from forwarded test headers
-      if (!orgId) {
-        await reply.status(200).send(rejectUpload(401, 'missing_auth_or_org'));
-        return;
-      }
       const testUserId = getForwardedHeader(forwardedHeaders, 'X-Test-User-Id');
       if (!testUserId) {
         await reply.status(200).send(rejectUpload(401, 'no_auth_configured'));
@@ -298,19 +294,17 @@ export async function registerTusdWebhooks(
       return;
     }
 
-    if (!orgId) {
-      await reply.status(200).send(rejectUpload(401, 'missing_auth_or_org'));
-      return;
-    }
-
-    // Extract upload metadata
-    const submissionId = metadata['submission-id'] ?? metadata['submissionId'];
+    // Extract upload metadata — manuscript-version-id replaces submission-id
+    const manuscriptVersionId =
+      metadata['manuscript-version-id'] ?? metadata['manuscriptVersionId'];
     const mimeType =
       metadata['filetype'] ?? metadata['type'] ?? 'application/octet-stream';
     const fileSize = Upload.Size ?? 0;
 
-    if (!submissionId) {
-      await reply.status(200).send(rejectUpload(400, 'missing_submission_id'));
+    if (!manuscriptVersionId) {
+      await reply
+        .status(200)
+        .send(rejectUpload(400, 'missing_manuscript_version_id'));
       return;
     }
 
@@ -330,42 +324,35 @@ export async function registerTusdWebhooks(
       return;
     }
 
-    // Validate within RLS context
+    // Validate within user-scoped RLS context (no org needed)
     try {
-      await withRls({ orgId, userId }, async (tx: DrizzleDb) => {
-        // Check submission exists and is DRAFT
-        const [submission] = await tx
+      await withRls({ userId }, async (tx: DrizzleDb) => {
+        // Check manuscript version exists and is owned by this user
+        const [version] = await tx
           .select({
-            id: submissions.id,
-            status: submissions.status,
-            submitterId: submissions.submitterId,
+            id: manuscriptVersions.id,
+            manuscriptId: manuscriptVersions.manuscriptId,
           })
-          .from(submissions)
-          .where(eq(submissions.id, submissionId))
+          .from(manuscriptVersions)
+          .innerJoin(
+            manuscripts,
+            eq(manuscriptVersions.manuscriptId, manuscripts.id),
+          )
+          .where(eq(manuscriptVersions.id, manuscriptVersionId))
           .limit(1);
 
-        if (!submission) {
-          throw new Error('submission_not_found');
+        if (!version) {
+          throw new Error('manuscript_version_not_found');
         }
-        if (submission.status !== 'DRAFT') {
-          throw new Error('submission_not_draft');
-        }
-        // Only the submission owner can upload files
-        if (submission.submitterId !== userId) {
-          throw new Error('not_submission_owner');
-        }
+        // RLS already ensures ownership, but the join through manuscripts
+        // table with owner_id = current_user_id() policy handles this.
 
         // Check file count and size limits
-        await fileService.validateLimits(tx, submissionId, fileSize);
+        await fileService.validateLimits(tx, manuscriptVersionId, fileSize);
       });
     } catch (e) {
       const message = e instanceof Error ? e.message : 'validation_failed';
-      const statusCode =
-        message === 'submission_not_found'
-          ? 404
-          : message === 'submission_not_draft'
-            ? 409
-            : 422;
+      const statusCode = message === 'manuscript_version_not_found' ? 404 : 422;
       await reply.status(200).send(rejectUpload(statusCode, message));
       return;
     }
@@ -391,9 +378,10 @@ export async function registerTusdWebhooks(
     const metadata = Upload.MetaData ?? {};
     const forwardedHeaders = HTTPRequest.Header;
 
-    let orgId = getForwardedHeader(forwardedHeaders, 'X-Organization-Id');
     const authHeader = getForwardedHeader(forwardedHeaders, 'Authorization');
     const apiKeyHeader = getForwardedHeader(forwardedHeaders, 'X-Api-Key');
+    // orgId is optional — manuscript uploads are user-scoped, not org-scoped
+    const orgId = getForwardedHeader(forwardedHeaders, 'X-Organization-Id');
 
     // Resolve userId from forwarded auth — fail closed if auth is invalid
     let userId: string;
@@ -404,10 +392,6 @@ export async function registerTusdWebhooks(
 
     if (verifyToken && bearerMatch) {
       // OIDC token auth
-      if (!orgId) {
-        request.log.error('Post-finish webhook missing X-Organization-Id');
-        return reply.status(400).send({ error: 'missing_org_id' });
-      }
       try {
         const { payload } = await verifyToken(bearerMatch[1]);
         if (!payload.sub) {
@@ -443,15 +427,9 @@ export async function registerTusdWebhooks(
         return reply.status(403).send({ error: 'insufficient_scopes' });
       }
       userId = creator.id;
-      // CRITICAL: Use org from the key, NOT from the forwarded header
-      orgId = apiKey.organizationId;
       // Fire-and-forget: update lastUsedAt (mirrors auth.ts)
       void apiKeyService.touchLastUsed(apiKey.id);
     } else if (env.NODE_ENV === 'test') {
-      if (!orgId) {
-        request.log.error('Post-finish webhook missing X-Organization-Id');
-        return reply.status(400).send({ error: 'missing_org_id' });
-      }
       const testUserId = getForwardedHeader(forwardedHeaders, 'X-Test-User-Id');
       if (!testUserId) {
         return reply.status(401).send({ error: 'no_auth_configured' });
@@ -462,12 +440,8 @@ export async function registerTusdWebhooks(
       return reply.status(401).send({ error: 'no_auth_configured' });
     }
 
-    if (!orgId) {
-      request.log.error('Post-finish webhook missing org context');
-      return reply.status(400).send({ error: 'missing_org_id' });
-    }
-
-    const submissionId = metadata['submission-id'] ?? metadata['submissionId'];
+    const manuscriptVersionId =
+      metadata['manuscript-version-id'] ?? metadata['manuscriptVersionId'];
     const filename = sanitizeFilename(
       metadata['filename'] ?? metadata['name'] ?? 'unnamed',
     );
@@ -476,9 +450,9 @@ export async function registerTusdWebhooks(
     const storageKey = Upload.Storage?.Key ?? Upload.ID;
     const size = Upload.Size;
 
-    if (!submissionId || !storageKey) {
+    if (!manuscriptVersionId || !storageKey) {
       request.log.error(
-        { submissionId, storageKey },
+        { manuscriptVersionId, storageKey },
         'Post-finish missing required metadata',
       );
       return reply.status(400).send({ error: 'missing_metadata' });
@@ -489,7 +463,8 @@ export async function registerTusdWebhooks(
       let fileIdToScan: string | null = null;
       let needsScanEnqueue = false;
 
-      await withRls({ orgId, userId }, async (tx: DrizzleDb) => {
+      // User-scoped RLS — no org needed for manuscript file operations
+      await withRls({ userId }, async (tx: DrizzleDb) => {
         // Idempotency: check if already processed
         const existing = await fileService.getByStorageKey(tx, storageKey);
         if (existing) {
@@ -506,9 +481,9 @@ export async function registerTusdWebhooks(
           return;
         }
 
-        // Create file record
+        // Create file record linked to manuscript version
         const file = await fileService.create(tx, {
-          submissionId,
+          manuscriptVersionId,
           filename,
           mimeType,
           size,
@@ -520,16 +495,16 @@ export async function registerTusdWebhooks(
           await fileService.updateScanStatus(tx, file.id, 'CLEAN');
         }
 
-        // Audit within the same transaction
+        // Audit within the same transaction (orgId is optional)
         await auditService.log(tx, {
           resource: AuditResources.FILE,
           action: AuditActions.FILE_UPLOADED,
           resourceId: file.id,
           actorId: userId,
-          organizationId: orgId,
+          ...(orgId ? { organizationId: orgId } : {}),
           ipAddress: request.ip,
           userAgent: request.headers['user-agent'],
-          newValue: { filename, mimeType, size, submissionId },
+          newValue: { filename, mimeType, size, manuscriptVersionId },
         });
 
         fileIdToScan = file.id;
@@ -538,7 +513,7 @@ export async function registerTusdWebhooks(
         }
 
         request.log.info(
-          { fileId: file.id, submissionId, storageKey },
+          { fileId: file.id, manuscriptVersionId, storageKey },
           'File record created from tusd post-finish',
         );
       });
@@ -548,11 +523,12 @@ export async function registerTusdWebhooks(
         await enqueueFileScan(env, {
           fileId: fileIdToScan,
           storageKey,
-          organizationId: orgId,
+          userId,
+          ...(orgId ? { organizationId: orgId } : {}),
         });
       }
 
-      // When scanning disabled, move file to submissions bucket so
+      // When scanning disabled, move file to clean bucket so
       // download/delete paths find it in the expected location
       if (!env.VIRUS_SCAN_ENABLED && fileIdToScan && !needsScanEnqueue) {
         try {

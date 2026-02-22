@@ -1,16 +1,24 @@
 import { z } from 'zod';
 import {
-  submissionIdParamSchema,
   fileIdParamSchema,
-  submissionFileSchema,
+  fileSchema,
   downloadUrlResponseSchema,
   successResponseSchema,
+  manuscriptVersionIdParamSchema,
 } from '@colophony/types';
-import { orgProcedure, createRouter, requireScopes } from '../init.js';
+import {
+  userProcedure,
+  orgProcedure,
+  createRouter,
+  requireScopes,
+} from '../init.js';
 import { fileService } from '../../services/file.service.js';
 import { createS3Client } from '../../services/s3.js';
 import { validateEnv } from '../../config/env.js';
-import { toServiceContext } from '../../services/context.js';
+import {
+  toServiceContext,
+  toUserServiceContext,
+} from '../../services/context.js';
 import { mapServiceError } from '../error-mapper.js';
 
 // Lazily create S3 client (avoid creating at module load for tests)
@@ -29,24 +37,43 @@ function getEnvConfig() {
 }
 
 export const filesRouter = createRouter({
-  /** List files for a submission — owner or editor/admin. */
-  listBySubmission: orgProcedure
+  /** List files for a manuscript version — owner via RLS. */
+  listByManuscriptVersion: userProcedure
     .use(requireScopes('files:read'))
-    .input(submissionIdParamSchema)
-    .output(z.array(submissionFileSchema))
+    .input(manuscriptVersionIdParamSchema)
+    .output(z.array(fileSchema))
     .query(async ({ ctx, input }) => {
       try {
-        return await fileService.listBySubmissionWithAccess(
-          toServiceContext(ctx),
-          input.submissionId,
+        return await fileService.listByManuscriptVersionWithAccess(
+          toUserServiceContext(ctx),
+          input.manuscriptVersionId,
         );
       } catch (e) {
         mapServiceError(e);
       }
     }),
 
-  /** Get a presigned download URL for a file — owner or editor/admin, CLEAN only. */
-  getDownloadUrl: orgProcedure
+  /** Get a presigned download URL for a file — CLEAN only. */
+  getDownloadUrl: userProcedure
+    .use(requireScopes('files:read'))
+    .input(fileIdParamSchema)
+    .output(downloadUrlResponseSchema)
+    .query(async ({ ctx, input }) => {
+      try {
+        const env = getEnvConfig();
+        return await fileService.getDownloadUrlWithAccess(
+          toUserServiceContext(ctx),
+          input.fileId,
+          getS3Client(),
+          env.S3_BUCKET,
+        );
+      } catch (e) {
+        mapServiceError(e);
+      }
+    }),
+
+  /** Get a presigned download URL — org context (for editors viewing submission files). */
+  getDownloadUrlOrg: orgProcedure
     .use(requireScopes('files:read'))
     .input(fileIdParamSchema)
     .output(downloadUrlResponseSchema)
@@ -64,8 +91,8 @@ export const filesRouter = createRouter({
       }
     }),
 
-  /** Delete a file — submission owner only, DRAFT only. */
-  delete: orgProcedure
+  /** Delete a file — manuscript owner only. */
+  delete: userProcedure
     .use(requireScopes('files:write'))
     .input(fileIdParamSchema)
     .output(successResponseSchema)
@@ -73,7 +100,7 @@ export const filesRouter = createRouter({
       try {
         const env = getEnvConfig();
         return await fileService.deleteAsOwner(
-          toServiceContext(ctx),
+          toUserServiceContext(ctx),
           input.fileId,
           getS3Client(),
           env.S3_BUCKET,

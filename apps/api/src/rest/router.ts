@@ -10,11 +10,13 @@ import { apiKeysRouter } from './routers/api-keys.js';
 import { auditRouter } from './routers/audit.js';
 import { formsRouter } from './routers/forms.js';
 import { periodsRouter } from './routers/periods.js';
+import { manuscriptsRouter } from './routers/manuscripts.js';
 import type { RestContext } from './context.js';
 
 const restRouter = {
   organizations: organizationsRouter,
   submissions: submissionsRouter,
+  manuscripts: manuscriptsRouter,
   files: filesRouter,
   users: usersRouter,
   apiKeys: apiKeysRouter,
@@ -55,6 +57,11 @@ const openApiHandler = new OpenAPIHandler<RestContext>(restRouter, {
             name: 'Organizations',
             description:
               'Manage organizations and their members. Organizations are the top-level tenant in Colophony.',
+          },
+          {
+            name: 'Manuscripts',
+            description:
+              'Manage manuscripts — personal library of creative works with versioning.',
           },
           {
             name: 'Submissions',

@@ -13,6 +13,11 @@ export interface AuthedGraphQLContext extends GraphQLContext {
   authContext: AuthContext;
 }
 
+export interface UserGraphQLContext extends GraphQLContext {
+  authContext: AuthContext;
+  dbTx: DrizzleDb;
+}
+
 export interface OrgGraphQLContext extends GraphQLContext {
   authContext: AuthContext & { orgId: string; role: Role };
   dbTx: DrizzleDb;
@@ -32,6 +37,24 @@ export function requireAuth(ctx: GraphQLContext): AuthedGraphQLContext {
     });
   }
   return ctx as AuthedGraphQLContext;
+}
+
+/**
+ * Require user context (auth + dbTx, no org required).
+ * Returns narrowed context with non-null dbTx.
+ */
+export function requireUserContext(ctx: GraphQLContext): UserGraphQLContext {
+  if (!ctx.authContext) {
+    throw new GraphQLError('Not authenticated', {
+      extensions: { code: 'UNAUTHENTICATED' },
+    });
+  }
+  if (!ctx.dbTx) {
+    throw new GraphQLError('Database transaction not available', {
+      extensions: { code: 'INTERNAL_SERVER_ERROR' },
+    });
+  }
+  return ctx as UserGraphQLContext;
 }
 
 /**

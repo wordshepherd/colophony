@@ -5,5 +5,6 @@ import './users.js';
 import './audit.js';
 import './api-keys.js';
 import './files.js';
+import './manuscripts.js';
 import './forms.js';
 import './periods.js';

@@ -1,7 +1,7 @@
 import DataLoader from 'dataloader';
 import { asc } from 'drizzle-orm';
 import {
-  submissionFiles,
+  files,
   formFields,
   formPages,
   users,
@@ -10,7 +10,7 @@ import {
   type DrizzleDb,
 } from '@colophony/db';
 import type {
-  SubmissionFile,
+  File,
   FormField,
   FormPage,
   User,
@@ -18,7 +18,7 @@ import type {
 } from '@colophony/db';
 
 export interface Loaders {
-  submissionFiles: DataLoader<string, SubmissionFile[]>;
+  filesByManuscriptVersion: DataLoader<string, File[]>;
   formFields: DataLoader<string, FormField[]>;
   formPages: DataLoader<string, FormPage[]>;
   user: DataLoader<string, User | null>;
@@ -32,26 +32,26 @@ export interface Loaders {
 export function createLoaders(dbTx: DrizzleDb | null): Loaders {
   return {
     /**
-     * Batch-load submission files by submission ID.
-     * Returns an array of files per submission (may be empty).
+     * Batch-load files by manuscript version ID.
+     * Returns an array of files per version (may be empty).
      */
-    submissionFiles: new DataLoader<string, SubmissionFile[]>(
-      async (submissionIds) => {
-        if (!dbTx) return submissionIds.map(() => []);
+    filesByManuscriptVersion: new DataLoader<string, File[]>(
+      async (versionIds) => {
+        if (!dbTx) return versionIds.map(() => []);
 
         const rows = await dbTx
           .select()
-          .from(submissionFiles)
-          .where(inArray(submissionFiles.submissionId, [...submissionIds]));
+          .from(files)
+          .where(inArray(files.manuscriptVersionId, [...versionIds]));
 
-        const grouped = new Map<string, SubmissionFile[]>();
+        const grouped = new Map<string, File[]>();
         for (const row of rows) {
-          const list = grouped.get(row.submissionId) ?? [];
+          const list = grouped.get(row.manuscriptVersionId) ?? [];
           list.push(row);
-          grouped.set(row.submissionId, list);
+          grouped.set(row.manuscriptVersionId, list);
         }
 
-        return submissionIds.map((id) => grouped.get(id) ?? []);
+        return versionIds.map((id) => grouped.get(id) ?? []);
       },
     ),
 

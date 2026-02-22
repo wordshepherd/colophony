@@ -1,6 +1,6 @@
 import {
   submissions,
-  submissionFiles,
+  files,
   submissionHistory,
   submissionPeriods,
   formDefinitions,
@@ -171,6 +171,7 @@ export const submissionService = {
           coverLetter: submissions.coverLetter,
           formDefinitionId: submissions.formDefinitionId,
           formData: submissions.formData,
+          manuscriptVersionId: submissions.manuscriptVersionId,
           status: submissions.status,
           submittedAt: submissions.submittedAt,
           createdAt: submissions.createdAt,
@@ -257,6 +258,7 @@ export const submissionService = {
         submissionPeriodId: input.submissionPeriodId ?? null,
         formDefinitionId: resolvedFormDefinitionId,
         formData: input.formData ?? null,
+        manuscriptVersionId: input.manuscriptVersionId ?? null,
         status: 'DRAFT',
       })
       .returning();
@@ -283,12 +285,17 @@ export const submissionService = {
 
     if (!submission) return null;
 
-    const [files, [submitter]] = await Promise.all([
-      tx
-        .select()
-        .from(submissionFiles)
-        .where(eq(submissionFiles.submissionId, id))
-        .orderBy(asc(submissionFiles.uploadedAt)),
+    // Get files via manuscript version (if attached)
+    const [versionFiles, [submitter]] = await Promise.all([
+      submission.manuscriptVersionId
+        ? tx
+            .select()
+            .from(files)
+            .where(
+              eq(files.manuscriptVersionId, submission.manuscriptVersionId),
+            )
+            .orderBy(asc(files.uploadedAt))
+        : Promise.resolve([]),
       tx
         .select({ email: users.email })
         .from(users)
@@ -298,7 +305,7 @@ export const submissionService = {
 
     return {
       ...submission,
-      files,
+      files: versionFiles,
       submitterEmail: submitter?.email ?? null,
     };
   },
@@ -349,8 +356,9 @@ export const submissionService = {
       status: SubmissionStatus;
       form_definition_id: string | null;
       form_data: Record<string, unknown> | null;
+      manuscript_version_id: string | null;
     }>(
-      sql`SELECT id, status, form_definition_id, form_data FROM submissions WHERE id = ${id} FOR UPDATE`,
+      sql`SELECT id, status, form_definition_id, form_data, manuscript_version_id FROM submissions WHERE id = ${id} FOR UPDATE`,
     );
 
     const existing = rows.rows[0];
@@ -369,20 +377,24 @@ export const submissionService = {
       }
     }
 
-    // On DRAFT→SUBMITTED, verify file scan statuses
+    // On DRAFT→SUBMITTED, verify file scan statuses via manuscript version
     if (fromStatus === 'DRAFT' && newStatus === 'SUBMITTED') {
-      const files = await tx
-        .select({ scanStatus: submissionFiles.scanStatus })
-        .from(submissionFiles)
-        .where(eq(submissionFiles.submissionId, id));
+      if (existing.manuscript_version_id) {
+        const versionFiles = await tx
+          .select({ scanStatus: files.scanStatus })
+          .from(files)
+          .where(eq(files.manuscriptVersionId, existing.manuscript_version_id));
 
-      const hasUnscanned = files.some(
-        (f) => f.scanStatus === 'PENDING' || f.scanStatus === 'SCANNING',
-      );
-      if (hasUnscanned) throw new UnscannedFilesError();
+        const hasUnscanned = versionFiles.some(
+          (f) => f.scanStatus === 'PENDING' || f.scanStatus === 'SCANNING',
+        );
+        if (hasUnscanned) throw new UnscannedFilesError();
 
-      const hasInfected = files.some((f) => f.scanStatus === 'INFECTED');
-      if (hasInfected) throw new InfectedFilesError();
+        const hasInfected = versionFiles.some(
+          (f) => f.scanStatus === 'INFECTED',
+        );
+        if (hasInfected) throw new InfectedFilesError();
+      }
 
       // Validate form data against the form definition
       if (existing.form_definition_id) {
