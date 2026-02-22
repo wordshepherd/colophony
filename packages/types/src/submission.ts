@@ -165,6 +165,14 @@ export const submissionDetailSchema = submissionSchema.extend({
     .email()
     .nullable()
     .describe("Email address of the submitter"),
+  manuscript: z
+    .object({
+      manuscriptId: z.string().uuid(),
+      manuscriptTitle: z.string(),
+      versionNumber: z.number().int(),
+    })
+    .nullable()
+    .describe("Linked manuscript info (null if no manuscript attached)"),
 });
 
 export type SubmissionDetail = z.infer<typeof submissionDetailSchema>;

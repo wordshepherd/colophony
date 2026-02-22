@@ -27,6 +27,7 @@ interface ManuscriptVersionFilesProps {
   manuscriptVersionId: string;
   files: FileRecord[];
   readOnly?: boolean;
+  onFileChange?: () => void;
 }
 
 const scanStatusConfig: Record<
@@ -88,9 +89,15 @@ export function ManuscriptVersionFiles({
   manuscriptVersionId,
   files,
   readOnly,
+  onFileChange,
 }: ManuscriptVersionFilesProps) {
   if (!readOnly) {
-    return <FileUpload manuscriptVersionId={manuscriptVersionId} />;
+    return (
+      <FileUpload
+        manuscriptVersionId={manuscriptVersionId}
+        onFileChange={onFileChange}
+      />
+    );
   }
 
   if (files.length === 0) {

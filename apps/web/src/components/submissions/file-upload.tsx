@@ -26,6 +26,7 @@ import {
 interface FileUploadProps {
   manuscriptVersionId?: string | null;
   disabled?: boolean;
+  onFileChange?: () => void;
 }
 
 const scanStatusConfig: Record<
@@ -175,7 +176,11 @@ function ExistingFileItem({
   );
 }
 
-export function FileUpload({ manuscriptVersionId, disabled }: FileUploadProps) {
+export function FileUpload({
+  manuscriptVersionId,
+  disabled,
+  onFileChange,
+}: FileUploadProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   // Track whether uploads are in "processing" state (waiting for post-finish
   // webhook to create the file record). Used by refetchInterval below.
@@ -190,6 +195,7 @@ export function FileUpload({ manuscriptVersionId, disabled }: FileUploadProps) {
       if (manuscriptVersionId) {
         utils.files.listByManuscriptVersion.invalidate({ manuscriptVersionId });
       }
+      onFileChange?.();
     },
   });
 
@@ -273,6 +279,7 @@ export function FileUpload({ manuscriptVersionId, disabled }: FileUploadProps) {
             manuscriptVersionId,
           });
         }
+        onFileChange?.();
       } catch (error) {
         console.error("Failed to delete file:", error);
       }

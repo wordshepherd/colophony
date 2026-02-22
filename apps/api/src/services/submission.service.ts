@@ -312,8 +312,8 @@ export const submissionService = {
 
     if (!submission) return null;
 
-    // Get files via manuscript version (if attached)
-    const [versionFiles, [submitter]] = await Promise.all([
+    // Get files via manuscript version (if attached) + manuscript info
+    const [versionFiles, [submitter], manuscriptInfo] = await Promise.all([
       submission.manuscriptVersionId
         ? tx
             .select()
@@ -328,12 +328,29 @@ export const submissionService = {
         .from(users)
         .where(eq(users.id, submission.submitterId))
         .limit(1),
+      submission.manuscriptVersionId
+        ? tx
+            .select({
+              manuscriptId: manuscripts.id,
+              manuscriptTitle: manuscripts.title,
+              versionNumber: manuscriptVersions.versionNumber,
+            })
+            .from(manuscriptVersions)
+            .innerJoin(
+              manuscripts,
+              eq(manuscriptVersions.manuscriptId, manuscripts.id),
+            )
+            .where(eq(manuscriptVersions.id, submission.manuscriptVersionId))
+            .limit(1)
+            .then((rows) => rows[0] ?? null)
+        : Promise.resolve(null),
     ]);
 
     return {
       ...submission,
       files: versionFiles,
       submitterEmail: submitter?.email ?? null,
+      manuscript: manuscriptInfo,
     };
   },
 
