@@ -20,6 +20,9 @@ if ! command -v overmind &>/dev/null; then
   exit 1
 fi
 
+# Clean up stale processes from previous sessions
+bash scripts/dev-clean.sh 2>/dev/null || true
+
 # Build workspace packages (not apps) so dist/ exports resolve
 echo "Building workspace packages..."
 pnpm exec turbo run build --filter='./packages/*'
