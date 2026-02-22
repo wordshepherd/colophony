@@ -4,7 +4,10 @@ import type { Env } from '../config/env.js';
 export interface FileScanJobData {
   fileId: string;
   storageKey: string;
-  organizationId: string;
+  /** User who uploaded the file — needed for user-scoped RLS on files. */
+  userId: string;
+  /** Organization context — optional for manuscript uploads (user-scoped). */
+  organizationId?: string;
 }
 
 let queue: Queue<FileScanJobData> | null = null;

@@ -13,7 +13,7 @@ import {
   submissionPeriods,
   payments,
   organizationMembers,
-  submissionFiles,
+  files,
 } from '@colophony/db';
 
 let scenario: TwoOrgScenario;
@@ -74,13 +74,13 @@ describe('RLS Write Prevention', () => {
       ).rejects.toMatchObject({ cause: { code: '42501' } });
     });
 
-    it("INSERT submission_file for other org's submission throws 42501", async () => {
+    it("INSERT file for other org's manuscript version throws 42501", async () => {
       await expect(
         withTestRls(
           { orgId: scenario.orgA.id, userId: scenario.userA.id },
           (tx) =>
-            tx.insert(submissionFiles).values({
-              submissionId: scenario.submissionB.id,
+            tx.insert(files).values({
+              manuscriptVersionId: scenario.manuscriptVersionB.id,
               filename: 'cross-org-file.pdf',
               mimeType: 'application/pdf',
               size: 1024,
@@ -179,10 +179,7 @@ describe('RLS Write Prevention', () => {
       const result = await withTestRls(
         { orgId: scenario.orgA.id, userId: scenario.userA.id },
         (tx) =>
-          tx
-            .delete(submissionFiles)
-            .where(eq(submissionFiles.id, scenario.fileB.id))
-            .returning(),
+          tx.delete(files).where(eq(files.id, scenario.fileB.id)).returning(),
       );
       expect(result).toHaveLength(0);
     });

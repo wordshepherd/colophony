@@ -40,21 +40,27 @@ export type AllowedMimeType = (typeof ALLOWED_MIME_TYPES)[number];
 export const MAX_FILE_SIZE = 50 * 1024 * 1024;
 
 /**
- * Maximum total upload size per submission (200MB default)
+ * Maximum total upload size per manuscript version (200MB default)
  */
 export const MAX_TOTAL_UPLOAD_SIZE = 200 * 1024 * 1024;
 
 /**
- * Maximum files per submission
+ * Maximum files per manuscript version
  */
-export const MAX_FILES_PER_SUBMISSION = 10;
+export const MAX_FILES_PER_MANUSCRIPT_VERSION = 10;
 
-export const submissionFileSchema = z.object({
+/** @deprecated Use MAX_FILES_PER_MANUSCRIPT_VERSION */
+export const MAX_FILES_PER_SUBMISSION = MAX_FILES_PER_MANUSCRIPT_VERSION;
+
+/**
+ * File schema — files belong to manuscript versions (not submissions directly).
+ */
+export const fileSchema = z.object({
   id: z.string().uuid().describe("Unique identifier for the file"),
-  submissionId: z
+  manuscriptVersionId: z
     .string()
     .uuid()
-    .describe("ID of the submission this file belongs to"),
+    .describe("ID of the manuscript version this file belongs to"),
   filename: z.string().describe("Original filename as uploaded"),
   mimeType: z.string().describe("MIME type of the file (e.g. application/pdf)"),
   size: z.number().describe("File size in bytes"),
@@ -64,7 +70,14 @@ export const submissionFileSchema = z.object({
   uploadedAt: z.date().describe("When the file was uploaded"),
 });
 
-export type SubmissionFile = z.infer<typeof submissionFileSchema>;
+export type FileRecord = z.infer<typeof fileSchema>;
+
+/**
+ * @deprecated Use fileSchema instead — submissionFileSchema is an alias for migration
+ */
+export const submissionFileSchema = fileSchema;
+/** @deprecated Use FileRecord instead */
+export type SubmissionFile = FileRecord;
 
 /** Response from `files.getDownloadUrl`. */
 export const downloadUrlResponseSchema = z.object({
@@ -83,10 +96,10 @@ export type DownloadUrlResponse = z.infer<typeof downloadUrlResponseSchema>;
  * Client provides metadata, server returns upload URL.
  */
 export const initiateUploadSchema = z.object({
-  submissionId: z
+  manuscriptVersionId: z
     .string()
     .uuid()
-    .describe("ID of the submission to attach the file to"),
+    .describe("ID of the manuscript version to attach the file to"),
   filename: z
     .string()
     .min(1)
@@ -129,7 +142,7 @@ export const completeUploadSchema = z.object({
 export type CompleteUploadInput = z.infer<typeof completeUploadSchema>;
 
 /**
- * Input for deleting a file from a submission.
+ * Input for deleting a file from a manuscript version.
  */
 export const deleteFileSchema = z.object({
   fileId: z.string().uuid(),

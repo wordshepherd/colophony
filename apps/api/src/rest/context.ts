@@ -20,6 +20,12 @@ export interface AuthedContext extends RestContext {
   authContext: AuthContext;
 }
 
+/** Context after requireUserContext middleware narrows authContext + dbTx (no org). */
+export interface UserContext extends RestContext {
+  authContext: AuthContext;
+  dbTx: DrizzleDb;
+}
+
 /** Context after requireOrgContext middleware narrows orgId, role, and dbTx. */
 export interface OrgContext extends RestContext {
   authContext: AuthContext & { orgId: string; role: Role };
@@ -47,6 +53,25 @@ export const requireAuth = restBase.middleware(async ({ context, next }) => {
     context: { authContext: context.authContext },
   });
 });
+
+/** Requires auth + DB transaction (user context). No org required. */
+export const requireUserContext = restBase.middleware(
+  async ({ context, next }) => {
+    if (!context.authContext) {
+      throw new ORPCError('UNAUTHORIZED', {
+        message: 'Not authenticated',
+      });
+    }
+    if (!context.dbTx) {
+      throw new ORPCError('INTERNAL_SERVER_ERROR', {
+        message: 'Database transaction not available',
+      });
+    }
+    return next({
+      context: { authContext: context.authContext, dbTx: context.dbTx },
+    });
+  },
+);
 
 /** Requires org context (X-Organization-Id resolved by org-context hook). */
 export const requireOrgContext = restBase.middleware(
@@ -148,5 +173,6 @@ export function requireScopes(...scopes: ApiKeyScope[]) {
 
 // Procedure builders (analogous to tRPC's authedProcedure, orgProcedure, adminProcedure)
 export const authedProcedure = restBase.use(requireAuth);
+export const userProcedure = restBase.use(requireUserContext);
 export const orgProcedure = restBase.use(requireOrgContext);
 export const adminProcedure = restBase.use(requireAdmin);

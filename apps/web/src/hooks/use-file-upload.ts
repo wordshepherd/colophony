@@ -25,7 +25,7 @@ export interface UploadingFile {
 }
 
 interface UseFileUploadOptions {
-  submissionId: string;
+  manuscriptVersionId: string;
   onUploadComplete?: (uploadId: string) => void;
   onError?: (error: string) => void;
 }
@@ -43,7 +43,7 @@ function mapTusError(error: tus.DetailedError | Error): string {
 }
 
 export function useFileUpload({
-  submissionId,
+  manuscriptVersionId,
   onUploadComplete,
   onError,
 }: UseFileUploadOptions) {
@@ -156,7 +156,7 @@ export function useFileUpload({
           metadata: {
             filename: file.name,
             filetype: file.type || "application/octet-stream",
-            "submission-id": submissionId,
+            "manuscript-version-id": manuscriptVersionId!,
           },
           headers,
           onProgress: (bytesUploaded, bytesTotal) => {
@@ -175,11 +175,15 @@ export function useFileUpload({
             // invalidation to give the webhook time to process, then retry
             // in case the first attempt was still too early.
             setTimeout(() => {
-              utils.files.listBySubmission.invalidate({ submissionId });
+              utils.files.listByManuscriptVersion.invalidate({
+                manuscriptVersionId: manuscriptVersionId!,
+              });
               onUploadComplete?.(uploadId);
             }, 1500);
             setTimeout(() => {
-              utils.files.listBySubmission.invalidate({ submissionId });
+              utils.files.listByManuscriptVersion.invalidate({
+                manuscriptVersionId: manuscriptVersionId!,
+              });
             }, 4000);
           },
           onError: (error) => {
@@ -209,9 +213,9 @@ export function useFileUpload({
       }
     },
     [
-      submissionId,
+      manuscriptVersionId,
       updateUpload,
-      utils.files.listBySubmission,
+      utils.files.listByManuscriptVersion,
       onUploadComplete,
       onError,
     ],

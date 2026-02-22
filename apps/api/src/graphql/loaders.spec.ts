@@ -15,9 +15,9 @@ function mockTx(rows: unknown[] = []) {
 
 describe('createLoaders', () => {
   describe('with null dbTx', () => {
-    it('submissionFiles returns empty arrays', async () => {
+    it('filesByManuscriptVersion returns empty arrays', async () => {
       const loaders = createLoaders(null);
-      const result = await loaders.submissionFiles.load('id-1');
+      const result = await loaders.filesByManuscriptVersion.load('id-1');
       expect(result).toEqual([]);
     });
 
@@ -35,19 +35,19 @@ describe('createLoaders', () => {
   });
 
   describe('with valid dbTx', () => {
-    it('submissionFiles groups results by submissionId', async () => {
-      const files = [
-        { id: 'f1', submissionId: 'sub-1', filename: 'a.pdf' },
-        { id: 'f2', submissionId: 'sub-1', filename: 'b.pdf' },
-        { id: 'f3', submissionId: 'sub-2', filename: 'c.pdf' },
+    it('filesByManuscriptVersion groups results by manuscriptVersionId', async () => {
+      const fileRows = [
+        { id: 'f1', manuscriptVersionId: 'v-1', filename: 'a.pdf' },
+        { id: 'f2', manuscriptVersionId: 'v-1', filename: 'b.pdf' },
+        { id: 'f3', manuscriptVersionId: 'v-2', filename: 'c.pdf' },
       ];
-      const tx = mockTx(files);
+      const tx = mockTx(fileRows);
       const loaders = createLoaders(tx);
 
       const [r1, r2, r3] = await Promise.all([
-        loaders.submissionFiles.load('sub-1'),
-        loaders.submissionFiles.load('sub-2'),
-        loaders.submissionFiles.load('sub-3'),
+        loaders.filesByManuscriptVersion.load('v-1'),
+        loaders.filesByManuscriptVersion.load('v-2'),
+        loaders.filesByManuscriptVersion.load('v-3'),
       ]);
 
       expect(r1).toHaveLength(2);

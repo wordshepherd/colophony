@@ -33,16 +33,29 @@ async function getClamClient(env: Env): Promise<NodeClam> {
   return clamInstance;
 }
 
+/**
+ * Build RLS context for file operations.
+ * Files use user-scoped RLS (owner_id = current_user_id()),
+ * so we pass userId. orgId is optional.
+ */
+function buildRlsContext(data: FileScanJobData) {
+  return {
+    userId: data.userId,
+    ...(data.organizationId ? { orgId: data.organizationId } : {}),
+  };
+}
+
 export function startFileScanWorker(env: Env): Worker<FileScanJobData> {
   const s3Client = createS3Client(env);
 
   worker = new Worker<FileScanJobData>(
     'file-scan',
     async (job) => {
-      const { fileId, storageKey, organizationId } = job.data;
+      const { fileId, storageKey } = job.data;
+      const rlsCtx = buildRlsContext(job.data);
 
       // Phase 1: Mark as SCANNING
-      await withRls({ orgId: organizationId }, async (tx: DrizzleDb) => {
+      await withRls(rlsCtx, async (tx: DrizzleDb) => {
         await fileService.updateScanStatus(tx, fileId, 'SCANNING');
       });
 
@@ -61,13 +74,13 @@ export function startFileScanWorker(env: Env): Worker<FileScanJobData> {
         viruses = result.viruses;
       } catch (err) {
         // Phase 2 error: mark FAILED, audit, re-throw for retry
-        await withRls({ orgId: organizationId }, async (tx: DrizzleDb) => {
+        await withRls(rlsCtx, async (tx: DrizzleDb) => {
           await fileService.updateScanStatus(tx, fileId, 'FAILED');
           await auditService.log(tx, {
             resource: AuditResources.FILE,
             action: AuditActions.FILE_SCAN_FAILED,
             resourceId: fileId,
-            organizationId,
+            organizationId: job.data.organizationId,
             newValue: {
               error: err instanceof Error ? err.message : 'Unknown error',
             },
@@ -89,39 +102,39 @@ export function startFileScanWorker(env: Env): Worker<FileScanJobData> {
           );
           await deleteS3Object(s3Client, env.S3_QUARANTINE_BUCKET, storageKey);
 
-          await withRls({ orgId: organizationId }, async (tx: DrizzleDb) => {
+          await withRls(rlsCtx, async (tx: DrizzleDb) => {
             await fileService.updateScanStatus(tx, fileId, 'CLEAN');
             await auditService.log(tx, {
               resource: AuditResources.FILE,
               action: AuditActions.FILE_SCAN_CLEAN,
               resourceId: fileId,
-              organizationId,
+              organizationId: job.data.organizationId,
             });
           });
         } else {
           // INFECTED: delete from quarantine
           await deleteS3Object(s3Client, env.S3_QUARANTINE_BUCKET, storageKey);
 
-          await withRls({ orgId: organizationId }, async (tx: DrizzleDb) => {
+          await withRls(rlsCtx, async (tx: DrizzleDb) => {
             await fileService.updateScanStatus(tx, fileId, 'INFECTED');
             await auditService.log(tx, {
               resource: AuditResources.FILE,
               action: AuditActions.FILE_SCAN_INFECTED,
               resourceId: fileId,
-              organizationId,
+              organizationId: job.data.organizationId,
               newValue: { viruses },
             });
           });
         }
       } catch (err) {
         // S3 move/delete failed — mark FAILED so file doesn't stay SCANNING
-        await withRls({ orgId: organizationId }, async (tx: DrizzleDb) => {
+        await withRls(rlsCtx, async (tx: DrizzleDb) => {
           await fileService.updateScanStatus(tx, fileId, 'FAILED');
           await auditService.log(tx, {
             resource: AuditResources.FILE,
             action: AuditActions.FILE_SCAN_FAILED,
             resourceId: fileId,
-            organizationId,
+            organizationId: job.data.organizationId,
             newValue: {
               error: err instanceof Error ? err.message : 'Unknown error',
               phase: 'post-scan-s3',

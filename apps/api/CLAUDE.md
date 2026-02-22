@@ -2,28 +2,29 @@
 
 ## Key Paths
 
-| What              | Path                                |
-| ----------------- | ----------------------------------- |
-| App entry         | `src/main.ts`                       |
-| Env config (Zod)  | `src/config/env.ts`                 |
-| Fastify hooks     | `src/hooks/`                        |
-| Service layer     | `src/services/`                     |
-| tRPC router       | `src/trpc/router.ts`                |
-| tRPC client types | `src/trpc/client-types.ts`          |
-| tRPC init         | `src/trpc/init.ts`                  |
-| tRPC context      | `src/trpc/context.ts`               |
-| REST router       | `src/rest/router.ts`                |
-| REST context      | `src/rest/context.ts`               |
-| REST error mapper | `src/rest/error-mapper.ts`          |
-| REST org handlers | `src/rest/routers/organizations.ts` |
-| GraphQL schema    | `src/graphql/schema.ts`             |
-| GraphQL builder   | `src/graphql/builder.ts`            |
-| GraphQL guards    | `src/graphql/guards.ts`             |
-| GraphQL resolvers | `src/graphql/resolvers/`            |
-| GraphQL router    | `src/graphql/router.ts`             |
-| tusd webhook      | `src/webhooks/tusd.webhook.ts`      |
-| Zitadel webhook   | `src/webhooks/zitadel.webhook.ts`   |
-| Stripe webhook    | `src/webhooks/stripe.webhook.ts`    |
+| What              | Path                                 |
+| ----------------- | ------------------------------------ |
+| App entry         | `src/main.ts`                        |
+| Env config (Zod)  | `src/config/env.ts`                  |
+| Fastify hooks     | `src/hooks/`                         |
+| Service layer     | `src/services/`                      |
+| Manuscript svc    | `src/services/manuscript.service.ts` |
+| tRPC router       | `src/trpc/router.ts`                 |
+| tRPC client types | `src/trpc/client-types.ts`           |
+| tRPC init         | `src/trpc/init.ts`                   |
+| tRPC context      | `src/trpc/context.ts`                |
+| REST router       | `src/rest/router.ts`                 |
+| REST context      | `src/rest/context.ts`                |
+| REST error mapper | `src/rest/error-mapper.ts`           |
+| REST org handlers | `src/rest/routers/organizations.ts`  |
+| GraphQL schema    | `src/graphql/schema.ts`              |
+| GraphQL builder   | `src/graphql/builder.ts`             |
+| GraphQL guards    | `src/graphql/guards.ts`              |
+| GraphQL resolvers | `src/graphql/resolvers/`             |
+| GraphQL router    | `src/graphql/router.ts`              |
+| tusd webhook      | `src/webhooks/tusd.webhook.ts`       |
+| Zitadel webhook   | `src/webhooks/zitadel.webhook.ts`    |
+| Stripe webhook    | `src/webhooks/stripe.webhook.ts`     |
 
 ### Service Method Naming
 
@@ -105,6 +106,7 @@ All surfaces share the same service layer and Zod schemas from `@colophony/types
 | `publicProcedure` | none             | No auth required                              |
 | `authedProcedure` | `isAuthed`       | `ctx.authContext` is non-null                 |
 | `orgProcedure`    | `hasOrgContext`  | `ctx.authContext.orgId/role` + `ctx.dbTx` set |
+| `userProcedure`   | `hasUserContext` | `ctx.authContext` + `ctx.dbTx` (no org)       |
 | `adminProcedure`  | `isAdmin`        | `orgProcedure` + `role === 'ADMIN'`           |
 
 Also exported: `createRouter`, `mergeRouters`.

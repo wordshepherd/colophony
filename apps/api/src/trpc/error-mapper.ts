@@ -30,6 +30,10 @@ import {
   PeriodNotFoundError,
   PeriodHasSubmissionsError,
 } from '../services/period.service.js';
+import {
+  ManuscriptNotFoundError,
+  ManuscriptVersionNotFoundError,
+} from '../services/manuscript.service.js';
 
 type TRPCErrorCode = ConstructorParameters<typeof TRPCError>[0]['code'];
 
@@ -42,6 +46,8 @@ const errorCodeMap: [new (...args: never[]) => Error, TRPCErrorCode][] = [
   [SubmissionNotFoundError, 'NOT_FOUND'],
   [UserNotFoundError, 'NOT_FOUND'],
   [FileNotFoundError, 'NOT_FOUND'],
+  [ManuscriptNotFoundError, 'NOT_FOUND'],
+  [ManuscriptVersionNotFoundError, 'NOT_FOUND'],
   // Bad request (business rule violations)
   [NotDraftError, 'BAD_REQUEST'],
   [InvalidStatusTransitionError, 'BAD_REQUEST'],

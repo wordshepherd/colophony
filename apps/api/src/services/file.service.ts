@@ -1,9 +1,16 @@
-import { submissionFiles, eq, sql, type DrizzleDb } from '@colophony/db';
+import {
+  files,
+  manuscripts,
+  manuscriptVersions,
+  eq,
+  sql,
+  type DrizzleDb,
+} from '@colophony/db';
 import { asc, count } from 'drizzle-orm';
 import type { S3Client } from '@aws-sdk/client-s3';
 import type { ScanStatus } from '@colophony/types';
 import {
-  MAX_FILES_PER_SUBMISSION,
+  MAX_FILES_PER_MANUSCRIPT_VERSION,
   MAX_TOTAL_UPLOAD_SIZE,
   MAX_FILE_SIZE,
   ALLOWED_MIME_TYPES,
@@ -11,13 +18,8 @@ import {
   AuditResources,
 } from '@colophony/types';
 import { getPresignedDownloadUrl, deleteS3Object } from './s3.js';
-import type { ServiceContext } from './types.js';
-import { ForbiddenError, assertOwnerOrEditor } from './errors.js';
-import {
-  submissionService,
-  SubmissionNotFoundError,
-  NotDraftError,
-} from './submission.service.js';
+import type { ServiceContext, UserServiceContext } from './types.js';
+import { ForbiddenError } from './errors.js';
 
 // ---------------------------------------------------------------------------
 // Error classes
@@ -33,7 +35,7 @@ export class FileNotFoundError extends Error {
 export class FileLimitExceededError extends Error {
   constructor() {
     super(
-      `Maximum of ${MAX_FILES_PER_SUBMISSION} files per submission exceeded`,
+      `Maximum of ${MAX_FILES_PER_MANUSCRIPT_VERSION} files per manuscript version exceeded`,
     );
     this.name = 'FileLimitExceededError';
   }
@@ -76,19 +78,19 @@ export class FileNotCleanError extends Error {
 // ---------------------------------------------------------------------------
 
 export const fileService = {
-  async listBySubmission(tx: DrizzleDb, submissionId: string) {
+  async listByManuscriptVersion(tx: DrizzleDb, manuscriptVersionId: string) {
     return tx
       .select()
-      .from(submissionFiles)
-      .where(eq(submissionFiles.submissionId, submissionId))
-      .orderBy(asc(submissionFiles.uploadedAt));
+      .from(files)
+      .where(eq(files.manuscriptVersionId, manuscriptVersionId))
+      .orderBy(asc(files.uploadedAt));
   },
 
   async getById(tx: DrizzleDb, fileId: string) {
     const [file] = await tx
       .select()
-      .from(submissionFiles)
-      .where(eq(submissionFiles.id, fileId))
+      .from(files)
+      .where(eq(files.id, fileId))
       .limit(1);
     return file ?? null;
   },
@@ -96,8 +98,8 @@ export const fileService = {
   async getByStorageKey(tx: DrizzleDb, storageKey: string) {
     const [file] = await tx
       .select()
-      .from(submissionFiles)
-      .where(eq(submissionFiles.storageKey, storageKey))
+      .from(files)
+      .where(eq(files.storageKey, storageKey))
       .limit(1);
     return file ?? null;
   },
@@ -105,7 +107,7 @@ export const fileService = {
   async create(
     tx: DrizzleDb,
     input: {
-      submissionId: string;
+      manuscriptVersionId: string;
       filename: string;
       mimeType: string;
       size: number;
@@ -113,9 +115,9 @@ export const fileService = {
     },
   ) {
     const [file] = await tx
-      .insert(submissionFiles)
+      .insert(files)
       .values({
-        submissionId: input.submissionId,
+        manuscriptVersionId: input.manuscriptVersionId,
         filename: input.filename,
         mimeType: input.mimeType,
         size: input.size,
@@ -132,37 +134,42 @@ export const fileService = {
     scanStatus: ScanStatus,
   ) {
     const [updated] = await tx
-      .update(submissionFiles)
+      .update(files)
       .set({
         scanStatus,
         scannedAt: scanStatus === 'PENDING' ? null : sql`now()`,
       })
-      .where(eq(submissionFiles.id, fileId))
+      .where(eq(files.id, fileId))
       .returning();
     return updated ?? null;
   },
 
   async delete(tx: DrizzleDb, fileId: string) {
     const [deleted] = await tx
-      .delete(submissionFiles)
-      .where(eq(submissionFiles.id, fileId))
+      .delete(files)
+      .where(eq(files.id, fileId))
       .returning();
     return deleted ?? null;
   },
 
-  async countBySubmission(tx: DrizzleDb, submissionId: string) {
+  async countByManuscriptVersion(tx: DrizzleDb, manuscriptVersionId: string) {
     const [result] = await tx
       .select({ count: count() })
-      .from(submissionFiles)
-      .where(eq(submissionFiles.submissionId, submissionId));
+      .from(files)
+      .where(eq(files.manuscriptVersionId, manuscriptVersionId));
     return result?.count ?? 0;
   },
 
-  async totalSizeBySubmission(tx: DrizzleDb, submissionId: string) {
+  async totalSizeByManuscriptVersion(
+    tx: DrizzleDb,
+    manuscriptVersionId: string,
+  ) {
     const [result] = await tx
-      .select({ total: sql<number>`coalesce(sum(${submissionFiles.size}), 0)` })
-      .from(submissionFiles)
-      .where(eq(submissionFiles.submissionId, submissionId));
+      .select({
+        total: sql<number>`coalesce(sum(${files.size}), 0)`,
+      })
+      .from(files)
+      .where(eq(files.manuscriptVersionId, manuscriptVersionId));
     return Number(result?.total ?? 0);
   },
 
@@ -180,29 +187,30 @@ export const fileService = {
 
   async validateLimits(
     tx: DrizzleDb,
-    submissionId: string,
+    manuscriptVersionId: string,
     newFileSize: number,
   ): Promise<void> {
-    const fileCount = await fileService.countBySubmission(tx, submissionId);
-    if (fileCount >= MAX_FILES_PER_SUBMISSION) {
+    const fileCount = await fileService.countByManuscriptVersion(
+      tx,
+      manuscriptVersionId,
+    );
+    if (fileCount >= MAX_FILES_PER_MANUSCRIPT_VERSION) {
       throw new FileLimitExceededError();
     }
 
-    const totalSize = await fileService.totalSizeBySubmission(tx, submissionId);
+    const totalSize = await fileService.totalSizeByManuscriptVersion(
+      tx,
+      manuscriptVersionId,
+    );
     if (totalSize + newFileSize > MAX_TOTAL_UPLOAD_SIZE) {
       throw new TotalSizeLimitExceededError();
     }
   },
 
   // ---------------------------------------------------------------------------
-  // S3-integrated methods (building blocks for access-control-aware PR 2)
+  // S3-integrated methods
   // ---------------------------------------------------------------------------
 
-  /**
-   * Fetch a file record and generate a presigned download URL.
-   * Returns null if the file doesn't exist. Throws if the file hasn't
-   * passed the virus scan.
-   */
   async getDownloadUrl(
     tx: DrizzleDb,
     fileId: string,
@@ -225,11 +233,6 @@ export const fileService = {
     return { url, filename: file.filename, mimeType: file.mimeType };
   },
 
-  /**
-   * Delete a file's DB record and its S3 object. Determines the correct
-   * bucket based on scan status (clean → main bucket, else → quarantine).
-   * Returns the deleted record, or null if not found.
-   */
   async deleteWithS3(
     tx: DrizzleDb,
     fileId: string,
@@ -248,45 +251,32 @@ export const fileService = {
   },
 
   // ---------------------------------------------------------------------------
-  // Access-aware methods (PR 2) — bundle access control + audit
+  // Access-aware methods
   // ---------------------------------------------------------------------------
 
   /**
-   * List files for a submission — owner or editor/admin access check.
+   * List files for a manuscript version — owner access check via RLS.
+   * For org-context access (editors viewing submission files), use
+   * listByManuscriptVersion directly (org RLS policy handles access).
    */
-  async listBySubmissionWithAccess(svc: ServiceContext, submissionId: string) {
-    const submission = await submissionService.getById(svc.tx, submissionId);
-    if (!submission) throw new SubmissionNotFoundError(submissionId);
-    assertOwnerOrEditor(
-      svc.actor.userId,
-      svc.actor.role,
-      submission.submitterId,
-    );
-    return fileService.listBySubmission(svc.tx, submissionId);
+  async listByManuscriptVersionWithAccess(
+    ctx: UserServiceContext,
+    manuscriptVersionId: string,
+  ) {
+    return fileService.listByManuscriptVersion(ctx.tx, manuscriptVersionId);
   },
 
   /**
-   * Get a presigned download URL — owner or editor/admin, CLEAN files only.
+   * Get a presigned download URL — requires CLEAN status.
    */
   async getDownloadUrlWithAccess(
-    svc: ServiceContext,
+    svc: ServiceContext | UserServiceContext,
     fileId: string,
     s3Client: S3Client,
     bucket: string,
   ) {
     const file = await fileService.getById(svc.tx, fileId);
     if (!file) throw new FileNotFoundError(fileId);
-
-    const submission = await submissionService.getById(
-      svc.tx,
-      file.submissionId,
-    );
-    if (!submission) throw new SubmissionNotFoundError(file.submissionId);
-    assertOwnerOrEditor(
-      svc.actor.userId,
-      svc.actor.role,
-      submission.submitterId,
-    );
 
     if (file.scanStatus !== 'CLEAN') {
       throw new FileNotCleanError(fileId, file.scanStatus);
@@ -301,10 +291,10 @@ export const fileService = {
   },
 
   /**
-   * Delete a file — submission owner only, DRAFT only, with audit + S3 cleanup.
+   * Delete a file — manuscript owner only, with audit + S3 cleanup.
    */
   async deleteAsOwner(
-    svc: ServiceContext,
+    svc: UserServiceContext,
     fileId: string,
     s3Client: S3Client,
     bucket: string,
@@ -313,16 +303,23 @@ export const fileService = {
     const file = await fileService.getById(svc.tx, fileId);
     if (!file) throw new FileNotFoundError(fileId);
 
-    const submission = await submissionService.getById(
-      svc.tx,
-      file.submissionId,
-    );
-    if (!submission) throw new SubmissionNotFoundError(file.submissionId);
-    if (submission.submitterId !== svc.actor.userId) {
-      throw new ForbiddenError('Only the submitter can delete files');
-    }
-    if (submission.status !== 'DRAFT') {
-      throw new NotDraftError();
+    // Verify ownership via manuscript chain
+    const [version] = await svc.tx
+      .select({ manuscriptId: manuscriptVersions.manuscriptId })
+      .from(manuscriptVersions)
+      .where(eq(manuscriptVersions.id, file.manuscriptVersionId))
+      .limit(1);
+
+    if (!version) throw new FileNotFoundError(fileId);
+
+    const [manuscript] = await svc.tx
+      .select({ ownerId: manuscripts.ownerId })
+      .from(manuscripts)
+      .where(eq(manuscripts.id, version.manuscriptId))
+      .limit(1);
+
+    if (!manuscript || manuscript.ownerId !== svc.userId) {
+      throw new ForbiddenError('Only the manuscript owner can delete files');
     }
 
     const deleted = await fileService.delete(svc.tx, fileId);
@@ -334,7 +331,7 @@ export const fileService = {
       resourceId: fileId,
       newValue: {
         filename: file.filename,
-        submissionId: file.submissionId,
+        manuscriptVersionId: file.manuscriptVersionId,
       },
     });
 
@@ -344,8 +341,6 @@ export const fileService = {
         file.scanStatus === 'CLEAN' ? bucket : quarantineBucket;
       await deleteS3Object(s3Client, targetBucket, file.storageKey);
     } catch {
-      // Log but don't fail — orphaned S3 objects can be cleaned up
-      // by a periodic garbage collection job
       svc
         .audit({
           action: AuditActions.FILE_DELETED,

@@ -13,14 +13,16 @@ vi.mock('./s3.js', () => ({
 
 // Mock @colophony/db
 vi.mock('@colophony/db', () => ({
-  submissionFiles: {
+  files: {
     id: 'id',
-    submissionId: 'submissionId',
+    manuscriptVersionId: 'manuscriptVersionId',
     storageKey: 'storageKey',
     uploadedAt: 'uploadedAt',
     size: 'size',
     scanStatus: 'scanStatus',
   },
+  manuscripts: { id: 'id', ownerId: 'ownerId' },
+  manuscriptVersions: { id: 'id', manuscriptId: 'manuscriptId' },
   eq: vi.fn((a, b) => ({ _eq: [a, b] })),
   sql: Object.assign(
     (strings: TemplateStringsArray, ...values: unknown[]) => ({
@@ -40,10 +42,12 @@ vi.mock('drizzle-orm', () => ({
 
 // Mock @colophony/types
 vi.mock('@colophony/types', () => ({
-  MAX_FILES_PER_SUBMISSION: 10,
+  MAX_FILES_PER_MANUSCRIPT_VERSION: 10,
   MAX_TOTAL_UPLOAD_SIZE: 100_000_000,
   MAX_FILE_SIZE: 25_000_000,
   ALLOWED_MIME_TYPES: ['application/pdf'],
+  AuditActions: { FILE_DELETED: 'FILE_DELETED' },
+  AuditResources: { FILE: 'file' },
 }));
 
 import { fileService, FileNotCleanError } from './file.service.js';

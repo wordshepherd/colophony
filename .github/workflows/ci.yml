@@ -317,6 +317,15 @@ jobs:
           --health-interval 5s
           --health-timeout 5s
           --health-retries 10
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
     steps:
       - uses: actions/checkout@v6
       - uses: pnpm/action-setup@v4
@@ -395,7 +404,7 @@ jobs:
         if: failure()
         run: |
           echo "=== MinIO logs ===" && docker logs minio 2>&1 | tail -50 || true
-          echo "=== tusd logs ===" && docker logs tusd 2>&1 | tail -50 || true
+          echo "=== tusd logs ===" && docker logs tusd 2>&1 | tail -100 || true
       - name: Upload Playwright report
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v4

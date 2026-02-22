@@ -24,7 +24,7 @@ import {
 } from "@colophony/types";
 
 interface FileUploadProps {
-  submissionId: string;
+  manuscriptVersionId?: string | null;
   disabled?: boolean;
 }
 
@@ -175,7 +175,7 @@ function ExistingFileItem({
   );
 }
 
-export function FileUpload({ submissionId, disabled }: FileUploadProps) {
+export function FileUpload({ manuscriptVersionId, disabled }: FileUploadProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   // Track whether uploads are in "processing" state (waiting for post-finish
   // webhook to create the file record). Used by refetchInterval below.
@@ -185,9 +185,11 @@ export function FileUpload({ submissionId, disabled }: FileUploadProps) {
   const utils = trpc.useUtils();
 
   const { uploads, uploadFiles, removeUpload, cancelUpload } = useFileUpload({
-    submissionId,
+    manuscriptVersionId: manuscriptVersionId!,
     onUploadComplete: () => {
-      utils.files.listBySubmission.invalidate({ submissionId });
+      if (manuscriptVersionId) {
+        utils.files.listByManuscriptVersion.invalidate({ manuscriptVersionId });
+      }
     },
   });
 
@@ -202,9 +204,10 @@ export function FileUpload({ submissionId, disabled }: FileUploadProps) {
   // Poll while any file is still being scanned OR while uploads are waiting
   // for the post-finish webhook to create their DB records.
   const { data: existingFiles, isPending: isLoading } =
-    trpc.files.listBySubmission.useQuery(
-      { submissionId },
+    trpc.files.listByManuscriptVersion.useQuery(
+      { manuscriptVersionId: manuscriptVersionId! },
       {
+        enabled: !!manuscriptVersionId,
         refetchInterval: (query) => {
           const files = query.state.data as
             | Array<{ scanStatus: ScanStatus }>
@@ -265,12 +268,16 @@ export function FileUpload({ submissionId, disabled }: FileUploadProps) {
     async (fileId: string) => {
       try {
         await deleteMutation.mutateAsync({ fileId });
-        utils.files.listBySubmission.invalidate({ submissionId });
+        if (manuscriptVersionId) {
+          utils.files.listByManuscriptVersion.invalidate({
+            manuscriptVersionId,
+          });
+        }
       } catch (error) {
         console.error("Failed to delete file:", error);
       }
     },
-    [deleteMutation, utils.files.listBySubmission, submissionId],
+    [deleteMutation, utils.files.listByManuscriptVersion, manuscriptVersionId],
   );
 
   const totalFiles = (existingFiles?.length ?? 0) + uploads.length;

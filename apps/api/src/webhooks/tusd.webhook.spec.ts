@@ -40,8 +40,8 @@ vi.mock('@colophony/db', () => ({
     },
   },
   withRls: (...args: unknown[]) => mockWithRls(...args),
-  submissions: { id: 'id', status: 'status', submitterId: 'submitterId' },
-  submissionFiles: {},
+  manuscriptVersions: { id: 'id', manuscriptId: 'manuscriptId' },
+  manuscripts: { id: 'id' },
   users: { zitadelUserId: 'zitadelUserId' },
   eq: vi.fn((_col: unknown, _val: unknown) => ({})),
   and: vi.fn(),
@@ -51,13 +51,14 @@ vi.mock('@colophony/db', () => ({
 // Mock file service
 vi.mock('../services/file.service.js', () => ({
   fileService: {
-    listBySubmission: vi.fn(),
+    listByManuscriptVersion: vi.fn(),
     getById: vi.fn(),
     getByStorageKey: vi.fn(),
     create: vi.fn(),
+    updateScanStatus: vi.fn(),
     delete: vi.fn(),
-    countBySubmission: vi.fn(),
-    totalSizeBySubmission: vi.fn(),
+    countByManuscriptVersion: vi.fn(),
+    totalSizeByManuscriptVersion: vi.fn(),
     validateMimeType: vi.fn(),
     validateFileSize: vi.fn(),
     validateLimits: vi.fn(),
@@ -149,7 +150,7 @@ const TEST_ENV = {
   CLAMAV_PORT: 3310,
 } as unknown as Env;
 
-const SUBMISSION_ID = 'a1111111-1111-1111-a111-111111111111';
+const MANUSCRIPT_VERSION_ID = 'a1111111-1111-1111-a111-111111111111';
 
 /** Build a tusd v2 pre-create webhook payload: { Type, Event: { Upload, HTTPRequest } } */
 function makePreCreateBody(overrides: Record<string, unknown> = {}) {
@@ -159,7 +160,7 @@ function makePreCreateBody(overrides: Record<string, unknown> = {}) {
       Upload: {
         Size: 1024,
         MetaData: {
-          'submission-id': SUBMISSION_ID,
+          'manuscript-version-id': MANUSCRIPT_VERSION_ID,
           filetype: 'application/pdf',
           filename: 'poem.pdf',
         },
@@ -171,7 +172,6 @@ function makePreCreateBody(overrides: Record<string, unknown> = {}) {
         RemoteAddr: '127.0.0.1',
         Header: {
           Authorization: ['Bearer test-token'],
-          'X-Organization-Id': ['org-1'],
           'X-Test-User-Id': ['user-1'],
         },
       },
@@ -189,7 +189,7 @@ function makePostFinishBody(overrides: Record<string, unknown> = {}) {
         Size: 1024,
         Offset: 1024,
         MetaData: {
-          'submission-id': SUBMISSION_ID,
+          'manuscript-version-id': MANUSCRIPT_VERSION_ID,
           filetype: 'application/pdf',
           filename: 'poem.pdf',
         },
@@ -249,15 +249,16 @@ describe('tusd webhook handler', () => {
           const mockTx = {
             select: () => ({
               from: () => ({
-                where: () => ({
-                  limit: () =>
-                    Promise.resolve([
-                      {
-                        id: SUBMISSION_ID,
-                        status: 'DRAFT',
-                        submitterId: 'user-1',
-                      },
-                    ]),
+                innerJoin: () => ({
+                  where: () => ({
+                    limit: () =>
+                      Promise.resolve([
+                        {
+                          id: MANUSCRIPT_VERSION_ID,
+                          manuscriptId: 'manuscript-1',
+                        },
+                      ]),
+                  }),
                 }),
               }),
             }),
@@ -314,14 +315,16 @@ describe('tusd webhook handler', () => {
       expect(result.RejectUpload).toBe(true);
     });
 
-    it('rejects when submission not found', async () => {
+    it('rejects when manuscript version not found', async () => {
       mockWithRls.mockImplementation(
         async (_ctx: unknown, fn: (tx: unknown) => Promise<void>) => {
           const mockTx = {
             select: () => ({
               from: () => ({
-                where: () => ({
-                  limit: () => Promise.resolve([]),
+                innerJoin: () => ({
+                  where: () => ({
+                    limit: () => Promise.resolve([]),
+                  }),
                 }),
               }),
             }),
@@ -340,82 +343,12 @@ describe('tusd webhook handler', () => {
       expect(response.statusCode).toBe(200);
       const result = JSON.parse(response.payload);
       expect(result.RejectUpload).toBe(true);
-      expect(result.HTTPResponse.Body).toContain('submission_not_found');
-    });
-
-    it('rejects when not submission owner', async () => {
-      mockWithRls.mockImplementation(
-        async (_ctx: unknown, fn: (tx: unknown) => Promise<void>) => {
-          const mockTx = {
-            select: () => ({
-              from: () => ({
-                where: () => ({
-                  limit: () =>
-                    Promise.resolve([
-                      {
-                        id: SUBMISSION_ID,
-                        status: 'DRAFT',
-                        submitterId: 'other-user',
-                      },
-                    ]),
-                }),
-              }),
-            }),
-          };
-          return fn(mockTx);
-        },
+      expect(result.HTTPResponse.Body).toContain(
+        'manuscript_version_not_found',
       );
-
-      const response = await app.inject({
-        method: 'POST',
-        url: '/webhooks/tusd',
-        headers: {},
-        payload: makePreCreateBody(),
-      });
-
-      expect(response.statusCode).toBe(200);
-      const result = JSON.parse(response.payload);
-      expect(result.RejectUpload).toBe(true);
-      expect(result.HTTPResponse.Body).toContain('not_submission_owner');
     });
 
-    it('rejects when submission not DRAFT', async () => {
-      mockWithRls.mockImplementation(
-        async (_ctx: unknown, fn: (tx: unknown) => Promise<void>) => {
-          const mockTx = {
-            select: () => ({
-              from: () => ({
-                where: () => ({
-                  limit: () =>
-                    Promise.resolve([
-                      {
-                        id: SUBMISSION_ID,
-                        status: 'SUBMITTED',
-                        submitterId: 'user-1',
-                      },
-                    ]),
-                }),
-              }),
-            }),
-          };
-          return fn(mockTx);
-        },
-      );
-
-      const response = await app.inject({
-        method: 'POST',
-        url: '/webhooks/tusd',
-        headers: {},
-        payload: makePreCreateBody(),
-      });
-
-      expect(response.statusCode).toBe(200);
-      const result = JSON.parse(response.payload);
-      expect(result.RejectUpload).toBe(true);
-      expect(result.HTTPResponse.Body).toContain('submission_not_draft');
-    });
-
-    it('rejects missing submission-id in metadata', async () => {
+    it('rejects missing manuscript-version-id in metadata', async () => {
       const body = makePreCreateBody({
         MetaData: { filetype: 'application/pdf' },
       });
@@ -447,7 +380,7 @@ describe('tusd webhook handler', () => {
       mockFileService.getByStorageKey.mockResolvedValueOnce(null as never);
       mockFileService.create.mockResolvedValueOnce({
         id: 'file-1',
-        submissionId: SUBMISSION_ID,
+        manuscriptVersionId: MANUSCRIPT_VERSION_ID,
         filename: 'poem.pdf',
         mimeType: 'application/pdf',
         size: 1024,
@@ -470,7 +403,7 @@ describe('tusd webhook handler', () => {
       expect(mockFileService.create).toHaveBeenCalledWith(
         expect.anything(),
         expect.objectContaining({
-          submissionId: SUBMISSION_ID,
+          manuscriptVersionId: MANUSCRIPT_VERSION_ID,
           filename: 'poem.pdf',
           mimeType: 'application/pdf',
           storageKey: 'quarantine/upload-abc123',
@@ -527,7 +460,27 @@ describe('tusd webhook handler', () => {
       expect(result.error).toBe('no_auth_configured');
     });
 
-    it('returns 400 when missing org id', async () => {
+    it('succeeds without org id (orgId is optional)', async () => {
+      mockWithRls.mockImplementation(
+        async (_ctx: unknown, fn: (tx: unknown) => Promise<void>) => {
+          return fn({});
+        },
+      );
+      mockFileService.getByStorageKey.mockResolvedValueOnce(null as never);
+      mockFileService.create.mockResolvedValueOnce({
+        id: 'file-1',
+        manuscriptVersionId: MANUSCRIPT_VERSION_ID,
+        filename: 'poem.pdf',
+        mimeType: 'application/pdf',
+        size: 1024,
+        storageKey: 'quarantine/upload-abc123',
+        scanStatus: 'PENDING',
+        scannedAt: null,
+        uploadedAt: new Date(),
+      } as never);
+      mockAuditService.log.mockResolvedValueOnce(undefined);
+      mockEnqueueFileScan.mockResolvedValueOnce(undefined);
+
       const body = makePostFinishBody();
       body.Event.HTTPRequest.Header = {
         Authorization: ['Bearer test-token'],
@@ -541,7 +494,12 @@ describe('tusd webhook handler', () => {
         payload: body,
       });
 
-      expect(response.statusCode).toBe(400);
+      expect(response.statusCode).toBe(200);
+      // withRls called with userId only (no orgId)
+      expect(mockWithRls).toHaveBeenCalledWith(
+        { userId: 'user-1' },
+        expect.any(Function),
+      );
     });
 
     it('enqueues scan job after commit when VIRUS_SCAN_ENABLED', async () => {
@@ -553,7 +511,7 @@ describe('tusd webhook handler', () => {
       mockFileService.getByStorageKey.mockResolvedValueOnce(null as never);
       mockFileService.create.mockResolvedValueOnce({
         id: 'file-1',
-        submissionId: SUBMISSION_ID,
+        manuscriptVersionId: MANUSCRIPT_VERSION_ID,
         filename: 'poem.pdf',
         mimeType: 'application/pdf',
         size: 1024,
@@ -578,6 +536,7 @@ describe('tusd webhook handler', () => {
         expect.objectContaining({
           fileId: 'file-1',
           storageKey: 'quarantine/upload-abc123',
+          userId: 'user-1',
           organizationId: 'org-1',
         }),
       );
@@ -681,7 +640,7 @@ describe('tusd webhook handler', () => {
           Upload: {
             Size: 1024,
             MetaData: {
-              'submission-id': SUBMISSION_ID,
+              'manuscript-version-id': MANUSCRIPT_VERSION_ID,
               filetype: 'application/pdf',
               filename: 'poem.pdf',
             },
@@ -708,7 +667,7 @@ describe('tusd webhook handler', () => {
             Size: 1024,
             Offset: 1024,
             MetaData: {
-              'submission-id': SUBMISSION_ID,
+              'manuscript-version-id': MANUSCRIPT_VERSION_ID,
               filetype: 'application/pdf',
               filename: 'poem.pdf',
             },
@@ -738,15 +697,16 @@ describe('tusd webhook handler', () => {
           const mockTx = {
             select: () => ({
               from: () => ({
-                where: () => ({
-                  limit: () =>
-                    Promise.resolve([
-                      {
-                        id: SUBMISSION_ID,
-                        status: 'DRAFT',
-                        submitterId: 'user-1',
-                      },
-                    ]),
+                innerJoin: () => ({
+                  where: () => ({
+                    limit: () =>
+                      Promise.resolve([
+                        {
+                          id: MANUSCRIPT_VERSION_ID,
+                          manuscriptId: 'manuscript-1',
+                        },
+                      ]),
+                  }),
                 }),
               }),
             }),
@@ -766,9 +726,9 @@ describe('tusd webhook handler', () => {
       expect(response.statusCode).toBe(200);
       const body = JSON.parse(response.payload);
       expect(body.RejectUpload).toBeUndefined();
-      // Verify org comes from key, not header
+      // Pre-create uses withRls({ userId }) — user-scoped, no orgId
       expect(mockWithRls).toHaveBeenCalledWith(
-        expect.objectContaining({ orgId: 'org-from-key', userId: 'user-1' }),
+        { userId: 'user-1' },
         expect.any(Function),
       );
     });
@@ -887,7 +847,7 @@ describe('tusd webhook handler', () => {
       mockFileService.getByStorageKey.mockResolvedValueOnce(null as never);
       mockFileService.create.mockResolvedValueOnce({
         id: 'file-1',
-        submissionId: SUBMISSION_ID,
+        manuscriptVersionId: MANUSCRIPT_VERSION_ID,
         filename: 'poem.pdf',
         mimeType: 'application/pdf',
         size: 1024,
@@ -906,9 +866,9 @@ describe('tusd webhook handler', () => {
       });
 
       expect(response.statusCode).toBe(200);
-      // Verify org comes from key, not header
+      // Post-finish uses withRls({ userId }) — user-scoped, no orgId
       expect(mockWithRls).toHaveBeenCalledWith(
-        expect.objectContaining({ orgId: 'org-from-key', userId: 'user-1' }),
+        { userId: 'user-1' },
         expect.any(Function),
       );
     });
@@ -1022,15 +982,16 @@ describe('tusd webhook handler', () => {
           const mockTx = {
             select: () => ({
               from: () => ({
-                where: () => ({
-                  limit: () =>
-                    Promise.resolve([
-                      {
-                        id: SUBMISSION_ID,
-                        status: 'DRAFT',
-                        submitterId: 'user-1',
-                      },
-                    ]),
+                innerJoin: () => ({
+                  where: () => ({
+                    limit: () =>
+                      Promise.resolve([
+                        {
+                          id: MANUSCRIPT_VERSION_ID,
+                          manuscriptId: 'manuscript-1',
+                        },
+                      ]),
+                  }),
                 }),
               }),
             }),

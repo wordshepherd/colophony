@@ -11,9 +11,9 @@
 | Type exports   | `src/types.ts`                           |
 | Migrations     | `migrations/`                            |
 
-### Schema Files (12 domain files + barrel)
+### Schema Files (13 domain files + barrel)
 
-`api-keys.ts`, `audit.ts`, `compliance.ts`, `enums.ts`, `members.ts`, `messaging.ts`, `organizations.ts`, `payments.ts`, `relations.ts`, `submissions.ts`, `users.ts`, `webhooks.ts`, `index.ts`
+`api-keys.ts`, `audit.ts`, `compliance.ts`, `enums.ts`, `manuscripts.ts`, `members.ts`, `messaging.ts`, `organizations.ts`, `payments.ts`, `relations.ts`, `submissions.ts`, `users.ts`, `webhooks.ts`, `index.ts`
 
 ---
 
@@ -59,6 +59,10 @@ async function withRls<T>(
 
 Acquires a dedicated connection, sets `app.current_org` and/or `app.user_id` via `set_config(..., true)` (transaction-local), runs the callback inside a transaction, releases the connection. Context is automatically cleared when the transaction ends.
 
+### User-Scoped RLS (Manuscripts)
+
+Manuscripts use `owner_id = current_user_id()` instead of org-scoped isolation. The `current_user_id()` SQL function (migration 0000) returns `app.user_id`. Files use dual RLS: owner CRUD via manuscript ownership chain (`files → manuscript_versions → manuscripts WHERE owner_id = current_user_id()`) + org SELECT for editors on submitted manuscripts (`files → manuscript_versions → submissions WHERE organization_id = current_org_id()`). This is a new pattern — all other tables use org-scoped isolation only.
+
 ### NEVER
 
 - Query tenant data without setting org context via `SET LOCAL`
@@ -68,6 +72,7 @@ Acquires a dedicated connection, sets `app.current_org` and/or `app.user_id` via
 - Skip `FORCE ROW LEVEL SECURITY` on tenant tables
 - Make `app_user` a superuser (superusers bypass RLS)
 - Use `INSERT...RETURNING` when SELECT policy is stricter than INSERT (e.g., `audit_events`) — the RETURNING clause reads the row back via SELECT, so both policies must pass. Drop `.returning()` or widen the SELECT policy.
+- Pass `organizationId` to `auditService.log()` in user-scoped `withRls({ userId })` context — the `audit_events` INSERT policy requires `organization_id IS NULL OR organization_id = current_org_id()`. With no org context set, a non-NULL `organization_id` fails the check. Omit `organizationId` from audit params when org context is not set; `actorId` provides traceability.
 
 **ALWAYS:** Test multi-tenancy isolation in every feature that touches tenant data.
 

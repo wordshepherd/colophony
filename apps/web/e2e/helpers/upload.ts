@@ -11,7 +11,7 @@ import type { Page } from "@playwright/test";
 import { Pool } from "pg";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { eq } from "drizzle-orm";
-import { submissionFiles } from "@colophony/db";
+import { files } from "@colophony/db";
 
 const DATABASE_URL =
   process.env.DATABASE_URL ||
@@ -47,9 +47,11 @@ export function createTestFile(
 }
 
 /**
- * Query files associated with a submission from the database.
+ * Query files associated with a manuscript version from the database.
  */
-export async function getFilesBySubmissionId(submissionId: string): Promise<
+export async function getFilesByManuscriptVersionId(
+  manuscriptVersionId: string,
+): Promise<
   Array<{
     id: string;
     filename: string;
@@ -62,27 +64,27 @@ export async function getFilesBySubmissionId(submissionId: string): Promise<
   const db = getDb();
   return db
     .select({
-      id: submissionFiles.id,
-      filename: submissionFiles.filename,
-      mimeType: submissionFiles.mimeType,
-      size: submissionFiles.size,
-      scanStatus: submissionFiles.scanStatus,
-      storageKey: submissionFiles.storageKey,
+      id: files.id,
+      filename: files.filename,
+      mimeType: files.mimeType,
+      size: files.size,
+      scanStatus: files.scanStatus,
+      storageKey: files.storageKey,
     })
-    .from(submissionFiles)
-    .where(eq(submissionFiles.submissionId, submissionId));
+    .from(files)
+    .where(eq(files.manuscriptVersionId, manuscriptVersionId));
 }
 
 /**
- * Delete all files associated with a submission (test cleanup).
+ * Delete all files associated with a manuscript version (test cleanup).
  */
-export async function deleteFilesBySubmissionId(
-  submissionId: string,
+export async function deleteFilesByManuscriptVersionId(
+  manuscriptVersionId: string,
 ): Promise<void> {
   const db = getDb();
   await db
-    .delete(submissionFiles)
-    .where(eq(submissionFiles.submissionId, submissionId))
+    .delete(files)
+    .where(eq(files.manuscriptVersionId, manuscriptVersionId))
     .catch(() => {
       // Ignore if already deleted
     });

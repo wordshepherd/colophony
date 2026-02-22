@@ -10,6 +10,7 @@ import type { DrizzleDb } from '@colophony/db';
 
 vi.mock('../guards.js', () => ({
   requireAuth: vi.fn(),
+  requireUserContext: vi.fn(),
   requireOrgContext: vi.fn(),
   requireAdmin: vi.fn(),
   requireScopes: vi.fn().mockResolvedValue(undefined),
@@ -17,6 +18,7 @@ vi.mock('../guards.js', () => ({
 
 vi.mock('../../services/context.js', () => ({
   toServiceContext: vi.fn((ctx: unknown) => ctx),
+  toUserServiceContext: vi.fn((ctx: unknown) => ctx),
 }));
 
 vi.mock('../../services/file.service.js', () => ({
@@ -126,11 +128,11 @@ vi.mock('../../config/env.js', () => ({
   }),
 }));
 
-import { requireOrgContext, requireScopes } from '../guards.js';
+import { requireUserContext, requireScopes } from '../guards.js';
 import { fileService } from '../../services/file.service.js';
 import { mapServiceError } from '../error-mapper.js';
 
-const mockRequireOrgContext = vi.mocked(requireOrgContext);
+const mockRequireUserContext = vi.mocked(requireUserContext);
 const mockRequireScopes = vi.mocked(requireScopes);
 
 import { schema } from '../schema.js';
@@ -151,14 +153,11 @@ function makeCtx(): GraphQLContext {
   };
 }
 
-function makeOrgCtx() {
+function makeUserCtx() {
   const ctx = makeCtx();
   return {
     ...ctx,
-    authContext: ctx.authContext as AuthContext & {
-      orgId: string;
-      role: 'ADMIN' | 'EDITOR' | 'READER';
-    },
+    authContext: ctx.authContext as AuthContext,
     dbTx: ctx.dbTx as DrizzleDb,
   };
 }
@@ -178,11 +177,11 @@ describe('File mutations — schema', () => {
 describe('File mutations — resolver wiring', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockRequireOrgContext.mockReturnValue(makeOrgCtx());
+    mockRequireUserContext.mockReturnValue(makeUserCtx());
     mockRequireScopes.mockResolvedValue(undefined);
   });
 
-  it('deleteFile calls requireOrgContext + files:write scope + service', async () => {
+  it('deleteFile calls requireUserContext + files:write scope + service', async () => {
     // eslint-disable-next-line @typescript-eslint/unbound-method
     vi.mocked(fileService.deleteAsOwner).mockResolvedValue({ success: true });
 
@@ -194,7 +193,7 @@ describe('File mutations — resolver wiring', () => {
       {} as never,
     );
 
-    expect(mockRequireOrgContext).toHaveBeenCalled();
+    expect(mockRequireUserContext).toHaveBeenCalled();
     expect(mockRequireScopes).toHaveBeenCalledWith(
       expect.anything(),
       'files:write',
@@ -212,7 +211,7 @@ describe('File mutations — resolver wiring', () => {
   });
 
   it('deleteFile guard failure prevents service call', async () => {
-    mockRequireOrgContext.mockImplementation(() => {
+    mockRequireUserContext.mockImplementation(() => {
       throw new GraphQLError('Not authenticated', {
         extensions: { code: 'UNAUTHENTICATED' },
       });

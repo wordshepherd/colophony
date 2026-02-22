@@ -6,6 +6,8 @@ import { z } from "zod";
 
 export const apiKeyScopeSchema = z
   .enum([
+    "manuscripts:read",
+    "manuscripts:write",
     "submissions:read",
     "submissions:write",
     "files:read",

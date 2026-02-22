@@ -8,6 +8,7 @@ import { apiKeysRouter } from './routers/api-keys.js';
 import { auditRouter } from './routers/audit.js';
 import { formsRouter } from './routers/forms.js';
 import { periodsRouter } from './routers/periods.js';
+import { manuscriptsRouter } from './routers/manuscripts.js';
 
 // Re-export procedure builders for convenience
 export {
@@ -30,6 +31,7 @@ export const appRouter = t.router({
   organizations: organizationsRouter,
   users: usersRouter,
   submissions: submissionsRouter,
+  manuscripts: manuscriptsRouter,
   files: filesRouter,
   apiKeys: apiKeysRouter,
   payments: t.router({}),

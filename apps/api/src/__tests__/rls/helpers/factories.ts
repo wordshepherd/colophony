@@ -7,7 +7,9 @@ import {
   organizationMembers,
   submissionPeriods,
   submissions,
-  submissionFiles,
+  manuscripts,
+  manuscriptVersions,
+  files,
   submissionHistory,
   payments,
   auditEvents,
@@ -18,7 +20,9 @@ import {
   type OrganizationMember,
   type SubmissionPeriod,
   type Submission,
-  type SubmissionFile,
+  type Manuscript,
+  type ManuscriptVersion,
+  type File,
   type SubmissionHistoryEntry,
   type Payment,
   type AuditEvent,
@@ -114,15 +118,47 @@ export async function createSubmission(
   return submission;
 }
 
-export async function createSubmissionFile(
-  submissionId: string,
-  overrides?: Partial<SubmissionFile>,
-): Promise<SubmissionFile> {
+export async function createManuscript(
+  ownerId: string,
+  overrides?: Partial<Manuscript>,
+): Promise<Manuscript> {
+  const db = adminDb();
+  const [manuscript] = await db
+    .insert(manuscripts)
+    .values({
+      ownerId,
+      title: faker.lorem.sentence(),
+      ...overrides,
+    })
+    .returning();
+  return manuscript;
+}
+
+export async function createManuscriptVersion(
+  manuscriptId: string,
+  overrides?: Partial<ManuscriptVersion>,
+): Promise<ManuscriptVersion> {
+  const db = adminDb();
+  const [version] = await db
+    .insert(manuscriptVersions)
+    .values({
+      manuscriptId,
+      versionNumber: 1,
+      ...overrides,
+    })
+    .returning();
+  return version;
+}
+
+export async function createFile(
+  manuscriptVersionId: string,
+  overrides?: Partial<File>,
+): Promise<File> {
   const db = adminDb();
   const [file] = await db
-    .insert(submissionFiles)
+    .insert(files)
     .values({
-      submissionId,
+      manuscriptVersionId,
       filename: faker.system.fileName(),
       mimeType: faker.system.mimeType(),
       size: faker.number.int({ min: 1000, max: 10000000 }),
@@ -226,8 +262,12 @@ export interface TwoOrgScenario {
   periodB: SubmissionPeriod;
   submissionA: Submission;
   submissionB: Submission;
-  fileA: SubmissionFile;
-  fileB: SubmissionFile;
+  manuscriptA: Manuscript;
+  manuscriptB: Manuscript;
+  manuscriptVersionA: ManuscriptVersion;
+  manuscriptVersionB: ManuscriptVersion;
+  fileA: File;
+  fileB: File;
   historyA: SubmissionHistoryEntry;
   historyB: SubmissionHistoryEntry;
   paymentA: Payment;
@@ -265,9 +305,19 @@ export async function createTwoOrgScenario(): Promise<TwoOrgScenario> {
     createSubmission(orgB.id, userB.id, { submissionPeriodId: periodB.id }),
   ]);
 
+  const [manuscriptA, manuscriptB] = await Promise.all([
+    createManuscript(userA.id),
+    createManuscript(userB.id),
+  ]);
+
+  const [manuscriptVersionA, manuscriptVersionB] = await Promise.all([
+    createManuscriptVersion(manuscriptA.id),
+    createManuscriptVersion(manuscriptB.id),
+  ]);
+
   const [fileA, fileB] = await Promise.all([
-    createSubmissionFile(submissionA.id),
-    createSubmissionFile(submissionB.id),
+    createFile(manuscriptVersionA.id),
+    createFile(manuscriptVersionB.id),
   ]);
 
   const [historyA, historyB] = await Promise.all([
@@ -310,6 +360,10 @@ export async function createTwoOrgScenario(): Promise<TwoOrgScenario> {
     periodB,
     submissionA,
     submissionB,
+    manuscriptA,
+    manuscriptB,
+    manuscriptVersionA,
+    manuscriptVersionB,
     fileA,
     fileB,
     historyA,

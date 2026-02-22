@@ -10,7 +10,7 @@ import {
 import type { FastifyInstance } from 'fastify';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { eq } from '@colophony/db';
-import { submissionFiles, auditEvents } from '@colophony/db';
+import { files, auditEvents } from '@colophony/db';
 import {
   globalSetup,
   globalTeardown,
@@ -223,10 +223,10 @@ describe('tusd webhook integration', () => {
       const storageKey = payload.Event.Upload.Storage.Key;
       const [file] = await db
         .select()
-        .from(submissionFiles)
-        .where(eq(submissionFiles.storageKey, storageKey));
+        .from(files)
+        .where(eq(files.storageKey, storageKey));
       expect(file).toBeDefined();
-      expect(file.submissionId).toBe(submission.id);
+      expect(file.manuscriptVersionId).toBeDefined();
       expect(file.mimeType).toBe('application/pdf');
       expect(file.scanStatus).toBe('CLEAN'); // VIRUS_SCAN_ENABLED=false
 
@@ -254,11 +254,11 @@ describe('tusd webhook integration', () => {
 
       const db = adminDb();
       const storageKey = payload.Event.Upload.Storage.Key;
-      const files = await db
+      const fileRows = await db
         .select()
-        .from(submissionFiles)
-        .where(eq(submissionFiles.storageKey, storageKey));
-      expect(files).toHaveLength(1);
+        .from(files)
+        .where(eq(files.storageKey, storageKey));
+      expect(fileRows).toHaveLength(1);
     });
 
     it('enqueueFileScan called when VIRUS_SCAN_ENABLED=true', async () => {
@@ -304,8 +304,8 @@ describe('tusd webhook integration', () => {
       const storageKey = payload.Event.Upload.Storage.Key;
       const [file] = await db
         .select()
-        .from(submissionFiles)
-        .where(eq(submissionFiles.storageKey, storageKey));
+        .from(files)
+        .where(eq(files.storageKey, storageKey));
       expect(file.scanStatus).toBe('CLEAN');
       expect(mockEnqueueFileScan).not.toHaveBeenCalled();
     });

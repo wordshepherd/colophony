@@ -1,10 +1,13 @@
-import { submissionIdParamSchema, fileIdParamSchema } from '@colophony/types';
+import {
+  fileIdParamSchema,
+  manuscriptVersionIdParamSchema,
+} from '@colophony/types';
 import { fileService } from '../../services/file.service.js';
 import { createS3Client } from '../../services/s3.js';
 import { validateEnv } from '../../config/env.js';
-import { toServiceContext } from '../../services/context.js';
+import { toUserServiceContext } from '../../services/context.js';
 import { mapServiceError } from '../error-mapper.js';
-import { orgProcedure, requireScopes } from '../context.js';
+import { userProcedure, requireScopes } from '../context.js';
 
 // Lazily create S3 client (avoid creating at module load for tests)
 let s3ClientInstance: ReturnType<typeof createS3Client> | null = null;
@@ -22,32 +25,32 @@ function getEnvConfig() {
 }
 
 // ---------------------------------------------------------------------------
-// File routes
+// File routes (user-scoped — files belong to manuscript versions)
 // ---------------------------------------------------------------------------
 
-const list = orgProcedure
+const list = userProcedure
   .use(requireScopes('files:read'))
   .route({
     method: 'GET',
-    path: '/submissions/{submissionId}/files',
-    summary: 'List submission files',
-    description: 'Returns all files attached to a submission.',
-    operationId: 'listSubmissionFiles',
+    path: '/manuscript-versions/{manuscriptVersionId}/files',
+    summary: 'List files for a manuscript version',
+    description: 'Returns all files attached to a manuscript version.',
+    operationId: 'listManuscriptVersionFiles',
     tags: ['Files'],
   })
-  .input(submissionIdParamSchema)
+  .input(manuscriptVersionIdParamSchema)
   .handler(async ({ input, context }) => {
     try {
-      return await fileService.listBySubmissionWithAccess(
-        toServiceContext(context),
-        input.submissionId,
+      return await fileService.listByManuscriptVersionWithAccess(
+        toUserServiceContext(context),
+        input.manuscriptVersionId,
       );
     } catch (e) {
       mapServiceError(e);
     }
   });
 
-const download = orgProcedure
+const download = userProcedure
   .use(requireScopes('files:read'))
   .route({
     method: 'GET',
@@ -63,7 +66,7 @@ const download = orgProcedure
     try {
       const env = getEnvConfig();
       return await fileService.getDownloadUrlWithAccess(
-        toServiceContext(context),
+        toUserServiceContext(context),
         input.fileId,
         getS3Client(),
         env.S3_BUCKET,
@@ -73,14 +76,14 @@ const download = orgProcedure
     }
   });
 
-const del = orgProcedure
+const del = userProcedure
   .use(requireScopes('files:write'))
   .route({
     method: 'DELETE',
     path: '/files/{fileId}',
     summary: 'Delete a file',
     description:
-      'Delete a file from a submission. Only allowed while the submission is in DRAFT status.',
+      'Delete a file from a manuscript version. Only the manuscript owner can delete files.',
     operationId: 'deleteFile',
     tags: ['Files'],
   })
@@ -89,7 +92,7 @@ const del = orgProcedure
     try {
       const env = getEnvConfig();
       return await fileService.deleteAsOwner(
-        toServiceContext(context),
+        toUserServiceContext(context),
         input.fileId,
         getS3Client(),
         env.S3_BUCKET,

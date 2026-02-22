@@ -135,8 +135,25 @@ export function requireScopes(...scopes: ApiKeyScope[]) {
 // Procedure builders
 // ---------------------------------------------------------------------------
 
+/** Requires auth + DB transaction (user context). No org required. */
+const hasUserContext = t.middleware(({ ctx, next }) => {
+  if (!ctx.authContext) {
+    throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Not authenticated' });
+  }
+  if (!ctx.dbTx) {
+    throw new TRPCError({
+      code: 'INTERNAL_SERVER_ERROR',
+      message: 'Database transaction not available',
+    });
+  }
+  return next({
+    ctx: { ...ctx, authContext: ctx.authContext, dbTx: ctx.dbTx },
+  });
+});
+
 export const publicProcedure = t.procedure;
 export const authedProcedure = t.procedure.use(isAuthed);
+export const userProcedure = t.procedure.use(hasUserContext);
 export const orgProcedure = t.procedure.use(hasOrgContext);
 export const adminProcedure = t.procedure.use(isAdmin);
 export const createRouter = t.router;
