@@ -269,6 +269,7 @@ export function SubmissionForm({ mode, submissionId }: SubmissionFormProps) {
         id: currentSubmissionId,
         ...rest,
         formData,
+        manuscriptVersionId: selectedManuscriptVersionId ?? undefined,
       });
       return undefined;
     }
@@ -290,6 +291,7 @@ export function SubmissionForm({ mode, submissionId }: SubmissionFormProps) {
         id: saveId,
         ...rest,
         formData,
+        manuscriptVersionId: selectedManuscriptVersionId ?? undefined,
       });
     }
 
