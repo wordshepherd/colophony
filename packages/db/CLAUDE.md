@@ -72,6 +72,7 @@ Manuscripts use `owner_id = current_user_id()` instead of org-scoped isolation. 
 - Skip `FORCE ROW LEVEL SECURITY` on tenant tables
 - Make `app_user` a superuser (superusers bypass RLS)
 - Use `INSERT...RETURNING` when SELECT policy is stricter than INSERT (e.g., `audit_events`) — the RETURNING clause reads the row back via SELECT, so both policies must pass. Drop `.returning()` or widen the SELECT policy.
+- Pass `organizationId` to `auditService.log()` in user-scoped `withRls({ userId })` context — the `audit_events` INSERT policy requires `organization_id IS NULL OR organization_id = current_org_id()`. With no org context set, a non-NULL `organization_id` fails the check. Omit `organizationId` from audit params when org context is not set; `actorId` provides traceability.
 
 **ALWAYS:** Test multi-tenancy isolation in every feature that touches tenant data.
 
