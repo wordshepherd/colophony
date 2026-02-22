@@ -41,6 +41,7 @@ import {
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { FileUpload } from "./file-upload";
+import { ManuscriptPicker } from "@/components/manuscripts/manuscript-picker";
 import { WizardFormFields } from "./wizard-form-fields";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
@@ -61,6 +62,8 @@ export function SubmissionForm({ mode, submissionId }: SubmissionFormProps) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [selectedFormId, setSelectedFormId] = useState<string | undefined>();
+  const [selectedManuscriptVersionId, setSelectedManuscriptVersionId] =
+    useState<string | null>(null);
   const utils = trpc.useUtils();
 
   // Fetch existing submission for edit mode
@@ -70,10 +73,16 @@ export function SubmissionForm({ mode, submissionId }: SubmissionFormProps) {
       { enabled: mode === "edit" && !!submissionId },
     );
 
+  // Determine the active manuscript version ID for file queries
+  const activeManuscriptVersionId =
+    mode === "edit"
+      ? existingSubmission?.manuscriptVersionId
+      : selectedManuscriptVersionId;
+
   // Fetch files for the manuscript version (v2: listByManuscriptVersion)
   const { data: existingFiles } = trpc.files.listByManuscriptVersion.useQuery(
-    { manuscriptVersionId: existingSubmission?.manuscriptVersionId ?? "" },
-    { enabled: mode === "edit" && !!existingSubmission?.manuscriptVersionId },
+    { manuscriptVersionId: activeManuscriptVersionId ?? "" },
+    { enabled: !!activeManuscriptVersionId },
   );
 
   // Fetch published forms for create-mode selector
@@ -231,6 +240,7 @@ export function SubmissionForm({ mode, submissionId }: SubmissionFormProps) {
         ...rest,
         ...(hasForm ? { formDefinitionId: selectedId } : {}),
         formData: hasForm ? formData : undefined,
+        manuscriptVersionId: selectedManuscriptVersionId ?? undefined,
       });
     } else if (submissionId) {
       // v2: flattened input — { id, ...data } instead of { id, data }
@@ -251,6 +261,7 @@ export function SubmissionForm({ mode, submissionId }: SubmissionFormProps) {
         ...rest,
         ...(hasForm ? { formDefinitionId: selectedId } : {}),
         formData: hasForm ? formData : undefined,
+        manuscriptVersionId: selectedManuscriptVersionId ?? undefined,
       });
       return result.id;
     } else {
@@ -527,23 +538,45 @@ export function SubmissionForm({ mode, submissionId }: SubmissionFormProps) {
             />
           )}
 
-          {/* File upload - only shown after creation */}
-          {mode === "edit" && (currentSubmissionId ?? submissionId) && (
+          {/* Manuscript — create mode: picker, edit mode: file upload for linked version */}
+          {mode === "create" && (
             <Card>
               <CardHeader>
-                <CardTitle>Files</CardTitle>
+                <CardTitle>Manuscript</CardTitle>
                 <CardDescription>
-                  Upload supporting documents for your submission
+                  Select or create a manuscript to attach files to this
+                  submission
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <FileUpload
-                  manuscriptVersionId={existingSubmission?.manuscriptVersionId}
-                  disabled={!canEdit}
+                <ManuscriptPicker
+                  value={selectedManuscriptVersionId}
+                  onChange={(versionId) =>
+                    setSelectedManuscriptVersionId(versionId)
+                  }
                 />
               </CardContent>
             </Card>
           )}
+
+          {mode === "edit" &&
+            (currentSubmissionId ?? submissionId) &&
+            existingSubmission?.manuscriptVersionId && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Files</CardTitle>
+                  <CardDescription>
+                    Upload supporting documents for your submission
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <FileUpload
+                    manuscriptVersionId={existingSubmission.manuscriptVersionId}
+                    disabled={!canEdit}
+                  />
+                </CardContent>
+              </Card>
+            )}
 
           {/* Actions — hidden in wizard mode (wizard has its own nav) */}
           {!isWizardMode && (

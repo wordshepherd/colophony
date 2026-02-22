@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { useOrganization } from "@/hooks/use-organization";
 import {
+  BookOpen,
   Building2,
   Calendar,
   ClipboardList,
@@ -16,6 +17,7 @@ import {
 
 const navigation = [
   { name: "My Submissions", href: "/submissions", icon: FileText },
+  { name: "My Manuscripts", href: "/manuscripts", icon: BookOpen },
   { name: "Settings", href: "/settings", icon: Settings },
 ];
 

@@ -54,6 +54,13 @@ describe("Sidebar", () => {
     expect(screen.getByText("My Submissions")).toBeInTheDocument();
   });
 
+  it("should always render My Manuscripts link", () => {
+    render(<Sidebar />);
+    const link = screen.getByText("My Manuscripts");
+    expect(link).toBeInTheDocument();
+    expect(link.closest("a")).toHaveAttribute("href", "/manuscripts");
+  });
+
   it("should always render Settings link", () => {
     render(<Sidebar />);
     expect(screen.getByText("Settings")).toBeInTheDocument();
