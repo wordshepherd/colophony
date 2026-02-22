@@ -37,6 +37,7 @@ import {
   CheckCircle,
   AlertCircle,
   Loader2,
+  BookOpen,
 } from "lucide-react";
 import {
   EDITOR_ALLOWED_TRANSITIONS,
@@ -262,6 +263,31 @@ export function SubmissionDetail({
                 <div className="whitespace-pre-wrap text-sm">
                   {submission.coverLetter}
                 </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Linked manuscript */}
+          {submission.manuscript && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Linked Manuscript</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Link
+                  href={`/manuscripts/${submission.manuscript.manuscriptId}`}
+                  className="flex items-center gap-3 p-3 border rounded-lg hover:bg-accent transition-colors"
+                >
+                  <BookOpen className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">
+                      {submission.manuscript.manuscriptTitle}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Version {submission.manuscript.versionNumber}
+                    </p>
+                  </div>
+                </Link>
               </CardContent>
             </Card>
           )}

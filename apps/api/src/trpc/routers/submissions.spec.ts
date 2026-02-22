@@ -172,6 +172,7 @@ function makeDraftSubmission(submitterId = USER_ID) {
     ...makeSubmissionBase(submitterId),
     files: [],
     submitterEmail: 'test@example.com',
+    manuscript: null,
   };
 }
 
