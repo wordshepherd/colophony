@@ -95,6 +95,7 @@ function resetMocks() {
   mockIsLoadingSubmission = false;
   mockExistingFiles = undefined;
   mockFormDefinition = undefined;
+  mockManuscriptPickerOnChange = undefined;
   mockPublishedForms = {
     items: [],
     total: 0,
@@ -191,6 +192,26 @@ jest.mock("../file-upload", () => ({
       data-disabled={String(props.disabled)}
     />
   ),
+}));
+
+let mockManuscriptPickerOnChange:
+  | ((versionId: string | null) => void)
+  | undefined;
+jest.mock("@/components/manuscripts/manuscript-picker", () => ({
+  ManuscriptPicker: (props: {
+    value: string | null;
+    onChange: (versionId: string | null) => void;
+    disabled?: boolean;
+  }) => {
+    mockManuscriptPickerOnChange = props.onChange;
+    return (
+      <div
+        data-testid="manuscript-picker"
+        data-value={props.value ?? ""}
+        data-disabled={String(!!props.disabled)}
+      />
+    );
+  },
 }));
 
 jest.mock("../form-renderer", () => {
@@ -372,7 +393,9 @@ describe("SubmissionForm", () => {
     });
 
     it("renders FileUpload with manuscriptVersionId and disabled=false", () => {
-      mockExistingSubmission = makeDraftSubmission();
+      mockExistingSubmission = makeDraftSubmission({
+        manuscriptVersionId: "mv-1",
+      });
       render(<SubmissionForm mode="edit" submissionId="sub-1" />);
 
       const fileUpload = screen.getByTestId("file-upload");
@@ -729,6 +752,34 @@ describe("SubmissionForm", () => {
           expect.objectContaining({
             title: "My Poem",
             formDefinitionId: "00000000-0000-4000-8000-000000000001",
+          }),
+        );
+      });
+    });
+
+    it("renders manuscript picker in create mode", () => {
+      render(<SubmissionForm mode="create" />);
+      expect(screen.getByTestId("manuscript-picker")).toBeInTheDocument();
+    });
+
+    it("passes manuscriptVersionId to create mutation", async () => {
+      const user = userEvent.setup();
+      render(<SubmissionForm mode="create" />);
+
+      // Simulate selecting a manuscript via the picker callback
+      mockManuscriptPickerOnChange?.("mv-123");
+
+      await user.type(
+        screen.getByPlaceholderText("Enter submission title"),
+        "My Story",
+      );
+      await user.click(screen.getByRole("button", { name: "Create Draft" }));
+
+      await waitFor(() => {
+        expect(mockCreateMutateAsync).toHaveBeenCalledWith(
+          expect.objectContaining({
+            title: "My Story",
+            manuscriptVersionId: "mv-123",
           }),
         );
       });
