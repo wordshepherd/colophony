@@ -1,6 +1,7 @@
 import {
   formDefinitions,
   formFields,
+  formPages,
   submissionPeriods,
   submissions,
   eq,
@@ -9,6 +10,7 @@ import {
   type DrizzleDb,
 } from '@colophony/db';
 import { desc, asc, ilike, count, inArray } from 'drizzle-orm';
+import { randomUUID } from 'node:crypto';
 import type {
   CreateFormDefinitionInput,
   UpdateFormDefinitionInput,
@@ -16,13 +18,17 @@ import type {
   UpdateFormFieldInput,
   ReorderFormFieldsInput,
   ListFormDefinitionsInput,
+  CreateFormPageInput,
+  UpdateFormPageInput,
+  ReorderFormPagesInput,
   FormFieldError,
 } from '@colophony/types';
 import {
   AuditActions,
   AuditResources,
   PRESENTATIONAL_FIELD_TYPES,
-  evaluateFieldVisibility,
+  evaluateFieldVisibilityWithBranching,
+  extractBranchingConfig,
 } from '@colophony/types';
 import type { ServiceContext } from './types.js';
 import { assertEditorOrAdmin } from './errors.js';
@@ -43,6 +49,20 @@ export class FormFieldNotFoundError extends Error {
   constructor(id: string) {
     super(`Form field "${id}" not found`);
     this.name = 'FormFieldNotFoundError';
+  }
+}
+
+export class FormPageNotFoundError extends Error {
+  constructor(id: string) {
+    super(`Form page "${id}" not found`);
+    this.name = 'FormPageNotFoundError';
+  }
+}
+
+export class InvalidBranchReferenceError extends Error {
+  constructor(details: string) {
+    super(`Invalid branch reference: ${details}`);
+    this.name = 'InvalidBranchReferenceError';
   }
 }
 
@@ -155,13 +175,20 @@ export const formService = {
 
     if (!form) return null;
 
-    const fields = await tx
-      .select()
-      .from(formFields)
-      .where(eq(formFields.formDefinitionId, id))
-      .orderBy(asc(formFields.sortOrder));
+    const [fields, pages] = await Promise.all([
+      tx
+        .select()
+        .from(formFields)
+        .where(eq(formFields.formDefinitionId, id))
+        .orderBy(asc(formFields.sortOrder)),
+      tx
+        .select()
+        .from(formPages)
+        .where(eq(formPages.formDefinitionId, id))
+        .orderBy(asc(formPages.sortOrder)),
+    ]);
 
-    return { ...form, fields };
+    return { ...form, fields, pages };
   },
 
   // -------------------------------------------------------------------------
@@ -249,12 +276,55 @@ export const formService = {
     await assertDraft(tx, id);
 
     // Check that the form has at least one field
-    const fieldCount = await tx
-      .select({ count: count() })
+    const allFields = await tx
+      .select()
       .from(formFields)
       .where(eq(formFields.formDefinitionId, id));
 
-    if ((fieldCount[0]?.count ?? 0) === 0) throw new FormHasNoFieldsError();
+    if (allFields.length === 0) throw new FormHasNoFieldsError();
+
+    // Validate branchId references
+    const validBranchIds = new Set<string>();
+    for (const field of allFields) {
+      const branching = extractBranchingConfig(field.config);
+      if (branching?.enabled) {
+        for (const branch of branching.branches) {
+          validBranchIds.add(branch.id);
+        }
+      }
+    }
+
+    for (const field of allFields) {
+      if (field.branchId && !validBranchIds.has(field.branchId)) {
+        throw new InvalidBranchReferenceError(
+          `Field "${field.fieldKey}" references branch "${field.branchId}" which does not exist`,
+        );
+      }
+    }
+
+    // Check for circular branch chains
+    for (const field of allFields) {
+      if (field.branchId) {
+        const visited = new Set<string>();
+        let currentBranchId: string | null = field.branchId;
+        while (currentBranchId) {
+          if (visited.has(currentBranchId)) {
+            throw new InvalidBranchReferenceError(
+              `Circular branch chain detected involving field "${field.fieldKey}"`,
+            );
+          }
+          visited.add(currentBranchId);
+          // Find the source field for this branch
+          const sourceField = allFields.find((f) => {
+            const b = extractBranchingConfig(f.config);
+            return (
+              b?.enabled && b.branches.some((br) => br.id === currentBranchId)
+            );
+          });
+          currentBranchId = sourceField?.branchId ?? null;
+        }
+      }
+    }
 
     const [published] = await tx
       .update(formDefinitions)
@@ -330,10 +400,43 @@ export const formService = {
       })
       .returning();
 
-    // Copy all fields
+    // Copy pages with new UUIDs
+    const pageIdMap = new Map<string, string>();
+    if (source.pages.length > 0) {
+      const newPages = source.pages.map((p) => {
+        const newPageId = randomUUID();
+        pageIdMap.set(p.id, newPageId);
+        return {
+          id: newPageId,
+          formDefinitionId: newForm.id,
+          title: p.title,
+          description: p.description,
+          sortOrder: p.sortOrder,
+          branchingRules: p.branchingRules,
+        };
+      });
+      await tx.insert(formPages).values(newPages);
+    }
+
+    // Copy fields with remapped branchIds and pageIds
+    const branchIdMap = new Map<string, string>();
     if (source.fields.length > 0) {
-      await tx.insert(formFields).values(
-        source.fields.map((f) => ({
+      // First pass: remap branching config in fields that are branch sources
+      const fieldValues = source.fields.map((f) => {
+        let config = f.config;
+        const branching = extractBranchingConfig(f.config);
+        if (branching?.enabled) {
+          const newBranches = branching.branches.map((b) => {
+            const newBranchId = randomUUID();
+            branchIdMap.set(b.id, newBranchId);
+            return { ...b, id: newBranchId };
+          });
+          config = {
+            ...config,
+            branching: { enabled: true, branches: newBranches },
+          };
+        }
+        return {
           formDefinitionId: newForm.id,
           fieldKey: f.fieldKey,
           fieldType: f.fieldType,
@@ -342,10 +445,28 @@ export const formService = {
           placeholder: f.placeholder,
           required: f.required,
           sortOrder: f.sortOrder,
-          config: f.config,
+          config,
           conditionalRules: f.conditionalRules,
-        })),
-      );
+          branchId: f.branchId ? (branchIdMap.get(f.branchId) ?? null) : null,
+          pageId: f.pageId ? (pageIdMap.get(f.pageId) ?? null) : null,
+        };
+      });
+
+      // Second pass: remap branchId references (some may reference branches
+      // from fields processed later in the first pass)
+      for (const fv of fieldValues) {
+        if (fv.branchId === null) {
+          // Check the original field for a branchId that wasn't mapped yet in first pass
+          const originalField = source.fields.find(
+            (f) => f.fieldKey === fv.fieldKey,
+          );
+          if (originalField?.branchId) {
+            fv.branchId = branchIdMap.get(originalField.branchId) ?? null;
+          }
+        }
+      }
+
+      await tx.insert(formFields).values(fieldValues);
     }
 
     return formService.getById(tx, newForm.id);
@@ -431,6 +552,20 @@ export const formService = {
       sortOrder = (maxResult.rows[0]?.max_order ?? -1) + 1;
     }
 
+    // Validate pageId belongs to this form if provided
+    if (input.pageId) {
+      const [page] = await tx
+        .select({ id: formPages.id })
+        .from(formPages)
+        .where(
+          and(
+            eq(formPages.id, input.pageId),
+            eq(formPages.formDefinitionId, formId),
+          ),
+        );
+      if (!page) throw new FormPageNotFoundError(input.pageId);
+    }
+
     const [field] = await tx
       .insert(formFields)
       .values({
@@ -443,6 +578,8 @@ export const formService = {
         required: input.required ?? false,
         sortOrder,
         config: input.config ?? {},
+        branchId: input.branchId ?? null,
+        pageId: input.pageId ?? null,
       })
       .returning();
 
@@ -499,6 +636,20 @@ export const formService = {
 
     if (!existing) throw new FormFieldNotFoundError(fieldId);
 
+    // Validate pageId belongs to this form if provided
+    if (input.pageId) {
+      const [page] = await tx
+        .select({ id: formPages.id })
+        .from(formPages)
+        .where(
+          and(
+            eq(formPages.id, input.pageId),
+            eq(formPages.formDefinitionId, formId),
+          ),
+        );
+      if (!page) throw new FormPageNotFoundError(input.pageId);
+    }
+
     const [updated] = await tx
       .update(formFields)
       .set({
@@ -514,6 +665,8 @@ export const formService = {
         ...(input.conditionalRules !== undefined
           ? { conditionalRules: input.conditionalRules }
           : {}),
+        ...(input.branchId !== undefined ? { branchId: input.branchId } : {}),
+        ...(input.pageId !== undefined ? { pageId: input.pageId } : {}),
         updatedAt: new Date(),
       })
       .where(eq(formFields.id, fieldId))
@@ -548,17 +701,40 @@ export const formService = {
   async removeField(tx: DrizzleDb, formId: string, fieldId: string) {
     await assertDraft(tx, formId);
 
-    const [deleted] = await tx
-      .delete(formFields)
+    // Load the field to check for branching config before deleting
+    const [toDelete] = await tx
+      .select()
+      .from(formFields)
       .where(
         and(
           eq(formFields.id, fieldId),
           eq(formFields.formDefinitionId, formId),
         ),
       )
+      .limit(1);
+
+    if (!toDelete) throw new FormFieldNotFoundError(fieldId);
+
+    // If this field has branching enabled, clear branchId on orphaned fields
+    const branching = extractBranchingConfig(toDelete.config);
+    if (branching?.enabled && branching.branches.length > 0) {
+      const orphanedBranchIds = branching.branches.map((b) => b.id);
+      await tx
+        .update(formFields)
+        .set({ branchId: null, updatedAt: new Date() })
+        .where(
+          and(
+            eq(formFields.formDefinitionId, formId),
+            inArray(formFields.branchId, orphanedBranchIds),
+          ),
+        );
+    }
+
+    const [deleted] = await tx
+      .delete(formFields)
+      .where(eq(formFields.id, fieldId))
       .returning();
 
-    if (!deleted) throw new FormFieldNotFoundError(fieldId);
     return deleted;
   },
 
@@ -651,9 +827,16 @@ export const formService = {
         continue;
       }
 
-      // Evaluate conditional visibility
+      // Evaluate conditional visibility (includes branching)
       const { visible, required: conditionallyRequired } =
-        evaluateFieldVisibility(field.conditionalRules, data);
+        evaluateFieldVisibilityWithBranching(
+          {
+            branchId: field.branchId,
+            conditionalRules: field.conditionalRules,
+          },
+          form.fields,
+          data,
+        );
 
       // Skip hidden fields entirely — no validation
       if (!visible) continue;
@@ -684,6 +867,185 @@ export const formService = {
     return errors;
   },
 
+  // -------------------------------------------------------------------------
+  // Page Operations
+  // -------------------------------------------------------------------------
+
+  async addPage(tx: DrizzleDb, formId: string, input: CreateFormPageInput) {
+    await assertDraft(tx, formId);
+
+    let sortOrder = input.sortOrder;
+    if (sortOrder === undefined) {
+      const maxResult = await tx.execute<{ max_order: number | null }>(
+        sql`SELECT MAX(sort_order) as max_order FROM form_pages WHERE form_definition_id = ${formId}`,
+      );
+      sortOrder = (maxResult.rows[0]?.max_order ?? -1) + 1;
+    }
+
+    const [page] = await tx
+      .insert(formPages)
+      .values({
+        formDefinitionId: formId,
+        title: input.title,
+        description: input.description ?? null,
+        sortOrder,
+      })
+      .returning();
+
+    return page;
+  },
+
+  async addPageWithAudit(
+    svc: ServiceContext,
+    formId: string,
+    input: CreateFormPageInput,
+  ) {
+    assertEditorOrAdmin(svc.actor.role);
+    const page = await formService.addPage(svc.tx, formId, input);
+    await svc.audit({
+      action: AuditActions.FORM_PAGE_ADDED,
+      resource: AuditResources.FORM,
+      resourceId: formId,
+      newValue: { pageId: page.id, title: input.title },
+    });
+    return page;
+  },
+
+  async updatePage(
+    tx: DrizzleDb,
+    formId: string,
+    pageId: string,
+    input: UpdateFormPageInput,
+  ) {
+    await assertDraft(tx, formId);
+
+    const [existing] = await tx
+      .select()
+      .from(formPages)
+      .where(
+        and(eq(formPages.id, pageId), eq(formPages.formDefinitionId, formId)),
+      )
+      .limit(1);
+
+    if (!existing) throw new FormPageNotFoundError(pageId);
+
+    const [updated] = await tx
+      .update(formPages)
+      .set({
+        ...(input.title !== undefined ? { title: input.title } : {}),
+        ...(input.description !== undefined
+          ? { description: input.description }
+          : {}),
+        ...(input.branchingRules !== undefined
+          ? { branchingRules: input.branchingRules }
+          : {}),
+        updatedAt: new Date(),
+      })
+      .where(eq(formPages.id, pageId))
+      .returning();
+
+    return updated ?? null;
+  },
+
+  async updatePageWithAudit(
+    svc: ServiceContext,
+    formId: string,
+    pageId: string,
+    input: UpdateFormPageInput,
+  ) {
+    assertEditorOrAdmin(svc.actor.role);
+    const updated = await formService.updatePage(svc.tx, formId, pageId, input);
+    if (!updated) throw new FormPageNotFoundError(pageId);
+    await svc.audit({
+      action: AuditActions.FORM_PAGE_UPDATED,
+      resource: AuditResources.FORM,
+      resourceId: formId,
+      newValue: { pageId, ...input },
+    });
+    return updated;
+  },
+
+  async removePage(tx: DrizzleDb, formId: string, pageId: string) {
+    await assertDraft(tx, formId);
+
+    const [deleted] = await tx
+      .delete(formPages)
+      .where(
+        and(eq(formPages.id, pageId), eq(formPages.formDefinitionId, formId)),
+      )
+      .returning();
+
+    if (!deleted) throw new FormPageNotFoundError(pageId);
+    return deleted;
+  },
+
+  async removePageWithAudit(
+    svc: ServiceContext,
+    formId: string,
+    pageId: string,
+  ) {
+    assertEditorOrAdmin(svc.actor.role);
+    const removed = await formService.removePage(svc.tx, formId, pageId);
+    await svc.audit({
+      action: AuditActions.FORM_PAGE_REMOVED,
+      resource: AuditResources.FORM,
+      resourceId: formId,
+      newValue: { pageId },
+    });
+    return removed;
+  },
+
+  async reorderPages(
+    tx: DrizzleDb,
+    formId: string,
+    input: ReorderFormPagesInput,
+  ) {
+    await assertDraft(tx, formId);
+
+    const existingPages = await tx
+      .select({ id: formPages.id })
+      .from(formPages)
+      .where(eq(formPages.formDefinitionId, formId));
+
+    const existingIds = new Set(existingPages.map((p) => p.id));
+    for (const pageId of input.pageIds) {
+      if (!existingIds.has(pageId)) throw new FormPageNotFoundError(pageId);
+    }
+
+    for (let i = 0; i < input.pageIds.length; i++) {
+      await tx
+        .update(formPages)
+        .set({ sortOrder: i, updatedAt: new Date() })
+        .where(eq(formPages.id, input.pageIds[i]));
+    }
+
+    return tx
+      .select()
+      .from(formPages)
+      .where(eq(formPages.formDefinitionId, formId))
+      .orderBy(asc(formPages.sortOrder));
+  },
+
+  async reorderPagesWithAudit(
+    svc: ServiceContext,
+    formId: string,
+    input: ReorderFormPagesInput,
+  ) {
+    assertEditorOrAdmin(svc.actor.role);
+    const pages = await formService.reorderPages(svc.tx, formId, input);
+    await svc.audit({
+      action: AuditActions.FORM_PAGES_REORDERED,
+      resource: AuditResources.FORM,
+      resourceId: formId,
+      newValue: { pageIds: input.pageIds },
+    });
+    return pages;
+  },
+
+  // -------------------------------------------------------------------------
+  // DataLoader batch methods
+  // -------------------------------------------------------------------------
+
   /**
    * Batch-load form fields by form definition IDs.
    * Used by GraphQL DataLoader for N+1 prevention.
@@ -699,6 +1061,30 @@ export const formService = {
       .orderBy(asc(formFields.sortOrder));
 
     const grouped = new Map<string, (typeof formFields.$inferSelect)[]>();
+    for (const row of rows) {
+      const list = grouped.get(row.formDefinitionId) ?? [];
+      list.push(row);
+      grouped.set(row.formDefinitionId, list);
+    }
+
+    return grouped;
+  },
+
+  /**
+   * Batch-load form pages by form definition IDs.
+   * Used by GraphQL DataLoader for N+1 prevention.
+   */
+  async getPagesByFormIds(tx: DrizzleDb, formIds: string[]) {
+    if (formIds.length === 0)
+      return new Map<string, (typeof formPages.$inferSelect)[]>();
+
+    const rows = await tx
+      .select()
+      .from(formPages)
+      .where(inArray(formPages.formDefinitionId, formIds))
+      .orderBy(asc(formPages.sortOrder));
+
+    const grouped = new Map<string, (typeof formPages.$inferSelect)[]>();
     for (const row of rows) {
       const list = grouped.get(row.formDefinitionId) ?? [];
       list.push(row);

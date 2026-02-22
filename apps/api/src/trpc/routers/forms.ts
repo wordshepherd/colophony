@@ -5,10 +5,14 @@ import {
   createFormFieldSchema,
   updateFormFieldSchema,
   reorderFormFieldsSchema,
+  createFormPageSchema,
+  updateFormPageSchema,
+  reorderFormPagesSchema,
   listFormDefinitionsSchema,
   formDefinitionSchema,
   formDefinitionDetailSchema,
   formFieldSchema,
+  formPageSchema,
   idParamSchema,
   successResponseSchema,
   paginatedResponseSchema,
@@ -21,6 +25,11 @@ import { mapServiceError } from '../error-mapper.js';
 const formIdFieldIdSchema = z.object({
   id: z.string().uuid(),
   fieldId: z.string().uuid(),
+});
+
+const formIdPageIdSchema = z.object({
+  id: z.string().uuid(),
+  pageId: z.string().uuid(),
 });
 
 export const formsRouter = createRouter({
@@ -211,6 +220,78 @@ export const formsRouter = createRouter({
       const { id, ...data } = input;
       try {
         return await formService.reorderFieldsWithAudit(
+          toServiceContext(ctx),
+          id,
+          data,
+        );
+      } catch (e) {
+        mapServiceError(e);
+      }
+    }),
+
+  /** Add a page to a DRAFT form. */
+  addPage: orgProcedure
+    .use(requireScopes('forms:write'))
+    .input(idParamSchema.merge(createFormPageSchema))
+    .output(formPageSchema)
+    .mutation(async ({ ctx, input }) => {
+      const { id, ...pageData } = input;
+      try {
+        return await formService.addPageWithAudit(
+          toServiceContext(ctx),
+          id,
+          pageData,
+        );
+      } catch (e) {
+        mapServiceError(e);
+      }
+    }),
+
+  /** Update a page in a DRAFT form. */
+  updatePage: orgProcedure
+    .use(requireScopes('forms:write'))
+    .input(formIdPageIdSchema.merge(updateFormPageSchema))
+    .output(formPageSchema)
+    .mutation(async ({ ctx, input }) => {
+      const { id, pageId, ...data } = input;
+      try {
+        return await formService.updatePageWithAudit(
+          toServiceContext(ctx),
+          id,
+          pageId,
+          data,
+        );
+      } catch (e) {
+        mapServiceError(e);
+      }
+    }),
+
+  /** Remove a page from a DRAFT form. */
+  removePage: orgProcedure
+    .use(requireScopes('forms:write'))
+    .input(formIdPageIdSchema)
+    .output(formPageSchema)
+    .mutation(async ({ ctx, input }) => {
+      try {
+        return await formService.removePageWithAudit(
+          toServiceContext(ctx),
+          input.id,
+          input.pageId,
+        );
+      } catch (e) {
+        mapServiceError(e);
+      }
+    }),
+
+  /** Reorder pages in a DRAFT form. */
+  reorderPages: orgProcedure
+    .use(requireScopes('forms:write'))
+    .input(idParamSchema.merge(reorderFormPagesSchema))
+    .output(z.array(formPageSchema))
+    .mutation(async ({ ctx, input }) => {
+      const { id, ...data } = input;
+      try {
+        return await formService.reorderPagesWithAudit(
           toServiceContext(ctx),
           id,
           data,

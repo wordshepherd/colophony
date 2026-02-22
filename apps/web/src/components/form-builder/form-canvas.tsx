@@ -7,7 +7,8 @@ import {
 import { SortableFieldItem } from "./sortable-field-item";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { LayoutList } from "lucide-react";
-import type { FormFieldType } from "@colophony/types";
+import { useMemo } from "react";
+import { extractBranchingConfig, type FormFieldType } from "@colophony/types";
 
 interface CanvasField {
   id: string;
@@ -19,6 +20,7 @@ interface CanvasField {
   required: boolean;
   sortOrder: number;
   config: Record<string, unknown> | null;
+  branchId: string | null;
 }
 
 interface FormCanvasProps {
@@ -37,6 +39,29 @@ export function FormCanvas({
   onReorder,
 }: FormCanvasProps) {
   const fieldIds = fields.map((f) => f.id);
+
+  // Build branchId → branchName map from all fields' branching configs
+  const branchNameMap = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const f of fields) {
+      const bc = extractBranchingConfig(f.config);
+      if (!bc?.enabled) continue;
+      for (const branch of bc.branches) {
+        map.set(branch.id, branch.name);
+      }
+    }
+    return map;
+  }, [fields]);
+
+  // Set of fields that have branching enabled (source fields)
+  const branchingFieldIds = useMemo(() => {
+    const set = new Set<string>();
+    for (const f of fields) {
+      const bc = extractBranchingConfig(f.config);
+      if (bc?.enabled) set.add(f.id);
+    }
+    return set;
+  }, [fields]);
 
   function handleMoveUp(index: number) {
     if (index === 0) return;
@@ -76,7 +101,15 @@ export function FormCanvas({
           {fields.map((field, index) => (
             <SortableFieldItem
               key={field.id}
-              field={field}
+              field={{
+                ...field,
+                hasBranching: branchingFieldIds.has(field.id),
+              }}
+              branchName={
+                field.branchId
+                  ? (branchNameMap.get(field.branchId) ?? null)
+                  : null
+              }
               isSelected={field.id === selectedFieldId}
               isFirst={index === 0}
               isLast={index === fields.length - 1}

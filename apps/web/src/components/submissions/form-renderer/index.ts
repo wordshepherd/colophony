@@ -7,3 +7,4 @@ export {
   type FormSchemaResult,
 } from "./build-form-schema";
 export { mapFieldErrorsToForm } from "./map-field-errors";
+export { getPageFieldPaths } from "./build-page-schema";

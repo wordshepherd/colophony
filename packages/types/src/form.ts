@@ -1,5 +1,16 @@
 import { z } from "zod";
-import { conditionalRulesSchema } from "./conditional-rules";
+import {
+  conditionalRulesSchema,
+  ruleConditionSchema,
+} from "./conditional-rules";
+
+// Re-export branching schemas from conditional-rules (canonical location)
+export {
+  branchDefinitionSchema,
+  branchingConfigSchema,
+  type BranchDefinition,
+  type BranchingConfig,
+} from "./conditional-rules";
 
 // ---------------------------------------------------------------------------
 // Enums
@@ -37,6 +48,13 @@ export type FormFieldType = z.infer<typeof formFieldTypeSchema>;
 export const PRESENTATIONAL_FIELD_TYPES: FormFieldType[] = [
   "section_header",
   "info_text",
+];
+
+/** Field types that support branching (select-like fields with discrete options). */
+export const BRANCHING_FIELD_TYPES: FormFieldType[] = [
+  "select",
+  "radio",
+  "checkbox_group",
 ];
 
 // ---------------------------------------------------------------------------
@@ -80,6 +98,52 @@ export const fieldConfigSchema = z
   .describe("Type-specific configuration for the field");
 
 // ---------------------------------------------------------------------------
+// Page branching schemas
+// ---------------------------------------------------------------------------
+
+export const pageBranchingRuleSchema = z.object({
+  targetPageId: z.string().uuid(),
+  condition: ruleConditionSchema,
+});
+
+export type PageBranchingRule = z.infer<typeof pageBranchingRuleSchema>;
+
+export const formPageSchema = z.object({
+  id: z.string().uuid(),
+  formDefinitionId: z.string().uuid(),
+  title: z.string().min(1).max(255),
+  description: z.string().nullable(),
+  sortOrder: z.number().int(),
+  branchingRules: z.array(pageBranchingRuleSchema).nullable(),
+  createdAt: z.date(),
+  updatedAt: z.date(),
+});
+
+export type FormPage = z.infer<typeof formPageSchema>;
+
+export const createFormPageSchema = z.object({
+  title: z.string().trim().min(1).max(255),
+  description: z.string().max(2000).optional(),
+  sortOrder: z.number().int().min(0).optional(),
+});
+
+export type CreateFormPageInput = z.infer<typeof createFormPageSchema>;
+
+export const updateFormPageSchema = z.object({
+  title: z.string().trim().min(1).max(255).optional(),
+  description: z.string().max(2000).optional(),
+  branchingRules: z.array(pageBranchingRuleSchema).nullable().optional(),
+});
+
+export type UpdateFormPageInput = z.infer<typeof updateFormPageSchema>;
+
+export const reorderFormPagesSchema = z.object({
+  pageIds: z.array(z.string().uuid()).min(1),
+});
+
+export type ReorderFormPagesInput = z.infer<typeof reorderFormPagesSchema>;
+
+// ---------------------------------------------------------------------------
 // Form field schema
 // ---------------------------------------------------------------------------
 
@@ -112,6 +176,11 @@ export const formFieldSchema = z.object({
   conditionalRules: conditionalRulesSchema
     .nullable()
     .describe("Conditional display rules"),
+  branchId: z
+    .string()
+    .nullable()
+    .describe("Branch ID this field belongs to (from source field config)"),
+  pageId: z.string().uuid().nullable().describe("Page this field belongs to"),
   createdAt: z.date().describe("When the field was created"),
   updatedAt: z.date().describe("When the field was last updated"),
 });
@@ -143,11 +212,14 @@ export const formDefinitionSchema = z.object({
 
 export type FormDefinition = z.infer<typeof formDefinitionSchema>;
 
-/** Form definition with its fields — returned by getById. */
+/** Form definition with its fields and pages — returned by getById. */
 export const formDefinitionDetailSchema = formDefinitionSchema.extend({
   fields: z
     .array(formFieldSchema)
     .describe("Fields in this form, ordered by sortOrder"),
+  pages: z
+    .array(formPageSchema)
+    .describe("Pages in this form, ordered by sortOrder"),
 });
 
 export type FormDefinitionDetail = z.infer<typeof formDefinitionDetailSchema>;
@@ -220,6 +292,17 @@ export const createFormFieldSchema = z.object({
     .optional()
     .describe("Display order (auto-assigned if omitted)"),
   config: fieldConfigSchema.optional().describe("Type-specific configuration"),
+  branchId: z
+    .string()
+    .uuid()
+    .optional()
+    .describe("Branch ID to assign this field to"),
+  pageId: z
+    .string()
+    .uuid()
+    .nullable()
+    .optional()
+    .describe("Page to assign this field to"),
 });
 
 export type CreateFormFieldInput = z.infer<typeof createFormFieldSchema>;
@@ -234,6 +317,18 @@ export const updateFormFieldSchema = z.object({
     .nullable()
     .optional()
     .describe("Conditional display rules"),
+  branchId: z
+    .string()
+    .uuid()
+    .nullable()
+    .optional()
+    .describe("Branch ID to assign this field to"),
+  pageId: z
+    .string()
+    .uuid()
+    .nullable()
+    .optional()
+    .describe("Page to assign this field to"),
 });
 
 export type UpdateFormFieldInput = z.infer<typeof updateFormFieldSchema>;

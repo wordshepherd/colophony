@@ -12,10 +12,27 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
+import { FormStepper } from "@/components/ui/form-stepper";
 import { useConditionalFields } from "@/hooks/use-conditional-fields";
-import type { FormFieldType, ConditionalRule } from "@colophony/types";
+import { useWizardForm } from "@/hooks/use-wizard-form";
+import { ArrowLeft, ArrowRight } from "lucide-react";
+import type {
+  FormFieldType,
+  ConditionalRule,
+  PageBranchingRule,
+} from "@colophony/types";
+
+/** Loose page type that accepts both Date and string for timestamp fields (tRPC v11 serialization). */
+interface PreviewPageData {
+  id: string;
+  title: string;
+  description: string | null;
+  sortOrder: number;
+  branchingRules: PageBranchingRule[] | null;
+}
 
 interface PreviewFieldData {
   id: string;
@@ -27,6 +44,7 @@ interface PreviewFieldData {
   required: boolean;
   config: Record<string, unknown> | null;
   conditionalRules?: ConditionalRule[] | null;
+  branchId?: string | null;
 }
 
 interface FormPreviewProps {
@@ -34,6 +52,7 @@ interface FormPreviewProps {
     name: string;
     description: string | null;
     fields: PreviewFieldData[];
+    pages: PreviewPageData[];
   };
 }
 
@@ -238,6 +257,36 @@ export function FormPreview({ form }: FormPreviewProps) {
     [],
   );
 
+  const hasPages = form.pages.length > 0;
+
+  if (hasPages) {
+    return (
+      <WizardPreview
+        form={form}
+        previewValues={previewValues}
+        onPreviewChange={handlePreviewChange}
+      />
+    );
+  }
+
+  return (
+    <FlatPreview
+      form={form}
+      previewValues={previewValues}
+      onPreviewChange={handlePreviewChange}
+    />
+  );
+}
+
+function FlatPreview({
+  form,
+  previewValues,
+  onPreviewChange,
+}: {
+  form: FormPreviewProps["form"];
+  previewValues: Record<string, unknown>;
+  onPreviewChange: (fieldKey: string, value: unknown) => void;
+}) {
   const visibilityMap = useConditionalFields(form.fields, previewValues);
 
   return (
@@ -263,7 +312,7 @@ export function FormPreview({ form }: FormPreviewProps) {
                 key={field.id}
                 field={{ ...field, required: effectiveRequired }}
                 value={previewValues[field.fieldKey]}
-                onChange={(val) => handlePreviewChange(field.fieldKey, val)}
+                onChange={(val) => onPreviewChange(field.fieldKey, val)}
               />
             );
           })}
@@ -273,6 +322,137 @@ export function FormPreview({ form }: FormPreviewProps) {
             No fields to preview. Add fields in the editor.
           </p>
         )}
+      </div>
+    </ScrollArea>
+  );
+}
+
+function WizardPreview({
+  form,
+  previewValues,
+  onPreviewChange,
+}: {
+  form: FormPreviewProps["form"];
+  previewValues: Record<string, unknown>;
+  onPreviewChange: (fieldKey: string, value: unknown) => void;
+}) {
+  const fields = form.fields.map((f) => ({
+    ...f,
+    pageId: (f as PreviewFieldData & { pageId?: string | null }).pageId ?? null,
+  }));
+
+  const {
+    wizardPages,
+    currentStep,
+    completedSteps,
+    isLastStep,
+    isFirstStep,
+    goToNext,
+    goToPrevious,
+    goToStep,
+    currentPageFields,
+    currentPage,
+    markCurrentCompleted,
+  } = useWizardForm({
+    pages: form.pages,
+    fields,
+    formValues: previewValues,
+  });
+
+  // Pass all fields (not just current page) so cross-page branching visibility works
+  const allFieldsVisibility = useConditionalFields(fields, previewValues);
+  const currentPageFieldKeys = new Set(
+    currentPageFields.map((f) => f.fieldKey),
+  );
+  const visibilityMap = new Map(
+    [...allFieldsVisibility].filter(([key]) => currentPageFieldKeys.has(key)),
+  );
+
+  const stepperSteps = wizardPages.map((p) => ({
+    id: p.id ?? "__general__",
+    title: p.title,
+  }));
+
+  return (
+    <ScrollArea className="flex-1">
+      <div className="max-w-2xl mx-auto p-6 space-y-6">
+        <div className="space-y-2">
+          <h1 className="text-2xl font-bold">{form.name}</h1>
+          {form.description && (
+            <p className="text-muted-foreground">{form.description}</p>
+          )}
+        </div>
+
+        <FormStepper
+          steps={stepperSteps}
+          currentStepIndex={currentStep}
+          completedStepIndices={completedSteps}
+          onStepClick={goToStep}
+        />
+
+        <div className="space-y-2">
+          <h2 className="text-lg font-semibold">{currentPage.title}</h2>
+          {currentPage.description && (
+            <p className="text-sm text-muted-foreground">
+              {currentPage.description}
+            </p>
+          )}
+        </div>
+        <Separator />
+        <div className="space-y-6">
+          {currentPageFields.map((field) => {
+            const vis = visibilityMap.get(field.fieldKey);
+            if (vis && !vis.visible) return null;
+
+            const effectiveRequired =
+              field.required || (vis?.required ?? false);
+
+            return (
+              <PreviewField
+                key={field.fieldKey}
+                field={
+                  {
+                    ...field,
+                    id: field.fieldKey,
+                    required: effectiveRequired,
+                    fieldType: field.fieldType as FormFieldType,
+                  } as PreviewFieldData
+                }
+                value={previewValues[field.fieldKey]}
+                onChange={(val) => onPreviewChange(field.fieldKey, val)}
+              />
+            );
+          })}
+        </div>
+
+        <div className="flex justify-between pt-4">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={goToPrevious}
+            disabled={isFirstStep}
+          >
+            <ArrowLeft className="mr-1 h-4 w-4" />
+            Back
+          </Button>
+
+          {isLastStep ? (
+            <Button type="button" disabled>
+              Submit for Review
+            </Button>
+          ) : (
+            <Button
+              type="button"
+              onClick={() => {
+                markCurrentCompleted();
+                goToNext();
+              }}
+            >
+              Next
+              <ArrowRight className="ml-1 h-4 w-4" />
+            </Button>
+          )}
+        </div>
       </div>
     </ScrollArea>
   );

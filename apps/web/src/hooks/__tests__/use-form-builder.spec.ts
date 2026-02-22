@@ -74,6 +74,18 @@ jest.mock("@/lib/trpc", () => ({
       reorderFields: {
         useMutation: () => ({ mutate: mockMutate, isPending: false }),
       },
+      addPage: {
+        useMutation: () => ({ mutate: mockMutate, isPending: false }),
+      },
+      updatePage: {
+        useMutation: () => ({ mutate: mockMutate, isPending: false }),
+      },
+      removePage: {
+        useMutation: () => ({ mutate: mockMutate, isPending: false }),
+      },
+      reorderPages: {
+        useMutation: () => ({ mutate: mockMutate, isPending: false }),
+      },
     },
   },
 }));
@@ -218,5 +230,47 @@ describe("useFormBuilder", () => {
     expect(result.current.updateField).toBeDefined();
     expect(result.current.removeField).toBeDefined();
     expect(result.current.reorderFields).toBeDefined();
+  });
+
+  it("provides page mutation objects", () => {
+    const { result } = renderHook(() => useFormBuilder("form-1"));
+
+    expect(result.current.addPage).toBeDefined();
+    expect(result.current.updatePage).toBeDefined();
+    expect(result.current.removePage).toBeDefined();
+    expect(result.current.reorderPages).toBeDefined();
+  });
+
+  it("initializes activePageId to null", () => {
+    const { result } = renderHook(() => useFormBuilder("form-1"));
+    expect(result.current.activePageId).toBeNull();
+  });
+
+  it("allows setting activePageId", () => {
+    const { result } = renderHook(() => useFormBuilder("form-1"));
+
+    act(() => {
+      result.current.setActivePageId("page-1");
+    });
+
+    expect(result.current.activePageId).toBe("page-1");
+  });
+
+  it("addField includes pageId when activePageId is set", () => {
+    const { result } = renderHook(() => useFormBuilder("form-1"));
+
+    act(() => {
+      result.current.setActivePageId("page-1");
+    });
+
+    act(() => {
+      result.current.addField("text");
+    });
+
+    expect(mockMutate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        pageId: "page-1",
+      }),
+    );
   });
 });

@@ -4,12 +4,14 @@ import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { Button } from "@/components/ui/button";
 import { FIELD_TYPE_META } from "./field-type-meta";
+import { Badge } from "@/components/ui/badge";
 import {
   GripVertical,
   Trash2,
   ChevronUp,
   ChevronDown,
   Asterisk,
+  GitBranch,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { FormFieldType } from "@colophony/types";
@@ -19,10 +21,13 @@ interface SortableField {
   fieldType: FormFieldType;
   label: string;
   required: boolean;
+  branchId: string | null;
+  hasBranching: boolean;
 }
 
 interface SortableFieldItemProps {
   field: SortableField;
+  branchName?: string | null;
   isSelected: boolean;
   isFirst: boolean;
   isLast: boolean;
@@ -34,6 +39,7 @@ interface SortableFieldItemProps {
 
 export function SortableFieldItem({
   field,
+  branchName,
   isSelected,
   isFirst,
   isLast,
@@ -67,6 +73,7 @@ export function SortableFieldItem({
         "flex items-center gap-2 rounded-lg border p-3 bg-background transition-colors",
         isSelected && "ring-2 ring-primary border-primary",
         isDragging && "opacity-50",
+        field.branchId && "ml-4 border-l-2 border-l-blue-400",
       )}
     >
       <button
@@ -83,10 +90,22 @@ export function SortableFieldItem({
         onClick={onSelect}
         type="button"
       >
-        <Icon className="h-4 w-4 text-muted-foreground shrink-0" />
+        {field.hasBranching ? (
+          <GitBranch className="h-4 w-4 text-blue-500 shrink-0" />
+        ) : (
+          <Icon className="h-4 w-4 text-muted-foreground shrink-0" />
+        )}
         <span className="text-sm font-medium truncate">{field.label}</span>
         {field.required && (
           <Asterisk className="h-3 w-3 text-destructive shrink-0" />
+        )}
+        {branchName && (
+          <Badge
+            variant="secondary"
+            className="text-[10px] px-1.5 py-0 shrink-0"
+          >
+            {branchName}
+          </Badge>
         )}
         <span className="text-xs text-muted-foreground shrink-0">
           {meta.label}

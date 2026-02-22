@@ -1,9 +1,11 @@
 import { useMemo } from "react";
-import { evaluateFieldVisibility } from "@colophony/types";
+import { evaluateFieldVisibilityWithBranching } from "@colophony/types";
 import type { ConditionalRule } from "@colophony/types";
 
 interface FieldWithRules {
   fieldKey: string;
+  branchId?: string | null;
+  config?: Record<string, unknown> | null;
   conditionalRules?: ConditionalRule[] | null | undefined;
 }
 
@@ -16,7 +18,18 @@ export function useConditionalFields(
     for (const field of fields) {
       result.set(
         field.fieldKey,
-        evaluateFieldVisibility(field.conditionalRules, formValues),
+        evaluateFieldVisibilityWithBranching(
+          {
+            branchId: field.branchId ?? null,
+            conditionalRules: field.conditionalRules,
+          },
+          fields.map((f) => ({
+            fieldKey: f.fieldKey,
+            branchId: f.branchId ?? null,
+            config: f.config ?? null,
+          })),
+          formValues,
+        ),
       );
     }
     return result;

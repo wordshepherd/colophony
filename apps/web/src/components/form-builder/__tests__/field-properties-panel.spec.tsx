@@ -14,6 +14,7 @@ const baseField = {
   sortOrder: 0,
   config: { minLength: 5, maxLength: 100 },
   conditionalRules: null,
+  branchId: null,
   createdAt: new Date(),
   updatedAt: new Date(),
 };

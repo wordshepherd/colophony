@@ -213,6 +213,124 @@ export function evaluateFieldVisibility(
   return { visible, required };
 }
 
+// ---------------------------------------------------------------------------
+// Branching evaluation
+// ---------------------------------------------------------------------------
+
+/** A named branch definition — lives in a source field's config.branching. */
+export const branchDefinitionSchema = z.object({
+  id: z.string().uuid(),
+  name: z.string().min(1).max(100),
+  optionValues: z.array(z.string().min(1)).min(1),
+});
+
+export type BranchDefinition = z.infer<typeof branchDefinitionSchema>;
+
+/** Branching config embedded in a field's config object. */
+export const branchingConfigSchema = z.object({
+  enabled: z.boolean(),
+  branches: z.array(branchDefinitionSchema).min(1),
+});
+
+export type BranchingConfig = z.infer<typeof branchingConfigSchema>;
+
+/**
+ * Extract and validate a branching config from a field's config object.
+ * Returns null if not present or invalid.
+ */
+export function extractBranchingConfig(
+  config: Record<string, unknown> | null,
+): {
+  enabled: boolean;
+  branches: Array<{ id: string; name: string; optionValues: string[] }>;
+} | null {
+  if (!config || !config.branching) return null;
+  const result = branchingConfigSchema.safeParse(config.branching);
+  return result.success ? result.data : null;
+}
+
+interface BranchableField {
+  fieldKey: string;
+  branchId?: string | null;
+  config: Record<string, unknown> | null;
+}
+
+/**
+ * Check if a branch is active based on the source field's current value.
+ * Supports sub-branching (source field in another branch) with circular reference guard.
+ */
+export function isBranchActive(
+  branchId: string,
+  fields: BranchableField[],
+  formValues: FormValues,
+  visited?: Set<string>,
+): boolean {
+  const seen = visited ?? new Set<string>();
+  if (seen.has(branchId)) return false; // circular reference guard
+  seen.add(branchId);
+
+  // Find the source field whose config.branching.branches contains this branchId
+  let sourceField: BranchableField | undefined;
+  let matchedBranch:
+    | { id: string; name: string; optionValues: string[] }
+    | undefined;
+
+  for (const field of fields) {
+    const branching = extractBranchingConfig(field.config);
+    if (!branching?.enabled) continue;
+    const branch = branching.branches.find((b) => b.id === branchId);
+    if (branch) {
+      sourceField = field;
+      matchedBranch = branch;
+      break;
+    }
+  }
+
+  if (!sourceField || !matchedBranch) return false;
+
+  // If the source field itself is in a branch, check that branch is active (sub-branching)
+  if (sourceField.branchId) {
+    if (!isBranchActive(sourceField.branchId, fields, formValues, seen)) {
+      return false;
+    }
+  }
+
+  // Check if the source field's value matches this branch's optionValues
+  const value = formValues[sourceField.fieldKey];
+  if (value === undefined || value === null) return false;
+
+  if (Array.isArray(value)) {
+    // For multi-select/checkbox_group: branch is active if any selected value is in optionValues
+    return value.some((v) => matchedBranch.optionValues.includes(String(v)));
+  }
+
+  return matchedBranch.optionValues.includes(String(value));
+}
+
+/**
+ * Evaluate field visibility considering both branching and conditional rules.
+ * Branch visibility is checked first — if the branch is inactive, the field is hidden
+ * regardless of conditional rules.
+ */
+export function evaluateFieldVisibilityWithBranching(
+  field: {
+    branchId: string | null;
+    conditionalRules: ConditionalRule[] | null | undefined;
+  },
+  allFields: BranchableField[],
+  formValues: FormValues,
+): { visible: boolean; required: boolean } {
+  // Check branch visibility first
+  if (field.branchId) {
+    if (!isBranchActive(field.branchId, allFields, formValues)) {
+      return { visible: false, required: false };
+    }
+  }
+
+  // Delegate to conditional rules evaluation
+  return evaluateFieldVisibility(field.conditionalRules, formValues);
+}
+
 /**
  * Extract the fieldKeys that a field's rules depend on.
  * Used for dependency graph optimization in the renderer.
