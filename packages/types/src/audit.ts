@@ -67,6 +67,10 @@ export const AuditActions = {
   FORM_FIELD_UPDATED: "FORM_FIELD_UPDATED",
   FORM_FIELD_REMOVED: "FORM_FIELD_REMOVED",
   FORM_FIELDS_REORDERED: "FORM_FIELDS_REORDERED",
+  FORM_PAGE_ADDED: "FORM_PAGE_ADDED",
+  FORM_PAGE_UPDATED: "FORM_PAGE_UPDATED",
+  FORM_PAGE_REMOVED: "FORM_PAGE_REMOVED",
+  FORM_PAGES_REORDERED: "FORM_PAGES_REORDERED",
 
   // Payment lifecycle
   PAYMENT_SUCCEEDED: "PAYMENT_SUCCEEDED",
@@ -195,7 +199,11 @@ export interface FormAuditParams extends BaseAuditParams {
     | typeof AuditActions.FORM_FIELD_ADDED
     | typeof AuditActions.FORM_FIELD_UPDATED
     | typeof AuditActions.FORM_FIELD_REMOVED
-    | typeof AuditActions.FORM_FIELDS_REORDERED;
+    | typeof AuditActions.FORM_FIELDS_REORDERED
+    | typeof AuditActions.FORM_PAGE_ADDED
+    | typeof AuditActions.FORM_PAGE_UPDATED
+    | typeof AuditActions.FORM_PAGE_REMOVED
+    | typeof AuditActions.FORM_PAGES_REORDERED;
 }
 
 export interface PaymentAuditParams extends BaseAuditParams {

@@ -3,6 +3,7 @@ import { asc } from 'drizzle-orm';
 import {
   submissionFiles,
   formFields,
+  formPages,
   users,
   organizationMembers,
   inArray,
@@ -11,6 +12,7 @@ import {
 import type {
   SubmissionFile,
   FormField,
+  FormPage,
   User,
   OrganizationMember,
 } from '@colophony/db';
@@ -18,6 +20,7 @@ import type {
 export interface Loaders {
   submissionFiles: DataLoader<string, SubmissionFile[]>;
   formFields: DataLoader<string, FormField[]>;
+  formPages: DataLoader<string, FormPage[]>;
   user: DataLoader<string, User | null>;
   orgMembers: DataLoader<string, OrganizationMember[]>;
 }
@@ -66,6 +69,29 @@ export function createLoaders(dbTx: DrizzleDb | null): Loaders {
         .orderBy(asc(formFields.sortOrder));
 
       const grouped = new Map<string, FormField[]>();
+      for (const row of rows) {
+        const list = grouped.get(row.formDefinitionId) ?? [];
+        list.push(row);
+        grouped.set(row.formDefinitionId, list);
+      }
+
+      return formIds.map((id) => grouped.get(id) ?? []);
+    }),
+
+    /**
+     * Batch-load form pages by form definition ID.
+     * Returns an array of pages per form (may be empty), ordered by sortOrder.
+     */
+    formPages: new DataLoader<string, FormPage[]>(async (formIds) => {
+      if (!dbTx) return formIds.map(() => []);
+
+      const rows = await dbTx
+        .select()
+        .from(formPages)
+        .where(inArray(formPages.formDefinitionId, [...formIds]))
+        .orderBy(asc(formPages.sortOrder));
+
+      const grouped = new Map<string, FormPage[]>();
       for (const row of rows) {
         const list = grouped.get(row.formDefinitionId) ?? [];
         list.push(row);

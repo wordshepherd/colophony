@@ -2,7 +2,7 @@ import type { InferSelectModel, InferInsertModel } from "drizzle-orm";
 import type { organizations } from "./schema/organizations";
 import type { users } from "./schema/users";
 import type { organizationMembers } from "./schema/members";
-import type { formDefinitions, formFields } from "./schema/forms";
+import type { formDefinitions, formFields, formPages } from "./schema/forms";
 import type {
   submissionPeriods,
   submissions,
@@ -22,6 +22,7 @@ export type User = InferSelectModel<typeof users>;
 export type OrganizationMember = InferSelectModel<typeof organizationMembers>;
 export type FormDefinition = InferSelectModel<typeof formDefinitions>;
 export type FormField = InferSelectModel<typeof formFields>;
+export type FormPage = InferSelectModel<typeof formPages>;
 export type SubmissionPeriod = InferSelectModel<typeof submissionPeriods>;
 export type Submission = InferSelectModel<typeof submissions>;
 export type SubmissionFile = InferSelectModel<typeof submissionFiles>;
@@ -44,6 +45,7 @@ export type NewOrganizationMember = InferInsertModel<
 >;
 export type NewFormDefinition = InferInsertModel<typeof formDefinitions>;
 export type NewFormField = InferInsertModel<typeof formFields>;
+export type NewFormPage = InferInsertModel<typeof formPages>;
 export type NewSubmissionPeriod = InferInsertModel<typeof submissionPeriods>;
 export type NewSubmission = InferInsertModel<typeof submissions>;
 export type NewSubmissionFile = InferInsertModel<typeof submissionFiles>;

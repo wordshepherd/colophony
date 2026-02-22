@@ -5,6 +5,7 @@ const RLS_TABLES = [
   'organization_members',
   'form_definitions',
   'form_fields',
+  'form_pages',
   'submission_periods',
   'submissions',
   'submission_files',

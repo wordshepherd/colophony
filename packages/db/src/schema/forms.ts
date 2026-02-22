@@ -14,6 +14,19 @@ import {
 import { sql } from "drizzle-orm";
 import { formStatusEnum, formFieldTypeEnum } from "./enums";
 
+/** Inline type for page branching rules JSONB column — mirrors PageBranchingRule from @colophony/types. */
+export interface PageBranchingRuleJson {
+  targetPageId: string;
+  condition: {
+    operator: "AND" | "OR";
+    rules: Array<{
+      field: string;
+      comparator: RuleComparatorJson;
+      value?: string | number | boolean | string[];
+    }>;
+  };
+}
+
 /** Inline type for conditional rules JSONB column — mirrors ConditionalRule from @colophony/types. */
 export type RuleComparatorJson =
   | "eq"
@@ -84,6 +97,43 @@ export const formDefinitions = pgTable(
   ],
 ).enableRLS();
 
+// --- form_pages ---
+
+export const formPages = pgTable(
+  "form_pages",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    formDefinitionId: uuid("form_definition_id")
+      .notNull()
+      .references(() => formDefinitions.id, { onDelete: "cascade" }),
+    title: varchar("title", { length: 255 }).notNull(),
+    description: text("description"),
+    sortOrder: integer("sort_order").notNull().default(0),
+    branchingRules: jsonb("branching_rules").$type<PageBranchingRuleJson[]>(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull()
+      .$defaultFn(() => new Date()),
+  },
+  (table) => [
+    index("form_pages_form_definition_id_idx").on(table.formDefinitionId),
+    index("form_pages_form_sort_idx").on(
+      table.formDefinitionId,
+      table.sortOrder,
+    ),
+    pgPolicy("form_pages_org_isolation", {
+      for: "all",
+      using: sql`form_definition_id IN (
+        SELECT id FROM form_definitions
+        WHERE organization_id = current_org_id()
+      )`,
+    }),
+  ],
+).enableRLS();
+
 // --- form_fields ---
 
 export const formFields = pgTable(
@@ -102,6 +152,10 @@ export const formFields = pgTable(
     sortOrder: integer("sort_order").notNull().default(0),
     config: jsonb("config").$type<Record<string, unknown>>().default({}),
     conditionalRules: jsonb("conditional_rules").$type<ConditionalRuleJson[]>(),
+    branchId: varchar("branch_id", { length: 36 }),
+    pageId: uuid("page_id").references(() => formPages.id, {
+      onDelete: "set null",
+    }),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
@@ -112,6 +166,7 @@ export const formFields = pgTable(
   },
   (table) => [
     index("form_fields_form_definition_id_idx").on(table.formDefinitionId),
+    index("form_fields_branch_id_idx").on(table.branchId),
     index("form_fields_form_sort_idx").on(
       table.formDefinitionId,
       table.sortOrder,

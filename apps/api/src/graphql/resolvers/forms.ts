@@ -6,6 +6,9 @@ import {
   createFormFieldSchema,
   updateFormFieldSchema,
   reorderFormFieldsSchema,
+  createFormPageSchema,
+  updateFormPageSchema,
+  reorderFormPagesSchema,
   idParamSchema,
   type ConditionalRule,
 } from '@colophony/types';
@@ -14,7 +17,11 @@ import { requireOrgContext, requireScopes } from '../guards.js';
 import { toServiceContext } from '../../services/context.js';
 import { formService, FormNotFoundError } from '../../services/form.service.js';
 import { mapServiceError } from '../error-mapper.js';
-import { FormDefinitionType, FormFieldObjectType } from '../types/index.js';
+import {
+  FormDefinitionType,
+  FormFieldObjectType,
+  FormPageType,
+} from '../types/index.js';
 import { SuccessPayload } from '../types/payloads.js';
 
 // ---------------------------------------------------------------------------
@@ -301,6 +308,14 @@ builder.mutationFields((t) => ({
         required: false,
         description: 'Type-specific configuration.',
       }),
+      branchId: t.arg.string({
+        required: false,
+        description: 'Branch ID to assign this field to.',
+      }),
+      pageId: t.arg.string({
+        required: false,
+        description: 'Page to assign this field to.',
+      }),
     },
     resolve: async (_root, args, ctx) => {
       const orgCtx = requireOrgContext(ctx);
@@ -314,6 +329,8 @@ builder.mutationFields((t) => ({
         required: args.required ?? false,
         sortOrder: args.sortOrder ?? undefined,
         config: (args.config as Record<string, unknown>) ?? undefined,
+        branchId: args.branchId ?? undefined,
+        pageId: args.pageId ?? undefined,
       });
       const { id: formId } = idParamSchema.parse({ id: args.formId });
       try {
@@ -361,6 +378,14 @@ builder.mutationFields((t) => ({
         required: false,
         description: 'Conditional display rules.',
       }),
+      branchId: t.arg.string({
+        required: false,
+        description: 'Branch ID to assign this field to (null to unassign).',
+      }),
+      pageId: t.arg.string({
+        required: false,
+        description: 'Page to assign this field to (null to unassign).',
+      }),
     },
     resolve: async (_root, args, ctx) => {
       const orgCtx = requireOrgContext(ctx);
@@ -375,6 +400,8 @@ builder.mutationFields((t) => ({
           args.conditionalRules !== undefined
             ? (args.conditionalRules as ConditionalRule[] | null)
             : undefined,
+        branchId: args.branchId !== undefined ? args.branchId : undefined,
+        pageId: args.pageId !== undefined ? args.pageId : undefined,
       });
       const { id: formId } = idParamSchema.parse({ id: args.formId });
       const { id: fieldId } = idParamSchema.parse({ id: args.fieldId });
@@ -442,6 +469,155 @@ builder.mutationFields((t) => ({
       const { id: formId } = idParamSchema.parse({ id: args.formId });
       try {
         return await formService.reorderFieldsWithAudit(
+          toServiceContext(orgCtx),
+          formId,
+          input,
+        );
+      } catch (e) {
+        mapServiceError(e);
+      }
+    },
+  }),
+
+  /** Add a page to a DRAFT form. */
+  addFormPage: t.field({
+    type: FormPageType,
+    description: 'Add a new page to a DRAFT form definition.',
+    args: {
+      formId: t.arg.string({
+        required: true,
+        description: 'Form definition ID.',
+      }),
+      title: t.arg.string({
+        required: true,
+        description: 'Page title.',
+      }),
+      description: t.arg.string({
+        required: false,
+        description: 'Page description.',
+      }),
+      sortOrder: t.arg.int({
+        required: false,
+        description: 'Display order (auto-assigned if omitted).',
+      }),
+    },
+    resolve: async (_root, args, ctx) => {
+      const orgCtx = requireOrgContext(ctx);
+      await requireScopes(ctx, 'forms:write');
+      const input = createFormPageSchema.parse({
+        title: args.title,
+        description: args.description ?? undefined,
+        sortOrder: args.sortOrder ?? undefined,
+      });
+      const { id: formId } = idParamSchema.parse({ id: args.formId });
+      try {
+        return await formService.addPageWithAudit(
+          toServiceContext(orgCtx),
+          formId,
+          input,
+        );
+      } catch (e) {
+        mapServiceError(e);
+      }
+    },
+  }),
+
+  /** Update a page in a DRAFT form. */
+  updateFormPage: t.field({
+    type: FormPageType,
+    description: 'Update a page in a DRAFT form definition.',
+    args: {
+      formId: t.arg.string({
+        required: true,
+        description: 'Form definition ID.',
+      }),
+      pageId: t.arg.string({ required: true, description: 'Page ID.' }),
+      title: t.arg.string({ required: false, description: 'New title.' }),
+      description: t.arg.string({
+        required: false,
+        description: 'New description.',
+      }),
+      branchingRules: t.arg({
+        type: 'JSON',
+        required: false,
+        description: 'Page branching rules.',
+      }),
+    },
+    resolve: async (_root, args, ctx) => {
+      const orgCtx = requireOrgContext(ctx);
+      await requireScopes(ctx, 'forms:write');
+      const data = updateFormPageSchema.parse({
+        title: args.title ?? undefined,
+        description: args.description ?? undefined,
+        branchingRules:
+          args.branchingRules !== undefined ? args.branchingRules : undefined,
+      });
+      const { id: formId } = idParamSchema.parse({ id: args.formId });
+      const { id: pageId } = idParamSchema.parse({ id: args.pageId });
+      try {
+        return await formService.updatePageWithAudit(
+          toServiceContext(orgCtx),
+          formId,
+          pageId,
+          data,
+        );
+      } catch (e) {
+        mapServiceError(e);
+      }
+    },
+  }),
+
+  /** Remove a page from a DRAFT form. */
+  removeFormPage: t.field({
+    type: FormPageType,
+    description: 'Remove a page from a DRAFT form definition.',
+    args: {
+      formId: t.arg.string({
+        required: true,
+        description: 'Form definition ID.',
+      }),
+      pageId: t.arg.string({ required: true, description: 'Page ID.' }),
+    },
+    resolve: async (_root, args, ctx) => {
+      const orgCtx = requireOrgContext(ctx);
+      await requireScopes(ctx, 'forms:write');
+      const { id: formId } = idParamSchema.parse({ id: args.formId });
+      const { id: pageId } = idParamSchema.parse({ id: args.pageId });
+      try {
+        return await formService.removePageWithAudit(
+          toServiceContext(orgCtx),
+          formId,
+          pageId,
+        );
+      } catch (e) {
+        mapServiceError(e);
+      }
+    },
+  }),
+
+  /** Reorder pages in a DRAFT form. */
+  reorderFormPages: t.field({
+    type: [FormPageType],
+    description: 'Set the display order of pages in a DRAFT form.',
+    args: {
+      formId: t.arg.string({
+        required: true,
+        description: 'Form definition ID.',
+      }),
+      pageIds: t.arg.stringList({
+        required: true,
+        description: 'Ordered list of page IDs.',
+      }),
+    },
+    resolve: async (_root, args, ctx) => {
+      const orgCtx = requireOrgContext(ctx);
+      await requireScopes(ctx, 'forms:write');
+      const input = reorderFormPagesSchema.parse({
+        pageIds: args.pageIds,
+      });
+      const { id: formId } = idParamSchema.parse({ id: args.formId });
+      try {
+        return await formService.reorderPagesWithAudit(
           toServiceContext(orgCtx),
           formId,
           input,

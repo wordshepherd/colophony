@@ -17,12 +17,14 @@ import { LastAdminError } from '../services/organization.service.js';
 import {
   FormNotFoundError,
   FormFieldNotFoundError,
+  FormPageNotFoundError,
   FormNotDraftError,
   FormNotPublishedError,
   DuplicateFieldKeyError,
   FormHasNoFieldsError,
   FormInUseError,
   InvalidFormDataError,
+  InvalidBranchReferenceError,
 } from '../services/form.service.js';
 import {
   PeriodNotFoundError,
@@ -50,12 +52,14 @@ const errorCodeMap: [new (...args: never[]) => Error, GraphQLErrorCode][] = [
   // Form errors
   [FormNotFoundError, 'NOT_FOUND'],
   [FormFieldNotFoundError, 'NOT_FOUND'],
+  [FormPageNotFoundError, 'NOT_FOUND'],
   [FormNotDraftError, 'BAD_REQUEST'],
   [FormNotPublishedError, 'BAD_REQUEST'],
   [DuplicateFieldKeyError, 'CONFLICT'],
   [FormHasNoFieldsError, 'BAD_REQUEST'],
   [FormInUseError, 'BAD_REQUEST'],
   [InvalidFormDataError, 'BAD_REQUEST'],
+  [InvalidBranchReferenceError, 'BAD_REQUEST'],
   // Period errors
   [PeriodNotFoundError, 'NOT_FOUND'],
   [PeriodHasSubmissionsError, 'BAD_REQUEST'],

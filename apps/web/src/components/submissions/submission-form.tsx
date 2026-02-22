@@ -41,6 +41,7 @@ import {
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { FileUpload } from "./file-upload";
+import { WizardFormFields } from "./wizard-form-fields";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 
@@ -188,6 +189,19 @@ export function SubmissionForm({ mode, submissionId }: SubmissionFormProps) {
     },
   });
 
+  // Track current submission ID for wizard auto-save (create → update flow)
+  const [currentSubmissionId, setCurrentSubmissionId] = useState(submissionId);
+
+  // Wizard-specific create mutation: no navigation, just returns the ID
+  const wizardCreateMutation = trpc.submissions.create.useMutation({
+    onSuccess: (data) => {
+      setCurrentSubmissionId(data.id);
+      utils.submissions.mySubmissions.invalidate();
+      router.replace(`/submissions/${data.id}/edit`, { scroll: false });
+    },
+    onError: (err) => setError(err.message),
+  });
+
   // Submit mutation (for submitting draft)
   const submitMutation = trpc.submissions.submit.useMutation({
     onSuccess: async () => {
@@ -228,6 +242,64 @@ export function SubmissionForm({ mode, submissionId }: SubmissionFormProps) {
     }
   };
 
+  const handleAutoSave = async (): Promise<string | undefined> => {
+    const data = form.getValues();
+    const { formData, formDefinitionId: selectedId, ...rest } = data;
+    const hasForm = selectedId && selectedId !== "__none__";
+    if (!currentSubmissionId) {
+      const result = await wizardCreateMutation.mutateAsync({
+        ...rest,
+        ...(hasForm ? { formDefinitionId: selectedId } : {}),
+        formData: hasForm ? formData : undefined,
+      });
+      return result.id;
+    } else {
+      await updateMutation.mutateAsync({
+        id: currentSubmissionId,
+        ...rest,
+        formData,
+      });
+      return undefined;
+    }
+  };
+
+  const handleWizardSubmitForReview = async () => {
+    let saveId = currentSubmissionId;
+
+    // Create draft if it doesn't exist yet (e.g., one-page wizard)
+    if (!saveId) {
+      const newId = await handleAutoSave();
+      saveId = newId ?? currentSubmissionId;
+      if (!saveId) return;
+    } else {
+      // Save current data first
+      const data = form.getValues();
+      const { formData, ...rest } = data;
+      await updateMutation.mutateAsync({
+        id: saveId,
+        ...rest,
+        formData,
+      });
+    }
+
+    // Check for pending/infected files
+    if (
+      existingFiles?.some(
+        (f) => f.scanStatus === "PENDING" || f.scanStatus === "SCANNING",
+      )
+    ) {
+      toast.error("Please wait for file scans to complete");
+      return;
+    }
+
+    if (existingFiles?.some((f) => f.scanStatus === "INFECTED")) {
+      toast.error("Please remove infected files before submitting");
+      return;
+    }
+
+    await submitMutation.mutateAsync({ id: saveId });
+  };
+
   const handleSubmitForReview = async () => {
     if (!submissionId) return;
 
@@ -263,10 +335,16 @@ export function SubmissionForm({ mode, submissionId }: SubmissionFormProps) {
     await submitMutation.mutateAsync({ id: submissionId });
   };
 
+  const isWizardMode =
+    !!formDefinition &&
+    (formDefinition as { pages?: unknown[] }).pages != null &&
+    (formDefinition as { pages?: unknown[] }).pages!.length > 0;
+
   const isLoading =
     createMutation.isPending ||
     updateMutation.isPending ||
-    submitMutation.isPending;
+    submitMutation.isPending ||
+    wizardCreateMutation.isPending;
 
   const canEdit = existingSubmission?.status === "DRAFT" || mode === "create";
 
@@ -428,8 +506,21 @@ export function SubmissionForm({ mode, submissionId }: SubmissionFormProps) {
             </CardContent>
           </Card>
 
-          {/* Dynamic form fields — shown when submission links to a form */}
-          {formDefinitionId && (
+          {/* Dynamic form fields — wizard or flat depending on pages */}
+          {formDefinitionId && isWizardMode && formDefinition && (
+            <WizardFormFields
+              formDefinition={formDefinition}
+              disabled={!canEdit}
+              onAutoSave={handleAutoSave}
+              isSaving={
+                wizardCreateMutation.isPending || updateMutation.isPending
+              }
+              onSubmitForReview={handleWizardSubmitForReview}
+              isSubmitting={submitMutation.isPending}
+            />
+          )}
+
+          {formDefinitionId && !isWizardMode && (
             <DynamicFormFields
               formDefinitionId={formDefinitionId}
               disabled={!canEdit}
@@ -437,7 +528,7 @@ export function SubmissionForm({ mode, submissionId }: SubmissionFormProps) {
           )}
 
           {/* File upload - only shown after creation */}
-          {mode === "edit" && submissionId && (
+          {mode === "edit" && (currentSubmissionId ?? submissionId) && (
             <Card>
               <CardHeader>
                 <CardTitle>Files</CardTitle>
@@ -446,43 +537,52 @@ export function SubmissionForm({ mode, submissionId }: SubmissionFormProps) {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <FileUpload submissionId={submissionId} disabled={!canEdit} />
+                <FileUpload
+                  submissionId={(currentSubmissionId ?? submissionId)!}
+                  disabled={!canEdit}
+                />
               </CardContent>
             </Card>
           )}
 
-          <Separator />
+          {/* Actions — hidden in wizard mode (wizard has its own nav) */}
+          {!isWizardMode && (
+            <>
+              <Separator />
 
-          {/* Actions */}
-          <div className="flex justify-between">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => router.back()}
-            >
-              Cancel
-            </Button>
-
-            <div className="flex gap-2">
-              <Button type="submit" disabled={isLoading || !canEdit}>
-                {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {mode === "create" ? "Create Draft" : "Save Draft"}
-              </Button>
-
-              {mode === "edit" && submissionId && (
+              <div className="flex justify-between">
                 <Button
                   type="button"
-                  onClick={handleSubmitForReview}
-                  disabled={isLoading || !canEdit}
+                  variant="outline"
+                  onClick={() => router.back()}
                 >
-                  {submitMutation.isPending && (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  )}
-                  Submit for Review
+                  Cancel
                 </Button>
-              )}
-            </div>
-          </div>
+
+                <div className="flex gap-2">
+                  <Button type="submit" disabled={isLoading || !canEdit}>
+                    {isLoading && (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    )}
+                    {mode === "create" ? "Create Draft" : "Save Draft"}
+                  </Button>
+
+                  {mode === "edit" && submissionId && (
+                    <Button
+                      type="button"
+                      onClick={handleSubmitForReview}
+                      disabled={isLoading || !canEdit}
+                    >
+                      {submitMutation.isPending && (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      )}
+                      Submit for Review
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </>
+          )}
         </form>
       </Form>
     </div>

@@ -77,6 +77,28 @@ export function useFormBuilder(formId: string) {
     onError: (err) => toast.error(err.message),
   });
 
+  const addPageMutation = trpc.forms.addPage.useMutation({
+    onSuccess: () => invalidateForm(),
+    onError: (err) => toast.error(err.message),
+  });
+
+  const updatePageMutation = trpc.forms.updatePage.useMutation({
+    onSuccess: () => invalidateForm(),
+    onError: (err) => toast.error(err.message),
+  });
+
+  const removePageMutation = trpc.forms.removePage.useMutation({
+    onSuccess: () => invalidateForm(),
+    onError: (err) => toast.error(err.message),
+  });
+
+  const reorderPagesMutation = trpc.forms.reorderPages.useMutation({
+    onSuccess: () => invalidateForm(),
+    onError: (err) => toast.error(err.message),
+  });
+
+  const [activePageId, setActivePageId] = useState<string | null>(null);
+
   const addField = useCallback(
     (fieldType: FormFieldType) => {
       const fields = formQuery.data?.fields ?? [];
@@ -100,9 +122,10 @@ export function useFormBuilder(formId: string) {
         fieldType,
         label,
         sortOrder: fields.length,
+        ...(activePageId ? { pageId: activePageId } : {}),
       });
     },
-    [formId, formQuery.data?.fields, addFieldMutation],
+    [formId, formQuery.data?.fields, addFieldMutation, activePageId],
   );
 
   const togglePreview = useCallback(() => {
@@ -128,5 +151,11 @@ export function useFormBuilder(formId: string) {
     updateField: updateFieldMutation,
     removeField: removeFieldMutation,
     reorderFields: reorderFieldsMutation,
+    activePageId,
+    setActivePageId,
+    addPage: addPageMutation,
+    updatePage: updatePageMutation,
+    removePage: removePageMutation,
+    reorderPages: reorderPagesMutation,
   };
 }

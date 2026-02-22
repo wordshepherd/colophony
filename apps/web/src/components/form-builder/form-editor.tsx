@@ -18,8 +18,11 @@ import { FormStatusBadge } from "./form-status-badge";
 import { FieldPalette } from "./field-palette";
 import { FormCanvas } from "./form-canvas";
 import { FieldPropertiesPanel } from "./field-properties-panel";
+import { PageTabs } from "./page-tabs";
+import { PageBranchingEditor } from "./page-branching-editor";
 import { FormPreview } from "./form-preview";
 import { Skeleton } from "@/components/ui/skeleton";
+import type { FormFieldForRenderer } from "@/components/submissions/form-renderer/build-form-schema";
 import {
   Send,
   Archive,
@@ -58,6 +61,12 @@ export function FormEditor({ formId }: FormEditorProps) {
     updateField,
     removeField,
     reorderFields,
+    activePageId,
+    setActivePageId,
+    addPage,
+    updatePage,
+    removePage,
+    reorderPages,
   } = useFormBuilder(formId);
 
   const [editingName, setEditingName] = useState(false);
@@ -76,19 +85,59 @@ export function FormEditor({ formId }: FormEditorProps) {
       if (!over || active.id === over.id || !form) return;
       if (form.status !== "DRAFT") return;
 
-      const fieldIds = form.fields.map((f) => f.id);
-      const oldIndex = fieldIds.indexOf(active.id as string);
-      const newIndex = fieldIds.indexOf(over.id as string);
+      const hasPages = form.pages.length > 0;
 
-      if (oldIndex === -1 || newIndex === -1) return;
+      if (hasPages && activePageId !== null) {
+        // Page-scoped reorder: reconstruct full list
+        const pageFieldIds = form.fields
+          .filter((f) => f.pageId === activePageId)
+          .map((f) => f.id);
 
-      const newIds = [...fieldIds];
-      const [removed] = newIds.splice(oldIndex, 1);
-      newIds.splice(newIndex, 0, removed);
+        const oldIndex = pageFieldIds.indexOf(active.id as string);
+        const newIndex = pageFieldIds.indexOf(over.id as string);
+        if (oldIndex === -1 || newIndex === -1) return;
 
-      reorderFields.mutate({ id: formId, fieldIds: newIds });
+        const reorderedPageIds = [...pageFieldIds];
+        const [removed] = reorderedPageIds.splice(oldIndex, 1);
+        reorderedPageIds.splice(newIndex, 0, removed);
+
+        // Merge back into full list
+        const pageFieldSet = new Set(reorderedPageIds);
+        const fullIds = form.fields.map((f) => f.id);
+        let reorderIdx = 0;
+        const merged = fullIds.map((id) =>
+          pageFieldSet.has(id) ? reorderedPageIds[reorderIdx++] : id,
+        );
+        reorderFields.mutate({ id: formId, fieldIds: merged });
+      } else {
+        // Flat reorder (no pages, or "All Fields" tab)
+        const fieldIds = (
+          hasPages ? form.fields.filter((f) => !f.pageId) : form.fields
+        ).map((f) => f.id);
+
+        const oldIndex = fieldIds.indexOf(active.id as string);
+        const newIndex = fieldIds.indexOf(over.id as string);
+        if (oldIndex === -1 || newIndex === -1) return;
+
+        const newIds = [...fieldIds];
+        const [removed] = newIds.splice(oldIndex, 1);
+        newIds.splice(newIndex, 0, removed);
+
+        if (hasPages) {
+          // Merge unassigned reorder back into full list
+          const unassignedSet = new Set(newIds);
+          const fullIds = form.fields.map((f) => f.id);
+          let reorderIdx = 0;
+          const merged = fullIds.map((id) =>
+            unassignedSet.has(id) ? newIds[reorderIdx++] : id,
+          );
+          reorderFields.mutate({ id: formId, fieldIds: merged });
+        } else {
+          reorderFields.mutate({ id: formId, fieldIds: newIds });
+        }
+      }
     },
-    [form, formId, reorderFields],
+    [form, formId, reorderFields, activePageId],
   );
 
   const handleUpdateField = useCallback(
@@ -146,6 +195,18 @@ export function FormEditor({ formId }: FormEditorProps) {
 
   const canEdit = form.status === "DRAFT";
   const selectedField = form.fields.find((f) => f.id === selectedFieldId);
+  const hasPages = form.pages.length > 0;
+
+  // Filter fields for canvas based on active page
+  const canvasFields = hasPages
+    ? activePageId !== null
+      ? form.fields.filter((f) => f.pageId === activePageId)
+      : form.fields.filter((f) => !f.pageId)
+    : form.fields;
+
+  const activePage = activePageId
+    ? form.pages.find((p) => p.id === activePageId)
+    : null;
 
   return (
     <div className="h-full flex flex-col">
@@ -251,60 +312,102 @@ export function FormEditor({ formId }: FormEditorProps) {
       {isPreviewMode ? (
         <FormPreview form={form} />
       ) : (
-        <DndContext
-          sensors={sensors}
-          collisionDetection={closestCenter}
-          onDragEnd={handleDragEnd}
-        >
-          <div className="flex flex-1 min-h-0">
-            {/* Left: Palette */}
-            <div className="w-56 border-r shrink-0">
-              <FieldPalette onAddField={addField} disabled={!canEdit} />
-            </div>
+        <>
+          {/* Page tabs */}
+          <PageTabs
+            formId={formId}
+            pages={form.pages}
+            activePageId={activePageId}
+            onSelectPage={(pageId) => {
+              setActivePageId(pageId);
+              setSelectedFieldId(null);
+            }}
+            onAddPage={(title) =>
+              addPage.mutate({
+                id: formId,
+                title,
+                sortOrder: form.pages.length,
+              })
+            }
+            onUpdatePage={(pageId, data) =>
+              updatePage.mutate({ id: formId, pageId, ...data })
+            }
+            onRemovePage={(pageId) => removePage.mutate({ id: formId, pageId })}
+            onReorderPages={(pageIds) =>
+              reorderPages.mutate({ id: formId, pageIds })
+            }
+            canEdit={canEdit}
+          />
 
-            {/* Center: Canvas */}
-            <div className="flex-1 flex flex-col p-4">
-              {!canEdit && (
-                <div className="mb-3 rounded-lg bg-muted px-3 py-2 text-sm text-muted-foreground">
-                  This form is {form.status.toLowerCase()} and cannot be edited.
-                  Duplicate it to make changes.
-                </div>
-              )}
-              <FormCanvas
-                fields={form.fields}
-                selectedFieldId={selectedFieldId}
-                onSelectField={setSelectedFieldId}
-                onRemoveField={
-                  canEdit
-                    ? (fieldId) => removeField.mutate({ id: formId, fieldId })
-                    : () => {}
-                }
-                onReorder={
-                  canEdit
-                    ? (fieldIds) =>
-                        reorderFields.mutate({ id: formId, fieldIds })
-                    : () => {}
-                }
-              />
-            </div>
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
+          >
+            <div className="flex flex-1 min-h-0">
+              {/* Left: Palette */}
+              <div className="w-56 border-r shrink-0">
+                <FieldPalette onAddField={addField} disabled={!canEdit} />
+              </div>
 
-            {/* Right: Properties */}
-            <div className="w-72 border-l shrink-0">
-              {selectedField ? (
-                <FieldPropertiesPanel
-                  field={selectedField}
-                  allFields={form.fields}
-                  onUpdate={handleUpdateField}
-                  isSaving={updateField.isPending}
+              {/* Center: Canvas */}
+              <div className="flex-1 flex flex-col p-4">
+                {!canEdit && (
+                  <div className="mb-3 rounded-lg bg-muted px-3 py-2 text-sm text-muted-foreground">
+                    This form is {form.status.toLowerCase()} and cannot be
+                    edited. Duplicate it to make changes.
+                  </div>
+                )}
+                <FormCanvas
+                  fields={canvasFields}
+                  selectedFieldId={selectedFieldId}
+                  onSelectField={setSelectedFieldId}
+                  onRemoveField={
+                    canEdit
+                      ? (fieldId) => removeField.mutate({ id: formId, fieldId })
+                      : () => {}
+                  }
+                  onReorder={
+                    canEdit
+                      ? (fieldIds) =>
+                          reorderFields.mutate({ id: formId, fieldIds })
+                      : () => {}
+                  }
                 />
-              ) : (
-                <div className="flex items-center justify-center h-full text-sm text-muted-foreground p-4 text-center">
-                  Select a field to edit its properties
-                </div>
-              )}
+              </div>
+
+              {/* Right: Properties */}
+              <div className="w-72 border-l shrink-0">
+                {selectedField ? (
+                  <FieldPropertiesPanel
+                    field={selectedField}
+                    allFields={form.fields}
+                    onUpdate={handleUpdateField}
+                    isSaving={updateField.isPending}
+                  />
+                ) : activePage ? (
+                  <PageBranchingEditor
+                    page={activePage}
+                    allPages={form.pages}
+                    allFields={form.fields as FormFieldForRenderer[]}
+                    onUpdate={(branchingRules) =>
+                      updatePage.mutate({
+                        id: formId,
+                        pageId: activePage.id,
+                        branchingRules,
+                      })
+                    }
+                    isSaving={updatePage.isPending}
+                  />
+                ) : (
+                  <div className="flex items-center justify-center h-full text-sm text-muted-foreground p-4 text-center">
+                    Select a field to edit its properties
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
-        </DndContext>
+          </DndContext>
+        </>
       )}
     </div>
   );

@@ -60,11 +60,23 @@ vi.mock('../../services/form.service.js', () => ({
       super('Field not found');
     }
   },
+  FormPageNotFoundError: class FormPageNotFoundError extends Error {
+    name = 'FormPageNotFoundError';
+    constructor(id = 'unknown') {
+      super(`Form page "${id}" not found`);
+    }
+  },
   InvalidFormDataError: class InvalidFormDataError extends Error {
     name = 'InvalidFormDataError';
     fieldErrors: { fieldKey: string; message: string }[] = [];
     constructor() {
       super('Invalid form data');
+    }
+  },
+  InvalidBranchReferenceError: class InvalidBranchReferenceError extends Error {
+    name = 'InvalidBranchReferenceError';
+    constructor(details = '') {
+      super(`Invalid branch reference: ${details}`);
     }
   },
 }));
@@ -165,6 +177,8 @@ function makeFormField(overrides: Record<string, unknown> = {}) {
     sortOrder: 0,
     config: null,
     conditionalRules: null,
+    branchId: null,
+    pageId: null,
     createdAt: new Date(),
     updatedAt: new Date(),
     ...overrides,
@@ -223,6 +237,7 @@ describe('forms tRPC router', () => {
       const form = {
         ...makeFormDefinition(),
         fields: [makeFormField()],
+        pages: [],
       };
       mockService.getById.mockResolvedValueOnce(form as never);
 
@@ -341,6 +356,7 @@ describe('forms tRPC router', () => {
           duplicatedFromId: FORM_ID,
         }),
         fields: [makeFormField()],
+        pages: [],
       };
       mockService.duplicateWithAudit.mockResolvedValueOnce(duplicated as never);
 

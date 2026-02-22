@@ -5,6 +5,9 @@ import {
   createFormFieldSchema,
   updateFormFieldSchema,
   reorderFormFieldsSchema,
+  createFormPageSchema,
+  updateFormPageSchema,
+  reorderFormPagesSchema,
   listFormDefinitionsSchema,
   idParamSchema,
 } from '@colophony/types';
@@ -29,6 +32,11 @@ const restListFormsQuery = listFormDefinitionsSchema
 const formFieldIdParam = z.object({
   id: z.string().uuid(),
   fieldId: z.string().uuid(),
+});
+
+const formPageIdParam = z.object({
+  id: z.string().uuid(),
+  pageId: z.string().uuid(),
 });
 
 // ---------------------------------------------------------------------------
@@ -311,6 +319,107 @@ const reorderFields = orgProcedure
   });
 
 // ---------------------------------------------------------------------------
+// Page routes
+// ---------------------------------------------------------------------------
+
+const addPage = orgProcedure
+  .use(requireScopes('forms:write'))
+  .route({
+    method: 'POST',
+    path: '/forms/{id}/pages',
+    successStatus: 201,
+    summary: 'Add a page',
+    description: 'Add a new page to a DRAFT form definition.',
+    operationId: 'addFormPage',
+    tags: ['Forms'],
+  })
+  .input(idParamSchema.merge(createFormPageSchema))
+  .handler(async ({ input, context }) => {
+    const { id, ...pageData } = input;
+    try {
+      return await formService.addPageWithAudit(
+        toServiceContext(context),
+        id,
+        pageData,
+      );
+    } catch (e) {
+      mapServiceError(e);
+    }
+  });
+
+const updatePage = orgProcedure
+  .use(requireScopes('forms:write'))
+  .route({
+    method: 'PATCH',
+    path: '/forms/{id}/pages/{pageId}',
+    summary: 'Update a page',
+    description: 'Update a page in a DRAFT form definition.',
+    operationId: 'updateFormPage',
+    tags: ['Forms'],
+  })
+  .input(formPageIdParam.merge(updateFormPageSchema))
+  .handler(async ({ input, context }) => {
+    const { id, pageId, ...data } = input;
+    try {
+      return await formService.updatePageWithAudit(
+        toServiceContext(context),
+        id,
+        pageId,
+        data,
+      );
+    } catch (e) {
+      mapServiceError(e);
+    }
+  });
+
+const removePage = orgProcedure
+  .use(requireScopes('forms:write'))
+  .route({
+    method: 'DELETE',
+    path: '/forms/{id}/pages/{pageId}',
+    summary: 'Remove a page',
+    description: 'Remove a page from a DRAFT form definition.',
+    operationId: 'removeFormPage',
+    tags: ['Forms'],
+  })
+  .input(formPageIdParam)
+  .handler(async ({ input, context }) => {
+    try {
+      return await formService.removePageWithAudit(
+        toServiceContext(context),
+        input.id,
+        input.pageId,
+      );
+    } catch (e) {
+      mapServiceError(e);
+    }
+  });
+
+const reorderPages = orgProcedure
+  .use(requireScopes('forms:write'))
+  .route({
+    method: 'PUT',
+    path: '/forms/{id}/pages/order',
+    summary: 'Reorder pages',
+    description: 'Set the display order of pages in a DRAFT form definition.',
+    operationId: 'reorderFormPages',
+    tags: ['Forms'],
+  })
+  .input(idParamSchema.merge(reorderFormPagesSchema))
+  .handler(async ({ input, context }) => {
+    const { id, ...data } = input;
+    try {
+      return await formService.reorderPagesWithAudit(
+        toServiceContext(context),
+        id,
+        data,
+      );
+    } catch (e) {
+      mapServiceError(e);
+    }
+  });
+
+// ---------------------------------------------------------------------------
 // Assembled router
 // ---------------------------------------------------------------------------
 
@@ -327,4 +436,8 @@ export const formsRouter = {
   updateField,
   removeField,
   reorderFields,
+  addPage,
+  updatePage,
+  removePage,
+  reorderPages,
 };

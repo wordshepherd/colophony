@@ -1,4 +1,4 @@
-import type { FormDefinition, FormField } from '@colophony/db';
+import type { FormDefinition, FormField, FormPage } from '@colophony/db';
 import { builder } from '../builder.js';
 
 // ---------------------------------------------------------------------------
@@ -84,7 +84,15 @@ export const FormFieldType = builder
       conditionalRules: t.expose('conditionalRules', {
         type: 'JSON',
         nullable: true,
-        description: 'Conditional display rules (Phase 2).',
+        description: 'Conditional display rules.',
+      }),
+      branchId: t.exposeString('branchId', {
+        nullable: true,
+        description: 'Branch ID this field belongs to.',
+      }),
+      pageId: t.exposeString('pageId', {
+        nullable: true,
+        description: 'Page this field belongs to.',
       }),
       createdAt: t.expose('createdAt', {
         type: 'DateTime',
@@ -96,6 +104,37 @@ export const FormFieldType = builder
       }),
     }),
   });
+
+export const FormPageType = builder.objectRef<FormPage>('FormPage').implement({
+  description: 'A page within a multi-page form definition.',
+  fields: (t) => ({
+    id: t.exposeString('id', { description: 'Unique identifier.' }),
+    formDefinitionId: t.exposeString('formDefinitionId', {
+      description: 'ID of the parent form definition.',
+    }),
+    title: t.exposeString('title', { description: 'Page title.' }),
+    description: t.exposeString('description', {
+      nullable: true,
+      description: 'Page description.',
+    }),
+    sortOrder: t.exposeInt('sortOrder', {
+      description: 'Display order within the form.',
+    }),
+    branchingRules: t.expose('branchingRules', {
+      type: 'JSON',
+      nullable: true,
+      description: 'Page-level branching rules.',
+    }),
+    createdAt: t.expose('createdAt', {
+      type: 'DateTime',
+      description: 'When the page was created.',
+    }),
+    updatedAt: t.expose('updatedAt', {
+      type: 'DateTime',
+      description: 'When the page was last updated.',
+    }),
+  }),
+});
 
 export const FormDefinitionType = builder
   .objectRef<FormDefinition>('FormDefinition')
@@ -146,6 +185,11 @@ export const FormDefinitionType = builder
         type: [FormFieldType],
         description: 'Fields in this form, ordered by sortOrder.',
         resolve: (form, _args, ctx) => ctx.loaders.formFields.load(form.id),
+      }),
+      pages: t.field({
+        type: [FormPageType],
+        description: 'Pages in this form, ordered by sortOrder.',
+        resolve: (form, _args, ctx) => ctx.loaders.formPages.load(form.id),
       }),
     }),
   });
