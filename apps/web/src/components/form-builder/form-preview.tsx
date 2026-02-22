@@ -359,7 +359,14 @@ function WizardPreview({
     formValues: previewValues,
   });
 
-  const visibilityMap = useConditionalFields(currentPageFields, previewValues);
+  // Pass all fields (not just current page) so cross-page branching visibility works
+  const allFieldsVisibility = useConditionalFields(fields, previewValues);
+  const currentPageFieldKeys = new Set(
+    currentPageFields.map((f) => f.fieldKey),
+  );
+  const visibilityMap = new Map(
+    [...allFieldsVisibility].filter(([key]) => currentPageFieldKeys.has(key)),
+  );
 
   const stepperSteps = wizardPages.map((p) => ({
     id: p.id ?? "__general__",

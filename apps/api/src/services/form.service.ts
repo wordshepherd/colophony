@@ -552,6 +552,20 @@ export const formService = {
       sortOrder = (maxResult.rows[0]?.max_order ?? -1) + 1;
     }
 
+    // Validate pageId belongs to this form if provided
+    if (input.pageId) {
+      const [page] = await tx
+        .select({ id: formPages.id })
+        .from(formPages)
+        .where(
+          and(
+            eq(formPages.id, input.pageId),
+            eq(formPages.formDefinitionId, formId),
+          ),
+        );
+      if (!page) throw new FormPageNotFoundError(input.pageId);
+    }
+
     const [field] = await tx
       .insert(formFields)
       .values({
@@ -621,6 +635,20 @@ export const formService = {
       .limit(1);
 
     if (!existing) throw new FormFieldNotFoundError(fieldId);
+
+    // Validate pageId belongs to this form if provided
+    if (input.pageId) {
+      const [page] = await tx
+        .select({ id: formPages.id })
+        .from(formPages)
+        .where(
+          and(
+            eq(formPages.id, input.pageId),
+            eq(formPages.formDefinitionId, formId),
+          ),
+        );
+      if (!page) throw new FormPageNotFoundError(input.pageId);
+    }
 
     const [updated] = await tx
       .update(formFields)

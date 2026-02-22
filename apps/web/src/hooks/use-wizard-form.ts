@@ -77,8 +77,8 @@ export function useWizardForm({
         description: null,
         fields: unassignedFields.sort(
           (a, b) =>
-            (a as { sortOrder?: number }).sortOrder ??
-            0 - ((b as { sortOrder?: number }).sortOrder ?? 0),
+            ((a as { sortOrder?: number }).sortOrder ?? 0) -
+            ((b as { sortOrder?: number }).sortOrder ?? 0),
         ),
         branchingRules: null,
       });
@@ -92,8 +92,8 @@ export function useWizardForm({
         description: page.description,
         fields: (fieldsByPage.get(page.id) ?? []).sort(
           (a, b) =>
-            (a as { sortOrder?: number }).sortOrder ??
-            0 - ((b as { sortOrder?: number }).sortOrder ?? 0),
+            ((a as { sortOrder?: number }).sortOrder ?? 0) -
+            ((b as { sortOrder?: number }).sortOrder ?? 0),
         ),
         branchingRules: page.branchingRules,
       });
@@ -209,7 +209,13 @@ export function useWizardForm({
     wizardPages,
     currentStep,
     completedSteps,
-    isLastStep: currentStep === wizardPages.length - 1,
+    isLastStep: (() => {
+      // Check if there are any reachable pages after current step with visible fields
+      for (let i = currentStep + 1; i < wizardPages.length; i++) {
+        if (hasVisibleFields(wizardPages[i])) return false;
+      }
+      return true;
+    })(),
     isFirstStep: currentStep === 0,
     goToNext,
     goToPrevious,

@@ -87,9 +87,14 @@ export function WizardFormFields({
     formValues: watchedFormData,
   });
 
-  const visibilityMap = useConditionalFields(
-    currentPageFields,
-    watchedFormData,
+  // Pass all fields (not just current page) so cross-page branching visibility works
+  const allFieldsVisibility = useConditionalFields(fields, watchedFormData);
+  // Filter to only current page field keys for rendering
+  const currentPageFieldKeys = new Set(
+    currentPageFields.map((f) => f.fieldKey),
+  );
+  const visibilityMap = new Map(
+    [...allFieldsVisibility].filter(([key]) => currentPageFieldKeys.has(key)),
   );
 
   const stepperSteps = wizardPages.map((p) => ({

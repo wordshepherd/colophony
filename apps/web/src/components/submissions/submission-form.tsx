@@ -264,17 +264,23 @@ export function SubmissionForm({ mode, submissionId }: SubmissionFormProps) {
   };
 
   const handleWizardSubmitForReview = async () => {
-    const saveId = currentSubmissionId;
-    if (!saveId) return;
+    let saveId = currentSubmissionId;
 
-    // Save current data first
-    const data = form.getValues();
-    const { formData, ...rest } = data;
-    await updateMutation.mutateAsync({
-      id: saveId,
-      ...rest,
-      formData,
-    });
+    // Create draft if it doesn't exist yet (e.g., one-page wizard)
+    if (!saveId) {
+      const newId = await handleAutoSave();
+      saveId = newId ?? currentSubmissionId;
+      if (!saveId) return;
+    } else {
+      // Save current data first
+      const data = form.getValues();
+      const { formData, ...rest } = data;
+      await updateMutation.mutateAsync({
+        id: saveId,
+        ...rest,
+        formData,
+      });
+    }
 
     // Check for pending/infected files
     if (
