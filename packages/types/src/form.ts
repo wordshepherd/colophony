@@ -297,6 +297,12 @@ export const createFormFieldSchema = z.object({
     .uuid()
     .optional()
     .describe("Branch ID to assign this field to"),
+  pageId: z
+    .string()
+    .uuid()
+    .nullable()
+    .optional()
+    .describe("Page to assign this field to"),
 });
 
 export type CreateFormFieldInput = z.infer<typeof createFormFieldSchema>;
@@ -317,6 +323,12 @@ export const updateFormFieldSchema = z.object({
     .nullable()
     .optional()
     .describe("Branch ID to assign this field to"),
+  pageId: z
+    .string()
+    .uuid()
+    .nullable()
+    .optional()
+    .describe("Page to assign this field to"),
 });
 
 export type UpdateFormFieldInput = z.infer<typeof updateFormFieldSchema>;

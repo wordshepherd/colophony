@@ -74,6 +74,7 @@ function resetMocks() {
     archivedAt: null,
     createdAt: new Date(),
     updatedAt: new Date(),
+    pages: [],
   };
 }
 
@@ -95,6 +96,12 @@ jest.mock("@/hooks/use-form-builder", () => ({
     updateField: { mutate: mockUpdateFieldMutate, isPending: false },
     removeField: { mutate: mockRemoveFieldMutate, isPending: false },
     reorderFields: { mutate: mockReorderFieldsMutate, isPending: false },
+    activePageId: null,
+    setActivePageId: jest.fn(),
+    addPage: { mutate: jest.fn(), isPending: false },
+    updatePage: { mutate: jest.fn(), isPending: false },
+    removePage: { mutate: jest.fn(), isPending: false },
+    reorderPages: { mutate: jest.fn(), isPending: false },
   }),
 }));
 

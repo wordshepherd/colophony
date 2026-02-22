@@ -565,6 +565,7 @@ export const formService = {
         sortOrder,
         config: input.config ?? {},
         branchId: input.branchId ?? null,
+        pageId: input.pageId ?? null,
       })
       .returning();
 
@@ -637,6 +638,7 @@ export const formService = {
           ? { conditionalRules: input.conditionalRules }
           : {}),
         ...(input.branchId !== undefined ? { branchId: input.branchId } : {}),
+        ...(input.pageId !== undefined ? { pageId: input.pageId } : {}),
         updatedAt: new Date(),
       })
       .where(eq(formFields.id, fieldId))

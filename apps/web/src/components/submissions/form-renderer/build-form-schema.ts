@@ -23,6 +23,7 @@ export interface FormFieldForRenderer {
   config: Record<string, unknown> | null;
   conditionalRules?: ConditionalRule[] | null;
   branchId?: string | null;
+  pageId?: string | null;
 }
 
 export interface FormSchemaResult {

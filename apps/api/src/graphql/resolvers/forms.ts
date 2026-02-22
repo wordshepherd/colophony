@@ -312,6 +312,10 @@ builder.mutationFields((t) => ({
         required: false,
         description: 'Branch ID to assign this field to.',
       }),
+      pageId: t.arg.string({
+        required: false,
+        description: 'Page to assign this field to.',
+      }),
     },
     resolve: async (_root, args, ctx) => {
       const orgCtx = requireOrgContext(ctx);
@@ -326,6 +330,7 @@ builder.mutationFields((t) => ({
         sortOrder: args.sortOrder ?? undefined,
         config: (args.config as Record<string, unknown>) ?? undefined,
         branchId: args.branchId ?? undefined,
+        pageId: args.pageId ?? undefined,
       });
       const { id: formId } = idParamSchema.parse({ id: args.formId });
       try {
@@ -377,6 +382,10 @@ builder.mutationFields((t) => ({
         required: false,
         description: 'Branch ID to assign this field to (null to unassign).',
       }),
+      pageId: t.arg.string({
+        required: false,
+        description: 'Page to assign this field to (null to unassign).',
+      }),
     },
     resolve: async (_root, args, ctx) => {
       const orgCtx = requireOrgContext(ctx);
@@ -392,6 +401,7 @@ builder.mutationFields((t) => ({
             ? (args.conditionalRules as ConditionalRule[] | null)
             : undefined,
         branchId: args.branchId !== undefined ? args.branchId : undefined,
+        pageId: args.pageId !== undefined ? args.pageId : undefined,
       });
       const { id: formId } = idParamSchema.parse({ id: args.formId });
       const { id: fieldId } = idParamSchema.parse({ id: args.fieldId });
