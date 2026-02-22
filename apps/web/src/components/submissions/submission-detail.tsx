@@ -84,7 +84,7 @@ export function SubmissionDetail({
 
   // v2: listByManuscriptVersion (files belong to manuscript versions)
   const { data: files } = trpc.files.listByManuscriptVersion.useQuery(
-    { manuscriptVersionId: submission?.manuscriptVersionId! },
+    { manuscriptVersionId: submission?.manuscriptVersionId ?? "" },
     { enabled: !!submission?.manuscriptVersionId },
   );
 

@@ -72,7 +72,7 @@ export function SubmissionForm({ mode, submissionId }: SubmissionFormProps) {
 
   // Fetch files for the manuscript version (v2: listByManuscriptVersion)
   const { data: existingFiles } = trpc.files.listByManuscriptVersion.useQuery(
-    { manuscriptVersionId: existingSubmission?.manuscriptVersionId! },
+    { manuscriptVersionId: existingSubmission?.manuscriptVersionId ?? "" },
     { enabled: mode === "edit" && !!existingSubmission?.manuscriptVersionId },
   );
 
