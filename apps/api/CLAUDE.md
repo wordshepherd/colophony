@@ -2,29 +2,32 @@
 
 ## Key Paths
 
-| What              | Path                                 |
-| ----------------- | ------------------------------------ |
-| App entry         | `src/main.ts`                        |
-| Env config (Zod)  | `src/config/env.ts`                  |
-| Fastify hooks     | `src/hooks/`                         |
-| Service layer     | `src/services/`                      |
-| Manuscript svc    | `src/services/manuscript.service.ts` |
-| tRPC router       | `src/trpc/router.ts`                 |
-| tRPC client types | `src/trpc/client-types.ts`           |
-| tRPC init         | `src/trpc/init.ts`                   |
-| tRPC context      | `src/trpc/context.ts`                |
-| REST router       | `src/rest/router.ts`                 |
-| REST context      | `src/rest/context.ts`                |
-| REST error mapper | `src/rest/error-mapper.ts`           |
-| REST org handlers | `src/rest/routers/organizations.ts`  |
-| GraphQL schema    | `src/graphql/schema.ts`              |
-| GraphQL builder   | `src/graphql/builder.ts`             |
-| GraphQL guards    | `src/graphql/guards.ts`              |
-| GraphQL resolvers | `src/graphql/resolvers/`             |
-| GraphQL router    | `src/graphql/router.ts`              |
-| tusd webhook      | `src/webhooks/tusd.webhook.ts`       |
-| Zitadel webhook   | `src/webhooks/zitadel.webhook.ts`    |
-| Stripe webhook    | `src/webhooks/stripe.webhook.ts`     |
+| What              | Path                                       |
+| ----------------- | ------------------------------------------ |
+| App entry         | `src/main.ts`                              |
+| Env config (Zod)  | `src/config/env.ts`                        |
+| Fastify hooks     | `src/hooks/`                               |
+| Service layer     | `src/services/`                            |
+| Manuscript svc    | `src/services/manuscript.service.ts`       |
+| tRPC router       | `src/trpc/router.ts`                       |
+| tRPC client types | `src/trpc/client-types.ts`                 |
+| tRPC init         | `src/trpc/init.ts`                         |
+| tRPC context      | `src/trpc/context.ts`                      |
+| REST router       | `src/rest/router.ts`                       |
+| REST context      | `src/rest/context.ts`                      |
+| REST error mapper | `src/rest/error-mapper.ts`                 |
+| REST org handlers | `src/rest/routers/organizations.ts`        |
+| GraphQL schema    | `src/graphql/schema.ts`                    |
+| GraphQL builder   | `src/graphql/builder.ts`                   |
+| GraphQL guards    | `src/graphql/guards.ts`                    |
+| GraphQL resolvers | `src/graphql/resolvers/`                   |
+| GraphQL router    | `src/graphql/router.ts`                    |
+| Embed routes      | `src/routes/embed.routes.ts`               |
+| Embed token svc   | `src/services/embed-token.service.ts`      |
+| Embed submit svc  | `src/services/embed-submission.service.ts` |
+| tusd webhook      | `src/webhooks/tusd.webhook.ts`             |
+| Zitadel webhook   | `src/webhooks/zitadel.webhook.ts`          |
+| Stripe webhook    | `src/webhooks/stripe.webhook.ts`           |
 
 ### Service Method Naming
 
