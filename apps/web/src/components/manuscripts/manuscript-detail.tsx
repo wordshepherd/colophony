@@ -324,6 +324,11 @@ export function ManuscriptDetail({ manuscriptId }: ManuscriptDetailProps) {
                     manuscriptVersionId={version.id}
                     files={version.files}
                     readOnly={version !== versionsNewestFirst[0]}
+                    onFileChange={() =>
+                      utils.manuscripts.getDetail.invalidate({
+                        id: manuscriptId,
+                      })
+                    }
                   />
                 </CardContent>
               </Card>

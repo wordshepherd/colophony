@@ -28,4 +28,6 @@ echo "Building workspace packages..."
 pnpm exec turbo run build --filter='./packages/*'
 
 # Start dev servers via Overmind (exec replaces shell for clean signal handling)
-exec overmind start -f Procfile.dev
+# --no-port: let each process use its own PORT (API from .env, Next.js default 3000)
+# Without this, Overmind sets PORT=5000/5100 which breaks Zitadel OIDC redirect URIs
+exec overmind start -f Procfile.dev --no-port
