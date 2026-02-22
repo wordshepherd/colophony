@@ -24,6 +24,7 @@ export const users = pgTable(
       .defaultNow()
       .notNull()
       .$defaultFn(() => new Date()),
+    isGuest: boolean("is_guest").default(false).notNull(),
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
     lastEventAt: timestamp("last_event_at", { withTimezone: true }),
   },
