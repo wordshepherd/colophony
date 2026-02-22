@@ -72,6 +72,12 @@ export const AuditActions = {
   FORM_PAGE_REMOVED: "FORM_PAGE_REMOVED",
   FORM_PAGES_REORDERED: "FORM_PAGES_REORDERED",
 
+  // Manuscript lifecycle
+  MANUSCRIPT_CREATED: "MANUSCRIPT_CREATED",
+  MANUSCRIPT_UPDATED: "MANUSCRIPT_UPDATED",
+  MANUSCRIPT_DELETED: "MANUSCRIPT_DELETED",
+  MANUSCRIPT_VERSION_CREATED: "MANUSCRIPT_VERSION_CREATED",
+
   // Payment lifecycle
   PAYMENT_SUCCEEDED: "PAYMENT_SUCCEEDED",
   PAYMENT_EXPIRED: "PAYMENT_EXPIRED",
@@ -88,6 +94,7 @@ export const AuditResources = {
   ORGANIZATION: "organization",
   SUBMISSION: "submission",
   FILE: "file",
+  MANUSCRIPT: "manuscript",
   PERIOD: "period",
   FORM: "form",
   AUTH: "auth",
@@ -159,6 +166,15 @@ export interface FileAuditParams extends BaseAuditParams {
     | typeof AuditActions.FILE_SCAN_FAILED;
 }
 
+export interface ManuscriptAuditParams extends BaseAuditParams {
+  resource: typeof AuditResources.MANUSCRIPT;
+  action:
+    | typeof AuditActions.MANUSCRIPT_CREATED
+    | typeof AuditActions.MANUSCRIPT_UPDATED
+    | typeof AuditActions.MANUSCRIPT_DELETED
+    | typeof AuditActions.MANUSCRIPT_VERSION_CREATED;
+}
+
 export interface AuthAuditParams extends BaseAuditParams {
   resource: typeof AuditResources.AUTH;
   action:
@@ -224,6 +240,7 @@ export type AuditLogParams =
   | OrgAuditParams
   | SubmissionAuditParams
   | FileAuditParams
+  | ManuscriptAuditParams
   | PeriodAuditParams
   | FormAuditParams
   | AuthAuditParams

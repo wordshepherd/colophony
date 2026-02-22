@@ -1,7 +1,7 @@
 import type { Submission, SubmissionHistoryEntry } from '@colophony/db';
 import { builder } from '../builder.js';
 import { SubmissionStatusEnum } from './enums.js';
-import { SubmissionFileType } from './file.js';
+import { FileType } from './file.js';
 import { UserType } from './user.js';
 
 export const SubmissionType = builder
@@ -61,11 +61,21 @@ export const SubmissionType = builder
         type: 'DateTime',
         description: 'When the submission was last updated.',
       }),
+      manuscriptVersionId: t.exposeString('manuscriptVersionId', {
+        nullable: true,
+        description:
+          'ID of the manuscript version attached to this submission.',
+      }),
       files: t.field({
-        type: [SubmissionFileType],
-        description: 'Files attached to this submission.',
+        type: [FileType],
+        description:
+          'Files attached to this submission (via manuscript version).',
         resolve: (submission, _args, ctx) =>
-          ctx.loaders.submissionFiles.load(submission.id),
+          submission.manuscriptVersionId
+            ? ctx.loaders.filesByManuscriptVersion.load(
+                submission.manuscriptVersionId,
+              )
+            : [],
       }),
       submitter: t.field({
         type: UserType,

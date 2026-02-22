@@ -4,20 +4,20 @@ import { TRPCError } from '@trpc/server';
 // Mock file service
 vi.mock('../../services/file.service.js', () => ({
   fileService: {
-    listBySubmission: vi.fn(),
+    listByManuscriptVersion: vi.fn(),
     getById: vi.fn(),
     getByStorageKey: vi.fn(),
     create: vi.fn(),
     delete: vi.fn(),
-    countBySubmission: vi.fn(),
-    totalSizeBySubmission: vi.fn(),
+    countByManuscriptVersion: vi.fn(),
+    totalSizeByManuscriptVersion: vi.fn(),
     validateMimeType: vi.fn(),
     validateFileSize: vi.fn(),
     validateLimits: vi.fn(),
     getDownloadUrl: vi.fn(),
     deleteWithS3: vi.fn(),
     // Access-aware methods (PR 2)
-    listBySubmissionWithAccess: vi.fn(),
+    listByManuscriptVersionWithAccess: vi.fn(),
     getDownloadUrlWithAccess: vi.fn(),
     deleteAsOwner: vi.fn(),
   },
@@ -112,7 +112,7 @@ vi.mock('@colophony/db', () => ({
   organizationMembers: {},
   users: {},
   submissions: {},
-  submissionFiles: {},
+  files: {},
   submissionHistory: {},
   eq: vi.fn(),
   and: vi.fn(),
@@ -161,6 +161,7 @@ const createCaller = (appRouter as any).createCaller as (
 ) => any;
 
 const SUBMISSION_ID = 'a1111111-1111-1111-a111-111111111111';
+const MANUSCRIPT_VERSION_ID = 'b1111111-1111-1111-a111-111111111111';
 const FILE_ID = 'f1111111-1111-1111-a111-111111111111';
 
 describe('files tRPC router', () => {
@@ -173,14 +174,16 @@ describe('files tRPC router', () => {
   // -------------------------------------------------------------------------
 
   describe('auth and access', () => {
-    it('listBySubmission requires authentication', async () => {
+    it('listByManuscriptVersion requires authentication', async () => {
       const caller = createCaller(makeContext());
       await expect(
-        caller.files.listBySubmission({ submissionId: SUBMISSION_ID }),
+        caller.files.listByManuscriptVersion({
+          manuscriptVersionId: MANUSCRIPT_VERSION_ID,
+        }),
       ).rejects.toThrow(TRPCError);
     });
 
-    it('listBySubmission requires org context', async () => {
+    it('listByManuscriptVersion requires user context (auth + dbTx)', async () => {
       const caller = createCaller(
         makeContext({
           authContext: {
@@ -193,27 +196,31 @@ describe('files tRPC router', () => {
         }),
       );
       await expect(
-        caller.files.listBySubmission({ submissionId: SUBMISSION_ID }),
+        caller.files.listByManuscriptVersion({
+          manuscriptVersionId: MANUSCRIPT_VERSION_ID,
+        }),
       ).rejects.toThrow(TRPCError);
     });
 
-    it('listBySubmission maps ForbiddenError from service', async () => {
-      mockFileService.listBySubmissionWithAccess.mockRejectedValueOnce(
+    it('listByManuscriptVersion maps ForbiddenError from service', async () => {
+      mockFileService.listByManuscriptVersionWithAccess.mockRejectedValueOnce(
         new ForbiddenError('You do not have access to this submission'),
       );
       const caller = createCaller(orgContext('READER'));
       await expect(
-        caller.files.listBySubmission({ submissionId: SUBMISSION_ID }),
+        caller.files.listByManuscriptVersion({
+          manuscriptVersionId: MANUSCRIPT_VERSION_ID,
+        }),
       ).rejects.toThrow('do not have access');
     });
 
-    it('listBySubmission succeeds for EDITOR', async () => {
-      mockFileService.listBySubmissionWithAccess.mockResolvedValueOnce(
+    it('listByManuscriptVersion succeeds for EDITOR', async () => {
+      mockFileService.listByManuscriptVersionWithAccess.mockResolvedValueOnce(
         [] as never,
       );
       const caller = createCaller(orgContext('EDITOR'));
-      const result = await caller.files.listBySubmission({
-        submissionId: SUBMISSION_ID,
+      const result = await caller.files.listByManuscriptVersion({
+        manuscriptVersionId: MANUSCRIPT_VERSION_ID,
       });
       expect(result).toEqual([]);
     });
@@ -230,15 +237,15 @@ describe('files tRPC router', () => {
   });
 
   // -------------------------------------------------------------------------
-  // listBySubmission
+  // listByManuscriptVersion
   // -------------------------------------------------------------------------
 
-  describe('listBySubmission', () => {
-    it('returns files for the submission', async () => {
+  describe('listByManuscriptVersion', () => {
+    it('returns files for the manuscript version', async () => {
       const files = [
         {
           id: FILE_ID,
-          submissionId: SUBMISSION_ID,
+          manuscriptVersionId: MANUSCRIPT_VERSION_ID,
           filename: 'poem.pdf',
           mimeType: 'application/pdf',
           size: 1024,
@@ -248,13 +255,13 @@ describe('files tRPC router', () => {
           uploadedAt: new Date(),
         },
       ];
-      mockFileService.listBySubmissionWithAccess.mockResolvedValueOnce(
+      mockFileService.listByManuscriptVersionWithAccess.mockResolvedValueOnce(
         files as never,
       );
 
       const caller = createCaller(orgContext());
-      const result = await caller.files.listBySubmission({
-        submissionId: SUBMISSION_ID,
+      const result = await caller.files.listByManuscriptVersion({
+        manuscriptVersionId: MANUSCRIPT_VERSION_ID,
       });
       expect(result).toHaveLength(1);
       expect(result[0].filename).toBe('poem.pdf');
@@ -263,12 +270,14 @@ describe('files tRPC router', () => {
     it('maps SubmissionNotFoundError to NOT_FOUND', async () => {
       const { SubmissionNotFoundError } =
         await import('../../services/submission.service.js');
-      mockFileService.listBySubmissionWithAccess.mockRejectedValueOnce(
+      mockFileService.listByManuscriptVersionWithAccess.mockRejectedValueOnce(
         new SubmissionNotFoundError(SUBMISSION_ID),
       );
       const caller = createCaller(orgContext());
       await expect(
-        caller.files.listBySubmission({ submissionId: SUBMISSION_ID }),
+        caller.files.listByManuscriptVersion({
+          manuscriptVersionId: MANUSCRIPT_VERSION_ID,
+        }),
       ).rejects.toThrow('not found');
     });
   });

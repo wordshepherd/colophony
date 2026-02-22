@@ -6,6 +6,7 @@ export {
 } from "./organizations.js";
 export { submissionsContract } from "./submissions.js";
 export { filesContract } from "./files.js";
+export { manuscriptsContract } from "./manuscripts.js";
 export { usersContract } from "./users.js";
 export { apiKeysContract } from "./api-keys.js";
 export { formsContract } from "./forms.js";

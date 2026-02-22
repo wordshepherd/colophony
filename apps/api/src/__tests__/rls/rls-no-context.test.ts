@@ -8,7 +8,7 @@ import {
   submissionPeriods,
   payments,
   organizationMembers,
-  submissionFiles,
+  files,
   submissionHistory,
   auditEvents,
   retentionPolicies,
@@ -56,10 +56,8 @@ describe('RLS No Context (empty context)', () => {
   });
 
   describe('indirect tables return 0 rows without context', () => {
-    it('submission_files: no context returns 0 rows', async () => {
-      const rows = await withTestRls({}, (tx) =>
-        tx.select().from(submissionFiles),
-      );
+    it('files: no context returns 0 rows', async () => {
+      const rows = await withTestRls({}, (tx) => tx.select().from(files));
       expect(rows).toHaveLength(0);
     });
 

@@ -44,8 +44,8 @@ vi.mock('@colophony/db', () => ({
     status: 'status',
     formDefinitionId: 'formDefinitionId',
   },
-  submissionFiles: {
-    submissionId: 'submissionFiles.submissionId',
+  files: {
+    manuscriptVersionId: 'files.manuscriptVersionId',
     scanStatus: 'scanStatus',
     uploadedAt: 'uploadedAt',
   },
@@ -344,13 +344,10 @@ describe('submissionService.updateStatus() — form validation', () => {
           status: 'DRAFT',
           form_definition_id: FORM_ID,
           form_data: { bio: '' },
+          manuscript_version_id: null,
         },
       ],
     });
-
-    // File scan check — no files
-    mockFrom.mockReturnValueOnce({ where: mockWhere });
-    mockWhere.mockReturnValueOnce([]);
 
     // formService.validateFormData returns errors
     // eslint-disable-next-line @typescript-eslint/unbound-method
@@ -379,13 +376,10 @@ describe('submissionService.updateStatus() — form validation', () => {
           status: 'DRAFT',
           form_definition_id: FORM_ID,
           form_data: { bio: 'Valid bio text' },
+          manuscript_version_id: null,
         },
       ],
     });
-
-    // File scan check — no files
-    mockFrom.mockReturnValueOnce({ where: mockWhere });
-    mockWhere.mockReturnValueOnce([]);
 
     // formService.validateFormData returns no errors
     // eslint-disable-next-line @typescript-eslint/unbound-method
@@ -432,13 +426,10 @@ describe('submissionService.updateStatus() — form validation', () => {
           status: 'DRAFT',
           form_definition_id: null,
           form_data: null,
+          manuscript_version_id: null,
         },
       ],
     });
-
-    // File scan check — no files
-    mockFrom.mockReturnValueOnce({ where: mockWhere });
-    mockWhere.mockReturnValueOnce([]);
 
     // update + history
     mockReturning.mockResolvedValueOnce([{ id: 'sub-1', status: 'SUBMITTED' }]);

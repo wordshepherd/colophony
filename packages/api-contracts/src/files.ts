@@ -1,13 +1,13 @@
 import { oc } from "@orpc/contract";
 import { z } from "zod";
-import { submissionFileSchema } from "@colophony/types";
+import { fileSchema } from "@colophony/types";
 
 // ---------------------------------------------------------------------------
 // Path param schemas
 // ---------------------------------------------------------------------------
 
-const submissionIdParam = z.object({
-  submissionId: z.string().uuid(),
+const manuscriptVersionIdParam = z.object({
+  manuscriptVersionId: z.string().uuid(),
 });
 
 const fileIdParam = z.object({
@@ -36,14 +36,14 @@ export const filesContract = {
   list: oc
     .route({
       method: "GET",
-      path: "/submissions/{submissionId}/files",
-      summary: "List submission files",
-      description: "Returns all files attached to a submission.",
-      operationId: "listSubmissionFiles",
+      path: "/manuscript-versions/{manuscriptVersionId}/files",
+      summary: "List files for a manuscript version",
+      description: "Returns all files attached to a manuscript version.",
+      operationId: "listManuscriptVersionFiles",
       tags: ["Files"],
     })
-    .input(submissionIdParam)
-    .output(z.array(submissionFileSchema)),
+    .input(manuscriptVersionIdParam)
+    .output(z.array(fileSchema)),
 
   download: oc
     .route({
@@ -64,7 +64,7 @@ export const filesContract = {
       path: "/files/{fileId}",
       summary: "Delete a file",
       description:
-        "Delete a file from a DRAFT submission. Only the submission owner can delete files.",
+        "Delete a file from a manuscript version. Only the manuscript owner can delete files.",
       operationId: "deleteFile",
       tags: ["Files"],
     })

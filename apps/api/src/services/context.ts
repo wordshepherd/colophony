@@ -1,6 +1,6 @@
 import type { DrizzleDb } from '@colophony/db';
 import type { Role } from '@colophony/types';
-import type { AuditFn, ServiceContext } from './types.js';
+import type { AuditFn, ServiceContext, UserServiceContext } from './types.js';
 
 /**
  * Build a {@link ServiceContext} from the request-scoped values provided by
@@ -21,6 +21,22 @@ export function toServiceContext(ctx: {
       orgId: ctx.authContext.orgId,
       role: ctx.authContext.role,
     },
+    audit: ctx.audit,
+  };
+}
+
+/**
+ * Build a {@link UserServiceContext} from request-scoped values.
+ * Used for user-scoped operations (manuscripts) that don't need org context.
+ */
+export function toUserServiceContext(ctx: {
+  dbTx: DrizzleDb;
+  authContext: { userId: string };
+  audit: AuditFn;
+}): UserServiceContext {
+  return {
+    tx: ctx.dbTx,
+    userId: ctx.authContext.userId,
     audit: ctx.audit,
   };
 }

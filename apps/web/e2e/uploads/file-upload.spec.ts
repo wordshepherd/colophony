@@ -12,21 +12,26 @@
 import { test, expect } from "../helpers/fixtures";
 import {
   createSubmission,
+  createManuscript,
+  createManuscriptVersion,
   deleteSubmission,
+  deleteManuscript,
   getOrgBySlug,
   getUserByEmail,
   getOpenSubmissionPeriod,
 } from "../helpers/db";
 import {
   createTestFile,
-  getFilesBySubmissionId,
-  deleteFilesBySubmissionId,
+  getFilesByManuscriptVersionId,
+  deleteFilesByManuscriptVersionId,
   setupTusAuth,
   disconnectUploadDb,
 } from "../helpers/upload";
 
 test.describe("File Upload (/submissions/:id — edit mode)", () => {
   let submissionId: string;
+  let manuscriptId: string;
+  let manuscriptVersionId: string;
 
   test.beforeAll(async () => {
     // Look up seed data directly (fixtures not available in beforeAll)
@@ -36,11 +41,25 @@ test.describe("File Upload (/submissions/:id — edit mode)", () => {
     const user = await getUserByEmail("writer@example.com");
     if (!user) throw new Error("Seed user not found");
 
+    // Create a manuscript + version for file uploads
+    const manuscript = await createManuscript({
+      ownerId: user.id,
+      title: "E2E Upload Test Manuscript",
+    });
+    manuscriptId = manuscript.id;
+
+    const version = await createManuscriptVersion({
+      manuscriptId: manuscript.id,
+      versionNumber: 1,
+    });
+    manuscriptVersionId = version.id;
+
     const period = await getOpenSubmissionPeriod(org.id);
     const submission = await createSubmission({
       orgId: org.id,
       submitterId: user.id,
       submissionPeriodId: period?.id,
+      manuscriptVersionId: version.id,
       title: "E2E Upload Test Submission",
       status: "DRAFT",
     });
@@ -49,16 +68,18 @@ test.describe("File Upload (/submissions/:id — edit mode)", () => {
 
   test.afterAll(async () => {
     if (submissionId) {
-      await deleteFilesBySubmissionId(submissionId);
       await deleteSubmission(submissionId);
+    }
+    if (manuscriptId) {
+      await deleteManuscript(manuscriptId);
     }
     await disconnectUploadDb();
   });
 
   test.afterEach(async () => {
     // Clean up files between tests to avoid file count limit issues
-    if (submissionId) {
-      await deleteFilesBySubmissionId(submissionId);
+    if (manuscriptVersionId) {
+      await deleteFilesByManuscriptVersionId(manuscriptVersionId);
     }
   });
 
@@ -138,7 +159,7 @@ test.describe("File Upload (/submissions/:id — edit mode)", () => {
     });
 
     // Verify in DB (VIRUS_SCAN_ENABLED=false → marked CLEAN immediately)
-    const files = await getFilesBySubmissionId(submissionId);
+    const files = await getFilesByManuscriptVersionId(manuscriptVersionId);
     expect(files.length).toBeGreaterThanOrEqual(1);
     const uploaded = files.find((f) => f.filename === "scan-test.txt");
     expect(uploaded).toBeDefined();
@@ -182,7 +203,7 @@ test.describe("File Upload (/submissions/:id — edit mode)", () => {
     });
 
     // Verify in DB
-    const files = await getFilesBySubmissionId(submissionId);
+    const files = await getFilesByManuscriptVersionId(manuscriptVersionId);
     const deleted = files.find((f) => f.filename === "to-delete.txt");
     expect(deleted).toBeUndefined();
   });
@@ -214,7 +235,7 @@ test.describe("File Upload (/submissions/:id — edit mode)", () => {
     });
 
     // No file should be created in DB
-    const files = await getFilesBySubmissionId(submissionId);
+    const files = await getFilesByManuscriptVersionId(manuscriptVersionId);
     const exe = files.find((f) => f.filename === "malicious.exe");
     expect(exe).toBeUndefined();
   });
@@ -245,7 +266,7 @@ test.describe("File Upload (/submissions/:id — edit mode)", () => {
     });
 
     // Verify in DB
-    const files = await getFilesBySubmissionId(submissionId);
+    const files = await getFilesByManuscriptVersionId(manuscriptVersionId);
     const names = files.map((f) => f.filename);
     expect(names).toContain("poem-1.txt");
     expect(names).toContain("poem-2.txt");

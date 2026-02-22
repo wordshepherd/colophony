@@ -92,6 +92,13 @@
       "when": 1771727887288,
       "tag": "0012_bizarre_the_executioner",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1771800000000,
+      "tag": "0013_manuscripts",
+      "breakpoints": true
     }
   ]
 }

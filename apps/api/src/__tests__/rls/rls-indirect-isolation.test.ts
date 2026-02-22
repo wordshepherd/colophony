@@ -4,7 +4,7 @@ import { globalSetup } from './helpers/db-setup';
 import { truncateAllTables } from './helpers/cleanup';
 import { withTestRls } from './helpers/rls-context';
 import { createTwoOrgScenario, type TwoOrgScenario } from './helpers/factories';
-import { submissionFiles, submissionHistory } from '@colophony/db';
+import { files, submissionHistory } from '@colophony/db';
 
 let scenario: TwoOrgScenario;
 
@@ -19,11 +19,11 @@ describe('RLS Indirect Isolation (subquery-based)', () => {
     await truncateAllTables();
   });
 
-  describe('submission_files', () => {
+  describe('files', () => {
     it('org A context sees only org A files', async () => {
       const rows = await withTestRls(
         { orgId: scenario.orgA.id, userId: scenario.userA.id },
-        (tx) => tx.select().from(submissionFiles),
+        (tx) => tx.select().from(files),
       );
       expect(rows).toHaveLength(1);
       expect(rows[0].id).toBe(scenario.fileA.id);
@@ -32,7 +32,7 @@ describe('RLS Indirect Isolation (subquery-based)', () => {
     it('org B context sees only org B files', async () => {
       const rows = await withTestRls(
         { orgId: scenario.orgB.id, userId: scenario.userB.id },
-        (tx) => tx.select().from(submissionFiles),
+        (tx) => tx.select().from(files),
       );
       expect(rows).toHaveLength(1);
       expect(rows[0].id).toBe(scenario.fileB.id);
@@ -41,23 +41,21 @@ describe('RLS Indirect Isolation (subquery-based)', () => {
     it('org A context cannot find org B file by ID', async () => {
       const rows = await withTestRls(
         { orgId: scenario.orgA.id, userId: scenario.userA.id },
-        (tx) =>
-          tx
-            .select()
-            .from(submissionFiles)
-            .where(eq(submissionFiles.id, scenario.fileB.id)),
+        (tx) => tx.select().from(files).where(eq(files.id, scenario.fileB.id)),
       );
       expect(rows).toHaveLength(0);
     });
 
-    it('org A context cannot find files by org B submission_id', async () => {
+    it('org A context cannot find files by org B manuscript_version_id', async () => {
       const rows = await withTestRls(
         { orgId: scenario.orgA.id, userId: scenario.userA.id },
         (tx) =>
           tx
             .select()
-            .from(submissionFiles)
-            .where(eq(submissionFiles.submissionId, scenario.submissionB.id)),
+            .from(files)
+            .where(
+              eq(files.manuscriptVersionId, scenario.manuscriptVersionB.id),
+            ),
       );
       expect(rows).toHaveLength(0);
     });
