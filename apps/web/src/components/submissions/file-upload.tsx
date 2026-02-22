@@ -284,7 +284,12 @@ export function FileUpload({
         console.error("Failed to delete file:", error);
       }
     },
-    [deleteMutation, utils.files.listByManuscriptVersion, manuscriptVersionId],
+    [
+      deleteMutation,
+      utils.files.listByManuscriptVersion,
+      manuscriptVersionId,
+      onFileChange,
+    ],
   );
 
   const totalFiles = (existingFiles?.length ?? 0) + uploads.length;
