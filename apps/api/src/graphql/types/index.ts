@@ -9,6 +9,7 @@ export { ApiKeyType } from './api-key.js';
 export {
   FormDefinitionType,
   FormFieldType as FormFieldObjectType,
+  FormPageType,
   FormStatusEnum,
   FormFieldTypeEnum,
 } from './form.js';

@@ -5,7 +5,7 @@ import {
   selectFieldConfigSchema,
   richTextFieldConfigSchema,
   PRESENTATIONAL_FIELD_TYPES,
-  evaluateFieldVisibility,
+  evaluateFieldVisibilityWithBranching,
   type ConditionalRule,
 } from "@colophony/types";
 
@@ -22,6 +22,7 @@ export interface FormFieldForRenderer {
   required: boolean;
   config: Record<string, unknown> | null;
   conditionalRules?: ConditionalRule[] | null;
+  branchId?: string | null;
 }
 
 export interface FormSchemaResult {
@@ -247,7 +248,14 @@ export function buildConditionalFormSchema(
 
   for (const field of fields) {
     const { visible, required: conditionallyRequired } =
-      evaluateFieldVisibility(field.conditionalRules ?? null, formValues);
+      evaluateFieldVisibilityWithBranching(
+        {
+          branchId: field.branchId ?? null,
+          conditionalRules: field.conditionalRules,
+        },
+        fields,
+        formValues,
+      );
 
     // Hidden fields: make optional so they don't block validation
     if (!visible) {

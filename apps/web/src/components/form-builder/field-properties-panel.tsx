@@ -11,13 +11,22 @@ import { TextConfig } from "./field-config/text-config";
 import { NumberConfig } from "./field-config/number-config";
 import { SelectConfig } from "./field-config/select-config";
 import { FileUploadConfig } from "./field-config/file-upload-config";
+import { BranchingConfig } from "./field-config/branching-config";
 import { ConditionalRulesConfig } from "./field-config/conditional-rules-config";
 import { FIELD_TYPE_META } from "./field-type-meta";
 import { Loader2, Check } from "lucide-react";
-import type {
-  FormFieldType,
-  UpdateFormFieldInput,
-  ConditionalRule,
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  extractBranchingConfig,
+  type FormFieldType,
+  type UpdateFormFieldInput,
+  type ConditionalRule,
 } from "@colophony/types";
 
 interface PropertiesField {
@@ -30,6 +39,7 @@ interface PropertiesField {
   required: boolean;
   config: Record<string, unknown> | null;
   conditionalRules: ConditionalRule[] | null;
+  branchId: string | null;
 }
 
 interface AllFieldInfo {
@@ -142,6 +152,29 @@ export function FieldPropertiesPanel({
     debouncedSave({ conditionalRules: newRules });
   }
 
+  function handleBranchIdChange(branchId: string | null) {
+    debouncedSave({ branchId });
+  }
+
+  // Collect available branches from all fields that have branching enabled
+  const availableBranches: Array<{
+    branchId: string;
+    branchName: string;
+    sourceLabel: string;
+  }> = [];
+  for (const f of allFields) {
+    if (f.fieldKey === field.fieldKey) continue;
+    const bc = extractBranchingConfig(f.config);
+    if (!bc?.enabled) continue;
+    for (const branch of bc.branches) {
+      availableBranches.push({
+        branchId: branch.id,
+        branchName: branch.name,
+        sourceLabel: f.label,
+      });
+    }
+  }
+
   const meta = FIELD_TYPE_META[field.fieldType];
 
   function renderTypeConfig() {
@@ -152,7 +185,16 @@ export function FieldPropertiesPanel({
       return <NumberConfig config={config} onChange={handleConfigChange} />;
     }
     if ((SELECT_TYPES as readonly string[]).includes(field.fieldType)) {
-      return <SelectConfig config={config} onChange={handleConfigChange} />;
+      return (
+        <>
+          <SelectConfig config={config} onChange={handleConfigChange} />
+          <BranchingConfig
+            config={config}
+            onChange={handleConfigChange}
+            fieldId={field.id}
+          />
+        </>
+      );
     }
     if (field.fieldType === "file_upload") {
       return <FileUploadConfig config={config} onChange={handleConfigChange} />;
@@ -238,6 +280,31 @@ export function FieldPropertiesPanel({
               Required
             </Label>
           </div>
+
+          {/* Branch assignment */}
+          {availableBranches.length > 0 && (
+            <div className="space-y-1.5">
+              <Label className="text-xs">Branch</Label>
+              <Select
+                value={field.branchId ?? "__always__"}
+                onValueChange={(v) =>
+                  handleBranchIdChange(v === "__always__" ? null : v)
+                }
+              >
+                <SelectTrigger className="h-8 text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__always__">Always visible</SelectItem>
+                  {availableBranches.map((ab) => (
+                    <SelectItem key={ab.branchId} value={ab.branchId}>
+                      {ab.sourceLabel} &rarr; {ab.branchName}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
         </div>
 
         {/* Type-specific config */}

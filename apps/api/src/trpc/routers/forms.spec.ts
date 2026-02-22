@@ -165,6 +165,8 @@ function makeFormField(overrides: Record<string, unknown> = {}) {
     sortOrder: 0,
     config: null,
     conditionalRules: null,
+    branchId: null,
+    pageId: null,
     createdAt: new Date(),
     updatedAt: new Date(),
     ...overrides,
@@ -223,6 +225,7 @@ describe('forms tRPC router', () => {
       const form = {
         ...makeFormDefinition(),
         fields: [makeFormField()],
+        pages: [],
       };
       mockService.getById.mockResolvedValueOnce(form as never);
 
@@ -341,6 +344,7 @@ describe('forms tRPC router', () => {
           duplicatedFromId: FORM_ID,
         }),
         fields: [makeFormField()],
+        pages: [],
       };
       mockService.duplicateWithAudit.mockResolvedValueOnce(duplicated as never);
 

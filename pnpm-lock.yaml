@@ -480,6 +480,9 @@ importers:
       typescript:
         specifier: ^5.7.2
         version: 5.9.3
+      vitest:
+        specifier: ^4.0.18
+        version: 4.0.18(@types/node@25.2.3)(jiti@1.21.7)(jsdom@20.0.3)(terser@5.46.0)(tsx@4.21.0)(yaml@2.8.2)
 
   packages/typescript-config: {}
 

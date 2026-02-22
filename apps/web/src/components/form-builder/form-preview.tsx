@@ -27,6 +27,7 @@ interface PreviewFieldData {
   required: boolean;
   config: Record<string, unknown> | null;
   conditionalRules?: ConditionalRule[] | null;
+  branchId?: string | null;
 }
 
 interface FormPreviewProps {

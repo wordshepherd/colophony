@@ -2,7 +2,7 @@ import { relations } from "drizzle-orm";
 import { organizations } from "./organizations";
 import { users } from "./users";
 import { organizationMembers } from "./members";
-import { formDefinitions, formFields } from "./forms";
+import { formDefinitions, formFields, formPages } from "./forms";
 import {
   submissionPeriods,
   submissions,
@@ -70,6 +70,7 @@ export const formDefinitionsRelations = relations(
       references: [users.id],
     }),
     fields: many(formFields),
+    pages: many(formPages),
     submissionPeriods: many(submissionPeriods),
     submissions: many(submissions),
   }),
@@ -82,6 +83,20 @@ export const formFieldsRelations = relations(formFields, ({ one }) => ({
     fields: [formFields.formDefinitionId],
     references: [formDefinitions.id],
   }),
+  page: one(formPages, {
+    fields: [formFields.pageId],
+    references: [formPages.id],
+  }),
+}));
+
+// --- form_pages ---
+
+export const formPagesRelations = relations(formPages, ({ one, many }) => ({
+  formDefinition: one(formDefinitions, {
+    fields: [formPages.formDefinitionId],
+    references: [formDefinitions.id],
+  }),
+  fields: many(formFields),
 }));
 
 // --- submission_periods ---
