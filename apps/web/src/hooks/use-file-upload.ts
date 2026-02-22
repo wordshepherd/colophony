@@ -184,6 +184,7 @@ export function useFileUpload({
               utils.files.listByManuscriptVersion.invalidate({
                 manuscriptVersionId: manuscriptVersionId!,
               });
+              onUploadComplete?.(uploadId);
             }, 4000);
           },
           onError: (error) => {
