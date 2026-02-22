@@ -495,13 +495,16 @@ export async function registerTusdWebhooks(
           await fileService.updateScanStatus(tx, file.id, 'CLEAN');
         }
 
-        // Audit within the same transaction (orgId is optional)
+        // Audit within the same transaction.
+        // Do NOT pass organizationId here — the RLS context is user-scoped
+        // (withRls({ userId })), so app.current_org is unset. The audit_events
+        // INSERT policy requires organization_id = current_org_id() when non-NULL,
+        // which would fail. The actorId is sufficient for traceability.
         await auditService.log(tx, {
           resource: AuditResources.FILE,
           action: AuditActions.FILE_UPLOADED,
           resourceId: file.id,
           actorId: userId,
-          ...(orgId ? { organizationId: orgId } : {}),
           ipAddress: request.ip,
           userAgent: request.headers['user-agent'],
           newValue: { filename, mimeType, size, manuscriptVersionId },
@@ -554,10 +557,7 @@ export async function registerTusdWebhooks(
       return reply.status(200).send({ status: 'processed' });
     } catch (err) {
       request.log.error(err, 'Post-finish webhook processing failed');
-      return reply.status(500).send({
-        error: 'processing_failed',
-        message: err instanceof Error ? err.message : String(err),
-      });
+      return reply.status(500).send({ error: 'processing_failed' });
     }
   }
 }
