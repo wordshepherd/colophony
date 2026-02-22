@@ -61,7 +61,7 @@ CREATE TABLE "files" (
 	"mime_type" varchar(255) NOT NULL,
 	"size" bigint NOT NULL,
 	"storage_key" varchar(1000) NOT NULL,
-	"scan_status" "scan_status" DEFAULT 'PENDING' NOT NULL,
+	"scan_status" "ScanStatus" DEFAULT 'PENDING' NOT NULL,
 	"scanned_at" timestamp with time zone,
 	"uploaded_at" timestamp with time zone DEFAULT now() NOT NULL
 );
