@@ -554,7 +554,10 @@ export async function registerTusdWebhooks(
       return reply.status(200).send({ status: 'processed' });
     } catch (err) {
       request.log.error(err, 'Post-finish webhook processing failed');
-      return reply.status(500).send({ error: 'processing_failed' });
+      return reply.status(500).send({
+        error: 'processing_failed',
+        message: err instanceof Error ? err.message : String(err),
+      });
     }
   }
 }
