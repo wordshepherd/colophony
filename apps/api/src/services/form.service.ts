@@ -705,7 +705,7 @@ export const formService = {
       .where(eq(formFields.id, fieldId))
       .returning();
 
-    return deleted!;
+    return deleted;
   },
 
   async removeFieldWithAudit(
