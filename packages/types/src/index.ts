@@ -10,3 +10,4 @@ export * from "./conditional-rules";
 export * from "./common";
 export * from "./audit";
 export * from "./api-key";
+export * from "./embed";

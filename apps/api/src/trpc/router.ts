@@ -9,6 +9,7 @@ import { auditRouter } from './routers/audit.js';
 import { formsRouter } from './routers/forms.js';
 import { periodsRouter } from './routers/periods.js';
 import { manuscriptsRouter } from './routers/manuscripts.js';
+import { embedTokensRouter } from './routers/embed-tokens.js';
 
 // Re-export procedure builders for convenience
 export {
@@ -40,6 +41,7 @@ export const appRouter = t.router({
   audit: auditRouter,
   forms: formsRouter,
   periods: periodsRouter,
+  embedTokens: embedTokensRouter,
   retention: t.router({}),
 });
 

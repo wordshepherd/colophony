@@ -82,6 +82,16 @@ export const AuditActions = {
   PAYMENT_SUCCEEDED: "PAYMENT_SUCCEEDED",
   PAYMENT_EXPIRED: "PAYMENT_EXPIRED",
 
+  // Embed token lifecycle
+  EMBED_TOKEN_CREATED: "EMBED_TOKEN_CREATED",
+  EMBED_TOKEN_REVOKED: "EMBED_TOKEN_REVOKED",
+
+  // Embed submission
+  EMBED_SUBMISSION_CREATED: "EMBED_SUBMISSION_CREATED",
+
+  // Guest user
+  GUEST_USER_CREATED: "GUEST_USER_CREATED",
+
   // Audit access
   AUDIT_ACCESSED: "AUDIT_ACCESSED",
 } as const;
@@ -100,6 +110,7 @@ export const AuditResources = {
   AUTH: "auth",
   API_KEY: "api_key",
   PAYMENT: "payment",
+  EMBED_TOKEN: "embed_token",
   AUDIT: "audit",
 } as const;
 
@@ -229,6 +240,15 @@ export interface PaymentAuditParams extends BaseAuditParams {
     | typeof AuditActions.PAYMENT_EXPIRED;
 }
 
+export interface EmbedTokenAuditParams extends BaseAuditParams {
+  resource: typeof AuditResources.EMBED_TOKEN;
+  action:
+    | typeof AuditActions.EMBED_TOKEN_CREATED
+    | typeof AuditActions.EMBED_TOKEN_REVOKED
+    | typeof AuditActions.EMBED_SUBMISSION_CREATED
+    | typeof AuditActions.GUEST_USER_CREATED;
+}
+
 export interface AuditAccessAuditParams extends BaseAuditParams {
   resource: typeof AuditResources.AUDIT;
   action: typeof AuditActions.AUDIT_ACCESSED;
@@ -246,6 +266,7 @@ export type AuditLogParams =
   | AuthAuditParams
   | ApiKeyAuditParams
   | PaymentAuditParams
+  | EmbedTokenAuditParams
   | AuditAccessAuditParams;
 
 // ---------------------------------------------------------------------------

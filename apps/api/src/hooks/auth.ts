@@ -27,7 +27,13 @@ declare module 'fastify' {
  * 2. Add a corresponding test in auth.spec.ts
  * 3. Document in apps/api/CLAUDE.md
  */
-const PUBLIC_PREFIXES = ['/health', '/ready', '/webhooks/', '/.well-known/'];
+const PUBLIC_PREFIXES = [
+  '/health',
+  '/ready',
+  '/webhooks/',
+  '/.well-known/',
+  '/embed/',
+];
 const PUBLIC_EXACT = [
   '/',
   '/health',

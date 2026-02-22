@@ -13,6 +13,7 @@ import type {
   AuditLogParams,
   AuthAuditParams,
   ApiKeyAuditParams,
+  EmbedTokenAuditParams,
   ListAuditEventsInput,
 } from '@colophony/types';
 
@@ -197,7 +198,9 @@ export const auditService = {
    *
    * Errors propagate — caller is responsible for try/catch.
    */
-  async logDirect(params: AuthAuditParams | ApiKeyAuditParams): Promise<void> {
+  async logDirect(
+    params: AuthAuditParams | ApiKeyAuditParams | EmbedTokenAuditParams,
+  ): Promise<void> {
     if (params.organizationId) {
       throw new Error(
         'logDirect must not include organizationId — use auditService.log() inside a transaction for org-scoped events',

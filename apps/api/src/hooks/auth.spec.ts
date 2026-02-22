@@ -317,6 +317,7 @@ describe('auth plugin', () => {
         emailVerifiedAt: null,
         createdAt: new Date(),
         updatedAt: new Date(),
+        isGuest: false,
         deletedAt: new Date(), // deactivated
         lastEventAt: null,
       });
@@ -346,6 +347,7 @@ describe('auth plugin', () => {
         emailVerifiedAt: new Date(),
         createdAt: new Date(),
         updatedAt: new Date(),
+        isGuest: false,
         deletedAt: null,
         lastEventAt: null,
       });
@@ -610,6 +612,7 @@ describe('auth plugin', () => {
         zitadelUserId: 'zitadel-deactivated',
         emailVerified: true,
         emailVerifiedAt: null,
+        isGuest: false,
         createdAt: new Date(),
         updatedAt: new Date(),
         deletedAt: new Date(),
@@ -886,6 +889,7 @@ describe('auth plugin', () => {
         emailVerifiedAt: new Date(),
         createdAt: new Date(),
         updatedAt: new Date(),
+        isGuest: false,
         deletedAt: null,
         lastEventAt: null,
       });

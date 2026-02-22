@@ -99,6 +99,13 @@
       "when": 1771800000000,
       "tag": "0013_manuscripts",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1772000000000,
+      "tag": "0014_embed_tokens",
+      "breakpoints": true
     }
   ]
 }
