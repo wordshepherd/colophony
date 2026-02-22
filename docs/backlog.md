@@ -108,7 +108,7 @@
 - [x] Editor dashboard rewrite (`/editor` pages) — submission queue + detail view reuse — (DEVLOG 2026-02-15; done 2026-02-21)
 - [x] Fix stale cache after submit: `submission-form.tsx` `submitMutation.onSuccess` does `router.push` but doesn't invalidate `getById` query — detail page shows stale DRAFT status — (DEVLOG 2026-02-18, E2E test run; done 2026-02-19)
 - [x] Manuscript entity — separate manuscripts (with versions) from submissions; creators maintain a manuscript library and attach manuscripts to submissions rather than uploading per-submission. Enables one-click withdraw-on-accept across all pending submissions of the same manuscript — (roadmap idea 2026-02-19; backend done 2026-02-22)
-- [ ] Manuscript entity frontend — manuscript library UI, submission form refactor to use manuscript versions instead of direct file upload — (DEVLOG 2026-02-22, PR 2 follow-up)
+- [x] Manuscript entity frontend — manuscript library UI, submission form refactor to use manuscript versions instead of direct file upload — (DEVLOG 2026-02-22, PR 2 follow-up; done 2026-02-22)
 - [ ] GDPR deletion mutation — stubbed with TODO — (DEVLOG 2026-02-15)
 - [ ] GDPR tools finalization from MVP — (architecture doc Track 3)
 - [ ] Org deletion — needs careful cascade handling — (DEVLOG 2026-02-13)
