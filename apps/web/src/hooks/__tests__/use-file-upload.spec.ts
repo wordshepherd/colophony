@@ -37,7 +37,7 @@ jest.mock("@/lib/trpc", () => ({
   trpc: {
     useUtils: () => ({
       files: {
-        listBySubmission: {
+        listByManuscriptVersion: {
           invalidate: (...args: unknown[]) => trpcMock.invalidateFiles(...args),
         },
       },
@@ -53,6 +53,7 @@ const mockInvalidateFiles = trpcMock.invalidateFiles;
 describe("useFileUpload", () => {
   const defaultOptions = {
     submissionId: "sub-123",
+    manuscriptVersionId: "mv-123",
     onUploadComplete: jest.fn(),
     onError: jest.fn(),
   };
@@ -129,7 +130,7 @@ describe("useFileUpload", () => {
     });
 
     expect(mockInvalidateFiles).toHaveBeenCalledWith({
-      submissionId: "sub-123",
+      manuscriptVersionId: "mv-123",
     });
     expect(defaultOptions.onUploadComplete).toHaveBeenCalled();
     jest.useRealTimers();

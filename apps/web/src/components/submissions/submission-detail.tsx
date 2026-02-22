@@ -82,10 +82,11 @@ export function SubmissionDetail({
       id: submissionId,
     });
 
-  // v2: listBySubmission (renamed from getBySubmission)
-  const { data: files } = trpc.files.listBySubmission.useQuery({
-    submissionId,
-  });
+  // v2: listByManuscriptVersion (files belong to manuscript versions)
+  const { data: files } = trpc.files.listByManuscriptVersion.useQuery(
+    { manuscriptVersionId: submission?.manuscriptVersionId! },
+    { enabled: !!submission?.manuscriptVersionId },
+  );
 
   const { data: history } = trpc.submissions.getHistory.useQuery({
     submissionId,

@@ -4,8 +4,8 @@ import { ORPCError } from '@orpc/server';
 // Mock file service
 vi.mock('../../services/file.service.js', () => ({
   fileService: {
-    listBySubmission: vi.fn(),
-    listBySubmissionWithAccess: vi.fn(),
+    listByManuscriptVersion: vi.fn(),
+    listByManuscriptVersionWithAccess: vi.fn(),
     getById: vi.fn(),
     getDownloadUrl: vi.fn(),
     getDownloadUrlWithAccess: vi.fn(),
@@ -74,7 +74,7 @@ vi.mock('../../config/env.js', () => ({
 vi.mock('@colophony/db', () => ({
   pool: { query: vi.fn(), connect: vi.fn() },
   db: { query: {} },
-  submissionFiles: {},
+  files: {},
   eq: vi.fn(),
   sql: vi.fn(),
 }));
@@ -90,6 +90,7 @@ const mockFileService = vi.mocked(fileService);
 const USER_ID = 'a0000000-0000-4000-a000-000000000001';
 const ORG_ID = 'b0000000-0000-4000-a000-000000000001';
 const SUBMISSION_ID = 'd0000000-0000-4000-a000-000000000001';
+const MANUSCRIPT_VERSION_ID = 'c0000000-0000-4000-a000-000000000001';
 const FILE_ID = 'e0000000-0000-4000-a000-000000000001';
 
 function baseContext(): RestContext {
@@ -144,39 +145,43 @@ describe('files REST router', () => {
   });
 
   // -------------------------------------------------------------------------
-  // GET /submissions/{submissionId}/files
+  // GET /manuscript-versions/{manuscriptVersionId}/files
   // -------------------------------------------------------------------------
 
-  describe('GET /submissions/{submissionId}/files (list)', () => {
+  describe('GET /manuscript-versions/{manuscriptVersionId}/files (list)', () => {
     it('requires auth', async () => {
       const call = client(filesRouter.list, baseContext());
-      await expect(call({ submissionId: SUBMISSION_ID })).rejects.toThrow(
-        ORPCError,
-      );
+      await expect(
+        call({ manuscriptVersionId: MANUSCRIPT_VERSION_ID }),
+      ).rejects.toThrow(ORPCError);
     });
 
-    it('returns files for a submission', async () => {
+    it('returns files for a manuscript version', async () => {
       const files = [
-        { id: FILE_ID, filename: 'test.pdf', submissionId: SUBMISSION_ID },
+        {
+          id: FILE_ID,
+          filename: 'test.pdf',
+          manuscriptVersionId: MANUSCRIPT_VERSION_ID,
+        },
       ];
-      mockFileService.listBySubmissionWithAccess.mockResolvedValueOnce(
+      mockFileService.listByManuscriptVersionWithAccess.mockResolvedValueOnce(
         files as never,
       );
 
       const call = client(filesRouter.list, orgContext('READER'));
-      const result = await call({ submissionId: SUBMISSION_ID });
+      const result = await call({ manuscriptVersionId: MANUSCRIPT_VERSION_ID });
       expect(result).toHaveLength(1);
     });
 
     it('maps ForbiddenError', async () => {
-      mockFileService.listBySubmissionWithAccess.mockRejectedValueOnce(
+      mockFileService.listByManuscriptVersionWithAccess.mockRejectedValueOnce(
         new ForbiddenError('No access'),
       );
 
       const call = client(filesRouter.list, orgContext('READER'));
-      await expect(call({ submissionId: SUBMISSION_ID })).rejects.toThrow(
-        'No access',
-      );
+      await expect(
+        call({ manuscriptVersionId: MANUSCRIPT_VERSION_ID }),
+      ).rejects.toThrow('No access');
     });
   });
 
@@ -278,9 +283,9 @@ describe('files REST router', () => {
     it('denies files:read route with wrong scope', async () => {
       const ctx = apiKeyContext(['submissions:read']);
       const call = client(filesRouter.list, ctx);
-      await expect(call({ submissionId: SUBMISSION_ID })).rejects.toThrow(
-        'Insufficient API key scope',
-      );
+      await expect(
+        call({ manuscriptVersionId: MANUSCRIPT_VERSION_ID }),
+      ).rejects.toThrow('Insufficient API key scope');
     });
 
     it('denies files:write route with only read scope', async () => {
@@ -293,13 +298,13 @@ describe('files REST router', () => {
 
     it('allows API key with correct read scope', async () => {
       const files = [{ id: FILE_ID, filename: 'test.pdf' }];
-      mockFileService.listBySubmissionWithAccess.mockResolvedValueOnce(
+      mockFileService.listByManuscriptVersionWithAccess.mockResolvedValueOnce(
         files as never,
       );
 
       const ctx = apiKeyContext(['files:read']);
       const call = client(filesRouter.list, ctx);
-      const result = await call({ submissionId: SUBMISSION_ID });
+      const result = await call({ manuscriptVersionId: MANUSCRIPT_VERSION_ID });
       expect(result).toHaveLength(1);
     });
   });

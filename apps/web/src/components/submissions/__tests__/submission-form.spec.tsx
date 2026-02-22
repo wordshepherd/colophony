@@ -156,7 +156,7 @@ jest.mock("@/lib/trpc", () => ({
       },
     },
     files: {
-      listBySubmission: {
+      listByManuscriptVersion: {
         useQuery: () => ({
           data: mockExistingFiles,
         }),

@@ -46,11 +46,11 @@ jest.mock("@/lib/trpc", () => ({
   trpc: {
     useUtils: () => ({
       files: {
-        listBySubmission: { invalidate: mockInvalidateFiles },
+        listByManuscriptVersion: { invalidate: mockInvalidateFiles },
       },
     }),
     files: {
-      listBySubmission: {
+      listByManuscriptVersion: {
         useQuery: () => ({
           data: mockExistingFiles,
           isPending: mockIsLoading,

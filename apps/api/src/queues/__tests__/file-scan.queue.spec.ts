@@ -31,6 +31,7 @@ describe('file-scan queue', () => {
       fileId: 'file-123',
       storageKey: 'quarantine/upload-abc',
       organizationId: 'org-1',
+      userId: 'test-user-id',
     });
 
     expect(mockAdd).toHaveBeenCalledWith(
@@ -39,6 +40,7 @@ describe('file-scan queue', () => {
         fileId: 'file-123',
         storageKey: 'quarantine/upload-abc',
         organizationId: 'org-1',
+        userId: 'test-user-id',
       },
       { jobId: 'file-123' },
     );
@@ -51,6 +53,7 @@ describe('file-scan queue', () => {
       fileId: 'file-456',
       storageKey: 'quarantine/upload-def',
       organizationId: 'org-2',
+      userId: 'test-user-id',
     });
 
     await closeFileScanQueue();

@@ -70,10 +70,10 @@ export function SubmissionForm({ mode, submissionId }: SubmissionFormProps) {
       { enabled: mode === "edit" && !!submissionId },
     );
 
-  // Fetch files for the submission (v2: listBySubmission)
-  const { data: existingFiles } = trpc.files.listBySubmission.useQuery(
-    { submissionId: submissionId! },
-    { enabled: mode === "edit" && !!submissionId },
+  // Fetch files for the manuscript version (v2: listByManuscriptVersion)
+  const { data: existingFiles } = trpc.files.listByManuscriptVersion.useQuery(
+    { manuscriptVersionId: existingSubmission?.manuscriptVersionId! },
+    { enabled: mode === "edit" && !!existingSubmission?.manuscriptVersionId },
   );
 
   // Fetch published forms for create-mode selector
@@ -539,6 +539,7 @@ export function SubmissionForm({ mode, submissionId }: SubmissionFormProps) {
               <CardContent>
                 <FileUpload
                   submissionId={(currentSubmissionId ?? submissionId)!}
+                  manuscriptVersionId={existingSubmission?.manuscriptVersionId}
                   disabled={!canEdit}
                 />
               </CardContent>
