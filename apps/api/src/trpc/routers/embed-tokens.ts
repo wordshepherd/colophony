@@ -24,12 +24,26 @@ export const embedTokensRouter = createRouter({
     .input(createEmbedTokenSchema)
     .output(createEmbedTokenResponseSchema)
     .mutation(async ({ ctx, input }) => {
-      const result = await embedTokenService.create(
-        ctx.dbTx,
-        ctx.authContext.orgId,
-        ctx.authContext.userId,
-        input,
-      );
+      let result;
+      try {
+        result = await embedTokenService.create(
+          ctx.dbTx,
+          ctx.authContext.orgId,
+          ctx.authContext.userId,
+          input,
+        );
+      } catch (err) {
+        if (
+          err instanceof Error &&
+          err.message === 'Submission period not found'
+        ) {
+          throw new TRPCError({
+            code: 'NOT_FOUND',
+            message: 'Submission period not found',
+          });
+        }
+        throw err;
+      }
       await ctx.audit({
         action: AuditActions.EMBED_TOKEN_CREATED,
         resource: AuditResources.EMBED_TOKEN,

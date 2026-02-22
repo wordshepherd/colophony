@@ -207,15 +207,19 @@ export async function registerEmbedRoutes(
 
       // Check origin on POST (CSRF protection)
       const origin = request.headers.origin;
-      if (
-        token.allowedOrigins.length > 0 &&
-        origin &&
-        !token.allowedOrigins.includes(origin)
-      ) {
-        return reply.status(403).send({
-          error: 'forbidden',
-          message: 'Origin not allowed for this embed token',
-        });
+      if (token.allowedOrigins.length > 0) {
+        if (!origin) {
+          return reply.status(403).send({
+            error: 'forbidden',
+            message: 'Origin header required for this embed token',
+          });
+        }
+        if (!token.allowedOrigins.includes(origin)) {
+          return reply.status(403).send({
+            error: 'forbidden',
+            message: 'Origin not allowed for this embed token',
+          });
+        }
       }
 
       // Validate body

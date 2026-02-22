@@ -1,5 +1,12 @@
 import crypto from 'node:crypto';
-import { pool, embedTokens, eq, and, type DrizzleDb } from '@colophony/db';
+import {
+  pool,
+  embedTokens,
+  submissionPeriods,
+  eq,
+  and,
+  type DrizzleDb,
+} from '@colophony/db';
 import type { CreateEmbedTokenInput } from '@colophony/types';
 import { EMBED_TOKEN_PREFIX } from '@colophony/types';
 
@@ -55,6 +62,17 @@ export const embedTokenService = {
     createdBy: string,
     input: CreateEmbedTokenInput,
   ) {
+    // Verify the submission period exists within the caller's org (RLS-scoped)
+    const [period] = await tx
+      .select({ id: submissionPeriods.id })
+      .from(submissionPeriods)
+      .where(eq(submissionPeriods.id, input.submissionPeriodId))
+      .limit(1);
+
+    if (!period) {
+      throw new Error('Submission period not found');
+    }
+
     const { plainTextToken, tokenHash, tokenPrefix } = generateToken();
 
     const [row] = await tx

@@ -21,6 +21,9 @@ vi.mock('@colophony/db', () => ({
     createdAt: 'created_at',
     expiresAt: 'expires_at',
   },
+  submissionPeriods: {
+    id: 'id',
+  },
   eq: vi.fn((_col: unknown, val: unknown) => val),
   and: vi.fn((...args: unknown[]) => args),
   sql: vi.fn(),
@@ -89,24 +92,36 @@ describe('embedTokenService', () => {
     });
   });
 
+  /** Helper to build a mockTx with period lookup + insert chain */
+  function createMockTx(insertResult: unknown[]) {
+    return {
+      select: vi.fn().mockReturnValue({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            limit: vi.fn().mockResolvedValue([{ id: 'period-1' }]),
+          }),
+        }),
+      }),
+      insert: vi.fn().mockReturnThis(),
+      values: vi.fn().mockReturnThis(),
+      returning: vi.fn().mockResolvedValue(insertResult),
+    } as unknown as Parameters<typeof embedTokenService.create>[0];
+  }
+
   describe('create', () => {
     it('generates token with col_emb_ prefix', async () => {
-      const mockTx = {
-        insert: vi.fn().mockReturnThis(),
-        values: vi.fn().mockReturnThis(),
-        returning: vi.fn().mockResolvedValue([
-          {
-            id: 'token-1',
-            submissionPeriodId: 'period-1',
-            tokenPrefix: 'col_emb_',
-            allowedOrigins: ['https://example.com'],
-            themeConfig: {},
-            active: true,
-            createdAt: new Date(),
-            expiresAt: null,
-          },
-        ]),
-      } as unknown as Parameters<typeof embedTokenService.create>[0];
+      const mockTx = createMockTx([
+        {
+          id: 'token-1',
+          submissionPeriodId: 'period-1',
+          tokenPrefix: 'col_emb_',
+          allowedOrigins: ['https://example.com'],
+          themeConfig: {},
+          active: true,
+          createdAt: new Date(),
+          expiresAt: null,
+        },
+      ]);
 
       const result = await embedTokenService.create(mockTx, 'org-1', 'user-1', {
         submissionPeriodId: 'period-1',
@@ -118,22 +133,18 @@ describe('embedTokenService', () => {
     });
 
     it('stores SHA-256 hash, never plain text', async () => {
-      const mockTx = {
-        insert: vi.fn().mockReturnThis(),
-        values: vi.fn().mockReturnThis(),
-        returning: vi.fn().mockResolvedValue([
-          {
-            id: 'token-1',
-            submissionPeriodId: 'period-1',
-            tokenPrefix: 'col_emb_',
-            allowedOrigins: [],
-            themeConfig: {},
-            active: true,
-            createdAt: new Date(),
-            expiresAt: null,
-          },
-        ]),
-      } as unknown as Parameters<typeof embedTokenService.create>[0];
+      const mockTx = createMockTx([
+        {
+          id: 'token-1',
+          submissionPeriodId: 'period-1',
+          tokenPrefix: 'col_emb_',
+          allowedOrigins: [],
+          themeConfig: {},
+          active: true,
+          createdAt: new Date(),
+          expiresAt: null,
+        },
+      ]);
 
       await embedTokenService.create(mockTx, 'org-1', 'user-1', {
         submissionPeriodId: 'period-1',
@@ -151,22 +162,18 @@ describe('embedTokenService', () => {
     });
 
     it('stores allowedOrigins and themeConfig', async () => {
-      const mockTx = {
-        insert: vi.fn().mockReturnThis(),
-        values: vi.fn().mockReturnThis(),
-        returning: vi.fn().mockResolvedValue([
-          {
-            id: 'token-1',
-            submissionPeriodId: 'period-1',
-            tokenPrefix: 'col_emb_',
-            allowedOrigins: ['https://example.com'],
-            themeConfig: { primaryColor: '#ff0000' },
-            active: true,
-            createdAt: new Date(),
-            expiresAt: null,
-          },
-        ]),
-      } as unknown as Parameters<typeof embedTokenService.create>[0];
+      const mockTx = createMockTx([
+        {
+          id: 'token-1',
+          submissionPeriodId: 'period-1',
+          tokenPrefix: 'col_emb_',
+          allowedOrigins: ['https://example.com'],
+          themeConfig: { primaryColor: '#ff0000' },
+          active: true,
+          createdAt: new Date(),
+          expiresAt: null,
+        },
+      ]);
 
       await embedTokenService.create(mockTx, 'org-1', 'user-1', {
         submissionPeriodId: 'period-1',

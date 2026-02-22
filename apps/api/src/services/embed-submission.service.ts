@@ -52,17 +52,34 @@ export const embedSubmissionService = {
       return { id: existing.id, isNew: false };
     }
 
-    // Create guest user
-    const [created] = await db
-      .insert(users)
-      .values({
-        email: normalizedEmail,
-        isGuest: true,
-        emailVerified: false,
-      })
-      .returning({ id: users.id });
+    // Create guest user — retry on unique constraint race (concurrent submissions)
+    try {
+      const [created] = await db
+        .insert(users)
+        .values({
+          email: normalizedEmail,
+          isGuest: true,
+          emailVerified: false,
+        })
+        .returning({ id: users.id });
 
-    return { id: created.id, isNew: true };
+      return { id: created.id, isNew: true };
+    } catch (err: unknown) {
+      // Unique constraint violation (23505) — another request created the user concurrently
+      if (
+        err instanceof Error &&
+        'code' in err &&
+        (err as { code: string }).code === '23505'
+      ) {
+        const [raced] = await db
+          .select({ id: users.id })
+          .from(users)
+          .where(sql`lower(${users.email}) = ${normalizedEmail}`)
+          .limit(1);
+        if (raced) return { id: raced.id, isNew: false };
+      }
+      throw err;
+    }
   },
 
   /**
