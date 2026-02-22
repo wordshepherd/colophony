@@ -11,9 +11,9 @@
 | Type exports   | `src/types.ts`                           |
 | Migrations     | `migrations/`                            |
 
-### Schema Files (12 domain files + barrel)
+### Schema Files (13 domain files + barrel)
 
-`api-keys.ts`, `audit.ts`, `compliance.ts`, `enums.ts`, `members.ts`, `messaging.ts`, `organizations.ts`, `payments.ts`, `relations.ts`, `submissions.ts`, `users.ts`, `webhooks.ts`, `index.ts`
+`api-keys.ts`, `audit.ts`, `compliance.ts`, `enums.ts`, `manuscripts.ts`, `members.ts`, `messaging.ts`, `organizations.ts`, `payments.ts`, `relations.ts`, `submissions.ts`, `users.ts`, `webhooks.ts`, `index.ts`
 
 ---
 
@@ -58,6 +58,10 @@ async function withRls<T>(
 ```
 
 Acquires a dedicated connection, sets `app.current_org` and/or `app.user_id` via `set_config(..., true)` (transaction-local), runs the callback inside a transaction, releases the connection. Context is automatically cleared when the transaction ends.
+
+### User-Scoped RLS (Manuscripts)
+
+Manuscripts use `owner_id = current_user_id()` instead of org-scoped isolation. The `current_user_id()` SQL function (migration 0000) returns `app.user_id`. Files use dual RLS: owner CRUD via manuscript ownership chain (`files → manuscript_versions → manuscripts WHERE owner_id = current_user_id()`) + org SELECT for editors on submitted manuscripts (`files → manuscript_versions → submissions WHERE organization_id = current_org_id()`). This is a new pattern — all other tables use org-scoped isolation only.
 
 ### NEVER
 
