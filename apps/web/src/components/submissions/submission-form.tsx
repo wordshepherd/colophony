@@ -538,7 +538,6 @@ export function SubmissionForm({ mode, submissionId }: SubmissionFormProps) {
               </CardHeader>
               <CardContent>
                 <FileUpload
-                  submissionId={(currentSubmissionId ?? submissionId)!}
                   manuscriptVersionId={existingSubmission?.manuscriptVersionId}
                   disabled={!canEdit}
                 />

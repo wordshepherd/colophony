@@ -52,7 +52,6 @@ const mockInvalidateFiles = trpcMock.invalidateFiles;
 
 describe("useFileUpload", () => {
   const defaultOptions = {
-    submissionId: "sub-123",
     manuscriptVersionId: "mv-123",
     onUploadComplete: jest.fn(),
     onError: jest.fn(),

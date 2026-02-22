@@ -111,13 +111,14 @@ export const files = pgTable(
         WHERE m.owner_id = current_user_id()
       )`,
     }),
-    // Org read: editors can read files on submitted manuscripts
+    // Org read: editors can read files on non-draft submissions in their org
     pgPolicy("files_org_read", {
       for: "select",
       using: sql`manuscript_version_id IN (
         SELECT s.manuscript_version_id FROM submissions s
         WHERE s.organization_id = current_org_id()
         AND s.manuscript_version_id IS NOT NULL
+        AND s.status != 'DRAFT'
       )`,
     }),
   ],

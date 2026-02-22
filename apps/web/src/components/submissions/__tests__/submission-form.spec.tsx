@@ -181,10 +181,13 @@ jest.mock("@/lib/trpc", () => ({
 }));
 
 jest.mock("../file-upload", () => ({
-  FileUpload: (props: { submissionId: string; disabled: boolean }) => (
+  FileUpload: (props: {
+    manuscriptVersionId?: string | null;
+    disabled: boolean;
+  }) => (
     <div
       data-testid="file-upload"
-      data-submission-id={props.submissionId}
+      data-manuscript-version-id={props.manuscriptVersionId ?? ""}
       data-disabled={String(props.disabled)}
     />
   ),
@@ -368,13 +371,12 @@ describe("SubmissionForm", () => {
       ).toHaveValue("Dear editors,");
     });
 
-    it("renders FileUpload with correct submissionId and disabled=false", () => {
+    it("renders FileUpload with manuscriptVersionId and disabled=false", () => {
       mockExistingSubmission = makeDraftSubmission();
       render(<SubmissionForm mode="edit" submissionId="sub-1" />);
 
       const fileUpload = screen.getByTestId("file-upload");
       expect(fileUpload).toBeInTheDocument();
-      expect(fileUpload).toHaveAttribute("data-submission-id", "sub-1");
       expect(fileUpload).toHaveAttribute("data-disabled", "false");
     });
 

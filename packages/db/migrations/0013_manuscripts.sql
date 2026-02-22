@@ -81,13 +81,6 @@ CREATE POLICY "files_owner" ON "files" AS PERMISSIVE FOR ALL TO public USING (ma
     WHERE m.owner_id = current_user_id()
   ));--> statement-breakpoint
 
--- Org read: editors can read files on submitted manuscripts
-CREATE POLICY "files_org_read" ON "files" AS PERMISSIVE FOR SELECT TO public USING (manuscript_version_id IN (
-    SELECT s.manuscript_version_id FROM submissions s
-    WHERE s.organization_id = current_org_id()
-    AND s.manuscript_version_id IS NOT NULL
-  ));--> statement-breakpoint
-
 GRANT SELECT, INSERT, UPDATE, DELETE ON "files" TO app_user;--> statement-breakpoint
 
 -- ---------------------------------------------------------------------------
@@ -97,6 +90,15 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON "files" TO app_user;--> statement-breakp
 ALTER TABLE "submissions" ADD COLUMN "manuscript_version_id" uuid;--> statement-breakpoint
 ALTER TABLE "submissions" ADD CONSTRAINT "submissions_manuscript_version_id_manuscript_versions_id_fk" FOREIGN KEY ("manuscript_version_id") REFERENCES "public"."manuscript_versions"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 CREATE INDEX "submissions_manuscript_version_id_idx" ON "submissions" USING btree ("manuscript_version_id");--> statement-breakpoint
+
+-- Org read: editors can read files on non-draft submissions in their org
+-- (Must come after submissions.manuscript_version_id column is added above)
+CREATE POLICY "files_org_read" ON "files" AS PERMISSIVE FOR SELECT TO public USING (manuscript_version_id IN (
+    SELECT s.manuscript_version_id FROM submissions s
+    WHERE s.organization_id = current_org_id()
+    AND s.manuscript_version_id IS NOT NULL
+    AND s.status != 'DRAFT'
+  ));--> statement-breakpoint
 
 -- ---------------------------------------------------------------------------
 -- 5. Add submitter-scoped SELECT policy on submissions
@@ -108,5 +110,10 @@ CREATE POLICY "submissions_submitter_read" ON "submissions" AS PERMISSIVE FOR SE
 -- ---------------------------------------------------------------------------
 -- 6. Drop submission_files table (replaced by files)
 -- ---------------------------------------------------------------------------
+-- No data migration needed: system has no production users. All existing
+-- submission_files rows are seed/test data only. If this migration were
+-- applied to a production system with real data, a backfill step would be
+-- needed here to create manuscripts/versions/files from submission_files
+-- rows and update submissions.manuscript_version_id accordingly.
 
 DROP TABLE "submission_files";

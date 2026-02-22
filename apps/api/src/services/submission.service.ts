@@ -1,6 +1,8 @@
 import {
   submissions,
   files,
+  manuscriptVersions,
+  manuscripts,
   submissionHistory,
   submissionPeriods,
   formDefinitions,
@@ -245,6 +247,31 @@ export const submissionService = {
 
       if (!form) throw new FormNotFoundError(resolvedFormDefinitionId);
       if (form.status !== 'PUBLISHED') throw new FormNotPublishedError();
+    }
+
+    // Validate manuscript version ownership if provided
+    if (input.manuscriptVersionId) {
+      const [version] = await tx
+        .select({
+          id: manuscriptVersions.id,
+          ownerId: manuscripts.ownerId,
+        })
+        .from(manuscriptVersions)
+        .innerJoin(
+          manuscripts,
+          eq(manuscriptVersions.manuscriptId, manuscripts.id),
+        )
+        .where(eq(manuscriptVersions.id, input.manuscriptVersionId))
+        .limit(1);
+
+      if (!version) {
+        throw new SubmissionNotFoundError(input.manuscriptVersionId);
+      }
+      if (version.ownerId !== submitterId) {
+        throw new ForbiddenError(
+          'Manuscript version does not belong to the submitter',
+        );
+      }
     }
 
     const [submission] = await tx

@@ -25,8 +25,7 @@ export interface UploadingFile {
 }
 
 interface UseFileUploadOptions {
-  submissionId: string;
-  manuscriptVersionId?: string | null;
+  manuscriptVersionId: string;
   onUploadComplete?: (uploadId: string) => void;
   onError?: (error: string) => void;
 }
@@ -44,7 +43,6 @@ function mapTusError(error: tus.DetailedError | Error): string {
 }
 
 export function useFileUpload({
-  submissionId,
   manuscriptVersionId,
   onUploadComplete,
   onError,
@@ -158,7 +156,7 @@ export function useFileUpload({
           metadata: {
             filename: file.name,
             filetype: file.type || "application/octet-stream",
-            "submission-id": submissionId,
+            "manuscript-version-id": manuscriptVersionId!,
           },
           headers,
           onProgress: (bytesUploaded, bytesTotal) => {
@@ -215,7 +213,6 @@ export function useFileUpload({
       }
     },
     [
-      submissionId,
       manuscriptVersionId,
       updateUpload,
       utils.files.listByManuscriptVersion,

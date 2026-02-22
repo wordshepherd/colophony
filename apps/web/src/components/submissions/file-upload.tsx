@@ -24,7 +24,6 @@ import {
 } from "@colophony/types";
 
 interface FileUploadProps {
-  submissionId: string;
   manuscriptVersionId?: string | null;
   disabled?: boolean;
 }
@@ -176,11 +175,7 @@ function ExistingFileItem({
   );
 }
 
-export function FileUpload({
-  submissionId,
-  manuscriptVersionId,
-  disabled,
-}: FileUploadProps) {
+export function FileUpload({ manuscriptVersionId, disabled }: FileUploadProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   // Track whether uploads are in "processing" state (waiting for post-finish
   // webhook to create the file record). Used by refetchInterval below.
@@ -190,8 +185,7 @@ export function FileUpload({
   const utils = trpc.useUtils();
 
   const { uploads, uploadFiles, removeUpload, cancelUpload } = useFileUpload({
-    submissionId,
-    manuscriptVersionId,
+    manuscriptVersionId: manuscriptVersionId!,
     onUploadComplete: () => {
       if (manuscriptVersionId) {
         utils.files.listByManuscriptVersion.invalidate({ manuscriptVersionId });

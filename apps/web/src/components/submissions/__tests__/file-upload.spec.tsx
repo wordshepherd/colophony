@@ -98,7 +98,7 @@ describe("FileUpload", () => {
   // --- Drop zone ---
   describe("drop zone", () => {
     it("shows 'Drop files here or click to upload' when enabled", () => {
-      render(<FileUpload submissionId="sub-1" disabled={false} />);
+      render(<FileUpload manuscriptVersionId="mv-1" disabled={false} />);
 
       expect(
         screen.getByText("Drop files here or click to upload"),
@@ -106,7 +106,7 @@ describe("FileUpload", () => {
     });
 
     it("shows 'Upload limit reached' when disabled", () => {
-      render(<FileUpload submissionId="sub-1" disabled />);
+      render(<FileUpload manuscriptVersionId="mv-1" disabled />);
 
       expect(screen.getByText("Upload limit reached")).toBeInTheDocument();
     });
@@ -124,7 +124,7 @@ describe("FileUpload", () => {
         }),
       ];
 
-      render(<FileUpload submissionId="sub-1" disabled={false} />);
+      render(<FileUpload manuscriptVersionId="mv-1" disabled={false} />);
 
       expect(screen.getByText("poem.pdf")).toBeInTheDocument();
       expect(screen.getByText("essay.docx")).toBeInTheDocument();
@@ -135,7 +135,7 @@ describe("FileUpload", () => {
     it("shows delete button when not disabled", () => {
       mockExistingFiles = [makeFileRecord()];
 
-      render(<FileUpload submissionId="sub-1" disabled={false} />);
+      render(<FileUpload manuscriptVersionId="mv-1" disabled={false} />);
 
       expect(screen.getByText("Uploaded files")).toBeInTheDocument();
       // ExistingFileItem renders a button when canDelete=true
@@ -146,7 +146,7 @@ describe("FileUpload", () => {
     it("hides delete button when disabled", () => {
       mockExistingFiles = [makeFileRecord()];
 
-      render(<FileUpload submissionId="sub-1" disabled />);
+      render(<FileUpload manuscriptVersionId="mv-1" disabled />);
 
       expect(screen.getByText("document.pdf")).toBeInTheDocument();
       // With canDelete=false, no buttons should appear in the existing files section
@@ -169,7 +169,7 @@ describe("FileUpload", () => {
         },
       ];
 
-      render(<FileUpload submissionId="sub-1" disabled={false} />);
+      render(<FileUpload manuscriptVersionId="mv-1" disabled={false} />);
 
       expect(screen.getByText("story.pdf")).toBeInTheDocument();
       expect(screen.getByText("42%")).toBeInTheDocument();
@@ -187,7 +187,7 @@ describe("FileUpload", () => {
         },
       ];
 
-      render(<FileUpload submissionId="sub-1" disabled={false} />);
+      render(<FileUpload manuscriptVersionId="mv-1" disabled={false} />);
 
       expect(screen.getByText("bad.exe")).toBeInTheDocument();
       expect(
@@ -201,7 +201,7 @@ describe("FileUpload", () => {
     it("shows scanning warning when files PENDING/SCANNING", () => {
       mockExistingFiles = [makeFileRecord({ scanStatus: "PENDING" })];
 
-      render(<FileUpload submissionId="sub-1" disabled={false} />);
+      render(<FileUpload manuscriptVersionId="mv-1" disabled={false} />);
 
       expect(screen.getByText(/still being scanned/)).toBeInTheDocument();
     });
@@ -209,7 +209,7 @@ describe("FileUpload", () => {
     it("shows infected warning when files INFECTED", () => {
       mockExistingFiles = [makeFileRecord({ scanStatus: "INFECTED" })];
 
-      render(<FileUpload submissionId="sub-1" disabled={false} />);
+      render(<FileUpload manuscriptVersionId="mv-1" disabled={false} />);
 
       expect(screen.getByText(/flagged as infected/)).toBeInTheDocument();
     });
