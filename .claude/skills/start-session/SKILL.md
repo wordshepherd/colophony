@@ -196,6 +196,15 @@ Run these commands in parallel:
 docker compose ps --format '{{.Name}}\t{{.Status}}' 2>/dev/null || echo "Docker Compose not running"
 ```
 
+Check for stale dev processes blocking ports 3000/4000:
+
+```bash
+lsof -ti :3000 2>/dev/null && echo "stale:3000" || true
+lsof -ti :4000 2>/dev/null && echo "stale:4000" || true
+```
+
+If stale processes are found on either port, report them in the briefing and suggest running `pnpm dev:clean` before starting dev servers.
+
 Also check if the Codex review tmux window is available (part of the `colophony` tmux session):
 
 ```bash
