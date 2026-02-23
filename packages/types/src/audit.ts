@@ -92,6 +92,11 @@ export const AuditActions = {
   // Guest user
   GUEST_USER_CREATED: "GUEST_USER_CREATED",
 
+  // GDPR
+  USER_GDPR_DELETED: "USER_GDPR_DELETED",
+  S3_CLEANUP_COMPLETED: "S3_CLEANUP_COMPLETED",
+  S3_CLEANUP_FAILED: "S3_CLEANUP_FAILED",
+
   // Audit access
   AUDIT_ACCESSED: "AUDIT_ACCESSED",
 } as const;
@@ -142,7 +147,8 @@ export interface UserAuditParams extends BaseAuditParams {
     | typeof AuditActions.USER_DEACTIVATED
     | typeof AuditActions.USER_REACTIVATED
     | typeof AuditActions.USER_REMOVED
-    | typeof AuditActions.USER_EMAIL_VERIFIED;
+    | typeof AuditActions.USER_EMAIL_VERIFIED
+    | typeof AuditActions.USER_GDPR_DELETED;
 }
 
 export interface OrgAuditParams extends BaseAuditParams {
@@ -254,6 +260,13 @@ export interface AuditAccessAuditParams extends BaseAuditParams {
   action: typeof AuditActions.AUDIT_ACCESSED;
 }
 
+export interface SystemAuditParams extends BaseAuditParams {
+  resource: typeof AuditResources.FILE;
+  action:
+    | typeof AuditActions.S3_CLEANUP_COMPLETED
+    | typeof AuditActions.S3_CLEANUP_FAILED;
+}
+
 /** Union of all resource-specific param types. */
 export type AuditLogParams =
   | UserAuditParams
@@ -267,7 +280,8 @@ export type AuditLogParams =
   | ApiKeyAuditParams
   | PaymentAuditParams
   | EmbedTokenAuditParams
-  | AuditAccessAuditParams;
+  | AuditAccessAuditParams
+  | SystemAuditParams;
 
 // ---------------------------------------------------------------------------
 // Query/response schemas for audit endpoints

@@ -161,6 +161,7 @@ export const FormDefinitionType = builder
         description: 'ID of the form this was duplicated from.',
       }),
       createdBy: t.exposeString('createdBy', {
+        nullable: true,
         description: 'ID of the user who created this form.',
       }),
       publishedAt: t.expose('publishedAt', {

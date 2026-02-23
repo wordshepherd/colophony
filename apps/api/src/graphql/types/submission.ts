@@ -82,7 +82,9 @@ export const SubmissionType = builder
         nullable: true,
         description: 'The user who created this submission.',
         resolve: (submission, _args, ctx) =>
-          ctx.loaders.user.load(submission.submitterId),
+          submission.submitterId
+            ? ctx.loaders.user.load(submission.submitterId)
+            : null,
       }),
     }),
   });
