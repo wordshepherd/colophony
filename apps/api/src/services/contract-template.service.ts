@@ -1,5 +1,11 @@
-import { contractTemplates, eq, and, type DrizzleDb } from '@colophony/db';
-import { desc, ilike, count } from 'drizzle-orm';
+import {
+  contractTemplates,
+  eq,
+  and,
+  desc,
+  type DrizzleDb,
+} from '@colophony/db';
+import { ilike, count } from 'drizzle-orm';
 import type {
   CreateContractTemplateInput,
   UpdateContractTemplateInput,

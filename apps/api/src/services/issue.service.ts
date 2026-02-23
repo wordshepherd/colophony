@@ -4,9 +4,10 @@ import {
   issueItems,
   eq,
   and,
+  desc,
   type DrizzleDb,
 } from '@colophony/db';
-import { desc, ilike, count } from 'drizzle-orm';
+import { ilike, count } from 'drizzle-orm';
 import type {
   CreateIssueInput,
   UpdateIssueInput,
@@ -236,6 +237,26 @@ export const issueService = {
   // -------------------------------------------------------------------------
 
   async addItem(tx: DrizzleDb, issueId: string, input: AddIssueItemInput) {
+    // Validate section belongs to this issue (if provided)
+    if (input.issueSectionId) {
+      const [section] = await tx
+        .select({ id: issueSections.id })
+        .from(issueSections)
+        .where(
+          and(
+            eq(issueSections.id, input.issueSectionId),
+            eq(issueSections.issueId, issueId),
+          ),
+        )
+        .limit(1);
+
+      if (!section) {
+        throw new IssueNotFoundError(
+          `Section "${input.issueSectionId}" does not belong to issue "${issueId}"`,
+        );
+      }
+    }
+
     const [row] = await tx
       .insert(issueItems)
       .values({

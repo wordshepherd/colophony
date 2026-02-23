@@ -1,5 +1,5 @@
-import { contracts, eq, and, type DrizzleDb } from '@colophony/db';
-import { desc, count } from 'drizzle-orm';
+import { contracts, eq, and, desc, type DrizzleDb } from '@colophony/db';
+import { count } from 'drizzle-orm';
 import type {
   GenerateContractInput,
   ListContractsInput,
@@ -188,13 +188,20 @@ export const contractService = {
 
   async sendWithAudit(ctx: ServiceContext, id: string) {
     assertEditorOrAdmin(ctx.actor.role);
+    const contract = await contractService.getById(ctx.tx, id);
+    if (!contract) throw new ContractNotFoundError(id);
+    if (contract.status !== 'DRAFT') {
+      throw new Error(
+        `Contract "${id}" has status "${contract.status}" — only DRAFT contracts can be sent`,
+      );
+    }
     const updated = await contractService.updateStatus(ctx.tx, id, 'SENT');
     if (!updated) throw new ContractNotFoundError(id);
     await ctx.audit({
       action: AuditActions.CONTRACT_SENT,
       resource: AuditResources.CONTRACT,
       resourceId: id,
-      oldValue: { status: 'DRAFT' },
+      oldValue: { status: contract.status },
       newValue: { status: 'SENT' },
     });
     return updated;

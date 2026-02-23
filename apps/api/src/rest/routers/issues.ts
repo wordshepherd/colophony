@@ -15,7 +15,7 @@ import {
 } from '../../services/issue.service.js';
 import { toServiceContext } from '../../services/context.js';
 import { mapServiceError } from '../error-mapper.js';
-import { orgProcedure, requireScopes } from '../context.js';
+import { orgProcedure, adminProcedure, requireScopes } from '../context.js';
 
 // ---------------------------------------------------------------------------
 // Query schemas
@@ -95,7 +95,7 @@ const getSections = orgProcedure
     return issueService.getSections(context.dbTx, input.id);
   });
 
-const create = orgProcedure
+const create = adminProcedure
   .use(requireScopes('issues:write'))
   .route({
     method: 'POST',
@@ -118,7 +118,7 @@ const create = orgProcedure
     }
   });
 
-const update = orgProcedure
+const update = adminProcedure
   .use(requireScopes('issues:write'))
   .route({
     method: 'PATCH',
@@ -142,7 +142,7 @@ const update = orgProcedure
     }
   });
 
-const publish = orgProcedure
+const publish = adminProcedure
   .use(requireScopes('issues:write'))
   .route({
     method: 'POST',
@@ -164,7 +164,7 @@ const publish = orgProcedure
     }
   });
 
-const archive = orgProcedure
+const archive = adminProcedure
   .use(requireScopes('issues:write'))
   .route({
     method: 'POST',
@@ -186,7 +186,7 @@ const archive = orgProcedure
     }
   });
 
-const addItem = orgProcedure
+const addItem = adminProcedure
   .use(requireScopes('issues:write'))
   .route({
     method: 'POST',
@@ -211,7 +211,7 @@ const addItem = orgProcedure
     }
   });
 
-const removeItem = orgProcedure
+const removeItem = adminProcedure
   .use(requireScopes('issues:write'))
   .route({
     method: 'DELETE',
@@ -234,7 +234,7 @@ const removeItem = orgProcedure
     }
   });
 
-const reorderItems = orgProcedure
+const reorderItems = adminProcedure
   .use(requireScopes('issues:write'))
   .route({
     method: 'PUT',
@@ -250,7 +250,7 @@ const reorderItems = orgProcedure
     return issueService.reorderItems(context.dbTx, id, data);
   });
 
-const addSection = orgProcedure
+const addSection = adminProcedure
   .use(requireScopes('issues:write'))
   .route({
     method: 'POST',
@@ -267,7 +267,7 @@ const addSection = orgProcedure
     return issueService.addSection(context.dbTx, id, data);
   });
 
-const removeSection = orgProcedure
+const removeSection = adminProcedure
   .use(requireScopes('issues:write'))
   .route({
     method: 'DELETE',

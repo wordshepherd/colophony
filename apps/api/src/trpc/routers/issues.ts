@@ -167,7 +167,7 @@ export const issuesRouter = createRouter({
     }),
 
   /** Reorder items in an issue. */
-  reorderItems: orgProcedure
+  reorderItems: adminProcedure
     .use(requireScopes('issues:write'))
     .input(idParamSchema.merge(reorderItemsSchema))
     .output(z.array(issueItemSchema))
@@ -177,7 +177,7 @@ export const issuesRouter = createRouter({
     }),
 
   /** Add a section to an issue. */
-  addSection: orgProcedure
+  addSection: adminProcedure
     .use(requireScopes('issues:write'))
     .input(idParamSchema.merge(addIssueSectionSchema))
     .output(issueSectionSchema)
@@ -187,7 +187,7 @@ export const issuesRouter = createRouter({
     }),
 
   /** Remove a section from an issue. */
-  removeSection: orgProcedure
+  removeSection: adminProcedure
     .use(requireScopes('issues:write'))
     .input(z.object({ id: z.string().uuid(), sectionId: z.string().uuid() }))
     .output(issueSectionSchema.nullable())

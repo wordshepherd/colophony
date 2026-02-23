@@ -8,7 +8,7 @@ import {
   idParamSchema,
 } from '@colophony/types';
 import { builder } from '../builder.js';
-import { requireOrgContext, requireScopes } from '../guards.js';
+import { requireOrgContext, requireAdmin, requireScopes } from '../guards.js';
 import { toServiceContext } from '../../services/context.js';
 import {
   issueService,
@@ -168,7 +168,7 @@ builder.mutationFields((t) => ({
       }),
     },
     resolve: async (_root, args, ctx) => {
-      const orgCtx = requireOrgContext(ctx);
+      const orgCtx = requireAdmin(ctx);
       await requireScopes(ctx, 'issues:write');
       const input = createIssueSchema.parse({
         publicationId: args.publicationId,
@@ -201,7 +201,7 @@ builder.mutationFields((t) => ({
       }),
     },
     resolve: async (_root, args, ctx) => {
-      const orgCtx = requireOrgContext(ctx);
+      const orgCtx = requireAdmin(ctx);
       await requireScopes(ctx, 'issues:write');
       const { id } = idParamSchema.parse({ id: args.id });
       const data = updateIssueSchema.parse({
@@ -228,7 +228,7 @@ builder.mutationFields((t) => ({
       id: t.arg.string({ required: true, description: 'Issue ID.' }),
     },
     resolve: async (_root, args, ctx) => {
-      const orgCtx = requireOrgContext(ctx);
+      const orgCtx = requireAdmin(ctx);
       await requireScopes(ctx, 'issues:write');
       const { id } = idParamSchema.parse({ id: args.id });
       try {
@@ -250,7 +250,7 @@ builder.mutationFields((t) => ({
       id: t.arg.string({ required: true, description: 'Issue ID.' }),
     },
     resolve: async (_root, args, ctx) => {
-      const orgCtx = requireOrgContext(ctx);
+      const orgCtx = requireAdmin(ctx);
       await requireScopes(ctx, 'issues:write');
       const { id } = idParamSchema.parse({ id: args.id });
       try {
@@ -284,7 +284,7 @@ builder.mutationFields((t) => ({
       }),
     },
     resolve: async (_root, args, ctx) => {
-      const orgCtx = requireOrgContext(ctx);
+      const orgCtx = requireAdmin(ctx);
       await requireScopes(ctx, 'issues:write');
       const { id } = idParamSchema.parse({ id: args.id });
       const data = addIssueItemSchema.parse({
@@ -320,7 +320,7 @@ builder.mutationFields((t) => ({
       }),
     },
     resolve: async (_root, args, ctx) => {
-      const orgCtx = requireOrgContext(ctx);
+      const orgCtx = requireAdmin(ctx);
       await requireScopes(ctx, 'issues:write');
       const { id } = idParamSchema.parse({ id: args.id });
       const data = addIssueSectionSchema.parse({

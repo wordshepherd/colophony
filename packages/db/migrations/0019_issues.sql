@@ -159,7 +159,7 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON "issue_items" TO app_user;
 --> statement-breakpoint
 
 -- updatedAt trigger (issues only — sections and items don't have updatedAt)
-CREATE TRIGGER "issues_updated_at"
+CREATE TRIGGER "trg_issues_set_updated_at"
   BEFORE UPDATE ON "issues"
   FOR EACH ROW
-  EXECUTE FUNCTION update_updated_at();
+  EXECUTE FUNCTION set_updated_at();

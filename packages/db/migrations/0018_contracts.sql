@@ -118,12 +118,12 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON "contracts" TO app_user;
 --> statement-breakpoint
 
 -- updatedAt trigger
-CREATE TRIGGER "contract_templates_updated_at"
+CREATE TRIGGER "trg_contract_templates_set_updated_at"
   BEFORE UPDATE ON "contract_templates"
   FOR EACH ROW
-  EXECUTE FUNCTION update_updated_at();
+  EXECUTE FUNCTION set_updated_at();
 
-CREATE TRIGGER "contracts_updated_at"
+CREATE TRIGGER "trg_contracts_set_updated_at"
   BEFORE UPDATE ON "contracts"
   FOR EACH ROW
-  EXECUTE FUNCTION update_updated_at();
+  EXECUTE FUNCTION set_updated_at();
