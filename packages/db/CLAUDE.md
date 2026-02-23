@@ -11,9 +11,9 @@
 | Type exports   | `src/types.ts`                           |
 | Migrations     | `migrations/`                            |
 
-### Schema Files (13 domain files + barrel)
+### Schema Files (18 domain files + barrel)
 
-`api-keys.ts`, `audit.ts`, `compliance.ts`, `enums.ts`, `manuscripts.ts`, `members.ts`, `messaging.ts`, `organizations.ts`, `payments.ts`, `relations.ts`, `submissions.ts`, `users.ts`, `webhooks.ts`, `index.ts`
+`api-keys.ts`, `audit.ts`, `cms.ts`, `compliance.ts`, `contracts.ts`, `enums.ts`, `issues.ts`, `manuscripts.ts`, `members.ts`, `messaging.ts`, `organizations.ts`, `payments.ts`, `pipeline.ts`, `publications.ts`, `relations.ts`, `submissions.ts`, `users.ts`, `webhooks.ts`, `index.ts`
 
 ---
 
