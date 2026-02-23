@@ -15,6 +15,17 @@ let worker: Worker<OutboxPollerJobData> | null = null;
  * poller instances overlap.
  */
 async function processOutboxEvents(): Promise<number> {
+  // Recover stale claims: rows claimed (processedAt = epoch) but not completed
+  // within 5 minutes are likely from a crashed worker. Reset them for retry.
+  const staleThreshold = new Date(Date.now() - 5 * 60 * 1000);
+  const claimSentinel = new Date(0);
+  await db
+    .update(outboxEvents)
+    .set({ processedAt: null, retryCount: sql`${outboxEvents.retryCount} + 1` })
+    .where(
+      sql`${outboxEvents.processedAt} = ${claimSentinel} AND ${outboxEvents.createdAt} < ${staleThreshold}`,
+    );
+
   // Fetch up to 50 unprocessed events, oldest first
   const events = await db
     .select()

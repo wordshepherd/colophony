@@ -179,7 +179,7 @@ function buildIssueHtml(issue: CmsIssuePayload): string {
       parts.push(`<h2>${currentSection}</h2>`);
     }
     parts.push(`<h3>${item.title}</h3>`);
-    parts.push(`<p><em>by ${item.author}</em></p>`);
+    if (item.author) parts.push(`<p><em>by ${item.author}</em></p>`);
     parts.push(item.content);
     parts.push('<hr />');
   }

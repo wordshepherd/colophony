@@ -8,6 +8,7 @@ import type {
 import { AuditActions, AuditResources } from '@colophony/types';
 import type { ServiceContext } from './types.js';
 import { assertEditorOrAdmin } from './errors.js';
+import { enqueueOutboxEvent } from './outbox.js';
 import {
   contractTemplateService,
   ContractTemplateNotFoundError,
@@ -151,6 +152,14 @@ export const contractService = {
         contractTemplateId: input.contractTemplateId,
       },
     });
+
+    // Enqueue outbox event to trigger the Documenso contract workflow
+    await enqueueOutboxEvent(ctx.tx, 'slate/contract.generated', {
+      orgId: ctx.actor.orgId,
+      contractId: contract.id,
+      pipelineItemId: input.pipelineItemId,
+    });
+
     return contract;
   },
 

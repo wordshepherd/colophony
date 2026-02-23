@@ -24,6 +24,7 @@ import {
 } from '@colophony/types';
 import type { ServiceContext } from './types.js';
 import { assertEditorOrAdmin } from './errors.js';
+import { enqueueOutboxEvent } from './outbox.js';
 
 // ---------------------------------------------------------------------------
 // Error classes
@@ -270,6 +271,30 @@ export const pipelineService = {
       oldValue: { stage: previousStage },
       newValue: { stage: input.stage },
     });
+
+    // Emit pipeline events consumed by Inngest workflows
+    const eventMap: Partial<Record<PipelineStage, string>> = {
+      AUTHOR_REVIEW: 'slate/pipeline.copyedit-completed',
+      READY_TO_PUBLISH: 'slate/pipeline.proofread-completed',
+    };
+    // Author review completion emits with approved flag based on direction
+    if (previousStage === 'AUTHOR_REVIEW') {
+      const approved = input.stage === 'PROOFREAD';
+      await enqueueOutboxEvent(
+        ctx.tx,
+        'slate/pipeline.author-review-completed',
+        { orgId: ctx.actor.orgId, pipelineItemId: id, approved },
+      );
+    } else {
+      const eventName = eventMap[input.stage];
+      if (eventName) {
+        await enqueueOutboxEvent(ctx.tx, eventName, {
+          orgId: ctx.actor.orgId,
+          pipelineItemId: id,
+        });
+      }
+    }
+
     return updated;
   },
 
@@ -305,6 +330,14 @@ export const pipelineService = {
       resourceId: id,
       newValue: { assignedCopyeditorId: input.userId },
     });
+
+    // Emit event for Inngest pipeline workflow
+    await enqueueOutboxEvent(ctx.tx, 'slate/pipeline.copyeditor-assigned', {
+      orgId: ctx.actor.orgId,
+      pipelineItemId: id,
+      copyeditorId: input.userId,
+    });
+
     return updated;
   },
 

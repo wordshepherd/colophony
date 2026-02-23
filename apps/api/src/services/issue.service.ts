@@ -20,6 +20,7 @@ import type {
 import { AuditActions, AuditResources } from '@colophony/types';
 import type { ServiceContext } from './types.js';
 import { assertEditorOrAdmin } from './errors.js';
+import { enqueueOutboxEvent } from './outbox.js';
 
 // ---------------------------------------------------------------------------
 // Error classes
@@ -213,6 +214,14 @@ export const issueService = {
       oldValue: { status: issue.status },
       newValue: { status: 'PUBLISHED' },
     });
+
+    // Enqueue outbox event to trigger CMS publishing
+    await enqueueOutboxEvent(ctx.tx, 'slate/issue.published', {
+      orgId: ctx.actor.orgId,
+      issueId: id,
+      publicationId: updated.publicationId,
+    });
+
     return updated;
   },
 

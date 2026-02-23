@@ -27,7 +27,7 @@ export interface CmsIssuePayload {
 export interface CmsPiecePayload {
   title: string;
   content: string;
-  author: string;
+  author: string | null;
   sortOrder: number;
   sectionTitle?: string | null;
 }
