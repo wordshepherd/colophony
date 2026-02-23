@@ -15,6 +15,7 @@ import { retentionPolicies, userConsents } from "./compliance";
 import { apiKeys } from "./api-keys";
 import { publications } from "./publications";
 import { pipelineItems, pipelineHistory, pipelineComments } from "./pipeline";
+import { contractTemplates, contracts } from "./contracts";
 
 // --- organizations ---
 
@@ -30,6 +31,8 @@ export const organizationsRelations = relations(organizations, ({ many }) => ({
   apiKeys: many(apiKeys),
   publications: many(publications),
   pipelineItems: many(pipelineItems),
+  contractTemplates: many(contractTemplates),
+  contracts: many(contracts),
 }));
 
 // --- users ---
@@ -314,6 +317,7 @@ export const pipelineItemsRelations = relations(
     }),
     history: many(pipelineHistory),
     comments: many(pipelineComments),
+    contracts: many(contracts),
   }),
 );
 
@@ -344,3 +348,33 @@ export const pipelineCommentsRelations = relations(
     }),
   }),
 );
+
+// --- contract_templates ---
+
+export const contractTemplatesRelations = relations(
+  contractTemplates,
+  ({ one, many }) => ({
+    organization: one(organizations, {
+      fields: [contractTemplates.organizationId],
+      references: [organizations.id],
+    }),
+    contracts: many(contracts),
+  }),
+);
+
+// --- contracts ---
+
+export const contractsRelations = relations(contracts, ({ one }) => ({
+  organization: one(organizations, {
+    fields: [contracts.organizationId],
+    references: [organizations.id],
+  }),
+  pipelineItem: one(pipelineItems, {
+    fields: [contracts.pipelineItemId],
+    references: [pipelineItems.id],
+  }),
+  contractTemplate: one(contractTemplates, {
+    fields: [contracts.contractTemplateId],
+    references: [contractTemplates.id],
+  }),
+}));

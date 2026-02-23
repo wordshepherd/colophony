@@ -13,3 +13,4 @@ export * from "./api-key";
 export * from "./embed";
 export * from "./publication";
 export * from "./pipeline";
+export * from "./contract";

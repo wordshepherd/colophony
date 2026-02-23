@@ -13,6 +13,8 @@ import { embedTokensRouter } from './routers/embed-tokens.js';
 import { gdprRouter } from './routers/gdpr.js';
 import { publicationsRouter } from './routers/publications.js';
 import { pipelineRouter } from './routers/pipeline.js';
+import { contractTemplatesRouter } from './routers/contract-templates.js';
+import { contractsRouter } from './routers/contracts.js';
 
 // Re-export procedure builders for convenience
 export {
@@ -47,6 +49,8 @@ export const appRouter = t.router({
   embedTokens: embedTokensRouter,
   publications: publicationsRouter,
   pipeline: pipelineRouter,
+  contractTemplates: contractTemplatesRouter,
+  contracts: contractsRouter,
   retention: t.router({}),
 });
 

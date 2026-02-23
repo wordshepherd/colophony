@@ -23,6 +23,11 @@ export {
   PipelineStageEnum,
 } from './pipeline.js';
 export {
+  ContractTemplateType,
+  ContractType,
+  ContractStatusEnum,
+} from './contract.js';
+export {
   SubmissionStatusChangePayload,
   CreateOrganizationPayload,
   CreateApiKeyPayload,

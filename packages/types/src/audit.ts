@@ -102,6 +102,16 @@ export const AuditActions = {
   PUBLICATION_UPDATED: "PUBLICATION_UPDATED",
   PUBLICATION_ARCHIVED: "PUBLICATION_ARCHIVED",
 
+  // Contract template lifecycle
+  CONTRACT_TEMPLATE_CREATED: "CONTRACT_TEMPLATE_CREATED",
+  CONTRACT_TEMPLATE_UPDATED: "CONTRACT_TEMPLATE_UPDATED",
+  CONTRACT_TEMPLATE_DELETED: "CONTRACT_TEMPLATE_DELETED",
+
+  // Contract lifecycle
+  CONTRACT_GENERATED: "CONTRACT_GENERATED",
+  CONTRACT_SENT: "CONTRACT_SENT",
+  CONTRACT_VOIDED: "CONTRACT_VOIDED",
+
   // Pipeline lifecycle
   PIPELINE_ITEM_CREATED: "PIPELINE_ITEM_CREATED",
   PIPELINE_STAGE_CHANGED: "PIPELINE_STAGE_CHANGED",
@@ -130,6 +140,8 @@ export const AuditResources = {
   EMBED_TOKEN: "embed_token",
   PUBLICATION: "publication",
   PIPELINE_ITEM: "pipeline_item",
+  CONTRACT_TEMPLATE: "contract_template",
+  CONTRACT: "contract",
   AUDIT: "audit",
 } as const;
 
@@ -287,6 +299,22 @@ export interface PipelineItemAuditParams extends BaseAuditParams {
     | typeof AuditActions.PIPELINE_COMMENT_ADDED;
 }
 
+export interface ContractTemplateAuditParams extends BaseAuditParams {
+  resource: typeof AuditResources.CONTRACT_TEMPLATE;
+  action:
+    | typeof AuditActions.CONTRACT_TEMPLATE_CREATED
+    | typeof AuditActions.CONTRACT_TEMPLATE_UPDATED
+    | typeof AuditActions.CONTRACT_TEMPLATE_DELETED;
+}
+
+export interface ContractAuditParams extends BaseAuditParams {
+  resource: typeof AuditResources.CONTRACT;
+  action:
+    | typeof AuditActions.CONTRACT_GENERATED
+    | typeof AuditActions.CONTRACT_SENT
+    | typeof AuditActions.CONTRACT_VOIDED;
+}
+
 export interface AuditAccessAuditParams extends BaseAuditParams {
   resource: typeof AuditResources.AUDIT;
   action: typeof AuditActions.AUDIT_ACCESSED;
@@ -314,6 +342,8 @@ export type AuditLogParams =
   | EmbedTokenAuditParams
   | PublicationAuditParams
   | PipelineItemAuditParams
+  | ContractTemplateAuditParams
+  | ContractAuditParams
   | AuditAccessAuditParams
   | SystemAuditParams;
 

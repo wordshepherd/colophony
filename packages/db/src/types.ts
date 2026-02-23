@@ -24,6 +24,7 @@ import type {
   pipelineHistory,
   pipelineComments,
 } from "./schema/pipeline";
+import type { contractTemplates, contracts } from "./schema/contracts";
 
 // --- Select types (what you get back from queries) ---
 
@@ -51,6 +52,8 @@ export type Publication = InferSelectModel<typeof publications>;
 export type PipelineItem = InferSelectModel<typeof pipelineItems>;
 export type PipelineHistoryEntry = InferSelectModel<typeof pipelineHistory>;
 export type PipelineComment = InferSelectModel<typeof pipelineComments>;
+export type ContractTemplate = InferSelectModel<typeof contractTemplates>;
+export type Contract = InferSelectModel<typeof contracts>;
 
 /** @deprecated Use File instead — submission_files has been replaced by the files table */
 export type SubmissionFile = File;
@@ -89,6 +92,8 @@ export type NewPublication = InferInsertModel<typeof publications>;
 export type NewPipelineItem = InferInsertModel<typeof pipelineItems>;
 export type NewPipelineHistoryEntry = InferInsertModel<typeof pipelineHistory>;
 export type NewPipelineComment = InferInsertModel<typeof pipelineComments>;
+export type NewContractTemplate = InferInsertModel<typeof contractTemplates>;
+export type NewContract = InferInsertModel<typeof contracts>;
 
 /** @deprecated Use NewFile instead */
 export type NewSubmissionFile = NewFile;

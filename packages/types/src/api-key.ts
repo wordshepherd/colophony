@@ -27,6 +27,8 @@ export const apiKeyScopeSchema = z
     "publications:write",
     "pipeline:read",
     "pipeline:write",
+    "contracts:read",
+    "contracts:write",
     "audit:read",
   ])
   .describe("Permission scope for the API key");
