@@ -86,6 +86,13 @@ export function FormEditor({ formId }: FormEditorProps) {
       if (!over || active.id === over.id || !form) return;
       if (form.status !== "DRAFT") return;
 
+      // Cancel any pending debounced arrow-button reorder to prevent it
+      // from overwriting this drag-drop result
+      if (reorderTimerRef.current) {
+        clearTimeout(reorderTimerRef.current);
+        reorderTimerRef.current = null;
+      }
+
       const hasPages = form.pages.length > 0;
 
       if (hasPages && activePageId !== null) {
@@ -216,7 +223,15 @@ export function FormEditor({ formId }: FormEditorProps) {
       // Debounce the API call
       if (reorderTimerRef.current) clearTimeout(reorderTimerRef.current);
       reorderTimerRef.current = setTimeout(() => {
-        reorderFields.mutate({ id: formId, fieldIds: mergedFieldIds });
+        reorderFields.mutate(
+          { id: formId, fieldIds: mergedFieldIds },
+          {
+            onError: () => {
+              // Rollback optimistic update on failure
+              utils.forms.getById.invalidate({ id: formId });
+            },
+          },
+        );
       }, 300);
     },
     [form, formId, activePageId, reorderFields, utils],
