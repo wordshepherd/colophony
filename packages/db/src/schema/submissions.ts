@@ -79,9 +79,9 @@ export const submissions = pgTable(
     organizationId: uuid("organization_id")
       .notNull()
       .references(() => organizations.id, { onDelete: "cascade" }),
-    submitterId: uuid("submitter_id")
-      .notNull()
-      .references(() => users.id, { onDelete: "restrict" }),
+    submitterId: uuid("submitter_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
     submissionPeriodId: uuid("submission_period_id").references(
       () => submissionPeriods.id,
       { onDelete: "set null" },

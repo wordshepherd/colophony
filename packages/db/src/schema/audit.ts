@@ -12,17 +12,17 @@ import { dsarTypeEnum, dsarStatusEnum } from "./enums";
 import { organizations } from "./organizations";
 import { users } from "./users";
 
-// --- audit_events (RLS — org-scoped, RESTRICT on FK) ---
+// --- audit_events (RLS — org-scoped, SET NULL on FK for GDPR deletion) ---
 
 export const auditEvents = pgTable(
   "audit_events",
   {
     id: uuid("id").defaultRandom().primaryKey(),
     organizationId: uuid("organization_id").references(() => organizations.id, {
-      onDelete: "restrict",
+      onDelete: "set null",
     }),
     actorId: uuid("actor_id").references(() => users.id, {
-      onDelete: "restrict",
+      onDelete: "set null",
     }),
     action: varchar("action", { length: 255 }).notNull(),
     resource: varchar("resource", { length: 255 }).notNull(),
@@ -65,7 +65,7 @@ export const dsarRequests = pgTable(
     id: uuid("id").defaultRandom().primaryKey(),
     userId: uuid("user_id")
       .notNull()
-      .references(() => users.id, { onDelete: "restrict" }),
+      .references(() => users.id, { onDelete: "cascade" }),
     type: dsarTypeEnum("type").notNull(),
     status: dsarStatusEnum("status").notNull().default("PENDING"),
     requestedAt: timestamp("requested_at", { withTimezone: true })
