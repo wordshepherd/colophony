@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { trpc } from "@/lib/trpc";
 import { useOrganization } from "@/hooks/use-organization";
 import { MemberList } from "./member-list";
@@ -25,10 +26,19 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
+import { Loader2, Trash2 } from "lucide-react";
 
 const nameFormSchema = z.object({
   name: z.string().min(1, "Name is required").max(255),
@@ -39,6 +49,9 @@ type NameFormData = z.infer<typeof nameFormSchema>;
 export function OrgSettings() {
   const { currentOrg, isAdmin } = useOrganization();
   const utils = trpc.useUtils();
+  const router = useRouter();
+  const [showDeleteOrgDialog, setShowDeleteOrgDialog] = useState(false);
+  const [deleteOrgConfirmation, setDeleteOrgConfirmation] = useState("");
 
   const { data: org, isPending: isLoading } = trpc.organizations.get.useQuery(
     undefined,
@@ -66,6 +79,18 @@ export function OrgSettings() {
     },
     onError: (err) => {
       toast.error(err.message);
+    },
+  });
+
+  const deleteOrgMutation = trpc.organizations.delete.useMutation({
+    onSuccess: () => {
+      toast.success("Organization deleted successfully");
+      utils.organizations.list.invalidate();
+      utils.users.me.invalidate();
+      router.push("/");
+    },
+    onError: (err) => {
+      toast.error(err.message || "Failed to delete organization");
     },
   });
 
@@ -193,6 +218,109 @@ export function OrgSettings() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Danger Zone — admin only */}
+      {isAdmin && (
+        <>
+          <Separator />
+          <Card className="border-destructive">
+            <CardHeader>
+              <CardTitle className="text-destructive">Danger Zone</CardTitle>
+              <CardDescription>
+                Irreversible actions that permanently affect this organization.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div>
+                <h4 className="text-sm font-medium mb-2">
+                  Delete Organization
+                </h4>
+                <p className="text-sm text-muted-foreground mb-3">
+                  Permanently delete this organization and all its data
+                  including submissions, forms, and API keys. This action cannot
+                  be undone.
+                </p>
+                <Button
+                  variant="destructive"
+                  onClick={() => setShowDeleteOrgDialog(true)}
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Delete Organization
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Dialog
+            open={showDeleteOrgDialog}
+            onOpenChange={(open) => {
+              setShowDeleteOrgDialog(open);
+              if (!open) setDeleteOrgConfirmation("");
+            }}
+          >
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Delete organization?</DialogTitle>
+                <DialogDescription>
+                  This action cannot be undone. This will permanently delete{" "}
+                  <span className="font-semibold">
+                    {org?.name ?? currentOrg.name}
+                  </span>{" "}
+                  and all associated data including:
+                </DialogDescription>
+              </DialogHeader>
+              <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1 my-4">
+                <li>All submissions and submission periods</li>
+                <li>All forms and form definitions</li>
+                <li>All API keys and embed tokens</li>
+                <li>All member associations</li>
+                <li>Audit history (anonymized)</li>
+              </ul>
+              <div className="space-y-2">
+                <p className="text-sm font-medium">
+                  Type the organization name{" "}
+                  <span className="font-mono text-destructive">
+                    {org?.name ?? currentOrg.name}
+                  </span>{" "}
+                  to confirm:
+                </p>
+                <Input
+                  value={deleteOrgConfirmation}
+                  onChange={(e) => setDeleteOrgConfirmation(e.target.value)}
+                  placeholder={org?.name ?? currentOrg.name}
+                  autoComplete="off"
+                />
+              </div>
+              <DialogFooter>
+                <Button
+                  variant="outline"
+                  onClick={() => setShowDeleteOrgDialog(false)}
+                  disabled={deleteOrgMutation.isPending}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  variant="destructive"
+                  disabled={
+                    deleteOrgConfirmation !== (org?.name ?? currentOrg.name) ||
+                    deleteOrgMutation.isPending
+                  }
+                  onClick={() => deleteOrgMutation.mutate()}
+                >
+                  {deleteOrgMutation.isPending ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Deleting...
+                    </>
+                  ) : (
+                    "Yes, delete this organization"
+                  )}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </>
+      )}
     </div>
   );
 }
