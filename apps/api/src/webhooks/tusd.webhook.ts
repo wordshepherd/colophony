@@ -20,6 +20,7 @@ import {
 import type { TusdPreCreateResponse } from '@colophony/types';
 import type { Env } from '../config/env.js';
 import { apiKeyService } from '../services/api-key.service.js';
+import { embedTokenService } from '../services/embed-token.service.js';
 import { fileService } from '../services/file.service.js';
 import { auditService } from '../services/audit.service.js';
 import { enqueueFileScan } from '../queues/file-scan.queue.js';
@@ -221,6 +222,13 @@ export async function registerTusdWebhooks(
     // Extract auth from forwarded headers
     const authHeader = getForwardedHeader(forwardedHeaders, 'Authorization');
     const apiKeyHeader = getForwardedHeader(forwardedHeaders, 'X-Api-Key');
+    const embedTokenHeader = getForwardedHeader(
+      forwardedHeaders,
+      'X-Embed-Token',
+    );
+
+    // Extract guest-user-id from metadata (used by embed token auth)
+    const guestUserId = metadata['guest-user-id'];
 
     // Validate token and resolve local user UUID
     // Note: orgId is NOT required for manuscript uploads (user-scoped)
@@ -281,6 +289,28 @@ export async function registerTusdWebhooks(
       userId = creator.id;
       // Fire-and-forget: update lastUsedAt (mirrors auth.ts)
       void apiKeyService.touchLastUsed(apiKey.id);
+    } else if (embedTokenHeader) {
+      // Embed token auth (guest form submitters)
+      const tokenResult = await embedTokenService.verifyToken(embedTokenHeader);
+      if (!tokenResult) {
+        await reply.status(200).send(rejectUpload(401, 'invalid_embed_token'));
+        return;
+      }
+      if (!tokenResult.active) {
+        await reply.status(200).send(rejectUpload(401, 'embed_token_revoked'));
+        return;
+      }
+      if (tokenResult.expiresAt && tokenResult.expiresAt < new Date()) {
+        await reply.status(200).send(rejectUpload(401, 'embed_token_expired'));
+        return;
+      }
+      if (!guestUserId) {
+        await reply
+          .status(200)
+          .send(rejectUpload(400, 'missing_guest_user_id'));
+        return;
+      }
+      userId = guestUserId;
     } else if (env.NODE_ENV === 'test') {
       // Test mode: extract from forwarded test headers
       const testUserId = getForwardedHeader(forwardedHeaders, 'X-Test-User-Id');
@@ -380,8 +410,15 @@ export async function registerTusdWebhooks(
 
     const authHeader = getForwardedHeader(forwardedHeaders, 'Authorization');
     const apiKeyHeader = getForwardedHeader(forwardedHeaders, 'X-Api-Key');
+    const embedTokenHeader = getForwardedHeader(
+      forwardedHeaders,
+      'X-Embed-Token',
+    );
     // orgId is optional — manuscript uploads are user-scoped, not org-scoped
     const orgId = getForwardedHeader(forwardedHeaders, 'X-Organization-Id');
+
+    // Extract guest-user-id from metadata (used by embed token auth)
+    const postFinishGuestUserId = metadata['guest-user-id'];
 
     // Resolve userId from forwarded auth — fail closed if auth is invalid
     let userId: string;
@@ -429,6 +466,22 @@ export async function registerTusdWebhooks(
       userId = creator.id;
       // Fire-and-forget: update lastUsedAt (mirrors auth.ts)
       void apiKeyService.touchLastUsed(apiKey.id);
+    } else if (embedTokenHeader) {
+      // Embed token auth (guest form submitters)
+      const tokenResult = await embedTokenService.verifyToken(embedTokenHeader);
+      if (!tokenResult) {
+        return reply.status(401).send({ error: 'invalid_embed_token' });
+      }
+      if (!tokenResult.active) {
+        return reply.status(401).send({ error: 'embed_token_revoked' });
+      }
+      if (tokenResult.expiresAt && tokenResult.expiresAt < new Date()) {
+        return reply.status(401).send({ error: 'embed_token_expired' });
+      }
+      if (!postFinishGuestUserId) {
+        return reply.status(400).send({ error: 'missing_guest_user_id' });
+      }
+      userId = postFinishGuestUserId;
     } else if (env.NODE_ENV === 'test') {
       const testUserId = getForwardedHeader(forwardedHeaders, 'X-Test-User-Id');
       if (!testUserId) {
