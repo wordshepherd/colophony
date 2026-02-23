@@ -21,6 +21,8 @@
     "db:check": "pnpm --filter @colophony/db check",
     "db:studio": "pnpm --filter @colophony/db studio",
     "db:seed": "pnpm --filter @colophony/db seed",
+    "db:verify": "pnpm --filter @colophony/db verify",
+    "db:verify:repair": "pnpm --filter @colophony/db verify:repair",
     "db:reset": "bash scripts/db-reset.sh",
     "sdk:export-spec": "pnpm --filter @colophony/api exec tsx ../../scripts/export-openapi.ts",
     "sdk:export-schema": "pnpm --filter @colophony/api exec tsx ../../scripts/export-schema.ts",

@@ -81,11 +81,15 @@ Manuscripts use `owner_id = current_user_id()` instead of org-scoped isolation. 
 ## Migration Workflow
 
 ```bash
-pnpm db:generate    # Generate migration from schema changes
-pnpm db:migrate     # Run Drizzle migrations
-pnpm db:seed        # Seed test data
-pnpm db:reset       # Drop and recreate with migrations + RLS
+pnpm db:generate        # Generate migration from schema changes
+pnpm db:migrate         # Run Drizzle migrations
+pnpm db:seed            # Seed test data
+pnpm db:reset           # Drop and recreate with migrations + RLS + verify
+pnpm db:verify          # Check FK constraints match expected state (exit 1 on mismatch)
+pnpm db:verify:repair   # Check + auto-repair any mismatched FK constraints
 ```
+
+**Drizzle `migrate()` silent no-op workaround:** Drizzle ORM 0.44+ / journal v7 can silently record a migration as applied without executing its DDL on existing databases. `db:verify` detects this for migration 0015 (GDPR FK constraints). Run `db:verify` after `db:migrate` in production deployments. If mismatches are found, run `db:verify:repair` to re-apply the correct DDL.
 
 **init-db.sh caveat:** Only runs on first DB creation. Must `docker compose down -v` to re-run after changes.
 
