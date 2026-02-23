@@ -107,6 +107,14 @@ vi.mock('../services/api-key.service.js', () => ({
   },
 }));
 
+// Mock embed token service
+const mockVerifyEmbedToken = vi.fn();
+vi.mock('../services/embed-token.service.js', () => ({
+  embedTokenService: {
+    verifyToken: (...args: unknown[]) => mockVerifyEmbedToken(...args),
+  },
+}));
+
 // Mock auth-client
 vi.mock('@colophony/auth-client', () => ({
   createJwksVerifier: vi.fn(),
@@ -235,6 +243,7 @@ describe('tusd webhook handler', () => {
     mockRedisEval.mockResolvedValue([1, 60000]);
     mockRedisQuit.mockResolvedValue('OK');
     mockVerifyKey.mockResolvedValue(null);
+    mockVerifyEmbedToken.mockResolvedValue(null);
   });
 
   // -------------------------------------------------------------------------
@@ -907,6 +916,315 @@ describe('tusd webhook handler', () => {
       expect(response.statusCode).toBe(401);
       const body = JSON.parse(response.payload);
       expect(body.error).toBe('invalid_key');
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Embed token auth
+  // -------------------------------------------------------------------------
+
+  describe('embed token auth', () => {
+    const VALID_EMBED_TOKEN = {
+      id: 'embed-token-1',
+      organizationId: 'org-1',
+      submissionPeriodId: 'period-1',
+      allowedOrigins: [],
+      themeConfig: null,
+      active: true,
+      expiresAt: null,
+      period: {
+        name: 'Fall 2026',
+        opensAt: new Date(Date.now() - 86400000),
+        closesAt: new Date(Date.now() + 86400000),
+        formDefinitionId: null,
+        maxSubmissions: null,
+        fee: null,
+      },
+    };
+
+    function makeEmbedPreCreateBody() {
+      return {
+        Type: 'pre-create',
+        Event: {
+          Upload: {
+            Size: 1024,
+            MetaData: {
+              'manuscript-version-id': MANUSCRIPT_VERSION_ID,
+              'guest-user-id': 'guest-user-1',
+              filetype: 'application/pdf',
+              filename: 'poem.pdf',
+            },
+          },
+          HTTPRequest: {
+            Method: 'POST',
+            URI: '/files/',
+            RemoteAddr: '127.0.0.1',
+            Header: {
+              'X-Embed-Token': ['col_emb_abc123def456'],
+            },
+          },
+        },
+      };
+    }
+
+    function makeEmbedPostFinishBody() {
+      return {
+        Type: 'post-finish',
+        Event: {
+          Upload: {
+            ID: 'upload-embed-123',
+            Size: 1024,
+            Offset: 1024,
+            MetaData: {
+              'manuscript-version-id': MANUSCRIPT_VERSION_ID,
+              'guest-user-id': 'guest-user-1',
+              filetype: 'application/pdf',
+              filename: 'poem.pdf',
+            },
+            Storage: {
+              Key: 'quarantine/upload-embed-123',
+              Bucket: 'quarantine',
+              Type: 's3store',
+            },
+          },
+          HTTPRequest: {
+            Method: 'POST',
+            URI: '/files/upload-embed-123',
+            RemoteAddr: '127.0.0.1',
+            Header: {
+              'X-Embed-Token': ['col_emb_abc123def456'],
+            },
+          },
+        },
+      };
+    }
+
+    it('pre-create allows upload with valid embed token + guest-user-id', async () => {
+      mockVerifyEmbedToken.mockResolvedValueOnce(VALID_EMBED_TOKEN);
+      mockWithRls.mockImplementation(
+        async (_ctx: unknown, fn: (tx: unknown) => Promise<void>) => {
+          const mockTx = {
+            select: () => ({
+              from: () => ({
+                innerJoin: () => ({
+                  where: () => ({
+                    limit: () =>
+                      Promise.resolve([
+                        {
+                          id: MANUSCRIPT_VERSION_ID,
+                          manuscriptId: 'manuscript-1',
+                        },
+                      ]),
+                  }),
+                }),
+              }),
+            }),
+          };
+          return fn(mockTx);
+        },
+      );
+      mockFileService.validateLimits.mockResolvedValueOnce(undefined);
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/webhooks/tusd',
+        headers: {},
+        payload: makeEmbedPreCreateBody(),
+      });
+
+      expect(response.statusCode).toBe(200);
+      const body = JSON.parse(response.payload);
+      expect(body.RejectUpload).toBeUndefined();
+      // Verify withRls was called with the guest user ID
+      expect(mockWithRls).toHaveBeenCalledWith(
+        { userId: 'guest-user-1' },
+        expect.any(Function),
+      );
+    });
+
+    it('pre-create rejects invalid embed token', async () => {
+      mockVerifyEmbedToken.mockResolvedValueOnce(null);
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/webhooks/tusd',
+        headers: {},
+        payload: makeEmbedPreCreateBody(),
+      });
+
+      expect(response.statusCode).toBe(200);
+      const body = JSON.parse(response.payload);
+      expect(body.RejectUpload).toBe(true);
+      expect(body.HTTPResponse.Body).toContain('invalid_embed_token');
+    });
+
+    it('pre-create rejects expired embed token', async () => {
+      mockVerifyEmbedToken.mockResolvedValueOnce({
+        ...VALID_EMBED_TOKEN,
+        expiresAt: new Date('2020-01-01'),
+      });
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/webhooks/tusd',
+        headers: {},
+        payload: makeEmbedPreCreateBody(),
+      });
+
+      expect(response.statusCode).toBe(200);
+      const body = JSON.parse(response.payload);
+      expect(body.RejectUpload).toBe(true);
+      expect(body.HTTPResponse.Body).toContain('embed_token_expired');
+    });
+
+    it('pre-create rejects when submission period is closed', async () => {
+      mockVerifyEmbedToken.mockResolvedValueOnce({
+        ...VALID_EMBED_TOKEN,
+        period: {
+          ...VALID_EMBED_TOKEN.period,
+          closesAt: new Date(Date.now() - 3600000), // closed 1 hour ago
+        },
+      });
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/webhooks/tusd',
+        headers: {},
+        payload: makeEmbedPreCreateBody(),
+      });
+
+      expect(response.statusCode).toBe(200);
+      const body = JSON.parse(response.payload);
+      expect(body.RejectUpload).toBe(true);
+      expect(body.HTTPResponse.Body).toContain('submission_period_closed');
+    });
+
+    it('pre-create rejects missing guest-user-id metadata', async () => {
+      mockVerifyEmbedToken.mockResolvedValueOnce(VALID_EMBED_TOKEN);
+
+      const body = makeEmbedPreCreateBody();
+      delete (body.Event.Upload.MetaData as Record<string, string>)[
+        'guest-user-id'
+      ];
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/webhooks/tusd',
+        headers: {},
+        payload: body,
+      });
+
+      expect(response.statusCode).toBe(200);
+      const result = JSON.parse(response.payload);
+      expect(result.RejectUpload).toBe(true);
+      expect(result.HTTPResponse.Body).toContain('missing_guest_user_id');
+    });
+
+    it('pre-create rejects when manuscript version not owned by guest user', async () => {
+      mockVerifyEmbedToken.mockResolvedValueOnce(VALID_EMBED_TOKEN);
+      mockWithRls.mockImplementation(
+        async (_ctx: unknown, fn: (tx: unknown) => Promise<void>) => {
+          const mockTx = {
+            select: () => ({
+              from: () => ({
+                innerJoin: () => ({
+                  where: () => ({
+                    limit: () => Promise.resolve([]),
+                  }),
+                }),
+              }),
+            }),
+          };
+          return fn(mockTx);
+        },
+      );
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/webhooks/tusd',
+        headers: {},
+        payload: makeEmbedPreCreateBody(),
+      });
+
+      expect(response.statusCode).toBe(200);
+      const result = JSON.parse(response.payload);
+      expect(result.RejectUpload).toBe(true);
+      expect(result.HTTPResponse.Body).toContain(
+        'manuscript_version_not_found',
+      );
+    });
+
+    it('post-finish creates file record for embed upload', async () => {
+      mockVerifyEmbedToken.mockResolvedValueOnce(VALID_EMBED_TOKEN);
+      mockWithRls.mockImplementation(
+        async (_ctx: unknown, fn: (tx: unknown) => Promise<void>) => {
+          return fn({});
+        },
+      );
+      mockFileService.getByStorageKey.mockResolvedValueOnce(null as never);
+      mockFileService.create.mockResolvedValueOnce({
+        id: 'file-embed-1',
+        manuscriptVersionId: MANUSCRIPT_VERSION_ID,
+        filename: 'poem.pdf',
+        mimeType: 'application/pdf',
+        size: 1024,
+        storageKey: 'quarantine/upload-embed-123',
+        scanStatus: 'PENDING',
+        scannedAt: null,
+        uploadedAt: new Date(),
+      } as never);
+      mockAuditService.log.mockResolvedValueOnce(undefined);
+      mockEnqueueFileScan.mockResolvedValueOnce(undefined);
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/webhooks/tusd',
+        headers: {},
+        payload: makeEmbedPostFinishBody(),
+      });
+
+      expect(response.statusCode).toBe(200);
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(mockFileService.create).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({
+          manuscriptVersionId: MANUSCRIPT_VERSION_ID,
+          filename: 'poem.pdf',
+          storageKey: 'quarantine/upload-embed-123',
+        }),
+      );
+      expect(mockEnqueueFileScan).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({
+          fileId: 'file-embed-1',
+          userId: 'guest-user-1',
+        }),
+      );
+    });
+
+    it('post-finish is idempotent for embed uploads', async () => {
+      mockVerifyEmbedToken.mockResolvedValueOnce(VALID_EMBED_TOKEN);
+      mockWithRls.mockImplementation(
+        async (_ctx: unknown, fn: (tx: unknown) => Promise<void>) => {
+          return fn({});
+        },
+      );
+      mockFileService.getByStorageKey.mockResolvedValueOnce({
+        id: 'existing-file',
+        storageKey: 'quarantine/upload-embed-123',
+        scanStatus: 'CLEAN',
+      } as never);
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/webhooks/tusd',
+        headers: {},
+        payload: makeEmbedPostFinishBody(),
+      });
+
+      expect(response.statusCode).toBe(200);
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(mockFileService.create).not.toHaveBeenCalled();
     });
   });
 

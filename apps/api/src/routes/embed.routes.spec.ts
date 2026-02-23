@@ -7,6 +7,8 @@ const { mockEmbedTokenService, mockEmbedSubmissionService } = vi.hoisted(() => {
   const mockEmbedSubmissionService = {
     submitFromEmbed: vi.fn(),
     loadFormForEmbed: vi.fn(),
+    prepareUpload: vi.fn(),
+    getUploadStatus: vi.fn(),
   };
   return { mockEmbedTokenService, mockEmbedSubmissionService };
 });
@@ -39,6 +41,7 @@ vi.mock('ioredis', () => {
 import Fastify from 'fastify';
 import { registerEmbedRoutes } from './embed.routes.js';
 import type { VerifiedEmbedToken } from '../services/embed-token.service.js';
+import { PeriodClosedError } from '../services/embed-submission.service.js';
 
 function makeVerifiedToken(
   overrides: Partial<VerifiedEmbedToken> = {},
@@ -70,6 +73,7 @@ const testEnv = {
   REDIS_PASSWORD: '',
   RATE_LIMIT_WINDOW_SECONDS: 60,
   RATE_LIMIT_KEY_PREFIX: 'test:rl',
+  TUS_ENDPOINT: 'http://localhost:1080',
 } as any;
 
 async function buildTestApp() {
@@ -242,6 +246,124 @@ describe('embed routes', () => {
       });
 
       expect(res.statusCode).toBe(404);
+    });
+  });
+
+  describe('POST /embed/:token/prepare-upload', () => {
+    it('returns upload config', async () => {
+      const token = makeVerifiedToken();
+      mockEmbedTokenService.verifyToken.mockResolvedValueOnce(token);
+      mockEmbedSubmissionService.prepareUpload.mockResolvedValueOnce({
+        manuscriptVersionId: 'mv-1',
+        guestUserId: 'guest-1',
+        tusEndpoint: 'http://localhost:1080',
+        maxFileSize: 52428800,
+        maxFiles: 10,
+        allowedMimeTypes: ['application/pdf'],
+      });
+
+      const app = await buildTestApp();
+      const res = await app.inject({
+        method: 'POST',
+        url: '/embed/col_emb_abcdef1234567890abcdef1234567890/prepare-upload',
+        payload: {
+          email: 'writer@example.com',
+        },
+      });
+
+      expect(res.statusCode).toBe(200);
+      const body = JSON.parse(res.body);
+      expect(body.manuscriptVersionId).toBe('mv-1');
+      expect(body.guestUserId).toBe('guest-1');
+      expect(body.tusEndpoint).toBe('http://localhost:1080');
+      expect(body.maxFileSize).toBe(52428800);
+      expect(body.maxFiles).toBe(10);
+      expect(body.allowedMimeTypes).toContain('application/pdf');
+    });
+
+    it('rejects invalid email', async () => {
+      const token = makeVerifiedToken();
+      mockEmbedTokenService.verifyToken.mockResolvedValueOnce(token);
+
+      const app = await buildTestApp();
+      const res = await app.inject({
+        method: 'POST',
+        url: '/embed/col_emb_abcdef1234567890abcdef1234567890/prepare-upload',
+        payload: {
+          email: 'not-an-email',
+        },
+      });
+
+      expect(res.statusCode).toBe(400);
+      const body = JSON.parse(res.body);
+      expect(body.error).toBe('validation_error');
+    });
+
+    it('returns 410 for closed period', async () => {
+      const token = makeVerifiedToken();
+      mockEmbedTokenService.verifyToken.mockResolvedValueOnce(token);
+
+      mockEmbedSubmissionService.prepareUpload.mockRejectedValueOnce(
+        new PeriodClosedError('Fall 2026'),
+      );
+
+      const app = await buildTestApp();
+      const res = await app.inject({
+        method: 'POST',
+        url: '/embed/col_emb_abcdef1234567890abcdef1234567890/prepare-upload',
+        payload: {
+          email: 'writer@example.com',
+        },
+      });
+
+      expect(res.statusCode).toBe(410);
+      const body = JSON.parse(res.body);
+      expect(body.error).toBe('gone');
+    });
+  });
+
+  describe('GET /embed/:token/upload-status/:manuscriptVersionId', () => {
+    it('returns file scan status', async () => {
+      const token = makeVerifiedToken();
+      mockEmbedTokenService.verifyToken.mockResolvedValueOnce(token);
+      mockEmbedSubmissionService.getUploadStatus.mockResolvedValueOnce({
+        files: [
+          {
+            id: 'file-1',
+            filename: 'poem.pdf',
+            size: 1024,
+            mimeType: 'application/pdf',
+            scanStatus: 'CLEAN',
+          },
+        ],
+        allClean: true,
+      });
+
+      const app = await buildTestApp();
+      const res = await app.inject({
+        method: 'GET',
+        url: '/embed/col_emb_abcdef1234567890abcdef1234567890/upload-status/a1111111-1111-1111-a111-111111111111?email=writer@example.com',
+      });
+
+      expect(res.statusCode).toBe(200);
+      const body = JSON.parse(res.body);
+      expect(body.files).toHaveLength(1);
+      expect(body.allClean).toBe(true);
+    });
+
+    it('validates email query param', async () => {
+      const token = makeVerifiedToken();
+      mockEmbedTokenService.verifyToken.mockResolvedValueOnce(token);
+
+      const app = await buildTestApp();
+      const res = await app.inject({
+        method: 'GET',
+        url: '/embed/col_emb_abcdef1234567890abcdef1234567890/upload-status/a1111111-1111-1111-a111-111111111111?email=not-valid',
+      });
+
+      expect(res.statusCode).toBe(400);
+      const body = JSON.parse(res.body);
+      expect(body.error).toBe('validation_error');
     });
   });
 });
