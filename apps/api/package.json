@@ -29,8 +29,8 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
-    "@aws-sdk/client-s3": "^3.990.0",
-    "@aws-sdk/s3-request-presigner": "^3.990.0",
+    "@aws-sdk/client-s3": "^3.995.0",
+    "@aws-sdk/s3-request-presigner": "^3.995.0",
     "@colophony/api-contracts": "workspace:*",
     "@colophony/auth-client": "workspace:*",
     "@colophony/db": "workspace:*",
@@ -44,7 +44,7 @@
     "@pothos/plugin-relay": "^4.3",
     "@trpc/server": "^11.0.0",
     "archiver": "^7.0.1",
-    "bullmq": "^5.69.2",
+    "bullmq": "^5.70.1",
     "clamscan": "^2.4.0",
     "dataloader": "^2.2",
     "drizzle-orm": "^0.45.1",
@@ -66,7 +66,7 @@
     "@types/archiver": "^7.0.0",
     "@types/clamscan": "^2.4.1",
     "@types/ioredis-mock": "^8.2.6",
-    "@types/node": "^25.2.3",
+    "@types/node": "^25.3.0",
     "@types/nodemailer": "^7.0.9",
     "@types/pg": "^8.11.0",
     "eslint-config-prettier": "^10.1.8",
@@ -78,7 +78,7 @@
     "prettier": "^3.4.0",
     "tsx": "^4.19.0",
     "typescript": "^5.7.2",
-    "typescript-eslint": "^8.55.0",
+    "typescript-eslint": "^8.56.0",
     "vitest": "^4.0.18"
   }
 }
