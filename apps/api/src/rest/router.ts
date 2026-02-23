@@ -15,6 +15,7 @@ import { publicationsRouter } from './routers/publications.js';
 import { pipelineRouter } from './routers/pipeline.js';
 import { contractTemplatesRouter } from './routers/contract-templates.js';
 import { contractsRouter } from './routers/contracts.js';
+import { issuesRouter } from './routers/issues.js';
 import type { RestContext } from './context.js';
 
 const restRouter = {
@@ -31,6 +32,7 @@ const restRouter = {
   pipeline: pipelineRouter,
   contractTemplates: contractTemplatesRouter,
   contracts: contractsRouter,
+  issues: issuesRouter,
 };
 
 const openApiHandler = new OpenAPIHandler<RestContext>(restRouter, {
@@ -120,6 +122,11 @@ const openApiHandler = new OpenAPIHandler<RestContext>(restRouter, {
             name: 'Contracts',
             description:
               'Generate, send, and manage contracts for pipeline items (Slate).',
+          },
+          {
+            name: 'Issues',
+            description:
+              'Assemble and manage publication issues — collections of pipeline items (Slate).',
           },
           {
             name: 'Audit',

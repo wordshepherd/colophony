@@ -42,9 +42,14 @@ import {
   PipelineItemNotFoundError,
   PipelineItemAlreadyExistsError,
   InvalidPipelineTransitionError,
+  SubmissionNotAcceptedError,
 } from '../services/pipeline.service.js';
 import { ContractTemplateNotFoundError } from '../services/contract-template.service.js';
 import { ContractNotFoundError } from '../services/contract.service.js';
+import {
+  IssueNotFoundError,
+  IssueItemAlreadyExistsError,
+} from '../services/issue.service.js';
 
 type ORPCErrorCode = ConstructorParameters<typeof ORPCError>[0];
 
@@ -87,9 +92,13 @@ const errorCodeMap: [new (...args: never[]) => Error, ORPCErrorCode][] = [
   [PipelineItemNotFoundError, 'NOT_FOUND'],
   [PipelineItemAlreadyExistsError, 'CONFLICT'],
   [InvalidPipelineTransitionError, 'BAD_REQUEST'],
+  [SubmissionNotAcceptedError, 'BAD_REQUEST'],
   // Contract errors
   [ContractTemplateNotFoundError, 'NOT_FOUND'],
   [ContractNotFoundError, 'NOT_FOUND'],
+  // Issue errors
+  [IssueNotFoundError, 'NOT_FOUND'],
+  [IssueItemAlreadyExistsError, 'CONFLICT'],
   // Precondition
   [FileNotCleanError, 'BAD_REQUEST'],
 ];

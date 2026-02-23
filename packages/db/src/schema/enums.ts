@@ -85,6 +85,14 @@ export const pipelineStageEnum = pgEnum("PipelineStage", [
   "WITHDRAWN",
 ]);
 
+export const issueStatusEnum = pgEnum("IssueStatus", [
+  "PLANNING",
+  "ASSEMBLING",
+  "READY",
+  "PUBLISHED",
+  "ARCHIVED",
+]);
+
 export const contractStatusEnum = pgEnum("ContractStatus", [
   "DRAFT",
   "SENT",

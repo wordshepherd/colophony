@@ -16,6 +16,7 @@ import { apiKeys } from "./api-keys";
 import { publications } from "./publications";
 import { pipelineItems, pipelineHistory, pipelineComments } from "./pipeline";
 import { contractTemplates, contracts } from "./contracts";
+import { issues, issueSections, issueItems } from "./issues";
 
 // --- organizations ---
 
@@ -33,6 +34,7 @@ export const organizationsRelations = relations(organizations, ({ many }) => ({
   pipelineItems: many(pipelineItems),
   contractTemplates: many(contractTemplates),
   contracts: many(contracts),
+  issues: many(issues),
 }));
 
 // --- users ---
@@ -285,6 +287,7 @@ export const publicationsRelations = relations(
     }),
     submissionPeriods: many(submissionPeriods),
     pipelineItems: many(pipelineItems),
+    issues: many(issues),
   }),
 );
 
@@ -318,6 +321,7 @@ export const pipelineItemsRelations = relations(
     history: many(pipelineHistory),
     comments: many(pipelineComments),
     contracts: many(contracts),
+    issueItems: many(issueItems),
   }),
 );
 
@@ -376,5 +380,50 @@ export const contractsRelations = relations(contracts, ({ one }) => ({
   contractTemplate: one(contractTemplates, {
     fields: [contracts.contractTemplateId],
     references: [contractTemplates.id],
+  }),
+}));
+
+// --- issues ---
+
+export const issuesRelations = relations(issues, ({ one, many }) => ({
+  organization: one(organizations, {
+    fields: [issues.organizationId],
+    references: [organizations.id],
+  }),
+  publication: one(publications, {
+    fields: [issues.publicationId],
+    references: [publications.id],
+  }),
+  sections: many(issueSections),
+  items: many(issueItems),
+}));
+
+// --- issue_sections ---
+
+export const issueSectionsRelations = relations(
+  issueSections,
+  ({ one, many }) => ({
+    issue: one(issues, {
+      fields: [issueSections.issueId],
+      references: [issues.id],
+    }),
+    items: many(issueItems),
+  }),
+);
+
+// --- issue_items ---
+
+export const issueItemsRelations = relations(issueItems, ({ one }) => ({
+  issue: one(issues, {
+    fields: [issueItems.issueId],
+    references: [issues.id],
+  }),
+  pipelineItem: one(pipelineItems, {
+    fields: [issueItems.pipelineItemId],
+    references: [pipelineItems.id],
+  }),
+  section: one(issueSections, {
+    fields: [issueItems.issueSectionId],
+    references: [issueSections.id],
   }),
 }));

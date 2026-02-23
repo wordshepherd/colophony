@@ -112,6 +112,14 @@ export const AuditActions = {
   CONTRACT_SENT: "CONTRACT_SENT",
   CONTRACT_VOIDED: "CONTRACT_VOIDED",
 
+  // Issue lifecycle
+  ISSUE_CREATED: "ISSUE_CREATED",
+  ISSUE_UPDATED: "ISSUE_UPDATED",
+  ISSUE_PUBLISHED: "ISSUE_PUBLISHED",
+  ISSUE_ARCHIVED: "ISSUE_ARCHIVED",
+  ISSUE_ITEM_ADDED: "ISSUE_ITEM_ADDED",
+  ISSUE_ITEM_REMOVED: "ISSUE_ITEM_REMOVED",
+
   // Pipeline lifecycle
   PIPELINE_ITEM_CREATED: "PIPELINE_ITEM_CREATED",
   PIPELINE_STAGE_CHANGED: "PIPELINE_STAGE_CHANGED",
@@ -142,6 +150,7 @@ export const AuditResources = {
   PIPELINE_ITEM: "pipeline_item",
   CONTRACT_TEMPLATE: "contract_template",
   CONTRACT: "contract",
+  ISSUE: "issue",
   AUDIT: "audit",
 } as const;
 
@@ -315,6 +324,17 @@ export interface ContractAuditParams extends BaseAuditParams {
     | typeof AuditActions.CONTRACT_VOIDED;
 }
 
+export interface IssueAuditParams extends BaseAuditParams {
+  resource: typeof AuditResources.ISSUE;
+  action:
+    | typeof AuditActions.ISSUE_CREATED
+    | typeof AuditActions.ISSUE_UPDATED
+    | typeof AuditActions.ISSUE_PUBLISHED
+    | typeof AuditActions.ISSUE_ARCHIVED
+    | typeof AuditActions.ISSUE_ITEM_ADDED
+    | typeof AuditActions.ISSUE_ITEM_REMOVED;
+}
+
 export interface AuditAccessAuditParams extends BaseAuditParams {
   resource: typeof AuditResources.AUDIT;
   action: typeof AuditActions.AUDIT_ACCESSED;
@@ -344,6 +364,7 @@ export type AuditLogParams =
   | PipelineItemAuditParams
   | ContractTemplateAuditParams
   | ContractAuditParams
+  | IssueAuditParams
   | AuditAccessAuditParams
   | SystemAuditParams;
 

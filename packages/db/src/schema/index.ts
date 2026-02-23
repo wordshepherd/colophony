@@ -15,4 +15,5 @@ export * from "./embed-tokens";
 export * from "./publications";
 export * from "./pipeline";
 export * from "./contracts";
+export * from "./issues";
 export * from "./relations";

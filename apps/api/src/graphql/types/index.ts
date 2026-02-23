@@ -28,6 +28,12 @@ export {
   ContractStatusEnum,
 } from './contract.js';
 export {
+  IssueType,
+  IssueSectionType,
+  IssueItemType,
+  IssueStatusEnum,
+} from './issue.js';
+export {
   SubmissionStatusChangePayload,
   CreateOrganizationPayload,
   CreateApiKeyPayload,

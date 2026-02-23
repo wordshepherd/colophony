@@ -15,6 +15,7 @@ import { publicationsRouter } from './routers/publications.js';
 import { pipelineRouter } from './routers/pipeline.js';
 import { contractTemplatesRouter } from './routers/contract-templates.js';
 import { contractsRouter } from './routers/contracts.js';
+import { issuesRouter } from './routers/issues.js';
 
 // Re-export procedure builders for convenience
 export {
@@ -51,6 +52,7 @@ export const appRouter = t.router({
   pipeline: pipelineRouter,
   contractTemplates: contractTemplatesRouter,
   contracts: contractsRouter,
+  issues: issuesRouter,
   retention: t.router({}),
 });
 

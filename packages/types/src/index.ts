@@ -14,3 +14,4 @@ export * from "./embed";
 export * from "./publication";
 export * from "./pipeline";
 export * from "./contract";
+export * from "./issue";
