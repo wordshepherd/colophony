@@ -15,6 +15,7 @@ export const SubmissionType = builder
         description: 'ID of the owning organization.',
       }),
       submitterId: t.exposeString('submitterId', {
+        nullable: true,
         description: 'ID of the user who created this submission.',
       }),
       submissionPeriodId: t.exposeString('submissionPeriodId', {

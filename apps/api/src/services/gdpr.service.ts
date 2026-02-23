@@ -122,6 +122,7 @@ export const gdprService = {
     }
 
     // Step 5: Enqueue S3 cleanup (outside transaction, best-effort)
+    let storageKeysEnqueued = 0;
     if (storageKeys.length > 0) {
       try {
         await enqueueS3Cleanup(env, {
@@ -129,13 +130,14 @@ export const gdprService = {
           reason: 'user_gdpr_deletion',
           sourceId: userId,
         });
+        storageKeysEnqueued = storageKeys.length;
       } catch {
         // Best-effort — DB deletion already committed.
         // S3 objects will remain as orphans until manual cleanup.
       }
     }
 
-    return { storageKeysEnqueued: storageKeys.length };
+    return { storageKeysEnqueued };
   },
 
   /**
