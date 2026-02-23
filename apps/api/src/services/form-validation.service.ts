@@ -181,9 +181,10 @@ export function validateFieldValue(
       if (parsed.success) {
         const validValues = parsed.data.options.map((o) => o.value);
         if (!validValues.includes(value)) {
+          const validLabels = parsed.data.options.map((o) => o.label);
           errors.push({
             fieldKey: field.fieldKey,
-            message: `${field.label} must be one of: ${validValues.join(', ')}`,
+            message: `${field.label} must be one of: ${validLabels.join(', ')}`,
           });
         }
       }
@@ -200,12 +201,14 @@ export function validateFieldValue(
       }
       const parsed = selectFieldConfigSchema.safeParse(config);
       if (parsed.success) {
-        const validValues = parsed.data.options.map((o) => o.value);
+        const { options } = parsed.data;
+        const validValues = options.map((o) => o.value);
         for (const v of value) {
           if (typeof v !== 'string' || !validValues.includes(v)) {
+            const validLabels = options.map((o) => o.label);
             errors.push({
               fieldKey: field.fieldKey,
-              message: `${field.label} contains invalid option: ${String(v)}`,
+              message: `${field.label} contains invalid option. Valid options: ${validLabels.join(', ')}`,
             });
             break;
           }

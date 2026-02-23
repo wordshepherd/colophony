@@ -230,7 +230,7 @@ describe('validateFieldValue', () => {
       'non-fiction',
     );
     expect(errors).toHaveLength(1);
-    expect(errors[0].message).toContain('must be one of');
+    expect(errors[0].message).toContain('must be one of: Poetry, Fiction');
   });
 
   it('accepts valid select option', () => {
@@ -262,7 +262,7 @@ describe('validateFieldValue', () => {
       'b',
     );
     expect(errors).toHaveLength(1);
-    expect(errors[0].message).toContain('must be one of');
+    expect(errors[0].message).toContain('must be one of: A');
   });
 
   // -----------------------------------------------------------------------
@@ -293,7 +293,7 @@ describe('validateFieldValue', () => {
       ['a', 'invalid'],
     );
     expect(errors).toHaveLength(1);
-    expect(errors[0].message).toContain('invalid option');
+    expect(errors[0].message).toContain('Valid options: A, B');
   });
 
   it('accepts valid multi_select values', () => {
@@ -325,7 +325,7 @@ describe('validateFieldValue', () => {
       ['y'],
     );
     expect(errors).toHaveLength(1);
-    expect(errors[0].message).toContain('invalid option');
+    expect(errors[0].message).toContain('Valid options: X');
   });
 
   // -----------------------------------------------------------------------
