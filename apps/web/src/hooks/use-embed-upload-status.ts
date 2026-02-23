@@ -62,8 +62,14 @@ export function useEmbedUploadStatus({
         setAllClean(result.allClean);
         setError(null);
 
-        // Reset interval to base on successful poll
-        pollIntervalMs.current = BASE_POLL_INTERVAL;
+        // Reset interval to base rate after successful poll (recovers from 429 backoff)
+        if (pollIntervalMs.current !== BASE_POLL_INTERVAL) {
+          pollIntervalMs.current = BASE_POLL_INTERVAL;
+          if (intervalRef.current) {
+            clearInterval(intervalRef.current);
+          }
+          intervalRef.current = setInterval(doPoll, BASE_POLL_INTERVAL);
+        }
 
         // Stop polling when no uploads in flight AND all files are in terminal state
         const allTerminal =

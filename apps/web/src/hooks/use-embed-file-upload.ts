@@ -197,7 +197,10 @@ export function useEmbedFileUpload({
     removeUpload,
     cancelUpload,
     isUploading: Array.from(uploads.values()).some(
-      (u) => u.status === "uploading" || u.status === "pending",
+      (u) =>
+        u.status === "uploading" ||
+        u.status === "pending" ||
+        u.status === "processing",
     ),
   };
 }

@@ -114,7 +114,7 @@ export function EmbedUploadSection({
     token,
     manuscriptVersionId: uploadContext.manuscriptVersionId,
     email: identity.email,
-    enabled: uploads.length > 0 || false,
+    enabled: true,
     uploadsInFlight: isUploading,
   });
 

@@ -65,8 +65,9 @@ export function EmbedForm({ token, apiUrl }: EmbedFormProps) {
   });
 
   const [identityLoading, setIdentityLoading] = useState(false);
+  const [loadAttempt, setLoadAttempt] = useState(0);
 
-  // Load form data on mount
+  // Load form data on mount (and on retry)
   useEffect(() => {
     let cancelled = false;
 
@@ -99,7 +100,7 @@ export function EmbedForm({ token, apiUrl }: EmbedFormProps) {
     return () => {
       cancelled = true;
     };
-  }, [apiUrl, token]);
+  }, [apiUrl, token, loadAttempt]);
 
   // Handle identity continue — optionally prepare upload
   const handleIdentityContinue = useCallback(
@@ -196,6 +197,8 @@ export function EmbedForm({ token, apiUrl }: EmbedFormProps) {
       step: prev.formData ? "identity" : "loading",
       error: null,
     }));
+    // Increment to re-trigger the load effect when formData is null
+    setLoadAttempt((n) => n + 1);
   }, []);
 
   return (
