@@ -19,4 +19,7 @@ sleep 5
 echo "Running migrations..."
 pnpm --filter @colophony/db migrate
 
+echo "Verifying migration state..."
+pnpm --filter @colophony/db verify
+
 echo "Database reset complete."
