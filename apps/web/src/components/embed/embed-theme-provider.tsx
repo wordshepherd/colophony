@@ -52,7 +52,14 @@ export function EmbedThemeProvider({
   }
 
   return (
-    <div style={style} className={theme.darkMode ? "dark" : undefined}>
+    <div
+      style={style}
+      className={
+        theme.darkMode
+          ? "dark bg-background text-foreground"
+          : "bg-background text-foreground"
+      }
+    >
       {children}
     </div>
   );
