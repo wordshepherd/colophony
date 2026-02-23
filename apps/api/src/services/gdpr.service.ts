@@ -184,7 +184,12 @@ export const gdprService = {
         [orgId],
       );
 
-      // Step 3: Log org deletion audit via raw SQL (not logDirect which rejects organizationId)
+      // Step 3: Log org deletion audit via raw SQL
+      // Pass NULL for organization_id — the org is about to be deleted, and the
+      // insert_audit_event() SECURITY DEFINER runs as audit_writer which respects
+      // RLS. The INSERT policy requires organization_id IS NULL OR matches current_org,
+      // and we have no org context set on this pool connection. The deleted org ID
+      // is captured in newValue JSON for traceability.
       const auditNewValue = serializeValue({
         deletedOrgId: orgId,
         deletedBy: actorUserId,
@@ -193,8 +198,8 @@ export const gdprService = {
         `SELECT insert_audit_event(
           $1::varchar, $2::varchar,
           $3::uuid, $4::uuid,
-          $5::uuid,
-          NULL::text, $6::text,
+          NULL::uuid,
+          NULL::text, $5::text,
           NULL::varchar, NULL::text,
           NULL::varchar, NULL::varchar,
           NULL::varchar
@@ -202,10 +207,9 @@ export const gdprService = {
         [
           AuditActions.ORG_DELETED,
           AuditResources.ORGANIZATION,
-          orgId,
-          actorUserId,
-          orgId,
-          auditNewValue,
+          orgId, // p_resource_id — the deleted org
+          actorUserId, // p_actor_id — who performed deletion
+          auditNewValue, // p_new_value
         ],
       );
 

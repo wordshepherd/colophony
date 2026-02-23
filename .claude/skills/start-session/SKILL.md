@@ -308,6 +308,8 @@ If the user is already on a feature branch, skip this step entirely.
 
 - This is a READ-ONLY operation — do not modify any files or start any services (exception: if the user opts for catch-up housekeeping in Step 1, perform end-session steps before continuing)
 - Use `gh run list/view` for CI status, NOT `gh pr checks` (fine-grained PAT limitation)
+- `gh pr edit` is broken (Projects Classic deprecation). Use `gh api repos/{owner}/{repo}/pulls/{number} -X PATCH` instead
+- `gh pr create/list/view` use GraphQL (5000 pts/hr shared budget). If rate limit errors occur, convert to REST: `gh api repos/{owner}/{repo}/pulls`
 - Keep the briefing concise — the user wants orientation, not a novel
 - If Docker services are down, mention it but don't block — the user may not need them for every task
 - If there are uncommitted changes on `main`, flag this prominently as it likely needs to be moved to a branch
