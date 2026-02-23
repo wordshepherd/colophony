@@ -16,6 +16,7 @@ import { pipelineRouter } from './routers/pipeline.js';
 import { contractTemplatesRouter } from './routers/contract-templates.js';
 import { contractsRouter } from './routers/contracts.js';
 import { issuesRouter } from './routers/issues.js';
+import { cmsConnectionsRouter } from './routers/cms-connections.js';
 import type { RestContext } from './context.js';
 
 const restRouter = {
@@ -33,6 +34,7 @@ const restRouter = {
   contractTemplates: contractTemplatesRouter,
   contracts: contractsRouter,
   issues: issuesRouter,
+  cmsConnections: cmsConnectionsRouter,
 };
 
 const openApiHandler = new OpenAPIHandler<RestContext>(restRouter, {
@@ -127,6 +129,11 @@ const openApiHandler = new OpenAPIHandler<RestContext>(restRouter, {
             name: 'Issues',
             description:
               'Assemble and manage publication issues — collections of pipeline items (Slate).',
+          },
+          {
+            name: 'CMS Connections',
+            description:
+              'Manage CMS connections for publishing issues to WordPress or Ghost (Slate).',
           },
           {
             name: 'Audit',

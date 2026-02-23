@@ -15,3 +15,4 @@ export * from "./publication";
 export * from "./pipeline";
 export * from "./contract";
 export * from "./issue";
+export * from "./cms";

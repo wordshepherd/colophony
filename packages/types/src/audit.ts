@@ -127,6 +127,11 @@ export const AuditActions = {
   PIPELINE_PROOFREADER_ASSIGNED: "PIPELINE_PROOFREADER_ASSIGNED",
   PIPELINE_COMMENT_ADDED: "PIPELINE_COMMENT_ADDED",
 
+  // CMS connection lifecycle
+  CMS_CONNECTION_CREATED: "CMS_CONNECTION_CREATED",
+  CMS_CONNECTION_UPDATED: "CMS_CONNECTION_UPDATED",
+  CMS_CONNECTION_DELETED: "CMS_CONNECTION_DELETED",
+
   // Audit access
   AUDIT_ACCESSED: "AUDIT_ACCESSED",
 } as const;
@@ -151,6 +156,7 @@ export const AuditResources = {
   CONTRACT_TEMPLATE: "contract_template",
   CONTRACT: "contract",
   ISSUE: "issue",
+  CMS_CONNECTION: "cms_connection",
   AUDIT: "audit",
 } as const;
 
@@ -335,6 +341,14 @@ export interface IssueAuditParams extends BaseAuditParams {
     | typeof AuditActions.ISSUE_ITEM_REMOVED;
 }
 
+export interface CmsConnectionAuditParams extends BaseAuditParams {
+  resource: typeof AuditResources.CMS_CONNECTION;
+  action:
+    | typeof AuditActions.CMS_CONNECTION_CREATED
+    | typeof AuditActions.CMS_CONNECTION_UPDATED
+    | typeof AuditActions.CMS_CONNECTION_DELETED;
+}
+
 export interface AuditAccessAuditParams extends BaseAuditParams {
   resource: typeof AuditResources.AUDIT;
   action: typeof AuditActions.AUDIT_ACCESSED;
@@ -365,6 +379,7 @@ export type AuditLogParams =
   | ContractTemplateAuditParams
   | ContractAuditParams
   | IssueAuditParams
+  | CmsConnectionAuditParams
   | AuditAccessAuditParams
   | SystemAuditParams;
 

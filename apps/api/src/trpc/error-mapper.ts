@@ -50,6 +50,7 @@ import {
   IssueNotFoundError,
   IssueItemAlreadyExistsError,
 } from '../services/issue.service.js';
+import { CmsConnectionNotFoundError } from '../services/cms-connection.service.js';
 
 type TRPCErrorCode = ConstructorParameters<typeof TRPCError>[0]['code'];
 
@@ -99,6 +100,8 @@ const errorCodeMap: [new (...args: never[]) => Error, TRPCErrorCode][] = [
   // Issue errors
   [IssueNotFoundError, 'NOT_FOUND'],
   [IssueItemAlreadyExistsError, 'CONFLICT'],
+  // CMS errors
+  [CmsConnectionNotFoundError, 'NOT_FOUND'],
   // Precondition
   [FileNotCleanError, 'PRECONDITION_FAILED'],
 ];

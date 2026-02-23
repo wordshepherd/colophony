@@ -93,6 +93,11 @@ export const issueStatusEnum = pgEnum("IssueStatus", [
   "ARCHIVED",
 ]);
 
+export const cmsAdapterTypeEnum = pgEnum("CmsAdapterType", [
+  "WORDPRESS",
+  "GHOST",
+]);
+
 export const contractStatusEnum = pgEnum("ContractStatus", [
   "DRAFT",
   "SENT",

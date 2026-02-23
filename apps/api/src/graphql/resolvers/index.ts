@@ -12,3 +12,4 @@ import './publications.js';
 import './pipeline.js';
 import './contracts.js';
 import './issues.js';
+import './cms-connections.js';

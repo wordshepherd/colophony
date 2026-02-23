@@ -17,6 +17,7 @@ import { publications } from "./publications";
 import { pipelineItems, pipelineHistory, pipelineComments } from "./pipeline";
 import { contractTemplates, contracts } from "./contracts";
 import { issues, issueSections, issueItems } from "./issues";
+import { cmsConnections } from "./cms";
 
 // --- organizations ---
 
@@ -35,6 +36,7 @@ export const organizationsRelations = relations(organizations, ({ many }) => ({
   contractTemplates: many(contractTemplates),
   contracts: many(contracts),
   issues: many(issues),
+  cmsConnections: many(cmsConnections),
 }));
 
 // --- users ---
@@ -288,6 +290,7 @@ export const publicationsRelations = relations(
     submissionPeriods: many(submissionPeriods),
     pipelineItems: many(pipelineItems),
     issues: many(issues),
+    cmsConnections: many(cmsConnections),
   }),
 );
 
@@ -425,5 +428,18 @@ export const issueItemsRelations = relations(issueItems, ({ one }) => ({
   section: one(issueSections, {
     fields: [issueItems.issueSectionId],
     references: [issueSections.id],
+  }),
+}));
+
+// --- cms_connections ---
+
+export const cmsConnectionsRelations = relations(cmsConnections, ({ one }) => ({
+  organization: one(organizations, {
+    fields: [cmsConnections.organizationId],
+    references: [organizations.id],
+  }),
+  publication: one(publications, {
+    fields: [cmsConnections.publicationId],
+    references: [publications.id],
   }),
 }));

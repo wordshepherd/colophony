@@ -50,6 +50,7 @@ import {
   IssueNotFoundError,
   IssueItemAlreadyExistsError,
 } from '../services/issue.service.js';
+import { CmsConnectionNotFoundError } from '../services/cms-connection.service.js';
 
 type GraphQLErrorCode = string;
 
@@ -99,6 +100,8 @@ const errorCodeMap: [new (...args: never[]) => Error, GraphQLErrorCode][] = [
   // Issue errors
   [IssueNotFoundError, 'NOT_FOUND'],
   [IssueItemAlreadyExistsError, 'CONFLICT'],
+  // CMS errors
+  [CmsConnectionNotFoundError, 'NOT_FOUND'],
   // Precondition
   [FileNotCleanError, 'BAD_REQUEST'],
 ];

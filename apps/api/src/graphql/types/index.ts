@@ -33,6 +33,7 @@ export {
   IssueItemType,
   IssueStatusEnum,
 } from './issue.js';
+export { CmsConnectionType, CmsAdapterTypeEnum } from './cms-connection.js';
 export {
   SubmissionStatusChangePayload,
   CreateOrganizationPayload,

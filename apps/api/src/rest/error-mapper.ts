@@ -50,6 +50,7 @@ import {
   IssueNotFoundError,
   IssueItemAlreadyExistsError,
 } from '../services/issue.service.js';
+import { CmsConnectionNotFoundError } from '../services/cms-connection.service.js';
 
 type ORPCErrorCode = ConstructorParameters<typeof ORPCError>[0];
 
@@ -99,6 +100,8 @@ const errorCodeMap: [new (...args: never[]) => Error, ORPCErrorCode][] = [
   // Issue errors
   [IssueNotFoundError, 'NOT_FOUND'],
   [IssueItemAlreadyExistsError, 'CONFLICT'],
+  // CMS errors
+  [CmsConnectionNotFoundError, 'NOT_FOUND'],
   // Precondition
   [FileNotCleanError, 'BAD_REQUEST'],
 ];
