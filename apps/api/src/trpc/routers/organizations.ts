@@ -27,6 +27,11 @@ import {
   requireScopes,
 } from '../init.js';
 import { organizationService } from '../../services/organization.service.js';
+import {
+  gdprService,
+  OrgNotDeletableError,
+} from '../../services/gdpr.service.js';
+import { validateEnv } from '../../config/env.js';
 import { toServiceContext } from '../../services/context.js';
 import { mapServiceError } from '../error-mapper.js';
 
@@ -162,6 +167,29 @@ export const organizationsRouter = createRouter({
     .query(async ({ input }) => {
       const available = await organizationService.isSlugAvailable(input.slug);
       return { available };
+    }),
+
+  delete: adminProcedure
+    .use(requireScopes('organizations:write'))
+    .output(successResponseSchema)
+    .mutation(async ({ ctx }) => {
+      const env = validateEnv();
+      try {
+        await gdprService.deleteOrganization(
+          ctx.authContext.orgId,
+          ctx.authContext.userId,
+          env,
+        );
+        return { success: true as const };
+      } catch (err) {
+        if (err instanceof OrgNotDeletableError) {
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: err.message,
+          });
+        }
+        throw err;
+      }
     }),
 
   members: membersRouter,
