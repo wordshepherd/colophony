@@ -17,6 +17,12 @@ export {
 export { SubmissionPeriodType, PeriodStatusEnum } from './period.js';
 export { PublicationType, PublicationStatusEnum } from './publication.js';
 export {
+  PipelineItemType,
+  PipelineHistoryEntryType,
+  PipelineCommentType,
+  PipelineStageEnum,
+} from './pipeline.js';
+export {
   SubmissionStatusChangePayload,
   CreateOrganizationPayload,
   CreateApiKeyPayload,

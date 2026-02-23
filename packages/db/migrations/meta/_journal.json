@@ -120,6 +120,13 @@
       "when": 1772400000000,
       "tag": "0016_publications",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1772600000000,
+      "tag": "0017_pipeline",
+      "breakpoints": true
     }
   ]
 }

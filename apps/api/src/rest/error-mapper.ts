@@ -38,6 +38,11 @@ import {
   PublicationNotFoundError,
   PublicationSlugConflictError,
 } from '../services/publication.service.js';
+import {
+  PipelineItemNotFoundError,
+  PipelineItemAlreadyExistsError,
+  InvalidPipelineTransitionError,
+} from '../services/pipeline.service.js';
 
 type ORPCErrorCode = ConstructorParameters<typeof ORPCError>[0];
 
@@ -76,6 +81,10 @@ const errorCodeMap: [new (...args: never[]) => Error, ORPCErrorCode][] = [
   // Publication errors
   [PublicationNotFoundError, 'NOT_FOUND'],
   [PublicationSlugConflictError, 'CONFLICT'],
+  // Pipeline errors
+  [PipelineItemNotFoundError, 'NOT_FOUND'],
+  [PipelineItemAlreadyExistsError, 'CONFLICT'],
+  [InvalidPipelineTransitionError, 'BAD_REQUEST'],
   // Precondition
   [FileNotCleanError, 'BAD_REQUEST'],
 ];

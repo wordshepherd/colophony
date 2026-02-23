@@ -12,6 +12,7 @@ import { formsRouter } from './routers/forms.js';
 import { periodsRouter } from './routers/periods.js';
 import { manuscriptsRouter } from './routers/manuscripts.js';
 import { publicationsRouter } from './routers/publications.js';
+import { pipelineRouter } from './routers/pipeline.js';
 import type { RestContext } from './context.js';
 
 const restRouter = {
@@ -25,6 +26,7 @@ const restRouter = {
   periods: periodsRouter,
   audit: auditRouter,
   publications: publicationsRouter,
+  pipeline: pipelineRouter,
 };
 
 const openApiHandler = new OpenAPIHandler<RestContext>(restRouter, {
@@ -101,14 +103,14 @@ const openApiHandler = new OpenAPIHandler<RestContext>(restRouter, {
               'Manage publications — named publishing venues within an organization (Slate pipeline).',
           },
           {
+            name: 'Pipeline',
+            description:
+              'Manage the post-acceptance publication pipeline — copyedit, proofread, and publish workflow (Slate).',
+          },
+          {
             name: 'Audit',
             description:
               'Query the audit log for security and compliance. Admin-only.',
-          },
-          {
-            name: 'Publications',
-            description:
-              'Manage publications — named publishing venues within an organization.',
           },
         ],
         externalDocs: {

@@ -25,6 +25,8 @@ export const apiKeyScopeSchema = z
     "webhooks:manage",
     "publications:read",
     "publications:write",
+    "pipeline:read",
+    "pipeline:write",
     "audit:read",
   ])
   .describe("Permission scope for the API key");

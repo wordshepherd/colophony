@@ -19,6 +19,11 @@ import type { retentionPolicies, userConsents } from "./schema/compliance";
 import type { outboxEvents } from "./schema/messaging";
 import type { zitadelWebhookEvents } from "./schema/webhooks";
 import type { publications } from "./schema/publications";
+import type {
+  pipelineItems,
+  pipelineHistory,
+  pipelineComments,
+} from "./schema/pipeline";
 
 // --- Select types (what you get back from queries) ---
 
@@ -43,6 +48,9 @@ export type UserConsent = InferSelectModel<typeof userConsents>;
 export type OutboxEvent = InferSelectModel<typeof outboxEvents>;
 export type ZitadelWebhookEvent = InferSelectModel<typeof zitadelWebhookEvents>;
 export type Publication = InferSelectModel<typeof publications>;
+export type PipelineItem = InferSelectModel<typeof pipelineItems>;
+export type PipelineHistoryEntry = InferSelectModel<typeof pipelineHistory>;
+export type PipelineComment = InferSelectModel<typeof pipelineComments>;
 
 /** @deprecated Use File instead — submission_files has been replaced by the files table */
 export type SubmissionFile = File;
@@ -78,6 +86,9 @@ export type NewZitadelWebhookEvent = InferInsertModel<
   typeof zitadelWebhookEvents
 >;
 export type NewPublication = InferInsertModel<typeof publications>;
+export type NewPipelineItem = InferInsertModel<typeof pipelineItems>;
+export type NewPipelineHistoryEntry = InferInsertModel<typeof pipelineHistory>;
+export type NewPipelineComment = InferInsertModel<typeof pipelineComments>;
 
 /** @deprecated Use NewFile instead */
 export type NewSubmissionFile = NewFile;

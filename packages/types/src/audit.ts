@@ -102,6 +102,13 @@ export const AuditActions = {
   PUBLICATION_UPDATED: "PUBLICATION_UPDATED",
   PUBLICATION_ARCHIVED: "PUBLICATION_ARCHIVED",
 
+  // Pipeline lifecycle
+  PIPELINE_ITEM_CREATED: "PIPELINE_ITEM_CREATED",
+  PIPELINE_STAGE_CHANGED: "PIPELINE_STAGE_CHANGED",
+  PIPELINE_COPYEDITOR_ASSIGNED: "PIPELINE_COPYEDITOR_ASSIGNED",
+  PIPELINE_PROOFREADER_ASSIGNED: "PIPELINE_PROOFREADER_ASSIGNED",
+  PIPELINE_COMMENT_ADDED: "PIPELINE_COMMENT_ADDED",
+
   // Audit access
   AUDIT_ACCESSED: "AUDIT_ACCESSED",
 } as const;
@@ -122,6 +129,7 @@ export const AuditResources = {
   PAYMENT: "payment",
   EMBED_TOKEN: "embed_token",
   PUBLICATION: "publication",
+  PIPELINE_ITEM: "pipeline_item",
   AUDIT: "audit",
 } as const;
 
@@ -269,6 +277,16 @@ export interface PublicationAuditParams extends BaseAuditParams {
     | typeof AuditActions.PUBLICATION_ARCHIVED;
 }
 
+export interface PipelineItemAuditParams extends BaseAuditParams {
+  resource: typeof AuditResources.PIPELINE_ITEM;
+  action:
+    | typeof AuditActions.PIPELINE_ITEM_CREATED
+    | typeof AuditActions.PIPELINE_STAGE_CHANGED
+    | typeof AuditActions.PIPELINE_COPYEDITOR_ASSIGNED
+    | typeof AuditActions.PIPELINE_PROOFREADER_ASSIGNED
+    | typeof AuditActions.PIPELINE_COMMENT_ADDED;
+}
+
 export interface AuditAccessAuditParams extends BaseAuditParams {
   resource: typeof AuditResources.AUDIT;
   action: typeof AuditActions.AUDIT_ACCESSED;
@@ -295,6 +313,7 @@ export type AuditLogParams =
   | PaymentAuditParams
   | EmbedTokenAuditParams
   | PublicationAuditParams
+  | PipelineItemAuditParams
   | AuditAccessAuditParams
   | SystemAuditParams;
 

@@ -74,3 +74,13 @@ export const publicationStatusEnum = pgEnum("PublicationStatus", [
   "ACTIVE",
   "ARCHIVED",
 ]);
+
+export const pipelineStageEnum = pgEnum("PipelineStage", [
+  "COPYEDIT_PENDING",
+  "COPYEDIT_IN_PROGRESS",
+  "AUTHOR_REVIEW",
+  "PROOFREAD",
+  "READY_TO_PUBLISH",
+  "PUBLISHED",
+  "WITHDRAWN",
+]);

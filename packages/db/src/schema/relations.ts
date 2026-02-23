@@ -14,6 +14,7 @@ import { auditEvents, dsarRequests } from "./audit";
 import { retentionPolicies, userConsents } from "./compliance";
 import { apiKeys } from "./api-keys";
 import { publications } from "./publications";
+import { pipelineItems, pipelineHistory, pipelineComments } from "./pipeline";
 
 // --- organizations ---
 
@@ -28,6 +29,7 @@ export const organizationsRelations = relations(organizations, ({ many }) => ({
   userConsents: many(userConsents),
   apiKeys: many(apiKeys),
   publications: many(publications),
+  pipelineItems: many(pipelineItems),
 }));
 
 // --- users ---
@@ -181,6 +183,7 @@ export const submissionsRelations = relations(submissions, ({ one, many }) => ({
   }),
   history: many(submissionHistory),
   payments: many(payments),
+  pipelineItems: many(pipelineItems),
 }));
 
 // --- submission_history ---
@@ -278,5 +281,66 @@ export const publicationsRelations = relations(
       references: [organizations.id],
     }),
     submissionPeriods: many(submissionPeriods),
+    pipelineItems: many(pipelineItems),
+  }),
+);
+
+// --- pipeline_items ---
+
+export const pipelineItemsRelations = relations(
+  pipelineItems,
+  ({ one, many }) => ({
+    organization: one(organizations, {
+      fields: [pipelineItems.organizationId],
+      references: [organizations.id],
+    }),
+    submission: one(submissions, {
+      fields: [pipelineItems.submissionId],
+      references: [submissions.id],
+    }),
+    publication: one(publications, {
+      fields: [pipelineItems.publicationId],
+      references: [publications.id],
+    }),
+    copyeditor: one(users, {
+      fields: [pipelineItems.assignedCopyeditorId],
+      references: [users.id],
+      relationName: "pipelineItemCopyeditor",
+    }),
+    proofreader: one(users, {
+      fields: [pipelineItems.assignedProofreaderId],
+      references: [users.id],
+      relationName: "pipelineItemProofreader",
+    }),
+    history: many(pipelineHistory),
+    comments: many(pipelineComments),
+  }),
+);
+
+// --- pipeline_history ---
+
+export const pipelineHistoryRelations = relations(
+  pipelineHistory,
+  ({ one }) => ({
+    pipelineItem: one(pipelineItems, {
+      fields: [pipelineHistory.pipelineItemId],
+      references: [pipelineItems.id],
+    }),
+  }),
+);
+
+// --- pipeline_comments ---
+
+export const pipelineCommentsRelations = relations(
+  pipelineComments,
+  ({ one }) => ({
+    pipelineItem: one(pipelineItems, {
+      fields: [pipelineComments.pipelineItemId],
+      references: [pipelineItems.id],
+    }),
+    author: one(users, {
+      fields: [pipelineComments.authorId],
+      references: [users.id],
+    }),
   }),
 );
