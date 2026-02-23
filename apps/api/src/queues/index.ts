@@ -9,3 +9,8 @@ export {
   closeS3CleanupQueue,
   type S3CleanupJobData,
 } from './s3-cleanup.queue.js';
+
+export {
+  startOutboxPoller,
+  closeOutboxPollerQueue,
+} from './outbox-poller.queue.js';

@@ -23,8 +23,16 @@ import {
   stopFileScanWorker,
   startS3CleanupWorker,
   stopS3CleanupWorker,
+  startOutboxPollerWorker,
+  stopOutboxPollerWorker,
 } from './workers/index.js';
-import { closeFileScanQueue, closeS3CleanupQueue } from './queues/index.js';
+import {
+  closeFileScanQueue,
+  closeS3CleanupQueue,
+  startOutboxPoller,
+  closeOutboxPollerQueue,
+} from './queues/index.js';
+import { registerInngestRoutes } from './inngest/serve.js';
 
 export async function buildApp(env: Env): Promise<FastifyInstance> {
   const app = Fastify({
@@ -138,6 +146,11 @@ export async function buildApp(env: Env): Promise<FastifyInstance> {
     await registerEmbedRoutes(scope, { env });
   });
 
+  // Inngest serve endpoint — isolated scope (Inngest handles its own auth)
+  await app.register(async (scope) => {
+    await registerInngestRoutes(scope);
+  });
+
   // tRPC adapter
   await app.register(fastifyTRPCPlugin, {
     prefix: '/trpc',
@@ -213,6 +226,11 @@ async function start(): Promise<void> {
   startS3CleanupWorker(env);
   app.log.info('S3 cleanup worker started');
 
+  // Start outbox poller for Inngest event delivery
+  startOutboxPollerWorker(env);
+  await startOutboxPoller(env);
+  app.log.info('Outbox poller worker started');
+
   // Graceful shutdown
   const shutdown = async (signal: string) => {
     app.log.info(`Received ${signal}, shutting down gracefully...`);
@@ -228,6 +246,8 @@ async function start(): Promise<void> {
       await stopS3CleanupWorker();
       await closeFileScanQueue();
       await closeS3CleanupQueue();
+      await stopOutboxPollerWorker();
+      await closeOutboxPollerQueue();
       // TODO: Close DB pool when connection management is centralized
       // TODO: Close Redis connections
       app.log.info('Server closed');

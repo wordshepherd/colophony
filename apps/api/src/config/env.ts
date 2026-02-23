@@ -75,6 +75,19 @@ const envSchema = z.object({
     .enum(['true', 'false'])
     .default('false')
     .transform((v) => v === 'true'),
+
+  // Inngest workflow engine
+  INNGEST_EVENT_KEY: z.string().optional(),
+  INNGEST_SIGNING_KEY: z.string().optional(),
+  INNGEST_DEV: z
+    .enum(['true', 'false'])
+    .default('false')
+    .transform((v) => v === 'true'),
+
+  // Documenso contract signing
+  DOCUMENSO_API_URL: z.string().url().optional(),
+  DOCUMENSO_API_KEY: z.string().optional(),
+  DOCUMENSO_WEBHOOK_SECRET: z.string().optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;

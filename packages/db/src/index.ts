@@ -32,5 +32,7 @@ export {
   not,
   isNull,
   inArray,
+  asc,
+  desc,
   sql,
 } from "drizzle-orm";
