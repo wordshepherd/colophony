@@ -116,7 +116,7 @@
 - [x] Form selector UI in submission creation — submitters need a way to select a published form when creating a submission (currently requires DB linkage) — (manual QA 2026-02-20; done 2026-02-20)
 - [x] [P2] E2E Playwright tests for embed form flow — 10 tests (8 core + 2 wizard), CI job added — (DEVLOG 2026-02-22, embed widget session; done 2026-02-22)
 - [x] [P2] Manual QA of embed form widget — test iframe embedding on third-party page, identity step, form filling (flat + wizard), file uploads with scan status, error states, theme inheritance — (backlog 2026-02-23; done 2026-02-23 — found + fixed CORS + dark mode bugs)
-- [ ] [P3] Embed form genre validation: show human-readable labels instead of raw enum values — (manual QA 2026-02-23)
+- [x] [P3] Embed form genre validation: show human-readable labels instead of raw enum values — (manual QA 2026-02-23; done 2026-02-23)
 - [x] [P2] Migration 0015 production reliability — `db:verify` / `db:verify:repair` scripts check `information_schema` for FK constraint drift and auto-repair; integrated into `db:reset` — (GDPR manual QA 2026-02-23; done 2026-02-23)
 
 ---
