@@ -83,6 +83,16 @@ export const contractService = {
       .orderBy(desc(contracts.createdAt));
   },
 
+  async getByDocumensoDocumentId(tx: DrizzleDb, documensoDocumentId: string) {
+    const [row] = await tx
+      .select()
+      .from(contracts)
+      .where(eq(contracts.documensoDocumentId, documensoDocumentId))
+      .limit(1);
+
+    return row ?? null;
+  },
+
   // -------------------------------------------------------------------------
   // Generate / Status / Void
   // -------------------------------------------------------------------------

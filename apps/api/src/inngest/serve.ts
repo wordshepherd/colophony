@@ -1,7 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import { serve } from 'inngest/fastify';
 import { inngest } from './client.js';
-import { pipelineWorkflow } from './functions/index.js';
+import { pipelineWorkflow, contractWorkflow } from './functions/index.js';
 
 /**
  * Register the Inngest serve endpoint at `POST /api/inngest`.
@@ -15,7 +15,7 @@ export async function registerInngestRoutes(
 ): Promise<void> {
   const handler = serve({
     client: inngest,
-    functions: [pipelineWorkflow],
+    functions: [pipelineWorkflow, contractWorkflow],
   });
 
   app.route({
