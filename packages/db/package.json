@@ -22,6 +22,8 @@
     "check": "drizzle-kit check",
     "studio": "drizzle-kit studio",
     "seed": "tsx --env-file=.env src/seed.ts",
+    "verify": "tsx --env-file=.env src/verify-migrations.ts --check",
+    "verify:repair": "tsx --env-file=.env src/verify-migrations.ts --repair",
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
