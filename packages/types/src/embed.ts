@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { scanStatusSchema } from "./file";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -145,6 +146,11 @@ export const embedSubmitSchema = z.object({
     .record(z.string(), z.unknown())
     .optional()
     .describe("Dynamic form field responses"),
+  manuscriptVersionId: z
+    .string()
+    .uuid()
+    .optional()
+    .describe("Manuscript version with uploaded files (from prepareUpload)"),
 });
 
 export type EmbedSubmitInput = z.infer<typeof embedSubmitSchema>;
@@ -171,3 +177,61 @@ export const listEmbedTokensByPeriodSchema = z.object({
     .uuid()
     .describe("Submission period to list tokens for"),
 });
+
+// ---------------------------------------------------------------------------
+// Prepare upload schemas
+// ---------------------------------------------------------------------------
+
+export const embedPrepareUploadSchema = z.object({
+  email: z.string().email().max(255).describe("Submitter email address"),
+  name: z.string().max(255).optional().describe("Submitter display name"),
+});
+
+export type EmbedPrepareUploadInput = z.infer<typeof embedPrepareUploadSchema>;
+
+export const embedPrepareUploadResponseSchema = z.object({
+  manuscriptVersionId: z
+    .string()
+    .uuid()
+    .describe("Manuscript version ID for tus metadata"),
+  guestUserId: z.string().uuid().describe("Guest user ID for tus metadata"),
+  tusEndpoint: z.string().url().describe("tusd endpoint URL"),
+  maxFileSize: z.number().describe("Max file size in bytes"),
+  maxFiles: z.number().describe("Max files per manuscript version"),
+  allowedMimeTypes: z
+    .array(z.string())
+    .describe("Allowed MIME types for upload"),
+});
+
+export type EmbedPrepareUploadResponse = z.infer<
+  typeof embedPrepareUploadResponseSchema
+>;
+
+// ---------------------------------------------------------------------------
+// Upload status schemas
+// ---------------------------------------------------------------------------
+
+export const embedUploadStatusQuerySchema = z.object({
+  email: z
+    .string()
+    .email()
+    .max(255)
+    .describe("Submitter email for ownership check"),
+});
+
+export const embedUploadStatusResponseSchema = z.object({
+  files: z.array(
+    z.object({
+      id: z.string().uuid(),
+      filename: z.string(),
+      size: z.number(),
+      mimeType: z.string(),
+      scanStatus: scanStatusSchema,
+    }),
+  ),
+  allClean: z.boolean().describe("Whether all files passed virus scanning"),
+});
+
+export type EmbedUploadStatusResponse = z.infer<
+  typeof embedUploadStatusResponseSchema
+>;
