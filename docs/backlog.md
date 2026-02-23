@@ -102,7 +102,7 @@
 - [x] Conditional logic engine — (architecture doc Track 3, form-builder-research.md; done 2026-02-21)
 - [x] Form branching logic PR 1 — schema, evaluation engine, all API surfaces, form builder UI, renderer; single-page branching complete — (roadmap idea 2026-02-21; done 2026-02-21)
 - [x] Form branching logic PR 2 — multi-page wizard renderer, per-page validation, page navigation with branching rules, stepper UI — (roadmap idea 2026-02-21; done 2026-02-21)
-- [~] Embeddable forms (iframe) — PR 1 backend foundation done 2026-02-22; PR 2 file uploads done 2026-02-22; PR 3 (frontend widget) pending — (architecture doc Track 3, form-builder-research.md)
+- [x] Embeddable forms (iframe) — PR 1 backend foundation done 2026-02-22; PR 2 file uploads done 2026-02-22; PR 3 frontend widget done 2026-02-22 — (architecture doc Track 3, form-builder-research.md)
 - [x] Submission periods UI — schema exists, no UI — (DEVLOG 2026-02-15; done 2026-02-21)
 - [x] Submission periods: REST oRPC router + GraphQL resolvers for parity with forms/submissions — (DEVLOG 2026-02-21, deferred from submission periods PR; done 2026-02-21)
 - [x] Editor dashboard rewrite (`/editor` pages) — submission queue + detail view reuse — (DEVLOG 2026-02-15; done 2026-02-21)
@@ -114,6 +114,7 @@
 - [ ] Org deletion — needs careful cascade handling — (DEVLOG 2026-02-13)
 - [ ] [P3] Form editor: debounce or batch field add/update API calls to avoid 429 rate limiting on rapid edits — (manual QA 2026-02-20)
 - [x] Form selector UI in submission creation — submitters need a way to select a published form when creating a submission (currently requires DB linkage) — (manual QA 2026-02-20; done 2026-02-20)
+- [ ] [P2] E2E Playwright tests for embed form flow — requires embed token creation + iframe testing — (DEVLOG 2026-02-22, embed widget session)
 
 ---
 
