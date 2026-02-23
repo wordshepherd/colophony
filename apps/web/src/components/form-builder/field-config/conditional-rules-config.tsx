@@ -377,7 +377,7 @@ function RuleEditor({
               <Separator className="flex-1" />
               <button
                 type="button"
-                className="text-[10px] font-medium px-1.5 py-0.5 rounded-sm hover:bg-muted"
+                className="text-[10px] font-medium px-1.5 py-0.5 rounded-xs hover:bg-muted"
                 onClick={() =>
                   updateOperator(
                     rule.condition.operator === "AND" ? "OR" : "AND",
