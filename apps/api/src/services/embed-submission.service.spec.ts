@@ -422,6 +422,29 @@ describe('embedSubmissionService', () => {
       expect(result.allClean).toBe(true);
     });
 
+    it('scopes RLS query to token org + user', async () => {
+      mockSelectChain([{ id: 'user-1' }]);
+
+      mockWithRls.mockImplementation(
+        async (_ctx: unknown, fn: (tx: unknown) => Promise<unknown>) => {
+          return fn({});
+        },
+      );
+      mockFileService.listByManuscriptVersion.mockResolvedValue([]);
+
+      const token = makeToken({ organizationId: 'org-specific-123' });
+      await embedSubmissionService.getUploadStatus(
+        token,
+        'version-1',
+        'writer@example.com',
+      );
+
+      expect(mockWithRls).toHaveBeenCalledWith(
+        { orgId: 'org-specific-123', userId: 'user-1' },
+        expect.any(Function),
+      );
+    });
+
     it('throws 404 for unknown email', async () => {
       mockSelectChain([]);
 

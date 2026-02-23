@@ -210,7 +210,7 @@ export const embedSubmissionService = {
    * SELECT-only user lookup — does not create users.
    */
   async getUploadStatus(
-    _token: VerifiedEmbedToken,
+    token: VerifiedEmbedToken,
     manuscriptVersionId: string,
     guestEmail: string,
   ): Promise<EmbedUploadStatusResponse> {
@@ -221,9 +221,13 @@ export const embedSubmissionService = {
       throw err;
     }
 
-    const files = await withRls({ userId: user.id }, async (tx) => {
-      return fileService.listByManuscriptVersion(tx, manuscriptVersionId);
-    });
+    // Scope to token's org + user — prevents cross-token enumeration
+    const files = await withRls(
+      { orgId: token.organizationId, userId: user.id },
+      async (tx) => {
+        return fileService.listByManuscriptVersion(tx, manuscriptVersionId);
+      },
+    );
 
     return {
       files: files.map((f) => ({

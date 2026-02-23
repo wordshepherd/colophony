@@ -1077,6 +1077,28 @@ describe('tusd webhook handler', () => {
       expect(body.HTTPResponse.Body).toContain('embed_token_expired');
     });
 
+    it('pre-create rejects when submission period is closed', async () => {
+      mockVerifyEmbedToken.mockResolvedValueOnce({
+        ...VALID_EMBED_TOKEN,
+        period: {
+          ...VALID_EMBED_TOKEN.period,
+          closesAt: new Date(Date.now() - 3600000), // closed 1 hour ago
+        },
+      });
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/webhooks/tusd',
+        headers: {},
+        payload: makeEmbedPreCreateBody(),
+      });
+
+      expect(response.statusCode).toBe(200);
+      const body = JSON.parse(response.payload);
+      expect(body.RejectUpload).toBe(true);
+      expect(body.HTTPResponse.Body).toContain('submission_period_closed');
+    });
+
     it('pre-create rejects missing guest-user-id metadata', async () => {
       mockVerifyEmbedToken.mockResolvedValueOnce(VALID_EMBED_TOKEN);
 

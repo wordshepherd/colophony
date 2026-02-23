@@ -391,7 +391,7 @@ export async function registerEmbedRoutes(
 
         const windowMs = env.RATE_LIMIT_WINDOW_SECONDS * 1000;
         const windowId = Math.floor(Date.now() / windowMs);
-        const key = `${env.RATE_LIMIT_KEY_PREFIX}:embed:${request.ip}:${windowId}`;
+        const key = `${env.RATE_LIMIT_KEY_PREFIX}:embed:poll:${request.ip}:${windowId}`;
 
         try {
           const result = (await redisClient.eval(
@@ -402,13 +402,14 @@ export async function registerEmbedRoutes(
           )) as [number, number];
           const count = result[0];
 
-          const embedLimit = 10;
-          if (count > embedLimit) {
+          // Higher limit for polling endpoint (60/window vs 10 for mutating endpoints)
+          const pollLimit = 60;
+          if (count > pollLimit) {
             const remainingMs = windowMs - (Date.now() % windowMs);
             const retryAfterSeconds = Math.ceil(remainingMs / 1000);
             reply.header('Retry-After', retryAfterSeconds);
             request.log.warn(
-              { ip: request.ip, count, limit: embedLimit },
+              { ip: request.ip, count, limit: pollLimit },
               'Embed upload-status rate limit exceeded',
             );
             return reply.status(429).send({

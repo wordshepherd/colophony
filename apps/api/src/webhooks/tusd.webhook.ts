@@ -304,6 +304,17 @@ export async function registerTusdWebhooks(
         await reply.status(200).send(rejectUpload(401, 'embed_token_expired'));
         return;
       }
+      // Reject uploads after submission period closes
+      const now = new Date();
+      if (
+        now < tokenResult.period.opensAt ||
+        now > tokenResult.period.closesAt
+      ) {
+        await reply
+          .status(200)
+          .send(rejectUpload(403, 'submission_period_closed'));
+        return;
+      }
       if (!guestUserId) {
         await reply
           .status(200)
@@ -477,6 +488,14 @@ export async function registerTusdWebhooks(
       }
       if (tokenResult.expiresAt && tokenResult.expiresAt < new Date()) {
         return reply.status(401).send({ error: 'embed_token_expired' });
+      }
+      // Reject post-finish after submission period closes
+      const pfNow = new Date();
+      if (
+        pfNow < tokenResult.period.opensAt ||
+        pfNow > tokenResult.period.closesAt
+      ) {
+        return reply.status(403).send({ error: 'submission_period_closed' });
       }
       if (!postFinishGuestUserId) {
         return reply.status(400).send({ error: 'missing_guest_user_id' });
