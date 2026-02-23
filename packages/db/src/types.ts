@@ -18,6 +18,14 @@ import type { auditEvents, dsarRequests } from "./schema/audit";
 import type { retentionPolicies, userConsents } from "./schema/compliance";
 import type { outboxEvents } from "./schema/messaging";
 import type { zitadelWebhookEvents } from "./schema/webhooks";
+import type { publications } from "./schema/publications";
+import type {
+  pipelineItems,
+  pipelineHistory,
+  pipelineComments,
+} from "./schema/pipeline";
+import type { contractTemplates, contracts } from "./schema/contracts";
+import type { issues, issueSections, issueItems } from "./schema/issues";
 
 // --- Select types (what you get back from queries) ---
 
@@ -41,6 +49,15 @@ export type RetentionPolicy = InferSelectModel<typeof retentionPolicies>;
 export type UserConsent = InferSelectModel<typeof userConsents>;
 export type OutboxEvent = InferSelectModel<typeof outboxEvents>;
 export type ZitadelWebhookEvent = InferSelectModel<typeof zitadelWebhookEvents>;
+export type Publication = InferSelectModel<typeof publications>;
+export type PipelineItem = InferSelectModel<typeof pipelineItems>;
+export type PipelineHistoryEntry = InferSelectModel<typeof pipelineHistory>;
+export type PipelineComment = InferSelectModel<typeof pipelineComments>;
+export type ContractTemplate = InferSelectModel<typeof contractTemplates>;
+export type Contract = InferSelectModel<typeof contracts>;
+export type Issue = InferSelectModel<typeof issues>;
+export type IssueSection = InferSelectModel<typeof issueSections>;
+export type IssueItem = InferSelectModel<typeof issueItems>;
 
 /** @deprecated Use File instead — submission_files has been replaced by the files table */
 export type SubmissionFile = File;
@@ -75,6 +92,15 @@ export type NewOutboxEvent = InferInsertModel<typeof outboxEvents>;
 export type NewZitadelWebhookEvent = InferInsertModel<
   typeof zitadelWebhookEvents
 >;
+export type NewPublication = InferInsertModel<typeof publications>;
+export type NewPipelineItem = InferInsertModel<typeof pipelineItems>;
+export type NewPipelineHistoryEntry = InferInsertModel<typeof pipelineHistory>;
+export type NewPipelineComment = InferInsertModel<typeof pipelineComments>;
+export type NewContractTemplate = InferInsertModel<typeof contractTemplates>;
+export type NewContract = InferInsertModel<typeof contracts>;
+export type NewIssue = InferInsertModel<typeof issues>;
+export type NewIssueSection = InferInsertModel<typeof issueSections>;
+export type NewIssueItem = InferInsertModel<typeof issueItems>;
 
 /** @deprecated Use NewFile instead */
 export type NewSubmissionFile = NewFile;

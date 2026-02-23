@@ -49,6 +49,7 @@ export function createTestEnv(overrides?: Partial<Env>): Env {
     DEV_AUTH_BYPASS: false,
     FEDERATION_DOMAIN: undefined,
     FEDERATION_ENABLED: false,
+    INNGEST_DEV: false,
     ...overrides,
   };
 }

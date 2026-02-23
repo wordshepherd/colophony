@@ -65,3 +65,45 @@ export const formFieldTypeEnum = pgEnum("FormFieldType", [
   "section_header",
   "info_text",
 ]);
+
+// ---------------------------------------------------------------------------
+// Slate — Publication Pipeline
+// ---------------------------------------------------------------------------
+
+export const publicationStatusEnum = pgEnum("PublicationStatus", [
+  "ACTIVE",
+  "ARCHIVED",
+]);
+
+export const pipelineStageEnum = pgEnum("PipelineStage", [
+  "COPYEDIT_PENDING",
+  "COPYEDIT_IN_PROGRESS",
+  "AUTHOR_REVIEW",
+  "PROOFREAD",
+  "READY_TO_PUBLISH",
+  "PUBLISHED",
+  "WITHDRAWN",
+]);
+
+export const issueStatusEnum = pgEnum("IssueStatus", [
+  "PLANNING",
+  "ASSEMBLING",
+  "READY",
+  "PUBLISHED",
+  "ARCHIVED",
+]);
+
+export const cmsAdapterTypeEnum = pgEnum("CmsAdapterType", [
+  "WORDPRESS",
+  "GHOST",
+]);
+
+export const contractStatusEnum = pgEnum("ContractStatus", [
+  "DRAFT",
+  "SENT",
+  "VIEWED",
+  "SIGNED",
+  "COUNTERSIGNED",
+  "COMPLETED",
+  "VOIDED",
+]);

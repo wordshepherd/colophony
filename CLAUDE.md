@@ -42,6 +42,9 @@ Per-directory CLAUDE.md files contain domain-specific details:
 | **tRPC (internal)**     | `apps/api/src/trpc/`                                                     |
 | **Zitadel webhook**     | `apps/api/src/webhooks/zitadel.webhook.ts`                               |
 | **Stripe webhook**      | `apps/api/src/webhooks/stripe.webhook.ts`                                |
+| **Documenso webhook**   | `apps/api/src/webhooks/documenso.webhook.ts`                             |
+| **Inngest functions**   | `apps/api/src/inngest/`                                                  |
+| **CMS adapters**        | `apps/api/src/adapters/cms/`                                             |
 | **Next.js frontend**    | `apps/web/`                                                              |
 | **tRPC client**         | `apps/web/src/lib/trpc.ts`                                               |
 | **Env config (Zod)**    | `apps/api/src/config/env.ts`                                             |

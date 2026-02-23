@@ -34,6 +34,23 @@ import {
   ManuscriptNotFoundError,
   ManuscriptVersionNotFoundError,
 } from '../services/manuscript.service.js';
+import {
+  PublicationNotFoundError,
+  PublicationSlugConflictError,
+} from '../services/publication.service.js';
+import {
+  PipelineItemNotFoundError,
+  PipelineItemAlreadyExistsError,
+  InvalidPipelineTransitionError,
+  SubmissionNotAcceptedError,
+} from '../services/pipeline.service.js';
+import { ContractTemplateNotFoundError } from '../services/contract-template.service.js';
+import { ContractNotFoundError } from '../services/contract.service.js';
+import {
+  IssueNotFoundError,
+  IssueItemAlreadyExistsError,
+} from '../services/issue.service.js';
+import { CmsConnectionNotFoundError } from '../services/cms-connection.service.js';
 
 type TRPCErrorCode = ConstructorParameters<typeof TRPCError>[0]['code'];
 
@@ -69,6 +86,22 @@ const errorCodeMap: [new (...args: never[]) => Error, TRPCErrorCode][] = [
   // Period errors
   [PeriodNotFoundError, 'NOT_FOUND'],
   [PeriodHasSubmissionsError, 'BAD_REQUEST'],
+  // Publication errors
+  [PublicationNotFoundError, 'NOT_FOUND'],
+  [PublicationSlugConflictError, 'CONFLICT'],
+  // Pipeline errors
+  [PipelineItemNotFoundError, 'NOT_FOUND'],
+  [PipelineItemAlreadyExistsError, 'CONFLICT'],
+  [InvalidPipelineTransitionError, 'BAD_REQUEST'],
+  [SubmissionNotAcceptedError, 'BAD_REQUEST'],
+  // Contract errors
+  [ContractTemplateNotFoundError, 'NOT_FOUND'],
+  [ContractNotFoundError, 'NOT_FOUND'],
+  // Issue errors
+  [IssueNotFoundError, 'NOT_FOUND'],
+  [IssueItemAlreadyExistsError, 'CONFLICT'],
+  // CMS errors
+  [CmsConnectionNotFoundError, 'NOT_FOUND'],
   // Precondition
   [FileNotCleanError, 'PRECONDITION_FAILED'],
 ];
