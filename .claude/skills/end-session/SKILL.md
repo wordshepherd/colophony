@@ -260,6 +260,8 @@ Print a summary for the user:
 
 - NEVER push to `main` — always use a feature branch
 - Use `gh run list/view` for CI status, NOT `gh pr checks` (fine-grained PAT limitation)
+- `gh pr edit` is broken (Projects Classic deprecation). Use `gh api repos/{owner}/{repo}/pulls/{number} -X PATCH -f title="..." -f body="..."` instead
+- `gh pr create/list/view` use GraphQL (5000 pts/hr shared budget). If rate limit errors occur, convert to REST: `gh api repos/{owner}/{repo}/pulls`
 - The DEVLOG entry should be concise but complete — future sessions rely on it for context
 - If the session had multiple unrelated workstreams, consider whether they should be separate PRs
 - Doc updates are always the LAST commit — after all code changes and any review fixes, but BEFORE the push/PR so CI covers everything in one run
