@@ -10,8 +10,9 @@ let worker: Worker<OutboxPollerJobData> | null = null;
  * Process unprocessed outbox events by sending them to Inngest.
  *
  * Uses the superuser `db` instance because `outbox_events` has no RLS —
- * it's a system table. Each event is sent to Inngest individually, and marked
- * as processed on success or has its error/retry count updated on failure.
+ * it's a system table. Each event is claimed atomically (processedAt set to
+ * a sentinel value) before sending to avoid duplicate delivery if multiple
+ * poller instances overlap.
  */
 async function processOutboxEvents(): Promise<number> {
   // Fetch up to 50 unprocessed events, oldest first
@@ -27,13 +28,25 @@ async function processOutboxEvents(): Promise<number> {
   let processed = 0;
 
   for (const event of events) {
+    // Claim the row atomically — only succeeds if still unclaimed
+    const claimSentinel = new Date(0); // epoch = "claimed, not yet delivered"
+    const [claimed] = await db
+      .update(outboxEvents)
+      .set({ processedAt: claimSentinel })
+      .where(
+        sql`${outboxEvents.id} = ${event.id} AND ${outboxEvents.processedAt} IS NULL`,
+      )
+      .returning({ id: outboxEvents.id });
+
+    if (!claimed) continue; // Another poller instance already claimed this row
+
     try {
       await inngest.send({
         name: event.eventType,
         data: event.payload as Record<string, unknown>,
       });
 
-      // Mark as processed
+      // Mark as fully processed with actual timestamp
       await db
         .update(outboxEvents)
         .set({ processedAt: new Date() })
@@ -41,10 +54,11 @@ async function processOutboxEvents(): Promise<number> {
 
       processed++;
     } catch (err) {
-      // Record error but don't fail the whole batch
+      // Unclaim + record error so the event can be retried
       await db
         .update(outboxEvents)
         .set({
+          processedAt: null,
           error: err instanceof Error ? err.message : String(err),
           retryCount: sql`${outboxEvents.retryCount} + 1`,
         })

@@ -41,77 +41,90 @@ export const pipelineWorkflow = inngest.createFunction(
       });
     });
 
-    // Step 2: Wait for copyeditor to be assigned → COPYEDIT_IN_PROGRESS
+    const pipelineItemId = pipelineItem.id;
+
+    // Step 2: Wait for copyeditor to be assigned
     await step.waitForEvent('wait-copyeditor-assigned', {
       event: 'slate/pipeline.copyeditor-assigned',
-      match: 'data.pipelineItemId',
+      if: `async.data.pipelineItemId == '${pipelineItemId}'`,
       timeout: '30d',
     });
 
-    // Step 3: Wait for copyedit to be completed
+    // Step 3: Advance to COPYEDIT_IN_PROGRESS
+    await step.run('advance-to-copyedit-in-progress', async () => {
+      return withRls({ orgId }, async (tx) => {
+        return pipelineService.updateStage(
+          tx,
+          pipelineItemId,
+          { stage: 'COPYEDIT_IN_PROGRESS' },
+          orgId,
+        );
+      });
+    });
+
+    // Step 4: Wait for copyedit to be completed
     await step.waitForEvent('wait-copyedit-completed', {
       event: 'slate/pipeline.copyedit-completed',
-      match: 'data.pipelineItemId',
+      if: `async.data.pipelineItemId == '${pipelineItemId}'`,
       timeout: '30d',
     });
 
-    // Step 4: Advance to AUTHOR_REVIEW
+    // Step 5: Advance to AUTHOR_REVIEW
     await step.run('advance-to-author-review', async () => {
       return withRls({ orgId }, async (tx) => {
         return pipelineService.updateStage(
           tx,
-          pipelineItem.id,
+          pipelineItemId,
           { stage: 'AUTHOR_REVIEW' },
           orgId,
         );
       });
     });
 
-    // Step 5: Wait for author review response
+    // Step 6: Wait for author review response
     const authorReview = await step.waitForEvent('wait-author-review', {
       event: 'slate/pipeline.author-review-completed',
-      match: 'data.pipelineItemId',
+      if: `async.data.pipelineItemId == '${pipelineItemId}'`,
       timeout: '30d',
     });
 
-    // If author rejected, loop back would need a recursive approach.
-    // For v1, we advance to PROOFREAD if approved.
+    // If author rejected, stay at AUTHOR_REVIEW for manual intervention.
+    // A future version could loop back to COPYEDIT_IN_PROGRESS.
     if (!authorReview || !authorReview.data.approved) {
-      // Author rejected — stay at AUTHOR_REVIEW for manual intervention
-      return { status: 'author-rejected', pipelineItemId: pipelineItem.id };
+      return { status: 'author-rejected', pipelineItemId };
     }
 
-    // Step 6: Advance to PROOFREAD
+    // Step 7: Advance to PROOFREAD
     await step.run('advance-to-proofread', async () => {
       return withRls({ orgId }, async (tx) => {
         return pipelineService.updateStage(
           tx,
-          pipelineItem.id,
+          pipelineItemId,
           { stage: 'PROOFREAD' },
           orgId,
         );
       });
     });
 
-    // Step 7: Wait for proofread to be completed
+    // Step 8: Wait for proofread to be completed
     await step.waitForEvent('wait-proofread-completed', {
       event: 'slate/pipeline.proofread-completed',
-      match: 'data.pipelineItemId',
+      if: `async.data.pipelineItemId == '${pipelineItemId}'`,
       timeout: '30d',
     });
 
-    // Step 8: Mark READY_TO_PUBLISH
+    // Step 9: Mark READY_TO_PUBLISH
     await step.run('advance-to-ready', async () => {
       return withRls({ orgId }, async (tx) => {
         return pipelineService.updateStage(
           tx,
-          pipelineItem.id,
+          pipelineItemId,
           { stage: 'READY_TO_PUBLISH' },
           orgId,
         );
       });
     });
 
-    return { status: 'ready-to-publish', pipelineItemId: pipelineItem.id };
+    return { status: 'ready-to-publish', pipelineItemId };
   },
 );
