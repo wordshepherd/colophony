@@ -115,6 +115,7 @@
 - [ ] [P3] Form editor: debounce or batch field add/update API calls to avoid 429 rate limiting on rapid edits — (manual QA 2026-02-20)
 - [x] Form selector UI in submission creation — submitters need a way to select a published form when creating a submission (currently requires DB linkage) — (manual QA 2026-02-20; done 2026-02-20)
 - [x] [P2] E2E Playwright tests for embed form flow — 10 tests (8 core + 2 wizard), CI job added — (DEVLOG 2026-02-22, embed widget session; done 2026-02-22)
+- [ ] [P2] Manual QA of embed form widget — test iframe embedding on third-party page, identity step, form filling (flat + wizard), file uploads with scan status, error states, theme inheritance — (backlog 2026-02-23)
 
 ---
 
