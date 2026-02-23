@@ -1,6 +1,6 @@
 import { faker } from '@faker-js/faker';
 import { drizzle } from 'drizzle-orm/node-postgres';
-import { getAdminPool, type DrizzleDb } from './db-setup';
+import { getAdminPool } from './db-setup';
 import {
   organizations,
   users,
@@ -30,7 +30,9 @@ import {
   type UserConsent,
 } from '@colophony/db';
 
-function adminDb(): DrizzleDb {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- pnpm resolves two drizzle-orm copies
+// (different optional peer dep contexts); runtime is single copy, types diverge. Cast to unify.
+function adminDb(): any {
   return drizzle(getAdminPool());
 }
 

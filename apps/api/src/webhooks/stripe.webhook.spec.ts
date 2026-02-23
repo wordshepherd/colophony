@@ -142,6 +142,7 @@ const testEnv: Env = {
   VIRUS_SCAN_ENABLED: true,
   DEV_AUTH_BYPASS: false,
   FEDERATION_ENABLED: false,
+  INNGEST_DEV: false,
   STRIPE_SECRET_KEY: 'sk_test_xxx',
   STRIPE_WEBHOOK_SECRET: WEBHOOK_SECRET,
 };
