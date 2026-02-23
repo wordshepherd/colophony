@@ -26,7 +26,7 @@ const DATABASE_URL =
 
 let pool: Pool | null = null;
 
-function getPool(): Pool {
+export function getPool(): Pool {
   if (!pool) {
     pool = new Pool({
       connectionString: DATABASE_URL,
@@ -37,7 +37,7 @@ function getPool(): Pool {
   return pool;
 }
 
-function getDb() {
+export function getDb() {
   return drizzle(getPool());
 }
 
