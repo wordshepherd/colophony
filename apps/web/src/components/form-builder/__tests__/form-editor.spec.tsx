@@ -109,6 +109,18 @@ jest.mock("sonner", () => ({
   toast: { success: jest.fn(), error: jest.fn() },
 }));
 
+jest.mock("@/lib/trpc", () => ({
+  trpc: {
+    useUtils: () => ({
+      forms: {
+        getById: {
+          setQueriesData: jest.fn(),
+        },
+      },
+    }),
+  },
+}));
+
 describe("FormEditor", () => {
   beforeEach(() => {
     resetMocks();

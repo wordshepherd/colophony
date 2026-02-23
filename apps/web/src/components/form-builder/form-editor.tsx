@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import {
   DndContext,
   closestCenter,
@@ -12,6 +12,7 @@ import {
 } from "@dnd-kit/core";
 import { sortableKeyboardCoordinates } from "@dnd-kit/sortable";
 import { useFormBuilder } from "@/hooks/use-form-builder";
+import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { FormStatusBadge } from "./form-status-badge";
@@ -84,6 +85,13 @@ export function FormEditor({ formId }: FormEditorProps) {
       const { active, over } = event;
       if (!over || active.id === over.id || !form) return;
       if (form.status !== "DRAFT") return;
+
+      // Cancel any pending debounced arrow-button reorder to prevent it
+      // from overwriting this drag-drop result
+      if (reorderTimerRef.current) {
+        clearTimeout(reorderTimerRef.current);
+        reorderTimerRef.current = null;
+      }
 
       const hasPages = form.pages.length > 0;
 
@@ -166,6 +174,74 @@ export function FormEditor({ formId }: FormEditorProps) {
       },
     );
   }, [formId, deleteForm, router]);
+
+  // Debounced reorder for arrow-button clicks (300ms)
+  const reorderTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const utils = trpc.useUtils();
+
+  const debouncedReorder = useCallback(
+    (fieldIds: string[]) => {
+      if (!form) return;
+
+      const hasPages = form.pages.length > 0;
+
+      // Merge page-scoped subset back into full field list
+      let mergedFieldIds: string[];
+      if (hasPages && activePageId !== null) {
+        const pageFieldSet = new Set(fieldIds);
+        const fullIds = form.fields.map((f) => f.id);
+        let reorderIdx = 0;
+        mergedFieldIds = fullIds.map((id) =>
+          pageFieldSet.has(id) ? fieldIds[reorderIdx++] : id,
+        );
+      } else if (hasPages && activePageId === null) {
+        const unassignedSet = new Set(fieldIds);
+        const fullIds = form.fields.map((f) => f.id);
+        let reorderIdx = 0;
+        mergedFieldIds = fullIds.map((id) =>
+          unassignedSet.has(id) ? fieldIds[reorderIdx++] : id,
+        );
+      } else {
+        mergedFieldIds = fieldIds;
+      }
+
+      // Optimistic UI update
+      utils.forms.getById.setQueriesData({ id: formId }, {}, (old) => {
+        if (!old) return old;
+        const idToIndex = new Map(mergedFieldIds.map((id, idx) => [id, idx]));
+        return {
+          ...old,
+          fields: old.fields
+            .map((f) => ({
+              ...f,
+              sortOrder: idToIndex.get(f.id) ?? f.sortOrder,
+            }))
+            .sort((a, b) => a.sortOrder - b.sortOrder),
+        };
+      });
+
+      // Debounce the API call
+      if (reorderTimerRef.current) clearTimeout(reorderTimerRef.current);
+      reorderTimerRef.current = setTimeout(() => {
+        reorderFields.mutate(
+          { id: formId, fieldIds: mergedFieldIds },
+          {
+            onError: () => {
+              // Rollback optimistic update on failure
+              utils.forms.getById.invalidate({ id: formId });
+            },
+          },
+        );
+      }, 300);
+    },
+    [form, formId, activePageId, reorderFields, utils],
+  );
+
+  useEffect(() => {
+    return () => {
+      if (reorderTimerRef.current) clearTimeout(reorderTimerRef.current);
+    };
+  }, []);
 
   if (isLoading) {
     return (
@@ -367,12 +443,7 @@ export function FormEditor({ formId }: FormEditorProps) {
                       ? (fieldId) => removeField.mutate({ id: formId, fieldId })
                       : () => {}
                   }
-                  onReorder={
-                    canEdit
-                      ? (fieldIds) =>
-                          reorderFields.mutate({ id: formId, fieldIds })
-                      : () => {}
-                  }
+                  onReorder={canEdit ? debouncedReorder : () => {}}
                 />
               </div>
 
