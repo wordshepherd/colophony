@@ -114,7 +114,7 @@
 - [ ] Org deletion — needs careful cascade handling — (DEVLOG 2026-02-13)
 - [ ] [P3] Form editor: debounce or batch field add/update API calls to avoid 429 rate limiting on rapid edits — (manual QA 2026-02-20)
 - [x] Form selector UI in submission creation — submitters need a way to select a published form when creating a submission (currently requires DB linkage) — (manual QA 2026-02-20; done 2026-02-20)
-- [ ] [P2] E2E Playwright tests for embed form flow — requires embed token creation + iframe testing — (DEVLOG 2026-02-22, embed widget session)
+- [x] [P2] E2E Playwright tests for embed form flow — 10 tests (8 core + 2 wizard), CI job added — (DEVLOG 2026-02-22, embed widget session; done 2026-02-22)
 
 ---
 
