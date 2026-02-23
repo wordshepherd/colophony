@@ -43,6 +43,15 @@ export class PipelineItemAlreadyExistsError extends Error {
   }
 }
 
+export class SubmissionNotAcceptedError extends Error {
+  constructor(submissionId: string, currentStatus: string) {
+    super(
+      `Submission "${submissionId}" has status "${currentStatus}" — only ACCEPTED submissions can enter the pipeline`,
+    );
+    this.name = 'SubmissionNotAcceptedError';
+  }
+}
+
 export class InvalidPipelineTransitionError extends Error {
   constructor(from: string, to: string) {
     super(`Invalid pipeline transition from "${from}" to "${to}"`);
@@ -145,6 +154,23 @@ export const pipelineService = {
   // -------------------------------------------------------------------------
 
   async create(tx: DrizzleDb, input: CreatePipelineItemInput, orgId: string) {
+    // Verify the submission exists and is ACCEPTED
+    const [submission] = await tx
+      .select({ id: submissions.id, status: submissions.status })
+      .from(submissions)
+      .where(eq(submissions.id, input.submissionId))
+      .limit(1);
+
+    if (!submission) {
+      throw new PipelineItemNotFoundError(input.submissionId);
+    }
+    if (submission.status !== 'ACCEPTED') {
+      throw new SubmissionNotAcceptedError(
+        input.submissionId,
+        submission.status,
+      );
+    }
+
     // Check uniqueness: one pipeline item per submission
     const existing = await pipelineService.getBySubmissionId(
       tx,
@@ -227,6 +253,10 @@ export const pipelineService = {
     input: UpdatePipelineStageInput,
   ) {
     assertEditorOrAdmin(ctx.actor.role);
+    // Capture the previous stage before the update for the audit trail
+    const current = await pipelineService.getById(ctx.tx, id);
+    if (!current) throw new PipelineItemNotFoundError(id);
+    const previousStage = current.stage;
     const updated = await pipelineService.updateStage(
       ctx.tx,
       id,
@@ -237,7 +267,7 @@ export const pipelineService = {
       action: AuditActions.PIPELINE_STAGE_CHANGED,
       resource: AuditResources.PIPELINE_ITEM,
       resourceId: id,
-      oldValue: { stage: updated.stage },
+      oldValue: { stage: previousStage },
       newValue: { stage: input.stage },
     });
     return updated;
