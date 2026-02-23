@@ -32,6 +32,9 @@ pnpm --filter @colophony/web test:e2e
 # Playwright — upload flow (6 tests, requires tusd + MinIO)
 pnpm --filter @colophony/web test:e2e:uploads
 
+# Playwright — embed form (10 tests, requires dev servers)
+pnpm --filter @colophony/web test:e2e:embed
+
 # Playwright — OIDC flow (6 tests, requires Zitadel)
 pnpm --filter @colophony/web test:e2e:oidc
 
@@ -62,7 +65,7 @@ pnpm --filter @colophony/web test:e2e:ui
 | Web unit tests            | 11    | ~108  | Jest + jsdom    | `apps/web/src/**/*.spec.*`         |
 | RLS integration tests     | 8     | ~93   | Vitest (custom) | `apps/api/src/__tests__/rls/`      |
 | Webhook integration tests | 3     | ~28   | Vitest (custom) | `apps/api/src/__tests__/webhooks/` |
-| Playwright browser E2E    | 6     | ~32   | Playwright      | `apps/web/e2e/`                    |
+| Playwright browser E2E    | 8     | ~42   | Playwright      | `apps/web/e2e/`                    |
 
 > Counts use `~` prefix because they shift as tests are added. Run `pnpm test` to get exact numbers.
 
@@ -97,6 +100,8 @@ pnpm --filter @colophony/web test:e2e:ui
 - `uploads/file-upload.spec.ts` — 6 tests (upload + list, progress, DB scan status, delete, MIME reject, multi-file)
 - `oidc/login.spec.ts` — 4 tests (redirect to Zitadel, login flow, return path, logout)
 - `oidc/auth-guard.spec.ts` — 2 tests (protected route redirect, callback error UI)
+- `embed/embed-form.spec.ts` — 8 tests (identity step, invalid token, email validation, form fields, title required, full submit, minimal submit, expired token)
+- `embed/embed-wizard.spec.ts` — 2 tests (wizard page navigation, multi-page submit)
 
 ---
 
@@ -321,6 +326,14 @@ The setup script creates a Zitadel project, OIDC app (Authorization Code + PKCE)
 | `DATABASE_APP_URL`  | Non-superuser connection (RLS tests) | `postgresql://app_user:app_password@localhost:5433/colophony_test` |
 
 **Important:** `DATABASE_APP_URL` must be separate from `DATABASE_TEST_URL`. RLS tests connect as `app_user` (non-superuser, NOBYPASSRLS). If it falls back to `DATABASE_TEST_URL`, both clients are superuser and RLS is silently bypassed.
+
+#### Embed E2E Tests (embed project)
+
+Public embed forms — no OIDC needed. Tests exercise token verification, identity collection, form filling, and submission. Uses its own fixtures (`e2e/helpers/embed-fixtures.ts`) and DB helpers (`e2e/helpers/embed-db.ts`) that share the admin pool from `db.ts`.
+
+```bash
+pnpm --filter @colophony/web test:e2e:embed
+```
 
 ---
 

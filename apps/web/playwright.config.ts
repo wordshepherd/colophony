@@ -89,6 +89,11 @@ export default defineConfig({
       testDir: "./e2e/oidc",
       use: { ...devices["Desktop Chrome"] },
     },
+    {
+      name: "embed",
+      testDir: "./e2e/embed",
+      use: { ...devices["Desktop Chrome"] },
+    },
   ],
 
   webServer: [
