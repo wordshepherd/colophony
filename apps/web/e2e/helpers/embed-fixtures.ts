@@ -90,6 +90,9 @@ export const test = base.extend<{ embedData: EmbedData }>({
       ],
     });
 
+    // Save original form linkage so teardown can restore it
+    const originalFormDefinitionId = period.formDefinitionId;
+
     // Link form to period
     await linkFormToPeriod(period.id, form.id);
 
@@ -115,7 +118,12 @@ export const test = base.extend<{ embedData: EmbedData }>({
     // Teardown: clean up in reverse dependency order
     await deleteSubmissionsByEmail(EMBED_TEST_EMAIL);
     await deleteGuestUser(EMBED_TEST_EMAIL);
-    await unlinkFormFromPeriod(period.id);
+    // Restore original form linkage (may have been null or a different form)
+    if (originalFormDefinitionId) {
+      await linkFormToPeriod(period.id, originalFormDefinitionId);
+    } else {
+      await unlinkFormFromPeriod(period.id);
+    }
     await deleteEmbedToken(token.id);
     await deleteFormDefinition(form.id);
   },

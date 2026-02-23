@@ -1,5 +1,4 @@
 import { test, expect, EMBED_TEST_EMAIL } from "../helpers/embed-fixtures";
-import { test as base } from "@playwright/test";
 import {
   createEmbedToken,
   deleteEmbedToken,

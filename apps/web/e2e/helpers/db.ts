@@ -323,15 +323,18 @@ export async function deleteSubmission(submissionId: string): Promise<void> {
 /**
  * Find an open submission period for an org (now between opensAt and closesAt).
  */
-export async function getOpenSubmissionPeriod(
-  orgId: string,
-): Promise<{ id: string; name: string } | null> {
+export async function getOpenSubmissionPeriod(orgId: string): Promise<{
+  id: string;
+  name: string;
+  formDefinitionId: string | null;
+} | null> {
   const db = getDb();
   const now = new Date();
   const [row] = await db
     .select({
       id: submissionPeriods.id,
       name: submissionPeriods.name,
+      formDefinitionId: submissionPeriods.formDefinitionId,
     })
     .from(submissionPeriods)
     .where(
