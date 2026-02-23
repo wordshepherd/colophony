@@ -73,7 +73,7 @@ const testEnv = {
   REDIS_PASSWORD: '',
   RATE_LIMIT_WINDOW_SECONDS: 60,
   RATE_LIMIT_KEY_PREFIX: 'test:rl',
-  TUS_ENDPOINT: 'http://localhost:1080',
+  TUS_ENDPOINT: 'http://localhost:1080/files/',
 } as any;
 
 async function buildTestApp() {
@@ -275,7 +275,7 @@ describe('embed routes', () => {
       const body = JSON.parse(res.body);
       expect(body.manuscriptVersionId).toBe('mv-1');
       expect(body.guestUserId).toBe('guest-1');
-      expect(body.tusEndpoint).toBe('http://localhost:1080');
+      expect(body.tusEndpoint).toBe('http://localhost:1080/files/');
       expect(body.maxFileSize).toBe(52428800);
       expect(body.maxFiles).toBe(10);
       expect(body.allowedMimeTypes).toContain('application/pdf');

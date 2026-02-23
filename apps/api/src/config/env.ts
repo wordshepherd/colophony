@@ -50,7 +50,7 @@ const envSchema = z.object({
   S3_ACCESS_KEY: z.string().default('minioadmin'),
   S3_SECRET_KEY: z.string().default('minioadmin'),
   S3_REGION: z.string().default('us-east-1'),
-  TUS_ENDPOINT: z.string().default('http://localhost:1080'),
+  TUS_ENDPOINT: z.string().default('http://localhost:1080/files/'),
 
   // ClamAV virus scanning
   CLAMAV_HOST: z.string().default('localhost'),

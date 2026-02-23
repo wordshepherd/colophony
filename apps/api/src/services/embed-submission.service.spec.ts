@@ -224,7 +224,7 @@ describe('embedSubmissionService', () => {
 
       expect(result.manuscriptVersionId).toBe('version-1');
       expect(result.guestUserId).toBe('guest-1');
-      expect(result.tusEndpoint).toBe('http://localhost:1080');
+      expect(result.tusEndpoint).toBe('http://localhost:1080/files/');
       expect(result.maxFileSize).toBeGreaterThan(0);
       expect(result.maxFiles).toBeGreaterThan(0);
       expect(result.allowedMimeTypes.length).toBeGreaterThan(0);

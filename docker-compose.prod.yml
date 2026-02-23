@@ -217,7 +217,11 @@ services:
       - -hooks-http
       - http://api:4000/webhooks/tusd
       - -hooks-http-forward-headers
-      - Authorization,X-Organization-Id
+      - Authorization,X-Organization-Id,X-Embed-Token
+      - -cors-allow-origin
+      - ".*"
+      - -cors-allow-headers
+      - Authorization,Origin,X-Requested-With,Content-Type,Upload-Length,Upload-Offset,Tus-Resumable,Upload-Metadata,Upload-Defer-Length,X-Organization-Id,X-Embed-Token
       - -behind-proxy
       - -base-path
       - /upload
