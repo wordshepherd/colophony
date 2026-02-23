@@ -18,8 +18,13 @@ import { appRouter } from './trpc/router.js';
 import { createContext } from './trpc/context.js';
 import { registerRestRoutes } from './rest/router.js';
 import { registerGraphQLRoutes } from './graphql/index.js';
-import { startFileScanWorker, stopFileScanWorker } from './workers/index.js';
-import { closeFileScanQueue } from './queues/index.js';
+import {
+  startFileScanWorker,
+  stopFileScanWorker,
+  startS3CleanupWorker,
+  stopS3CleanupWorker,
+} from './workers/index.js';
+import { closeFileScanQueue, closeS3CleanupQueue } from './queues/index.js';
 
 export async function buildApp(env: Env): Promise<FastifyInstance> {
   const app = Fastify({
@@ -205,6 +210,8 @@ async function start(): Promise<void> {
     startFileScanWorker(env);
     app.log.info('File scan worker started');
   }
+  startS3CleanupWorker(env);
+  app.log.info('S3 cleanup worker started');
 
   // Graceful shutdown
   const shutdown = async (signal: string) => {
@@ -218,7 +225,9 @@ async function start(): Promise<void> {
     try {
       await app.close();
       await stopFileScanWorker();
+      await stopS3CleanupWorker();
       await closeFileScanQueue();
+      await closeS3CleanupQueue();
       // TODO: Close DB pool when connection management is centralized
       // TODO: Close Redis connections
       app.log.info('Server closed');

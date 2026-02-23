@@ -24,7 +24,7 @@ export const manuscripts = pgTable(
     id: uuid("id").defaultRandom().primaryKey(),
     ownerId: uuid("owner_id")
       .notNull()
-      .references(() => users.id, { onDelete: "restrict" }),
+      .references(() => users.id, { onDelete: "cascade" }),
     title: varchar("title", { length: 500 }).notNull(),
     description: text("description"),
     createdAt: timestamp("created_at", { withTimezone: true })

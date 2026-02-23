@@ -18,9 +18,9 @@ export const apiKeys = pgTable(
     organizationId: uuid("organization_id")
       .notNull()
       .references(() => organizations.id, { onDelete: "cascade" }),
-    createdBy: uuid("created_by")
-      .notNull()
-      .references(() => users.id, { onDelete: "restrict" }),
+    createdBy: uuid("created_by").references(() => users.id, {
+      onDelete: "set null",
+    }),
     name: varchar("name", { length: 255 }).notNull(),
     keyHash: varchar("key_hash", { length: 128 }).notNull().unique(),
     keyPrefix: varchar("key_prefix", { length: 12 }).notNull(),

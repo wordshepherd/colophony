@@ -10,6 +10,7 @@ import { formsRouter } from './routers/forms.js';
 import { periodsRouter } from './routers/periods.js';
 import { manuscriptsRouter } from './routers/manuscripts.js';
 import { embedTokensRouter } from './routers/embed-tokens.js';
+import { gdprRouter } from './routers/gdpr.js';
 
 // Re-export procedure builders for convenience
 export {
@@ -36,7 +37,7 @@ export const appRouter = t.router({
   files: filesRouter,
   apiKeys: apiKeysRouter,
   payments: t.router({}),
-  gdpr: t.router({}),
+  gdpr: gdprRouter,
   consent: t.router({}),
   audit: auditRouter,
   forms: formsRouter,

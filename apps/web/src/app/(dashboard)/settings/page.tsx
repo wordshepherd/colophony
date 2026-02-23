@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/hooks/use-auth";
 import { useOrganization } from "@/hooks/use-organization";
+import { getUserManager } from "@/lib/oidc";
+import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -25,6 +27,8 @@ import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import { Input } from "@/components/ui/input";
+import { Loader2 } from "lucide-react";
 import {
   Download,
   Trash2,
@@ -39,9 +43,22 @@ export default function SettingsPage() {
   const { organizations, currentOrg, switchOrganization } = useOrganization();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+  const [deleteConfirmation, setDeleteConfirmation] = useState("");
 
-  // TODO: Re-enable when gdpr.requestDeletion tRPC route is built in v2
-  const deletionDisabled = true;
+  const deleteAccountMutation = trpc.gdpr.deleteAccount.useMutation({
+    onSuccess: () => {
+      toast.success("Account deleted successfully. Signing out...");
+      const userManager = getUserManager();
+      if (userManager) {
+        void userManager.signoutRedirect();
+      } else {
+        router.push("/");
+      }
+    },
+    onError: (err) => {
+      toast.error(err.message || "Failed to delete account");
+    },
+  });
 
   const handleExportData = async () => {
     setIsExporting(true);
@@ -218,19 +235,22 @@ export default function SettingsPage() {
             <Button
               variant="destructive"
               onClick={() => setShowDeleteDialog(true)}
-              disabled={deletionDisabled}
             >
               <Trash2 className="mr-2 h-4 w-4" />
-              {deletionDisabled
-                ? "Delete Account (Coming Soon)"
-                : "Delete Account"}
+              Delete Account
             </Button>
           </div>
         </CardContent>
       </Card>
 
       {/* Delete confirmation dialog */}
-      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+      <Dialog
+        open={showDeleteDialog}
+        onOpenChange={(open) => {
+          setShowDeleteDialog(open);
+          if (!open) setDeleteConfirmation("");
+        }}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Delete your account?</DialogTitle>
@@ -241,26 +261,46 @@ export default function SettingsPage() {
           </DialogHeader>
           <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1 my-4">
             <li>Your profile information</li>
-            <li>All submissions and files</li>
+            <li>All manuscripts and files</li>
             <li>Organization memberships</li>
-            <li>Activity history</li>
+            <li>Activity history (anonymized)</li>
           </ul>
+          <div className="space-y-2">
+            <p className="text-sm font-medium">
+              Type <span className="font-mono text-destructive">DELETE</span> to
+              confirm:
+            </p>
+            <Input
+              value={deleteConfirmation}
+              onChange={(e) => setDeleteConfirmation(e.target.value)}
+              placeholder="DELETE"
+              autoComplete="off"
+            />
+          </div>
           <DialogFooter>
             <Button
               variant="outline"
               onClick={() => setShowDeleteDialog(false)}
+              disabled={deleteAccountMutation.isPending}
             >
               Cancel
             </Button>
             <Button
               variant="destructive"
-              disabled={deletionDisabled}
-              onClick={() => {
-                // TODO: Call gdpr.requestDeletion when built in v2
-                setShowDeleteDialog(false);
-              }}
+              disabled={
+                deleteConfirmation !== "DELETE" ||
+                deleteAccountMutation.isPending
+              }
+              onClick={() => deleteAccountMutation.mutate()}
             >
-              Yes, delete my account
+              {deleteAccountMutation.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                "Yes, delete my account"
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>

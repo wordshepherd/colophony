@@ -15,6 +15,11 @@ import {
 } from '../guards.js';
 import { toServiceContext } from '../../services/context.js';
 import { organizationService } from '../../services/organization.service.js';
+import {
+  gdprService,
+  OrgNotDeletableError,
+} from '../../services/gdpr.service.js';
+import { validateEnv } from '../../config/env.js';
 import { mapServiceError } from '../error-mapper.js';
 import { OrganizationType, OrganizationMemberType } from '../types/index.js';
 import {
@@ -327,6 +332,33 @@ builder.mutationFields((t) => ({
           role,
         );
       } catch (e) {
+        mapServiceError(e);
+      }
+    },
+  }),
+
+  /**
+   * Delete the current organization and all its data (admin only).
+   */
+  deleteOrganization: t.field({
+    type: SuccessPayload,
+    description:
+      'Permanently delete the current organization and all its data. Requires ADMIN role. This action cannot be undone.',
+    resolve: async (_root, _args, ctx) => {
+      const orgCtx = requireAdmin(ctx);
+      await requireScopes(ctx, 'organizations:write');
+      const env = validateEnv();
+      try {
+        await gdprService.deleteOrganization(
+          orgCtx.authContext.orgId,
+          orgCtx.authContext.userId,
+          env,
+        );
+        return { success: true };
+      } catch (e) {
+        if (e instanceof OrgNotDeletableError) {
+          throw new Error(e.message);
+        }
         mapServiceError(e);
       }
     },

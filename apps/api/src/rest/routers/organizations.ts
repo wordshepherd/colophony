@@ -9,6 +9,11 @@ import {
 } from '@colophony/types';
 import { restPaginationQuery } from '@colophony/api-contracts';
 import { organizationService } from '../../services/organization.service.js';
+import {
+  gdprService,
+  OrgNotDeletableError,
+} from '../../services/gdpr.service.js';
+import { validateEnv } from '../../config/env.js';
 import { toServiceContext } from '../../services/context.js';
 import { mapServiceError } from '../error-mapper.js';
 import {
@@ -257,6 +262,36 @@ const orgsUpdate = adminProcedure
     }
   });
 
+const orgsDelete = adminProcedure
+  .use(requireScopes('organizations:write'))
+  .route({
+    method: 'DELETE',
+    path: '/organizations/{orgId}',
+    summary: 'Delete an organization',
+    description:
+      'Permanently delete an organization and all its data. Requires ADMIN role. This action cannot be undone.',
+    operationId: 'deleteOrganization',
+    tags: ['Organizations'],
+  })
+  .input(orgIdParam)
+  .handler(async ({ input, context }) => {
+    assertOrgIdMatch(input.orgId, context.authContext.orgId);
+    const env = validateEnv();
+    try {
+      await gdprService.deleteOrganization(
+        context.authContext.orgId,
+        context.authContext.userId,
+        env,
+      );
+      return { success: true };
+    } catch (e) {
+      if (e instanceof OrgNotDeletableError) {
+        throw new ORPCError('FORBIDDEN', { message: e.message });
+      }
+      mapServiceError(e);
+    }
+  });
+
 // ---------------------------------------------------------------------------
 // Assembled router
 // ---------------------------------------------------------------------------
@@ -267,6 +302,7 @@ export const organizationsRouter = {
   checkSlug: orgsCheckSlug,
   get: orgsGet,
   update: orgsUpdate,
+  delete: orgsDelete,
   members: {
     list: membersList,
     add: membersAdd,

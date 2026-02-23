@@ -14,6 +14,8 @@ import type {
   AuthAuditParams,
   ApiKeyAuditParams,
   EmbedTokenAuditParams,
+  UserAuditParams,
+  SystemAuditParams,
   ListAuditEventsInput,
 } from '@colophony/types';
 
@@ -199,7 +201,12 @@ export const auditService = {
    * Errors propagate — caller is responsible for try/catch.
    */
   async logDirect(
-    params: AuthAuditParams | ApiKeyAuditParams | EmbedTokenAuditParams,
+    params:
+      | AuthAuditParams
+      | ApiKeyAuditParams
+      | EmbedTokenAuditParams
+      | UserAuditParams
+      | SystemAuditParams,
   ): Promise<void> {
     if (params.organizationId) {
       throw new Error(

@@ -12,7 +12,7 @@ export type PaymentStatus = z.infer<typeof paymentStatusSchema>;
 
 export const paymentSchema = z.object({
   id: z.string().uuid(),
-  organizationId: z.string().uuid(),
+  organizationId: z.string().uuid().nullable(),
   submissionId: z.string().uuid().nullable(),
   stripePaymentId: z.string().nullable(),
   stripeSessionId: z.string().nullable(),

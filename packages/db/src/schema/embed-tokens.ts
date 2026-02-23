@@ -39,9 +39,9 @@ export const embedTokens = pgTable(
       .default(sql`ARRAY[]::text[]`),
     themeConfig: jsonb("theme_config").default({}).$type<EmbedThemeConfig>(),
     active: boolean("active").default(true).notNull(),
-    createdBy: uuid("created_by")
-      .notNull()
-      .references(() => users.id, { onDelete: "restrict" }),
+    createdBy: uuid("created_by").references(() => users.id, {
+      onDelete: "set null",
+    }),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),

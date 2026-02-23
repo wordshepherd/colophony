@@ -203,7 +203,11 @@ export const formDefinitionSchema = z.object({
     .uuid()
     .nullable()
     .describe("ID of the form this was duplicated from"),
-  createdBy: z.string().uuid().describe("ID of the user who created the form"),
+  createdBy: z
+    .string()
+    .uuid()
+    .nullable()
+    .describe("ID of the user who created the form"),
   publishedAt: z.date().nullable().describe("When the form was published"),
   archivedAt: z.date().nullable().describe("When the form was archived"),
   createdAt: z.date().describe("When the form was created"),
