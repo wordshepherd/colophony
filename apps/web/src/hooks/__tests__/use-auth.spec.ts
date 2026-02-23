@@ -229,11 +229,7 @@ describe("useAuth", () => {
       const { result } = renderHook(() => useAuth());
       await act(async () => {});
 
-      Object.defineProperty(window, "location", {
-        value: { pathname: "/submissions", search: "?page=2" },
-        writable: true,
-        configurable: true,
-      });
+      window.history.pushState({}, "", "/submissions?page=2");
 
       act(() => {
         result.current.login();
@@ -243,13 +239,6 @@ describe("useAuth", () => {
         "/submissions?page=2",
       );
       expect(mockSigninRedirect).toHaveBeenCalled();
-
-      // Restore
-      Object.defineProperty(window, "location", {
-        value: { pathname: "/", search: "" },
-        writable: true,
-        configurable: true,
-      });
     });
 
     it("should NOT save returnTo for root path", async () => {
@@ -258,11 +247,7 @@ describe("useAuth", () => {
       const { result } = renderHook(() => useAuth());
       await act(async () => {});
 
-      Object.defineProperty(window, "location", {
-        value: { pathname: "/", search: "" },
-        writable: true,
-        configurable: true,
-      });
+      window.history.pushState({}, "", "/");
 
       act(() => {
         result.current.login();
