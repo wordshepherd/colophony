@@ -219,7 +219,7 @@ describe('embedSubmissionService', () => {
         { email: 'writer@example.com', name: 'Writer' },
         '127.0.0.1',
         'TestAgent/1.0',
-        'http://localhost:1080',
+        'http://localhost:1080/files/',
       );
 
       expect(result.manuscriptVersionId).toBe('version-1');
@@ -256,7 +256,7 @@ describe('embedSubmissionService', () => {
         { email: 'existing@example.com' },
         '127.0.0.1',
         undefined,
-        'http://localhost:1080',
+        'http://localhost:1080/files/',
       );
 
       expect(result.guestUserId).toBe('existing-1');
@@ -282,7 +282,7 @@ describe('embedSubmissionService', () => {
           { email: 'writer@example.com' },
           '127.0.0.1',
           undefined,
-          'http://localhost:1080',
+          'http://localhost:1080/files/',
         ),
       ).rejects.toThrow(PeriodClosedError);
     });
@@ -305,7 +305,7 @@ describe('embedSubmissionService', () => {
           { email: 'writer@example.com' },
           '127.0.0.1',
           undefined,
-          'http://localhost:1080',
+          'http://localhost:1080/files/',
         ),
       ).rejects.toThrow(PeriodClosedError);
     });
@@ -335,7 +335,7 @@ describe('embedSubmissionService', () => {
         { email: 'writer@example.com' },
         '127.0.0.1',
         'TestAgent/1.0',
-        'http://localhost:1080',
+        'http://localhost:1080/files/',
       );
 
       // Should be called twice: MANUSCRIPT_CREATED + MANUSCRIPT_VERSION_CREATED

@@ -256,7 +256,7 @@ describe('embed routes', () => {
       mockEmbedSubmissionService.prepareUpload.mockResolvedValueOnce({
         manuscriptVersionId: 'mv-1',
         guestUserId: 'guest-1',
-        tusEndpoint: 'http://localhost:1080',
+        tusEndpoint: 'http://localhost:1080/files/',
         maxFileSize: 52428800,
         maxFiles: 10,
         allowedMimeTypes: ['application/pdf'],
