@@ -15,6 +15,25 @@ export {
   FormFieldTypeEnum,
 } from './form.js';
 export { SubmissionPeriodType, PeriodStatusEnum } from './period.js';
+export { PublicationType, PublicationStatusEnum } from './publication.js';
+export {
+  PipelineItemType,
+  PipelineHistoryEntryType,
+  PipelineCommentType,
+  PipelineStageEnum,
+} from './pipeline.js';
+export {
+  ContractTemplateType,
+  ContractType,
+  ContractStatusEnum,
+} from './contract.js';
+export {
+  IssueType,
+  IssueSectionType,
+  IssueItemType,
+  IssueStatusEnum,
+} from './issue.js';
+export { CmsConnectionType, CmsAdapterTypeEnum } from './cms-connection.js';
 export {
   SubmissionStatusChangePayload,
   CreateOrganizationPayload,

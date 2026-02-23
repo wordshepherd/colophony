@@ -13,6 +13,11 @@ import { payments } from "./payments";
 import { auditEvents, dsarRequests } from "./audit";
 import { retentionPolicies, userConsents } from "./compliance";
 import { apiKeys } from "./api-keys";
+import { publications } from "./publications";
+import { pipelineItems, pipelineHistory, pipelineComments } from "./pipeline";
+import { contractTemplates, contracts } from "./contracts";
+import { issues, issueSections, issueItems } from "./issues";
+import { cmsConnections } from "./cms";
 
 // --- organizations ---
 
@@ -26,6 +31,12 @@ export const organizationsRelations = relations(organizations, ({ many }) => ({
   retentionPolicies: many(retentionPolicies),
   userConsents: many(userConsents),
   apiKeys: many(apiKeys),
+  publications: many(publications),
+  pipelineItems: many(pipelineItems),
+  contractTemplates: many(contractTemplates),
+  contracts: many(contracts),
+  issues: many(issues),
+  cmsConnections: many(cmsConnections),
 }));
 
 // --- users ---
@@ -146,6 +157,10 @@ export const submissionPeriodsRelations = relations(
       fields: [submissionPeriods.formDefinitionId],
       references: [formDefinitions.id],
     }),
+    publication: one(publications, {
+      fields: [submissionPeriods.publicationId],
+      references: [publications.id],
+    }),
     submissions: many(submissions),
   }),
 );
@@ -175,6 +190,7 @@ export const submissionsRelations = relations(submissions, ({ one, many }) => ({
   }),
   history: many(submissionHistory),
   payments: many(payments),
+  pipelineItems: many(pipelineItems),
 }));
 
 // --- submission_history ---
@@ -259,5 +275,171 @@ export const apiKeysRelations = relations(apiKeys, ({ one }) => ({
   creator: one(users, {
     fields: [apiKeys.createdBy],
     references: [users.id],
+  }),
+}));
+
+// --- publications ---
+
+export const publicationsRelations = relations(
+  publications,
+  ({ one, many }) => ({
+    organization: one(organizations, {
+      fields: [publications.organizationId],
+      references: [organizations.id],
+    }),
+    submissionPeriods: many(submissionPeriods),
+    pipelineItems: many(pipelineItems),
+    issues: many(issues),
+    cmsConnections: many(cmsConnections),
+  }),
+);
+
+// --- pipeline_items ---
+
+export const pipelineItemsRelations = relations(
+  pipelineItems,
+  ({ one, many }) => ({
+    organization: one(organizations, {
+      fields: [pipelineItems.organizationId],
+      references: [organizations.id],
+    }),
+    submission: one(submissions, {
+      fields: [pipelineItems.submissionId],
+      references: [submissions.id],
+    }),
+    publication: one(publications, {
+      fields: [pipelineItems.publicationId],
+      references: [publications.id],
+    }),
+    copyeditor: one(users, {
+      fields: [pipelineItems.assignedCopyeditorId],
+      references: [users.id],
+      relationName: "pipelineItemCopyeditor",
+    }),
+    proofreader: one(users, {
+      fields: [pipelineItems.assignedProofreaderId],
+      references: [users.id],
+      relationName: "pipelineItemProofreader",
+    }),
+    history: many(pipelineHistory),
+    comments: many(pipelineComments),
+    contracts: many(contracts),
+    issueItems: many(issueItems),
+  }),
+);
+
+// --- pipeline_history ---
+
+export const pipelineHistoryRelations = relations(
+  pipelineHistory,
+  ({ one }) => ({
+    pipelineItem: one(pipelineItems, {
+      fields: [pipelineHistory.pipelineItemId],
+      references: [pipelineItems.id],
+    }),
+  }),
+);
+
+// --- pipeline_comments ---
+
+export const pipelineCommentsRelations = relations(
+  pipelineComments,
+  ({ one }) => ({
+    pipelineItem: one(pipelineItems, {
+      fields: [pipelineComments.pipelineItemId],
+      references: [pipelineItems.id],
+    }),
+    author: one(users, {
+      fields: [pipelineComments.authorId],
+      references: [users.id],
+    }),
+  }),
+);
+
+// --- contract_templates ---
+
+export const contractTemplatesRelations = relations(
+  contractTemplates,
+  ({ one, many }) => ({
+    organization: one(organizations, {
+      fields: [contractTemplates.organizationId],
+      references: [organizations.id],
+    }),
+    contracts: many(contracts),
+  }),
+);
+
+// --- contracts ---
+
+export const contractsRelations = relations(contracts, ({ one }) => ({
+  organization: one(organizations, {
+    fields: [contracts.organizationId],
+    references: [organizations.id],
+  }),
+  pipelineItem: one(pipelineItems, {
+    fields: [contracts.pipelineItemId],
+    references: [pipelineItems.id],
+  }),
+  contractTemplate: one(contractTemplates, {
+    fields: [contracts.contractTemplateId],
+    references: [contractTemplates.id],
+  }),
+}));
+
+// --- issues ---
+
+export const issuesRelations = relations(issues, ({ one, many }) => ({
+  organization: one(organizations, {
+    fields: [issues.organizationId],
+    references: [organizations.id],
+  }),
+  publication: one(publications, {
+    fields: [issues.publicationId],
+    references: [publications.id],
+  }),
+  sections: many(issueSections),
+  items: many(issueItems),
+}));
+
+// --- issue_sections ---
+
+export const issueSectionsRelations = relations(
+  issueSections,
+  ({ one, many }) => ({
+    issue: one(issues, {
+      fields: [issueSections.issueId],
+      references: [issues.id],
+    }),
+    items: many(issueItems),
+  }),
+);
+
+// --- issue_items ---
+
+export const issueItemsRelations = relations(issueItems, ({ one }) => ({
+  issue: one(issues, {
+    fields: [issueItems.issueId],
+    references: [issues.id],
+  }),
+  pipelineItem: one(pipelineItems, {
+    fields: [issueItems.pipelineItemId],
+    references: [pipelineItems.id],
+  }),
+  section: one(issueSections, {
+    fields: [issueItems.issueSectionId],
+    references: [issueSections.id],
+  }),
+}));
+
+// --- cms_connections ---
+
+export const cmsConnectionsRelations = relations(cmsConnections, ({ one }) => ({
+  organization: one(organizations, {
+    fields: [cmsConnections.organizationId],
+    references: [organizations.id],
+  }),
+  publication: one(publications, {
+    fields: [cmsConnections.publicationId],
+    references: [publications.id],
   }),
 }));

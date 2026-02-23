@@ -125,17 +125,19 @@
 
 ### Code
 
-- [ ] Post-acceptance workflow — (architecture doc Track 4)
-- [ ] Copyedit/proofread stages — (architecture doc Track 4)
-- [ ] Contract generation + e-signature — Documenso via Tier 1 adapter — (architecture doc Track 4, decision 2026-02-15)
-- [ ] Issue assembly — (architecture doc Track 4)
-- [ ] CMS integration (WordPress, Ghost) — (architecture doc Track 4)
-- [ ] Editorial calendar — (architecture doc Track 4)
+- [x] Post-acceptance workflow — pipeline-workflow Inngest function with waitForEvent — (architecture doc Track 4; done 2026-02-23 PR pending)
+- [x] Copyedit/proofread stages — PipelineStage enum + transition state machine + pipeline service — (architecture doc Track 4; done 2026-02-23 PR pending)
+- [x] Contract generation + e-signature — contract templates with merge fields, Documenso adapter + webhook — (architecture doc Track 4, decision 2026-02-15; done 2026-02-23 PR pending)
+- [x] Issue assembly — issues, sections, items with reorder + TOC generation — (architecture doc Track 4; done 2026-02-23 PR pending)
+- [x] CMS integration (WordPress, Ghost) — CmsAdapter interface, WordPress REST API + Ghost Admin API implementations — (architecture doc Track 4; done 2026-02-23 PR pending)
+- [ ] Editorial calendar frontend — (architecture doc Track 4; backend calendar queries done, frontend pending)
+- [ ] Slate frontend — pipeline dashboard, issue assembly UI, contract management pages — (architecture doc Track 4)
+- [ ] Slate E2E tests — Playwright tests for pipeline flows — (architecture doc Track 4)
 
 ### Research / Design
 
-- [ ] Workflow orchestration evaluation: Inngest (preferred) vs Temporal — evaluate at Track 4 design time — (decision 2026-02-15)
-- [ ] CMS "starter home" scope: static pages vs blog-like vs magazine-format with issue structure — (architecture doc Open Question #4)
+- [x] Workflow orchestration evaluation: Inngest (preferred) vs Temporal — **Resolved:** Inngest chosen — step functions, waitForEvent, single Docker container — (decision 2026-02-15; resolved 2026-02-23)
+- [x] CMS "starter home" scope: static pages vs blog-like vs magazine-format with issue structure — **Resolved:** Integration-only for v2.0 (WordPress/Ghost adapters), defer built-in pages — (architecture doc Open Question #4; resolved 2026-02-23)
 
 ---
 

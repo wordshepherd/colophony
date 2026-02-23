@@ -53,6 +53,7 @@
     "fastify-raw-body": "^5.0.0",
     "graphql": "^16.10",
     "graphql-yoga": "^5.11",
+    "inngest": "^3.52.3",
     "ioredis": "^5.9.3",
     "nodemailer": "^8.0.1",
     "stripe": "^20.3.1",

@@ -33,6 +33,7 @@ const PUBLIC_PREFIXES = [
   '/webhooks/',
   '/.well-known/',
   '/embed/',
+  '/api/inngest',
 ];
 const PUBLIC_EXACT = [
   '/',

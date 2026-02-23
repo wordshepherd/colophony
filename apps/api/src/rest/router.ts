@@ -11,6 +11,12 @@ import { auditRouter } from './routers/audit.js';
 import { formsRouter } from './routers/forms.js';
 import { periodsRouter } from './routers/periods.js';
 import { manuscriptsRouter } from './routers/manuscripts.js';
+import { publicationsRouter } from './routers/publications.js';
+import { pipelineRouter } from './routers/pipeline.js';
+import { contractTemplatesRouter } from './routers/contract-templates.js';
+import { contractsRouter } from './routers/contracts.js';
+import { issuesRouter } from './routers/issues.js';
+import { cmsConnectionsRouter } from './routers/cms-connections.js';
 import type { RestContext } from './context.js';
 
 const restRouter = {
@@ -23,6 +29,12 @@ const restRouter = {
   forms: formsRouter,
   periods: periodsRouter,
   audit: auditRouter,
+  publications: publicationsRouter,
+  pipeline: pipelineRouter,
+  contractTemplates: contractTemplatesRouter,
+  contracts: contractsRouter,
+  issues: issuesRouter,
+  cmsConnections: cmsConnectionsRouter,
 };
 
 const openApiHandler = new OpenAPIHandler<RestContext>(restRouter, {
@@ -92,6 +104,36 @@ const openApiHandler = new OpenAPIHandler<RestContext>(restRouter, {
             name: 'Periods',
             description:
               'Manage submission periods — time windows during which submissions are accepted.',
+          },
+          {
+            name: 'Publications',
+            description:
+              'Manage publications — named publishing venues within an organization (Slate pipeline).',
+          },
+          {
+            name: 'Pipeline',
+            description:
+              'Manage the post-acceptance publication pipeline — copyedit, proofread, and publish workflow (Slate).',
+          },
+          {
+            name: 'Contract Templates',
+            description:
+              'Manage contract templates with merge field placeholders for generating contracts (Slate).',
+          },
+          {
+            name: 'Contracts',
+            description:
+              'Generate, send, and manage contracts for pipeline items (Slate).',
+          },
+          {
+            name: 'Issues',
+            description:
+              'Assemble and manage publication issues — collections of pipeline items (Slate).',
+          },
+          {
+            name: 'CMS Connections',
+            description:
+              'Manage CMS connections for publishing issues to WordPress or Ghost (Slate).',
           },
           {
             name: 'Audit',

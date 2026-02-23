@@ -97,6 +97,41 @@ export const AuditActions = {
   S3_CLEANUP_COMPLETED: "S3_CLEANUP_COMPLETED",
   S3_CLEANUP_FAILED: "S3_CLEANUP_FAILED",
 
+  // Publication lifecycle
+  PUBLICATION_CREATED: "PUBLICATION_CREATED",
+  PUBLICATION_UPDATED: "PUBLICATION_UPDATED",
+  PUBLICATION_ARCHIVED: "PUBLICATION_ARCHIVED",
+
+  // Contract template lifecycle
+  CONTRACT_TEMPLATE_CREATED: "CONTRACT_TEMPLATE_CREATED",
+  CONTRACT_TEMPLATE_UPDATED: "CONTRACT_TEMPLATE_UPDATED",
+  CONTRACT_TEMPLATE_DELETED: "CONTRACT_TEMPLATE_DELETED",
+
+  // Contract lifecycle
+  CONTRACT_GENERATED: "CONTRACT_GENERATED",
+  CONTRACT_SENT: "CONTRACT_SENT",
+  CONTRACT_VOIDED: "CONTRACT_VOIDED",
+
+  // Issue lifecycle
+  ISSUE_CREATED: "ISSUE_CREATED",
+  ISSUE_UPDATED: "ISSUE_UPDATED",
+  ISSUE_PUBLISHED: "ISSUE_PUBLISHED",
+  ISSUE_ARCHIVED: "ISSUE_ARCHIVED",
+  ISSUE_ITEM_ADDED: "ISSUE_ITEM_ADDED",
+  ISSUE_ITEM_REMOVED: "ISSUE_ITEM_REMOVED",
+
+  // Pipeline lifecycle
+  PIPELINE_ITEM_CREATED: "PIPELINE_ITEM_CREATED",
+  PIPELINE_STAGE_CHANGED: "PIPELINE_STAGE_CHANGED",
+  PIPELINE_COPYEDITOR_ASSIGNED: "PIPELINE_COPYEDITOR_ASSIGNED",
+  PIPELINE_PROOFREADER_ASSIGNED: "PIPELINE_PROOFREADER_ASSIGNED",
+  PIPELINE_COMMENT_ADDED: "PIPELINE_COMMENT_ADDED",
+
+  // CMS connection lifecycle
+  CMS_CONNECTION_CREATED: "CMS_CONNECTION_CREATED",
+  CMS_CONNECTION_UPDATED: "CMS_CONNECTION_UPDATED",
+  CMS_CONNECTION_DELETED: "CMS_CONNECTION_DELETED",
+
   // Audit access
   AUDIT_ACCESSED: "AUDIT_ACCESSED",
 } as const;
@@ -116,6 +151,12 @@ export const AuditResources = {
   API_KEY: "api_key",
   PAYMENT: "payment",
   EMBED_TOKEN: "embed_token",
+  PUBLICATION: "publication",
+  PIPELINE_ITEM: "pipeline_item",
+  CONTRACT_TEMPLATE: "contract_template",
+  CONTRACT: "contract",
+  ISSUE: "issue",
+  CMS_CONNECTION: "cms_connection",
   AUDIT: "audit",
 } as const;
 
@@ -255,6 +296,59 @@ export interface EmbedTokenAuditParams extends BaseAuditParams {
     | typeof AuditActions.GUEST_USER_CREATED;
 }
 
+export interface PublicationAuditParams extends BaseAuditParams {
+  resource: typeof AuditResources.PUBLICATION;
+  action:
+    | typeof AuditActions.PUBLICATION_CREATED
+    | typeof AuditActions.PUBLICATION_UPDATED
+    | typeof AuditActions.PUBLICATION_ARCHIVED;
+}
+
+export interface PipelineItemAuditParams extends BaseAuditParams {
+  resource: typeof AuditResources.PIPELINE_ITEM;
+  action:
+    | typeof AuditActions.PIPELINE_ITEM_CREATED
+    | typeof AuditActions.PIPELINE_STAGE_CHANGED
+    | typeof AuditActions.PIPELINE_COPYEDITOR_ASSIGNED
+    | typeof AuditActions.PIPELINE_PROOFREADER_ASSIGNED
+    | typeof AuditActions.PIPELINE_COMMENT_ADDED;
+}
+
+export interface ContractTemplateAuditParams extends BaseAuditParams {
+  resource: typeof AuditResources.CONTRACT_TEMPLATE;
+  action:
+    | typeof AuditActions.CONTRACT_TEMPLATE_CREATED
+    | typeof AuditActions.CONTRACT_TEMPLATE_UPDATED
+    | typeof AuditActions.CONTRACT_TEMPLATE_DELETED;
+}
+
+export interface ContractAuditParams extends BaseAuditParams {
+  resource: typeof AuditResources.CONTRACT;
+  action:
+    | typeof AuditActions.CONTRACT_GENERATED
+    | typeof AuditActions.CONTRACT_SENT
+    | typeof AuditActions.CONTRACT_VOIDED;
+}
+
+export interface IssueAuditParams extends BaseAuditParams {
+  resource: typeof AuditResources.ISSUE;
+  action:
+    | typeof AuditActions.ISSUE_CREATED
+    | typeof AuditActions.ISSUE_UPDATED
+    | typeof AuditActions.ISSUE_PUBLISHED
+    | typeof AuditActions.ISSUE_ARCHIVED
+    | typeof AuditActions.ISSUE_ITEM_ADDED
+    | typeof AuditActions.ISSUE_ITEM_REMOVED;
+}
+
+export interface CmsConnectionAuditParams extends BaseAuditParams {
+  resource: typeof AuditResources.CMS_CONNECTION;
+  action:
+    | typeof AuditActions.CMS_CONNECTION_CREATED
+    | typeof AuditActions.CMS_CONNECTION_UPDATED
+    | typeof AuditActions.CMS_CONNECTION_DELETED;
+}
+
 export interface AuditAccessAuditParams extends BaseAuditParams {
   resource: typeof AuditResources.AUDIT;
   action: typeof AuditActions.AUDIT_ACCESSED;
@@ -280,6 +374,12 @@ export type AuditLogParams =
   | ApiKeyAuditParams
   | PaymentAuditParams
   | EmbedTokenAuditParams
+  | PublicationAuditParams
+  | PipelineItemAuditParams
+  | ContractTemplateAuditParams
+  | ContractAuditParams
+  | IssueAuditParams
+  | CmsConnectionAuditParams
   | AuditAccessAuditParams
   | SystemAuditParams;
 

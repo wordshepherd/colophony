@@ -173,6 +173,18 @@ services:
     profiles:
       - auth
 
+  # Inngest workflow engine (optional — for Slate publication pipeline)
+  inngest:
+    image: inngest/inngest:latest
+    container_name: colophony-inngest
+    ports:
+      - '8288:8288'
+    command: dev -u http://host.docker.internal:4000/api/inngest
+    extra_hosts:
+      - 'host.docker.internal:host-gateway'
+    profiles:
+      - slate
+
   # ClamAV for virus scanning (optional in development)
   clamav:
     image: clamav/clamav:stable

@@ -113,6 +113,34 @@
       "when": 1772200000000,
       "tag": "0015_gdpr_fk_constraints",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1772400000000,
+      "tag": "0016_publications",
+      "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1772600000000,
+      "tag": "0017_pipeline",
+      "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1772800000000,
+      "tag": "0018_contracts",
+      "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1773000000000,
+      "tag": "0019_issues",
+      "breakpoints": true
     }
   ]
 }

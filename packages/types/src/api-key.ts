@@ -23,6 +23,16 @@ export const apiKeyScopeSchema = z
     "api-keys:manage",
     "payments:read",
     "webhooks:manage",
+    "publications:read",
+    "publications:write",
+    "pipeline:read",
+    "pipeline:write",
+    "contracts:read",
+    "contracts:write",
+    "issues:read",
+    "issues:write",
+    "cms:read",
+    "cms:write",
     "audit:read",
   ])
   .describe("Permission scope for the API key");

@@ -11,3 +11,8 @@ export * from "./common";
 export * from "./audit";
 export * from "./api-key";
 export * from "./embed";
+export * from "./publication";
+export * from "./pipeline";
+export * from "./contract";
+export * from "./issue";
+export * from "./cms";
