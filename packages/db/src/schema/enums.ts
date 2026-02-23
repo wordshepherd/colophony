@@ -65,3 +65,12 @@ export const formFieldTypeEnum = pgEnum("FormFieldType", [
   "section_header",
   "info_text",
 ]);
+
+// ---------------------------------------------------------------------------
+// Slate — Publication Pipeline
+// ---------------------------------------------------------------------------
+
+export const publicationStatusEnum = pgEnum("PublicationStatus", [
+  "ACTIVE",
+  "ARCHIVED",
+]);

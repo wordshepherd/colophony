@@ -11,3 +11,4 @@ export * from "./common";
 export * from "./audit";
 export * from "./api-key";
 export * from "./embed";
+export * from "./publication";

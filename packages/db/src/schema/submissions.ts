@@ -17,6 +17,7 @@ import { organizations } from "./organizations";
 import { users } from "./users";
 import { formDefinitions } from "./forms";
 import { manuscriptVersions } from "./manuscripts";
+import { publications } from "./publications";
 
 const tsvector = customType<{ data: string }>({
   dataType() {
@@ -48,6 +49,9 @@ export const submissionPeriods = pgTable(
       () => formDefinitions.id,
       { onDelete: "set null" },
     ),
+    publicationId: uuid("publication_id").references(() => publications.id, {
+      onDelete: "set null",
+    }),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
@@ -66,6 +70,7 @@ export const submissionPeriods = pgTable(
     index("submission_periods_form_definition_id_idx").on(
       table.formDefinitionId,
     ),
+    index("submission_periods_publication_id_idx").on(table.publicationId),
     orgIsolationPolicy,
   ],
 ).enableRLS();

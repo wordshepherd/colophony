@@ -15,6 +15,7 @@ export {
   FormFieldTypeEnum,
 } from './form.js';
 export { SubmissionPeriodType, PeriodStatusEnum } from './period.js';
+export { PublicationType, PublicationStatusEnum } from './publication.js';
 export {
   SubmissionStatusChangePayload,
   CreateOrganizationPayload,

@@ -13,6 +13,7 @@ import { payments } from "./payments";
 import { auditEvents, dsarRequests } from "./audit";
 import { retentionPolicies, userConsents } from "./compliance";
 import { apiKeys } from "./api-keys";
+import { publications } from "./publications";
 
 // --- organizations ---
 
@@ -26,6 +27,7 @@ export const organizationsRelations = relations(organizations, ({ many }) => ({
   retentionPolicies: many(retentionPolicies),
   userConsents: many(userConsents),
   apiKeys: many(apiKeys),
+  publications: many(publications),
 }));
 
 // --- users ---
@@ -146,6 +148,10 @@ export const submissionPeriodsRelations = relations(
       fields: [submissionPeriods.formDefinitionId],
       references: [formDefinitions.id],
     }),
+    publication: one(publications, {
+      fields: [submissionPeriods.publicationId],
+      references: [publications.id],
+    }),
     submissions: many(submissions),
   }),
 );
@@ -261,3 +267,16 @@ export const apiKeysRelations = relations(apiKeys, ({ one }) => ({
     references: [users.id],
   }),
 }));
+
+// --- publications ---
+
+export const publicationsRelations = relations(
+  publications,
+  ({ one, many }) => ({
+    organization: one(organizations, {
+      fields: [publications.organizationId],
+      references: [organizations.id],
+    }),
+    submissionPeriods: many(submissionPeriods),
+  }),
+);

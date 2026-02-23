@@ -97,6 +97,11 @@ export const AuditActions = {
   S3_CLEANUP_COMPLETED: "S3_CLEANUP_COMPLETED",
   S3_CLEANUP_FAILED: "S3_CLEANUP_FAILED",
 
+  // Publication lifecycle
+  PUBLICATION_CREATED: "PUBLICATION_CREATED",
+  PUBLICATION_UPDATED: "PUBLICATION_UPDATED",
+  PUBLICATION_ARCHIVED: "PUBLICATION_ARCHIVED",
+
   // Audit access
   AUDIT_ACCESSED: "AUDIT_ACCESSED",
 } as const;
@@ -116,6 +121,7 @@ export const AuditResources = {
   API_KEY: "api_key",
   PAYMENT: "payment",
   EMBED_TOKEN: "embed_token",
+  PUBLICATION: "publication",
   AUDIT: "audit",
 } as const;
 
@@ -255,6 +261,14 @@ export interface EmbedTokenAuditParams extends BaseAuditParams {
     | typeof AuditActions.GUEST_USER_CREATED;
 }
 
+export interface PublicationAuditParams extends BaseAuditParams {
+  resource: typeof AuditResources.PUBLICATION;
+  action:
+    | typeof AuditActions.PUBLICATION_CREATED
+    | typeof AuditActions.PUBLICATION_UPDATED
+    | typeof AuditActions.PUBLICATION_ARCHIVED;
+}
+
 export interface AuditAccessAuditParams extends BaseAuditParams {
   resource: typeof AuditResources.AUDIT;
   action: typeof AuditActions.AUDIT_ACCESSED;
@@ -280,6 +294,7 @@ export type AuditLogParams =
   | ApiKeyAuditParams
   | PaymentAuditParams
   | EmbedTokenAuditParams
+  | PublicationAuditParams
   | AuditAccessAuditParams
   | SystemAuditParams;
 

@@ -12,4 +12,5 @@ export * from "./messaging";
 export * from "./webhooks";
 export * from "./api-keys";
 export * from "./embed-tokens";
+export * from "./publications";
 export * from "./relations";

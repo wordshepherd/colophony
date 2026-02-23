@@ -8,3 +8,5 @@ import './files.js';
 import './manuscripts.js';
 import './forms.js';
 import './periods.js';
+import './publications.js';
+import './publications.js';

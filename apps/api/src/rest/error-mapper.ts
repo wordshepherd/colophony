@@ -34,6 +34,10 @@ import {
   ManuscriptNotFoundError,
   ManuscriptVersionNotFoundError,
 } from '../services/manuscript.service.js';
+import {
+  PublicationNotFoundError,
+  PublicationSlugConflictError,
+} from '../services/publication.service.js';
 
 type ORPCErrorCode = ConstructorParameters<typeof ORPCError>[0];
 
@@ -69,6 +73,9 @@ const errorCodeMap: [new (...args: never[]) => Error, ORPCErrorCode][] = [
   // Period errors
   [PeriodNotFoundError, 'NOT_FOUND'],
   [PeriodHasSubmissionsError, 'BAD_REQUEST'],
+  // Publication errors
+  [PublicationNotFoundError, 'NOT_FOUND'],
+  [PublicationSlugConflictError, 'CONFLICT'],
   // Precondition
   [FileNotCleanError, 'BAD_REQUEST'],
 ];

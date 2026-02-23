@@ -18,6 +18,7 @@ import type { auditEvents, dsarRequests } from "./schema/audit";
 import type { retentionPolicies, userConsents } from "./schema/compliance";
 import type { outboxEvents } from "./schema/messaging";
 import type { zitadelWebhookEvents } from "./schema/webhooks";
+import type { publications } from "./schema/publications";
 
 // --- Select types (what you get back from queries) ---
 
@@ -41,6 +42,7 @@ export type RetentionPolicy = InferSelectModel<typeof retentionPolicies>;
 export type UserConsent = InferSelectModel<typeof userConsents>;
 export type OutboxEvent = InferSelectModel<typeof outboxEvents>;
 export type ZitadelWebhookEvent = InferSelectModel<typeof zitadelWebhookEvents>;
+export type Publication = InferSelectModel<typeof publications>;
 
 /** @deprecated Use File instead — submission_files has been replaced by the files table */
 export type SubmissionFile = File;
@@ -75,6 +77,7 @@ export type NewOutboxEvent = InferInsertModel<typeof outboxEvents>;
 export type NewZitadelWebhookEvent = InferInsertModel<
   typeof zitadelWebhookEvents
 >;
+export type NewPublication = InferInsertModel<typeof publications>;
 
 /** @deprecated Use NewFile instead */
 export type NewSubmissionFile = NewFile;
