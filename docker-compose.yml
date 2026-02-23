@@ -114,8 +114,10 @@ services:
       - http://host.docker.internal:4000/webhooks/tusd
       - -hooks-http-forward-headers
       - Authorization,X-Organization-Id,X-Embed-Token
+      - -cors-allow-origin
+      - ".*"
       - -cors-allow-headers
-      - X-Organization-Id,X-Embed-Token
+      - Authorization,Origin,X-Requested-With,Content-Type,Upload-Length,Upload-Offset,Tus-Resumable,Upload-Metadata,Upload-Defer-Length,X-Organization-Id,X-Embed-Token
       - -behind-proxy
       - -verbose
     depends_on:

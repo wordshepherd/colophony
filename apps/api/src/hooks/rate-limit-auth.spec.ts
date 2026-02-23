@@ -81,7 +81,7 @@ const testEnv: Env = {
   S3_ACCESS_KEY: 'minioadmin',
   S3_SECRET_KEY: 'minioadmin',
   S3_REGION: 'us-east-1',
-  TUS_ENDPOINT: 'http://localhost:1080',
+  TUS_ENDPOINT: 'http://localhost:1080/files/',
   CLAMAV_HOST: 'localhost',
   CLAMAV_PORT: 3310,
   VIRUS_SCAN_ENABLED: true,
