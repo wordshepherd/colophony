@@ -21,9 +21,9 @@ export const payments = pgTable(
   "payments",
   {
     id: uuid("id").defaultRandom().primaryKey(),
-    organizationId: uuid("organization_id")
-      .notNull()
-      .references(() => organizations.id, { onDelete: "restrict" }),
+    organizationId: uuid("organization_id").references(() => organizations.id, {
+      onDelete: "set null",
+    }),
     submissionId: uuid("submission_id").references(() => submissions.id, {
       onDelete: "set null",
     }),

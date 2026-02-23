@@ -34,7 +34,7 @@ export class NotFoundError extends Error {
 export function assertOwnerOrEditor(
   actorUserId: string,
   actorRole: string,
-  resourceOwnerId: string,
+  resourceOwnerId: string | null,
 ): void {
   if (
     resourceOwnerId !== actorUserId &&

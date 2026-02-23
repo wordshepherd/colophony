@@ -323,11 +323,13 @@ export const submissionService = {
             )
             .orderBy(asc(files.uploadedAt))
         : Promise.resolve([]),
-      tx
-        .select({ email: users.email })
-        .from(users)
-        .where(eq(users.id, submission.submitterId))
-        .limit(1),
+      submission.submitterId
+        ? tx
+            .select({ email: users.email })
+            .from(users)
+            .where(eq(users.id, submission.submitterId))
+            .limit(1)
+        : Promise.resolve([]),
       submission.manuscriptVersionId
         ? tx
             .select({

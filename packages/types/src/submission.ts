@@ -28,6 +28,7 @@ export const submissionSchema = z.object({
   submitterId: z
     .string()
     .uuid()
+    .nullable()
     .describe("ID of the user who created the submission"),
   submissionPeriodId: z
     .string()

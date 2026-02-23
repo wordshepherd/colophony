@@ -71,9 +71,9 @@ export const formDefinitions = pgTable(
     status: formStatusEnum("status").notNull().default("DRAFT"),
     version: integer("version").notNull().default(1),
     duplicatedFromId: uuid("duplicated_from_id"),
-    createdBy: uuid("created_by")
-      .notNull()
-      .references(() => users.id, { onDelete: "restrict" }),
+    createdBy: uuid("created_by").references(() => users.id, {
+      onDelete: "set null",
+    }),
     publishedAt: timestamp("published_at", { withTimezone: true }),
     archivedAt: timestamp("archived_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true })

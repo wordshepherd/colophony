@@ -22,6 +22,7 @@
 | GraphQL guards    | `src/graphql/guards.ts`                    |
 | GraphQL resolvers | `src/graphql/resolvers/`                   |
 | GraphQL router    | `src/graphql/router.ts`                    |
+| GDPR service      | `src/services/gdpr.service.ts`             |
 | Embed routes      | `src/routes/embed.routes.ts`               |
 | Embed token svc   | `src/services/embed-token.service.ts`      |
 | Embed submit svc  | `src/services/embed-submission.service.ts` |
@@ -182,6 +183,13 @@ Workers and queues are started in `main.ts` and closed during graceful shutdown.
 - **Fail closed**: ClamAV errors → FAILED status → downloads blocked → BullMQ retries (3 attempts, exponential backoff)
 - **Feature flag**: `VIRUS_SCAN_ENABLED` (default `true`). When `false`, files are marked CLEAN immediately in the tusd webhook
 
+### S3 Cleanup Worker
+
+- **Queue**: `s3-cleanup` — jobs enqueued from `gdprService.deleteUser()` after transaction commit
+- **Flow**: Iterates storage keys, deletes from clean or quarantine bucket, logs audit event
+- **Retries**: 5 attempts, exponential backoff from 60s, 30-day fail retention
+- **Always active**: Not gated on `VIRUS_SCAN_ENABLED` — runs whenever GDPR deletion occurs
+
 ### Env Vars
 
 | Variable             | Default     | Purpose                                     |
@@ -195,16 +203,17 @@ Workers and queues are started in `main.ts` and closed during graceful shutdown.
 
 ## Quirks
 
-| Quirk                                  | Details                                                                                                                                                                                                                                                               |
-| -------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Zitadel webhook signatures**         | Verify `x-zitadel-signature` header on all webhook payloads. Use shared secret from Zitadel Actions config                                                                                                                                                            |
-| **BullMQ Redis password**              | Uses `REDIS_HOST`/`REDIS_PORT`/`REDIS_PASSWORD` (not `REDIS_URL`). Pass password in worker/queue config                                                                                                                                                               |
-| **tRPC TS2742 under NodeNext**         | Resolved in tRPC v11. `declaration: true` now works in API tsconfig. Web app still resolves `AppRouter` via source path alias pointing to `src/trpc/client-types.ts` (bundler resolution). All web-facing type exports go through `client-types.ts`                   |
-| **`@fastify/raw-body` doesn't exist**  | Official `@fastify/` scoped package not published on npm. Use `fastify-raw-body` (community package, v5.0.0 for Fastify 5)                                                                                                                                            |
-| **tusd v2 webhook payload format**     | tusd v2.8.0 sends `{ Type: "pre-create"\|"post-finish", Event: { Upload, HTTPRequest } }` instead of v1's `Hook-Name` header + `{ Upload, HTTPRequest }` body. Our handler supports both formats. The `Event` envelope is unwrapped before dispatch.                  |
-| **Fastify 5 preHandler short-circuit** | To stop request processing in a `preHandler` hook, you MUST `return reply.status(N).send(...)`. Using `void reply.send(); return;` does NOT work — Fastify still runs the handler, causing `ERR_HTTP_HEADERS_SENT` crash. This bit us in webhook rate limiters.       |
-| **oRPC OpenAPI needs Zod 4 converter** | `OpenAPIReferencePlugin` requires explicit `schemaConverters: [new ZodToJsonSchemaConverter()]` from `@orpc/zod/zod4`. Without it, all schemas become `{}` and routes with path params throw 500. The default `@orpc/zod` export is Zod 3 only.                       |
-| **tRPC v11 no superjson**              | `httpBatchLink` uses plain JSON — `Date` objects become ISO strings over the wire. Input schemas must use `z.coerce.date()` (not `z.date()`) for date fields sent from the client. Output schemas are unaffected since Drizzle returns real Date objects server-side. |
+| Quirk                                  | Details                                                                                                                                                                                                                                                                     |
+| -------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Zitadel webhook signatures**         | Verify `x-zitadel-signature` header on all webhook payloads. Use shared secret from Zitadel Actions config                                                                                                                                                                  |
+| **BullMQ Redis password**              | Uses `REDIS_HOST`/`REDIS_PORT`/`REDIS_PASSWORD` (not `REDIS_URL`). Pass password in worker/queue config                                                                                                                                                                     |
+| **tRPC TS2742 under NodeNext**         | Resolved in tRPC v11. `declaration: true` now works in API tsconfig. Web app still resolves `AppRouter` via source path alias pointing to `src/trpc/client-types.ts` (bundler resolution). All web-facing type exports go through `client-types.ts`                         |
+| **`@fastify/raw-body` doesn't exist**  | Official `@fastify/` scoped package not published on npm. Use `fastify-raw-body` (community package, v5.0.0 for Fastify 5)                                                                                                                                                  |
+| **tusd v2 webhook payload format**     | tusd v2.8.0 sends `{ Type: "pre-create"\|"post-finish", Event: { Upload, HTTPRequest } }` instead of v1's `Hook-Name` header + `{ Upload, HTTPRequest }` body. Our handler supports both formats. The `Event` envelope is unwrapped before dispatch.                        |
+| **Fastify 5 preHandler short-circuit** | To stop request processing in a `preHandler` hook, you MUST `return reply.status(N).send(...)`. Using `void reply.send(); return;` does NOT work — Fastify still runs the handler, causing `ERR_HTTP_HEADERS_SENT` crash. This bit us in webhook rate limiters.             |
+| **oRPC OpenAPI needs Zod 4 converter** | `OpenAPIReferencePlugin` requires explicit `schemaConverters: [new ZodToJsonSchemaConverter()]` from `@orpc/zod/zod4`. Without it, all schemas become `{}` and routes with path params throw 500. The default `@orpc/zod` export is Zod 3 only.                             |
+| **tRPC v11 no superjson**              | `httpBatchLink` uses plain JSON — `Date` objects become ISO strings over the wire. Input schemas must use `z.coerce.date()` (not `z.date()`) for date fields sent from the client. Output schemas are unaffected since Drizzle returns real Date objects server-side.       |
+| **`validateEnv()` must be lazy**       | Call `validateEnv()` inside handler functions, NOT at module level. Module-level calls execute at import time, breaking any test that imports the router tree (9 test files failed when GDPR router used module-level `validateEnv()`). See `files.ts` for correct pattern. |
 
 ## Version Pins
 

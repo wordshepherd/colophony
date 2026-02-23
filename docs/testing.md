@@ -60,7 +60,7 @@ pnpm --filter @colophony/web test:e2e:ui
 
 | Tier                      | Files | Tests | Runner          | Location                           |
 | ------------------------- | ----- | ----- | --------------- | ---------------------------------- |
-| API unit tests            | 36    | ~499  | Vitest          | `apps/api/src/**/*.spec.ts`        |
+| API unit tests            | 38    | ~513  | Vitest          | `apps/api/src/**/*.spec.ts`        |
 | Package unit tests        | 4     | ~38   | Vitest          | `packages/*/src/**/*.spec.ts`      |
 | Web unit tests            | 11    | ~108  | Jest + jsdom    | `apps/web/src/**/*.spec.*`         |
 | RLS integration tests     | 8     | ~93   | Vitest (custom) | `apps/api/src/__tests__/rls/`      |

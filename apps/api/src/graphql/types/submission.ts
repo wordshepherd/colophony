@@ -15,6 +15,7 @@ export const SubmissionType = builder
         description: 'ID of the owning organization.',
       }),
       submitterId: t.exposeString('submitterId', {
+        nullable: true,
         description: 'ID of the user who created this submission.',
       }),
       submissionPeriodId: t.exposeString('submissionPeriodId', {
@@ -82,7 +83,9 @@ export const SubmissionType = builder
         nullable: true,
         description: 'The user who created this submission.',
         resolve: (submission, _args, ctx) =>
-          ctx.loaders.user.load(submission.submitterId),
+          submission.submitterId
+            ? ctx.loaders.user.load(submission.submitterId)
+            : null,
       }),
     }),
   });
