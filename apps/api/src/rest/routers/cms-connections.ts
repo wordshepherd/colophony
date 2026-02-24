@@ -149,7 +149,10 @@ const test = orgProcedure
   .input(idParamSchema)
   .handler(async ({ input, context }) => {
     try {
-      return await cmsConnectionService.testConnection(context.dbTx, input.id);
+      return await cmsConnectionService.testConnectionWithAudit(
+        toServiceContext(context),
+        input.id,
+      );
     } catch (e) {
       mapServiceError(e);
     }

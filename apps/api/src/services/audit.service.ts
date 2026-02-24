@@ -21,7 +21,7 @@ import type {
 
 const MAX_VALUE_LENGTH = 8192;
 
-const SECRET_PATTERN = /token|secret|password|authorization/i;
+const SECRET_PATTERN = /token|secret|password|authorization|api.?key/i;
 
 /**
  * Safely serialize a value to JSON for audit storage.

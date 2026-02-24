@@ -131,6 +131,7 @@ export const AuditActions = {
   CMS_CONNECTION_CREATED: "CMS_CONNECTION_CREATED",
   CMS_CONNECTION_UPDATED: "CMS_CONNECTION_UPDATED",
   CMS_CONNECTION_DELETED: "CMS_CONNECTION_DELETED",
+  CMS_CONNECTION_TESTED: "CMS_CONNECTION_TESTED",
 
   // Audit access
   AUDIT_ACCESSED: "AUDIT_ACCESSED",
@@ -346,7 +347,8 @@ export interface CmsConnectionAuditParams extends BaseAuditParams {
   action:
     | typeof AuditActions.CMS_CONNECTION_CREATED
     | typeof AuditActions.CMS_CONNECTION_UPDATED
-    | typeof AuditActions.CMS_CONNECTION_DELETED;
+    | typeof AuditActions.CMS_CONNECTION_DELETED
+    | typeof AuditActions.CMS_CONNECTION_TESTED;
 }
 
 export interface AuditAccessAuditParams extends BaseAuditParams {

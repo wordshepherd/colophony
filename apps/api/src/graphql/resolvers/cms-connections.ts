@@ -231,7 +231,10 @@ builder.mutationFields((t) => ({
       await requireScopes(ctx, 'cms:read');
       const { id } = idParamSchema.parse({ id: args.id });
       try {
-        return await cmsConnectionService.testConnection(orgCtx.dbTx, id);
+        return await cmsConnectionService.testConnectionWithAudit(
+          toServiceContext(orgCtx),
+          id,
+        );
       } catch (e) {
         mapServiceError(e);
       }
