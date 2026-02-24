@@ -70,6 +70,8 @@ jobs:
     needs: changes
     if: needs.changes.outputs.docs_only != 'true'
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v6
 
@@ -105,6 +107,8 @@ jobs:
     needs: changes
     if: needs.changes.outputs.docs_only != 'true'
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v6
       - uses: pnpm/action-setup@v4
@@ -203,6 +207,8 @@ jobs:
     needs: changes
     if: needs.changes.outputs.docs_only != 'true'
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     services:
       postgres:
         image: postgres:16-alpine
@@ -243,6 +249,8 @@ jobs:
     needs: changes
     if: needs.changes.outputs.docs_only != 'true' && needs.changes.outputs.run_submissions == 'true'
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     services:
       postgres:
         image: postgres:16-alpine
@@ -326,6 +334,8 @@ jobs:
     needs: changes
     if: needs.changes.outputs.docs_only != 'true' && needs.changes.outputs.run_embed == 'true'
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     services:
       postgres:
         image: postgres:16-alpine
@@ -409,6 +419,8 @@ jobs:
     needs: changes
     if: needs.changes.outputs.docs_only != 'true' && needs.changes.outputs.run_slate == 'true'
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     services:
       postgres:
         image: postgres:16-alpine
@@ -492,6 +504,8 @@ jobs:
     needs: changes
     if: needs.changes.outputs.docs_only != 'true' && needs.changes.outputs.run_uploads == 'true'
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     services:
       postgres:
         image: postgres:16-alpine
@@ -611,6 +625,8 @@ jobs:
     needs: changes
     if: needs.changes.outputs.docs_only != 'true' && needs.changes.outputs.run_oidc == 'true'
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     services:
       postgres:
         image: postgres:16-alpine
@@ -737,6 +753,8 @@ jobs:
     needs: changes
     if: needs.changes.outputs.docs_only != 'true'
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v6
       - uses: pnpm/action-setup@v4
