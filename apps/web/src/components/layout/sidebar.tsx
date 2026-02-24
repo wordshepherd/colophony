@@ -11,6 +11,7 @@ import {
   Building2,
   Calendar,
   ClipboardList,
+  FileSignature,
   FileText,
   GitBranch,
   Inbox,
@@ -38,6 +39,7 @@ const slateNavigation = [
   { name: "Pipeline", href: "/slate/pipeline", icon: GitBranch },
   { name: "Issues", href: "/slate/issues", icon: BookCopy },
   { name: "Calendar", href: "/slate/calendar", icon: Calendar },
+  { name: "Contracts", href: "/slate/contracts", icon: FileSignature },
 ];
 
 const adminNavigation = [

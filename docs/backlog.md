@@ -135,7 +135,7 @@
 - [x] Slate frontend PR2 — pipeline dashboard (list/detail/transitions/comments/history/roles) — (architecture doc Track 4; done 2026-02-23)
 - [x] Slate frontend PR3 — issues + sections (CRUD, item assignment, DnD reordering) — (architecture doc Track 4; done 2026-02-23)
 - [x] Slate frontend PR4 — editorial calendar — (architecture doc Track 4; done 2026-02-23 PR pending)
-- [ ] Slate frontend PR5 — contracts + templates (Tiptap WYSIWYG + merge fields) — (architecture doc Track 4)
+- [x] Slate frontend PR5 — contracts + templates (Tiptap WYSIWYG + merge fields) — (architecture doc Track 4; done 2026-02-24 PR pending)
 - [ ] Slate frontend PR6 — CMS connections (CRUD, adapter config, test) — (architecture doc Track 4)
 - [ ] Slate E2E tests — Playwright tests for pipeline flows — (architecture doc Track 4)
 

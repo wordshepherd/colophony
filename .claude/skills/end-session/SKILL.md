@@ -52,10 +52,16 @@ Scan the conversation to identify:
 
 ### Step 3: Note Codex review status
 
-Check the conversation history for any `/codex-review` invocations during this session:
+Check the conversation history for any `/codex-review` invocations during this session. **Distinguish between review types** — they are not interchangeable:
 
-- **If a review was done**: Note which findings were addressed vs deferred in the session summary
-- **If no review was done and there are code changes**: Suggest running `/codex-review` before ending
+- **Plan review** (`/codex-review plan`): Reviews the _plan file_ for soundness before implementation. Does NOT review actual code written.
+- **Branch review** (`/codex-review branch`): Reviews the _actual code diff_ against `origin/main`. This is the implementation review.
+
+Record which types were run:
+
+- **If a branch review was done**: Note which findings were addressed vs deferred in the session summary
+- **If only a plan review was done**: Note it, but do NOT count it as a code review — Step 6.5 still needs to run
+- **If no review was done and there are code changes**: Note that Step 6.5 will handle it
 
 This step does NOT perform a review — it only records what happened during the session.
 
@@ -78,7 +84,8 @@ Use this exact format:
 
 - [ ] or [x] All code committed
 - [ ] or [x] Tests passing
-- [ ] or [x] Codex review done
+- [ ] or [x] Codex plan review done
+- [ ] or [x] Codex branch review done
 - [ ] or [x] DEVLOG updated
 - [ ] or [x] PR created/updated
 
@@ -196,9 +203,11 @@ After all commits (code + docs) are complete but before pushing, run a Codex bra
 
 - The session had no code changes (doc-only update)
 - The user explicitly says to skip review (e.g., "just push it")
-- A `/codex-review` was already run manually during this session and no code changes were made after it
+- A `/codex-review branch` was already run during this session and no code changes were made after it
 
-Update the session summary (Step 9) to include the Codex review outcome under "Code Review".
+**IMPORTANT: A plan review (`/codex-review plan`) does NOT substitute for a branch review.** Plan reviews check the plan's assumptions against the codebase; branch reviews check the actual implementation. Even if a plan review ran earlier in the session, a branch review is still required here unless explicitly skipped by the user.
+
+Update the session summary (Step 9) to include the Codex review outcome under "Code Review", distinguishing between plan and branch reviews.
 
 ### Step 7: Push and create/update PR
 
