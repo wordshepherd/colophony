@@ -25,6 +25,15 @@ import {
   apiKeys,
   auditEvents,
   retentionPolicies,
+  publications,
+  pipelineItems,
+  pipelineHistory,
+  contractTemplates,
+  contracts,
+  issues,
+  issueSections,
+  issueItems,
+  cmsConnections,
 } from "./schema";
 
 // ---------------------------------------------------------------------------
@@ -476,6 +485,301 @@ async function main() {
     });
 
     console.log("  Retention policies: 2 (1 org-scoped, 1 global)");
+
+    // =====================================================================
+    // Slate — Publication Pipeline seed data
+    // =====================================================================
+
+    // ----- Second ACCEPTED submission (for two pipeline-eligible pieces) -----
+    const [acceptedSub2] = await tx
+      .insert(submissions)
+      .values({
+        organizationId: org1!.id,
+        submitterId: writerUser!.id,
+        submissionPeriodId: openPeriod!.id,
+        title: "The Architecture of Longing",
+        content:
+          "A sequence of prose poems exploring the spaces between desire and memory.",
+        coverLetter:
+          "These prose poems were written during a fellowship at the Vermont Studio Center.",
+        status: "ACCEPTED",
+        submittedAt: daysAgo(18),
+      })
+      .returning();
+
+    await tx.insert(submissionHistory).values([
+      {
+        submissionId: acceptedSub2!.id,
+        fromStatus: "DRAFT",
+        toStatus: "SUBMITTED",
+        changedBy: writerUser!.id,
+        changedAt: daysAgo(18),
+      },
+      {
+        submissionId: acceptedSub2!.id,
+        fromStatus: "SUBMITTED",
+        toStatus: "UNDER_REVIEW",
+        changedBy: editorUser!.id,
+        changedAt: daysAgo(12),
+      },
+      {
+        submissionId: acceptedSub2!.id,
+        fromStatus: "UNDER_REVIEW",
+        toStatus: "ACCEPTED",
+        changedBy: adminUser!.id,
+        comment: "Strong work — accepted for Spring issue.",
+        changedAt: daysAgo(2),
+      },
+    ]);
+
+    console.log("  Second accepted submission: The Architecture of Longing");
+
+    // ----- Publications -----
+    const [pub1] = await tx
+      .insert(publications)
+      .values({
+        organizationId: org1!.id,
+        name: "The Quarterly Review",
+        slug: "the-quarterly-review",
+        description:
+          "Flagship print journal publishing poetry, fiction, and essays since 1985.",
+        status: "ACTIVE",
+      })
+      .returning();
+
+    const [pub2] = await tx
+      .insert(publications)
+      .values({
+        organizationId: org1!.id,
+        name: "Quarterly Online",
+        slug: "quarterly-online",
+        description:
+          "Digital companion to The Quarterly Review, featuring web-exclusive content.",
+        status: "ACTIVE",
+      })
+      .returning();
+
+    console.log(`  Publications: ${pub1!.name}, ${pub2!.name}`);
+
+    // ----- Pipeline Items -----
+    const [pipeItem1] = await tx
+      .insert(pipelineItems)
+      .values({
+        organizationId: org1!.id,
+        submissionId: acceptedSub!.id,
+        publicationId: pub1!.id,
+        stage: "COPYEDIT_IN_PROGRESS",
+        assignedCopyeditorId: editorUser!.id,
+        copyeditDueAt: daysFromNow(14),
+      })
+      .returning();
+
+    const [pipeItem2] = await tx
+      .insert(pipelineItems)
+      .values({
+        organizationId: org1!.id,
+        submissionId: acceptedSub2!.id,
+        publicationId: pub1!.id,
+        stage: "READY_TO_PUBLISH",
+      })
+      .returning();
+
+    console.log("  Pipeline items: 2 (COPYEDIT_IN_PROGRESS, READY_TO_PUBLISH)");
+
+    // ----- Pipeline History -----
+    await tx.insert(pipelineHistory).values([
+      // Item 1: entered pipeline → copyedit started
+      {
+        pipelineItemId: pipeItem1!.id,
+        fromStage: null,
+        toStage: "COPYEDIT_PENDING",
+        changedBy: adminUser!.id,
+        comment: "Moved to publication pipeline.",
+        changedAt: daysAgo(2),
+      },
+      {
+        pipelineItemId: pipeItem1!.id,
+        fromStage: "COPYEDIT_PENDING",
+        toStage: "COPYEDIT_IN_PROGRESS",
+        changedBy: editorUser!.id,
+        comment: "Copyedit started.",
+        changedAt: daysAgo(1),
+      },
+      // Item 2: full pipeline progression to READY_TO_PUBLISH
+      {
+        pipelineItemId: pipeItem2!.id,
+        fromStage: null,
+        toStage: "COPYEDIT_PENDING",
+        changedBy: adminUser!.id,
+        changedAt: daysAgo(10),
+      },
+      {
+        pipelineItemId: pipeItem2!.id,
+        fromStage: "COPYEDIT_PENDING",
+        toStage: "COPYEDIT_IN_PROGRESS",
+        changedBy: editorUser!.id,
+        changedAt: daysAgo(8),
+      },
+      {
+        pipelineItemId: pipeItem2!.id,
+        fromStage: "COPYEDIT_IN_PROGRESS",
+        toStage: "AUTHOR_REVIEW",
+        changedBy: editorUser!.id,
+        changedAt: daysAgo(5),
+      },
+      {
+        pipelineItemId: pipeItem2!.id,
+        fromStage: "AUTHOR_REVIEW",
+        toStage: "PROOFREAD",
+        changedBy: adminUser!.id,
+        changedAt: daysAgo(3),
+      },
+      {
+        pipelineItemId: pipeItem2!.id,
+        fromStage: "PROOFREAD",
+        toStage: "READY_TO_PUBLISH",
+        changedBy: adminUser!.id,
+        comment: "Proofread complete, ready for issue assembly.",
+        changedAt: daysAgo(1),
+      },
+    ]);
+
+    console.log("  Pipeline history: 7 entries");
+
+    // ----- Contract Template -----
+    const [template1] = await tx
+      .insert(contractTemplates)
+      .values({
+        organizationId: org1!.id,
+        name: "Standard Publication Agreement",
+        description: "Default contract template for first publication rights.",
+        body: [
+          "PUBLICATION AGREEMENT",
+          "",
+          "This agreement is between {{authorName}} (Author) and {{publicationName}} (Publisher).",
+          "",
+          'The Author grants the Publisher first serial rights to the work titled "{{title}}".',
+          "",
+          "Date: {{date}}",
+          "",
+          "Signature: ________________________",
+        ].join("\n"),
+        mergeFields: [
+          { key: "authorName", label: "Author Name", source: "auto" as const },
+          { key: "title", label: "Work Title", source: "auto" as const },
+          {
+            key: "publicationName",
+            label: "Publication Name",
+            source: "auto" as const,
+            defaultValue: "The Quarterly Review",
+          },
+          { key: "date", label: "Date", source: "auto" as const },
+        ],
+        isDefault: true,
+      })
+      .returning();
+
+    console.log(`  Contract templates: ${template1!.name}`);
+
+    // ----- Contract (DRAFT, linked to pipeline item 1) -----
+    await tx.insert(contracts).values({
+      organizationId: org1!.id,
+      pipelineItemId: pipeItem1!.id,
+      contractTemplateId: template1!.id,
+      status: "DRAFT",
+      renderedBody: [
+        "PUBLICATION AGREEMENT",
+        "",
+        "This agreement is between Writer Example (Author) and The Quarterly Review (Publisher).",
+        "",
+        'The Author grants the Publisher first serial rights to the work titled "Field Notes on Disappearing".',
+        "",
+        `Date: ${new Date().toISOString().split("T")[0]}`,
+        "",
+        "Signature: ________________________",
+      ].join("\n"),
+      mergeData: {
+        authorName: "Writer Example",
+        title: "Field Notes on Disappearing",
+        publicationName: "The Quarterly Review",
+        date: new Date().toISOString().split("T")[0],
+      },
+    });
+
+    console.log("  Contracts: 1 (DRAFT)");
+
+    // ----- Issue -----
+    const [issue1] = await tx
+      .insert(issues)
+      .values({
+        organizationId: org1!.id,
+        publicationId: pub1!.id,
+        title: "Spring 2026",
+        volume: 41,
+        issueNumber: 2,
+        description:
+          "Spring 2026 issue featuring new poetry, fiction, and essays.",
+        status: "ASSEMBLING",
+        publicationDate: daysFromNow(60),
+      })
+      .returning();
+
+    console.log(`  Issues: ${issue1!.title} (ASSEMBLING)`);
+
+    // ----- Issue Sections -----
+    const [poetrySection] = await tx
+      .insert(issueSections)
+      .values({
+        issueId: issue1!.id,
+        title: "Poetry",
+        sortOrder: 0,
+      })
+      .returning();
+
+    const [fictionSection] = await tx
+      .insert(issueSections)
+      .values({
+        issueId: issue1!.id,
+        title: "Fiction",
+        sortOrder: 1,
+      })
+      .returning();
+
+    console.log("  Issue sections: Poetry, Fiction");
+
+    // ----- Issue Items -----
+    await tx.insert(issueItems).values([
+      {
+        issueId: issue1!.id,
+        pipelineItemId: pipeItem2!.id,
+        issueSectionId: poetrySection!.id,
+        sortOrder: 0,
+      },
+      {
+        issueId: issue1!.id,
+        pipelineItemId: pipeItem1!.id,
+        issueSectionId: fictionSection!.id,
+        sortOrder: 0,
+      },
+    ]);
+
+    console.log("  Issue items: 2 (one per section)");
+
+    // ----- CMS Connection -----
+    await tx.insert(cmsConnections).values({
+      organizationId: org1!.id,
+      publicationId: pub2!.id,
+      adapterType: "WORDPRESS",
+      name: "QR WordPress",
+      config: {
+        siteUrl: "https://example.com/wp-json",
+        username: "admin",
+        applicationPassword: "xxxx-xxxx-xxxx",
+      },
+      isActive: true,
+    });
+
+    console.log("  CMS connections: 1 (QR WordPress)");
   });
 
   console.log("\nSeed complete.");

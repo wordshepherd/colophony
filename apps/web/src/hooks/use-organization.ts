@@ -47,6 +47,19 @@ export function useOrganization() {
     }
   }, [isAuthenticated, organizations, currentOrgId]);
 
+  // Clear stale org context — stored org ID doesn't match any known org
+  useEffect(() => {
+    if (isAuthenticated && currentOrgId && organizations.length > 0) {
+      const isKnown = organizations.some((org) => org.id === currentOrgId);
+      if (!isKnown) {
+        console.warn("Clearing stale org context:", currentOrgId);
+        const firstId = organizations[0].id;
+        setCurrentOrgId(firstId);
+        _setCurrentOrgId(firstId);
+      }
+    }
+  }, [isAuthenticated, currentOrgId, organizations]);
+
   // Switch organization
   const switchOrganization = useCallback(
     (orgId: string) => {
