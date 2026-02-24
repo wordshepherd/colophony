@@ -21,9 +21,10 @@ test.describe("Pipeline (/slate/pipeline)", () => {
   test("shows pipeline item in list", async ({ authedPage, slateData }) => {
     await authedPage.goto("/slate/pipeline");
 
-    // Pipeline list shows truncated submissionId (first 8 chars)
-    const truncatedId = slateData.acceptedSubmission.id.slice(0, 8);
-    await expect(authedPage.getByText(truncatedId)).toBeVisible({
+    // Pipeline list shows submission title (falls back to truncated ID if missing)
+    await expect(
+      authedPage.getByText(slateData.acceptedSubmission.title),
+    ).toBeVisible({
       timeout: 10_000,
     });
   });
@@ -31,16 +32,16 @@ test.describe("Pipeline (/slate/pipeline)", () => {
   test("filters by stage tab", async ({ authedPage, slateData }) => {
     await authedPage.goto("/slate/pipeline");
 
-    const truncatedId = slateData.acceptedSubmission.id.slice(0, 8);
+    const subTitle = slateData.acceptedSubmission.title;
 
     // Wait for data to load
-    await expect(authedPage.getByText(truncatedId)).toBeVisible({
+    await expect(authedPage.getByText(subTitle)).toBeVisible({
       timeout: 10_000,
     });
 
     // Pending tab — seed item is COPYEDIT_PENDING, should be visible
     await authedPage.getByRole("tab", { name: "Pending" }).click();
-    await expect(authedPage.getByText(truncatedId)).toBeVisible();
+    await expect(authedPage.getByText(subTitle)).toBeVisible();
 
     // Published tab — should show empty state
     await authedPage.getByRole("tab", { name: "Published" }).click();
@@ -50,13 +51,13 @@ test.describe("Pipeline (/slate/pipeline)", () => {
   test("navigates to detail page", async ({ authedPage, slateData }) => {
     await authedPage.goto("/slate/pipeline");
 
-    const truncatedId = slateData.acceptedSubmission.id.slice(0, 8);
-    await expect(authedPage.getByText(truncatedId)).toBeVisible({
+    const subTitle = slateData.acceptedSubmission.title;
+    await expect(authedPage.getByText(subTitle)).toBeVisible({
       timeout: 10_000,
     });
 
     // Click the pipeline item link
-    await authedPage.getByText(truncatedId).first().click();
+    await authedPage.getByText(subTitle).first().click();
 
     await expect(authedPage).toHaveURL(
       new RegExp(`/slate/pipeline/${slateData.pipelineItem.id}`),

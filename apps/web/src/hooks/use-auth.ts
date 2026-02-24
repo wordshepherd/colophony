@@ -88,6 +88,28 @@ export function useAuth() {
     refetchInterval: (query) => (!query.state.data ? 3000 : false),
   });
 
+  // Stale OIDC token recovery — if users.me fails with auth error after
+  // retries, the token is invalid (e.g., Zitadel signing keys changed).
+  // Clear OIDC state and force re-authentication.
+  useEffect(() => {
+    if (!profileError || !hasOidcToken) return;
+
+    const isAuthError =
+      profileError.data?.code === "UNAUTHORIZED" ||
+      profileError.message.includes("401") ||
+      profileError.message.includes("token_invalid");
+
+    if (!isAuthError) return;
+
+    console.warn("Stale OIDC token detected, forcing re-authentication");
+    const userManager = getUserManager();
+    if (userManager) {
+      void userManager.removeUser().then(() => {
+        void userManager.signinRedirect();
+      });
+    }
+  }, [profileError, hasOidcToken]);
+
   // Build the user profile with name from OIDC claims
   const user: UserProfile | null = userProfile
     ? {
