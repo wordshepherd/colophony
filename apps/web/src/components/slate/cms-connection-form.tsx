@@ -37,7 +37,7 @@ import { toast } from "sonner";
 import { ArrowLeft, Eye, EyeOff, Loader2 } from "lucide-react";
 import { cmsAdapterTypeValues, type CmsAdapterType } from "@colophony/types";
 
-const formSchema = z.object({
+const baseFormSchema = z.object({
   name: z.string().trim().min(1, "Name is required").max(255),
   adapterType: z.enum(cmsAdapterTypeValues),
   publicationId: z.string().uuid().optional().or(z.literal("")),
@@ -45,7 +45,7 @@ const formSchema = z.object({
   config: z.record(z.string(), z.unknown()),
 });
 
-type FormData = z.infer<typeof formSchema>;
+type FormData = z.infer<typeof baseFormSchema>;
 
 interface CmsConnectionFormProps {
   connectionId?: string;
@@ -58,6 +58,22 @@ export function CmsConnectionForm({ connectionId }: CmsConnectionFormProps) {
   const [visiblePasswords, setVisiblePasswords] = useState<
     Record<string, boolean>
   >({});
+
+  const formSchema = baseFormSchema.superRefine((data, ctx) => {
+    const fields = getAdapterConfigFields(data.adapterType);
+    for (const field of fields) {
+      if (field.required) {
+        const val = data.config[field.key];
+        if (!val || String(val).trim() === "") {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: `${field.label} is required`,
+            path: ["config", field.key],
+          });
+        }
+      }
+    }
+  });
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -119,7 +135,6 @@ export function CmsConnectionForm({ connectionId }: CmsConnectionFormProps) {
   });
 
   const onSubmit = (data: FormData) => {
-    const pubId = data.publicationId || undefined;
     if (isEdit) {
       updateMutation.mutate({
         id: connectionId!,
@@ -131,7 +146,7 @@ export function CmsConnectionForm({ connectionId }: CmsConnectionFormProps) {
       createMutation.mutate({
         name: data.name,
         adapterType: data.adapterType,
-        publicationId: pubId,
+        publicationId: data.publicationId || undefined,
         config: data.config,
       });
     }
@@ -246,6 +261,7 @@ export function CmsConnectionForm({ connectionId }: CmsConnectionFormProps) {
                       onValueChange={(v) =>
                         field.onChange(v === "none" ? "" : v)
                       }
+                      disabled={isEdit}
                     >
                       <FormControl>
                         <SelectTrigger>
@@ -264,7 +280,9 @@ export function CmsConnectionForm({ connectionId }: CmsConnectionFormProps) {
                       </SelectContent>
                     </Select>
                     <FormDescription>
-                      Optionally bind this connection to a specific publication
+                      {isEdit
+                        ? "Publication cannot be changed after creation"
+                        : "Optionally bind this connection to a specific publication"}
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -339,6 +357,11 @@ export function CmsConnectionForm({ connectionId }: CmsConnectionFormProps) {
                   {cf.description && (
                     <p className="text-sm text-muted-foreground">
                       {cf.description}
+                    </p>
+                  )}
+                  {form.formState.errors.config?.[cf.key] && (
+                    <p className="text-sm font-medium text-destructive">
+                      {form.formState.errors.config[cf.key]?.message as string}
                     </p>
                   )}
                 </div>
