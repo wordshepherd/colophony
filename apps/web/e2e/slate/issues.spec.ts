@@ -5,7 +5,6 @@ import {
   createIssue,
   createIssueItem,
   deleteIssue,
-  deleteIssueItem,
   deletePipelineItem,
 } from "../helpers/slate-db";
 
@@ -202,7 +201,7 @@ test.describe("Issues (/slate/issues)", () => {
       title: `E2E Remove Issue ${suffix}`,
       status: "ASSEMBLING",
     });
-    const extraItem = await createIssueItem({
+    await createIssueItem({
       issueId: extraIssue.id,
       pipelineItemId: extraPipeline.id,
     });
