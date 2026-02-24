@@ -4,7 +4,10 @@ import {
   issueItems,
   eq,
   and,
+  asc,
   desc,
+  gte,
+  lte,
   type DrizzleDb,
 } from '@colophony/db';
 import { ilike, count } from 'drizzle-orm';
@@ -57,22 +60,27 @@ export const issueService = {
   // -------------------------------------------------------------------------
 
   async list(tx: DrizzleDb, input: ListIssuesInput) {
-    const { publicationId, status, search, page, limit } = input;
+    const { publicationId, status, search, from, to, page, limit } = input;
     const offset = (page - 1) * limit;
 
     const conditions = [];
     if (publicationId) conditions.push(eq(issues.publicationId, publicationId));
     if (status) conditions.push(eq(issues.status, status));
     if (search) conditions.push(ilike(issues.title, `%${search}%`));
+    if (from) conditions.push(gte(issues.publicationDate, from));
+    if (to) conditions.push(lte(issues.publicationDate, to));
 
     const where = conditions.length > 0 ? and(...conditions) : undefined;
+    const hasDateRange = from || to;
 
     const [items, countResult] = await Promise.all([
       tx
         .select()
         .from(issues)
         .where(where)
-        .orderBy(desc(issues.createdAt))
+        .orderBy(
+          hasDateRange ? asc(issues.publicationDate) : desc(issues.createdAt),
+        )
         .limit(limit)
         .offset(offset),
       tx.select({ count: count() }).from(issues).where(where),

@@ -1,9 +1,15 @@
 import { IssueForm } from "@/components/slate/issue-form";
 
-export default function NewIssuePage() {
+export default async function NewIssuePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ publicationDate?: string }>;
+}) {
+  const params = await searchParams;
+
   return (
     <div className="p-6">
-      <IssueForm />
+      <IssueForm initialPublicationDate={params.publicationDate} />
     </div>
   );
 }
