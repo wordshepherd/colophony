@@ -11,6 +11,7 @@ import {
   Calendar,
   ClipboardList,
   FileText,
+  GitBranch,
   Inbox,
   LayoutDashboard,
   Library,
@@ -33,6 +34,7 @@ const editorNavigation = [
 const slateNavigation = [
   { name: "Slate Dashboard", href: "/slate", icon: BookMarked },
   { name: "Publications", href: "/slate/publications", icon: Library },
+  { name: "Pipeline", href: "/slate/pipeline", icon: GitBranch },
 ];
 
 const adminNavigation = [

@@ -34,7 +34,7 @@ const sections = [
     href: "/slate/pipeline",
     icon: GitBranch,
     cta: "View Pipeline",
-    comingSoon: true,
+    comingSoon: false,
   },
   {
     name: "Issues",
