@@ -323,6 +323,8 @@ Config template: `.claude/mcp-servers.example.json`
 pnpm docker:up                # Core infra + Zitadel (or --full for ClamAV, --core to skip Zitadel)
 pnpm install
 pnpm db:migrate               # Run Drizzle migrations
+pnpm db:seed                  # Seed dev data (orgs, submissions, Slate pipeline)
+pnpm zitadel:setup            # Provision Zitadel + patch .env files (after volume wipe)
 pnpm dev                      # Overmind: builds packages, then API: 4000, Web: 3000
 ```
 
