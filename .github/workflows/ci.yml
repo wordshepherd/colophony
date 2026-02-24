@@ -26,7 +26,15 @@ jobs:
       pull-requests: read
     outputs:
       docs_only: ${{ steps.check.outputs.docs_only }}
+      run_submissions: ${{ steps.suites.outputs.run_submissions }}
+      run_embed: ${{ steps.suites.outputs.run_embed }}
+      run_slate: ${{ steps.suites.outputs.run_slate }}
+      run_uploads: ${{ steps.suites.outputs.run_uploads }}
+      run_oidc: ${{ steps.suites.outputs.run_oidc }}
     steps:
+      - uses: actions/checkout@v6
+        with:
+          sparse-checkout: .github/scripts
       - name: Check for code changes
         id: check
         env:
@@ -47,6 +55,12 @@ jobs:
           else
             echo "docs_only=true" >> "$GITHUB_OUTPUT"
           fi
+          # Save file list for suite detection
+          echo "$FILES" > /tmp/changed-files.txt
+      - name: Detect Playwright suites to run
+        id: suites
+        run: |
+          cat /tmp/changed-files.txt | bash .github/scripts/detect-changes.sh
 
   # ──────────────────────────────────────────────────
   # Fast checks (~1 min): lint, format, type-check
@@ -227,7 +241,7 @@ jobs:
   playwright-tests:
     name: Playwright Submissions E2E
     needs: changes
-    if: needs.changes.outputs.docs_only != 'true'
+    if: needs.changes.outputs.docs_only != 'true' && needs.changes.outputs.run_submissions == 'true'
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -310,7 +324,7 @@ jobs:
   playwright-embed:
     name: Playwright Embed E2E
     needs: changes
-    if: needs.changes.outputs.docs_only != 'true'
+    if: needs.changes.outputs.docs_only != 'true' && needs.changes.outputs.run_embed == 'true'
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -393,7 +407,7 @@ jobs:
   playwright-slate:
     name: Playwright Slate E2E
     needs: changes
-    if: needs.changes.outputs.docs_only != 'true'
+    if: needs.changes.outputs.docs_only != 'true' && needs.changes.outputs.run_slate == 'true'
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -476,7 +490,7 @@ jobs:
   playwright-uploads:
     name: Playwright Uploads E2E
     needs: changes
-    if: needs.changes.outputs.docs_only != 'true'
+    if: needs.changes.outputs.docs_only != 'true' && needs.changes.outputs.run_uploads == 'true'
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -595,7 +609,7 @@ jobs:
   playwright-oidc:
     name: Playwright OIDC E2E
     needs: changes
-    if: needs.changes.outputs.docs_only != 'true'
+    if: needs.changes.outputs.docs_only != 'true' && needs.changes.outputs.run_oidc == 'true'
     runs-on: ubuntu-latest
     services:
       postgres:

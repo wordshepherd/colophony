@@ -262,6 +262,10 @@
 - [x] Plan override log for drift detection — during implementation, when discoveries require deliberate divergence from the plan, log overrides with rationale (file, what changed, why) in a structured format (e.g., task list metadata or a plan-overrides section in the PR). Drift detection reads the override log and excludes acknowledged divergences, only flagging unlogged drift — (dev workflow session 2026-02-20; done 2026-02-20)
 - [x] Automatic Codex branch review before PR — run `/codex-review branch` automatically after implementation is complete (all tasks done, tests passing) but before creating the PR; incorporate findings before presenting the PR for user review. Mirrors the plan review integration: user sees a Codex-vetted PR, not a raw first draft — (dev workflow session 2026-02-20; done 2026-02-20)
 
+### CI
+
+- [x] [P2] CI path filtering for Playwright suites — skip irrelevant E2E suites on PRs based on changed files; `.github/scripts/detect-changes.sh` with fail-open strategy — (DEVLOG 2026-02-24; done 2026-02-24)
+
 ### Dev Environment
 
 - [x] [P1] Add Overmind as process manager for dev servers — replaces `turbo run dev` for persistent server lifecycle (API + web); Turbo stays for build graph. Overmind manages tmux session so killing it kills entire process group — eliminates orphaned `tsx watch` / `next-server` / `postcss` processes that accumulate across sessions. Turbo's SIGINT forwarding is a known open issue (#9666, #9694). — (manual QA session 2026-02-21, found 60 orphaned processes; done 2026-02-21)

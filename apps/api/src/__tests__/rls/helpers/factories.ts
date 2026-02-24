@@ -30,7 +30,6 @@ import {
   type UserConsent,
 } from '@colophony/db';
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- pnpm resolves two drizzle-orm copies
 // (different optional peer dep contexts); runtime is single copy, types diverge. Cast to unify.
 function adminDb(): any {
   return drizzle(getAdminPool());

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { FileUpload } from "@/components/submissions/file-upload";
 import { Badge } from "@/components/ui/badge";
@@ -116,20 +116,20 @@ export function ManuscriptVersionFiles({
 }
 
 function ReadOnlyFileItem({ file }: { file: FileRecord }) {
-  const [downloadFileId, setDownloadFileId] = useState<string | null>(null);
+  const [isDownloading, setIsDownloading] = useState(false);
+  const utils = trpc.useUtils();
 
-  const { data: downloadData, isFetching } = trpc.files.getDownloadUrl.useQuery(
-    { fileId: downloadFileId! },
-    { enabled: !!downloadFileId },
-  );
-
-  // Open the download URL when it arrives
-  useEffect(() => {
-    if (downloadData?.url) {
-      window.open(downloadData.url, "_blank");
-      setDownloadFileId(null);
+  const handleDownload = async () => {
+    setIsDownloading(true);
+    try {
+      const data = await utils.files.getDownloadUrl.fetch({ fileId: file.id });
+      if (data?.url) {
+        window.open(data.url, "_blank");
+      }
+    } finally {
+      setIsDownloading(false);
     }
-  }, [downloadData]);
+  };
 
   return (
     <div className="flex items-center gap-3 p-3 border rounded-lg">
@@ -147,10 +147,10 @@ function ReadOnlyFileItem({ file }: { file: FileRecord }) {
             variant="ghost"
             size="icon"
             className="h-8 w-8"
-            onClick={() => setDownloadFileId(file.id)}
-            disabled={isFetching}
+            onClick={handleDownload}
+            disabled={isDownloading}
           >
-            {isFetching ? (
+            {isDownloading ? (
               <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
               <Download className="h-4 w-4" />
