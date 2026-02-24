@@ -178,7 +178,18 @@ export const cmsConnectionService = {
   },
 
   async testConnectionWithAudit(ctx: ServiceContext, id: string) {
-    const result = await cmsConnectionService.testConnection(ctx.tx, id);
+    let result: { success: boolean; error?: string };
+    try {
+      result = await cmsConnectionService.testConnection(ctx.tx, id);
+    } catch (error) {
+      await ctx.audit({
+        action: AuditActions.CMS_CONNECTION_TESTED,
+        resource: AuditResources.CMS_CONNECTION,
+        resourceId: id,
+        newValue: { success: false },
+      });
+      throw error;
+    }
     await ctx.audit({
       action: AuditActions.CMS_CONNECTION_TESTED,
       resource: AuditResources.CMS_CONNECTION,

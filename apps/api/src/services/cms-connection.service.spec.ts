@@ -158,4 +158,18 @@ describe('cmsConnectionService.testConnectionWithAudit', () => {
     // Must NOT leak error text into audit log
     expect(auditCall.newValue.error).toBeUndefined();
   });
+
+  it('audits failure and re-throws when testConnection throws', async () => {
+    mockTestConnection.mockRejectedValue(new Error('Config parse error'));
+    const ctx = makeServiceContext();
+
+    await expect(
+      cmsConnectionService.testConnectionWithAudit(ctx, 'conn-1'),
+    ).rejects.toThrow('Config parse error');
+
+    expect(ctx.audit).toHaveBeenCalledOnce();
+    const auditCall = (ctx.audit as ReturnType<typeof vi.fn>).mock.calls[0][0];
+    expect(auditCall.action).toBe(AuditActions.CMS_CONNECTION_TESTED);
+    expect(auditCall.newValue).toEqual({ success: false });
+  });
 });
