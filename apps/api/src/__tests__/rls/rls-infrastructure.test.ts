@@ -30,6 +30,7 @@ const NON_RLS_TABLES = [
   'stripe_webhook_events',
   'outbox_events',
   'zitadel_webhook_events',
+  'federation_config',
 ];
 
 describe('RLS Infrastructure', () => {

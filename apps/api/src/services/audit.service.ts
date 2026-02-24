@@ -16,6 +16,7 @@ import type {
   EmbedTokenAuditParams,
   UserAuditParams,
   SystemAuditParams,
+  FederationAuditParams,
   ListAuditEventsInput,
 } from '@colophony/types';
 
@@ -206,7 +207,8 @@ export const auditService = {
       | ApiKeyAuditParams
       | EmbedTokenAuditParams
       | UserAuditParams
-      | SystemAuditParams,
+      | SystemAuditParams
+      | FederationAuditParams,
   ): Promise<void> {
     if (params.organizationId) {
       throw new Error(

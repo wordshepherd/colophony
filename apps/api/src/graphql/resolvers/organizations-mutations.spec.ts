@@ -212,6 +212,7 @@ describe('Organization mutations — resolver wiring', () => {
         settings: null,
         createdAt: new Date(),
         updatedAt: new Date(),
+        federationOptedOut: false,
       },
       membership: {
         id: 'mem-1',
@@ -253,6 +254,7 @@ describe('Organization mutations — resolver wiring', () => {
       settings: null,
       createdAt: new Date(),
       updatedAt: new Date(),
+      federationOptedOut: false,
     };
     // eslint-disable-next-line @typescript-eslint/unbound-method
     vi.mocked(organizationService.updateWithAudit).mockResolvedValue(updated);
