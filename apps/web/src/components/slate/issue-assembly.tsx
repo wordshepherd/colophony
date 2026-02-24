@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, type MutableRefObject } from "react";
 import { trpc } from "@/lib/trpc";
 import { IssueSectionCard } from "./issue-section-card";
 import { SortableIssueItem } from "./sortable-issue-item";
@@ -39,6 +39,7 @@ type WireItem = {
   issueSectionId: string | null;
   sortOrder: number;
   createdAt: string;
+  submissionTitle?: string | null;
 };
 
 interface IssueAssemblyProps {
@@ -60,6 +61,7 @@ export function IssueAssembly({
   const [showAddItemDialog, setShowAddItemDialog] = useState(false);
   const utils = trpc.useUtils();
   const reorderTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const sectionChangeRef: MutableRefObject<boolean> = useRef(false);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
@@ -80,10 +82,13 @@ export function IssueAssembly({
 
   const removeItemMutation = trpc.issues.removeItem.useMutation({
     onSuccess: () => {
-      toast.success("Item removed");
+      if (!sectionChangeRef.current) {
+        toast.success("Item removed");
+      }
       utils.issues.getItems.invalidate({ id: issueId });
     },
     onError: (err) => {
+      sectionChangeRef.current = false;
       toast.error(err.message);
     },
   });
@@ -132,16 +137,33 @@ export function IssueAssembly({
     pipelineItemId: string,
     newSectionId: string | null,
   ) => {
+    sectionChangeRef.current = true;
     // Remove then re-add to change section
     removeItemMutation.mutate(
       { id: issueId, itemId },
       {
         onSuccess: () => {
-          addItemMutation.mutate({
-            id: issueId,
-            pipelineItemId,
-            issueSectionId: newSectionId ?? undefined,
-          });
+          addItemMutation.mutate(
+            {
+              id: issueId,
+              pipelineItemId,
+              issueSectionId: newSectionId ?? undefined,
+            },
+            {
+              onSuccess: () => {
+                sectionChangeRef.current = false;
+                const sectionName = newSectionId
+                  ? (sections.find((s) => s.id === newSectionId)?.title ??
+                    "section")
+                  : "Unsectioned";
+                toast.success(`Item moved to ${sectionName}`);
+                utils.issues.getItems.invalidate({ id: issueId });
+              },
+              onError: () => {
+                sectionChangeRef.current = false;
+              },
+            },
+          );
         },
       },
     );

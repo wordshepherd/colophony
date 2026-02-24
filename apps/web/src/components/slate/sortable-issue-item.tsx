@@ -22,6 +22,7 @@ type WireItem = {
   id: string;
   pipelineItemId: string;
   issueSectionId: string | null;
+  submissionTitle?: string | null;
 };
 
 interface SortableIssueItemProps {
@@ -85,8 +86,8 @@ export function SortableIssueItem({
         </button>
       )}
 
-      <span className="font-mono text-sm text-muted-foreground min-w-0 truncate">
-        {item.pipelineItemId.slice(0, 8)}&hellip;
+      <span className="text-sm text-muted-foreground min-w-0 truncate">
+        {item.submissionTitle ?? item.pipelineItemId.slice(0, 8) + "\u2026"}
       </span>
 
       {isEditor && (

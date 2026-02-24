@@ -155,16 +155,14 @@ test.describe("Issues (/slate/issues)", () => {
         authedPage.getByRole("heading", { name: "Add Pipeline Item" }),
       ).toBeVisible();
 
-      // Dialog table shows submissionId (first 8 chars)
-      const truncatedSubId = extraSub.id.slice(0, 8);
-      await authedPage.getByText(truncatedSubId).click();
+      // Dialog table shows submission title
+      await authedPage.getByText(extraSub.title).click();
 
       // Click "Add Item" button in dialog
       await authedPage.getByRole("button", { name: "Add Item" }).click();
 
-      // Assembly list shows pipelineItemId (first 8 chars), not submissionId
-      const truncatedPipelineId = extraPipeline.id.slice(0, 8);
-      await expect(authedPage.getByText(truncatedPipelineId)).toBeVisible({
+      // Assembly list shows submission title (joined via pipeline item)
+      await expect(authedPage.getByText(extraSub.title)).toBeVisible({
         timeout: 5_000,
       });
     } finally {
@@ -216,9 +214,8 @@ test.describe("Issues (/slate/issues)", () => {
       // Go to Assembly tab
       await authedPage.getByRole("tab", { name: "Assembly" }).click();
 
-      // Assembly list shows pipelineItemId (first 8 chars), not submissionId
-      const truncatedPipelineId = extraPipeline.id.slice(0, 8);
-      await expect(authedPage.getByText(truncatedPipelineId)).toBeVisible({
+      // Assembly list shows submission title (joined via pipeline item)
+      await expect(authedPage.getByText(extraSub.title)).toBeVisible({
         timeout: 5_000,
       });
 
@@ -226,7 +223,7 @@ test.describe("Issues (/slate/issues)", () => {
       await authedPage.getByRole("button", { name: "Remove item" }).click();
 
       // Item should be removed
-      await expect(authedPage.getByText(truncatedPipelineId)).not.toBeVisible({
+      await expect(authedPage.getByText(extraSub.title)).not.toBeVisible({
         timeout: 10_000,
       });
     } finally {

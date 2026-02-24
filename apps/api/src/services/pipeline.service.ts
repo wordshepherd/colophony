@@ -3,12 +3,15 @@ import {
   pipelineHistory,
   pipelineComments,
   submissions,
+  publications,
+  users,
   eq,
   and,
   sql,
   type DrizzleDb,
 } from '@colophony/db';
-import { desc, inArray, count } from 'drizzle-orm';
+import { desc, inArray, count, getTableColumns } from 'drizzle-orm';
+import { alias } from 'drizzle-orm/pg-core';
 import type {
   CreatePipelineItemInput,
   UpdatePipelineStageInput,
@@ -109,16 +112,53 @@ export const pipelineService = {
 
     const where = conditions.length > 0 ? and(...conditions) : undefined;
 
-    const [items, countResult] = await Promise.all([
+    const copyeditors = alias(users, 'copyeditors');
+    const proofreaders = alias(users, 'proofreaders');
+
+    const [rows, countResult] = await Promise.all([
       tx
-        .select()
+        .select({
+          ...getTableColumns(pipelineItems),
+          submission: { title: submissions.title },
+          publication: { name: publications.name },
+          assignedCopyeditor: { email: copyeditors.email },
+          assignedProofreader: { email: proofreaders.email },
+        })
         .from(pipelineItems)
+        .leftJoin(submissions, eq(pipelineItems.submissionId, submissions.id))
+        .leftJoin(
+          publications,
+          eq(pipelineItems.publicationId, publications.id),
+        )
+        .leftJoin(
+          copyeditors,
+          eq(pipelineItems.assignedCopyeditorId, copyeditors.id),
+        )
+        .leftJoin(
+          proofreaders,
+          eq(pipelineItems.assignedProofreaderId, proofreaders.id),
+        )
         .where(where)
         .orderBy(desc(pipelineItems.createdAt))
         .limit(limit)
         .offset(offset),
       tx.select({ count: count() }).from(pipelineItems).where(where),
     ]);
+
+    // Clean up null join results to match optional schema shape
+    const items = rows.map((row) => ({
+      ...row,
+      submission: row.submission?.title != null ? row.submission : undefined,
+      publication: row.publication?.name != null ? row.publication : undefined,
+      assignedCopyeditor:
+        row.assignedCopyeditor?.email != null
+          ? row.assignedCopyeditor
+          : undefined,
+      assignedProofreader:
+        row.assignedProofreader?.email != null
+          ? row.assignedProofreader
+          : undefined,
+    }));
 
     const total = countResult[0]?.count ?? 0;
     return {
@@ -131,13 +171,46 @@ export const pipelineService = {
   },
 
   async getById(tx: DrizzleDb, id: string) {
+    const copyeditors = alias(users, 'copyeditors');
+    const proofreaders = alias(users, 'proofreaders');
+
     const [row] = await tx
-      .select()
+      .select({
+        ...getTableColumns(pipelineItems),
+        submission: { title: submissions.title },
+        publication: { name: publications.name },
+        assignedCopyeditor: { email: copyeditors.email },
+        assignedProofreader: { email: proofreaders.email },
+      })
       .from(pipelineItems)
+      .leftJoin(submissions, eq(pipelineItems.submissionId, submissions.id))
+      .leftJoin(publications, eq(pipelineItems.publicationId, publications.id))
+      .leftJoin(
+        copyeditors,
+        eq(pipelineItems.assignedCopyeditorId, copyeditors.id),
+      )
+      .leftJoin(
+        proofreaders,
+        eq(pipelineItems.assignedProofreaderId, proofreaders.id),
+      )
       .where(eq(pipelineItems.id, id))
       .limit(1);
 
-    return row ?? null;
+    if (!row) return null;
+
+    return {
+      ...row,
+      submission: row.submission?.title != null ? row.submission : undefined,
+      publication: row.publication?.name != null ? row.publication : undefined,
+      assignedCopyeditor:
+        row.assignedCopyeditor?.email != null
+          ? row.assignedCopyeditor
+          : undefined,
+      assignedProofreader:
+        row.assignedProofreader?.email != null
+          ? row.assignedProofreader
+          : undefined,
+    };
   },
 
   async getBySubmissionId(tx: DrizzleDb, submissionId: string) {
