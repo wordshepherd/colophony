@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { useOrganization } from "@/hooks/use-organization";
 import {
+  BookCopy,
   BookMarked,
   BookOpen,
   Building2,
@@ -35,6 +36,7 @@ const slateNavigation = [
   { name: "Slate Dashboard", href: "/slate", icon: BookMarked },
   { name: "Publications", href: "/slate/publications", icon: Library },
   { name: "Pipeline", href: "/slate/pipeline", icon: GitBranch },
+  { name: "Issues", href: "/slate/issues", icon: BookCopy },
 ];
 
 const adminNavigation = [

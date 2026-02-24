@@ -42,7 +42,7 @@ const sections = [
     href: "/slate/issues",
     icon: BookCopy,
     cta: "View Issues",
-    comingSoon: true,
+    comingSoon: false,
   },
   {
     name: "Calendar",
