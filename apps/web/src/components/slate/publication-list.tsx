@@ -44,6 +44,13 @@ export function PublicationList() {
     limit: 20,
   });
 
+  // Clamp page when data shrinks (e.g. after archiving the last item on a page)
+  useEffect(() => {
+    if (data && data.totalPages > 0 && page > data.totalPages) {
+      setPage(data.totalPages);
+    }
+  }, [data, page]);
+
   const utils = trpc.useUtils();
 
   const archiveMutation = trpc.publications.archive.useMutation({

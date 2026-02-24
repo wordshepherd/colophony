@@ -61,11 +61,14 @@ export function PublicationForm({ publicationId }: PublicationFormProps) {
     defaultValues: { name: "", slug: "", description: "" },
   });
 
-  const { data: publication, isPending: isLoadingPublication } =
-    trpc.publications.getById.useQuery(
-      { id: publicationId! },
-      { enabled: isEdit },
-    );
+  const {
+    data: publication,
+    isPending: isLoadingPublication,
+    error: loadError,
+  } = trpc.publications.getById.useQuery(
+    { id: publicationId! },
+    { enabled: isEdit },
+  );
 
   // Pre-populate form in edit mode
   useEffect(() => {
@@ -123,6 +126,17 @@ export function PublicationForm({ publicationId }: PublicationFormProps) {
       <div className="space-y-6">
         <Skeleton className="h-8 w-64" />
         <Skeleton className="h-96 w-full max-w-lg" />
+      </div>
+    );
+  }
+
+  if (isEdit && loadError) {
+    return (
+      <div className="text-center py-12">
+        <p className="text-muted-foreground">Publication not found</p>
+        <Link href="/slate/publications">
+          <Button variant="link">Back to publications</Button>
+        </Link>
       </div>
     );
   }
