@@ -41,6 +41,7 @@ function getRequestedProjects(): Set<string> {
     projects.add("uploads");
     projects.add("oidc");
     projects.add("embed");
+    projects.add("slate");
   }
 
   return projects;

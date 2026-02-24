@@ -1,12 +1,15 @@
 -- 0021: CMS connections table
 
--- Create CmsAdapterType enum
-CREATE TYPE "CmsAdapterType" AS ENUM ('WORDPRESS', 'GHOST');
+-- Create CmsAdapterType enum (idempotent)
+DO $$ BEGIN
+  CREATE TYPE "CmsAdapterType" AS ENUM ('WORDPRESS', 'GHOST');
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
 --> statement-breakpoint
 
 -- Create cms_connections table
-CREATE TABLE "cms_connections" (
+CREATE TABLE IF NOT EXISTS "cms_connections" (
   "id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
   "organization_id" uuid NOT NULL,
   "publication_id" uuid,
@@ -21,22 +24,28 @@ CREATE TABLE "cms_connections" (
 
 --> statement-breakpoint
 
--- Foreign keys
-ALTER TABLE "cms_connections"
-  ADD CONSTRAINT "cms_connections_organization_id_fk"
-  FOREIGN KEY ("organization_id") REFERENCES "organizations"("id")
-  ON DELETE CASCADE;
+-- Foreign keys (idempotent — check before adding)
+DO $$ BEGIN
+  ALTER TABLE "cms_connections"
+    ADD CONSTRAINT "cms_connections_organization_id_fk"
+    FOREIGN KEY ("organization_id") REFERENCES "organizations"("id")
+    ON DELETE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
-ALTER TABLE "cms_connections"
-  ADD CONSTRAINT "cms_connections_publication_id_fk"
-  FOREIGN KEY ("publication_id") REFERENCES "publications"("id")
-  ON DELETE CASCADE;
+DO $$ BEGIN
+  ALTER TABLE "cms_connections"
+    ADD CONSTRAINT "cms_connections_publication_id_fk"
+    FOREIGN KEY ("publication_id") REFERENCES "publications"("id")
+    ON DELETE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
 --> statement-breakpoint
 
 -- Indexes
-CREATE INDEX "cms_connections_organization_id_idx" ON "cms_connections" ("organization_id");
-CREATE INDEX "cms_connections_publication_id_idx" ON "cms_connections" ("publication_id");
+CREATE INDEX IF NOT EXISTS "cms_connections_organization_id_idx" ON "cms_connections" ("organization_id");
+CREATE INDEX IF NOT EXISTS "cms_connections_publication_id_idx" ON "cms_connections" ("publication_id");
 
 --> statement-breakpoint
 
@@ -44,9 +53,12 @@ CREATE INDEX "cms_connections_publication_id_idx" ON "cms_connections" ("publica
 ALTER TABLE "cms_connections" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "cms_connections" FORCE ROW LEVEL SECURITY;
 
-CREATE POLICY "cms_connections_org_isolation" ON "cms_connections"
-  FOR ALL
-  USING (organization_id = current_org_id());
+DO $$ BEGIN
+  CREATE POLICY "cms_connections_org_isolation" ON "cms_connections"
+    FOR ALL
+    USING (organization_id = current_org_id());
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
 --> statement-breakpoint
 
@@ -55,7 +67,8 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON "cms_connections" TO app_user;
 
 --> statement-breakpoint
 
--- updatedAt trigger
+-- updatedAt trigger (idempotent)
+DROP TRIGGER IF EXISTS "trg_cms_connections_set_updated_at" ON "cms_connections";
 CREATE TRIGGER "trg_cms_connections_set_updated_at"
   BEFORE UPDATE ON "cms_connections"
   FOR EACH ROW

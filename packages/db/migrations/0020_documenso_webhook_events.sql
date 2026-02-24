@@ -1,6 +1,6 @@
 -- 0020: Documenso webhook events (system table, no RLS)
 
-CREATE TABLE "documenso_webhook_events" (
+CREATE TABLE IF NOT EXISTS "documenso_webhook_events" (
   "id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
   "documenso_id" varchar(255) NOT NULL UNIQUE,
   "type" varchar(255) NOT NULL,
@@ -14,7 +14,7 @@ CREATE TABLE "documenso_webhook_events" (
 --> statement-breakpoint
 
 -- Polling index for unprocessed events
-CREATE INDEX "documenso_webhook_events_polling_idx"
+CREATE INDEX IF NOT EXISTS "documenso_webhook_events_polling_idx"
   ON "documenso_webhook_events" ("processed_at", "received_at");
 
 --> statement-breakpoint

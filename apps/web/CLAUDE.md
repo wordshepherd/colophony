@@ -77,6 +77,7 @@ Key functions in `trpc.ts`:
 | **TanStack Query v5 `isPending`**                | TQ5 renamed `isLoading` to `isPending`. Use `isPending: isLoading` alias pattern in destructuring to minimize downstream changes. TQ5 also fixed the disabled-query bug (no `fetchStatus` workaround needed)                                                               |
 | **Next.js 16 async params**                      | Next.js 16 types require `params: Promise<>`. In server components use `await params`; in client components use `use(params)` (React 19 exports `use()`)                                                                                                                   |
 | **`getUserManager()` returns `null` during SSR** | `getUserManager()` checks `typeof window === "undefined"` — always `null` on server. Never call it in `useState` initializers or render-time expressions; use `useEffect` for OIDC checks. See `eslint-disable` comments in `callback/page.tsx`, `page.tsx`, `use-auth.ts` |
+| **TipTap ProseMirror contenteditable**           | ProseMirror ignores Playwright's `fill()` and `pressSequentially()`. Use `editor.click()` + `page.keyboard.type(text, { delay: 20 })` + 500ms wait for debounced `onChange`. Selector: `[contenteditable='true']`                                                          |
 
 ## Version Pins
 
