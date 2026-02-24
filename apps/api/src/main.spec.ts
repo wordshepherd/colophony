@@ -186,4 +186,18 @@ describe('Fastify app', () => {
     const response = await app.inject({ method: 'GET', url: '/health' });
     expect(response.headers['cache-control']).toBeUndefined();
   });
+
+  it('federation discovery routes return 404 when FEDERATION_ENABLED=false', async () => {
+    const colophonyRes = await app.inject({
+      method: 'GET',
+      url: '/.well-known/colophony',
+    });
+    expect(colophonyRes.statusCode).toBe(404);
+
+    const webfingerRes = await app.inject({
+      method: 'GET',
+      url: '/.well-known/webfinger?resource=acct:test@example.com',
+    });
+    expect(webfingerRes.statusCode).toBe(404);
+  });
 });

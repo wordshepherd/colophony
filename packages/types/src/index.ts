@@ -16,3 +16,4 @@ export * from "./pipeline";
 export * from "./contract";
 export * from "./issue";
 export * from "./cms";
+export * from "./federation";

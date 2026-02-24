@@ -18,4 +18,5 @@ export * from "./contracts";
 export * from "./issues";
 export * from "./documenso";
 export * from "./cms";
+export * from "./federation";
 export * from "./relations";
