@@ -133,6 +133,9 @@ export const AuditActions = {
   CMS_CONNECTION_DELETED: "CMS_CONNECTION_DELETED",
   CMS_CONNECTION_TESTED: "CMS_CONNECTION_TESTED",
 
+  // Federation lifecycle
+  FEDERATION_KEY_GENERATED: "FEDERATION_KEY_GENERATED",
+
   // Audit access
   AUDIT_ACCESSED: "AUDIT_ACCESSED",
 } as const;
@@ -158,6 +161,7 @@ export const AuditResources = {
   CONTRACT: "contract",
   ISSUE: "issue",
   CMS_CONNECTION: "cms_connection",
+  FEDERATION: "federation",
   AUDIT: "audit",
 } as const;
 
@@ -351,6 +355,11 @@ export interface CmsConnectionAuditParams extends BaseAuditParams {
     | typeof AuditActions.CMS_CONNECTION_TESTED;
 }
 
+export interface FederationAuditParams extends BaseAuditParams {
+  resource: typeof AuditResources.FEDERATION;
+  action: typeof AuditActions.FEDERATION_KEY_GENERATED;
+}
+
 export interface AuditAccessAuditParams extends BaseAuditParams {
   resource: typeof AuditResources.AUDIT;
   action: typeof AuditActions.AUDIT_ACCESSED;
@@ -382,6 +391,7 @@ export type AuditLogParams =
   | ContractAuditParams
   | IssueAuditParams
   | CmsConnectionAuditParams
+  | FederationAuditParams
   | AuditAccessAuditParams
   | SystemAuditParams;
 

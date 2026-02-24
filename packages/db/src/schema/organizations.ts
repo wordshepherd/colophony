@@ -2,6 +2,7 @@ import {
   pgTable,
   uuid,
   varchar,
+  boolean,
   jsonb,
   timestamp,
   index,
@@ -23,6 +24,9 @@ export const organizations = pgTable(
       .defaultNow()
       .notNull()
       .$defaultFn(() => new Date()),
+    federationOptedOut: boolean("federation_opted_out")
+      .notNull()
+      .default(false),
   },
   (table) => [
     uniqueIndex("organizations_lower_slug_idx").on(sql`lower(${table.slug})`),

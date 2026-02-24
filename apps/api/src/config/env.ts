@@ -75,6 +75,9 @@ const envSchema = z.object({
     .enum(['true', 'false'])
     .default('false')
     .transform((v) => v === 'true'),
+  FEDERATION_CONTACT: z.string().email().optional(),
+  FEDERATION_PRIVATE_KEY: z.string().optional(),
+  FEDERATION_PUBLIC_KEY: z.string().optional(),
 
   // Inngest workflow engine
   INNGEST_EVENT_KEY: z.string().optional(),

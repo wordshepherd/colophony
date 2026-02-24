@@ -98,6 +98,16 @@ export const cmsAdapterTypeEnum = pgEnum("CmsAdapterType", [
   "GHOST",
 ]);
 
+// ---------------------------------------------------------------------------
+// Register — Identity & Federation
+// ---------------------------------------------------------------------------
+
+export const federationModeEnum = pgEnum("FederationMode", [
+  "allowlist",
+  "open",
+  "managed_hub",
+]);
+
 export const contractStatusEnum = pgEnum("ContractStatus", [
   "DRAFT",
   "SENT",
