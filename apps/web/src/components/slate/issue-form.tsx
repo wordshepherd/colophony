@@ -132,14 +132,15 @@ export function IssueForm({ issueId }: IssueFormProps) {
     };
 
     if (isEdit) {
+      // For nullable fields, send null to clear (not undefined which means "no change")
       updateMutation.mutate({
         id: issueId!,
         title: payload.title,
-        volume: payload.volume,
-        issueNumber: payload.issueNumber,
-        description: payload.description,
-        publicationDate: payload.publicationDate,
-        coverImageUrl: payload.coverImageUrl,
+        volume: payload.volume ?? null,
+        issueNumber: payload.issueNumber ?? null,
+        description: payload.description ?? null,
+        publicationDate: payload.publicationDate ?? null,
+        coverImageUrl: payload.coverImageUrl ?? null,
       });
     } else {
       createMutation.mutate(payload);

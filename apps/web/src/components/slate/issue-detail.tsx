@@ -308,6 +308,7 @@ export function IssueDetail({ issueId }: IssueDetailProps) {
             sections={sections}
             items={items}
             isEditor={isEditor}
+            isAdmin={isAdmin}
           />
         </TabsContent>
       </Tabs>

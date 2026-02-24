@@ -55,6 +55,7 @@ interface IssueSectionCardProps {
   issueId: string;
   allSections: WireSection[];
   isEditor: boolean;
+  isAdmin: boolean;
   onRemoveSection: (sectionId: string) => void;
   onRemoveItem: (itemId: string) => void;
   onChangeSection: (
@@ -70,6 +71,7 @@ export function IssueSectionCard({
   items,
   allSections,
   isEditor,
+  isAdmin,
   onRemoveSection,
   onRemoveItem,
   onChangeSection,
@@ -129,7 +131,7 @@ export function IssueSectionCard({
             {items.length}
           </Badge>
         </div>
-        {isEditor && (
+        {isAdmin && (
           <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
             <AlertDialogTrigger asChild>
               <Button
@@ -178,6 +180,7 @@ export function IssueSectionCard({
                     isFirst={idx === 0}
                     isLast={idx === sorted.length - 1}
                     isEditor={isEditor}
+                    isAdmin={isAdmin}
                     onMoveUp={() => handleMoveUp(idx)}
                     onMoveDown={() => handleMoveDown(idx)}
                     onRemove={() => onRemoveItem(item.id)}

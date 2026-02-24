@@ -46,6 +46,7 @@ interface IssueAssemblyProps {
   sections: WireSection[];
   items: WireItem[];
   isEditor: boolean;
+  isAdmin: boolean;
 }
 
 export function IssueAssembly({
@@ -53,6 +54,7 @@ export function IssueAssembly({
   sections,
   items,
   isEditor,
+  isAdmin,
 }: IssueAssemblyProps) {
   const [showAddSectionDialog, setShowAddSectionDialog] = useState(false);
   const [showAddItemDialog, setShowAddItemDialog] = useState(false);
@@ -67,6 +69,9 @@ export function IssueAssembly({
   );
 
   const reorderMutation = trpc.issues.reorderItems.useMutation({
+    onSuccess: () => {
+      utils.issues.getItems.invalidate({ id: issueId });
+    },
     onError: (err) => {
       toast.error(`Reorder failed: ${err.message}`);
       utils.issues.getItems.invalidate({ id: issueId });
@@ -196,16 +201,18 @@ export function IssueAssembly({
   return (
     <div className="space-y-4">
       {/* Toolbar */}
-      {isEditor && (
+      {(isAdmin || isEditor) && (
         <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setShowAddSectionDialog(true)}
-          >
-            <LayoutList className="mr-2 h-4 w-4" />
-            Add Section
-          </Button>
+          {isAdmin && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowAddSectionDialog(true)}
+            >
+              <LayoutList className="mr-2 h-4 w-4" />
+              Add Section
+            </Button>
+          )}
           <Button
             variant="outline"
             size="sm"
@@ -230,6 +237,7 @@ export function IssueAssembly({
             issueId={issueId}
             allSections={sections}
             isEditor={isEditor}
+            isAdmin={isAdmin}
             onRemoveSection={handleRemoveSection}
             onRemoveItem={handleRemoveItem}
             onChangeSection={handleChangeSection}
@@ -262,6 +270,7 @@ export function IssueAssembly({
                     isFirst={idx === 0}
                     isLast={idx === unsectionedItems.length - 1}
                     isEditor={isEditor}
+                    isAdmin={isAdmin}
                     onMoveUp={() => handleUnsectionedMoveUp(idx)}
                     onMoveDown={() => handleUnsectionedMoveDown(idx)}
                     onRemove={() => handleRemoveItem(item.id)}
@@ -296,7 +305,7 @@ export function IssueAssembly({
         issueId={issueId}
         open={showAddSectionDialog}
         onOpenChange={setShowAddSectionDialog}
-        existingSectionCount={sections.length}
+        existingSortOrders={sections.map((s) => s.sortOrder)}
       />
       <AddItemDialog
         issueId={issueId}

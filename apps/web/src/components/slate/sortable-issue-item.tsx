@@ -30,6 +30,7 @@ interface SortableIssueItemProps {
   isFirst: boolean;
   isLast: boolean;
   isEditor: boolean;
+  isAdmin: boolean;
   onMoveUp: () => void;
   onMoveDown: () => void;
   onRemove: () => void;
@@ -44,6 +45,7 @@ export function SortableIssueItem({
   isFirst,
   isLast,
   isEditor,
+  isAdmin,
   onMoveUp,
   onMoveDown,
   onRemove,
@@ -72,7 +74,7 @@ export function SortableIssueItem({
         isDragging && "opacity-50",
       )}
     >
-      {isEditor && (
+      {isAdmin && (
         <button
           className="cursor-grab touch-none text-muted-foreground hover:text-foreground"
           aria-label="Drag to reorder"
@@ -88,27 +90,29 @@ export function SortableIssueItem({
       </span>
 
       {isEditor && (
-        <>
-          <Select
-            value={item.issueSectionId ?? UNSECTIONED_VALUE}
-            onValueChange={(v) =>
-              onChangeSection(v === UNSECTIONED_VALUE ? null : v)
-            }
-          >
-            <SelectTrigger className="w-[140px] h-8 text-xs">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={UNSECTIONED_VALUE}>Unsectioned</SelectItem>
-              {sections.map((s) => (
-                <SelectItem key={s.id} value={s.id}>
-                  {s.title}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+        <Select
+          value={item.issueSectionId ?? UNSECTIONED_VALUE}
+          onValueChange={(v) =>
+            onChangeSection(v === UNSECTIONED_VALUE ? null : v)
+          }
+        >
+          <SelectTrigger className="w-[140px] h-8 text-xs">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={UNSECTIONED_VALUE}>Unsectioned</SelectItem>
+            {sections.map((s) => (
+              <SelectItem key={s.id} value={s.id}>
+                {s.title}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      )}
 
-          <div className="flex items-center gap-0.5 shrink-0 ml-auto">
+      <div className="flex items-center gap-0.5 shrink-0 ml-auto">
+        {isAdmin && (
+          <>
             <Button
               variant="ghost"
               size="icon"
@@ -129,18 +133,20 @@ export function SortableIssueItem({
             >
               <ChevronDown className="h-3 w-3" />
             </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-7 w-7 text-muted-foreground hover:text-destructive"
-              onClick={onRemove}
-              aria-label="Remove item"
-            >
-              <Trash2 className="h-3 w-3" />
-            </Button>
-          </div>
-        </>
-      )}
+          </>
+        )}
+        {isEditor && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7 text-muted-foreground hover:text-destructive"
+            onClick={onRemove}
+            aria-label="Remove item"
+          >
+            <Trash2 className="h-3 w-3" />
+          </Button>
+        )}
+      </div>
     </div>
   );
 }

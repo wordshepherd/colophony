@@ -19,14 +19,14 @@ interface AddSectionDialogProps {
   issueId: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  existingSectionCount: number;
+  existingSortOrders: number[];
 }
 
 export function AddSectionDialog({
   issueId,
   open,
   onOpenChange,
-  existingSectionCount,
+  existingSortOrders,
 }: AddSectionDialogProps) {
   const [title, setTitle] = useState("");
   const utils = trpc.useUtils();
@@ -49,7 +49,8 @@ export function AddSectionDialog({
     mutation.mutate({
       id: issueId,
       title: title.trim(),
-      sortOrder: existingSectionCount,
+      sortOrder:
+        existingSortOrders.length > 0 ? Math.max(...existingSortOrders) + 1 : 0,
     });
   };
 
