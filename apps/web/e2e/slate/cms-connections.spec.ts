@@ -20,10 +20,11 @@ test.describe("CMS Connections (/slate/cms)", () => {
       authedPage.getByText(slateData.cmsConnection.name),
     ).toBeVisible({ timeout: 10_000 });
 
-    // WordPress badge in the table row (not the tab)
-    await expect(
-      authedPage.locator("table").getByText("WordPress", { exact: true }),
-    ).toBeVisible();
+    // WordPress badge in the same table row as the fixture connection
+    const row = authedPage
+      .locator("table tr")
+      .filter({ hasText: slateData.cmsConnection.name });
+    await expect(row.getByText("WordPress", { exact: true })).toBeVisible();
   });
 
   test("filters by adapter type", async ({ authedPage, slateData }) => {
