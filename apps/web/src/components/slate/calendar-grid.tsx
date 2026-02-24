@@ -46,7 +46,8 @@ export function CalendarGrid({
   const issuesByDate = new Map<string, typeof issues>();
   for (const issue of issues) {
     if (!issue.publicationDate) continue;
-    const dateKey = format(new Date(issue.publicationDate), "yyyy-MM-dd");
+    // Extract UTC date portion directly to avoid local-timezone day shifts
+    const dateKey = issue.publicationDate.slice(0, 10);
     const existing = issuesByDate.get(dateKey) ?? [];
     existing.push(issue);
     issuesByDate.set(dateKey, existing);

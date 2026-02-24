@@ -3,13 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import {
-  addMonths,
-  subMonths,
-  startOfMonth,
-  endOfMonth,
-  format,
-} from "date-fns";
+import { addMonths, subMonths, format } from "date-fns";
 import { trpc } from "@/lib/trpc";
 import { CalendarGrid } from "./calendar-grid";
 import { IssueStatusBadge } from "./issue-status-badge";
@@ -58,8 +52,13 @@ export function EditorialCalendar() {
   const [statusFilter, setStatusFilter] = useState<IssueStatus | "ALL">("ALL");
   const [publicationFilter, setPublicationFilter] = useState<string>("ALL");
 
-  const monthStart = startOfMonth(currentMonth);
-  const monthEnd = endOfMonth(currentMonth);
+  // Compute UTC month boundaries so the query window is timezone-independent.
+  // publicationDate is stored as UTC midnight; local-timezone startOfMonth/endOfMonth
+  // would shift the window and miss/include wrong dates near month edges.
+  const year = currentMonth.getFullYear();
+  const month = currentMonth.getMonth();
+  const utcMonthStart = new Date(Date.UTC(year, month, 1));
+  const utcMonthEnd = new Date(Date.UTC(year, month + 1, 0, 23, 59, 59, 999));
 
   const { data: publications } = trpc.publications.list.useQuery({
     limit: 100,
@@ -68,8 +67,8 @@ export function EditorialCalendar() {
   const pubMap = new Map(publications?.items.map((p) => [p.id, p.name]) ?? []);
 
   const { data, isPending, error } = trpc.issues.list.useQuery({
-    from: monthStart.toISOString() as unknown as Date,
-    to: monthEnd.toISOString() as unknown as Date,
+    from: utcMonthStart.toISOString() as unknown as Date,
+    to: utcMonthEnd.toISOString() as unknown as Date,
     status: statusFilter === "ALL" ? undefined : statusFilter,
     publicationId: publicationFilter === "ALL" ? undefined : publicationFilter,
     limit: 100,
@@ -233,7 +232,10 @@ export function EditorialCalendar() {
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
                       {issue.publicationDate
-                        ? new Date(issue.publicationDate).toLocaleDateString()
+                        ? new Date(issue.publicationDate).toLocaleDateString(
+                            undefined,
+                            { timeZone: "UTC" },
+                          )
                         : "\u2014"}
                     </TableCell>
                   </TableRow>
