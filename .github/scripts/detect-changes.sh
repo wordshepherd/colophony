@@ -56,11 +56,15 @@ shared_prefixes=(
   "apps/web/e2e/helpers/"
   "apps/web/e2e/global-setup.ts"
   "apps/web/e2e/global-teardown.ts"
+  "apps/web/src/app/layout.tsx"
+  "apps/web/src/app/globals.css"
+  "apps/web/tsconfig"
   ".github/"
   "docker-compose"
   "package.json"
   "pnpm-lock.yaml"
   "pnpm-workspace.yaml"
+  "tsconfig"
   "turbo.json"
 )
 
@@ -107,15 +111,12 @@ known_nonsuite_prefixes=(
   "apps/web/src/components/organizations/"
   "apps/web/src/components/periods/"
   "apps/web/src/app/(onboarding)/"
-  "apps/web/src/app/layout.tsx"
   "apps/web/src/app/page.tsx"
-  "apps/web/src/app/globals.css"
   "apps/web/src/app/favicon.ico"
   "apps/web/public/"
   "apps/web/next.config"
   "apps/web/tailwind.config"
   "apps/web/postcss.config"
-  "apps/web/tsconfig"
 )
 
 # --- Known non-suite file extensions ---

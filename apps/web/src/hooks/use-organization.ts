@@ -39,6 +39,8 @@ export function useOrganization() {
     organizations.find((org) => org.id === currentOrgId) ?? null;
 
   // Resolve org: auto-select first org or recover from stale org (render-time)
+  // React state update during render is safe (React batches it into the current render).
+  // localStorage sync is deferred to an effect below.
   const needsAutoSelect =
     isAuthenticated && organizations.length > 0 && !currentOrgId;
   const isStaleOrg =
@@ -47,14 +49,24 @@ export function useOrganization() {
     organizations.length > 0 &&
     !organizations.some((org) => org.id === currentOrgId);
 
-  if (needsAutoSelect || isStaleOrg) {
-    if (isStaleOrg) {
-      console.warn("Clearing stale org context:", currentOrgId);
-    }
-    const firstId = organizations[0].id;
-    setCurrentOrgId(firstId);
-    _setCurrentOrgId(firstId);
+  const resolvedOrgId =
+    needsAutoSelect || isStaleOrg ? organizations[0].id : currentOrgId;
+  if (resolvedOrgId !== currentOrgId) {
+    _setCurrentOrgId(resolvedOrgId);
   }
+
+  // Sync localStorage after render (side effect)
+  useEffect(() => {
+    if (resolvedOrgId && resolvedOrgId !== getCurrentOrgId()) {
+      if (isStaleOrg) {
+        console.warn(
+          "Clearing stale org context, switching to:",
+          resolvedOrgId,
+        );
+      }
+      setCurrentOrgId(resolvedOrgId);
+    }
+  }, [resolvedOrgId, isStaleOrg]);
 
   // Invalidate cached queries when org changes (stale recovery or manual switch)
   const prevOrgIdRef = useRef(currentOrgId);

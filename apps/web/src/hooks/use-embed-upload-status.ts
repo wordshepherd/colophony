@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { fetchUploadStatus, type EmbedApiError } from "@/lib/embed-api";
 import type { EmbedUploadStatusResponse } from "@colophony/types";
 
@@ -32,9 +32,6 @@ export function useEmbedUploadStatus({
   const [error, setError] = useState<string | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const pollIntervalMs = useRef(BASE_POLL_INTERVAL);
-
-  // Derive polling state from whether the interval is active
-  const isPolling = enabled && !!manuscriptVersionId;
 
   useEffect(() => {
     if (!enabled || !manuscriptVersionId) {
@@ -113,6 +110,14 @@ export function useEmbedUploadStatus({
       }
     };
   }, [enabled, manuscriptVersionId, apiUrl, token, email, uploadsInFlight]);
+
+  // Derive polling state: active when enabled with a version ID and files aren't all terminal
+  const isPolling = useMemo(() => {
+    if (!enabled || !manuscriptVersionId) return false;
+    if (files.length === 0) return true; // waiting for first poll result
+    const allTerminal = files.every((f) => isTerminalStatus(f.scanStatus));
+    return uploadsInFlight || !allTerminal;
+  }, [enabled, manuscriptVersionId, files, uploadsInFlight]);
 
   return { files, allClean, isPolling, error };
 }
