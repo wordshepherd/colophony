@@ -66,7 +66,7 @@ const sections = [
     href: "/slate/cms",
     icon: Globe,
     cta: "View Connections",
-    comingSoon: true,
+    comingSoon: false,
   },
 ];
 
