@@ -139,7 +139,7 @@
 - [x] Slate frontend PR6 — CMS connections (CRUD, adapter config, test) — (architecture doc Track 4; done 2026-02-24)
 - [x] [P2] Redact CMS credentials from audit logs — `updateWithAudit` writes raw `config` (including passwords) to audit table; needs field-level redaction before `newValue` storage — (Codex review 2026-02-24; done 2026-02-24)
 - [x] [P2] Add audit logging for `testConnection` — sensitive operation using stored credentials, currently not audit-logged — (Codex review 2026-02-24; done 2026-02-24)
-- [ ] Slate E2E tests — Playwright tests for pipeline flows — (architecture doc Track 4)
+- [x] Slate E2E tests — Playwright tests for pipeline flows (30 tests, 5 spec files) — (architecture doc Track 4; done 2026-02-24)
 
 ### Research / Design
 
