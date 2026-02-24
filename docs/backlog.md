@@ -152,7 +152,7 @@
 
 ### Code
 
-- [ ] Discovery: WebFinger + `.well-known` endpoints — (architecture doc Track 5)
+- [x] Discovery: WebFinger + `.well-known` endpoints — (architecture doc Track 5; done 2026-02-24)
 - [ ] Identity: `did:web` documents — use `jose` library — (architecture doc Track 5, decision 2026-02-15)
 - [ ] Trust establishment — use `openid-client` for OIDC flows — (architecture doc Track 5, decision 2026-02-15)
 - [ ] Sim-sub enforcement (BSAP) — manuscript entity (Track 3) is the natural anchor for cross-instance tracking — (architecture doc Track 5)
