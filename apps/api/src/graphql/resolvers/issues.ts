@@ -64,6 +64,14 @@ builder.queryFields((t) => ({
         required: false,
         description: 'Search by title.',
       }),
+      from: t.arg.string({
+        required: false,
+        description: 'Filter issues from this date (ISO-8601).',
+      }),
+      to: t.arg.string({
+        required: false,
+        description: 'Filter issues until this date (ISO-8601).',
+      }),
       page: t.arg.int({
         required: false,
         defaultValue: 1,
@@ -82,6 +90,8 @@ builder.queryFields((t) => ({
         publicationId: args.publicationId ?? undefined,
         status: args.status ?? undefined,
         search: args.search ?? undefined,
+        from: args.from ?? undefined,
+        to: args.to ?? undefined,
         page: args.page,
         limit: args.limit,
       });

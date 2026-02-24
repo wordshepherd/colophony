@@ -124,6 +124,14 @@ export const listIssuesSchema = z.object({
   publicationId: z.string().uuid().optional().describe("Filter by publication"),
   status: issueStatusSchema.optional().describe("Filter by status"),
   search: z.string().trim().max(200).optional().describe("Search by title"),
+  from: z.coerce
+    .date()
+    .optional()
+    .describe("Filter issues with publicationDate >= this date"),
+  to: z.coerce
+    .date()
+    .optional()
+    .describe("Filter issues with publicationDate <= this date"),
   page: z.number().int().min(1).default(1).describe("Page number (1-based)"),
   limit: z
     .number()

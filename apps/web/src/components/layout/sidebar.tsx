@@ -37,6 +37,7 @@ const slateNavigation = [
   { name: "Publications", href: "/slate/publications", icon: Library },
   { name: "Pipeline", href: "/slate/pipeline", icon: GitBranch },
   { name: "Issues", href: "/slate/issues", icon: BookCopy },
+  { name: "Calendar", href: "/slate/calendar", icon: Calendar },
 ];
 
 const adminNavigation = [
