@@ -28,6 +28,29 @@ import {
 import { toast } from "sonner";
 import { ArrowLeft, Loader2, Pencil, Trash2, Wifi } from "lucide-react";
 
+function friendlyCmsError(raw?: string | null): string {
+  if (!raw) return "Connection test failed";
+  const lower = raw.toLowerCase();
+  if (
+    lower.includes("fetch failed") ||
+    lower.includes("enotfound") ||
+    lower.includes("econnrefused")
+  ) {
+    return "Could not connect to CMS. Please verify the site URL is correct and the server is reachable.";
+  }
+  if (
+    lower.includes("401") ||
+    lower.includes("403") ||
+    lower.includes("unauthorized")
+  ) {
+    return "Authentication failed. Please check your credentials.";
+  }
+  if (lower.includes("404")) {
+    return "API endpoint not found. Please verify the site URL.";
+  }
+  return raw;
+}
+
 interface CmsConnectionDetailProps {
   connectionId: string;
 }
@@ -62,10 +85,10 @@ export function CmsConnectionDetail({
       if (result.success) {
         toast.success("Connection test successful");
       } else {
-        toast.error(result.error ?? "Connection test failed");
+        toast.error(friendlyCmsError(result.error));
       }
     },
-    onError: (err) => toast.error(err.message),
+    onError: (err) => toast.error(friendlyCmsError(err.message)),
   });
 
   if (isLoading) {

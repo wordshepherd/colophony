@@ -2,6 +2,8 @@ import {
   issues,
   issueSections,
   issueItems,
+  pipelineItems,
+  submissions,
   eq,
   and,
   asc,
@@ -10,7 +12,7 @@ import {
   lte,
   type DrizzleDb,
 } from '@colophony/db';
-import { ilike, count } from 'drizzle-orm';
+import { ilike, count, getTableColumns } from 'drizzle-orm';
 import type {
   CreateIssueInput,
   UpdateIssueInput,
@@ -108,8 +110,13 @@ export const issueService = {
 
   async getItems(tx: DrizzleDb, issueId: string) {
     return tx
-      .select()
+      .select({
+        ...getTableColumns(issueItems),
+        submissionTitle: submissions.title,
+      })
       .from(issueItems)
+      .leftJoin(pipelineItems, eq(issueItems.pipelineItemId, pipelineItems.id))
+      .leftJoin(submissions, eq(pipelineItems.submissionId, submissions.id))
       .where(eq(issueItems.issueId, issueId))
       .orderBy(issueItems.sortOrder);
   },

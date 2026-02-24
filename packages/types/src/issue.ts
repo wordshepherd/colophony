@@ -54,6 +54,8 @@ export const issueItemSchema = z.object({
     .describe("Section ID (if assigned)"),
   sortOrder: z.number().int().describe("Sort order within section"),
   createdAt: z.date().describe("When the item was added"),
+  // Joined field (optional — populated by getItems query)
+  submissionTitle: z.string().nullable().optional(),
 });
 
 export type IssueItem = z.infer<typeof issueItemSchema>;

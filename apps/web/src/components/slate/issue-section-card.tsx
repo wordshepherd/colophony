@@ -47,6 +47,7 @@ type WireItem = {
   issueSectionId: string | null;
   sortOrder: number;
   createdAt: string;
+  submissionTitle?: string | null;
 };
 
 interface IssueSectionCardProps {
