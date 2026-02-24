@@ -137,8 +137,8 @@
 - [x] Slate frontend PR4 — editorial calendar — (architecture doc Track 4; done 2026-02-23 PR pending)
 - [x] Slate frontend PR5 — contracts + templates (Tiptap WYSIWYG + merge fields) — (architecture doc Track 4; done 2026-02-24 PR pending)
 - [x] Slate frontend PR6 — CMS connections (CRUD, adapter config, test) — (architecture doc Track 4; done 2026-02-24)
-- [ ] [P2] Redact CMS credentials from audit logs — `updateWithAudit` writes raw `config` (including passwords) to audit table; needs field-level redaction before `newValue` storage — (Codex review 2026-02-24)
-- [ ] [P2] Add audit logging for `testConnection` — sensitive operation using stored credentials, currently not audit-logged — (Codex review 2026-02-24)
+- [x] [P2] Redact CMS credentials from audit logs — `updateWithAudit` writes raw `config` (including passwords) to audit table; needs field-level redaction before `newValue` storage — (Codex review 2026-02-24; done 2026-02-24)
+- [x] [P2] Add audit logging for `testConnection` — sensitive operation using stored credentials, currently not audit-logged — (Codex review 2026-02-24; done 2026-02-24)
 - [ ] Slate E2E tests — Playwright tests for pipeline flows — (architecture doc Track 4)
 
 ### Research / Design
