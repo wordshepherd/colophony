@@ -1,18 +1,14 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { faker } from '@faker-js/faker';
 import { drizzle } from 'drizzle-orm/node-postgres';
-import {
-  globalSetup,
-  globalTeardown,
-  getAdminPool,
-} from '../rls/helpers/db-setup';
-import { truncateAllTables } from '../rls/helpers/cleanup';
-import { withTestRls } from '../rls/helpers/rls-context';
+import { globalSetup, globalTeardown, getAdminPool } from './helpers/db-setup';
+import { truncateAllTables } from './helpers/cleanup';
+import { withTestRls } from './helpers/rls-context';
 import {
   createOrganization,
   createUser,
   createOrgMember,
-} from '../rls/helpers/factories';
+} from './helpers/factories';
 import {
   issues,
   publications,
