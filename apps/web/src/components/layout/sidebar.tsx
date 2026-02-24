@@ -14,6 +14,7 @@ import {
   FileSignature,
   FileText,
   GitBranch,
+  Globe,
   Inbox,
   LayoutDashboard,
   Library,
@@ -40,6 +41,7 @@ const slateNavigation = [
   { name: "Issues", href: "/slate/issues", icon: BookCopy },
   { name: "Calendar", href: "/slate/calendar", icon: Calendar },
   { name: "Contracts", href: "/slate/contracts", icon: FileSignature },
+  { name: "CMS", href: "/slate/cms", icon: Globe },
 ];
 
 const adminNavigation = [
