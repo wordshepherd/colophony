@@ -187,6 +187,8 @@ All other version pins are in their respective per-directory CLAUDE.md files.
 | **playwright-slate**   | Playwright E2E Slate pipeline project (30 tests)   |
 | **build**              | `pnpm build` (API + Web production build)          |
 
+**Path filtering:** Playwright suites run selectively on PRs based on changed files (`.github/scripts/detect-changes.sh`). Shared paths (packages, API, shared hooks/lib/ui) trigger all suites. Suite-specific paths (e.g., `apps/web/e2e/slate/`, `apps/web/src/components/slate/`) trigger only that suite. Unknown paths fail-open (all suites run). Push to `main` always runs everything. Fast jobs (quality, unit-tests, rls-tests, build) are unaffected — they always run on non-docs PRs.
+
 ---
 
 ## Development Workflow
@@ -220,7 +222,7 @@ All other version pins are in their respective per-directory CLAUDE.md files.
 
 **Pre-edit:** `pre-edit-validate.js` (secrets, RLS context), `pre-payment-validate.js` (idempotency), `pre-frontend-validate.js` (use client, shadcn, org context), `pre-router-audit.js` (audit logging), `pre-push-branch.js` (blocks push to main)
 
-**Post-edit:** `post-schema.js` (db:generate reminder), `post-email-template.js` (text version), `post-migration-validate.js` (RLS for new tables), `post-commit-devlog.js` (DEVLOG reminder)
+**Post-edit:** `post-edit-lint.js` (eslint on changed file — fix warnings immediately, do not defer), `post-schema.js` (db:generate reminder), `post-email-template.js` (text version), `post-migration-validate.js` (RLS for new tables), `post-commit-devlog.js` (DEVLOG reminder)
 
 ### Codex Review Integration
 
