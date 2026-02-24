@@ -44,9 +44,10 @@ type FormData = z.infer<typeof formSchema>;
 
 interface IssueFormProps {
   issueId?: string;
+  initialPublicationDate?: string;
 }
 
-export function IssueForm({ issueId }: IssueFormProps) {
+export function IssueForm({ issueId, initialPublicationDate }: IssueFormProps) {
   const router = useRouter();
   const utils = trpc.useUtils();
   const isEdit = !!issueId;
@@ -59,7 +60,7 @@ export function IssueForm({ issueId }: IssueFormProps) {
       volume: "",
       issueNumber: "",
       description: "",
-      publicationDate: "",
+      publicationDate: initialPublicationDate ?? "",
       coverImageUrl: "",
     },
   });

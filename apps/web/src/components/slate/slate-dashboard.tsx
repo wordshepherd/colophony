@@ -50,7 +50,7 @@ const sections = [
     href: "/slate/calendar",
     icon: Calendar,
     cta: "View Calendar",
-    comingSoon: true,
+    comingSoon: false,
   },
   {
     name: "Contracts",
