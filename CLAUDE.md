@@ -184,6 +184,7 @@ All other version pins are in their respective per-directory CLAUDE.md files.
 | **playwright-uploads** | Playwright E2E uploads project (6 tests)           |
 | **playwright-oidc**    | Playwright E2E OIDC project (6 tests)              |
 | **playwright-embed**   | Playwright E2E embed project (10 tests)            |
+| **playwright-slate**   | Playwright E2E Slate pipeline project (30 tests)   |
 | **build**              | `pnpm build` (API + Web production build)          |
 
 ---

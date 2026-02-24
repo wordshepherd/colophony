@@ -94,6 +94,11 @@ export default defineConfig({
       testDir: "./e2e/embed",
       use: { ...devices["Desktop Chrome"] },
     },
+    {
+      name: "slate",
+      testDir: "./e2e/slate",
+      use: { ...devices["Desktop Chrome"] },
+    },
   ],
 
   webServer: [

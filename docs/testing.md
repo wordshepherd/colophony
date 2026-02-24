@@ -38,6 +38,9 @@ pnpm --filter @colophony/web test:e2e:embed
 # Playwright — OIDC flow (6 tests, requires Zitadel)
 pnpm --filter @colophony/web test:e2e:oidc
 
+# Playwright — Slate pipeline (30 tests, requires dev servers)
+pnpm --filter @colophony/web test:e2e:slate
+
 # Playwright — all projects
 pnpm --filter @colophony/web test:e2e:all
 
@@ -56,7 +59,7 @@ pnpm --filter @colophony/web test:e2e:ui
 
 ## Current Test Status
 
-**~721 tests passing** across 6 tiers:
+**~751 tests passing** across 6 tiers:
 
 | Tier                      | Files | Tests | Runner          | Location                           |
 | ------------------------- | ----- | ----- | --------------- | ---------------------------------- |
@@ -65,7 +68,7 @@ pnpm --filter @colophony/web test:e2e:ui
 | Web unit tests            | 11    | ~108  | Jest + jsdom    | `apps/web/src/**/*.spec.*`         |
 | RLS integration tests     | 8     | ~93   | Vitest (custom) | `apps/api/src/__tests__/rls/`      |
 | Webhook integration tests | 3     | ~28   | Vitest (custom) | `apps/api/src/__tests__/webhooks/` |
-| Playwright browser E2E    | 8     | ~42   | Playwright      | `apps/web/e2e/`                    |
+| Playwright browser E2E    | 13    | ~72   | Playwright      | `apps/web/e2e/`                    |
 
 > Counts use `~` prefix because they shift as tests are added. Run `pnpm test` to get exact numbers.
 
@@ -102,6 +105,11 @@ pnpm --filter @colophony/web test:e2e:ui
 - `oidc/auth-guard.spec.ts` — 2 tests (protected route redirect, callback error UI)
 - `embed/embed-form.spec.ts` — 8 tests (identity step, invalid token, email validation, form fields, title required, full submit, minimal submit, expired token)
 - `embed/embed-wizard.spec.ts` — 2 tests (wizard page navigation, multi-page submit)
+- `slate/publications.spec.ts` — 6 tests (heading, list, filter, search, create, detail)
+- `slate/pipeline.spec.ts` — 8 tests (heading, list, filter, detail, transitions, comments)
+- `slate/issues.spec.ts` — 7 tests (heading, list, create, detail, assembly tab, add item, remove item)
+- `slate/contracts.spec.ts` — 5 tests (heading, list, templates, create template, template detail)
+- `slate/cms-connections.spec.ts` — 4 tests (heading, list, filter, create)
 
 ---
 
