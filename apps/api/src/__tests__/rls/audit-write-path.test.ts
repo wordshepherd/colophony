@@ -45,7 +45,6 @@ function adminDb(): DrizzleDb {
 
 /** Read all audit_events via admin (bypasses RLS). */
 async function allAuditEvents(): Promise<AuditEvent[]> {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- cross-package drizzle-orm type mismatch (pnpm peer dep duplication)
   return adminDb()
     .select()
     .from(auditEvents as any) as any;
@@ -206,7 +205,6 @@ describe('logDirect() and RLS interaction', () => {
 
 describe('log() org-scoped write via RLS transaction', () => {
   it('inserts event visible within same org context', async () => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- cross-package drizzle-orm type mismatch
     await withTestRls({ orgId: orgA.id, userId: userA.id }, (tx: any) =>
       auditService.log(tx, {
         action: AuditActions.ORG_UPDATED,
@@ -227,7 +225,7 @@ describe('log() org-scoped write via RLS transaction', () => {
     expect(rows[0].resource).toBe('organization');
 
     // Also verify tenant isolation: org A event visible in org A context
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- cross-package drizzle-orm type mismatch
+
     const orgARows = await withTestRls(
       { orgId: orgA.id, userId: userA.id },
       (tx) => tx.select().from(auditEvents as any),
@@ -238,7 +236,7 @@ describe('log() org-scoped write via RLS transaction', () => {
 
   it('org A audit event is invisible to org B (tenant isolation)', async () => {
     // Insert via org A
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- cross-package drizzle-orm type mismatch
+
     await withTestRls({ orgId: orgA.id, userId: userA.id }, (tx: any) =>
       auditService.log(tx, {
         action: AuditActions.ORG_CREATED,
@@ -251,7 +249,7 @@ describe('log() org-scoped write via RLS transaction', () => {
     // Org B sees nothing
     const orgBRows = await withTestRls(
       { orgId: orgB.id, userId: userB.id },
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- cross-package drizzle-orm type mismatch
+
       (tx) => tx.select().from(auditEvents as any),
     );
     expect(orgBRows).toHaveLength(0);
@@ -277,7 +275,6 @@ describe('transaction rollback atomicity', () => {
         userA.id,
       ]);
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- cross-package drizzle-orm type mismatch
       const tx = drizzle(client) as any;
       await auditService.log(tx, {
         action: AuditActions.ORG_DELETED,

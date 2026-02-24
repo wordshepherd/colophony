@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -182,11 +182,13 @@ export function ConditionalRulesConfig({
   const [localRules, setLocalRules] = useState<ConditionalRule[] | null>(rules);
   const [enabled, setEnabled] = useState(rules !== null && rules.length > 0);
 
-  // Sync from props when the selected field changes (currentFieldKey drives this)
-  useEffect(() => {
+  // Sync from props when the selected field changes (render-time state adjustment)
+  const [prevFieldKey, setPrevFieldKey] = useState(currentFieldKey);
+  if (prevFieldKey !== currentFieldKey) {
+    setPrevFieldKey(currentFieldKey);
     setLocalRules(rules);
     setEnabled(rules !== null && rules.length > 0);
-  }, [currentFieldKey]); // eslint-disable-line react-hooks/exhaustive-deps
+  }
 
   const availableFields = fields.filter(
     (f) =>

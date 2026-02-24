@@ -9,7 +9,6 @@ jest.mock("@/components/ui/select", () => {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   const React = require("react");
   const SelectContext = React.createContext({
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     onValueChange: (_v: string) => {},
     value: undefined as string | undefined,
   });
@@ -30,8 +29,12 @@ jest.mock("@/components/ui/select", () => {
       </SelectContext.Provider>
     ),
     SelectTrigger: ({ children }: { children: React.ReactNode }) => (
-      // eslint-disable-next-line jsx-a11y/role-has-required-aria-props
-      <button type="button" role="combobox">
+      <button
+        type="button"
+        role="combobox"
+        aria-expanded="false"
+        aria-controls="mock-listbox"
+      >
         {children}
       </button>
     ),
@@ -52,6 +55,7 @@ jest.mock("@/components/ui/select", () => {
       return (
         <div
           role="option"
+          aria-selected={ctx.value === value}
           data-value={value}
           onClick={() => ctx.onValueChange(value)}
         >

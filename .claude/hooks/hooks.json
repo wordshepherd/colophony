@@ -56,6 +56,22 @@
     ],
     "PostToolUse": [
       {
+        "event": "Edit(apps/**/*.ts)",
+        "script": ".claude/hooks/post-edit-lint.js"
+      },
+      {
+        "event": "Write(apps/**/*.ts)",
+        "script": ".claude/hooks/post-edit-lint.js"
+      },
+      {
+        "event": "Edit(apps/**/*.tsx)",
+        "script": ".claude/hooks/post-edit-lint.js"
+      },
+      {
+        "event": "Write(apps/**/*.tsx)",
+        "script": ".claude/hooks/post-edit-lint.js"
+      },
+      {
         "event": "Edit(**/schema/*.ts)",
         "script": ".claude/hooks/post-schema.js"
       },

@@ -74,16 +74,18 @@ export function AddItemDialog({
     return () => clearTimeout(timer);
   }, [search]);
 
-  // Reset state when dialog opens
-  useEffect(() => {
-    if (open) {
-      setSearch("");
-      setDebouncedSearch("");
-      setStageFilter("ALL");
-      setSelectedPipelineItemId(null);
-      setTargetSectionId(UNSECTIONED_VALUE);
-    }
-  }, [open]);
+  // Reset state when dialog opens (render-time state adjustment)
+  const [prevOpen, setPrevOpen] = useState(false);
+  if (open && !prevOpen) {
+    setSearch("");
+    setDebouncedSearch("");
+    setStageFilter("ALL");
+    setSelectedPipelineItemId(null);
+    setTargetSectionId(UNSECTIONED_VALUE);
+  }
+  if (open !== prevOpen) {
+    setPrevOpen(open);
+  }
 
   const { data, isPending } = trpc.pipeline.list.useQuery(
     {
