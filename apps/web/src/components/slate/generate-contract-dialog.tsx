@@ -67,7 +67,11 @@ export function GenerateContractDialog({
     const fields = (tmpl?.mergeFields ?? []) as MergeFieldDefinition[];
     const initial: Record<string, string> = {};
     for (const field of fields) {
-      initial[field.key] = field.defaultValue ?? "";
+      // Only pre-fill fields that have a default; leave auto fields without
+      // defaults empty so the backend can auto-populate them
+      if (field.defaultValue) {
+        initial[field.key] = field.defaultValue;
+      }
     }
     setMergeData(initial);
   };
@@ -85,10 +89,15 @@ export function GenerateContractDialog({
 
   const handleGenerate = () => {
     if (!selectedTemplateId) return;
+    // Strip empty values so the backend can auto-populate unset fields
+    const filteredData = Object.fromEntries(
+      Object.entries(mergeData).filter(([, v]) => v !== ""),
+    );
     generateMutation.mutate({
       pipelineItemId,
       contractTemplateId: selectedTemplateId,
-      mergeData: Object.keys(mergeData).length > 0 ? mergeData : undefined,
+      mergeData:
+        Object.keys(filteredData).length > 0 ? filteredData : undefined,
     });
   };
 
