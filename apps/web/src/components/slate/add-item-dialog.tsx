@@ -193,13 +193,15 @@ export function AddItemDialog({
                       <TableCell>
                         <PipelineStageBadge stage={item.stage} />
                       </TableCell>
-                      <TableCell className="font-mono text-sm">
-                        {item.submissionId.slice(0, 8)}&hellip;
+                      <TableCell className="text-sm">
+                        {item.submission?.title ??
+                          item.submissionId.slice(0, 8) + "\u2026"}
                       </TableCell>
-                      <TableCell className="font-mono text-sm text-muted-foreground">
-                        {item.publicationId
-                          ? `${item.publicationId.slice(0, 8)}\u2026`
-                          : "\u2014"}
+                      <TableCell className="text-sm text-muted-foreground">
+                        {item.publication?.name ??
+                          (item.publicationId
+                            ? item.publicationId.slice(0, 8) + "\u2026"
+                            : "\u2014")}
                       </TableCell>
                     </TableRow>
                   ))}

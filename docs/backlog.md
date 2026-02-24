@@ -268,6 +268,9 @@
 - [x] [P2] Add `dev:clean` script — kill processes on ports 4000/3000, remove stale lock files (`apps/web/.next/dev/lock`). Fallback for when Overmind isn't running or crashes. Add as `pnpm dev:clean` in root package.json. — (manual QA session 2026-02-21; done 2026-02-21)
 - [x] [P2] Simplify Docker profile handling — wrapper script or Makefile target that always includes `--profile auth` for Zitadel. Current setup requires remembering `docker compose --profile auth up -d zitadel` separately from `docker compose up -d`. — (manual QA session 2026-02-21; done 2026-02-21)
 - [ ] [P3] Docker Compose staging override — `docker-compose.staging.yml` with built API/web production images alongside shared infra services. For local staging testing and future deployed staging. Do NOT use `docker compose watch` for Next.js (Turbopack hot-reload bug, docker/compose#12827). — (manual QA session 2026-02-21)
+- [x] [P2] Zitadel dev setup automation — `pnpm zitadel:setup` provisions Zitadel and patches .env files after volume wipe — (manual QA friction 2026-02-24; done 2026-02-24)
+- [x] [P2] Stale org context recovery — `useOrganization` detects stale localStorage org ID and auto-switches — (manual QA friction 2026-02-24; done 2026-02-24)
+- [x] [P2] Slate seed data — publications, pipeline items, issues, contracts, CMS connections in `db:seed` — (manual QA friction 2026-02-24; done 2026-02-24)
 
 ### QA Observations
 

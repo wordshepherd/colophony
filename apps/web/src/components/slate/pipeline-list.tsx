@@ -141,25 +141,29 @@ export function PipelineList() {
                   <TableCell>
                     <Link
                       href={`/slate/pipeline/${item.id}`}
-                      className="font-mono text-sm hover:underline"
+                      className="text-sm hover:underline"
                     >
-                      {item.submissionId.slice(0, 8)}&hellip;
+                      {item.submission?.title ??
+                        item.submissionId.slice(0, 8) + "\u2026"}
                     </Link>
                   </TableCell>
-                  <TableCell className="font-mono text-sm text-muted-foreground">
-                    {item.publicationId
-                      ? `${item.publicationId.slice(0, 8)}\u2026`
-                      : "\u2014"}
+                  <TableCell className="text-sm text-muted-foreground">
+                    {item.publication?.name ??
+                      (item.publicationId
+                        ? item.publicationId.slice(0, 8) + "\u2026"
+                        : "\u2014")}
                   </TableCell>
-                  <TableCell className="font-mono text-sm text-muted-foreground">
-                    {item.assignedCopyeditorId
-                      ? `${item.assignedCopyeditorId.slice(0, 8)}\u2026`
-                      : "\u2014"}
+                  <TableCell className="text-sm text-muted-foreground">
+                    {item.assignedCopyeditor?.email ??
+                      (item.assignedCopyeditorId
+                        ? item.assignedCopyeditorId.slice(0, 8) + "\u2026"
+                        : "\u2014")}
                   </TableCell>
-                  <TableCell className="font-mono text-sm text-muted-foreground">
-                    {item.assignedProofreaderId
-                      ? `${item.assignedProofreaderId.slice(0, 8)}\u2026`
-                      : "\u2014"}
+                  <TableCell className="text-sm text-muted-foreground">
+                    {item.assignedProofreader?.email ??
+                      (item.assignedProofreaderId
+                        ? item.assignedProofreaderId.slice(0, 8) + "\u2026"
+                        : "\u2014")}
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground">
                     {formatDistanceToNow(new Date(item.updatedAt), {

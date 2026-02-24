@@ -5,6 +5,7 @@ import { useAuth } from "../use-auth";
 const mockGetUser = jest.fn().mockResolvedValue(null);
 const mockSigninRedirect = jest.fn();
 const mockSignoutRedirect = jest.fn();
+const mockRemoveUser = jest.fn().mockResolvedValue(undefined);
 const mockEvents = {
   addUserLoaded: jest.fn(),
   addUserUnloaded: jest.fn(),
@@ -18,6 +19,7 @@ let mockUserManager: object | null = {
   getUser: mockGetUser,
   signinRedirect: mockSigninRedirect,
   signoutRedirect: mockSignoutRedirect,
+  removeUser: mockRemoveUser,
   events: mockEvents,
 };
 
@@ -69,6 +71,7 @@ describe("useAuth", () => {
       getUser: mockGetUser,
       signinRedirect: mockSigninRedirect,
       signoutRedirect: mockSignoutRedirect,
+      removeUser: mockRemoveUser,
       events: mockEvents,
     };
     mockProfileData = undefined;
@@ -296,6 +299,42 @@ describe("useAuth", () => {
       await act(async () => {});
 
       expect(result.current.isEmailVerified).toBe(false);
+    });
+  });
+
+  describe("stale OIDC token recovery", () => {
+    it("forces re-auth when users.me returns UNAUTHORIZED after retries", async () => {
+      const warnSpy = jest.spyOn(console, "warn").mockImplementation();
+      mockGetUser.mockResolvedValue(makeOidcUser());
+      mockProfileError = Object.assign(new Error("UNAUTHORIZED"), {
+        data: { code: "UNAUTHORIZED" },
+      });
+
+      renderHook(() => useAuth());
+      await act(async () => {});
+
+      expect(warnSpy).toHaveBeenCalledWith(
+        "Stale OIDC token detected, forcing re-authentication",
+      );
+      expect(mockRemoveUser).toHaveBeenCalled();
+
+      // Wait for removeUser().then() to resolve
+      await act(async () => {});
+
+      expect(mockSigninRedirect).toHaveBeenCalled();
+      warnSpy.mockRestore();
+    });
+
+    it("does not force re-auth for non-auth errors (e.g., 500)", async () => {
+      mockGetUser.mockResolvedValue(makeOidcUser());
+      mockProfileError = Object.assign(new Error("Internal server error"), {
+        data: { code: "INTERNAL_SERVER_ERROR" },
+      });
+
+      renderHook(() => useAuth());
+      await act(async () => {});
+
+      expect(mockRemoveUser).not.toHaveBeenCalled();
     });
   });
 

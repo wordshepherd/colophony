@@ -103,17 +103,17 @@ export function PipelineDetail({ pipelineItemId }: PipelineDetailProps) {
                     </p>
                     <Link
                       href={`/editor/${item.submissionId}`}
-                      className="text-sm font-mono hover:underline"
+                      className="text-sm hover:underline"
                     >
-                      {item.submissionId}
+                      {item.submission?.title ?? item.submissionId}
                     </Link>
                   </div>
                   <div>
                     <p className="text-sm font-medium text-muted-foreground">
                       Publication
                     </p>
-                    <p className="text-sm font-mono">
-                      {item.publicationId ?? "\u2014"}
+                    <p className="text-sm">
+                      {item.publication?.name ?? item.publicationId ?? "\u2014"}
                     </p>
                   </div>
                   <div>

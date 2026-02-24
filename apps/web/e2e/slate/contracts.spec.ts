@@ -30,8 +30,10 @@ test.describe("Contracts (/slate/contracts)", () => {
     try {
       await authedPage.goto("/slate/contracts");
 
-      // Contract list shows status badge — "Draft" (scoped to table to avoid tab match)
-      await expect(authedPage.locator("table").getByText("Draft")).toBeVisible({
+      // Contract list shows status badge — use .first() since seed data may add extra rows
+      await expect(
+        authedPage.locator("table").getByText("Draft").first(),
+      ).toBeVisible({
         timeout: 10_000,
       });
     } finally {

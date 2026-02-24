@@ -71,6 +71,11 @@ export const pipelineItemSchema = z.object({
     .describe("Active Inngest workflow run ID"),
   createdAt: z.date().describe("When the item entered the pipeline"),
   updatedAt: z.date().describe("When the item was last updated"),
+  // Joined fields (optional — populated by list/getById queries)
+  submission: z.object({ title: z.string().nullable() }).optional(),
+  publication: z.object({ name: z.string() }).optional(),
+  assignedCopyeditor: z.object({ email: z.string() }).optional(),
+  assignedProofreader: z.object({ email: z.string() }).optional(),
 });
 
 export type PipelineItem = z.infer<typeof pipelineItemSchema>;

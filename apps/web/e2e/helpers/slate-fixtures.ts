@@ -71,7 +71,7 @@ interface TestApiKey {
 
 interface SlateData {
   publication: { id: string; name: string; slug: string };
-  acceptedSubmission: { id: string };
+  acceptedSubmission: { id: string; title: string };
   pipelineItem: { id: string };
   contractTemplate: { id: string; name: string };
   issue: { id: string; title: string };

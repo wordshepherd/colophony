@@ -94,10 +94,13 @@ describe("useOrganization", () => {
       expect(result.current.currentOrg?.name).toBe("Org Two");
     });
 
-    it("should return null when stored org ID does not match any org", () => {
+    it("should auto-recover stale org ID to first valid org", () => {
       mockGetCurrentOrgId.mockReturnValue("nonexistent");
       const { result } = renderHook(() => useOrganization());
-      expect(result.current.currentOrg).toBeNull();
+      // Stale org recovery useEffect auto-switches to the first valid org
+      expect(result.current.currentOrg?.id).toBe("org-1");
+      expect(mockSetCurrentOrgId).toHaveBeenCalledWith("org-1");
+      expect(mockInvalidate).toHaveBeenCalled();
     });
 
     it("should auto-select first org when none stored", () => {
@@ -162,12 +165,13 @@ describe("useOrganization", () => {
       expect(result.current.isReader).toBe(true);
     });
 
-    it("should return false for all roles when no org selected", () => {
+    it("should recover to first org roles when stored org is stale", () => {
       mockGetCurrentOrgId.mockReturnValue("nonexistent");
       const { result } = renderHook(() => useOrganization());
-      expect(result.current.isAdmin).toBe(false);
-      expect(result.current.isEditor).toBe(false);
-      expect(result.current.isReader).toBe(false);
+      // Stale recovery switches to org-1 (ADMIN), so all role checks are true
+      expect(result.current.isAdmin).toBe(true);
+      expect(result.current.isEditor).toBe(true);
+      expect(result.current.isReader).toBe(true);
     });
   });
 
