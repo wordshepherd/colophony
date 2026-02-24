@@ -134,7 +134,11 @@ export const cmsConnectionService = {
       action: AuditActions.CMS_CONNECTION_UPDATED,
       resource: AuditResources.CMS_CONNECTION,
       resourceId: id,
-      newValue: input,
+      newValue: {
+        ...(input.name !== undefined && { name: input.name }),
+        ...(input.isActive !== undefined && { isActive: input.isActive }),
+        ...(input.config !== undefined && { configUpdated: true }),
+      },
     });
     return updated;
   },
@@ -171,6 +175,17 @@ export const cmsConnectionService = {
 
     const adapter = getCmsAdapter(connection.adapterType);
     return adapter.testConnection(connection.config);
+  },
+
+  async testConnectionWithAudit(ctx: ServiceContext, id: string) {
+    const result = await cmsConnectionService.testConnection(ctx.tx, id);
+    await ctx.audit({
+      action: AuditActions.CMS_CONNECTION_TESTED,
+      resource: AuditResources.CMS_CONNECTION,
+      resourceId: id,
+      newValue: { success: result.success },
+    });
+    return result;
   },
 
   // -------------------------------------------------------------------------
