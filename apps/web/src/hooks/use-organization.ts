@@ -56,6 +56,8 @@ export function useOrganization() {
         const firstId = organizations[0].id;
         setCurrentOrgId(firstId);
         _setCurrentOrgId(firstId);
+        // Invalidate cached queries (may contain 403 errors from stale org)
+        utils.invalidate();
       }
     }
   }, [isAuthenticated, currentOrgId, organizations]);
