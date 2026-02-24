@@ -105,7 +105,10 @@ export const cmsConnectionsRouter = createRouter({
     .output(z.object({ success: z.boolean(), error: z.string().optional() }))
     .mutation(async ({ ctx, input }) => {
       try {
-        return await cmsConnectionService.testConnection(ctx.dbTx, input.id);
+        return await cmsConnectionService.testConnectionWithAudit(
+          toServiceContext(ctx),
+          input.id,
+        );
       } catch (e) {
         mapServiceError(e);
       }

@@ -55,6 +55,22 @@ describe('serializeValue', () => {
     expect(serializeValue('hello')).toBe('"hello"');
   });
 
+  it('scrubs apiKey variants', () => {
+    const input = {
+      adminApiKey: 'ghost_key_123',
+      api_key: 'wp_key_456',
+      apiKey: 'generic_key_789',
+      apikey: 'lower_key_000',
+      name: 'safe-value',
+    };
+    const result = JSON.parse(serializeValue(input)!);
+    expect(result.adminApiKey).toBe('[REDACTED]');
+    expect(result.api_key).toBe('[REDACTED]');
+    expect(result.apiKey).toBe('[REDACTED]');
+    expect(result.apikey).toBe('[REDACTED]');
+    expect(result.name).toBe('safe-value');
+  });
+
   it('scrubs secret keys', () => {
     const input = {
       email: 'test@example.com',
