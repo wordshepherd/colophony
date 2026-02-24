@@ -29,10 +29,12 @@ export function useEmbedUploadStatus({
 }: UseEmbedUploadStatusOptions) {
   const [files, setFiles] = useState<EmbedUploadStatusResponse["files"]>([]);
   const [allClean, setAllClean] = useState(false);
-  const [isPolling, setIsPolling] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const pollIntervalMs = useRef(BASE_POLL_INTERVAL);
+
+  // Derive polling state from whether the interval is active
+  const isPolling = enabled && !!manuscriptVersionId;
 
   useEffect(() => {
     if (!enabled || !manuscriptVersionId) {
@@ -40,7 +42,6 @@ export function useEmbedUploadStatus({
         clearInterval(intervalRef.current);
         intervalRef.current = null;
       }
-      setIsPolling(false);
       return;
     }
 
@@ -80,7 +81,6 @@ export function useEmbedUploadStatus({
             clearInterval(intervalRef.current);
             intervalRef.current = null;
           }
-          setIsPolling(false);
         }
       } catch (err) {
         if (cancelled) return;
@@ -104,7 +104,6 @@ export function useEmbedUploadStatus({
 
     // Set up interval
     intervalRef.current = setInterval(doPoll, pollIntervalMs.current);
-    setIsPolling(true);
 
     return () => {
       cancelled = true;
@@ -112,7 +111,6 @@ export function useEmbedUploadStatus({
         clearInterval(intervalRef.current);
         intervalRef.current = null;
       }
-      setIsPolling(false);
     };
   }, [enabled, manuscriptVersionId, apiUrl, token, email, uploadsInFlight]);
 

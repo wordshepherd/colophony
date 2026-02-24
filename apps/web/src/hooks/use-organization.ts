@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { getCurrentOrgId, setCurrentOrgId, trpc } from "@/lib/trpc";
 import { useAuth } from "./use-auth";
 
@@ -38,29 +38,34 @@ export function useOrganization() {
   const currentOrg =
     organizations.find((org) => org.id === currentOrgId) ?? null;
 
-  // If no current org but user has orgs, select the first one
-  useEffect(() => {
-    if (isAuthenticated && organizations.length > 0 && !currentOrgId) {
-      const firstId = organizations[0].id;
-      setCurrentOrgId(firstId);
-      _setCurrentOrgId(firstId);
-    }
-  }, [isAuthenticated, organizations, currentOrgId]);
+  // Resolve org: auto-select first org or recover from stale org (render-time)
+  const needsAutoSelect =
+    isAuthenticated && organizations.length > 0 && !currentOrgId;
+  const isStaleOrg =
+    isAuthenticated &&
+    !!currentOrgId &&
+    organizations.length > 0 &&
+    !organizations.some((org) => org.id === currentOrgId);
 
-  // Clear stale org context — stored org ID doesn't match any known org
-  useEffect(() => {
-    if (isAuthenticated && currentOrgId && organizations.length > 0) {
-      const isKnown = organizations.some((org) => org.id === currentOrgId);
-      if (!isKnown) {
-        console.warn("Clearing stale org context:", currentOrgId);
-        const firstId = organizations[0].id;
-        setCurrentOrgId(firstId);
-        _setCurrentOrgId(firstId);
-        // Invalidate cached queries (may contain 403 errors from stale org)
-        utils.invalidate();
-      }
+  if (needsAutoSelect || isStaleOrg) {
+    if (isStaleOrg) {
+      console.warn("Clearing stale org context:", currentOrgId);
     }
-  }, [isAuthenticated, currentOrgId, organizations]);
+    const firstId = organizations[0].id;
+    setCurrentOrgId(firstId);
+    _setCurrentOrgId(firstId);
+  }
+
+  // Invalidate cached queries when org changes (stale recovery or manual switch)
+  const prevOrgIdRef = useRef(currentOrgId);
+  useEffect(() => {
+    const prev = prevOrgIdRef.current;
+    prevOrgIdRef.current = currentOrgId;
+    // Only invalidate when switching from one valid org to another (not initial select)
+    if (prev && prev !== currentOrgId) {
+      utils.invalidate();
+    }
+  }, [currentOrgId, utils]);
 
   // Switch organization
   const switchOrganization = useCallback(
@@ -73,11 +78,8 @@ export function useOrganization() {
 
       setCurrentOrgId(orgId);
       _setCurrentOrgId(orgId);
-
-      // Invalidate queries that depend on org context
-      utils.invalidate();
     },
-    [organizations, utils],
+    [organizations],
   );
 
   // Role checks

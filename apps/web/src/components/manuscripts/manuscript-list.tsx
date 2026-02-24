@@ -24,10 +24,12 @@ export function ManuscriptList() {
   const [page, setPage] = useState(1);
   const limit = 12;
 
-  // Reset page when search changes
-  useEffect(() => {
+  // Reset page when search changes (render-time state adjustment)
+  const [prevSearch, setPrevSearch] = useState(debouncedSearch);
+  if (prevSearch !== debouncedSearch) {
+    setPrevSearch(debouncedSearch);
     setPage(1);
-  }, [debouncedSearch]);
+  }
 
   const {
     data,

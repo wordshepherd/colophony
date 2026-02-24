@@ -9,9 +9,11 @@ const eslintConfig = [
   },
   {
     rules: {
-      // Downgraded to warn: existing OIDC guard clauses use synchronous setState
-      // in effects for early returns. Refactor deferred — see backlog.
-      "react-hooks/set-state-in-effect": "warn",
+      // Match monorepo base config: allow _-prefixed vars for intentionally unused bindings
+      "@typescript-eslint/no-unused-vars": ["warn", { argsIgnorePattern: "^_", varsIgnorePattern: "^_" }],
+      // React Hook Form's watch() is incompatible with React Compiler memoization.
+      // This is a known RHF limitation — the compiler skips these components automatically.
+      "react-hooks/incompatible-library": "off",
       "no-restricted-imports": ["error", {
         patterns: [{
           group: ["@colophony/api/**"],

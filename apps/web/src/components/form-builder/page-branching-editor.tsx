@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -107,11 +107,13 @@ export function PageBranchingEditor({
     page.branchingRules !== null && page.branchingRules.length > 0,
   );
 
-  // Sync from props when page changes
-  useEffect(() => {
+  // Sync from props when page changes (render-time state adjustment)
+  const [prevPageId, setPrevPageId] = useState(page.id);
+  if (prevPageId !== page.id) {
+    setPrevPageId(page.id);
     setLocalRules(page.branchingRules);
     setEnabled(page.branchingRules !== null && page.branchingRules.length > 0);
-  }, [page.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  }
 
   const availableFields = allFields.filter(
     (f) =>

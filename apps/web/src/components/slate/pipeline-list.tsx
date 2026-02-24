@@ -52,12 +52,10 @@ export function PipelineList() {
     limit: 20,
   });
 
-  // Clamp page when data shrinks
-  useEffect(() => {
-    if (data && data.totalPages > 0 && page > data.totalPages) {
-      setPage(data.totalPages);
-    }
-  }, [data, page]);
+  // Clamp page when data shrinks (render-time state adjustment)
+  if (data && data.totalPages > 0 && page > data.totalPages) {
+    setPage(data.totalPages);
+  }
 
   const handleStageChange = (value: string) => {
     setStageFilter(value as PipelineStage | "ALL");

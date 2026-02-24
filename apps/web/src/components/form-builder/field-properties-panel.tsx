@@ -81,20 +81,18 @@ export function FieldPropertiesPanel({
   );
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const fieldIdRef = useRef(field.id);
 
-  // Reset local state when selected field changes
-  useEffect(() => {
-    if (fieldIdRef.current !== field.id) {
-      fieldIdRef.current = field.id;
-      setLabel(field.label);
-      setDescription(field.description ?? "");
-      setPlaceholder(field.placeholder ?? "");
-      setRequired(field.required);
-      setConfig(field.config ?? {});
-      setSaveStatus("idle");
-    }
-  }, [field]);
+  // Reset local state when selected field changes (render-time state adjustment)
+  const [prevFieldId, setPrevFieldId] = useState(field.id);
+  if (prevFieldId !== field.id) {
+    setPrevFieldId(field.id);
+    setLabel(field.label);
+    setDescription(field.description ?? "");
+    setPlaceholder(field.placeholder ?? "");
+    setRequired(field.required);
+    setConfig(field.config ?? {});
+    setSaveStatus("idle");
+  }
 
   const debouncedSave = useCallback(
     (data: UpdateFormFieldInput) => {
@@ -107,14 +105,21 @@ export function FieldPropertiesPanel({
     [field.id, onUpdate],
   );
 
-  // Track save completion
-  useEffect(() => {
+  // Track save completion — detect transition during render, timer in effect
+  const [prevIsSaving, setPrevIsSaving] = useState(isSaving);
+  if (prevIsSaving !== isSaving) {
+    setPrevIsSaving(isSaving);
     if (!isSaving && saveStatus === "saving") {
       setSaveStatus("saved");
+    }
+  }
+
+  useEffect(() => {
+    if (saveStatus === "saved") {
       const timer = setTimeout(() => setSaveStatus("idle"), 2000);
       return () => clearTimeout(timer);
     }
-  }, [isSaving, saveStatus]);
+  }, [saveStatus]);
 
   // Cleanup debounce on unmount
   useEffect(() => {
