@@ -38,6 +38,7 @@ export function PipelineRoleAssignment({
       toast.success("Copyeditor assigned");
       closeDialog();
       utils.pipeline.getById.invalidate({ id: pipelineItemId });
+      utils.pipeline.list.invalidate();
     },
     onError: (err) => toast.error(err.message),
   });
@@ -47,6 +48,7 @@ export function PipelineRoleAssignment({
       toast.success("Proofreader assigned");
       closeDialog();
       utils.pipeline.getById.invalidate({ id: pipelineItemId });
+      utils.pipeline.list.invalidate();
     },
     onError: (err) => toast.error(err.message),
   });

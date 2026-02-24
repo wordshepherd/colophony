@@ -8,7 +8,6 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -98,14 +97,10 @@ export function PipelineStageTransition({
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Confirm stage transition</DialogTitle>
-            <DialogDescription>
-              Move this item from{" "}
-              <PipelineStageBadge stage={currentStage} className="inline" /> to{" "}
-              {targetStage && (
-                <PipelineStageBadge stage={targetStage} className="inline" />
-              )}
-              ?
-            </DialogDescription>
+            <div className="text-sm text-muted-foreground flex flex-wrap items-center gap-1">
+              Move this item from <PipelineStageBadge stage={currentStage} /> to{" "}
+              {targetStage && <PipelineStageBadge stage={targetStage} />}?
+            </div>
           </DialogHeader>
 
           <Textarea
