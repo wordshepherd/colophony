@@ -58,7 +58,7 @@ const sections = [
     href: "/slate/contracts",
     icon: FileSignature,
     cta: "View Contracts",
-    comingSoon: true,
+    comingSoon: false,
   },
   {
     name: "CMS Connections",
