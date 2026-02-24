@@ -308,6 +308,28 @@ describe('federationService', () => {
       expect(metadata.publications).toHaveLength(0);
     });
 
+    it('throws FederationDisabledError when config.enabled is false', async () => {
+      const { federationService, FederationDisabledError } =
+        await import('./federation.service.js');
+
+      const disabledConfig = {
+        id: 'cfg-id',
+        publicKey: 'pub-key',
+        privateKey: 'priv-key',
+        keyId: 'magazine.example#main',
+        mode: 'allowlist' as const,
+        contactEmail: null,
+        capabilities: ['identity'],
+        enabled: false,
+      };
+
+      dbModule.db.select.mockReturnValueOnce(mockSelectChain([disabledConfig]));
+
+      await expect(
+        federationService.getInstanceMetadata(baseEnv),
+      ).rejects.toThrow(FederationDisabledError);
+    });
+
     it('includes only ACTIVE publications', async () => {
       const { federationService } = await import('./federation.service.js');
 
@@ -380,12 +402,25 @@ describe('federationService', () => {
   });
 
   describe('resolveWebFinger', () => {
+    const enabledConfig = {
+      id: 'cfg-id',
+      publicKey: 'pub-key',
+      privateKey: 'priv-key',
+      keyId: 'magazine.example#main',
+      mode: 'allowlist' as const,
+      contactEmail: null,
+      capabilities: ['identity'],
+      enabled: true,
+    };
+
     it('returns JRD for valid acct: URI', async () => {
       const { federationService } = await import('./federation.service.js');
 
-      dbModule.db.select.mockReturnValueOnce(
-        mockSelectChain([{ id: 'user-1', email: 'alice@magazine.example' }]),
-      );
+      dbModule.db.select
+        .mockReturnValueOnce(mockSelectChain([enabledConfig]))
+        .mockReturnValueOnce(
+          mockSelectChain([{ id: 'user-1', email: 'alice@magazine.example' }]),
+        );
 
       const result = await federationService.resolveWebFinger(
         baseEnv,
@@ -401,7 +436,9 @@ describe('federationService', () => {
       const { federationService, WebFingerUserNotFoundError } =
         await import('./federation.service.js');
 
-      dbModule.db.select.mockReturnValueOnce(mockSelectChain([]));
+      dbModule.db.select
+        .mockReturnValueOnce(mockSelectChain([enabledConfig]))
+        .mockReturnValueOnce(mockSelectChain([]));
 
       await expect(
         federationService.resolveWebFinger(
@@ -415,6 +452,8 @@ describe('federationService', () => {
       const { federationService, WebFingerDomainMismatchError } =
         await import('./federation.service.js');
 
+      dbModule.db.select.mockReturnValueOnce(mockSelectChain([enabledConfig]));
+
       await expect(
         federationService.resolveWebFinger(baseEnv, 'acct:alice@other.example'),
       ).rejects.toThrow(WebFingerDomainMismatchError);
@@ -423,9 +462,11 @@ describe('federationService', () => {
     it('aliases include did:web identifier', async () => {
       const { federationService } = await import('./federation.service.js');
 
-      dbModule.db.select.mockReturnValueOnce(
-        mockSelectChain([{ id: 'user-1', email: 'alice@magazine.example' }]),
-      );
+      dbModule.db.select
+        .mockReturnValueOnce(mockSelectChain([enabledConfig]))
+        .mockReturnValueOnce(
+          mockSelectChain([{ id: 'user-1', email: 'alice@magazine.example' }]),
+        );
 
       const result = await federationService.resolveWebFinger(
         baseEnv,
@@ -433,6 +474,21 @@ describe('federationService', () => {
       );
 
       expect(result.aliases).toContain('did:web:magazine.example:users:alice');
+    });
+
+    it('throws FederationDisabledError when config.enabled is false', async () => {
+      const { federationService, FederationDisabledError } =
+        await import('./federation.service.js');
+
+      const disabledConfig = { ...enabledConfig, enabled: false };
+      dbModule.db.select.mockReturnValueOnce(mockSelectChain([disabledConfig]));
+
+      await expect(
+        federationService.resolveWebFinger(
+          baseEnv,
+          'acct:alice@magazine.example',
+        ),
+      ).rejects.toThrow(FederationDisabledError);
     });
   });
 });

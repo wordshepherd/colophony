@@ -12,6 +12,9 @@ vi.mock('../services/federation.service.js', () => ({
       mockGetInstanceMetadata(...args),
     resolveWebFinger: (...args: unknown[]) => mockResolveWebFinger(...args),
   },
+  FederationDisabledError: class extends Error {
+    override name = 'FederationDisabledError' as const;
+  },
   FederationNotConfiguredError: class extends Error {
     override name = 'FederationNotConfiguredError' as const;
   },
@@ -95,6 +98,22 @@ describe('Federation Discovery Routes', () => {
       const body = response.json();
       expect(body.software).toBe('colophony');
       expect(body.domain).toBe('magazine.example');
+    });
+
+    it('returns 503 when federation is disabled in DB', async () => {
+      const { FederationDisabledError } =
+        await import('../services/federation.service.js');
+      mockGetInstanceMetadata.mockRejectedValueOnce(
+        new FederationDisabledError(),
+      );
+
+      const response = await app.inject({
+        method: 'GET',
+        url: '/.well-known/colophony',
+      });
+
+      expect(response.statusCode).toBe(503);
+      expect(response.json().error).toBe('federation_disabled');
     });
 
     it('returns Cache-Control header', async () => {
@@ -192,6 +211,20 @@ describe('Federation Discovery Routes', () => {
       });
 
       expect(response.statusCode).toBe(404);
+    });
+
+    it('returns 503 when federation is disabled in DB', async () => {
+      const { FederationDisabledError } =
+        await import('../services/federation.service.js');
+      mockResolveWebFinger.mockRejectedValueOnce(new FederationDisabledError());
+
+      const response = await app.inject({
+        method: 'GET',
+        url: '/.well-known/webfinger?resource=acct:alice@magazine.example',
+      });
+
+      expect(response.statusCode).toBe(503);
+      expect(response.json().error).toBe('federation_disabled');
     });
 
     it('includes CORS header', async () => {

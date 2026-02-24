@@ -1,8 +1,10 @@
 import type { FastifyInstance } from 'fastify';
+import cors from '@fastify/cors';
 import { webFingerQuerySchema } from '@colophony/types';
 import type { Env } from '../config/env.js';
 import {
   federationService,
+  FederationDisabledError,
   FederationNotConfiguredError,
   WebFingerUserNotFoundError,
   WebFingerDomainMismatchError,
@@ -14,6 +16,10 @@ export async function registerFederationDiscoveryRoutes(
 ): Promise<void> {
   const { env } = opts;
 
+  // Override app-level CORS for federation routes — RFC 7033 requires
+  // WebFinger to be accessible from any origin
+  await app.register(cors, { origin: true, credentials: false });
+
   app.get('/.well-known/colophony', async (_request, reply) => {
     try {
       const metadata = await federationService.getInstanceMetadata(env);
@@ -22,6 +28,9 @@ export async function registerFederationDiscoveryRoutes(
         .header('content-type', 'application/json')
         .send(metadata);
     } catch (err) {
+      if (err instanceof FederationDisabledError) {
+        return reply.status(503).send({ error: 'federation_disabled' });
+      }
       if (err instanceof FederationNotConfiguredError) {
         return reply.status(503).send({ error: 'federation_not_configured' });
       }
@@ -48,6 +57,9 @@ export async function registerFederationDiscoveryRoutes(
         .header('access-control-allow-origin', '*')
         .send(result);
     } catch (err) {
+      if (err instanceof FederationDisabledError) {
+        return reply.status(503).send({ error: 'federation_disabled' });
+      }
       if (
         err instanceof WebFingerUserNotFoundError ||
         err instanceof WebFingerDomainMismatchError

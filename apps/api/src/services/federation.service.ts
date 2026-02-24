@@ -135,6 +135,7 @@ export const federationService = {
         privateKey,
         keyId,
         contactEmail: env.FEDERATION_CONTACT ?? null,
+        enabled: true, // Auto-init enables — FEDERATION_ENABLED env var already authorized
       })
       .onConflictDoNothing({ target: federationConfig.singleton });
 
@@ -174,6 +175,10 @@ export const federationService = {
    */
   async getInstanceMetadata(env: Env): Promise<FederationMetadata> {
     const config = await this.getOrInitConfig(env);
+
+    if (!config.enabled) {
+      throw new FederationDisabledError();
+    }
 
     // Query active publications from non-opted-out orgs via superuser pool
     const pubs = await db
@@ -218,6 +223,12 @@ export const federationService = {
     env: Env,
     resource: string,
   ): Promise<WebFingerResponse> {
+    const config = await this.getOrInitConfig(env);
+
+    if (!config.enabled) {
+      throw new FederationDisabledError();
+    }
+
     // Parse acct: URI
     const acctMatch = resource.match(/^acct:(.+)@(.+)$/);
     if (!acctMatch) {
