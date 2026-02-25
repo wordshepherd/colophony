@@ -51,6 +51,7 @@ import {
   IssueItemAlreadyExistsError,
 } from '../services/issue.service.js';
 import { CmsConnectionNotFoundError } from '../services/cms-connection.service.js';
+import { SimSubConflictError } from '../services/simsub.service.js';
 
 type GraphQLErrorCode = string;
 
@@ -119,6 +120,17 @@ export function mapServiceError(error: unknown): never {
   }
 
   if (error instanceof Error) {
+    // Sim-sub conflict — include conflict details in extensions
+    if (error instanceof SimSubConflictError) {
+      throw new GraphQLError(error.message, {
+        extensions: {
+          code: 'CONFLICT',
+          conflicts: error.conflicts,
+          remoteResults: error.remoteResults,
+        },
+      });
+    }
+
     // Surface fieldErrors for form validation failures
     if (error instanceof InvalidFormDataError) {
       throw new GraphQLError(error.message, {

@@ -63,6 +63,33 @@ vi.mock('@colophony/db', () => ({
   sql: vi.fn(),
 }));
 
+// Mock validateEnv (must be before router import)
+vi.mock('../../config/env.js', () => ({
+  validateEnv: () => ({
+    FEDERATION_ENABLED: false,
+    FEDERATION_DOMAIN: 'localhost',
+  }),
+}));
+
+// Mock simsubService
+vi.mock('../../services/simsub.service.js', () => ({
+  simsubService: {
+    preSubmitCheck: vi.fn().mockResolvedValue(undefined),
+  },
+  SimSubConflictError: class SimSubConflictError extends Error {
+    name = 'SimSubConflictError';
+    conflicts: unknown[];
+    remoteResults: unknown[];
+    constructor(conflicts: unknown[] = [], remoteResults: unknown[] = []) {
+      super(
+        `Simultaneous submission conflict: ${conflicts.length} active submission(s) found`,
+      );
+      this.conflicts = conflicts;
+      this.remoteResults = remoteResults;
+    }
+  },
+}));
+
 import { submissionService } from '../../services/submission.service.js';
 import { ForbiddenError } from '../../services/errors.js';
 import { submissionsRouter } from './submissions.js';

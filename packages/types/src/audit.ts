@@ -133,6 +133,12 @@ export const AuditActions = {
   CMS_CONNECTION_DELETED: "CMS_CONNECTION_DELETED",
   CMS_CONNECTION_TESTED: "CMS_CONNECTION_TESTED",
 
+  // Sim-sub enforcement
+  SIMSUB_CHECK_PERFORMED: "SIMSUB_CHECK_PERFORMED",
+  SIMSUB_CONFLICT_FOUND: "SIMSUB_CONFLICT_FOUND",
+  SIMSUB_OVERRIDE_GRANTED: "SIMSUB_OVERRIDE_GRANTED",
+  SIMSUB_INBOUND_CHECK: "SIMSUB_INBOUND_CHECK",
+
   // Federation lifecycle
   FEDERATION_KEY_GENERATED: "FEDERATION_KEY_GENERATED",
   FEDERATION_USER_KEY_GENERATED: "FEDERATION_USER_KEY_GENERATED",
@@ -168,6 +174,7 @@ export const AuditResources = {
   ISSUE: "issue",
   CMS_CONNECTION: "cms_connection",
   FEDERATION: "federation",
+  SIMSUB: "simsub",
   AUDIT: "audit",
 } as const;
 
@@ -373,6 +380,15 @@ export interface FederationAuditParams extends BaseAuditParams {
     | typeof AuditActions.FEDERATION_TRUST_RECEIVED;
 }
 
+export interface SimSubAuditParams extends BaseAuditParams {
+  resource: typeof AuditResources.SIMSUB;
+  action:
+    | typeof AuditActions.SIMSUB_CHECK_PERFORMED
+    | typeof AuditActions.SIMSUB_CONFLICT_FOUND
+    | typeof AuditActions.SIMSUB_OVERRIDE_GRANTED
+    | typeof AuditActions.SIMSUB_INBOUND_CHECK;
+}
+
 export interface AuditAccessAuditParams extends BaseAuditParams {
   resource: typeof AuditResources.AUDIT;
   action: typeof AuditActions.AUDIT_ACCESSED;
@@ -405,6 +421,7 @@ export type AuditLogParams =
   | IssueAuditParams
   | CmsConnectionAuditParams
   | FederationAuditParams
+  | SimSubAuditParams
   | AuditAccessAuditParams
   | SystemAuditParams;
 

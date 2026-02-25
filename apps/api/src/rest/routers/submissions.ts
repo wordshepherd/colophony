@@ -7,10 +7,12 @@ import {
 } from '@colophony/types';
 import { restPaginationQuery } from '@colophony/api-contracts';
 import { submissionService } from '../../services/submission.service.js';
+import { simsubService } from '../../services/simsub.service.js';
 import { toServiceContext } from '../../services/context.js';
 import { assertEditorOrAdmin } from '../../services/errors.js';
 import { mapServiceError } from '../error-mapper.js';
 import { orgProcedure, requireScopes } from '../context.js';
+import { validateEnv } from '../../config/env.js';
 
 // ---------------------------------------------------------------------------
 // Query schemas — override page/limit with z.coerce for REST query strings
@@ -150,10 +152,16 @@ const submit = orgProcedure
   .input(idParamSchema)
   .handler(async ({ input, context }) => {
     try {
-      return await submissionService.submitAsOwner(
-        toServiceContext(context),
+      const env = validateEnv();
+      const svc = toServiceContext(context);
+      await simsubService.preSubmitCheck(
+        env,
+        svc.tx,
         input.id,
+        svc.actor.userId,
+        svc.actor.orgId,
       );
+      return await submissionService.submitAsOwner(svc, input.id);
     } catch (e) {
       mapServiceError(e);
     }

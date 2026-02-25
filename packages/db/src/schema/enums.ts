@@ -116,6 +116,13 @@ export const peerTrustStatusEnum = pgEnum("PeerTrustStatus", [
   "revoked",
 ]);
 
+export const simSubCheckResultEnum = pgEnum("SimSubCheckResult", [
+  "CLEAR",
+  "CONFLICT",
+  "PARTIAL",
+  "SKIPPED",
+]);
+
 export const contractStatusEnum = pgEnum("ContractStatus", [
   "DRAFT",
   "SENT",

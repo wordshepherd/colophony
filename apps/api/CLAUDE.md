@@ -41,6 +41,10 @@
 | Trust service     | `src/services/trust.service.ts`            |
 | HTTP signatures   | `src/federation/http-signatures.ts`        |
 | Federation auth   | `src/federation/federation-auth.ts`        |
+| Sim-sub routes    | `src/federation/simsub.routes.ts` (S2S)    |
+| Sim-sub admin     | `src/federation/simsub-admin.routes.ts`    |
+| Sim-sub service   | `src/services/simsub.service.ts`           |
+| Fingerprint svc   | `src/services/fingerprint.service.ts`      |
 
 ### Service Method Naming
 

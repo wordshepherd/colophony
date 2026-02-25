@@ -51,6 +51,7 @@ import {
   IssueItemAlreadyExistsError,
 } from '../services/issue.service.js';
 import { CmsConnectionNotFoundError } from '../services/cms-connection.service.js';
+import { SimSubConflictError } from '../services/simsub.service.js';
 
 type ORPCErrorCode = ConstructorParameters<typeof ORPCError>[0];
 
@@ -119,6 +120,17 @@ export function mapServiceError(error: unknown): never {
   }
 
   if (error instanceof Error) {
+    // Sim-sub conflict — include conflict details in response
+    if (error instanceof SimSubConflictError) {
+      throw new ORPCError('CONFLICT', {
+        message: error.message,
+        data: {
+          conflicts: error.conflicts,
+          remoteResults: error.remoteResults,
+        },
+      });
+    }
+
     // Surface fieldErrors for form validation failures
     if (error instanceof InvalidFormDataError) {
       throw new ORPCError('BAD_REQUEST', {

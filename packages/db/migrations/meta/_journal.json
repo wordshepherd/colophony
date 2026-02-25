@@ -183,6 +183,13 @@
       "when": 1774200000000,
       "tag": "0025_trusted_peers",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1774400000000,
+      "tag": "0026_sim_sub_enforcement",
+      "breakpoints": true
     }
   ]
 }
