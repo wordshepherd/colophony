@@ -42,6 +42,8 @@ import { registerSimSubRoutes } from './federation/simsub.routes.js';
 import { registerSimSubAdminRoutes } from './federation/simsub-admin.routes.js';
 import { registerTransferRoutes } from './federation/transfer.routes.js';
 import { registerTransferAdminRoutes } from './federation/transfer-admin.routes.js';
+import { registerMigrationRoutes } from './federation/migration.routes.js';
+import { registerMigrationAdminRoutes } from './federation/migration-admin.routes.js';
 
 export async function buildApp(env: Env): Promise<FastifyInstance> {
   const app = Fastify({
@@ -189,6 +191,12 @@ export async function buildApp(env: Env): Promise<FastifyInstance> {
     });
     await app.register(async (scope) => {
       await registerTransferAdminRoutes(scope, { env });
+    });
+    await app.register(async (scope) => {
+      await registerMigrationRoutes(scope, { env });
+    });
+    await app.register(async (scope) => {
+      await registerMigrationAdminRoutes(scope, { env });
     });
   }
 

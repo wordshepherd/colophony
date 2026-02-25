@@ -133,6 +133,19 @@ export const pieceTransferStatusEnum = pgEnum("PieceTransferStatus", [
   "EXPIRED",
 ]);
 
+export const identityMigrationStatusEnum = pgEnum("IdentityMigrationStatus", [
+  "PENDING",
+  "PENDING_APPROVAL",
+  "APPROVED",
+  "BUNDLE_SENT",
+  "PROCESSING",
+  "COMPLETED",
+  "REJECTED",
+  "FAILED",
+  "EXPIRED",
+  "CANCELLED",
+]);
+
 export const contractStatusEnum = pgEnum("ContractStatus", [
   "DRAFT",
   "SENT",

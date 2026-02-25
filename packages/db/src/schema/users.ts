@@ -27,11 +27,17 @@ export const users = pgTable(
     isGuest: boolean("is_guest").default(false).notNull(),
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
     lastEventAt: timestamp("last_event_at", { withTimezone: true }),
+    migratedToDomain: varchar("migrated_to_domain", { length: 512 }),
+    migratedToDid: varchar("migrated_to_did", { length: 512 }),
+    migratedAt: timestamp("migrated_at", { withTimezone: true }),
   },
   (table) => [
     index("users_lower_email_idx").on(sql`lower(${table.email})`),
     uniqueIndex("users_zitadel_user_id_idx")
       .on(table.zitadelUserId)
       .where(sql`${table.zitadelUserId} IS NOT NULL`),
+    index("users_migrated_to_domain_idx")
+      .on(table.migratedToDomain)
+      .where(sql`${table.migratedToDomain} IS NOT NULL`),
   ],
 );

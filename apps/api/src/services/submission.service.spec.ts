@@ -37,6 +37,12 @@ const mockTx = {
 
 // Mock @colophony/db
 vi.mock('@colophony/db', () => ({
+  db: {
+    select: vi.fn().mockReturnThis(),
+    from: vi.fn().mockReturnThis(),
+    where: vi.fn().mockReturnThis(),
+    limit: vi.fn().mockResolvedValue([]),
+  },
   submissions: {
     id: 'submissions.id',
     submitterId: 'submitterId',
@@ -55,7 +61,7 @@ vi.mock('@colophony/db', () => ({
     formDefinitionId: 'sp.formDefinitionId',
   },
   formDefinitions: { id: 'formDefinitions.id', status: 'fd.status' },
-  users: { id: 'users.id', email: 'email' },
+  users: { id: 'users.id', email: 'email', migratedAt: 'migratedAt' },
   eq: vi.fn((_col, _val) => ({ type: 'eq' })),
   and: vi.fn((..._args: unknown[]) => ({ type: 'and' })),
   sql: Object.assign(
@@ -64,6 +70,12 @@ vi.mock('@colophony/db', () => ({
       raw: vi.fn(),
     },
   ),
+}));
+
+vi.mock('./migration.service.js', () => ({
+  MigrationInvalidStateError: class MigrationInvalidStateError extends Error {
+    override name = 'MigrationInvalidStateError' as const;
+  },
 }));
 
 // Mock drizzle-orm

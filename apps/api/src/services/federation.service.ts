@@ -382,6 +382,7 @@ export const federationService = {
         id: users.id,
         deletedAt: users.deletedAt,
         isGuest: users.isGuest,
+        migratedToDid: users.migratedToDid,
       })
       .from(users)
       .where(
@@ -409,6 +410,7 @@ export const federationService = {
     return {
       '@context': DID_CONTEXT,
       id: didId,
+      ...(user.migratedToDid ? { alsoKnownAs: [user.migratedToDid] } : {}),
       verificationMethod: [
         {
           id: keyRef,
