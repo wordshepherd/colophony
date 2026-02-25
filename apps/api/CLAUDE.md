@@ -45,6 +45,9 @@
 | Sim-sub admin     | `src/federation/simsub-admin.routes.ts`    |
 | Sim-sub service   | `src/services/simsub.service.ts`           |
 | Fingerprint svc   | `src/services/fingerprint.service.ts`      |
+| Transfer routes   | `src/federation/transfer.routes.ts` (S2S)  |
+| Transfer admin    | `src/federation/transfer-admin.routes.ts`  |
+| Transfer service  | `src/services/transfer.service.ts`         |
 
 ### Service Method Naming
 
