@@ -20,3 +20,4 @@ export * from "./federation";
 export * from "./sim-sub";
 export * from "./transfer";
 export * from "./migration";
+export * from "./hub";

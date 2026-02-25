@@ -23,4 +23,5 @@ export * from "./user-keys";
 export * from "./trusted-peers";
 export * from "./transfers";
 export * from "./identity-migrations";
+export * from "./hub";
 export * from "./relations";

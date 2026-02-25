@@ -52,6 +52,11 @@
 | Migration admin   | `src/federation/migration-admin.routes.ts` |
 | Migration service | `src/services/migration.service.ts`        |
 | Migration bundle  | `src/services/migration-bundle.service.ts` |
+| Hub routes        | `src/federation/hub.routes.ts` (S2S)       |
+| Hub admin         | `src/federation/hub-admin.routes.ts`       |
+| Hub auth          | `src/federation/hub-auth.ts`               |
+| Hub service       | `src/services/hub.service.ts`              |
+| Hub client svc    | `src/services/hub-client.service.ts`       |
 
 ### Service Method Naming
 

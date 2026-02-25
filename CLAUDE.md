@@ -59,6 +59,10 @@ Per-directory CLAUDE.md files contain domain-specific details:
 | **Transfer service**     | `apps/api/src/services/transfer.service.ts`                                      |
 | **Migration routes**     | `apps/api/src/federation/migration.routes.ts` (S2S), `migration-admin.routes.ts` |
 | **Migration service**    | `apps/api/src/services/migration.service.ts`, `migration-bundle.service.ts`      |
+| **Hub routes**           | `apps/api/src/federation/hub.routes.ts` (S2S), `hub-admin.routes.ts`             |
+| **Hub auth**             | `apps/api/src/federation/hub-auth.ts` (S2S hub auth middleware)                  |
+| **Hub service**          | `apps/api/src/services/hub.service.ts`                                           |
+| **Hub client service**   | `apps/api/src/services/hub-client.service.ts`                                    |
 | **Next.js frontend**     | `apps/web/`                                                                      |
 | **tRPC client**          | `apps/web/src/lib/trpc.ts`                                                       |
 | **Env config (Zod)**     | `apps/api/src/config/env.ts`                                                     |

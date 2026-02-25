@@ -27,6 +27,7 @@ import { auditService } from './audit.service.js';
 import { federationService, domainToDid } from './federation.service.js';
 import { fingerprintService } from './fingerprint.service.js';
 import { signFederationRequest } from '../federation/http-signatures.js';
+import { hubClientService } from './hub-client.service.js';
 
 // ---------------------------------------------------------------------------
 // Error classes
@@ -200,8 +201,39 @@ export const simsubService = {
 
     const domain = env.FEDERATION_DOMAIN ?? 'localhost';
 
+    // Hub-first path: if HUB_DOMAIN is set, query centralized index
+    let hubResults: SimSubRemoteResult[] = [];
+    let hubResponded = false;
+    if (env.HUB_DOMAIN) {
+      const hubResult = await hubClientService.queryHubFingerprints(
+        env,
+        fingerprint,
+        submitterDid,
+      );
+      if (hubResult) {
+        hubResponded = true;
+        hubResults = hubResult.conflicts.map((c) => ({
+          domain: c.sourceDomain,
+          status: 'checked' as const,
+          found: true,
+          conflicts: [
+            {
+              publicationName: c.publicationName ?? 'Unknown',
+              submittedAt: c.submittedAt ?? new Date().toISOString(),
+            },
+          ],
+          durationMs: 0,
+        }));
+      }
+    }
+
     // Query active trusted peers with simsub.respond capability.
-    // Scoped to the submission's org — only check peers trusted by this org.
+    // If hub responded, skip hub-attested peers (they're covered by the hub index).
+    // Self-hosted peers (hub_attested = false) still get direct fan-out.
+    const peerFilter = hubResponded
+      ? sql`status = 'active' AND granted_capabilities @> '{"simsub.respond": true}'::jsonb AND hub_attested = false`
+      : sql`status = 'active' AND granted_capabilities @> '{"simsub.respond": true}'::jsonb`;
+
     const peers = await withRls({ orgId }, async (tx) => {
       return tx
         .select({
@@ -209,17 +241,18 @@ export const simsubService = {
           instanceUrl: sql<string>`instance_url`,
         })
         .from(sql`trusted_peers`)
-        .where(
-          sql`status = 'active' AND granted_capabilities @> '{"simsub.respond": true}'::jsonb`,
-        );
+        .where(peerFilter);
     });
 
-    if (peers.length === 0) {
-      return [];
+    if (peers.length === 0 && hubResults.length === 0) {
+      return hubResults;
     }
 
-    // Deduplicate by domain (SQL DISTINCT ON handles this)
-    const results: SimSubRemoteResult[] = [];
+    if (peers.length === 0) {
+      return hubResults;
+    }
+
+    const results: SimSubRemoteResult[] = [...hubResults];
     const body = JSON.stringify({
       fingerprint,
       submitterDid,
@@ -394,6 +427,19 @@ export const simsubService = {
         newValue: { result, fingerprint, localConflicts, remoteResults },
       });
     });
+
+    // Push fingerprint to hub (fire-and-forget, after local recording)
+    if (env.HUB_DOMAIN) {
+      hubClientService
+        .pushFingerprint(env, {
+          fingerprint,
+          submitterDid,
+          submittedAt: new Date().toISOString(),
+        })
+        .catch(() => {
+          /* best-effort */
+        });
+    }
 
     return { result, fingerprint, localConflicts, remoteResults };
   },

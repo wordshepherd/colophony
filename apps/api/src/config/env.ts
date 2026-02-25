@@ -91,6 +91,10 @@ const envSchema = z.object({
   DOCUMENSO_API_URL: z.string().url().optional(),
   DOCUMENSO_API_KEY: z.string().optional(),
   DOCUMENSO_WEBHOOK_SECRET: z.string().optional(),
+
+  // Federation hub (managed hosting)
+  HUB_DOMAIN: z.string().optional(),
+  HUB_REGISTRATION_TOKEN: z.string().optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;
