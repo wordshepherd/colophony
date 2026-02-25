@@ -46,7 +46,11 @@ export function extractDomainFromKeyId(keyId: string): string | null {
       colonIndex >= 0 ? pathPart.slice(0, colonIndex) : pathPart;
     if (!encodedDomain) return null;
     // Decode percent-encoded colons (e.g., localhost%3A4000 → localhost:4000)
-    return decodeURIComponent(encodedDomain);
+    try {
+      return decodeURIComponent(encodedDomain);
+    } catch {
+      return null;
+    }
   }
 
   // Instance key: domain#fragment (e.g., example.com#main, localhost:4000#main)
@@ -121,6 +125,7 @@ export default fp(
           .where(
             and(
               eq(trustedPeers.domain, domain),
+              eq(trustedPeers.keyId, keyId),
               eq(trustedPeers.status, 'active'),
             ),
           )
@@ -132,18 +137,19 @@ export default fp(
 
         const peer = activePeers[0];
 
-        // Build key lookup using stored public key
+        // Build key lookup using stored public key (keyId already matched by DB query)
         const keyLookup = async (
           lookupKeyId: string,
         ): Promise<string | null> => {
-          if (lookupKeyId === peer.keyId || lookupKeyId === keyId) {
+          if (lookupKeyId === keyId) {
             return peer.publicKey;
           }
           return null;
         };
 
-        // Reconstruct full URL for signature verification
-        const fullUrl = `${request.protocol}://${request.hostname}${request.url}`;
+        // Reconstruct full URL for signature verification.
+        // Use request.host (not hostname) to preserve the port for non-default ports.
+        const fullUrl = `${request.protocol}://${request.host}${request.url}`;
         const rawBody = (request as any).rawBody as string | undefined;
 
         try {

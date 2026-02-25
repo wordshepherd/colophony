@@ -352,4 +352,8 @@ describe('extractDomainFromKeyId', () => {
   it('returns null for did:web: with empty domain', () => {
     expect(extractDomainFromKeyId('did:web:#main')).toBeNull();
   });
+
+  it('returns null for malformed percent-encoding in DID key', () => {
+    expect(extractDomainFromKeyId('did:web:%ZZ#main')).toBeNull();
+  });
 });
