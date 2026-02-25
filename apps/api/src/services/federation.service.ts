@@ -5,13 +5,15 @@ import {
   publications,
   organizations,
   users,
+  userKeys,
 } from '@colophony/db';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, isNull } from 'drizzle-orm';
 import {
   AuditActions,
   AuditResources,
   type FederationMetadata,
   type WebFingerResponse,
+  type DidDocument,
 } from '@colophony/types';
 import type { Env } from '../config/env.js';
 import { auditService } from './audit.service.js';
@@ -48,6 +50,13 @@ export class WebFingerDomainMismatchError extends Error {
   }
 }
 
+export class UserDidNotFoundError extends Error {
+  override name = 'UserDidNotFoundError' as const;
+  constructor(localPart: string) {
+    super(`User not found for DID resolution: ${localPart}`);
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -61,6 +70,41 @@ interface FederationConfigRow {
   contactEmail: string | null;
   capabilities: string[];
   enabled: boolean;
+}
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+const DID_CONTEXT = [
+  'https://www.w3.org/ns/did/v1',
+  'https://w3id.org/security/suites/jws-2020/v1',
+];
+
+/**
+ * Convert an Ed25519 PEM public key to JWK format.
+ * Uses Node.js native crypto — no external deps.
+ */
+function pemToJwk(pem: string): {
+  kty: 'OKP';
+  crv: 'Ed25519';
+  x: string;
+} {
+  const keyObj = crypto.createPublicKey(pem);
+  const jwk = keyObj.export({ format: 'jwk' });
+  return {
+    kty: 'OKP',
+    crv: 'Ed25519',
+    x: jwk.x as string,
+  };
+}
+
+/**
+ * Encode a domain for did:web — port colons become %3A per spec.
+ * "localhost:4000" → "localhost%3A4000"
+ */
+function domainToDid(domain: string): string {
+  return domain.replace(/:/g, '%3A');
 }
 
 // ---------------------------------------------------------------------------
@@ -271,5 +315,176 @@ export const federationService = {
         },
       ],
     };
+  },
+
+  /**
+   * Build the instance DID document (did:web:<domain>).
+   * Resolved at GET /.well-known/did.json
+   */
+  async getInstanceDidDocument(env: Env): Promise<DidDocument> {
+    const config = await this.getOrInitConfig(env);
+
+    if (!config.enabled) {
+      throw new FederationDisabledError();
+    }
+
+    const domain = env.FEDERATION_DOMAIN ?? 'localhost';
+    const didId = `did:web:${domainToDid(domain)}`;
+    const keyRef = `${didId}#main`;
+
+    return {
+      '@context': DID_CONTEXT,
+      id: didId,
+      verificationMethod: [
+        {
+          id: keyRef,
+          type: 'JsonWebKey2020',
+          controller: didId,
+          publicKeyJwk: pemToJwk(config.publicKey),
+        },
+      ],
+      authentication: [keyRef],
+      assertionMethod: [keyRef],
+      service: [
+        {
+          id: `${didId}#federation`,
+          type: 'ColophonyFederation',
+          serviceEndpoint: `https://${domain}/.well-known/colophony`,
+        },
+      ],
+    };
+  },
+
+  /**
+   * Build a user DID document (did:web:<domain>:users:<localPart>).
+   * Resolved at GET /users/:localPart/did.json
+   *
+   * Lazily generates an Ed25519 keypair on first request.
+   * Never returns private key material.
+   */
+  async getUserDidDocument(env: Env, localPart: string): Promise<DidDocument> {
+    const config = await this.getOrInitConfig(env);
+
+    if (!config.enabled) {
+      throw new FederationDisabledError();
+    }
+
+    const domain = env.FEDERATION_DOMAIN ?? 'localhost';
+
+    // Look up user by email local part — must be non-deleted, non-guest
+    const email = `${localPart}@${domain}`;
+    const [user] = await db
+      .select({
+        id: users.id,
+        deletedAt: users.deletedAt,
+        isGuest: users.isGuest,
+      })
+      .from(users)
+      .where(
+        and(
+          eq(users.email, email),
+          isNull(users.deletedAt),
+          eq(users.isGuest, false),
+        ),
+      )
+      .limit(1);
+
+    if (!user) {
+      throw new UserDidNotFoundError(localPart);
+    }
+
+    const keypair = await this.getOrCreateUserKeypair(user.id, domain);
+
+    const didId = `did:web:${domainToDid(domain)}:users:${localPart}`;
+    const keyRef = `${didId}#key-1`;
+
+    return {
+      '@context': DID_CONTEXT,
+      id: didId,
+      verificationMethod: [
+        {
+          id: keyRef,
+          type: 'JsonWebKey2020',
+          controller: didId,
+          publicKeyJwk: pemToJwk(keypair.publicKey),
+        },
+      ],
+      authentication: [keyRef],
+      assertionMethod: [keyRef],
+      service: [
+        {
+          id: `${didId}#submitter`,
+          type: 'ColophonySubmitter',
+          serviceEndpoint: `https://${domain}/users/${localPart}`,
+        },
+      ],
+    };
+  },
+
+  /**
+   * Get or lazily create an Ed25519 keypair for a user.
+   * INSERT ON CONFLICT handles concurrent generation races.
+   * Returns only the public key and keyId — never exposes private key.
+   */
+  async getOrCreateUserKeypair(
+    userId: string,
+    domain: string,
+  ): Promise<{ publicKey: string; keyId: string }> {
+    // Check for existing keypair
+    const [existing] = await db
+      .select({
+        publicKey: userKeys.publicKey,
+        keyId: userKeys.keyId,
+      })
+      .from(userKeys)
+      .where(eq(userKeys.userId, userId))
+      .limit(1);
+
+    if (existing) {
+      return existing;
+    }
+
+    // Generate new Ed25519 keypair
+    const { publicKey, privateKey } = crypto.generateKeyPairSync('ed25519', {
+      publicKeyEncoding: { type: 'spki', format: 'pem' },
+      privateKeyEncoding: { type: 'pkcs8', format: 'pem' },
+    });
+
+    const keyId = `did:web:${domainToDid(domain)}:users:${userId}#key-1`;
+
+    // INSERT ON CONFLICT handles race condition
+    await db
+      .insert(userKeys)
+      .values({
+        userId,
+        publicKey,
+        privateKey,
+        keyId,
+        algorithm: 'Ed25519',
+      })
+      .onConflictDoNothing();
+
+    // Read back (handles race where another process inserted first)
+    const [row] = await db
+      .select({
+        publicKey: userKeys.publicKey,
+        keyId: userKeys.keyId,
+      })
+      .from(userKeys)
+      .where(eq(userKeys.userId, userId))
+      .limit(1);
+
+    // Audit log if we generated the key now in DB
+    if (row && row.publicKey === publicKey) {
+      await auditService.logDirect({
+        resource: AuditResources.FEDERATION,
+        action: AuditActions.FEDERATION_USER_KEY_GENERATED,
+        actorId: userId,
+        newValue: { keyId, algorithm: 'Ed25519' },
+      });
+    }
+
+    // row is guaranteed to exist — either we inserted or another process did
+    return { publicKey: row.publicKey, keyId: row.keyId };
   },
 };

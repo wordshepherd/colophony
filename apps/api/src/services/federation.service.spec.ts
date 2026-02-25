@@ -1,6 +1,17 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { Env } from '../config/env.js';
 
+// Generate real keypair at module level using vi.hoisted to run before mocks
+const { testKeypairHoisted } = vi.hoisted(() => {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const c = require('node:crypto') as typeof import('node:crypto');
+  const kp = c.generateKeyPairSync('ed25519', {
+    publicKeyEncoding: { type: 'spki', format: 'pem' },
+    privateKeyEncoding: { type: 'pkcs8', format: 'pem' },
+  });
+  return { testKeypairHoisted: kp };
+});
+
 // Mock @colophony/db
 vi.mock('@colophony/db', () => ({
   db: {
@@ -20,9 +31,20 @@ vi.mock('@colophony/db', () => ({
     slug: 'slug',
     federationOptedOut: 'federation_opted_out',
   },
-  users: { id: 'id', email: 'email' },
+  users: {
+    id: 'id',
+    email: 'email',
+    deletedAt: 'deleted_at',
+    isGuest: 'is_guest',
+  },
+  userKeys: {
+    publicKey: 'public_key',
+    keyId: 'key_id',
+    userId: 'user_id',
+  },
   eq: vi.fn((_col, val) => ({ _eq: val })),
   and: vi.fn((...args: unknown[]) => ({ _and: args })),
+  isNull: vi.fn((col) => ({ _isNull: col })),
   sql: vi.fn(),
 }));
 
@@ -42,9 +64,10 @@ vi.mock('node:crypto', async () => {
     default: {
       ...actual,
       generateKeyPairSync: vi.fn(() => ({
-        publicKey: 'mock-ed25519-public-key-pem',
-        privateKey: 'mock-ed25519-private-key-pem',
+        publicKey: testKeypairHoisted.publicKey,
+        privateKey: testKeypairHoisted.privateKey,
       })),
+      createPublicKey: actual.createPublicKey,
     },
   };
 });
@@ -98,6 +121,9 @@ function mockSelectChain(rows: unknown[]) {
   };
 }
 
+// Alias for readability in test data
+const testKeypair = testKeypairHoisted;
+
 describe('federationService', () => {
   let dbModule: {
     db: { select: ReturnType<typeof vi.fn>; insert: ReturnType<typeof vi.fn> };
@@ -128,8 +154,8 @@ describe('federationService', () => {
           mockSelectChain([
             {
               id: 'new-id',
-              publicKey: 'mock-ed25519-public-key-pem',
-              privateKey: 'mock-ed25519-private-key-pem',
+              publicKey: testKeypair.publicKey,
+              privateKey: testKeypair.privateKey,
               keyId: 'magazine.example#main',
               mode: 'allowlist',
               contactEmail: null,
@@ -153,7 +179,7 @@ describe('federationService', () => {
           publicKeyEncoding: { type: 'spki', format: 'pem' },
         }),
       );
-      expect(config.publicKey).toBe('mock-ed25519-public-key-pem');
+      expect(config.publicKey).toBe(testKeypair.publicKey);
     });
 
     it('returns existing config from DB', async () => {
@@ -367,7 +393,7 @@ describe('federationService', () => {
     it('audit logs key generation', async () => {
       const { federationService } = await import('./federation.service.js');
 
-      const generatedPub = 'mock-ed25519-public-key-pem';
+      const generatedPub = testKeypair.publicKey;
 
       dbModule.db.insert.mockReturnValue({
         values: vi.fn().mockReturnValue({
@@ -380,7 +406,7 @@ describe('federationService', () => {
           {
             id: 'new-id',
             publicKey: generatedPub,
-            privateKey: 'mock-ed25519-private-key-pem',
+            privateKey: testKeypair.privateKey,
             keyId: 'magazine.example#main',
             mode: 'allowlist',
             contactEmail: null,
@@ -489,6 +515,306 @@ describe('federationService', () => {
           'acct:alice@magazine.example',
         ),
       ).rejects.toThrow(FederationDisabledError);
+    });
+  });
+
+  describe('getInstanceDidDocument', () => {
+    it('returns valid DID document with JWK', async () => {
+      const { federationService } = await import('./federation.service.js');
+
+      const configRow = {
+        id: 'cfg-id',
+        publicKey: testKeypair.publicKey,
+        privateKey: testKeypair.privateKey,
+        keyId: 'magazine.example#main',
+        mode: 'allowlist' as const,
+        contactEmail: null,
+        capabilities: ['identity'],
+        enabled: true,
+      };
+
+      dbModule.db.select.mockReturnValueOnce(mockSelectChain([configRow]));
+
+      const doc = await federationService.getInstanceDidDocument(baseEnv);
+
+      expect(doc['@context']).toContain('https://www.w3.org/ns/did/v1');
+      expect(doc.id).toBe('did:web:magazine.example');
+      expect(doc.verificationMethod[0].type).toBe('JsonWebKey2020');
+      expect(doc.verificationMethod[0].publicKeyJwk.kty).toBe('OKP');
+      expect(doc.verificationMethod[0].publicKeyJwk.crv).toBe('Ed25519');
+      expect(doc.verificationMethod[0].publicKeyJwk.x).toBeTruthy();
+      expect(doc.authentication).toContain('did:web:magazine.example#main');
+      expect(doc.service![0].type).toBe('ColophonyFederation');
+    });
+
+    it('throws FederationDisabledError when not enabled', async () => {
+      const { federationService, FederationDisabledError } =
+        await import('./federation.service.js');
+
+      const disabledConfig = {
+        id: 'cfg-id',
+        publicKey: testKeypair.publicKey,
+        privateKey: testKeypair.privateKey,
+        keyId: 'magazine.example#main',
+        mode: 'allowlist' as const,
+        contactEmail: null,
+        capabilities: ['identity'],
+        enabled: false,
+      };
+
+      dbModule.db.select.mockReturnValueOnce(mockSelectChain([disabledConfig]));
+
+      await expect(
+        federationService.getInstanceDidDocument(baseEnv),
+      ).rejects.toThrow(FederationDisabledError);
+    });
+  });
+
+  describe('getUserDidDocument', () => {
+    const enabledConfig = {
+      id: 'cfg-id',
+      publicKey: testKeypair.publicKey,
+      privateKey: testKeypair.privateKey,
+      keyId: 'magazine.example#main',
+      mode: 'allowlist' as const,
+      contactEmail: null,
+      capabilities: ['identity'],
+      enabled: true,
+    };
+
+    it('returns valid DID document for existing user', async () => {
+      const { federationService } = await import('./federation.service.js');
+
+      dbModule.db.select
+        // getOrInitConfig
+        .mockReturnValueOnce(mockSelectChain([enabledConfig]))
+        // getUserDidDocument -> user lookup
+        .mockReturnValueOnce(
+          mockSelectChain([{ id: 'user-1', deletedAt: null, isGuest: false }]),
+        )
+        // getOrCreateUserKeypair -> existing keypair lookup
+        .mockReturnValueOnce(
+          mockSelectChain([
+            {
+              publicKey: testKeypair.publicKey,
+              keyId: 'did:web:magazine.example:users:user-1#key-1',
+            },
+          ]),
+        );
+
+      const doc = await federationService.getUserDidDocument(baseEnv, 'alice');
+
+      expect(doc.id).toBe('did:web:magazine.example:users:alice');
+      expect(doc.verificationMethod[0].publicKeyJwk.kty).toBe('OKP');
+      expect(doc.service![0].type).toBe('ColophonySubmitter');
+    });
+
+    it('lazily generates keypair on first request', async () => {
+      const { federationService } = await import('./federation.service.js');
+
+      dbModule.db.select
+        // getOrInitConfig
+        .mockReturnValueOnce(mockSelectChain([enabledConfig]))
+        // user lookup
+        .mockReturnValueOnce(
+          mockSelectChain([{ id: 'user-1', deletedAt: null, isGuest: false }]),
+        )
+        // getOrCreateUserKeypair -> no existing keypair
+        .mockReturnValueOnce(mockSelectChain([]))
+        // read-back after insert
+        .mockReturnValueOnce(
+          mockSelectChain([
+            {
+              publicKey: testKeypair.publicKey,
+              keyId: 'did:web:magazine.example:users:user-1#key-1',
+            },
+          ]),
+        );
+
+      dbModule.db.insert.mockReturnValue({
+        values: vi.fn().mockReturnValue({
+          onConflictDoNothing: vi.fn().mockResolvedValue({ rowCount: 1 }),
+        }),
+      });
+
+      const doc = await federationService.getUserDidDocument(baseEnv, 'alice');
+
+      expect(doc.verificationMethod[0].publicKeyJwk.kty).toBe('OKP');
+      expect(cryptoModule.default.generateKeyPairSync).toHaveBeenCalledWith(
+        'ed25519',
+        expect.any(Object),
+      );
+    });
+
+    it('handles concurrent keypair generation race', async () => {
+      const { federationService } = await import('./federation.service.js');
+
+      dbModule.db.select
+        // getOrCreateUserKeypair -> no existing keypair
+        .mockReturnValueOnce(mockSelectChain([]))
+        // read-back after INSERT ON CONFLICT returns other process's keypair
+        .mockReturnValueOnce(
+          mockSelectChain([
+            {
+              publicKey: 'other-process-pub-key',
+              keyId: 'other-process-key-id',
+            },
+          ]),
+        );
+
+      dbModule.db.insert.mockReturnValue({
+        values: vi.fn().mockReturnValue({
+          onConflictDoNothing: vi.fn().mockResolvedValue({ rowCount: 0 }),
+        }),
+      });
+
+      const result = await federationService.getOrCreateUserKeypair(
+        'user-1',
+        'magazine.example',
+      );
+
+      expect(result.publicKey).toBe('other-process-pub-key');
+    });
+
+    it('throws UserDidNotFoundError for unknown user', async () => {
+      const { federationService, UserDidNotFoundError } =
+        await import('./federation.service.js');
+
+      dbModule.db.select
+        .mockReturnValueOnce(mockSelectChain([enabledConfig]))
+        .mockReturnValueOnce(mockSelectChain([]));
+
+      await expect(
+        federationService.getUserDidDocument(baseEnv, 'nobody'),
+      ).rejects.toThrow(UserDidNotFoundError);
+    });
+
+    it('throws UserDidNotFoundError for deleted user', async () => {
+      const { federationService, UserDidNotFoundError } =
+        await import('./federation.service.js');
+
+      // The query filters out deleted users, so empty result is returned
+      dbModule.db.select
+        .mockReturnValueOnce(mockSelectChain([enabledConfig]))
+        .mockReturnValueOnce(mockSelectChain([]));
+
+      await expect(
+        federationService.getUserDidDocument(baseEnv, 'deleted-user'),
+      ).rejects.toThrow(UserDidNotFoundError);
+    });
+
+    it('throws UserDidNotFoundError for guest user', async () => {
+      const { federationService, UserDidNotFoundError } =
+        await import('./federation.service.js');
+
+      // The query filters out guest users, so empty result is returned
+      dbModule.db.select
+        .mockReturnValueOnce(mockSelectChain([enabledConfig]))
+        .mockReturnValueOnce(mockSelectChain([]));
+
+      await expect(
+        federationService.getUserDidDocument(baseEnv, 'guest-user'),
+      ).rejects.toThrow(UserDidNotFoundError);
+    });
+
+    it('DID document never contains private key material', async () => {
+      const { federationService } = await import('./federation.service.js');
+
+      dbModule.db.select
+        .mockReturnValueOnce(mockSelectChain([enabledConfig]))
+        .mockReturnValueOnce(
+          mockSelectChain([{ id: 'user-1', deletedAt: null, isGuest: false }]),
+        )
+        .mockReturnValueOnce(
+          mockSelectChain([
+            {
+              publicKey: testKeypair.publicKey,
+              keyId: 'did:web:magazine.example:users:user-1#key-1',
+            },
+          ]),
+        );
+
+      const doc = await federationService.getUserDidDocument(baseEnv, 'alice');
+
+      const serialized = JSON.stringify(doc);
+      expect(serialized).not.toContain('PRIVATE');
+      expect(serialized).not.toContain(testKeypair.privateKey);
+    });
+  });
+
+  describe('domainToDid', () => {
+    it('encodes port as %3A', async () => {
+      const { federationService } = await import('./federation.service.js');
+
+      const configRow = {
+        id: 'cfg-id',
+        publicKey: testKeypair.publicKey,
+        privateKey: testKeypair.privateKey,
+        keyId: 'localhost:4000#main',
+        mode: 'allowlist' as const,
+        contactEmail: null,
+        capabilities: ['identity'],
+        enabled: true,
+      };
+
+      dbModule.db.select.mockReturnValueOnce(mockSelectChain([configRow]));
+
+      const envWithPort: Env = {
+        ...baseEnv,
+        FEDERATION_DOMAIN: 'localhost:4000',
+      };
+
+      const doc = await federationService.getInstanceDidDocument(envWithPort);
+
+      expect(doc.id).toBe('did:web:localhost%3A4000');
+    });
+
+    it('passes through portless domain unchanged', async () => {
+      const { federationService } = await import('./federation.service.js');
+
+      const configRow = {
+        id: 'cfg-id',
+        publicKey: testKeypair.publicKey,
+        privateKey: testKeypair.privateKey,
+        keyId: 'magazine.example#main',
+        mode: 'allowlist' as const,
+        contactEmail: null,
+        capabilities: ['identity'],
+        enabled: true,
+      };
+
+      dbModule.db.select.mockReturnValueOnce(mockSelectChain([configRow]));
+
+      const doc = await federationService.getInstanceDidDocument(baseEnv);
+
+      expect(doc.id).toBe('did:web:magazine.example');
+    });
+  });
+
+  describe('pemToJwk', () => {
+    it('correctly converts Ed25519 PEM to JWK', async () => {
+      const { federationService } = await import('./federation.service.js');
+
+      const configRow = {
+        id: 'cfg-id',
+        publicKey: testKeypair.publicKey,
+        privateKey: testKeypair.privateKey,
+        keyId: 'magazine.example#main',
+        mode: 'allowlist' as const,
+        contactEmail: null,
+        capabilities: ['identity'],
+        enabled: true,
+      };
+
+      dbModule.db.select.mockReturnValueOnce(mockSelectChain([configRow]));
+
+      const doc = await federationService.getInstanceDidDocument(baseEnv);
+      const jwk = doc.verificationMethod[0].publicKeyJwk;
+
+      expect(jwk.kty).toBe('OKP');
+      expect(jwk.crv).toBe('Ed25519');
+      expect(typeof jwk.x).toBe('string');
+      expect(jwk.x.length).toBeGreaterThan(0);
     });
   });
 });
