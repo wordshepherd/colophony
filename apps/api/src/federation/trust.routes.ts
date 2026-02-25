@@ -1,5 +1,9 @@
 import type { FastifyInstance } from 'fastify';
-import { trustRequestSchema, trustAcceptSchema } from '@colophony/types';
+import {
+  trustRequestSchema,
+  trustAcceptSchema,
+  hubAttestationTrustRequestSchema,
+} from '@colophony/types';
 import type { Env } from '../config/env.js';
 import {
   trustService,
@@ -97,6 +101,51 @@ export async function registerFederationTrustRoutes(
     } catch (err) {
       if (err instanceof TrustSignatureVerificationError) {
         return reply.status(401).send({ error: 'signature_invalid' });
+      }
+      throw err;
+    }
+  });
+
+  /**
+   * POST /federation/trust/hub-attested — Hub-attested auto-trust.
+   * No bilateral flow — creates active peers directly if attestation is valid.
+   */
+  app.post('/federation/trust/hub-attested', async (request, reply) => {
+    if (!env.FEDERATION_ENABLED) {
+      return reply.status(503).send({ error: 'federation_disabled' });
+    }
+
+    // Verify HTTP signature (same as other trust routes — proves possession of attested key)
+    if (!request.federationPeer) {
+      return reply.status(401).send({ error: 'signature_required' });
+    }
+
+    const parsed = hubAttestationTrustRequestSchema.safeParse(request.body);
+    if (!parsed.success) {
+      return reply.status(400).send({
+        error: 'invalid_request',
+        details: parsed.error.issues,
+      });
+    }
+
+    // Ensure the authenticated peer matches the request body domain
+    if (request.federationPeer.domain !== parsed.data.domain) {
+      return reply.status(403).send({ error: 'domain_mismatch' });
+    }
+
+    try {
+      const result = await trustService.handleHubAttestedTrust(
+        env,
+        parsed.data,
+      );
+
+      return reply.status(200).send({
+        status: 'trusted',
+        orgCount: result.orgIds.length,
+      });
+    } catch (err) {
+      if (err instanceof TrustSignatureVerificationError) {
+        return reply.status(401).send({ error: 'attestation_invalid' });
       }
       throw err;
     }

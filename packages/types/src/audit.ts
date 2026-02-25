@@ -171,6 +171,15 @@ export const AuditActions = {
   FEDERATION_TRUST_REVOKED: "FEDERATION_TRUST_REVOKED",
   FEDERATION_TRUST_RECEIVED: "FEDERATION_TRUST_RECEIVED",
 
+  // Hub lifecycle
+  HUB_INSTANCE_REGISTERED: "HUB_INSTANCE_REGISTERED",
+  HUB_INSTANCE_SUSPENDED: "HUB_INSTANCE_SUSPENDED",
+  HUB_INSTANCE_REVOKED: "HUB_INSTANCE_REVOKED",
+  HUB_ATTESTATION_ISSUED: "HUB_ATTESTATION_ISSUED",
+  HUB_FINGERPRINT_REGISTERED: "HUB_FINGERPRINT_REGISTERED",
+  HUB_FINGERPRINT_QUERIED: "HUB_FINGERPRINT_QUERIED",
+  HUB_AUTO_TRUST_ESTABLISHED: "HUB_AUTO_TRUST_ESTABLISHED",
+
   // Audit access
   AUDIT_ACCESSED: "AUDIT_ACCESSED",
 } as const;
@@ -200,6 +209,7 @@ export const AuditResources = {
   SIMSUB: "simsub",
   TRANSFER: "transfer",
   MIGRATION: "migration",
+  HUB: "hub",
   AUDIT: "audit",
 } as const;
 
@@ -443,6 +453,18 @@ export interface MigrationAuditParams extends BaseAuditParams {
     | typeof AuditActions.MIGRATION_BROADCAST_RECEIVED;
 }
 
+export interface HubAuditParams extends BaseAuditParams {
+  resource: typeof AuditResources.HUB;
+  action:
+    | typeof AuditActions.HUB_INSTANCE_REGISTERED
+    | typeof AuditActions.HUB_INSTANCE_SUSPENDED
+    | typeof AuditActions.HUB_INSTANCE_REVOKED
+    | typeof AuditActions.HUB_ATTESTATION_ISSUED
+    | typeof AuditActions.HUB_FINGERPRINT_REGISTERED
+    | typeof AuditActions.HUB_FINGERPRINT_QUERIED
+    | typeof AuditActions.HUB_AUTO_TRUST_ESTABLISHED;
+}
+
 export interface AuditAccessAuditParams extends BaseAuditParams {
   resource: typeof AuditResources.AUDIT;
   action: typeof AuditActions.AUDIT_ACCESSED;
@@ -478,6 +500,7 @@ export type AuditLogParams =
   | SimSubAuditParams
   | TransferAuditParams
   | MigrationAuditParams
+  | HubAuditParams
   | AuditAccessAuditParams
   | SystemAuditParams;
 

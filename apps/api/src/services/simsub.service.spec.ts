@@ -116,6 +116,16 @@ vi.mock('../federation/http-signatures.js', () => ({
     mockSignFederationRequest(...args),
 }));
 
+const mockQueryHubFingerprints = vi.fn();
+const mockPushFingerprint = vi.fn();
+vi.mock('./hub-client.service.js', () => ({
+  hubClientService: {
+    queryHubFingerprints: (...args: unknown[]) =>
+      mockQueryHubFingerprints(...args),
+    pushFingerprint: (...args: unknown[]) => mockPushFingerprint(...args),
+  },
+}));
+
 const mockFetch = vi.fn();
 vi.stubGlobal('fetch', mockFetch);
 
@@ -633,5 +643,149 @@ describe('simsubService.grantOverride', () => {
     await simsubService.grantOverride('org1', 'sub1', 'admin1');
     expect(mockWithRls).toHaveBeenCalled();
     expect(mockAuditLog).toHaveBeenCalled();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Hub integration tests
+// ---------------------------------------------------------------------------
+
+describe('simsubService.checkRemote — hub integration', () => {
+  it('queries hub first when HUB_DOMAIN set', async () => {
+    mockGetOrInitConfig.mockResolvedValue({
+      enabled: true,
+      privateKey: 'test-key',
+    });
+
+    mockQueryHubFingerprints.mockResolvedValueOnce({
+      found: true,
+      conflicts: [
+        {
+          sourceDomain: 'other.example.com',
+          publicationName: 'Hub Pub',
+          submittedAt: '2026-01-01T00:00:00Z',
+        },
+      ],
+    });
+
+    // Hub responded — only self-hosted peers should be queried
+    mockWithRls.mockImplementationOnce(async (_ctx: any, fn: any) => {
+      return fn({
+        select: () => ({
+          from: () => ({
+            where: () => Promise.resolve([]), // No self-hosted peers
+          }),
+        }),
+      });
+    });
+
+    const results = await simsubService.checkRemote(
+      makeEnv({ HUB_DOMAIN: 'hub.example.com' }),
+      'fp',
+      'did:web:test.example.com:users:alice',
+      'org1',
+    );
+
+    expect(mockQueryHubFingerprints).toHaveBeenCalled();
+    expect(results).toHaveLength(1);
+    expect(results[0].domain).toBe('other.example.com');
+  });
+
+  it('falls back to peer fan-out when hub unreachable', async () => {
+    mockGetOrInitConfig.mockResolvedValue({
+      enabled: true,
+      privateKey: 'test-key',
+    });
+
+    // Hub unreachable — returns null
+    mockQueryHubFingerprints.mockResolvedValueOnce(null);
+
+    // Should fan out to all peers (including hub-attested)
+    mockWithRls.mockImplementationOnce(async (_ctx: any, fn: any) => {
+      return fn({
+        select: () => ({
+          from: () => ({
+            where: () =>
+              Promise.resolve([
+                {
+                  peerDomain: 'peer1.com',
+                  instanceUrl: 'https://peer1.com',
+                },
+              ]),
+          }),
+        }),
+      });
+    });
+
+    mockSignFederationRequest.mockReturnValue({
+      headers: { signature: 'sig', 'signature-input': 'input' },
+    });
+
+    mockFetch.mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ found: false, conflicts: [] }),
+    });
+
+    const results = await simsubService.checkRemote(
+      makeEnv({ HUB_DOMAIN: 'hub.example.com' }),
+      'fp',
+      'did:web:test.example.com:users:alice',
+      'org1',
+    );
+
+    expect(results).toHaveLength(1);
+    expect(results[0].status).toBe('checked');
+  });
+});
+
+describe('simsubService.performFullCheck — hub push', () => {
+  const fingerprint = 'f'.repeat(64);
+
+  beforeEach(() => {
+    mockGetOrCompute.mockResolvedValue(fingerprint);
+    dbSelectResult = [{ email: 'alice@test.example.com' }];
+    mockPushFingerprint.mockResolvedValue(undefined);
+  });
+
+  it('pushes fingerprint to hub after recording', async () => {
+    mockWithRls.mockImplementation(async (_ctx: any, fn: any) => {
+      const mockTx = {
+        select: () => ({
+          from: () => ({
+            where: () => ({
+              limit: () => Promise.resolve([]),
+            }),
+          }),
+        }),
+        insert: () => ({
+          values: vi.fn().mockResolvedValue(undefined),
+        }),
+        update: () => ({
+          set: () => ({
+            where: vi.fn().mockResolvedValue(undefined),
+          }),
+        }),
+      };
+      return fn(mockTx);
+    });
+
+    const checkLocalSpy = vi
+      .spyOn(simsubService, 'checkLocal')
+      .mockResolvedValue([]);
+    const checkRemoteSpy = vi
+      .spyOn(simsubService, 'checkRemote')
+      .mockResolvedValue([]);
+
+    await simsubService.performFullCheck(
+      makeEnv({ HUB_DOMAIN: 'hub.example.com' }),
+      'sub1',
+      'v1',
+      'user1',
+      'org1',
+    );
+
+    expect(mockPushFingerprint).toHaveBeenCalled();
+    checkLocalSpy.mockRestore();
+    checkRemoteSpy.mockRestore();
   });
 });
