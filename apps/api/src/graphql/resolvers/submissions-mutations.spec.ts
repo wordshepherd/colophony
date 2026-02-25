@@ -293,6 +293,9 @@ describe('Submission mutations — resolver wiring', () => {
       submittedAt: null,
       createdAt: new Date(),
       updatedAt: new Date(),
+      simSubOverride: false,
+      simSubCheckResult: null,
+      simSubCheckedAt: null,
       searchVector: null,
     };
     // eslint-disable-next-line @typescript-eslint/unbound-method
@@ -391,6 +394,9 @@ describe('Submission mutations — resolver wiring', () => {
         submittedAt: new Date(),
         createdAt: new Date(),
         updatedAt: new Date(),
+        simSubOverride: false,
+        simSubCheckResult: null,
+        simSubCheckedAt: null,
         searchVector: null,
       },
       historyEntry: {
@@ -454,6 +460,9 @@ describe('Submission mutations — resolver wiring', () => {
       submittedAt: null,
       createdAt: new Date(),
       updatedAt: new Date(),
+      simSubOverride: false,
+      simSubCheckResult: null,
+      simSubCheckedAt: null,
       searchVector: null,
     };
     // eslint-disable-next-line @typescript-eslint/unbound-method
@@ -526,6 +535,9 @@ describe('Submission mutations — resolver wiring', () => {
       submittedAt: null,
       createdAt: new Date(),
       updatedAt: new Date(),
+      simSubOverride: false,
+      simSubCheckResult: null,
+      simSubCheckedAt: null,
       searchVector: null,
     };
     // eslint-disable-next-line @typescript-eslint/unbound-method

@@ -1,4 +1,5 @@
 import {
+  boolean,
   pgTable,
   pgPolicy,
   uuid,
@@ -12,7 +13,7 @@ import {
   customType,
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
-import { submissionStatusEnum } from "./enums";
+import { submissionStatusEnum, simSubCheckResultEnum } from "./enums";
 import { organizations } from "./organizations";
 import { users } from "./users";
 import { formDefinitions } from "./forms";
@@ -52,6 +53,7 @@ export const submissionPeriods = pgTable(
     publicationId: uuid("publication_id").references(() => publications.id, {
       onDelete: "set null",
     }),
+    simSubProhibited: boolean("sim_sub_prohibited").notNull().default(false),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
@@ -112,6 +114,9 @@ export const submissions = pgTable(
       .defaultNow()
       .notNull()
       .$defaultFn(() => new Date()),
+    simSubOverride: boolean("sim_sub_override").notNull().default(false),
+    simSubCheckResult: simSubCheckResultEnum("sim_sub_check_result"),
+    simSubCheckedAt: timestamp("sim_sub_checked_at", { withTimezone: true }),
     searchVector: tsvector("search_vector"),
   },
   (table) => [
@@ -165,6 +170,65 @@ export const submissionHistory = pgTable(
       table.changedAt,
     ),
     pgPolicy("submission_history_org_isolation", {
+      for: "all",
+      using: sql`submission_id IN (
+        SELECT id FROM submissions
+        WHERE organization_id = current_org_id()
+      )`,
+    }),
+  ],
+).enableRLS();
+
+// --- sim_sub_checks ---
+
+export const simSubChecks = pgTable(
+  "sim_sub_checks",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    submissionId: uuid("submission_id")
+      .notNull()
+      .references(() => submissions.id, { onDelete: "cascade" }),
+    fingerprint: varchar("fingerprint", { length: 64 }).notNull(),
+    submitterDid: varchar("submitter_did", { length: 512 }).notNull(),
+    result: simSubCheckResultEnum("result").notNull(),
+    localConflicts: jsonb("local_conflicts")
+      .$type<
+        Array<{
+          publicationName: string;
+          submittedAt: string;
+          periodName?: string;
+        }>
+      >()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
+    remoteResults: jsonb("remote_results")
+      .$type<
+        Array<{
+          domain: string;
+          status: "checked" | "timeout" | "error" | "unreachable";
+          found?: boolean;
+          conflicts?: Array<{
+            publicationName: string;
+            submittedAt: string;
+            periodName?: string;
+          }>;
+          durationMs?: number;
+        }>
+      >()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
+    overriddenBy: uuid("overridden_by").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    overriddenAt: timestamp("overridden_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    index("sim_sub_checks_submission_id_idx").on(table.submissionId),
+    index("sim_sub_checks_fingerprint_idx").on(table.fingerprint),
+    pgPolicy("sim_sub_checks_org_isolation", {
       for: "all",
       using: sql`submission_id IN (
         SELECT id FROM submissions
