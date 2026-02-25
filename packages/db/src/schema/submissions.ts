@@ -117,6 +117,10 @@ export const submissions = pgTable(
     simSubOverride: boolean("sim_sub_override").notNull().default(false),
     simSubCheckResult: simSubCheckResultEnum("sim_sub_check_result"),
     simSubCheckedAt: timestamp("sim_sub_checked_at", { withTimezone: true }),
+    transferredFromDomain: varchar("transferred_from_domain", { length: 512 }),
+    transferredFromTransferId: varchar("transferred_from_transfer_id", {
+      length: 255,
+    }),
     searchVector: tsvector("search_vector"),
   },
   (table) => [

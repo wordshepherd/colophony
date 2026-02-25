@@ -18,6 +18,7 @@ import type {
   SystemAuditParams,
   FederationAuditParams,
   SimSubAuditParams,
+  TransferAuditParams,
   ListAuditEventsInput,
 } from '@colophony/types';
 
@@ -210,7 +211,8 @@ export const auditService = {
       | UserAuditParams
       | SystemAuditParams
       | FederationAuditParams
-      | SimSubAuditParams,
+      | SimSubAuditParams
+      | TransferAuditParams,
   ): Promise<void> {
     if (params.organizationId) {
       throw new Error(

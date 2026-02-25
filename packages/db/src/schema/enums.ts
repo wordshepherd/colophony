@@ -123,6 +123,16 @@ export const simSubCheckResultEnum = pgEnum("SimSubCheckResult", [
   "SKIPPED",
 ]);
 
+export const pieceTransferStatusEnum = pgEnum("PieceTransferStatus", [
+  "PENDING",
+  "FILES_REQUESTED",
+  "COMPLETED",
+  "REJECTED",
+  "FAILED",
+  "CANCELLED",
+  "EXPIRED",
+]);
+
 export const contractStatusEnum = pgEnum("ContractStatus", [
   "DRAFT",
   "SENT",
