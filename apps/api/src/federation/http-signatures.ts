@@ -189,14 +189,18 @@ export async function verifyFederationSignature(
   }
   const signatureBytes = Buffer.from(sigMatch[1], 'base64');
 
-  // Validate timestamp freshness
+  // Validate timestamp freshness — date header is required for replay protection
   const dateHeader = normalizedHeaders['date'];
-  if (dateHeader) {
-    const requestTime = new Date(dateHeader).getTime();
-    const now = Date.now();
-    if (Math.abs(now - requestTime) > maxAge * 1000) {
-      throw new Error('Signature expired: timestamp outside allowed window');
-    }
+  if (!dateHeader) {
+    throw new Error('Missing required Date header for replay protection');
+  }
+  const requestTime = new Date(dateHeader).getTime();
+  if (Number.isNaN(requestTime)) {
+    throw new Error('Invalid Date header format');
+  }
+  const now = Date.now();
+  if (Math.abs(now - requestTime) > maxAge * 1000) {
+    throw new Error('Signature expired: timestamp outside allowed window');
   }
 
   // Verify Content-Digest if body is present

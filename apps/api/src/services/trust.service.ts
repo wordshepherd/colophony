@@ -246,10 +246,38 @@ export const trustService = {
     url: string,
     body: string,
   ): Promise<{ orgIds: string[] }> {
-    // Verify signature using the public key from the request itself
-    // (verified below that it matches the key served at the remote's DID endpoint)
+    // Validate that the claimed public key matches the remote's published metadata
+    // This prevents domain spoofing — attacker can't claim any domain with a self-signed key
+    let remotePublicKey: string;
+    try {
+      const remoteMetadata = await fetch(
+        `https://${request.domain}/.well-known/colophony`,
+        { signal: AbortSignal.timeout(10_000) },
+      );
+      if (!remoteMetadata.ok) {
+        throw new Error(
+          `Remote metadata fetch failed: ${remoteMetadata.status}`,
+        );
+      }
+      const metadata = federationMetadataSchema.parse(
+        await remoteMetadata.json(),
+      );
+      remotePublicKey = metadata.publicKey;
+    } catch (err) {
+      throw new TrustSignatureVerificationError(
+        `Cannot verify remote identity for ${request.domain}: ${err instanceof Error ? err.message : 'unknown error'}`,
+      );
+    }
+
+    if (remotePublicKey !== request.publicKey) {
+      throw new TrustSignatureVerificationError(
+        'Public key in request does not match remote metadata',
+      );
+    }
+
+    // Verify signature using the validated public key
     const keyLookup = async (keyId: string): Promise<string | null> => {
-      if (keyId === request.keyId) return request.publicKey;
+      if (keyId === request.keyId) return remotePublicKey;
       return null;
     };
 
@@ -307,8 +335,13 @@ export const trustService = {
 
           orgIds.push(org.id);
         });
-      } catch {
-        // Skip org on conflict — unique constraint violation is expected
+      } catch (err) {
+        // Skip org on unique constraint violation (peer already exists) — expected race condition
+        const isUniqueViolation =
+          err instanceof Error &&
+          'code' in err &&
+          (err as { code: string }).code === '23505';
+        if (!isUniqueViolation) throw err;
       }
     }
 

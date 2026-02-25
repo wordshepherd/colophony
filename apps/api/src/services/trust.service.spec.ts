@@ -281,6 +281,12 @@ describe('trust.service', () => {
 
   describe('handleInboundTrustRequest', () => {
     it('verifies signature and creates pending_inbound peers', async () => {
+      // Mock remote metadata fetch for key validation
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => sampleMetadataResponse,
+      });
+
       mockVerifyFederationSignature.mockResolvedValueOnce({
         valid: true,
         keyId: 'remote.example.com#main',
@@ -315,6 +321,12 @@ describe('trust.service', () => {
     });
 
     it('rejects invalid signature', async () => {
+      // Mock remote metadata fetch for key validation
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => sampleMetadataResponse,
+      });
+
       mockVerifyFederationSignature.mockResolvedValueOnce({
         valid: false,
         keyId: 'remote.example.com#main',
