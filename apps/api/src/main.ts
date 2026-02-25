@@ -44,6 +44,9 @@ import { registerTransferRoutes } from './federation/transfer.routes.js';
 import { registerTransferAdminRoutes } from './federation/transfer-admin.routes.js';
 import { registerMigrationRoutes } from './federation/migration.routes.js';
 import { registerMigrationAdminRoutes } from './federation/migration-admin.routes.js';
+import { registerHubRoutes } from './federation/hub.routes.js';
+import { registerHubAdminRoutes } from './federation/hub-admin.routes.js';
+import { hubClientService } from './services/hub-client.service.js';
 
 export async function buildApp(env: Env): Promise<FastifyInstance> {
   const app = Fastify({
@@ -198,6 +201,14 @@ export async function buildApp(env: Env): Promise<FastifyInstance> {
     await app.register(async (scope) => {
       await registerMigrationAdminRoutes(scope, { env });
     });
+    // Hub S2S routes (only active when mode = managed_hub)
+    await app.register(async (scope) => {
+      await registerHubRoutes(scope, { env });
+    });
+    // Hub admin routes (OIDC + ADMIN)
+    await app.register(async (scope) => {
+      await registerHubAdminRoutes(scope, { env });
+    });
   }
 
   // tRPC adapter
@@ -279,6 +290,16 @@ async function start(): Promise<void> {
   startOutboxPollerWorker(env);
   await startOutboxPoller(env);
   app.log.info('Outbox poller worker started');
+
+  // Hub registration (fire-and-forget — don't block startup)
+  if (env.HUB_DOMAIN && env.HUB_REGISTRATION_TOKEN) {
+    hubClientService.registerWithHub(env).catch((err) => {
+      app.log.warn(
+        { err, hubDomain: env.HUB_DOMAIN },
+        'Hub registration failed — will retry on next startup',
+      );
+    });
+  }
 
   // Graceful shutdown
   const shutdown = async (signal: string) => {

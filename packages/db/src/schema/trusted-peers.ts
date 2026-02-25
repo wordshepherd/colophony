@@ -4,6 +4,7 @@ import {
   uuid,
   varchar,
   text,
+  boolean,
   jsonb,
   timestamp,
   index,
@@ -35,6 +36,7 @@ export const trustedPeers = pgTable(
     protocolVersion: varchar("protocol_version", { length: 20 })
       .notNull()
       .default("1.0"),
+    hubAttested: boolean("hub_attested").notNull().default(false),
     lastVerifiedAt: timestamp("last_verified_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()

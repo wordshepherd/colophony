@@ -6,6 +6,8 @@ import {
   eq,
   and,
 } from '@colophony/db';
+import * as jose from 'jose';
+import crypto from 'node:crypto';
 import {
   AuditActions,
   AuditResources,
@@ -16,6 +18,7 @@ import {
   type PeerActionInput,
   type TrustedPeer,
   type RemoteMetadataPreview,
+  type HubAttestationTrustRequest,
 } from '@colophony/types';
 import type { Env } from '../config/env.js';
 import { auditService } from './audit.service.js';
@@ -654,5 +657,124 @@ export const trustService = {
 
       return row ? mapPeerRow(row) : null;
     });
+  },
+
+  /**
+   * Handle hub-attested auto-trust.
+   * Verifies the attestation JWT against the hub's public key, then
+   * creates active peers directly for all non-opted-out orgs.
+   */
+  async handleHubAttestedTrust(
+    _env: Env,
+    request: HubAttestationTrustRequest,
+  ): Promise<{ orgIds: string[] }> {
+    // Fetch hub's public key from its well-known metadata
+    let hubPublicKey: string;
+    try {
+      const hubMetadataResponse = await fetch(
+        `https://${request.hubDomain}/.well-known/colophony`,
+        { signal: AbortSignal.timeout(10_000) },
+      );
+      if (!hubMetadataResponse.ok) {
+        throw new Error(`HTTP ${hubMetadataResponse.status}`);
+      }
+      const hubMetadata = federationMetadataSchema.parse(
+        await hubMetadataResponse.json(),
+      );
+      hubPublicKey = hubMetadata.publicKey;
+    } catch (err) {
+      throw new TrustSignatureVerificationError(
+        `Cannot fetch hub metadata from ${request.hubDomain}: ${err instanceof Error ? err.message : 'unknown'}`,
+      );
+    }
+
+    // Verify the attestation JWT
+    try {
+      const pubKeyObj = crypto.createPublicKey(hubPublicKey);
+      const { payload } = await jose.jwtVerify(
+        request.attestationToken,
+        pubKeyObj,
+        {
+          issuer: request.hubDomain,
+          subject: request.domain,
+          audience: 'colophony:managed-hub',
+        },
+      );
+
+      // Verify instance public key matches attestation
+      if (payload.instancePublicKey !== request.publicKey) {
+        throw new TrustSignatureVerificationError(
+          'Instance public key does not match attestation',
+        );
+      }
+    } catch (err) {
+      if (err instanceof TrustSignatureVerificationError) throw err;
+      throw new TrustSignatureVerificationError(
+        `Attestation JWT verification failed: ${err instanceof Error ? err.message : 'unknown'}`,
+      );
+    }
+
+    // Query non-opted-out org IDs via superuser db (read-only, no tenant data)
+    const orgs = await db
+      .select({ id: organizations.id })
+      .from(organizations)
+      .where(eq(organizations.federationOptedOut, false));
+
+    const orgIds: string[] = [];
+    const capabilities = (request.requestedCapabilities ?? {}) as Record<
+      string,
+      boolean
+    >;
+
+    // For each org, create an active peer directly (hub-attested — no admin acceptance needed)
+    for (const org of orgs) {
+      try {
+        await withRls({ orgId: org.id }, async (tx) => {
+          const [existing] = await tx
+            .select()
+            .from(trustedPeers)
+            .where(eq(trustedPeers.domain, request.domain))
+            .limit(1);
+
+          if (existing) return; // Skip — already have a relationship
+
+          await tx.insert(trustedPeers).values({
+            organizationId: org.id,
+            domain: request.domain,
+            instanceUrl: request.instanceUrl,
+            publicKey: request.publicKey,
+            keyId: request.keyId,
+            grantedCapabilities: capabilities,
+            status: 'active',
+            initiatedBy: 'remote',
+            hubAttested: true,
+            protocolVersion: request.protocolVersion,
+            lastVerifiedAt: new Date(),
+          });
+
+          await auditService.log(tx, {
+            resource: AuditResources.HUB,
+            action: AuditActions.HUB_AUTO_TRUST_ESTABLISHED,
+            organizationId: org.id,
+            newValue: {
+              domain: request.domain,
+              hubDomain: request.hubDomain,
+              capabilities,
+            },
+          });
+
+          orgIds.push(org.id);
+        });
+      } catch (err) {
+        // Skip org on unique constraint violation (peer already exists)
+        const isUniqueViolation =
+          err instanceof Error &&
+          'code' in err &&
+          (err as { code: string }).code === '23505';
+        if (!isUniqueViolation) throw err;
+      }
+    }
+
+    return { orgIds };
   },
 };

@@ -36,4 +36,9 @@ export const federationConfig = pgTable("federation_config", {
   updatedAt: timestamp("updated_at", { withTimezone: true })
     .defaultNow()
     .notNull(),
+  hubAttestationToken: text("hub_attestation_token"),
+  hubAttestationExpiresAt: timestamp("hub_attestation_expires_at", {
+    withTimezone: true,
+  }),
+  hubDomain: varchar("hub_domain", { length: 512 }),
 });
