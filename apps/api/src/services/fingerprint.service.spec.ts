@@ -12,7 +12,8 @@ vi.mock('@colophony/db', () => ({
   },
   manuscripts: { id: 'id', title: 'title' },
   files: {
-    storageKey: 'storage_key',
+    filename: 'filename',
+    size: 'size',
     manuscriptVersionId: 'manuscript_version_id',
     scanStatus: 'scan_status',
   },
@@ -132,7 +133,9 @@ describe('fingerprintService.computeAndStore', () => {
     // files query
     mockTx.select.mockReturnValueOnce({
       from: vi.fn().mockReturnValue({
-        where: vi.fn().mockResolvedValue([{ storageKey: 'key1' }]),
+        where: vi
+          .fn()
+          .mockResolvedValue([{ filename: 'poem.pdf', size: 1024 }]),
       }),
     });
 

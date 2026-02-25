@@ -93,9 +93,15 @@ export const fingerprintService = {
       );
     }
 
-    // Get CLEAN file storage keys as file hashes
+    // Get CLEAN file identifiers for fingerprinting.
+    // Uses filename + size (not storageKey) for cross-instance stability:
+    // the same file uploaded to different instances has the same name/size
+    // but different storage keys.
     const cleanFiles = await tx
-      .select({ storageKey: files.storageKey })
+      .select({
+        filename: files.filename,
+        size: files.size,
+      })
       .from(files)
       .where(
         and(
@@ -104,7 +110,7 @@ export const fingerprintService = {
         ),
       );
 
-    const fileHashes = cleanFiles.map((f) => f.storageKey);
+    const fileHashes = cleanFiles.map((f) => `${f.filename}:${f.size}`);
 
     // Check if there's a linked submission with content text
     const [linkedSubmission] = await tx

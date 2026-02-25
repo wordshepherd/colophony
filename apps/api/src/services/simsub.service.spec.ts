@@ -100,6 +100,7 @@ vi.mock('./federation.service.js', () => ({
   federationService: {
     getOrInitConfig: (...args: unknown[]) => mockGetOrInitConfig(...args),
   },
+  domainToDid: (domain: string) => domain.replace(/:/g, '%3A'),
 }));
 
 const mockGetOrCompute = vi.fn();
@@ -283,6 +284,7 @@ describe('simsubService.checkRemote', () => {
       makeEnv({ FEDERATION_ENABLED: false }),
       'fp',
       'did:web:x:users:a',
+      'org1',
     );
     expect(result).toEqual([]);
   });
@@ -293,9 +295,22 @@ describe('simsubService.checkRemote', () => {
       privateKey: 'test-key',
     });
 
-    dbSelectResult = [
-      { peerDomain: 'peer1.com', instanceUrl: 'https://peer1.com' },
-    ];
+    // withRls for peer query — return peers via mock tx
+    mockWithRls.mockImplementationOnce(async (_ctx: any, fn: any) => {
+      return fn({
+        select: () => ({
+          from: () => ({
+            where: () =>
+              Promise.resolve([
+                {
+                  peerDomain: 'peer1.com',
+                  instanceUrl: 'https://peer1.com',
+                },
+              ]),
+          }),
+        }),
+      });
+    });
 
     mockSignFederationRequest.mockReturnValue({
       headers: { signature: 'sig', 'signature-input': 'input' },
@@ -310,6 +325,7 @@ describe('simsubService.checkRemote', () => {
       makeEnv(),
       'fp',
       'did:web:test.example.com:users:alice',
+      'org1',
     );
 
     expect(results).toHaveLength(1);
@@ -323,9 +339,18 @@ describe('simsubService.checkRemote', () => {
       privateKey: 'test-key',
     });
 
-    dbSelectResult = [
-      { peerDomain: 'slow.com', instanceUrl: 'https://slow.com' },
-    ];
+    mockWithRls.mockImplementationOnce(async (_ctx: any, fn: any) => {
+      return fn({
+        select: () => ({
+          from: () => ({
+            where: () =>
+              Promise.resolve([
+                { peerDomain: 'slow.com', instanceUrl: 'https://slow.com' },
+              ]),
+          }),
+        }),
+      });
+    });
 
     mockSignFederationRequest.mockReturnValue({
       headers: { signature: 'sig', 'signature-input': 'input' },
@@ -338,6 +363,7 @@ describe('simsubService.checkRemote', () => {
       makeEnv(),
       'fp',
       'did:web:test.example.com:users:alice',
+      'org1',
     );
 
     expect(results).toHaveLength(1);
@@ -350,9 +376,18 @@ describe('simsubService.checkRemote', () => {
       privateKey: 'test-key',
     });
 
-    dbSelectResult = [
-      { peerDomain: 'down.com', instanceUrl: 'https://down.com' },
-    ];
+    mockWithRls.mockImplementationOnce(async (_ctx: any, fn: any) => {
+      return fn({
+        select: () => ({
+          from: () => ({
+            where: () =>
+              Promise.resolve([
+                { peerDomain: 'down.com', instanceUrl: 'https://down.com' },
+              ]),
+          }),
+        }),
+      });
+    });
 
     mockSignFederationRequest.mockReturnValue({
       headers: { signature: 'sig', 'signature-input': 'input' },
@@ -364,6 +399,7 @@ describe('simsubService.checkRemote', () => {
       makeEnv(),
       'fp',
       'did:web:test.example.com:users:alice',
+      'org1',
     );
 
     expect(results).toHaveLength(1);
@@ -377,9 +413,21 @@ describe('simsubService.checkRemote', () => {
     });
 
     // SQL DISTINCT ON handles dedup — only one peer per domain returned
-    dbSelectResult = [
-      { peerDomain: 'peer1.com', instanceUrl: 'https://peer1.com' },
-    ];
+    mockWithRls.mockImplementationOnce(async (_ctx: any, fn: any) => {
+      return fn({
+        select: () => ({
+          from: () => ({
+            where: () =>
+              Promise.resolve([
+                {
+                  peerDomain: 'peer1.com',
+                  instanceUrl: 'https://peer1.com',
+                },
+              ]),
+          }),
+        }),
+      });
+    });
 
     mockSignFederationRequest.mockReturnValue({
       headers: { signature: 'sig', 'signature-input': 'input' },
@@ -394,6 +442,7 @@ describe('simsubService.checkRemote', () => {
       makeEnv(),
       'fp',
       'did:web:test.example.com:users:alice',
+      'org1',
     );
 
     expect(results).toHaveLength(1);

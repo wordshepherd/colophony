@@ -24,7 +24,7 @@ import {
 } from '@colophony/types';
 import type { Env } from '../config/env.js';
 import { auditService } from './audit.service.js';
-import { federationService } from './federation.service.js';
+import { federationService, domainToDid } from './federation.service.js';
 import { fingerprintService } from './fingerprint.service.js';
 import { signFederationRequest } from '../federation/http-signatures.js';
 
@@ -187,6 +187,7 @@ export const simsubService = {
     env: Env,
     fingerprint: string,
     submitterDid: string,
+    orgId: string,
   ): Promise<SimSubRemoteResult[]> {
     if (!env.FEDERATION_ENABLED) {
       return [];
@@ -200,16 +201,18 @@ export const simsubService = {
     const domain = env.FEDERATION_DOMAIN ?? 'localhost';
 
     // Query active trusted peers with simsub.respond capability.
-    // Superuser — justified: cross-org peer lookup for federation fanout.
-    const peers = await db
-      .select({
-        peerDomain: sql<string>`DISTINCT ON (domain) domain`,
-        instanceUrl: sql<string>`instance_url`,
-      })
-      .from(sql`trusted_peers`)
-      .where(
-        sql`status = 'active' AND granted_capabilities @> '{"simsub.respond": true}'::jsonb`,
-      );
+    // Scoped to the submission's org — only check peers trusted by this org.
+    const peers = await withRls({ orgId }, async (tx) => {
+      return tx
+        .select({
+          peerDomain: sql<string>`DISTINCT ON (domain) domain`,
+          instanceUrl: sql<string>`instance_url`,
+        })
+        .from(sql`trusted_peers`)
+        .where(
+          sql`status = 'active' AND granted_capabilities @> '{"simsub.respond": true}'::jsonb`,
+        );
+    });
 
     if (peers.length === 0) {
       return [];
@@ -319,8 +322,9 @@ export const simsubService = {
       },
     );
 
-    // Build submitter DID
-    const domain = env.FEDERATION_DOMAIN ?? 'localhost';
+    // Build submitter DID (encode port-bearing domains per did:web spec)
+    const rawDomain = env.FEDERATION_DOMAIN ?? 'localhost';
+    const encodedDomain = domainToDid(rawDomain);
     const [user] = await db
       .select({ email: users.email })
       .from(users)
@@ -328,12 +332,12 @@ export const simsubService = {
       .limit(1);
 
     const emailLocal = user?.email?.split('@')[0] ?? submitterUserId;
-    const submitterDid = `did:web:${domain}:users:${emailLocal}`;
+    const submitterDid = `did:web:${encodedDomain}:users:${emailLocal}`;
 
     // Run local + remote checks in parallel
     const [localConflicts, remoteResults] = await Promise.all([
       this.checkLocal(submitterUserId, fingerprint, submissionId),
-      this.checkRemote(env, fingerprint, submitterDid),
+      this.checkRemote(env, fingerprint, submitterDid, orgId),
     ]);
 
     // Aggregate result
@@ -342,7 +346,10 @@ export const simsubService = {
       ...remoteResults.flatMap((r) => r.conflicts ?? []),
     ];
     const hasUnreachable = remoteResults.some(
-      (r) => r.status === 'unreachable' || r.status === 'timeout',
+      (r) =>
+        r.status === 'unreachable' ||
+        r.status === 'timeout' ||
+        r.status === 'error',
     );
 
     let result: 'CLEAR' | 'CONFLICT' | 'PARTIAL';

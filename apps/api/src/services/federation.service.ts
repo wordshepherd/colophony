@@ -103,7 +103,7 @@ function pemToJwk(pem: string): {
  * Encode a domain for did:web — port colons become %3A per spec.
  * "localhost:4000" → "localhost%3A4000"
  */
-function domainToDid(domain: string): string {
+export function domainToDid(domain: string): string {
   return domain.replace(/:/g, '%3A');
 }
 
