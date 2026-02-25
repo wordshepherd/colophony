@@ -48,6 +48,9 @@ Per-directory CLAUDE.md files contain domain-specific details:
 | **Federation discovery** | `apps/api/src/federation/discovery.routes.ts`                            |
 | **Federation DID**       | `apps/api/src/federation/did.routes.ts`                                  |
 | **Federation service**   | `apps/api/src/services/federation.service.ts`                            |
+| **Federation trust**     | `apps/api/src/federation/trust.routes.ts` (S2S), `trust-admin.routes.ts` |
+| **Trust service**        | `apps/api/src/services/trust.service.ts`                                 |
+| **HTTP signatures**      | `apps/api/src/federation/http-signatures.ts`                             |
 | **Next.js frontend**     | `apps/web/`                                                              |
 | **tRPC client**          | `apps/web/src/lib/trpc.ts`                                               |
 | **Env config (Zod)**     | `apps/api/src/config/env.ts`                                             |
