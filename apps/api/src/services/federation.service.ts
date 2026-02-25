@@ -250,7 +250,9 @@ export const federationService = {
       domain: env.FEDERATION_DOMAIN ?? 'localhost',
       publicKey: config.publicKey,
       keyId: config.keyId,
-      capabilities: config.capabilities,
+      capabilities: [
+        ...new Set([...config.capabilities, 'simsub.check', 'simsub.respond']),
+      ],
       mode: config.mode,
       contactEmail: config.contactEmail,
       publications: pubs,
