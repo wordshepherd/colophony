@@ -40,6 +40,7 @@
 | Trust admin       | `src/federation/trust-admin.routes.ts`     |
 | Trust service     | `src/services/trust.service.ts`            |
 | HTTP signatures   | `src/federation/http-signatures.ts`        |
+| Federation auth   | `src/federation/federation-auth.ts`        |
 
 ### Service Method Naming
 
