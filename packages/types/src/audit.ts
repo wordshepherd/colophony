@@ -135,6 +135,7 @@ export const AuditActions = {
 
   // Federation lifecycle
   FEDERATION_KEY_GENERATED: "FEDERATION_KEY_GENERATED",
+  FEDERATION_USER_KEY_GENERATED: "FEDERATION_USER_KEY_GENERATED",
 
   // Audit access
   AUDIT_ACCESSED: "AUDIT_ACCESSED",
@@ -357,7 +358,9 @@ export interface CmsConnectionAuditParams extends BaseAuditParams {
 
 export interface FederationAuditParams extends BaseAuditParams {
   resource: typeof AuditResources.FEDERATION;
-  action: typeof AuditActions.FEDERATION_KEY_GENERATED;
+  action:
+    | typeof AuditActions.FEDERATION_KEY_GENERATED
+    | typeof AuditActions.FEDERATION_USER_KEY_GENERATED;
 }
 
 export interface AuditAccessAuditParams extends BaseAuditParams {

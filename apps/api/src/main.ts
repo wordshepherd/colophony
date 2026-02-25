@@ -35,6 +35,7 @@ import {
 } from './queues/index.js';
 import { registerInngestRoutes } from './inngest/serve.js';
 import { registerFederationDiscoveryRoutes } from './federation/discovery.routes.js';
+import { registerFederationDidRoutes } from './federation/did.routes.js';
 
 export async function buildApp(env: Env): Promise<FastifyInstance> {
   const app = Fastify({
@@ -157,10 +158,13 @@ export async function buildApp(env: Env): Promise<FastifyInstance> {
     await registerInngestRoutes(scope);
   });
 
-  // Federation discovery — isolated scope (public .well-known endpoints)
+  // Federation — isolated scopes (public endpoints)
   if (env.FEDERATION_ENABLED) {
     await app.register(async (scope) => {
       await registerFederationDiscoveryRoutes(scope, { env });
+    });
+    await app.register(async (scope) => {
+      await registerFederationDidRoutes(scope, { env });
     });
   }
 
