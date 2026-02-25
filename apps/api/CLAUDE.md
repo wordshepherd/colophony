@@ -36,6 +36,10 @@
 | CMS adapters      | `src/adapters/cms/`                        |
 | Documenso adapter | `src/adapters/documenso.adapter.ts`        |
 | Outbox poller     | `src/workers/outbox-poller.worker.ts`      |
+| Federation trust  | `src/federation/trust.routes.ts` (S2S)     |
+| Trust admin       | `src/federation/trust-admin.routes.ts`     |
+| Trust service     | `src/services/trust.service.ts`            |
+| HTTP signatures   | `src/federation/http-signatures.ts`        |
 
 ### Service Method Naming
 

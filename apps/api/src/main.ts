@@ -36,6 +36,8 @@ import {
 import { registerInngestRoutes } from './inngest/serve.js';
 import { registerFederationDiscoveryRoutes } from './federation/discovery.routes.js';
 import { registerFederationDidRoutes } from './federation/did.routes.js';
+import { registerFederationTrustRoutes } from './federation/trust.routes.js';
+import { registerFederationTrustAdminRoutes } from './federation/trust-admin.routes.js';
 
 export async function buildApp(env: Env): Promise<FastifyInstance> {
   const app = Fastify({
@@ -165,6 +167,12 @@ export async function buildApp(env: Env): Promise<FastifyInstance> {
     });
     await app.register(async (scope) => {
       await registerFederationDidRoutes(scope, { env });
+    });
+    await app.register(async (scope) => {
+      await registerFederationTrustRoutes(scope, { env });
+    });
+    await app.register(async (scope) => {
+      await registerFederationTrustAdminRoutes(scope, { env });
     });
   }
 

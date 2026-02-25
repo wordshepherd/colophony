@@ -108,6 +108,14 @@ export const federationModeEnum = pgEnum("FederationMode", [
   "managed_hub",
 ]);
 
+export const peerTrustStatusEnum = pgEnum("PeerTrustStatus", [
+  "pending_outbound",
+  "pending_inbound",
+  "active",
+  "rejected",
+  "revoked",
+]);
+
 export const contractStatusEnum = pgEnum("ContractStatus", [
   "DRAFT",
   "SENT",
