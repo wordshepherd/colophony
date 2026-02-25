@@ -372,7 +372,9 @@ export const federationService = {
     const domain = env.FEDERATION_DOMAIN ?? 'localhost';
 
     // Look up user by email local part — must be non-deleted, non-guest
-    const email = `${localPart}@${domain}`;
+    // Strip port from domain for email matching (did:web encodes port as %3A)
+    const emailDomain = domain.replace(/:\d+$/, '');
+    const email = `${localPart}@${emailDomain}`;
     const [user] = await db
       .select({
         id: users.id,
@@ -393,7 +395,11 @@ export const federationService = {
       throw new UserDidNotFoundError(localPart);
     }
 
-    const keypair = await this.getOrCreateUserKeypair(user.id, domain);
+    const keypair = await this.getOrCreateUserKeypair(
+      user.id,
+      domain,
+      localPart,
+    );
 
     const didId = `did:web:${domainToDid(domain)}:users:${localPart}`;
     const keyRef = `${didId}#key-1`;
@@ -429,6 +435,7 @@ export const federationService = {
   async getOrCreateUserKeypair(
     userId: string,
     domain: string,
+    localPart: string,
   ): Promise<{ publicKey: string; keyId: string }> {
     // Check for existing keypair
     const [existing] = await db
@@ -450,7 +457,7 @@ export const federationService = {
       privateKeyEncoding: { type: 'pkcs8', format: 'pem' },
     });
 
-    const keyId = `did:web:${domainToDid(domain)}:users:${userId}#key-1`;
+    const keyId = `did:web:${domainToDid(domain)}:users:${localPart}#key-1`;
 
     // INSERT ON CONFLICT handles race condition
     await db

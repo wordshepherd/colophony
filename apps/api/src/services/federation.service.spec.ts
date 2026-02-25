@@ -671,6 +671,7 @@ describe('federationService', () => {
       const result = await federationService.getOrCreateUserKeypair(
         'user-1',
         'magazine.example',
+        'alice',
       );
 
       expect(result.publicKey).toBe('other-process-pub-key');
