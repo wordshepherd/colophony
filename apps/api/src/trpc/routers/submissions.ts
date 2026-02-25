@@ -15,11 +15,20 @@ import {
   paginatedResponseSchema,
   initiateTransferInputSchema,
   transferIdParamSchema,
+  requestMigrationInputSchema,
+  migrationIdParamSchema,
+  migrationListQuerySchema,
 } from '@colophony/types';
-import { orgProcedure, createRouter, requireScopes } from '../init.js';
+import {
+  orgProcedure,
+  userProcedure,
+  createRouter,
+  requireScopes,
+} from '../init.js';
 import { submissionService } from '../../services/submission.service.js';
 import { simsubService } from '../../services/simsub.service.js';
 import { transferService } from '../../services/transfer.service.js';
+import { migrationService } from '../../services/migration.service.js';
 import { toServiceContext } from '../../services/context.js';
 import { assertEditorOrAdmin } from '../../services/errors.js';
 import { mapServiceError } from '../error-mapper.js';
@@ -237,6 +246,75 @@ export const submissionsRouter = createRouter({
           input.transferId,
         );
         return { success: true };
+      } catch (e) {
+        mapServiceError(e);
+      }
+    }),
+
+  // ─── Identity migration procedures ───
+
+  /** Request a migration from destination side (needs org context for trust lookup). */
+  requestMigration: orgProcedure
+    .use(requireScopes('submissions:write'))
+    .input(requestMigrationInputSchema)
+    .mutation(async ({ ctx, input }) => {
+      try {
+        const env = validateEnv();
+        return await migrationService.requestMigration(env, {
+          userId: ctx.authContext.userId,
+          organizationId: ctx.authContext.orgId,
+          originDomain: input.originDomain,
+          originEmail: input.originEmail,
+        });
+      } catch (e) {
+        mapServiceError(e);
+      }
+    }),
+
+  /** Approve an outbound migration (user-level, no org context needed). */
+  approveMigration: userProcedure
+    .use(requireScopes('submissions:write'))
+    .input(migrationIdParamSchema)
+    .mutation(async ({ ctx, input }) => {
+      try {
+        const env = validateEnv();
+        await migrationService.approveMigration(env, {
+          userId: ctx.authContext.userId,
+          migrationId: input.migrationId,
+        });
+        return { success: true };
+      } catch (e) {
+        mapServiceError(e);
+      }
+    }),
+
+  /** Reject an outbound migration (user-level, no org context needed). */
+  rejectMigration: userProcedure
+    .use(requireScopes('submissions:write'))
+    .input(migrationIdParamSchema)
+    .mutation(async ({ ctx, input }) => {
+      try {
+        const env = validateEnv();
+        await migrationService.rejectMigration(env, {
+          userId: ctx.authContext.userId,
+          migrationId: input.migrationId,
+        });
+        return { success: true };
+      } catch (e) {
+        mapServiceError(e);
+      }
+    }),
+
+  /** List user's migrations (user-level, no org context needed). */
+  getMigrations: userProcedure
+    .use(requireScopes('submissions:read'))
+    .input(migrationListQuerySchema)
+    .query(async ({ ctx, input }) => {
+      try {
+        return await migrationService.listMigrationsForUser(
+          ctx.authContext.userId,
+          input,
+        );
       } catch (e) {
         mapServiceError(e);
       }

@@ -80,6 +80,7 @@ export type DidServiceEndpoint = z.infer<typeof didServiceEndpointSchema>;
 export const didDocumentSchema = z.object({
   "@context": z.array(z.string()),
   id: z.string(),
+  alsoKnownAs: z.array(z.string()).optional(),
   verificationMethod: z.array(didVerificationMethodSchema),
   authentication: z.array(z.string()),
   assertionMethod: z.array(z.string()).optional(),

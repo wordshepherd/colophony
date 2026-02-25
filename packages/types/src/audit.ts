@@ -147,6 +147,21 @@ export const AuditActions = {
   TRANSFER_FAILED: "TRANSFER_FAILED",
   TRANSFER_FILE_SERVED: "TRANSFER_FILE_SERVED",
 
+  // Identity migration lifecycle
+  MIGRATION_REQUESTED: "MIGRATION_REQUESTED",
+  MIGRATION_INBOUND_RECEIVED: "MIGRATION_INBOUND_RECEIVED",
+  MIGRATION_APPROVED: "MIGRATION_APPROVED",
+  MIGRATION_REJECTED: "MIGRATION_REJECTED",
+  MIGRATION_BUNDLE_SENT: "MIGRATION_BUNDLE_SENT",
+  MIGRATION_BUNDLE_RECEIVED: "MIGRATION_BUNDLE_RECEIVED",
+  MIGRATION_COMPLETED: "MIGRATION_COMPLETED",
+  MIGRATION_FAILED: "MIGRATION_FAILED",
+  MIGRATION_CANCELLED: "MIGRATION_CANCELLED",
+  MIGRATION_FILE_SERVED: "MIGRATION_FILE_SERVED",
+  MIGRATION_BROADCAST_SENT: "MIGRATION_BROADCAST_SENT",
+  MIGRATION_BROADCAST_RECEIVED: "MIGRATION_BROADCAST_RECEIVED",
+  USER_SOFT_DEACTIVATED: "USER_SOFT_DEACTIVATED",
+
   // Federation lifecycle
   FEDERATION_KEY_GENERATED: "FEDERATION_KEY_GENERATED",
   FEDERATION_USER_KEY_GENERATED: "FEDERATION_USER_KEY_GENERATED",
@@ -184,6 +199,7 @@ export const AuditResources = {
   FEDERATION: "federation",
   SIMSUB: "simsub",
   TRANSFER: "transfer",
+  MIGRATION: "migration",
   AUDIT: "audit",
 } as const;
 
@@ -216,7 +232,8 @@ export interface UserAuditParams extends BaseAuditParams {
     | typeof AuditActions.USER_REACTIVATED
     | typeof AuditActions.USER_REMOVED
     | typeof AuditActions.USER_EMAIL_VERIFIED
-    | typeof AuditActions.USER_GDPR_DELETED;
+    | typeof AuditActions.USER_GDPR_DELETED
+    | typeof AuditActions.USER_SOFT_DEACTIVATED;
 }
 
 export interface OrgAuditParams extends BaseAuditParams {
@@ -409,6 +426,23 @@ export interface TransferAuditParams extends BaseAuditParams {
     | typeof AuditActions.TRANSFER_FILE_SERVED;
 }
 
+export interface MigrationAuditParams extends BaseAuditParams {
+  resource: typeof AuditResources.MIGRATION;
+  action:
+    | typeof AuditActions.MIGRATION_REQUESTED
+    | typeof AuditActions.MIGRATION_INBOUND_RECEIVED
+    | typeof AuditActions.MIGRATION_APPROVED
+    | typeof AuditActions.MIGRATION_REJECTED
+    | typeof AuditActions.MIGRATION_BUNDLE_SENT
+    | typeof AuditActions.MIGRATION_BUNDLE_RECEIVED
+    | typeof AuditActions.MIGRATION_COMPLETED
+    | typeof AuditActions.MIGRATION_FAILED
+    | typeof AuditActions.MIGRATION_CANCELLED
+    | typeof AuditActions.MIGRATION_FILE_SERVED
+    | typeof AuditActions.MIGRATION_BROADCAST_SENT
+    | typeof AuditActions.MIGRATION_BROADCAST_RECEIVED;
+}
+
 export interface AuditAccessAuditParams extends BaseAuditParams {
   resource: typeof AuditResources.AUDIT;
   action: typeof AuditActions.AUDIT_ACCESSED;
@@ -443,6 +477,7 @@ export type AuditLogParams =
   | FederationAuditParams
   | SimSubAuditParams
   | TransferAuditParams
+  | MigrationAuditParams
   | AuditAccessAuditParams
   | SystemAuditParams;
 

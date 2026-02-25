@@ -1,4 +1,5 @@
 import {
+  db,
   submissions,
   files,
   manuscriptVersions,
@@ -38,6 +39,7 @@ import {
   FormNotPublishedError,
   InvalidFormDataError,
 } from './form.service.js';
+import { MigrationInvalidStateError } from './migration.service.js';
 
 // ---------------------------------------------------------------------------
 // Error classes
@@ -86,6 +88,28 @@ export class InfectedFilesError extends Error {
   constructor() {
     super('Cannot submit: one or more files have been flagged as infected');
     this.name = 'InfectedFilesError';
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Migration guard
+// ---------------------------------------------------------------------------
+
+/**
+ * Reject submissions from migrated users.
+ * Superuser `db` for a single-column lookup — minimal query, same pattern
+ * used elsewhere in submission service for user checks.
+ */
+async function assertNotMigrated(submitterId: string): Promise<void> {
+  const [user] = await db
+    .select({ migratedAt: users.migratedAt })
+    .from(users)
+    .where(eq(users.id, submitterId))
+    .limit(1);
+  if (user?.migratedAt) {
+    throw new MigrationInvalidStateError(
+      'User has migrated and cannot create new submissions',
+    );
   }
 }
 
@@ -208,6 +232,8 @@ export const submissionService = {
     orgId: string,
     submitterId: string,
   ) {
+    await assertNotMigrated(submitterId);
+
     let resolvedFormDefinitionId = input.formDefinitionId ?? null;
 
     // Validate submission period exists under RLS (prevents cross-tenant refs)
@@ -584,6 +610,8 @@ export const submissionService = {
    * Submit a DRAFT submission (DRAFT→SUBMITTED) — owner only, with audit.
    */
   async submitAsOwner(svc: ServiceContext, id: string) {
+    await assertNotMigrated(svc.actor.userId);
+
     const existing = await submissionService.getById(svc.tx, id);
     if (!existing) throw new SubmissionNotFoundError(id);
     if (existing.submitterId !== svc.actor.userId) {
