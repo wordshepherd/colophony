@@ -20,4 +20,5 @@ export * from "./documenso";
 export * from "./cms";
 export * from "./federation";
 export * from "./user-keys";
+export * from "./trusted-peers";
 export * from "./relations";
