@@ -27,7 +27,7 @@ import type { Env } from '../config/env.js';
 import { auditService } from './audit.service.js';
 import { federationService, domainToDid } from './federation.service.js';
 import { signFederationRequest } from '../federation/http-signatures.js';
-import { createS3Client, getObjectStream } from './s3.js';
+import { createS3Client, getObjectStream, putObject } from './s3.js';
 
 // ---------------------------------------------------------------------------
 // Error classes
@@ -444,7 +444,7 @@ export const transferService = {
     // Step 1: Find org that trusts this peer with transfer.initiate capability
     // Superuser query — justified: pre-auth cross-org lookup, no org context
     // available until this query resolves. Same pattern as federation-auth.ts:119-132.
-    const [peerRow] = await db
+    const peerRows = await db
       .select({
         organizationId: trustedPeers.organizationId,
         publicKey: trustedPeers.publicKey,
@@ -457,23 +457,32 @@ export const transferService = {
           sql`granted_capabilities @> '{"transfer.initiate": true}'::jsonb`,
         ),
       )
-      .limit(1);
+      .limit(2);
 
-    if (!peerRow) {
+    if (peerRows.length === 0) {
       throw new TransferCapabilityError(peerDomain);
     }
 
+    if (peerRows.length > 1) {
+      throw new TransferCapabilityError(
+        `Ambiguous peer: multiple orgs trust ${peerDomain} with transfer.initiate`,
+      );
+    }
+
+    const peerRow = peerRows[0];
     const orgId = peerRow.organizationId;
 
     // Step 2: Verify JWT signature
     let claims: jose.JWTPayload;
     try {
       const publicKeyObj = crypto.createPublicKey(peerRow.publicKey);
+      const localDomain = env.FEDERATION_DOMAIN ?? 'localhost';
       const { payload } = await jose.jwtVerify(
         body.transferToken,
         publicKeyObj,
         {
           issuer: peerDomain,
+          audience: localDomain,
         },
       );
       claims = payload;
@@ -538,17 +547,14 @@ export const transferService = {
     // Step 4: Fire-and-forget file fetch (v1 — acceptable, BullMQ upgrade later)
     if (result.isNew) {
       const originDomain = claims.iss;
-      const fileIds = (claims as Record<string, unknown>).fileIds as
-        | string[]
-        | undefined;
-      if (originDomain && fileIds && fileIds.length > 0) {
+      if (originDomain && body.fileManifest.length > 0) {
         // Fetch files in background — don't block the response
         void this.fetchTransferFiles(
           env,
           originDomain,
           jti,
           body.transferToken,
-          fileIds,
+          body.fileManifest,
           result.transferId,
           orgId,
         ).catch((err) => {
@@ -566,13 +572,13 @@ export const transferService = {
    * Downloads each file using the transfer token as bearer auth.
    */
   async fetchTransferFiles(
-    _env: Env,
+    env: Env,
     originDomain: string,
     transferId: string,
     transferToken: string,
-    fileIds: string[],
-    _localSubmissionId: string,
-    _orgId: string,
+    fileManifest: TransferFileManifestEntry[],
+    localSubmissionId: string,
+    orgId: string,
   ): Promise<void> {
     // Resolve origin's instance URL from trusted peer
     const [peer] = await db
@@ -588,26 +594,56 @@ export const transferService = {
 
     if (!peer) return;
 
-    for (const fileId of fileIds) {
+    const s3Client = createS3Client(env);
+    const bucket = env.S3_BUCKET;
+    const storedFiles: Array<{ fileId: string; storageKey: string }> = [];
+
+    for (const entry of fileManifest) {
       try {
-        const url = `${peer.instanceUrl}/federation/v1/transfers/${transferId}/files/${fileId}`;
+        const url = `${peer.instanceUrl}/federation/v1/transfers/${transferId}/files/${entry.fileId}`;
         const response = await fetch(url, {
           headers: { authorization: `Bearer ${transferToken}` },
           signal: AbortSignal.timeout(60_000),
         });
 
         if (!response.ok) {
-          console.error(`File fetch failed for ${fileId}: ${response.status}`);
+          console.error(
+            `File fetch failed for ${entry.fileId}: ${response.status}`,
+          );
           continue;
         }
 
-        // TODO: Store file content into local storage and create file records
-        // For v1, we consume the response to complete the fetch but storage
-        // integration is a follow-up item
-        await response.arrayBuffer();
+        // Store in S3 under transfer-specific key prefix
+        const storageKey = `transfers/${localSubmissionId}/${entry.fileId}/${entry.filename}`;
+        const buffer = Buffer.from(await response.arrayBuffer());
+        await putObject(s3Client, bucket, storageKey, buffer, entry.mimeType);
+
+        storedFiles.push({ fileId: entry.fileId, storageKey });
       } catch (err) {
-        console.error(`File fetch error for ${fileId}:`, err);
+        console.error(`File fetch error for ${entry.fileId}:`, err);
       }
+    }
+
+    // Update the submission's file manifest with storage keys for later linking
+    if (storedFiles.length > 0) {
+      await withRls({ orgId }, async (tx) => {
+        // Store the storage key mapping alongside the original manifest
+        const enrichedManifest = fileManifest.map((entry) => {
+          const stored = storedFiles.find((s) => s.fileId === entry.fileId);
+          return { ...entry, storageKey: stored?.storageKey };
+        });
+
+        await tx
+          .update(submissions)
+          .set({
+            // Store enriched manifest as form data for later processing
+            formData: { _transferFiles: enrichedManifest } as Record<
+              string,
+              unknown
+            >,
+          })
+          .where(eq(submissions.id, localSubmissionId));
+      });
     }
   },
 

@@ -127,8 +127,13 @@ export type TransferIdParam = z.infer<typeof transferIdParamSchema>;
 
 /** Query schema for listing transfers. */
 export const transferListQuerySchema = z.object({
-  page: z.number().int().min(1).default(1).describe("Page number (1-based)"),
-  limit: z
+  page: z.coerce
+    .number()
+    .int()
+    .min(1)
+    .default(1)
+    .describe("Page number (1-based)"),
+  limit: z.coerce
     .number()
     .int()
     .min(1)

@@ -119,6 +119,7 @@ vi.mock('./audit.service.js', () => ({
 vi.mock('./s3.js', () => ({
   createS3Client: vi.fn(),
   getObjectStream: vi.fn(),
+  putObject: vi.fn().mockResolvedValue(undefined),
 }));
 
 // ---------------------------------------------------------------------------
@@ -453,6 +454,39 @@ describe('transferService', () => {
           protocolVersion: '1.0',
         }),
       ).rejects.toThrow(TransferCapabilityError);
+    });
+
+    it('rejects wrong audience in transfer token', async () => {
+      // Mock superuser peer lookup — peer found
+      mockDb.limit.mockResolvedValueOnce([
+        {
+          organizationId: validUuid,
+          publicKey:
+            '-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEARhJrpKFgxPmbYP07KnlUuSkZordGLP7bkL8JrMRK0QM=\n-----END PUBLIC KEY-----',
+        },
+      ]);
+
+      // jose.jwtVerify rejects with audience mismatch error
+      vi.mocked(jose.jwtVerify).mockRejectedValue(
+        new Error('"aud" claim mismatch'),
+      );
+
+      await expect(
+        transferService.handleInboundTransfer(testEnv, 'peer.example.com', {
+          transferToken: 'wrong.audience.token',
+          submitterDid: 'did:web:peer.example.com:users:alice',
+          pieceMetadata: { title: 'Test' },
+          fileManifest: [
+            {
+              fileId: validUuid3,
+              filename: 'test.pdf',
+              mimeType: 'application/pdf',
+              size: 1024,
+            },
+          ],
+          protocolVersion: '1.0',
+        }),
+      ).rejects.toThrow(TransferTokenError);
     });
   });
 
