@@ -193,8 +193,9 @@ export const migrationService = {
 
     const remoteResult = (await response.json()) as MigrationInitiateResponse;
 
-    // Create local migration record (user-scoped RLS)
-    const migrationId = crypto.randomUUID();
+    // Reuse the origin's migration ID so S2S follow-up messages (bundle-delivery,
+    // complete) can correlate correctly across both instances.
+    const migrationId = remoteResult.migrationId;
     await withRls({ userId }, async (tx) => {
       await tx.insert(identityMigrations).values({
         id: migrationId,
@@ -241,6 +242,7 @@ export const migrationService = {
       .from(identityMigrations)
       .where(
         and(
+          eq(identityMigrations.id, delivery.migrationId),
           eq(identityMigrations.direction, 'inbound'),
           eq(identityMigrations.peerDomain, peerDomain),
           eq(identityMigrations.status, 'PENDING'),
@@ -258,6 +260,7 @@ export const migrationService = {
         .from(identityMigrations)
         .where(
           and(
+            eq(identityMigrations.id, delivery.migrationId),
             eq(identityMigrations.direction, 'inbound'),
             eq(identityMigrations.peerDomain, peerDomain),
             inArray(identityMigrations.status, ['PROCESSING', 'COMPLETED']),
@@ -307,6 +310,7 @@ export const migrationService = {
 
         await tx.insert(submissions).values({
           organizationId: orgId,
+          submitterId: migration.userId,
           title: hist.title ?? 'Migrated submission',
           coverLetter: hist.coverLetter,
           status: hist.status as 'REJECTED' | 'WITHDRAWN' | 'ACCEPTED',
@@ -342,6 +346,7 @@ export const migrationService = {
 
         await tx.insert(submissions).values({
           organizationId: orgId,
+          submitterId: migration.userId,
           title: active.title ?? 'Migrated submission',
           coverLetter: active.coverLetter,
           content: active.content,
@@ -463,9 +468,17 @@ export const migrationService = {
    */
   async handleMigrationRequest(
     env: Env,
-    _peerDomain: string,
+    peerDomain: string,
     request: MigrationInitiateRequest,
   ): Promise<MigrationInitiateResponse> {
+    // Validate that the claimed destination domain matches the HTTP-signature-authenticated
+    // peer. Prevents a compromised peer from routing bundles to attacker-controlled endpoints.
+    if (request.destinationDomain !== peerDomain) {
+      throw new MigrationCapabilityError(
+        `Authenticated peer '${peerDomain}' does not match claimed destination '${request.destinationDomain}'`,
+      );
+    }
+
     // Look up user by email (superuser — no local user session in S2S context)
     const [user] = await db
       .select({
