@@ -16,9 +16,11 @@ import {
 } from '@colophony/types';
 import { orgProcedure, createRouter, requireScopes } from '../init.js';
 import { submissionService } from '../../services/submission.service.js';
+import { simsubService } from '../../services/simsub.service.js';
 import { toServiceContext } from '../../services/context.js';
 import { assertEditorOrAdmin } from '../../services/errors.js';
 import { mapServiceError } from '../error-mapper.js';
+import { validateEnv } from '../../config/env.js';
 
 export const submissionsRouter = createRouter({
   /** Submitter's own submissions (any org member). */
@@ -105,10 +107,16 @@ export const submissionsRouter = createRouter({
     .output(submissionStatusChangeResponseSchema)
     .mutation(async ({ ctx, input }) => {
       try {
-        return await submissionService.submitAsOwner(
-          toServiceContext(ctx),
+        const env = validateEnv();
+        const svc = toServiceContext(ctx);
+        await simsubService.preSubmitCheck(
+          env,
+          svc.tx,
           input.id,
+          svc.actor.userId,
+          svc.actor.orgId,
         );
+        return await submissionService.submitAsOwner(svc, input.id);
       } catch (e) {
         mapServiceError(e);
       }

@@ -51,6 +51,7 @@ import {
   IssueItemAlreadyExistsError,
 } from '../services/issue.service.js';
 import { CmsConnectionNotFoundError } from '../services/cms-connection.service.js';
+import { SimSubConflictError } from '../services/simsub.service.js';
 
 type TRPCErrorCode = ConstructorParameters<typeof TRPCError>[0]['code'];
 
@@ -119,6 +120,18 @@ export function mapServiceError(error: unknown): never {
   }
 
   if (error instanceof Error) {
+    // Sim-sub conflict — include conflict details in cause
+    if (error instanceof SimSubConflictError) {
+      throw new TRPCError({
+        code: 'CONFLICT',
+        message: error.message,
+        cause: {
+          conflicts: error.conflicts,
+          remoteResults: error.remoteResults,
+        },
+      });
+    }
+
     // Surface fieldErrors for form validation failures
     if (error instanceof InvalidFormDataError) {
       throw new TRPCError({

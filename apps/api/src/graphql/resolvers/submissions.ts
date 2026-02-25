@@ -11,7 +11,9 @@ import { requireOrgContext, requireScopes } from '../guards.js';
 import { toServiceContext } from '../../services/context.js';
 import { assertEditorOrAdmin } from '../../services/errors.js';
 import { submissionService } from '../../services/submission.service.js';
+import { simsubService } from '../../services/simsub.service.js';
 import { mapServiceError } from '../error-mapper.js';
+import { validateEnv } from '../../config/env.js';
 import { SubmissionType, SubmissionHistoryType } from '../types/index.js';
 import {
   SubmissionStatusChangePayload,
@@ -309,10 +311,16 @@ builder.mutationFields((t) => ({
       await requireScopes(ctx, 'submissions:write');
       const { id } = idParamSchema.parse({ id: args.id });
       try {
-        return await submissionService.submitAsOwner(
-          toServiceContext(orgCtx),
+        const env = validateEnv();
+        const svc = toServiceContext(orgCtx);
+        await simsubService.preSubmitCheck(
+          env,
+          svc.tx,
           id,
+          svc.actor.userId,
+          svc.actor.orgId,
         );
+        return await submissionService.submitAsOwner(svc, id);
       } catch (e) {
         mapServiceError(e);
       }
