@@ -30,6 +30,7 @@
 - [x] Zitadel webhook two-step idempotency — current one-step pattern doesn't handle crash recovery (row inserted but `processed=false`); align with Stripe webhook's two-step pattern — (Codex review 2026-02-17; done 2026-02-17)
 - [x] Audit query/list endpoints — wait for API surfaces — (DEVLOG 2026-02-13; done 2026-02-18 PR #101)
 - [x] Seed data (`packages/db/src/seed.ts` has TODO) — wait for API layer — (code TODO; done 2026-02-18 PR #104)
+- [ ] [P2] Replace custom rate-limit Lua scripts with `@fastify/rate-limit` plugin — gains sliding window (fixes burst-at-boundary), removes custom Lua, more idiomatic Fastify. Keep two-tier design (IP pre-auth + user post-auth). May also resolve recurring CodeQL `js/missing-rate-limiting` false positives on federation routes. — (dev feedback 2026-02-25)
 
 ### QA / Testing
 
@@ -164,7 +165,7 @@
 - [x] Piece transfer — cross-instance submission transfer with JWT tokens, dual-scope S2S routes, file proxy — (architecture doc Track 5; done 2026-02-25)
 - [ ] [P3] Piece transfer: upgrade fire-and-forget file fetch to BullMQ for retry/dead-letter — (DEVLOG 2026-02-25, v1 acceptable)
 - [x] Identity migration — (architecture doc Track 5; done 2026-02-25)
-- [ ] Hub for managed hosting — (architecture doc Track 5)
+- [x] Hub for managed hosting — (architecture doc Track 5; done 2026-02-25)
 
 ### Design Decisions
 
