@@ -34,6 +34,7 @@ const PUBLIC_PREFIXES = [
   '/.well-known/',
   '/embed/',
   '/api/inngest',
+  '/federation/trust',
 ];
 const PUBLIC_EXACT = [
   '/',

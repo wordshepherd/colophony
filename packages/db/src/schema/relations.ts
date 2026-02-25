@@ -18,6 +18,7 @@ import { pipelineItems, pipelineHistory, pipelineComments } from "./pipeline";
 import { contractTemplates, contracts } from "./contracts";
 import { issues, issueSections, issueItems } from "./issues";
 import { cmsConnections } from "./cms";
+import { trustedPeers } from "./trusted-peers";
 
 // --- organizations ---
 
@@ -37,6 +38,7 @@ export const organizationsRelations = relations(organizations, ({ many }) => ({
   contracts: many(contracts),
   issues: many(issues),
   cmsConnections: many(cmsConnections),
+  trustedPeers: many(trustedPeers),
 }));
 
 // --- users ---
@@ -428,6 +430,17 @@ export const issueItemsRelations = relations(issueItems, ({ one }) => ({
   section: one(issueSections, {
     fields: [issueItems.issueSectionId],
     references: [issueSections.id],
+  }),
+}));
+
+// --- cms_connections ---
+
+// --- trusted_peers ---
+
+export const trustedPeersRelations = relations(trustedPeers, ({ one }) => ({
+  organization: one(organizations, {
+    fields: [trustedPeers.organizationId],
+    references: [organizations.id],
   }),
 }));
 

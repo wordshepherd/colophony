@@ -87,3 +87,104 @@ export const didDocumentSchema = z.object({
 });
 
 export type DidDocument = z.infer<typeof didDocumentSchema>;
+
+// ---------------------------------------------------------------------------
+// Trust Establishment — Bilateral Federation Trust
+// ---------------------------------------------------------------------------
+
+export const peerTrustStatusSchema = z.enum([
+  "pending_outbound",
+  "pending_inbound",
+  "active",
+  "rejected",
+  "revoked",
+]);
+
+export type PeerTrustStatus = z.infer<typeof peerTrustStatusSchema>;
+
+export const federationCapabilitiesSchema = z.object({
+  "identity.verify": z.boolean().optional(),
+  "identity.migrate": z.boolean().optional(),
+  "simsub.check": z.boolean().optional(),
+  "simsub.respond": z.boolean().optional(),
+  "transfer.initiate": z.boolean().optional(),
+  "transfer.receive": z.boolean().optional(),
+});
+
+export type FederationCapabilities = z.infer<
+  typeof federationCapabilitiesSchema
+>;
+
+export const trustRequestSchema = z.object({
+  instanceUrl: z.string().url(),
+  domain: z.string().min(1),
+  publicKey: z.string().min(1),
+  keyId: z.string().min(1),
+  requestedCapabilities: federationCapabilitiesSchema,
+  protocolVersion: z.string().default("1.0"),
+});
+
+export type TrustRequest = z.infer<typeof trustRequestSchema>;
+
+export const trustAcceptSchema = z.object({
+  instanceUrl: z.string().url(),
+  domain: z.string().min(1),
+  grantedCapabilities: federationCapabilitiesSchema,
+  protocolVersion: z.string().default("1.0"),
+});
+
+export type TrustAccept = z.infer<typeof trustAcceptSchema>;
+
+export const initiateTrustSchema = z.object({
+  domain: z.string().min(1),
+  requestedCapabilities: federationCapabilitiesSchema,
+});
+
+export type InitiateTrustInput = z.infer<typeof initiateTrustSchema>;
+
+export const peerActionSchema = z.object({
+  grantedCapabilities: federationCapabilitiesSchema.optional(),
+});
+
+export type PeerActionInput = z.infer<typeof peerActionSchema>;
+
+export const trustedPeerSchema = z.object({
+  id: z.string().uuid(),
+  organizationId: z.string().uuid(),
+  domain: z.string(),
+  instanceUrl: z.string(),
+  publicKey: z.string(),
+  keyId: z.string(),
+  grantedCapabilities: z.record(z.string(), z.boolean()),
+  status: peerTrustStatusSchema,
+  initiatedBy: z.enum(["local", "remote"]),
+  protocolVersion: z.string(),
+  lastVerifiedAt: z.date().nullable(),
+  createdAt: z.date(),
+  updatedAt: z.date(),
+});
+
+export type TrustedPeer = z.infer<typeof trustedPeerSchema>;
+
+export const remoteMetadataPreviewSchema = z.object({
+  domain: z.string(),
+  software: z.string(),
+  version: z.string(),
+  publicKey: z.string(),
+  keyId: z.string(),
+  capabilities: z.array(z.string()),
+  mode: z.string(),
+  contactEmail: z.string().nullable(),
+  publicationCount: z.number(),
+});
+
+export type RemoteMetadataPreview = z.infer<typeof remoteMetadataPreviewSchema>;
+
+export const domainParamSchema = z.object({
+  domain: z
+    .string()
+    .min(1)
+    .regex(/^[a-zA-Z0-9][a-zA-Z0-9.-]+(:\d+)?$/, "Invalid domain format"),
+});
+
+export type DomainParam = z.infer<typeof domainParamSchema>;
