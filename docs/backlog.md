@@ -158,7 +158,7 @@
 - [ ] [P3] Key rotation mechanism for user keypairs — (architecture doc Track 5, deferred to Phase 7)
 - [ ] [P2] Inbound DID resolution hardening — validate remote DID documents fetched during federation — (Codex review 2026-02-24, deferred to Phase 3)
 - [x] Trust establishment — bilateral trust with HTTP signatures, trust service, public S2S + admin routes — (architecture doc Track 5; done 2026-02-24)
-- [ ] [P2] Federation signature verification middleware — protect all federation endpoints with signature-based auth — (DEVLOG 2026-02-24, deferred to PR2)
+- [x] [P2] Federation signature verification middleware — protect all federation endpoints with signature-based auth — (DEVLOG 2026-02-24, done 2026-02-24)
 - [ ] Sim-sub enforcement (BSAP) — manuscript entity (Track 3) is the natural anchor for cross-instance tracking — (architecture doc Track 5)
 - [ ] Piece transfer — (architecture doc Track 5)
 - [ ] Identity migration — (architecture doc Track 5)
