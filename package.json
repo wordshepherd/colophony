@@ -17,6 +17,7 @@
     "format": "prettier --write \"**/*.{ts,tsx,md,json}\"",
     "format:check": "prettier --check \"**/*.{ts,tsx,md,json}\"",
     "db:generate": "pnpm --filter @colophony/db generate",
+    "db:push": "pnpm --filter @colophony/db push",
     "db:migrate": "pnpm --filter @colophony/db migrate",
     "db:check": "pnpm --filter @colophony/db check",
     "db:studio": "pnpm --filter @colophony/db studio",

@@ -18,6 +18,7 @@
     "build": "tsc",
     "clean": "rm -rf dist",
     "generate": "drizzle-kit generate",
+    "push": "drizzle-kit push --force",
     "migrate": "drizzle-kit migrate",
     "check": "drizzle-kit check",
     "studio": "drizzle-kit studio",
