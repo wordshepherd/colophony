@@ -52,6 +52,11 @@ import {
 } from '../services/issue.service.js';
 import { CmsConnectionNotFoundError } from '../services/cms-connection.service.js';
 import { SimSubConflictError } from '../services/simsub.service.js';
+import {
+  TransferNotFoundError,
+  TransferInvalidStateError,
+  TransferCapabilityError,
+} from '../services/transfer.service.js';
 
 type ORPCErrorCode = ConstructorParameters<typeof ORPCError>[0];
 
@@ -103,6 +108,10 @@ const errorCodeMap: [new (...args: never[]) => Error, ORPCErrorCode][] = [
   [IssueItemAlreadyExistsError, 'CONFLICT'],
   // CMS errors
   [CmsConnectionNotFoundError, 'NOT_FOUND'],
+  // Transfer errors
+  [TransferNotFoundError, 'NOT_FOUND'],
+  [TransferInvalidStateError, 'CONFLICT'],
+  [TransferCapabilityError, 'BAD_REQUEST'],
   // Precondition
   [FileNotCleanError, 'BAD_REQUEST'],
 ];

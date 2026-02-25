@@ -18,6 +18,7 @@ const RLS_TABLES = [
   'manuscript_versions',
   'files',
   'embed_tokens',
+  'piece_transfers',
 ];
 
 /** RLS tables where app_user has full DML (excludes audit_events which is SELECT-only + function). */

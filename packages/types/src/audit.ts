@@ -139,6 +139,14 @@ export const AuditActions = {
   SIMSUB_OVERRIDE_GRANTED: "SIMSUB_OVERRIDE_GRANTED",
   SIMSUB_INBOUND_CHECK: "SIMSUB_INBOUND_CHECK",
 
+  // Transfer lifecycle
+  TRANSFER_INITIATED: "TRANSFER_INITIATED",
+  TRANSFER_INBOUND_RECEIVED: "TRANSFER_INBOUND_RECEIVED",
+  TRANSFER_COMPLETED: "TRANSFER_COMPLETED",
+  TRANSFER_CANCELLED: "TRANSFER_CANCELLED",
+  TRANSFER_FAILED: "TRANSFER_FAILED",
+  TRANSFER_FILE_SERVED: "TRANSFER_FILE_SERVED",
+
   // Federation lifecycle
   FEDERATION_KEY_GENERATED: "FEDERATION_KEY_GENERATED",
   FEDERATION_USER_KEY_GENERATED: "FEDERATION_USER_KEY_GENERATED",
@@ -175,6 +183,7 @@ export const AuditResources = {
   CMS_CONNECTION: "cms_connection",
   FEDERATION: "federation",
   SIMSUB: "simsub",
+  TRANSFER: "transfer",
   AUDIT: "audit",
 } as const;
 
@@ -389,6 +398,17 @@ export interface SimSubAuditParams extends BaseAuditParams {
     | typeof AuditActions.SIMSUB_INBOUND_CHECK;
 }
 
+export interface TransferAuditParams extends BaseAuditParams {
+  resource: typeof AuditResources.TRANSFER;
+  action:
+    | typeof AuditActions.TRANSFER_INITIATED
+    | typeof AuditActions.TRANSFER_INBOUND_RECEIVED
+    | typeof AuditActions.TRANSFER_COMPLETED
+    | typeof AuditActions.TRANSFER_CANCELLED
+    | typeof AuditActions.TRANSFER_FAILED
+    | typeof AuditActions.TRANSFER_FILE_SERVED;
+}
+
 export interface AuditAccessAuditParams extends BaseAuditParams {
   resource: typeof AuditResources.AUDIT;
   action: typeof AuditActions.AUDIT_ACCESSED;
@@ -422,6 +442,7 @@ export type AuditLogParams =
   | CmsConnectionAuditParams
   | FederationAuditParams
   | SimSubAuditParams
+  | TransferAuditParams
   | AuditAccessAuditParams
   | SystemAuditParams;
 

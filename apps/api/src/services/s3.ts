@@ -3,6 +3,7 @@ import {
   CopyObjectCommand,
   DeleteObjectCommand,
   GetObjectCommand,
+  PutObjectCommand,
 } from '@aws-sdk/client-s3';
 import type { Readable } from 'node:stream';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
@@ -54,6 +55,22 @@ export async function copyObject(
     CopySource: `${srcBucket}/${srcKey}`,
     Bucket: destBucket,
     Key: destKey,
+  });
+  await client.send(command);
+}
+
+export async function putObject(
+  client: S3Client,
+  bucket: string,
+  key: string,
+  body: Buffer | Uint8Array,
+  contentType?: string,
+): Promise<void> {
+  const command = new PutObjectCommand({
+    Bucket: bucket,
+    Key: key,
+    Body: body,
+    ContentType: contentType,
   });
   await client.send(command);
 }
