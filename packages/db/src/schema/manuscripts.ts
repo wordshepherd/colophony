@@ -57,12 +57,14 @@ export const manuscriptVersions = pgTable(
       .references(() => manuscripts.id, { onDelete: "cascade" }),
     versionNumber: integer("version_number").notNull(),
     label: varchar("label", { length: 255 }),
+    contentFingerprint: varchar("content_fingerprint", { length: 64 }),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
   },
   (table) => [
     index("manuscript_versions_manuscript_id_idx").on(table.manuscriptId),
+    index("manuscript_versions_fingerprint_idx").on(table.contentFingerprint),
     unique("manuscript_versions_manuscript_version_unique").on(
       table.manuscriptId,
       table.versionNumber,

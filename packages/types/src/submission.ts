@@ -252,6 +252,9 @@ export const submissionPeriodSchema = z.object({
     .uuid()
     .nullable()
     .describe("ID of the form definition linked to this period"),
+  simSubProhibited: z
+    .boolean()
+    .describe("Whether simultaneous submissions are prohibited"),
   createdAt: z.date().describe("When the period was created"),
   updatedAt: z.date().describe("When the period was last updated"),
 });
@@ -287,6 +290,12 @@ export const createSubmissionPeriodSchema = z.object({
     .uuid()
     .optional()
     .describe("Form definition to link to this period"),
+  simSubProhibited: z
+    .boolean()
+    .optional()
+    .describe(
+      "Whether simultaneous submissions are prohibited (default: false)",
+    ),
 });
 
 export type CreateSubmissionPeriodInput = z.infer<
