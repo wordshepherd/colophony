@@ -22,4 +22,5 @@ export * from "./federation";
 export * from "./user-keys";
 export * from "./trusted-peers";
 export * from "./transfers";
+export * from "./identity-migrations";
 export * from "./relations";

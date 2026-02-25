@@ -57,6 +57,13 @@ import {
   TransferInvalidStateError,
   TransferCapabilityError,
 } from '../services/transfer.service.js';
+import {
+  MigrationNotFoundError,
+  MigrationInvalidStateError,
+  MigrationCapabilityError,
+  MigrationAlreadyActiveError,
+  MigrationUserNotFoundError,
+} from '../services/migration.service.js';
 
 type ORPCErrorCode = ConstructorParameters<typeof ORPCError>[0];
 
@@ -112,6 +119,12 @@ const errorCodeMap: [new (...args: never[]) => Error, ORPCErrorCode][] = [
   [TransferNotFoundError, 'NOT_FOUND'],
   [TransferInvalidStateError, 'CONFLICT'],
   [TransferCapabilityError, 'BAD_REQUEST'],
+  // Migration errors
+  [MigrationNotFoundError, 'NOT_FOUND'],
+  [MigrationInvalidStateError, 'CONFLICT'],
+  [MigrationCapabilityError, 'BAD_REQUEST'],
+  [MigrationAlreadyActiveError, 'CONFLICT'],
+  [MigrationUserNotFoundError, 'NOT_FOUND'],
   // Precondition
   [FileNotCleanError, 'BAD_REQUEST'],
 ];

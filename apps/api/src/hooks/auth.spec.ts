@@ -347,6 +347,9 @@ describe('auth plugin', () => {
         isGuest: false,
         deletedAt: new Date(), // deactivated
         lastEventAt: null,
+        migratedToDomain: null,
+        migratedToDid: null,
+        migratedAt: null,
       });
 
       const response = await app.inject({
@@ -377,6 +380,9 @@ describe('auth plugin', () => {
         isGuest: false,
         deletedAt: null,
         lastEventAt: null,
+        migratedToDomain: null,
+        migratedToDid: null,
+        migratedAt: null,
       });
 
       const response = await app.inject({
@@ -644,6 +650,9 @@ describe('auth plugin', () => {
         updatedAt: new Date(),
         deletedAt: new Date(),
         lastEventAt: null,
+        migratedToDomain: null,
+        migratedToDid: null,
+        migratedAt: null,
       });
 
       await app.inject({
@@ -919,6 +928,9 @@ describe('auth plugin', () => {
         isGuest: false,
         deletedAt: null,
         lastEventAt: null,
+        migratedToDomain: null,
+        migratedToDid: null,
+        migratedAt: null,
       });
 
       const response = await app.inject({

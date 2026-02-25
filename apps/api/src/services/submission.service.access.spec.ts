@@ -10,15 +10,27 @@ import { ForbiddenError } from './errors.js';
 
 // Mock @colophony/db
 vi.mock('@colophony/db', () => ({
+  db: {
+    select: vi.fn().mockReturnThis(),
+    from: vi.fn().mockReturnThis(),
+    where: vi.fn().mockReturnThis(),
+    limit: vi.fn().mockResolvedValue([]),
+  },
   submissions: {},
   submissionFiles: {},
   submissionHistory: {},
   submissionPeriods: {},
   formDefinitions: {},
-  users: {},
+  users: { migratedAt: 'migratedAt' },
   eq: vi.fn(),
   and: vi.fn(),
   sql: vi.fn(),
+}));
+
+vi.mock('./migration.service.js', () => ({
+  MigrationInvalidStateError: class MigrationInvalidStateError extends Error {
+    override name = 'MigrationInvalidStateError' as const;
+  },
 }));
 
 // Mock form.service.js (imported by submission.service.ts)

@@ -48,6 +48,10 @@
 | Transfer routes   | `src/federation/transfer.routes.ts` (S2S)  |
 | Transfer admin    | `src/federation/transfer-admin.routes.ts`  |
 | Transfer service  | `src/services/transfer.service.ts`         |
+| Migration routes  | `src/federation/migration.routes.ts` (S2S) |
+| Migration admin   | `src/federation/migration-admin.routes.ts` |
+| Migration service | `src/services/migration.service.ts`        |
+| Migration bundle  | `src/services/migration-bundle.service.ts` |
 
 ### Service Method Naming
 
