@@ -194,6 +194,32 @@ describe('auth plugin', () => {
       expect(response.statusCode).toBe(404);
     });
 
+    it('skips auth for /.well-known/did.json', async () => {
+      const response = await app.inject({
+        method: 'GET',
+        url: '/.well-known/did.json',
+      });
+      // 404 because no route registered, but auth hook didn't block
+      expect(response.statusCode).toBe(404);
+    });
+
+    it('skips auth for /users/alice/did.json', async () => {
+      const response = await app.inject({
+        method: 'GET',
+        url: '/users/alice/did.json',
+      });
+      // 404 because no route registered, but auth hook didn't block
+      expect(response.statusCode).toBe(404);
+    });
+
+    it('does not skip auth for /users/alice/profile', async () => {
+      const response = await app.inject({
+        method: 'GET',
+        url: '/users/alice/profile',
+      });
+      expect(response.statusCode).toBe(401);
+    });
+
     it('skips auth for /trpc/health', async () => {
       const response = await app.inject({
         method: 'GET',
