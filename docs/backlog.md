@@ -153,7 +153,10 @@
 ### Code
 
 - [x] Discovery: WebFinger + `.well-known` endpoints — (architecture doc Track 5; done 2026-02-24)
-- [ ] Identity: `did:web` documents — use `jose` library — (architecture doc Track 5, decision 2026-02-15)
+- [x] Identity: `did:web` DID document resolution — per-user Ed25519 keypairs, native crypto (no jose needed) — (architecture doc Track 5; done 2026-02-24)
+- [ ] [P2] Split `getOrInitConfig()` to separate public-key-only read from private-key read — reduces private key exposure surface — (Codex review 2026-02-24, deferred to Phase 3)
+- [ ] [P3] Key rotation mechanism for user keypairs — (architecture doc Track 5, deferred to Phase 7)
+- [ ] [P2] Inbound DID resolution hardening — validate remote DID documents fetched during federation — (Codex review 2026-02-24, deferred to Phase 3)
 - [ ] Trust establishment — use `openid-client` for OIDC flows — (architecture doc Track 5, decision 2026-02-15)
 - [ ] Sim-sub enforcement (BSAP) — manuscript entity (Track 3) is the natural anchor for cross-instance tracking — (architecture doc Track 5)
 - [ ] Piece transfer — (architecture doc Track 5)
