@@ -145,7 +145,10 @@ export async function registerHubRoutes(
           });
         }
 
-        const result = await hubService.lookupFingerprint(parsed.data);
+        const result = await hubService.lookupFingerprint({
+          ...parsed.data,
+          requestingDomain: request.hubPeer!.domain,
+        });
         return reply.status(200).send(result);
       },
     );

@@ -82,7 +82,6 @@ export const hubClientService = {
     },
   ): Promise<void> {
     const config = await federationService.getOrInitConfig(env);
-    const localDomain = env.FEDERATION_DOMAIN ?? 'localhost';
 
     const body = JSON.stringify({
       fingerprint: input.fingerprint,
@@ -98,7 +97,7 @@ export const hubClientService = {
       headers: { 'content-type': 'application/json' },
       body,
       privateKey: config.privateKey,
-      keyId: `${localDomain}#main`,
+      keyId: config.keyId,
     });
 
     await fetch(url, {
@@ -134,7 +133,7 @@ export const hubClientService = {
       headers: { 'content-type': 'application/json' },
       body,
       privateKey: config.privateKey,
-      keyId: `${localDomain}#main`,
+      keyId: config.keyId,
     });
 
     try {
@@ -200,7 +199,7 @@ export const hubClientService = {
       headers: { 'content-type': 'application/json' },
       body,
       privateKey: config.privateKey,
-      keyId: `${localDomain}#main`,
+      keyId: config.keyId,
     });
 
     const response = await fetch(url, {
@@ -225,8 +224,8 @@ export const hubClientService = {
           organizationId: orgId,
           domain: targetDomain,
           instanceUrl: `https://${targetDomain}`,
-          publicKey: '', // Will be populated when remote responds
-          keyId: '',
+          publicKey: config.publicKey,
+          keyId: config.keyId,
           grantedCapabilities: {
             'identity.verify': true,
             'simsub.check': true,

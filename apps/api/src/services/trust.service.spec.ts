@@ -505,6 +505,140 @@ describe('trust.service', () => {
     });
   });
 
+  describe('handleHubAttestedTrust', () => {
+    const hubKeypair = crypto.generateKeyPairSync('ed25519', {
+      publicKeyEncoding: { type: 'spki', format: 'pem' },
+      privateKeyEncoding: { type: 'pkcs8', format: 'pem' },
+    });
+
+    const instanceKeypair = crypto.generateKeyPairSync('ed25519', {
+      publicKeyEncoding: { type: 'spki', format: 'pem' },
+      privateKeyEncoding: { type: 'pkcs8', format: 'pem' },
+    });
+
+    async function makeAttestation(opts?: {
+      iss?: string;
+      sub?: string;
+      aud?: string;
+      exp?: number;
+      instancePublicKey?: string;
+    }) {
+      const { SignJWT } = await import('jose');
+      const privKey = crypto.createPrivateKey(hubKeypair.privateKey);
+      return new SignJWT({
+        instancePublicKey: opts?.instancePublicKey ?? instanceKeypair.publicKey,
+        instanceKeyId: 'peer.example.com#main',
+      })
+        .setProtectedHeader({ alg: 'EdDSA' })
+        .setIssuer(opts?.iss ?? 'hub.example.com')
+        .setSubject(opts?.sub ?? 'peer.example.com')
+        .setAudience(opts?.aud ?? 'colophony:managed-hub')
+        .setIssuedAt()
+        .setExpirationTime(opts?.exp ?? Math.floor(Date.now() / 1000) + 3600)
+        .sign(privKey);
+    }
+
+    const baseHubRequest = {
+      instanceUrl: 'https://peer.example.com',
+      domain: 'peer.example.com',
+      publicKey: instanceKeypair.publicKey,
+      keyId: 'peer.example.com#main',
+      hubDomain: 'hub.example.com',
+      requestedCapabilities: { 'identity.verify': true },
+      protocolVersion: '1.0',
+    };
+
+    it('creates active peers for all non-opted-out orgs', async () => {
+      const token = await makeAttestation();
+
+      // Mock hub metadata fetch
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          ...sampleMetadataResponse,
+          domain: 'hub.example.com',
+          publicKey: hubKeypair.publicKey,
+          keyId: 'hub.example.com#main',
+        }),
+      });
+
+      // Mock org query — two orgs, both opted in
+      dbSelectResult = [
+        { id: 'a0000000-0000-4000-8000-000000000001' },
+        { id: 'a0000000-0000-4000-8000-000000000002' },
+      ];
+
+      // Mock withRls for each org — no existing peer
+      setupWithRls(makeMockTx({ selectResult: [], insertResult: [] }));
+
+      const result = await trustService.handleHubAttestedTrust(baseEnv, {
+        ...baseHubRequest,
+        attestationToken: token,
+      });
+
+      expect(result.orgIds).toHaveLength(2);
+      expect(result.orgIds).toContain('a0000000-0000-4000-8000-000000000001');
+      expect(result.orgIds).toContain('a0000000-0000-4000-8000-000000000002');
+      expect(mockAuditLog).toHaveBeenCalledTimes(2);
+    });
+
+    it('rejects invalid attestation JWT', async () => {
+      // Mock hub metadata fetch
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          ...sampleMetadataResponse,
+          domain: 'hub.example.com',
+          publicKey: hubKeypair.publicKey,
+          keyId: 'hub.example.com#main',
+        }),
+      });
+
+      await expect(
+        trustService.handleHubAttestedTrust(baseEnv, {
+          ...baseHubRequest,
+          attestationToken: 'not.a.valid.jwt',
+        }),
+      ).rejects.toThrow('Attestation JWT verification failed');
+    });
+
+    it('rejects expired attestation', async () => {
+      const token = await makeAttestation({
+        exp: Math.floor(Date.now() / 1000) - 3600, // 1 hour ago
+      });
+
+      // Mock hub metadata fetch
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          ...sampleMetadataResponse,
+          domain: 'hub.example.com',
+          publicKey: hubKeypair.publicKey,
+          keyId: 'hub.example.com#main',
+        }),
+      });
+
+      await expect(
+        trustService.handleHubAttestedTrust(baseEnv, {
+          ...baseHubRequest,
+          attestationToken: token,
+        }),
+      ).rejects.toThrow('Attestation JWT verification failed');
+    });
+
+    it('rejects attestation from unconfigured hub', async () => {
+      const envWithHub = { ...baseEnv, HUB_DOMAIN: 'myhub.example.com' };
+
+      await expect(
+        trustService.handleHubAttestedTrust(envWithHub, {
+          ...baseHubRequest,
+          attestationToken: 'unused',
+          hubDomain: 'evil.example.com',
+        }),
+      ).rejects.toThrow('Untrusted hub domain');
+    });
+  });
+
   describe('listPeers', () => {
     it('returns all peers for org', async () => {
       setupWithRls(makeMockTx({ selectResult: [samplePeerRow] }));

@@ -665,9 +665,16 @@ export const trustService = {
    * creates active peers directly for all non-opted-out orgs.
    */
   async handleHubAttestedTrust(
-    _env: Env,
+    env: Env,
     request: HubAttestationTrustRequest,
   ): Promise<{ orgIds: string[] }> {
+    // Reject attestations from unconfigured hubs
+    if (env.HUB_DOMAIN && request.hubDomain !== env.HUB_DOMAIN) {
+      throw new TrustSignatureVerificationError(
+        `Untrusted hub domain: ${request.hubDomain} (expected ${env.HUB_DOMAIN})`,
+      );
+    }
+
     // Fetch hub's public key from its well-known metadata
     let hubPublicKey: string;
     try {

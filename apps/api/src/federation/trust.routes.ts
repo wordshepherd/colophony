@@ -115,12 +115,22 @@ export async function registerFederationTrustRoutes(
       return reply.status(503).send({ error: 'federation_disabled' });
     }
 
+    // Verify HTTP signature (same as other trust routes — proves possession of attested key)
+    if (!request.federationPeer) {
+      return reply.status(401).send({ error: 'signature_required' });
+    }
+
     const parsed = hubAttestationTrustRequestSchema.safeParse(request.body);
     if (!parsed.success) {
       return reply.status(400).send({
         error: 'invalid_request',
         details: parsed.error.issues,
       });
+    }
+
+    // Ensure the authenticated peer matches the request body domain
+    if (request.federationPeer.domain !== parsed.data.domain) {
+      return reply.status(403).send({ error: 'domain_mismatch' });
     }
 
     try {
