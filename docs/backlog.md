@@ -163,7 +163,7 @@
 - [ ] [P3] Sim-sub manual verification — test with two running instances: submit to no-sim-sub period, submit same manuscript to second org, verify CONFLICT; test admin override flow — (DEVLOG 2026-02-24)
 - [x] Piece transfer — cross-instance submission transfer with JWT tokens, dual-scope S2S routes, file proxy — (architecture doc Track 5; done 2026-02-25)
 - [ ] [P3] Piece transfer: upgrade fire-and-forget file fetch to BullMQ for retry/dead-letter — (DEVLOG 2026-02-25, v1 acceptable)
-- [ ] Identity migration — (architecture doc Track 5)
+- [x] Identity migration — (architecture doc Track 5; done 2026-02-25)
 - [ ] Hub for managed hosting — (architecture doc Track 5)
 
 ### Design Decisions
