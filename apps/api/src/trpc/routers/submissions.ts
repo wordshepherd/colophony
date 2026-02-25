@@ -13,10 +13,13 @@ import {
   submissionHistorySchema,
   successResponseSchema,
   paginatedResponseSchema,
+  initiateTransferInputSchema,
+  transferIdParamSchema,
 } from '@colophony/types';
 import { orgProcedure, createRouter, requireScopes } from '../init.js';
 import { submissionService } from '../../services/submission.service.js';
 import { simsubService } from '../../services/simsub.service.js';
+import { transferService } from '../../services/transfer.service.js';
 import { toServiceContext } from '../../services/context.js';
 import { assertEditorOrAdmin } from '../../services/errors.js';
 import { mapServiceError } from '../error-mapper.js';
@@ -184,6 +187,56 @@ export const submissionsRouter = createRouter({
           toServiceContext(ctx),
           input.submissionId,
         );
+      } catch (e) {
+        mapServiceError(e);
+      }
+    }),
+
+  /** Initiate a piece transfer to a remote instance. */
+  initiateTransfer: orgProcedure
+    .use(requireScopes('submissions:write'))
+    .input(initiateTransferInputSchema)
+    .mutation(async ({ ctx, input }) => {
+      try {
+        const env = validateEnv();
+        return await transferService.initiateTransfer(env, {
+          orgId: ctx.authContext.orgId,
+          userId: ctx.authContext.userId,
+          submissionId: input.submissionId,
+          targetDomain: input.targetDomain,
+        });
+      } catch (e) {
+        mapServiceError(e);
+      }
+    }),
+
+  /** List transfers for a submission. */
+  getTransfers: orgProcedure
+    .use(requireScopes('submissions:read'))
+    .input(z.object({ submissionId: z.string().uuid() }))
+    .query(async ({ ctx, input }) => {
+      try {
+        return await transferService.getTransfersBySubmission(
+          ctx.authContext.orgId,
+          input.submissionId,
+        );
+      } catch (e) {
+        mapServiceError(e);
+      }
+    }),
+
+  /** Cancel a pending transfer. */
+  cancelTransfer: orgProcedure
+    .use(requireScopes('submissions:write'))
+    .input(transferIdParamSchema)
+    .mutation(async ({ ctx, input }) => {
+      try {
+        await transferService.cancelTransfer(
+          ctx.authContext.orgId,
+          ctx.authContext.userId,
+          input.transferId,
+        );
+        return { success: true };
       } catch (e) {
         mapServiceError(e);
       }

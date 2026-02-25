@@ -28,37 +28,39 @@ Per-directory CLAUDE.md files contain domain-specific details:
 - **`apps/api/CLAUDE.md`** — Hook registration, tRPC procedures, auth, webhooks
 - **`apps/web/CLAUDE.md`** — tRPC client, providers, auth utilities, conventions
 
-| What                     | Path                                                                       |
-| ------------------------ | -------------------------------------------------------------------------- |
-| **Drizzle schema**       | `packages/db/src/schema/` (one file per table group)                       |
-| **Drizzle migrations**   | `packages/db/migrations/`                                                  |
-| **Drizzle client**       | `packages/db/src/client.ts`                                                |
-| **RLS context**          | `packages/db/src/context.ts` (`withRls()`)                                 |
-| **Shared Zod schemas**   | `packages/types/src/`                                                      |
-| **Zitadel auth client**  | `packages/auth-client/src/`                                                |
-| **Fastify app entry**    | `apps/api/src/main.ts`                                                     |
-| **Fastify hooks**        | `apps/api/src/hooks/` (auth, rate-limit, org-context, db-context, audit)   |
-| **Service layer**        | `apps/api/src/services/`                                                   |
-| **tRPC (internal)**      | `apps/api/src/trpc/`                                                       |
-| **Zitadel webhook**      | `apps/api/src/webhooks/zitadel.webhook.ts`                                 |
-| **Stripe webhook**       | `apps/api/src/webhooks/stripe.webhook.ts`                                  |
-| **Documenso webhook**    | `apps/api/src/webhooks/documenso.webhook.ts`                               |
-| **Inngest functions**    | `apps/api/src/inngest/`                                                    |
-| **CMS adapters**         | `apps/api/src/adapters/cms/`                                               |
-| **Federation discovery** | `apps/api/src/federation/discovery.routes.ts`                              |
-| **Federation DID**       | `apps/api/src/federation/did.routes.ts`                                    |
-| **Federation service**   | `apps/api/src/services/federation.service.ts`                              |
-| **Federation trust**     | `apps/api/src/federation/trust.routes.ts` (S2S), `trust-admin.routes.ts`   |
-| **Trust service**        | `apps/api/src/services/trust.service.ts`                                   |
-| **HTTP signatures**      | `apps/api/src/federation/http-signatures.ts`                               |
-| **Federation auth**      | `apps/api/src/federation/federation-auth.ts` (S2S signature middleware)    |
-| **Sim-sub (BSAP)**       | `apps/api/src/federation/simsub.routes.ts` (S2S), `simsub-admin.routes.ts` |
-| **Sim-sub service**      | `apps/api/src/services/simsub.service.ts`                                  |
-| **Fingerprint service**  | `apps/api/src/services/fingerprint.service.ts`                             |
-| **Next.js frontend**     | `apps/web/`                                                                |
-| **tRPC client**          | `apps/web/src/lib/trpc.ts`                                                 |
-| **Env config (Zod)**     | `apps/api/src/config/env.ts`                                               |
-| **Backlog**              | `docs/backlog.md` (track-organized, drives session focus)                  |
+| What                     | Path                                                                           |
+| ------------------------ | ------------------------------------------------------------------------------ |
+| **Drizzle schema**       | `packages/db/src/schema/` (one file per table group)                           |
+| **Drizzle migrations**   | `packages/db/migrations/`                                                      |
+| **Drizzle client**       | `packages/db/src/client.ts`                                                    |
+| **RLS context**          | `packages/db/src/context.ts` (`withRls()`)                                     |
+| **Shared Zod schemas**   | `packages/types/src/`                                                          |
+| **Zitadel auth client**  | `packages/auth-client/src/`                                                    |
+| **Fastify app entry**    | `apps/api/src/main.ts`                                                         |
+| **Fastify hooks**        | `apps/api/src/hooks/` (auth, rate-limit, org-context, db-context, audit)       |
+| **Service layer**        | `apps/api/src/services/`                                                       |
+| **tRPC (internal)**      | `apps/api/src/trpc/`                                                           |
+| **Zitadel webhook**      | `apps/api/src/webhooks/zitadel.webhook.ts`                                     |
+| **Stripe webhook**       | `apps/api/src/webhooks/stripe.webhook.ts`                                      |
+| **Documenso webhook**    | `apps/api/src/webhooks/documenso.webhook.ts`                                   |
+| **Inngest functions**    | `apps/api/src/inngest/`                                                        |
+| **CMS adapters**         | `apps/api/src/adapters/cms/`                                                   |
+| **Federation discovery** | `apps/api/src/federation/discovery.routes.ts`                                  |
+| **Federation DID**       | `apps/api/src/federation/did.routes.ts`                                        |
+| **Federation service**   | `apps/api/src/services/federation.service.ts`                                  |
+| **Federation trust**     | `apps/api/src/federation/trust.routes.ts` (S2S), `trust-admin.routes.ts`       |
+| **Trust service**        | `apps/api/src/services/trust.service.ts`                                       |
+| **HTTP signatures**      | `apps/api/src/federation/http-signatures.ts`                                   |
+| **Federation auth**      | `apps/api/src/federation/federation-auth.ts` (S2S signature middleware)        |
+| **Sim-sub (BSAP)**       | `apps/api/src/federation/simsub.routes.ts` (S2S), `simsub-admin.routes.ts`     |
+| **Sim-sub service**      | `apps/api/src/services/simsub.service.ts`                                      |
+| **Fingerprint service**  | `apps/api/src/services/fingerprint.service.ts`                                 |
+| **Transfer routes**      | `apps/api/src/federation/transfer.routes.ts` (S2S), `transfer-admin.routes.ts` |
+| **Transfer service**     | `apps/api/src/services/transfer.service.ts`                                    |
+| **Next.js frontend**     | `apps/web/`                                                                    |
+| **tRPC client**          | `apps/web/src/lib/trpc.ts`                                                     |
+| **Env config (Zod)**     | `apps/api/src/config/env.ts`                                                   |
+| **Backlog**              | `docs/backlog.md` (track-organized, drives session focus)                      |
 
 Full project structure: [docs/architecture-v2-planning.md](docs/architecture-v2-planning.md)
 

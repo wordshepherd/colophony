@@ -52,6 +52,11 @@ import {
 } from '../services/issue.service.js';
 import { CmsConnectionNotFoundError } from '../services/cms-connection.service.js';
 import { SimSubConflictError } from '../services/simsub.service.js';
+import {
+  TransferNotFoundError,
+  TransferInvalidStateError,
+  TransferCapabilityError,
+} from '../services/transfer.service.js';
 
 type TRPCErrorCode = ConstructorParameters<typeof TRPCError>[0]['code'];
 
@@ -103,6 +108,10 @@ const errorCodeMap: [new (...args: never[]) => Error, TRPCErrorCode][] = [
   [IssueItemAlreadyExistsError, 'CONFLICT'],
   // CMS errors
   [CmsConnectionNotFoundError, 'NOT_FOUND'],
+  // Transfer errors
+  [TransferNotFoundError, 'NOT_FOUND'],
+  [TransferInvalidStateError, 'CONFLICT'],
+  [TransferCapabilityError, 'BAD_REQUEST'],
   // Precondition
   [FileNotCleanError, 'PRECONDITION_FAILED'],
 ];
