@@ -14,7 +14,7 @@ export type NotificationEventType = (typeof notificationEventTypes)[number];
 export const notificationEventTypeSchema = z.enum(notificationEventTypes);
 
 export const upsertNotificationPreferenceSchema = z.object({
-  channel: z.enum(["email"]),
+  channel: z.enum(["email", "in_app"]),
   eventType: notificationEventTypeSchema,
   enabled: z.boolean(),
 });
@@ -33,7 +33,7 @@ export type BulkUpsertNotificationPreferencesInput = z.infer<
 
 export const notificationPreferenceResponseSchema = z.object({
   id: z.string().uuid(),
-  channel: z.enum(["email"]),
+  channel: z.enum(["email", "in_app"]),
   eventType: z.string(),
   enabled: z.boolean(),
   createdAt: z.date(),

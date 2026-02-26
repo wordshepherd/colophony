@@ -178,7 +178,10 @@ export const emailSendStatusEnum = pgEnum("EmailSendStatus", [
   "BOUNCED",
 ]);
 
-export const notificationChannelEnum = pgEnum("NotificationChannel", ["email"]);
+export const notificationChannelEnum = pgEnum("NotificationChannel", [
+  "email",
+  "in_app",
+]);
 
 export const webhookEndpointStatusEnum = pgEnum("WebhookEndpointStatus", [
   "ACTIVE",

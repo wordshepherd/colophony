@@ -1,0 +1,97 @@
+import { render, screen, fireEvent } from "@testing-library/react";
+import "../../../../test/setup";
+
+let mockCurrentOrg: { id: string; name: string; slug: string } | null;
+let mockUnreadCount: number;
+
+jest.mock("@/hooks/use-organization", () => ({
+  useOrganization: () => ({
+    currentOrg: mockCurrentOrg,
+  }),
+}));
+
+jest.mock("@/hooks/use-notification-stream", () => ({
+  useNotificationStream: jest.fn(),
+}));
+
+jest.mock("@/lib/trpc", () => ({
+  trpc: {
+    notifications: {
+      unreadCount: {
+        useQuery: () => ({
+          data: mockCurrentOrg ? { count: mockUnreadCount } : undefined,
+        }),
+      },
+    },
+    useUtils: () => ({}),
+  },
+}));
+
+// Mock Popover to just render children for testability
+jest.mock("@/components/ui/popover", () => ({
+  Popover: ({
+    children,
+    open,
+    onOpenChange,
+  }: {
+    children: React.ReactNode;
+    open: boolean;
+    onOpenChange: (open: boolean) => void;
+  }) => <div data-open={open}>{children}</div>,
+  PopoverTrigger: ({
+    children,
+    asChild,
+  }: {
+    children: React.ReactNode;
+    asChild?: boolean;
+  }) => <>{children}</>,
+  PopoverContent: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="popover-content">{children}</div>
+  ),
+}));
+
+jest.mock("../notification-list", () => ({
+  NotificationList: ({ onClose }: { onClose?: () => void }) => (
+    <div data-testid="notification-list">NotificationList</div>
+  ),
+}));
+
+import { NotificationBell } from "../notification-bell";
+
+beforeEach(() => {
+  mockCurrentOrg = { id: "org-1", name: "Test Mag", slug: "test" };
+  mockUnreadCount = 0;
+});
+
+describe("NotificationBell", () => {
+  it("renders nothing when no current org", () => {
+    mockCurrentOrg = null;
+    const { container } = render(<NotificationBell />);
+    expect(container.innerHTML).toBe("");
+  });
+
+  it("renders bell without badge when count is 0", () => {
+    mockUnreadCount = 0;
+    render(<NotificationBell />);
+    expect(screen.getByRole("button")).toBeInTheDocument();
+    expect(screen.getByText("Notifications")).toBeInTheDocument();
+    expect(screen.queryByText("0")).not.toBeInTheDocument();
+  });
+
+  it("renders badge with unread count", () => {
+    mockUnreadCount = 5;
+    render(<NotificationBell />);
+    expect(screen.getByText("5")).toBeInTheDocument();
+  });
+
+  it("caps badge at 99+", () => {
+    mockUnreadCount = 150;
+    render(<NotificationBell />);
+    expect(screen.getByText("99+")).toBeInTheDocument();
+  });
+
+  it("includes NotificationList in popover", () => {
+    render(<NotificationBell />);
+    expect(screen.getByTestId("notification-list")).toBeInTheDocument();
+  });
+});

@@ -18,6 +18,7 @@ import { contractsRouter } from './routers/contracts.js';
 import { issuesRouter } from './routers/issues.js';
 import { cmsConnectionsRouter } from './routers/cms-connections.js';
 import { notificationPreferencesRouter } from './routers/notification-preferences.js';
+import { notificationsRouter } from './routers/notifications.js';
 import { webhooksRouter } from './routers/webhooks.js';
 
 // Re-export procedure builders for convenience
@@ -58,6 +59,7 @@ export const appRouter = t.router({
   issues: issuesRouter,
   cmsConnections: cmsConnectionsRouter,
   notificationPreferences: notificationPreferencesRouter,
+  notifications: notificationsRouter,
   webhooks: webhooksRouter,
   retention: t.router({}),
 });

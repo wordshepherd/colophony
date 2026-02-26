@@ -9,7 +9,7 @@ import { sql } from 'drizzle-orm';
 interface UpsertParams {
   organizationId: string;
   userId: string;
-  channel: 'email';
+  channel: 'email' | 'in_app';
   eventType: string;
   enabled: boolean;
 }
@@ -39,6 +39,32 @@ export const notificationPreferenceService = {
       .limit(1);
 
     // Default to enabled if no preference record exists
+    return pref?.enabled ?? true;
+  },
+
+  /**
+   * Check if in-app notifications are enabled for a user + event type.
+   * Returns true if no preference record exists (default: enabled).
+   */
+  async isInAppEnabled(
+    tx: DrizzleDb,
+    orgId: string,
+    userId: string,
+    eventType: string,
+  ): Promise<boolean> {
+    const [pref] = await tx
+      .select({ enabled: notificationPreferences.enabled })
+      .from(notificationPreferences)
+      .where(
+        and(
+          eq(notificationPreferences.organizationId, orgId),
+          eq(notificationPreferences.userId, userId),
+          eq(notificationPreferences.channel, 'in_app'),
+          eq(notificationPreferences.eventType, eventType),
+        ),
+      )
+      .limit(1);
+
     return pref?.enabled ?? true;
   },
 
@@ -80,7 +106,7 @@ export const notificationPreferenceService = {
     orgId: string,
     userId: string,
     preferences: Array<{
-      channel: 'email';
+      channel: 'email' | 'in_app';
       eventType: string;
       enabled: boolean;
     }>,

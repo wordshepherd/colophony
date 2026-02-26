@@ -222,7 +222,7 @@
 - [x] Email templates + provider integration (SMTP + SendGrid) — adapters, MJML templates, BullMQ queue/worker, notification preferences, Inngest functions — (architecture doc, Relay; done 2026-02-26)
 - [x] Notification preferences frontend — UI for users to manage email opt-in/opt-out per event type — (DEVLOG 2026-02-26; done 2026-02-26)
 - [x] Webhook delivery system (outbound) — (architecture doc, Relay; done 2026-02-26)
-- [ ] In-app notification center — (architecture doc, Relay)
+- [x] In-app notification center — SSE + Redis pub/sub + bell UI + dual-channel preferences — (architecture doc, Relay; done 2026-02-26)
 
 ---
 

@@ -192,6 +192,11 @@ export const AuditActions = {
   EMAIL_FAILED: "EMAIL_FAILED",
   NOTIFICATION_PREFERENCE_UPDATED: "NOTIFICATION_PREFERENCE_UPDATED",
 
+  // Relay — in-app notifications
+  IN_APP_NOTIFICATION_CREATED: "IN_APP_NOTIFICATION_CREATED",
+  IN_APP_NOTIFICATION_READ: "IN_APP_NOTIFICATION_READ",
+  IN_APP_NOTIFICATION_ALL_READ: "IN_APP_NOTIFICATION_ALL_READ",
+
   // Relay — webhooks
   WEBHOOK_ENDPOINT_CREATED: "WEBHOOK_ENDPOINT_CREATED",
   WEBHOOK_ENDPOINT_UPDATED: "WEBHOOK_ENDPOINT_UPDATED",
@@ -233,6 +238,7 @@ export const AuditResources = {
   MIGRATION: "migration",
   HUB: "hub",
   EMAIL: "email",
+  NOTIFICATION_INBOX: "notification_inbox",
   NOTIFICATION_PREFERENCE: "notification_preference",
   WEBHOOK_ENDPOINT: "webhook_endpoint",
   WEBHOOK_DELIVERY: "webhook_delivery",
@@ -505,6 +511,14 @@ export interface EmailAuditParams extends BaseAuditParams {
     | typeof AuditActions.EMAIL_FAILED;
 }
 
+export interface NotificationInboxAuditParams extends BaseAuditParams {
+  resource: typeof AuditResources.NOTIFICATION_INBOX;
+  action:
+    | typeof AuditActions.IN_APP_NOTIFICATION_CREATED
+    | typeof AuditActions.IN_APP_NOTIFICATION_READ
+    | typeof AuditActions.IN_APP_NOTIFICATION_ALL_READ;
+}
+
 export interface NotificationPreferenceAuditParams extends BaseAuditParams {
   resource: typeof AuditResources.NOTIFICATION_PREFERENCE;
   action: typeof AuditActions.NOTIFICATION_PREFERENCE_UPDATED;
@@ -565,6 +579,7 @@ export type AuditLogParams =
   | MigrationAuditParams
   | HubAuditParams
   | EmailAuditParams
+  | NotificationInboxAuditParams
   | NotificationPreferenceAuditParams
   | WebhookEndpointAuditParams
   | WebhookDeliveryAuditParams
