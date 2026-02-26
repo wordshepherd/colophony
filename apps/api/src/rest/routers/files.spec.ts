@@ -52,22 +52,16 @@ vi.mock('../../services/submission.service.js', () => ({
   },
 }));
 
-// Mock S3
-vi.mock('../../services/s3.js', () => ({
-  createS3Client: vi.fn(() => ({ __mock: true })),
-  getPresignedDownloadUrl: vi.fn(),
-  deleteS3Object: vi.fn(),
-}));
-
-// Mock env
-vi.mock('../../config/env.js', () => ({
-  validateEnv: vi.fn(() => ({
-    S3_BUCKET: 'submissions',
-    S3_QUARANTINE_BUCKET: 'quarantine',
-    S3_ENDPOINT: 'http://localhost:9000',
-    S3_ACCESS_KEY: 'minioadmin',
-    S3_SECRET_KEY: 'minioadmin',
-    S3_REGION: 'us-east-1',
+// Mock adapter registry (replaces old S3 + env mocks)
+vi.mock('../../adapters/registry-accessor.js', () => ({
+  getGlobalRegistry: vi.fn(() => ({
+    resolve: vi.fn(() => ({
+      defaultBucket: 'test-bucket',
+      quarantineBucket: 'test-quarantine',
+      getSignedUrlFromBucket: vi.fn(),
+      deleteFromBucket: vi.fn(),
+    })),
+    tryResolve: vi.fn(() => null),
   })),
 }));
 

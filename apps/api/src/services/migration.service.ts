@@ -33,7 +33,8 @@ import { auditService } from './audit.service.js';
 import { federationService, domainToDid } from './federation.service.js';
 import { migrationBundleService } from './migration-bundle.service.js';
 import { signFederationRequest } from '../federation/http-signatures.js';
-import { createS3Client, getObjectStream } from './s3.js';
+import { getGlobalRegistry } from '../adapters/registry-accessor.js';
+import type { S3StorageAdapter } from '../adapters/storage/index.js';
 
 // ---------------------------------------------------------------------------
 // Error classes
@@ -991,7 +992,7 @@ export const migrationService = {
    * Stream a file for a verified migration file serve request.
    */
   async getFileStream(
-    env: Env,
+    _env: Env,
     fileId: string,
   ): Promise<{
     stream: Readable;
@@ -1017,9 +1018,11 @@ export const migrationService = {
       throw new MigrationTokenError(`File not found or not clean: ${fileId}`);
     }
 
-    const s3Client = createS3Client(env);
-    const bucket = env.S3_BUCKET;
-    const stream = await getObjectStream(s3Client, bucket, file.storageKey);
+    const storage = getGlobalRegistry().resolve<S3StorageAdapter>('storage');
+    const stream = await storage.downloadFromBucket(
+      storage.defaultBucket,
+      file.storageKey,
+    );
 
     return {
       stream,

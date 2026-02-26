@@ -3,27 +3,13 @@ import { builder } from '../builder.js';
 import { requireUserContext, requireScopes } from '../guards.js';
 import { toUserServiceContext } from '../../services/context.js';
 import { fileService } from '../../services/file.service.js';
-import { createS3Client } from '../../services/s3.js';
-import { validateEnv } from '../../config/env.js';
+import { getGlobalRegistry } from '../../adapters/registry-accessor.js';
+import type { S3StorageAdapter } from '../../adapters/storage/index.js';
 import { mapServiceError } from '../error-mapper.js';
 import { SuccessPayload } from '../types/payloads.js';
 
-// ---------------------------------------------------------------------------
-// Lazy S3 client (same pattern as tRPC files router)
-// ---------------------------------------------------------------------------
-
-let s3ClientInstance: ReturnType<typeof createS3Client> | null = null;
-
-function getS3Client() {
-  if (!s3ClientInstance) {
-    const env = validateEnv();
-    s3ClientInstance = createS3Client(env);
-  }
-  return s3ClientInstance;
-}
-
-function getEnvConfig() {
-  return validateEnv();
+function getStorage(): S3StorageAdapter {
+  return getGlobalRegistry().resolve<S3StorageAdapter>('storage');
 }
 
 // ---------------------------------------------------------------------------
@@ -49,13 +35,10 @@ builder.mutationFields((t) => ({
       await requireScopes(ctx, 'files:write');
       const { fileId } = fileIdParamSchema.parse({ fileId: args.fileId });
       try {
-        const env = getEnvConfig();
         return await fileService.deleteAsOwner(
           toUserServiceContext(userCtx),
           fileId,
-          getS3Client(),
-          env.S3_BUCKET,
-          env.S3_QUARANTINE_BUCKET,
+          getStorage(),
         );
       } catch (e) {
         mapServiceError(e);

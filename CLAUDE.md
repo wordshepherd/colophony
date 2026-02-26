@@ -44,6 +44,9 @@ Per-directory CLAUDE.md files contain domain-specific details:
 | **Stripe webhook**       | `apps/api/src/webhooks/stripe.webhook.ts`                                        |
 | **Documenso webhook**    | `apps/api/src/webhooks/documenso.webhook.ts`                                     |
 | **Inngest functions**    | `apps/api/src/inngest/`                                                          |
+| **Adapter registry**     | `apps/api/src/adapters/registry-accessor.ts` (module-level singleton)            |
+| **Config builder**       | `apps/api/src/colophony.config.ts` (maps env → adapter configs)                  |
+| **SDK adapters**         | `apps/api/src/adapters/{email,storage,payment}/` (SDK-compatible)                |
 | **CMS adapters**         | `apps/api/src/adapters/cms/`                                                     |
 | **Federation discovery** | `apps/api/src/federation/discovery.routes.ts`                                    |
 | **Federation DID**       | `apps/api/src/federation/did.routes.ts`                                          |

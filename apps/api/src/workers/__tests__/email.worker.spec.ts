@@ -23,15 +23,6 @@ vi.mock('../../services/audit.service.js', () => ({
   },
 }));
 
-const mockAdapterSend = vi.fn();
-vi.mock('../../adapters/email/index.js', () => ({
-  createEmailAdapter: vi.fn(() => ({
-    name: 'smtp',
-    send: (...args: unknown[]) => mockAdapterSend(...args),
-    verify: vi.fn().mockResolvedValue(true),
-  })),
-}));
-
 const mockRenderEmailTemplate = vi.fn(
   (_name: unknown, _data: unknown) =>
     ({
@@ -67,6 +58,15 @@ vi.mock('bullmq', () => ({
 
 import { startEmailWorker } from '../email.worker.js';
 import type { Env } from '../../config/env.js';
+import type { AdapterRegistry } from '@colophony/plugin-sdk';
+
+const mockAdapterSend = vi.fn();
+
+const mockRegistry = {
+  resolve: vi.fn(() => ({
+    send: (...args: unknown[]) => mockAdapterSend(...args),
+  })),
+} as unknown as AdapterRegistry;
 
 const testEnv = {
   REDIS_HOST: 'localhost',
@@ -87,11 +87,11 @@ describe('email worker', () => {
   });
 
   it('starts worker and processes job successfully', async () => {
-    startEmailWorker(testEnv);
+    startEmailWorker(testEnv, mockRegistry);
 
     mockAdapterSend.mockResolvedValueOnce({
+      success: true,
       messageId: 'msg-123',
-      accepted: true,
     });
 
     await workerCallback({
@@ -119,7 +119,7 @@ describe('email worker', () => {
   });
 
   it('marks FAILED immediately on template render error', async () => {
-    startEmailWorker(testEnv);
+    startEmailWorker(testEnv, mockRegistry);
 
     mockRenderEmailTemplate.mockImplementationOnce(() => {
       throw new Error('Unknown template: bad-template');
@@ -151,8 +151,31 @@ describe('email worker', () => {
     expect(mockAdapterSend).not.toHaveBeenCalled();
   });
 
+  it('throws when send returns success=false to trigger BullMQ retry', async () => {
+    startEmailWorker(testEnv, mockRegistry);
+
+    mockAdapterSend.mockResolvedValueOnce({
+      success: false,
+      error: 'SMTP connection refused',
+    });
+
+    await expect(
+      workerCallback({
+        data: {
+          emailSendId: 'es-4',
+          orgId: 'org-1',
+          to: 'recipient@test.com',
+          from: 'noreply@test.com',
+          templateName: 'submission-received',
+          templateData: {},
+        },
+        attemptsMade: 0,
+      }),
+    ).rejects.toThrow('SMTP connection refused');
+  });
+
   it('marks FAILED + audit on final failure', async () => {
-    startEmailWorker(testEnv);
+    startEmailWorker(testEnv, mockRegistry);
 
     const mockJob = {
       id: 'job-1',

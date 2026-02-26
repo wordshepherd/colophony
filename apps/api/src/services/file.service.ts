@@ -7,7 +7,6 @@ import {
   type DrizzleDb,
 } from '@colophony/db';
 import { asc, count } from 'drizzle-orm';
-import type { S3Client } from '@aws-sdk/client-s3';
 import type { ScanStatus } from '@colophony/types';
 import {
   MAX_FILES_PER_MANUSCRIPT_VERSION,
@@ -17,7 +16,7 @@ import {
   AuditActions,
   AuditResources,
 } from '@colophony/types';
-import { getPresignedDownloadUrl, deleteS3Object } from './s3.js';
+import type { S3StorageAdapter } from '../adapters/storage/index.js';
 import type { ServiceContext, UserServiceContext } from './types.js';
 import { ForbiddenError } from './errors.js';
 
@@ -214,8 +213,7 @@ export const fileService = {
   async getDownloadUrl(
     tx: DrizzleDb,
     fileId: string,
-    s3Client: S3Client,
-    bucket: string,
+    storage: S3StorageAdapter,
   ): Promise<{ url: string; filename: string; mimeType: string } | null> {
     const file = await fileService.getById(tx, fileId);
     if (!file) return null;
@@ -224,28 +222,23 @@ export const fileService = {
       throw new FileNotCleanError(fileId, file.scanStatus);
     }
 
-    const url = await getPresignedDownloadUrl(
-      s3Client,
-      bucket,
+    const url = await storage.getSignedUrlFromBucket(
+      storage.defaultBucket,
       file.storageKey,
     );
 
     return { url, filename: file.filename, mimeType: file.mimeType };
   },
 
-  async deleteWithS3(
-    tx: DrizzleDb,
-    fileId: string,
-    s3Client: S3Client,
-    bucket: string,
-    quarantineBucket: string,
-  ) {
+  async deleteWithS3(tx: DrizzleDb, fileId: string, storage: S3StorageAdapter) {
     const deleted = await fileService.delete(tx, fileId);
     if (!deleted) return null;
 
     const targetBucket =
-      deleted.scanStatus === 'CLEAN' ? bucket : quarantineBucket;
-    await deleteS3Object(s3Client, targetBucket, deleted.storageKey);
+      deleted.scanStatus === 'CLEAN'
+        ? storage.defaultBucket
+        : storage.quarantineBucket;
+    await storage.deleteFromBucket(targetBucket, deleted.storageKey);
 
     return deleted;
   },
@@ -272,8 +265,7 @@ export const fileService = {
   async getDownloadUrlWithAccess(
     svc: ServiceContext | UserServiceContext,
     fileId: string,
-    s3Client: S3Client,
-    bucket: string,
+    storage: S3StorageAdapter,
   ) {
     const file = await fileService.getById(svc.tx, fileId);
     if (!file) throw new FileNotFoundError(fileId);
@@ -282,9 +274,8 @@ export const fileService = {
       throw new FileNotCleanError(fileId, file.scanStatus);
     }
 
-    const url = await getPresignedDownloadUrl(
-      s3Client,
-      bucket,
+    const url = await storage.getSignedUrlFromBucket(
+      storage.defaultBucket,
       file.storageKey,
     );
     return { url, filename: file.filename, mimeType: file.mimeType };
@@ -296,9 +287,7 @@ export const fileService = {
   async deleteAsOwner(
     svc: UserServiceContext,
     fileId: string,
-    s3Client: S3Client,
-    bucket: string,
-    quarantineBucket: string,
+    storage: S3StorageAdapter,
   ) {
     const file = await fileService.getById(svc.tx, fileId);
     if (!file) throw new FileNotFoundError(fileId);
@@ -338,8 +327,10 @@ export const fileService = {
     // S3 cleanup — best-effort
     try {
       const targetBucket =
-        file.scanStatus === 'CLEAN' ? bucket : quarantineBucket;
-      await deleteS3Object(s3Client, targetBucket, file.storageKey);
+        file.scanStatus === 'CLEAN'
+          ? storage.defaultBucket
+          : storage.quarantineBucket;
+      await storage.deleteFromBucket(targetBucket, file.storageKey);
     } catch {
       svc
         .audit({

@@ -19,7 +19,8 @@ const {
   mockAuditLog,
   mockRedisEval,
   mockRedisQuit,
-  mockConstructEvent,
+  mockVerifyWebhook,
+  mockTryResolve,
 } = vi.hoisted(() => {
   const mockClientQuery = vi.fn().mockResolvedValue({ rows: [] });
   const mockClientRelease = vi.fn();
@@ -35,7 +36,8 @@ const {
   const mockAuditLog = vi.fn().mockResolvedValue(undefined);
   const mockRedisEval = vi.fn().mockResolvedValue([1, 60000]);
   const mockRedisQuit = vi.fn().mockResolvedValue('OK');
-  const mockConstructEvent = vi.fn();
+  const mockVerifyWebhook = vi.fn();
+  const mockTryResolve = vi.fn();
 
   return {
     mockPoolConnect,
@@ -45,7 +47,8 @@ const {
     mockAuditLog,
     mockRedisEval,
     mockRedisQuit,
-    mockConstructEvent,
+    mockVerifyWebhook,
+    mockTryResolve,
   };
 });
 
@@ -96,17 +99,13 @@ vi.mock('ioredis', () => {
   return { default: RedisMock };
 });
 
-// Mock Stripe
-vi.mock('stripe', () => {
-  const StripeMock = vi.fn().mockImplementation(function () {
-    return {
-      webhooks: {
-        constructEvent: mockConstructEvent,
-      },
-    };
-  });
-  return { default: StripeMock };
-});
+// Mock adapter registry — payment adapter uses verifyWebhook instead of Stripe SDK directly
+vi.mock('../adapters/registry-accessor.js', () => ({
+  getGlobalRegistry: vi.fn(() => ({
+    resolve: vi.fn(),
+    tryResolve: mockTryResolve,
+  })),
+}));
 
 import { registerStripeWebhooks } from './stripe.webhook.js';
 
@@ -154,26 +153,34 @@ const testEnv: Env = {
 const TEST_ORG_ID = '550e8400-e29b-41d4-a716-446655440000';
 const TEST_SUBMISSION_ID = '660e8400-e29b-41d4-a716-446655440001';
 
-function makeStripeEvent(
+/**
+ * Build a parsed webhook event (what `paymentAdapter.verifyWebhook()` returns).
+ * Shape: `{ id, type, data }` where `data` is the session object directly.
+ * The source reconstructs this into Stripe.Event format internally.
+ */
+function makeParsedWebhookEvent(
   overrides: Record<string, unknown> = {},
 ): Record<string, unknown> {
-  return {
+  const base = {
     id: 'evt_test_001',
     type: 'checkout.session.completed',
     data: {
-      object: {
-        id: 'cs_test_session',
-        payment_intent: 'pi_test_intent',
-        amount_total: 2500,
-        currency: 'usd',
-        metadata: {
-          organizationId: TEST_ORG_ID,
-          submissionId: TEST_SUBMISSION_ID,
-        },
+      id: 'cs_test_session',
+      payment_intent: 'pi_test_intent',
+      amount_total: 2500,
+      currency: 'usd',
+      metadata: {
+        organizationId: TEST_ORG_ID,
+        submissionId: TEST_SUBMISSION_ID,
       },
     },
     ...overrides,
   };
+  // Allow overriding nested data
+  if (overrides.data) {
+    base.data = overrides.data as typeof base.data;
+  }
+  return base;
 }
 
 function sendWebhook(
@@ -214,7 +221,8 @@ describe('Stripe webhook handler', () => {
     mockAuditLog.mockClear().mockResolvedValue(undefined);
     mockRedisEval.mockClear().mockResolvedValue([1, 60000]);
     mockRedisQuit.mockClear();
-    mockConstructEvent.mockClear();
+    mockVerifyWebhook.mockClear();
+    mockTryResolve.mockClear();
 
     // Default mock setup
     mockPoolConnect.mockResolvedValue({
@@ -222,8 +230,11 @@ describe('Stripe webhook handler', () => {
       release: mockClientRelease,
     });
 
-    // Default: constructEvent returns a valid event
-    mockConstructEvent.mockReturnValue(makeStripeEvent());
+    // Default: tryResolve('payment') returns a mock payment adapter with verifyWebhook
+    mockTryResolve.mockReturnValue({ verifyWebhook: mockVerifyWebhook });
+
+    // Default: verifyWebhook returns a valid parsed event
+    mockVerifyWebhook.mockResolvedValue(makeParsedWebhookEvent());
 
     // Default client.query behavior:
     // - INSERT returns nothing (ON CONFLICT DO NOTHING)
@@ -246,6 +257,11 @@ describe('Stripe webhook handler', () => {
 
   describe('signature verification', () => {
     it('rejects missing stripe-signature header', async () => {
+      // Without the stripe-signature header, the adapter's verifyWebhook will reject
+      mockVerifyWebhook.mockRejectedValueOnce(
+        new Error('Missing stripe-signature header'),
+      );
+
       const response = await app.inject({
         method: 'POST',
         url: '/webhooks/stripe',
@@ -256,68 +272,28 @@ describe('Stripe webhook handler', () => {
       expect(response.json().error).toBe('invalid_signature');
     });
 
-    it('passes configured timestamp tolerance to constructEvent', async () => {
+    it('calls verifyWebhook on the payment adapter', async () => {
       await sendWebhook(app);
-      expect(mockConstructEvent).toHaveBeenCalledWith(
-        expect.anything(), // rawBody
-        'test_sig', // signature header
-        WEBHOOK_SECRET,
-        testEnv.WEBHOOK_TIMESTAMP_MAX_AGE_SECONDS,
+      expect(mockVerifyWebhook).toHaveBeenCalledWith(
+        expect.objectContaining({ 'stripe-signature': 'test_sig' }),
+        expect.any(String), // rawBody as string
       );
     });
 
     it('rejects invalid signature', async () => {
-      mockConstructEvent.mockImplementation(() => {
-        throw new Error('Invalid signature');
-      });
+      mockVerifyWebhook.mockRejectedValue(new Error('Invalid signature'));
 
       const response = await sendWebhook(app);
       expect(response.statusCode).toBe(401);
       expect(response.json().error).toBe('invalid_signature');
     });
 
-    it('rejects when STRIPE_SECRET_KEY not configured', async () => {
-      const noKeyApp = Fastify({ logger: false });
-      await noKeyApp.register(async (scope) => {
-        await registerStripeWebhooks(scope, {
-          env: { ...testEnv, STRIPE_SECRET_KEY: undefined },
-        });
-      });
+    it('rejects when payment adapter not configured (tryResolve returns null)', async () => {
+      mockTryResolve.mockReturnValueOnce(null);
 
-      const response = await noKeyApp.inject({
-        method: 'POST',
-        url: '/webhooks/stripe',
-        headers: {
-          'content-type': 'application/json',
-          'stripe-signature': 'test_sig',
-        },
-        payload: '{}',
-      });
+      const response = await sendWebhook(app);
       expect(response.statusCode).toBe(401);
       expect(response.json().error).toBe('invalid_signature');
-      await noKeyApp.close();
-    });
-
-    it('rejects when STRIPE_WEBHOOK_SECRET not configured', async () => {
-      const noSecretApp = Fastify({ logger: false });
-      await noSecretApp.register(async (scope) => {
-        await registerStripeWebhooks(scope, {
-          env: { ...testEnv, STRIPE_WEBHOOK_SECRET: undefined },
-        });
-      });
-
-      const response = await noSecretApp.inject({
-        method: 'POST',
-        url: '/webhooks/stripe',
-        headers: {
-          'content-type': 'application/json',
-          'stripe-signature': 'test_sig',
-        },
-        payload: '{}',
-      });
-      expect(response.statusCode).toBe(401);
-      expect(response.json().error).toBe('invalid_signature');
-      await noSecretApp.close();
     });
   });
 
@@ -400,8 +376,8 @@ describe('Stripe webhook handler', () => {
 
   describe('checkout.session.expired', () => {
     it('upserts payment with FAILED status and logs audit', async () => {
-      mockConstructEvent.mockReturnValue(
-        makeStripeEvent({
+      mockVerifyWebhook.mockResolvedValue(
+        makeParsedWebhookEvent({
           id: 'evt_expired_001',
           type: 'checkout.session.expired',
         }),
@@ -421,8 +397,8 @@ describe('Stripe webhook handler', () => {
 
   describe('unknown event types', () => {
     it('stores but does not process unknown event types', async () => {
-      mockConstructEvent.mockReturnValue(
-        makeStripeEvent({
+      mockVerifyWebhook.mockResolvedValue(
+        makeParsedWebhookEvent({
           id: 'evt_unknown_001',
           type: 'customer.subscription.created',
         }),
@@ -441,17 +417,15 @@ describe('Stripe webhook handler', () => {
 
   describe('metadata validation', () => {
     it('records error for missing organizationId and returns 200', async () => {
-      mockConstructEvent.mockReturnValue(
-        makeStripeEvent({
+      mockVerifyWebhook.mockResolvedValue(
+        makeParsedWebhookEvent({
           id: 'evt_no_org',
           data: {
-            object: {
-              id: 'cs_no_org',
-              payment_intent: 'pi_no_org',
-              amount_total: 1000,
-              currency: 'usd',
-              metadata: {},
-            },
+            id: 'cs_no_org',
+            payment_intent: 'pi_no_org',
+            amount_total: 1000,
+            currency: 'usd',
+            metadata: {},
           },
         }),
       );
@@ -473,17 +447,15 @@ describe('Stripe webhook handler', () => {
     });
 
     it('records error for invalid organizationId format', async () => {
-      mockConstructEvent.mockReturnValue(
-        makeStripeEvent({
+      mockVerifyWebhook.mockResolvedValue(
+        makeParsedWebhookEvent({
           id: 'evt_bad_org',
           data: {
-            object: {
-              id: 'cs_bad_org',
-              payment_intent: 'pi_bad_org',
-              amount_total: 1000,
-              currency: 'usd',
-              metadata: { organizationId: 'not-a-uuid' },
-            },
+            id: 'cs_bad_org',
+            payment_intent: 'pi_bad_org',
+            amount_total: 1000,
+            currency: 'usd',
+            metadata: { organizationId: 'not-a-uuid' },
           },
         }),
       );
@@ -495,17 +467,15 @@ describe('Stripe webhook handler', () => {
     });
 
     it('processes event with optional submissionId omitted', async () => {
-      mockConstructEvent.mockReturnValue(
-        makeStripeEvent({
+      mockVerifyWebhook.mockResolvedValue(
+        makeParsedWebhookEvent({
           id: 'evt_no_sub',
           data: {
-            object: {
-              id: 'cs_no_sub',
-              payment_intent: 'pi_no_sub',
-              amount_total: 1000,
-              currency: 'usd',
-              metadata: { organizationId: TEST_ORG_ID },
-            },
+            id: 'cs_no_sub',
+            payment_intent: 'pi_no_sub',
+            amount_total: 1000,
+            currency: 'usd',
+            metadata: { organizationId: TEST_ORG_ID },
           },
         }),
       );
