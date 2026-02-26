@@ -21,17 +21,32 @@ function shouldSkip(request: FastifyRequest): boolean {
 }
 
 /**
- * Atomic Lua script: INCR key, set PEXPIRE on first hit, return [count, pttl].
- * Single round-trip, no race condition between INCR and EXPIRE.
+ * Sliding-window-log rate limiter using Redis sorted sets.
+ *
+ * Each request is stored as a scored member (score = timestamp). On each check:
+ * 1. Remove expired entries (older than window)
+ * 2. Count remaining entries
+ * 3. Only add new entry if under limit (prevents unbounded growth during abuse)
+ * 4. Set TTL for automatic cleanup
+ *
+ * ARGV[1]: nowMs - windowMs (oldest allowed timestamp)
+ * ARGV[2]: nowMs (current timestamp as score)
+ * ARGV[3]: unique request ID (now:random) to prevent dedup
+ * ARGV[4]: windowMs (TTL for cleanup)
+ * ARGV[5]: max (limit — only add if under limit)
+ *
+ * Returns: count + 1 (1-indexed like INCR — allowed entries capped at limit)
+ *
  * Shared with rate-limit-auth.ts second-pass plugin.
  */
-export const LUA_SCRIPT = `
-local current = redis.call('INCR', KEYS[1])
-if current == 1 then
-  redis.call('PEXPIRE', KEYS[1], ARGV[1])
+export const SLIDING_WINDOW_SCRIPT = `
+redis.call('ZREMRANGEBYSCORE', KEYS[1], 0, ARGV[1])
+local count = redis.call('ZCARD', KEYS[1])
+if count < tonumber(ARGV[5]) then
+  redis.call('ZADD', KEYS[1], ARGV[2], ARGV[3])
 end
-local ttl = redis.call('PTTL', KEYS[1])
-return { current, ttl }
+redis.call('PEXPIRE', KEYS[1], ARGV[4])
+return count + 1
 `;
 
 /**
@@ -93,19 +108,23 @@ export default fp(
         // Always use IP — auth hasn't run yet
         const identifier = request.ip;
 
-        const windowId = Math.floor(Date.now() / windowMs);
-        const key = `${prefix}:${env.RATE_LIMIT_WINDOW_SECONDS}:${windowId}:${identifier}`;
+        const key = `${prefix}:${identifier}`;
+        const nowMs = Date.now();
+        const requestId = `${nowMs}:${Math.random().toString(36).slice(2, 8)}`;
 
         let count: number;
-        let ttlMs: number;
 
         try {
-          const result = (await redis.eval(LUA_SCRIPT, 1, key, windowMs)) as [
-            number,
-            number,
-          ];
-          count = result[0];
-          ttlMs = result[1];
+          count = (await redis.eval(
+            SLIDING_WINDOW_SCRIPT,
+            1,
+            key,
+            nowMs - windowMs,
+            nowMs,
+            requestId,
+            windowMs,
+            limit,
+          )) as number;
         } catch {
           // Graceful degradation: Redis unavailable → allow request
           request.log.warn(
@@ -115,16 +134,14 @@ export default fp(
         }
 
         const remaining = Math.max(0, limit - count);
-        const resetEpochSeconds = Math.ceil(
-          (Date.now() + Math.max(0, ttlMs)) / 1000,
-        );
+        const resetEpochSeconds = Math.ceil((nowMs + windowMs) / 1000);
 
         reply.header('X-RateLimit-Limit', limit);
         reply.header('X-RateLimit-Remaining', remaining);
         reply.header('X-RateLimit-Reset', resetEpochSeconds);
 
         if (count > limit) {
-          const retryAfterSeconds = Math.ceil(Math.max(0, ttlMs) / 1000);
+          const retryAfterSeconds = Math.ceil(windowMs / 1000);
           reply.header('Retry-After', retryAfterSeconds);
           reply.header('Cache-Control', 'no-store');
 

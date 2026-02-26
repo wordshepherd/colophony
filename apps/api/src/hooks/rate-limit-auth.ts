@@ -1,7 +1,7 @@
 import fp from 'fastify-plugin';
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import type { Env } from '../config/env.js';
-import { LUA_SCRIPT } from './rate-limit.js';
+import { SLIDING_WINDOW_SCRIPT } from './rate-limit.js';
 
 export interface RateLimitAuthPluginOptions {
   env: Env;
@@ -54,19 +54,23 @@ export default fp(
         const redis = app.rateLimitRedis;
         if (!redis) return;
 
-        const windowId = Math.floor(Date.now() / windowMs);
-        const key = `${prefix}:auth:${env.RATE_LIMIT_WINDOW_SECONDS}:${windowId}:${userId}`;
+        const key = `${prefix}:auth:${userId}`;
+        const nowMs = Date.now();
+        const requestId = `${nowMs}:${Math.random().toString(36).slice(2, 8)}`;
 
         let count: number;
-        let ttlMs: number;
 
         try {
-          const result = (await redis.eval(LUA_SCRIPT, 1, key, windowMs)) as [
-            number,
-            number,
-          ];
-          count = result[0];
-          ttlMs = result[1];
+          count = (await redis.eval(
+            SLIDING_WINDOW_SCRIPT,
+            1,
+            key,
+            nowMs - windowMs,
+            nowMs,
+            requestId,
+            windowMs,
+            limit,
+          )) as number;
         } catch {
           // Graceful degradation: Redis unavailable → allow request
           request.log.warn(
@@ -76,9 +80,7 @@ export default fp(
         }
 
         const remaining = Math.max(0, limit - count);
-        const resetEpochSeconds = Math.ceil(
-          (Date.now() + Math.max(0, ttlMs)) / 1000,
-        );
+        const resetEpochSeconds = Math.ceil((nowMs + windowMs) / 1000);
 
         // Override headers from first-pass with higher auth limits
         reply.header('X-RateLimit-Limit', limit);
@@ -86,7 +88,7 @@ export default fp(
         reply.header('X-RateLimit-Reset', resetEpochSeconds);
 
         if (count > limit) {
-          const retryAfterSeconds = Math.ceil(Math.max(0, ttlMs) / 1000);
+          const retryAfterSeconds = Math.ceil(windowMs / 1000);
           reply.header('Retry-After', retryAfterSeconds);
           reply.header('Cache-Control', 'no-store');
 

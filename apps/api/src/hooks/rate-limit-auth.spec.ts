@@ -290,7 +290,7 @@ describe('rate-limit-auth plugin (second-pass)', () => {
       vi.spyOn(redis, 'eval').mockImplementation(async () => {
         callCount++;
         if (callCount > 1) throw new Error('Redis down');
-        return [1, 60000] as [number, number];
+        return 1; // sliding window returns count directly
       });
 
       const response = await app.inject({
