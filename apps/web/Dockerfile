@@ -11,16 +11,12 @@ RUN pnpm install --frozen-lockfile
 
 # Stage 2: builder — build packages and Next.js app
 FROM deps AS builder
-# OpenSSL is required for Prisma to detect the correct engine binary (OpenSSL 3.x on Alpine 3.23+)
-RUN apk add --no-cache openssl
 ARG NEXT_PUBLIC_API_URL
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 ARG NEXT_PUBLIC_TUS_URL
 ENV NEXT_PUBLIC_TUS_URL=$NEXT_PUBLIC_TUS_URL
 COPY packages/ packages/
 COPY apps/web/ apps/web/
-# Prisma generate needed because @colophony/types may depend on Prisma types
-RUN pnpm --filter @colophony/db generate
 RUN pnpm --filter @colophony/types build
 RUN pnpm --filter @colophony/db build
 RUN pnpm --filter @colophony/web build

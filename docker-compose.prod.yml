@@ -26,7 +26,7 @@ services:
     networks:
       - colophony
 
-  # NestJS API + tRPC server
+  # Fastify API + tRPC server
   api:
     build:
       context: .
@@ -272,16 +272,13 @@ services:
     entrypoint: ["sh", "-c"]
     command:
       - |
-        # Install psql for RLS policy application, openssl for Prisma engine
-        apk add --no-cache postgresql16-client openssl
-        # Run migrations and apply RLS
+        apk add --no-cache postgresql16-client
         /app/scripts/init-prod.sh
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-colophony}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-colophony}
       APP_DATABASE_URL: postgresql://app_user:${APP_USER_PASSWORD}@postgres:5432/${POSTGRES_DB:-colophony}
     volumes:
       - ./scripts/init-prod.sh:/app/scripts/init-prod.sh:ro
-      - ./packages/db/prisma:/app/prisma:ro
     depends_on:
       postgres:
         condition: service_healthy
