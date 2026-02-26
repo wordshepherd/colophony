@@ -23,18 +23,24 @@ function createRedis(env: Env): Redis {
   });
 }
 
-export function getPublisher(env: Env): Redis {
+export async function getPublisher(env: Env): Promise<Redis> {
   if (!publisher) {
     publisher = createRedis(env);
-    void publisher.connect();
+    await publisher.connect();
+  }
+  if (publisher.status !== 'ready') {
+    await publisher.connect();
   }
   return publisher;
 }
 
-export function getSubscriber(env: Env): Redis {
+export async function getSubscriber(env: Env): Promise<Redis> {
   if (!subscriber) {
     subscriber = createRedis(env);
-    void subscriber.connect();
+    await subscriber.connect();
+  }
+  if (subscriber.status !== 'ready') {
+    await subscriber.connect();
   }
   return subscriber;
 }
@@ -49,7 +55,7 @@ export async function publishNotification(
   userId: string,
   event: NotificationEvent,
 ): Promise<void> {
-  const pub = getPublisher(env);
+  const pub = await getPublisher(env);
   await pub.publish(channelKey(orgId, userId), JSON.stringify(event));
 }
 

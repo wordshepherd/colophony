@@ -1,8 +1,14 @@
 import { describe, it, expect, vi } from 'vitest';
 
+let mockConnectShouldFail = false;
+
 vi.mock('ioredis', () => {
   class MockRedis {
-    connect = vi.fn().mockResolvedValue(undefined);
+    status = 'wait';
+    connect = vi.fn().mockImplementation(async () => {
+      if (mockConnectShouldFail) throw new Error('ECONNREFUSED');
+      (this as any).status = 'ready';
+    });
     publish = vi.fn().mockResolvedValue(1);
     quit = vi.fn().mockResolvedValue('OK');
   }
@@ -35,6 +41,7 @@ describe('redis-pubsub', () => {
 
   describe('publishNotification', () => {
     it('publishes serialized JSON to correct channel', async () => {
+      mockConnectShouldFail = false;
       const event = {
         id: 'notif-1',
         eventType: 'submission.received',
@@ -44,7 +51,6 @@ describe('redis-pubsub', () => {
         createdAt: '2026-02-26T00:00:00.000Z',
       };
 
-      // publishNotification uses getPublisher internally which creates a Redis instance
       await expect(
         publishNotification(mockEnv, 'org-1', 'user-1', event),
       ).resolves.not.toThrow();

@@ -1,13 +1,17 @@
 import { describe, it, expect, vi } from 'vitest';
 
+let mockConnectShouldFail = false;
+
 vi.mock('ioredis', () => {
-  const MockRedis = vi.fn().mockImplementation(() => ({
-    connect: vi.fn().mockResolvedValue(undefined),
-    subscribe: vi.fn().mockResolvedValue(undefined),
-    unsubscribe: vi.fn().mockResolvedValue(undefined),
-    quit: vi.fn().mockResolvedValue('OK'),
-    on: vi.fn(),
-  }));
+  class MockRedis {
+    connect = vi.fn().mockImplementation(async () => {
+      if (mockConnectShouldFail) throw new Error('ECONNREFUSED');
+    });
+    subscribe = vi.fn().mockResolvedValue(undefined);
+    unsubscribe = vi.fn().mockResolvedValue(undefined);
+    quit = vi.fn().mockResolvedValue('OK');
+    on = vi.fn();
+  }
   return { default: MockRedis };
 });
 
@@ -19,16 +23,20 @@ vi.mock('../redis-pubsub.js', () => ({
 
 import { registerNotificationStreamRoute } from '../notification-stream.js';
 
+function createTestHarness() {
+  const mockGet = vi.fn();
+  const mockApp = { get: mockGet } as any;
+  const mockEnv = {
+    REDIS_HOST: 'localhost',
+    REDIS_PORT: 6379,
+    REDIS_PASSWORD: '',
+  } as any;
+  return { mockGet, mockApp, mockEnv };
+}
+
 describe('registerNotificationStreamRoute', () => {
   it('registers a GET route at /api/notifications/stream', async () => {
-    const mockGet = vi.fn();
-    const mockApp = { get: mockGet } as any;
-    const mockEnv = {
-      REDIS_HOST: 'localhost',
-      REDIS_PORT: 6379,
-      REDIS_PASSWORD: '',
-    } as any;
-
+    const { mockGet, mockApp, mockEnv } = createTestHarness();
     await registerNotificationStreamRoute(mockApp, { env: mockEnv });
     expect(mockGet).toHaveBeenCalledWith(
       '/api/notifications/stream',
@@ -37,14 +45,7 @@ describe('registerNotificationStreamRoute', () => {
   });
 
   it('returns 401 when no auth context', async () => {
-    const mockGet = vi.fn();
-    const mockApp = { get: mockGet } as any;
-    const mockEnv = {
-      REDIS_HOST: 'localhost',
-      REDIS_PORT: 6379,
-      REDIS_PASSWORD: '',
-    } as any;
-
+    const { mockGet, mockApp, mockEnv } = createTestHarness();
     await registerNotificationStreamRoute(mockApp, { env: mockEnv });
 
     const handler = mockGet.mock.calls[0][1];
@@ -59,14 +60,7 @@ describe('registerNotificationStreamRoute', () => {
   });
 
   it('returns 400 when no org context', async () => {
-    const mockGet = vi.fn();
-    const mockApp = { get: mockGet } as any;
-    const mockEnv = {
-      REDIS_HOST: 'localhost',
-      REDIS_PORT: 6379,
-      REDIS_PASSWORD: '',
-    } as any;
-
+    const { mockGet, mockApp, mockEnv } = createTestHarness();
     await registerNotificationStreamRoute(mockApp, { env: mockEnv });
 
     const handler = mockGet.mock.calls[0][1];
@@ -78,5 +72,65 @@ describe('registerNotificationStreamRoute', () => {
 
     await handler(mockRequest, mockReply);
     expect(mockReply.status).toHaveBeenCalledWith(400);
+  });
+
+  it('returns 429 when user exceeds max SSE connections', async () => {
+    const { mockGet, mockApp, mockEnv } = createTestHarness();
+    await registerNotificationStreamRoute(mockApp, { env: mockEnv });
+
+    const handler = mockGet.mock.calls[0][1];
+
+    // Exhaust 5 connection slots for this user
+    for (let i = 0; i < 5; i++) {
+      const req = {
+        authContext: { userId: 'user-flood', orgId: 'org-1' },
+        raw: { on: vi.fn() },
+      };
+      const rep = {
+        hijack: vi.fn(),
+        raw: { writeHead: vi.fn(), write: vi.fn(), end: vi.fn() },
+        status: vi.fn().mockReturnThis(),
+        send: vi.fn().mockReturnThis(),
+      };
+      await handler(req, rep);
+    }
+
+    // 6th connection should be rejected
+    const mockRequest = {
+      authContext: { userId: 'user-flood', orgId: 'org-1' },
+      raw: { on: vi.fn() },
+    };
+    const mockReply = {
+      status: vi.fn().mockReturnThis(),
+      send: vi.fn().mockReturnThis(),
+    };
+
+    await handler(mockRequest, mockReply);
+    expect(mockReply.status).toHaveBeenCalledWith(429);
+  });
+
+  it('ends response gracefully when Redis connect fails', async () => {
+    mockConnectShouldFail = true;
+    const { mockGet, mockApp, mockEnv } = createTestHarness();
+    await registerNotificationStreamRoute(mockApp, { env: mockEnv });
+
+    const handler = mockGet.mock.calls[0][1];
+    const rawEnd = vi.fn();
+    const mockRequest = {
+      authContext: { userId: 'user-redis-fail', orgId: 'org-1' },
+      raw: { on: vi.fn() },
+    };
+    const mockReply = {
+      hijack: vi.fn(),
+      raw: { writeHead: vi.fn(), write: vi.fn(), end: rawEnd },
+      status: vi.fn().mockReturnThis(),
+      send: vi.fn().mockReturnThis(),
+    };
+
+    await handler(mockRequest, mockReply);
+    expect(rawEnd).toHaveBeenCalled();
+
+    // Reset for other tests
+    mockConnectShouldFail = false;
   });
 });

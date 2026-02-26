@@ -7,6 +7,26 @@ import {
   untrackConnection,
 } from './redis-pubsub.js';
 
+// Per-user SSE connection limit to prevent connection exhaustion
+const MAX_CONNECTIONS_PER_USER = 5;
+const userConnectionCounts = new Map<string, number>();
+
+function incrementUserConnections(userId: string): boolean {
+  const count = userConnectionCounts.get(userId) ?? 0;
+  if (count >= MAX_CONNECTIONS_PER_USER) return false;
+  userConnectionCounts.set(userId, count + 1);
+  return true;
+}
+
+function decrementUserConnections(userId: string): void {
+  const count = userConnectionCounts.get(userId) ?? 0;
+  if (count <= 1) {
+    userConnectionCounts.delete(userId);
+  } else {
+    userConnectionCounts.set(userId, count - 1);
+  }
+}
+
 export async function registerNotificationStreamRoute(
   app: FastifyInstance,
   { env }: { env: Env },
@@ -22,6 +42,12 @@ export async function registerNotificationStreamRoute(
     }
 
     const { userId, orgId } = request.authContext;
+
+    // Rate limit: max SSE connections per user
+    if (!incrementUserConnections(userId)) {
+      return reply.status(429).send({ error: 'Too many SSE connections' });
+    }
+
     const channel = channelKey(orgId, userId);
 
     // SSE response headers
@@ -45,7 +71,14 @@ export async function registerNotificationStreamRoute(
       lazyConnect: true,
       maxRetriesPerRequest: null,
     });
-    await sub.connect();
+
+    try {
+      await sub.connect();
+    } catch {
+      decrementUserConnections(userId);
+      raw.end();
+      return;
+    }
     trackConnection(sub);
 
     // Forward messages as SSE events
@@ -53,7 +86,15 @@ export async function registerNotificationStreamRoute(
       raw.write(`event: notification\ndata: ${message}\n\n`);
     });
 
-    await sub.subscribe(channel);
+    try {
+      await sub.subscribe(channel);
+    } catch {
+      decrementUserConnections(userId);
+      untrackConnection(sub);
+      sub.quit().catch(() => undefined);
+      raw.end();
+      return;
+    }
 
     // Keep-alive ping every 30s
     const pingInterval = setInterval(() => {
@@ -61,8 +102,12 @@ export async function registerNotificationStreamRoute(
     }, 30_000);
 
     // Cleanup on disconnect
+    let cleaned = false;
     const cleanup = () => {
+      if (cleaned) return;
+      cleaned = true;
       clearInterval(pingInterval);
+      decrementUserConnections(userId);
       sub
         .unsubscribe(channel)
         .catch(() => undefined)

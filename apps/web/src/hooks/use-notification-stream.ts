@@ -18,6 +18,7 @@ export function useNotificationStream(): void {
 
     let cancelled = false;
     let reconnectTimeout: ReturnType<typeof setTimeout>;
+    let attempt = 0;
 
     async function connect() {
       const token = await getAccessToken();
@@ -39,7 +40,12 @@ export function useNotificationStream(): void {
           },
         );
 
-        if (!response.ok || !response.body) return;
+        if (!response.ok || !response.body) {
+          throw new Error(`SSE response ${response.status}`);
+        }
+
+        // Connection succeeded — reset backoff
+        attempt = 0;
 
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
@@ -71,9 +77,11 @@ export function useNotificationStream(): void {
         // AbortError is expected on unmount/reconnect
       }
 
-      // Reconnect with backoff
+      // Reconnect with exponential backoff (1s, 2s, 4s, 8s, 16s, 30s max)
       if (!cancelled) {
-        reconnectTimeout = setTimeout(connect, 5000);
+        const delay = Math.min(1000 * Math.pow(2, attempt), 30_000);
+        attempt++;
+        reconnectTimeout = setTimeout(connect, delay);
       }
     }
 
