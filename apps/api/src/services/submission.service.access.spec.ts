@@ -55,6 +55,11 @@ vi.mock('drizzle-orm', () => ({
   count: vi.fn(),
 }));
 
+// Mock outbox (used by submitAsOwner, withdrawAsOwner, updateStatusAsEditor)
+vi.mock('./outbox.js', () => ({
+  enqueueOutboxEvent: vi.fn(),
+}));
+
 // Mock @colophony/types — provide status transition functions
 vi.mock('@colophony/types', () => ({
   isValidStatusTransition: vi.fn(() => true),
@@ -328,6 +333,9 @@ describe('submissionService access-aware methods', () => {
 
   describe('updateStatusAsEditor', () => {
     it('updates status and audits for editor', async () => {
+      const sub = makeSubmission('user-1');
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      vi.mocked(submissionService.getById).mockResolvedValueOnce(sub as never);
       // eslint-disable-next-line @typescript-eslint/unbound-method
       vi.mocked(submissionService.updateStatus).mockResolvedValueOnce({
         submission: { id: SUBMISSION_ID, status: 'UNDER_REVIEW' },

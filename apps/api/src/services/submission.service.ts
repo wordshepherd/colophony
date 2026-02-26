@@ -26,6 +26,7 @@ import {
   AuditActions,
   AuditResources,
 } from '@colophony/types';
+import { enqueueOutboxEvent } from './outbox.js';
 import type { ServiceContext } from './types.js';
 import {
   ForbiddenError,
@@ -630,6 +631,11 @@ export const submissionService = {
       resource: AuditResources.SUBMISSION,
       resourceId: id,
     });
+    await enqueueOutboxEvent(svc.tx, 'hopper/submission.submitted', {
+      orgId: svc.actor.orgId,
+      submissionId: id,
+      submitterId: svc.actor.userId,
+    });
     return result;
   },
 
@@ -676,6 +682,11 @@ export const submissionService = {
       resource: AuditResources.SUBMISSION,
       resourceId: id,
     });
+    await enqueueOutboxEvent(svc.tx, 'hopper/submission.withdrawn', {
+      orgId: svc.actor.orgId,
+      submissionId: id,
+      submitterId: existing.submitterId,
+    });
     return result;
   },
 
@@ -689,6 +700,11 @@ export const submissionService = {
     comment: string | undefined,
   ) {
     assertEditorOrAdmin(svc.actor.role);
+
+    // Fetch submitterId before the update for notification routing
+    const existing = await submissionService.getById(svc.tx, id);
+    if (!existing) throw new SubmissionNotFoundError(id);
+
     const result = await submissionService.updateStatus(
       svc.tx,
       id,
@@ -703,6 +719,22 @@ export const submissionService = {
       resourceId: id,
       newValue: { status, comment },
     });
+
+    // Enqueue notification events for acceptance/rejection
+    if (status === 'ACCEPTED') {
+      await enqueueOutboxEvent(svc.tx, 'hopper/submission.accepted', {
+        orgId: svc.actor.orgId,
+        submissionId: id,
+        submitterId: existing.submitterId,
+      });
+    } else if (status === 'REJECTED') {
+      await enqueueOutboxEvent(svc.tx, 'hopper/submission.rejected', {
+        orgId: svc.actor.orgId,
+        submissionId: id,
+        submitterId: existing.submitterId,
+      });
+    }
+
     return result;
   },
 

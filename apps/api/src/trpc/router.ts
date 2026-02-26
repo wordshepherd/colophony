@@ -17,6 +17,7 @@ import { contractTemplatesRouter } from './routers/contract-templates.js';
 import { contractsRouter } from './routers/contracts.js';
 import { issuesRouter } from './routers/issues.js';
 import { cmsConnectionsRouter } from './routers/cms-connections.js';
+import { notificationPreferencesRouter } from './routers/notification-preferences.js';
 
 // Re-export procedure builders for convenience
 export {
@@ -55,6 +56,7 @@ export const appRouter = t.router({
   contracts: contractsRouter,
   issues: issuesRouter,
   cmsConnections: cmsConnectionsRouter,
+  notificationPreferences: notificationPreferencesRouter,
   retention: t.router({}),
 });
 

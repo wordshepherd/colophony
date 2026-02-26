@@ -219,7 +219,8 @@
 
 ## Cross-Cutting — Relay (Notifications & Communications)
 
-- [ ] Email templates + provider integration (SendGrid) — (architecture doc, Relay)
+- [x] Email templates + provider integration (SMTP + SendGrid) — adapters, MJML templates, BullMQ queue/worker, notification preferences, Inngest functions — (architecture doc, Relay; done 2026-02-26)
+- [ ] Notification preferences frontend — UI for users to manage email opt-in/opt-out per event type — (DEVLOG 2026-02-26)
 - [ ] Webhook delivery system (outbound) — (architecture doc, Relay)
 - [ ] In-app notification center — (architecture doc, Relay)
 
@@ -248,7 +249,7 @@
 
 ### [P3] Low — Unused or minimal impact
 
-- [ ] nodemailer 7 → 8 — Relay not built yet; upgrade when starting Relay — (dependabot #77)
+- [ ] nodemailer 7 → 8 — Relay email foundation now built; evaluate upgrade — (dependabot #77)
 
 ### Upgrade order notes
 
