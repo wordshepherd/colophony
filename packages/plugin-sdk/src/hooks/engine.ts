@@ -77,6 +77,8 @@ export class HookEngine {
     for (const entry of handlers) {
       try {
         const result = await entry.handler(current);
+        // Void/undefined return means "no modification" — pass through current payload.
+        // Null is not a valid filter result; treat as no-op to avoid wiping the payload.
         if (result !== undefined && result !== null) {
           current = result as HookPayloadMap[T];
         }
@@ -95,6 +97,11 @@ export class HookEngine {
     return this.listeners.get(hookId)?.length ?? 0;
   }
 
+  /**
+   * Remove all handlers for a specific hook, or all hooks if no hookId given.
+   * Note: previously returned unsubscribe functions from `on()` become no-ops
+   * after removal (they check the array reference which is now deleted).
+   */
   removeAll(hookId?: HookId): void {
     if (hookId) {
       this.listeners.delete(hookId);

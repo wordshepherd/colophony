@@ -50,6 +50,12 @@ export class AdapterRegistry {
   async destroyAll(): Promise<void> {
     const adapters = [...this.adapters.values()];
     this.adapters.clear();
-    await Promise.all(adapters.map((a) => a.destroy()));
+    const results = await Promise.allSettled(adapters.map((a) => a.destroy()));
+    for (const result of results) {
+      if (result.status === "rejected") {
+        // Best-effort cleanup — log but don't throw so all adapters get destroyed
+        console.error("Adapter destroy failed:", result.reason);
+      }
+    }
   }
 }

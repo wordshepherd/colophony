@@ -75,6 +75,25 @@ describe("AdapterRegistry", () => {
     expect(registry.has("email")).toBe(false);
   });
 
+  it("destroyAll completes even if one adapter throws", async () => {
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const a1 = createStubAdapter({
+      id: "a1",
+      destroy: vi.fn().mockRejectedValue(new Error("destroy failed")),
+    });
+    const a2 = createStubAdapter({ id: "a2" });
+    registry.register("email", a1);
+    registry.register("storage", a2);
+
+    await registry.destroyAll();
+
+    expect(a1.destroy).toHaveBeenCalledOnce();
+    expect(a2.destroy).toHaveBeenCalledOnce();
+    expect(registry.has("email")).toBe(false);
+    expect(consoleSpy).toHaveBeenCalledOnce();
+    consoleSpy.mockRestore();
+  });
+
   it("listAllTypes returns types with registrations", () => {
     registry.register("email", createStubAdapter());
     registry.register("search", createStubAdapter());

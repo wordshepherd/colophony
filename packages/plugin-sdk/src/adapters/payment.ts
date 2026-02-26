@@ -36,6 +36,10 @@ export interface PaymentAdapter extends BaseAdapter {
   createCheckoutSession(
     params: CheckoutSessionParams,
   ): Promise<CheckoutSessionResult>;
+  /**
+   * Verify and parse a webhook payload. Callers must pass the raw request
+   * body (before any JSON parsing) to ensure signature verification succeeds.
+   */
   verifyWebhook(
     headers: Record<string, string>,
     body: string,

@@ -233,7 +233,13 @@ export class MockSearchAdapter implements SearchAdapter {
 async function streamToBuffer(stream: Readable): Promise<Buffer> {
   const chunks: Buffer[] = [];
   for await (const chunk of stream) {
-    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk as string));
+    chunks.push(
+      Buffer.isBuffer(chunk)
+        ? chunk
+        : Buffer.from(
+            typeof chunk === "string" ? chunk : (chunk as Uint8Array),
+          ),
+    );
   }
   return Buffer.concat(chunks);
 }
