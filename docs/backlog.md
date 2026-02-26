@@ -161,7 +161,7 @@
 - [x] Trust establishment — bilateral trust with HTTP signatures, trust service, public S2S + admin routes — (architecture doc Track 5; done 2026-02-24)
 - [x] [P2] Federation signature verification middleware — protect all federation endpoints with signature-based auth — (DEVLOG 2026-02-24, done 2026-02-24)
 - [x] Sim-sub enforcement (BSAP) — fingerprint service, sim-sub service (local+remote check), S2S endpoint, admin routes, submission flow integration, all 3 API surfaces — (architecture doc Track 5; done 2026-02-24)
-- [ ] [P3] Sim-sub manual verification — test with two running instances: submit to no-sim-sub period, submit same manuscript to second org, verify CONFLICT; test admin override flow — (DEVLOG 2026-02-24)
+- [x] [P3] Sim-sub manual verification — test with two running instances: submit to no-sim-sub period, submit same manuscript to second org, verify CONFLICT; test admin override flow — (DEVLOG 2026-02-24; done 2026-02-26)
 - [x] Piece transfer — cross-instance submission transfer with JWT tokens, dual-scope S2S routes, file proxy — (architecture doc Track 5; done 2026-02-25)
 - [x] [P3] Piece transfer: upgrade fire-and-forget file fetch to BullMQ for retry/dead-letter — (DEVLOG 2026-02-25, v1 acceptable; done 2026-02-25)
 - [x] Identity migration — (architecture doc Track 5; done 2026-02-25)

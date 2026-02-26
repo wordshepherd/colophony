@@ -1,0 +1,24 @@
+# Docker Compose override for sim-sub QA testing.
+# Adds a second PostgreSQL instance (Instance B) on port 5434.
+#
+# Usage:
+#   docker compose -f docker-compose.yml -f docker-compose.simsub-qa.yml up -d postgres postgres-b redis
+#
+# Instance B uses the same init-db.sh to create app_user and audit_writer roles.
+
+services:
+  postgres-b:
+    image: postgres:16-alpine
+    container_name: colophony-postgres-b
+    ports:
+      - "5434:5432"
+    environment:
+      POSTGRES_USER: colophony
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: colophony
+    volumes:
+      - ./scripts/init-db.sh:/docker-entrypoint-initdb.d/init-db.sh
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "colophony"]
+      interval: 5s
+      retries: 5
