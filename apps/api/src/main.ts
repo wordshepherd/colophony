@@ -57,6 +57,12 @@ import { registerHubRoutes } from './federation/hub.routes.js';
 import { registerHubAdminRoutes } from './federation/hub-admin.routes.js';
 import { registerKeyAdminRoutes } from './federation/key-admin.routes.js';
 import { hubClientService } from './services/hub-client.service.js';
+import { registerNotificationStreamRoute } from './sse/notification-stream.js';
+import {
+  closePublisher,
+  closeSubscriber,
+  closeAllSSEConnections,
+} from './sse/redis-pubsub.js';
 
 export async function buildApp(env: Env): Promise<FastifyInstance> {
   const app = Fastify({
@@ -243,6 +249,9 @@ export async function buildApp(env: Env): Promise<FastifyInstance> {
   // GraphQL API (Pothos + Yoga) — child scope inherits all hooks
   await app.register(registerGraphQLRoutes);
 
+  // SSE notification stream — inherits auth + org-context hooks (NOT db-context per skip)
+  await registerNotificationStreamRoute(app, { env });
+
   // Routes
   app.get('/health', async () => ({
     status: 'ok',
@@ -354,8 +363,10 @@ async function start(): Promise<void> {
       await closeEmailQueue();
       await stopWebhookWorker();
       await closeWebhookQueue();
+      await closeAllSSEConnections();
+      await closePublisher();
+      await closeSubscriber();
       // TODO: Close DB pool when connection management is centralized
-      // TODO: Close Redis connections
       app.log.info('Server closed');
     } finally {
       clearTimeout(forceExit);

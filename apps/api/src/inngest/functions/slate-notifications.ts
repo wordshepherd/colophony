@@ -18,6 +18,7 @@ import { emailService } from '../../services/email.service.js';
 import { auditService } from '../../services/audit.service.js';
 import { enqueueEmail } from '../../queues/email.queue.js';
 import { validateEnv } from '../../config/env.js';
+import { queueInAppNotification } from '../helpers/queue-in-app-notification.js';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -162,6 +163,16 @@ export const contractReadyNotification = inngest.createFunction(
       });
     });
 
+    await step.run('queue-in-app', async () => {
+      await queueInAppNotification({
+        orgId,
+        userId: data.submitterId!,
+        eventType: 'contract.ready',
+        title: `Contract ready for signing: ${data.submissionTitle}`,
+        link: '/contracts',
+      });
+    });
+
     return { notified: 1 };
   },
 );
@@ -227,6 +238,16 @@ export const copyeditorAssignedNotification = inngest.createFunction(
           orgName: data.orgName,
         },
         subject: `You've been assigned as copyeditor: ${data.submissionTitle}`,
+      });
+    });
+
+    await step.run('queue-in-app', async () => {
+      await queueInAppNotification({
+        orgId,
+        userId: copyeditorId,
+        eventType: 'copyeditor.assigned',
+        title: `You've been assigned as copyeditor: ${data.submissionTitle}`,
+        link: '/pipeline',
       });
     });
 

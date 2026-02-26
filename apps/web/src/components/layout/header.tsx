@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Menu } from "lucide-react";
 import { Sidebar } from "./sidebar";
+import { NotificationBell } from "@/components/notifications/notification-bell";
 
 export function Header() {
   const { isAuthenticated, login } = useAuth();
@@ -40,6 +41,7 @@ export function Header() {
         {isAuthenticated ? (
           <div className="flex items-center space-x-4">
             <OrgSwitcher />
+            <NotificationBell />
             <UserMenu />
           </div>
         ) : (

@@ -22,6 +22,7 @@ import { emailService } from '../../services/email.service.js';
 import { auditService } from '../../services/audit.service.js';
 import { enqueueEmail } from '../../queues/email.queue.js';
 import { validateEnv } from '../../config/env.js';
+import { queueInAppNotification } from '../helpers/queue-in-app-notification.js';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -177,6 +178,18 @@ export const submissionReceivedNotification = inngest.createFunction(
       }
     });
 
+    await step.run('queue-in-app-notifications', async () => {
+      for (const editor of editors) {
+        await queueInAppNotification({
+          orgId,
+          userId: editor.userId,
+          eventType: 'submission.received',
+          title: `New submission: ${submission.title}`,
+          link: `/submissions/${submissionId}`,
+        });
+      }
+    });
+
     return { notified: editors.length };
   },
 );
@@ -218,6 +231,16 @@ export const submissionAcceptedNotification = inngest.createFunction(
           orgName,
         },
         subject: `Your submission has been accepted: ${submission.title}`,
+      });
+    });
+
+    await step.run('queue-in-app', async () => {
+      await queueInAppNotification({
+        orgId,
+        userId: submitterId,
+        eventType: 'submission.accepted',
+        title: `Your submission has been accepted: ${submission.title}`,
+        link: `/submissions/${submissionId}`,
       });
     });
 
@@ -265,6 +288,16 @@ export const submissionRejectedNotification = inngest.createFunction(
       });
     });
 
+    await step.run('queue-in-app', async () => {
+      await queueInAppNotification({
+        orgId,
+        userId: submitterId,
+        eventType: 'submission.rejected',
+        title: `Update on your submission: ${submission.title}`,
+        link: `/submissions/${submissionId}`,
+      });
+    });
+
     return { notified: 1 };
   },
 );
@@ -309,6 +342,18 @@ export const submissionWithdrawnNotification = inngest.createFunction(
             orgName,
           },
           subject: `Submission withdrawn: ${submission.title}`,
+        });
+      }
+    });
+
+    await step.run('queue-in-app-notifications', async () => {
+      for (const editor of editors) {
+        await queueInAppNotification({
+          orgId,
+          userId: editor.userId,
+          eventType: 'submission.withdrawn',
+          title: `Submission withdrawn: ${submission.title}`,
+          link: `/submissions/${submissionId}`,
         });
       }
     });

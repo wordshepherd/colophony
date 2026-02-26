@@ -36,6 +36,11 @@ export default fp(
     app.addHook(
       'onRequest',
       async function dbContextOnRequest(request: FastifyRequest) {
+        // SSE endpoints use reply.hijack() — onResponse never fires,
+        // so the transaction would never commit. Skip db-context; the
+        // handler uses withRls() directly (same pattern as BullMQ workers).
+        if (request.url.startsWith('/api/notifications/stream')) return;
+
         // Only set up transaction if we have an authenticated user
         if (!request.authContext?.userId) return;
 

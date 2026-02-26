@@ -59,12 +59,19 @@ const SLATE_EVENTS: EventConfig[] = [
   },
 ];
 
+type NotificationChannel = "email" | "in_app";
+
 function deriveEnabled(
-  preferences: Array<{ eventType: string; enabled: boolean }> | undefined,
+  preferences:
+    | Array<{ eventType: string; channel: string; enabled: boolean }>
+    | undefined,
   eventType: NotificationEventType,
+  channel: NotificationChannel,
 ): boolean {
   if (!preferences) return true;
-  const record = preferences.find((p) => p.eventType === eventType);
+  const record = preferences.find(
+    (p) => p.eventType === eventType && p.channel === channel,
+  );
   return record ? record.enabled : true;
 }
 
@@ -92,10 +99,11 @@ export function NotificationPreferencesCard() {
 
   function handleToggle(
     eventType: NotificationEventType,
+    channel: NotificationChannel,
     currentEnabled: boolean,
   ) {
     upsertMutation.mutate({
-      channel: "email",
+      channel,
       eventType,
       enabled: !currentEnabled,
     });
@@ -125,7 +133,7 @@ export function NotificationPreferencesCard() {
           Notification Preferences
         </CardTitle>
         <CardDescription>
-          Manage email notifications for {currentOrg.name}
+          Manage notifications for {currentOrg.name}
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -137,7 +145,10 @@ export function NotificationPreferencesCard() {
                   <Skeleton className="h-4 w-32" />
                   <Skeleton className="h-3 w-48" />
                 </div>
-                <Skeleton className="h-5 w-9 rounded-full" />
+                <div className="flex gap-4">
+                  <Skeleton className="h-5 w-9 rounded-full" />
+                  <Skeleton className="h-5 w-9 rounded-full" />
+                </div>
               </div>
             ))}
           </div>
@@ -184,15 +195,36 @@ function EventGroup({
 }: {
   title: string;
   events: EventConfig[];
-  preferences: Array<{ eventType: string; enabled: boolean }> | undefined;
-  onToggle: (eventType: NotificationEventType, currentEnabled: boolean) => void;
+  preferences:
+    | Array<{ eventType: string; channel: string; enabled: boolean }>
+    | undefined;
+  onToggle: (
+    eventType: NotificationEventType,
+    channel: NotificationChannel,
+    currentEnabled: boolean,
+  ) => void;
   disabled: boolean;
 }) {
   return (
     <div className="space-y-4">
-      <h4 className="text-sm font-medium">{title}</h4>
+      <div className="flex items-center justify-between">
+        <h4 className="text-sm font-medium">{title}</h4>
+        <div className="flex gap-4 text-xs text-muted-foreground">
+          <span className="w-9 text-center">Email</span>
+          <span className="w-9 text-center">In-App</span>
+        </div>
+      </div>
       {events.map((event) => {
-        const enabled = deriveEnabled(preferences, event.eventType);
+        const emailEnabled = deriveEnabled(
+          preferences,
+          event.eventType,
+          "email",
+        );
+        const inAppEnabled = deriveEnabled(
+          preferences,
+          event.eventType,
+          "in_app",
+        );
         return (
           <div
             key={event.eventType}
@@ -204,12 +236,24 @@ function EventGroup({
                 {event.description}
               </p>
             </div>
-            <Switch
-              checked={enabled}
-              onCheckedChange={() => onToggle(event.eventType, enabled)}
-              disabled={disabled}
-              aria-label={`Toggle ${event.label} notifications`}
-            />
+            <div className="flex gap-4">
+              <Switch
+                checked={emailEnabled}
+                onCheckedChange={() =>
+                  onToggle(event.eventType, "email", emailEnabled)
+                }
+                disabled={disabled}
+                aria-label={`Toggle ${event.label} email notifications`}
+              />
+              <Switch
+                checked={inAppEnabled}
+                onCheckedChange={() =>
+                  onToggle(event.eventType, "in_app", inAppEnabled)
+                }
+                disabled={disabled}
+                aria-label={`Toggle ${event.label} in-app notifications`}
+              />
+            </div>
           </div>
         );
       })}
