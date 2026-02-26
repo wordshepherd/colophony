@@ -8,19 +8,20 @@ import {
   and,
 } from '@colophony/db';
 import type { DrizzleDb } from '@colophony/db';
+import type { AdapterRegistry } from '@colophony/plugin-sdk';
 import { AuditActions, AuditResources } from '@colophony/types';
 import type { Env } from '../config/env.js';
 import type { TransferFetchJobData } from '../queues/transfer-fetch.queue.js';
 import { auditService } from '../services/audit.service.js';
-import { createS3Client, putObject } from '../services/s3.js';
+import type { S3StorageAdapter } from '../adapters/storage/index.js';
 
 let worker: Worker<TransferFetchJobData> | null = null;
 
 export function startTransferFetchWorker(
   env: Env,
+  registry: AdapterRegistry,
 ): Worker<TransferFetchJobData> {
-  const s3Client = createS3Client(env);
-  const bucket = env.S3_BUCKET;
+  const storage = registry.resolve<S3StorageAdapter>('storage');
 
   worker = new Worker<TransferFetchJobData>(
     'transfer-fetch',
@@ -116,7 +117,12 @@ export function startTransferFetchWorker(
 
           const storageKey = `transfers/${localSubmissionId}/${entry.fileId}/${entry.filename}`;
           const buffer = Buffer.from(await response.arrayBuffer());
-          await putObject(s3Client, bucket, storageKey, buffer, entry.mimeType);
+          await storage.uploadToBucket(
+            storage.defaultBucket,
+            storageKey,
+            buffer,
+            entry.mimeType,
+          );
           storedFiles.push({ fileId: entry.fileId, storageKey });
         } catch {
           failedFiles.push(entry.fileId);

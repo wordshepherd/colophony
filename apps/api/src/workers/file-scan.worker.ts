@@ -2,17 +2,13 @@ import { Worker } from 'bullmq';
 import NodeClam from 'clamscan';
 import { withRls } from '@colophony/db';
 import type { DrizzleDb } from '@colophony/db';
+import type { AdapterRegistry } from '@colophony/plugin-sdk';
 import { AuditActions, AuditResources } from '@colophony/types';
 import type { Env } from '../config/env.js';
 import type { FileScanJobData } from '../queues/file-scan.queue.js';
 import { fileService } from '../services/file.service.js';
 import { auditService } from '../services/audit.service.js';
-import {
-  createS3Client,
-  getObjectStream,
-  copyObject,
-  deleteS3Object,
-} from '../services/s3.js';
+import type { S3StorageAdapter } from '../adapters/storage/index.js';
 
 let worker: Worker<FileScanJobData> | null = null;
 let clamInstance: NodeClam | null = null;
@@ -45,8 +41,11 @@ function buildRlsContext(data: FileScanJobData) {
   };
 }
 
-export function startFileScanWorker(env: Env): Worker<FileScanJobData> {
-  const s3Client = createS3Client(env);
+export function startFileScanWorker(
+  env: Env,
+  registry: AdapterRegistry,
+): Worker<FileScanJobData> {
+  const storage = registry.resolve<S3StorageAdapter>('storage');
 
   worker = new Worker<FileScanJobData>(
     'file-scan',
@@ -63,9 +62,8 @@ export function startFileScanWorker(env: Env): Worker<FileScanJobData> {
       let isInfected: boolean;
       let viruses: string[];
       try {
-        const stream = await getObjectStream(
-          s3Client,
-          env.S3_QUARANTINE_BUCKET,
+        const stream = await storage.downloadFromBucket(
+          storage.quarantineBucket,
           storageKey,
         );
         const clam = await getClamClient(env);
@@ -92,15 +90,13 @@ export function startFileScanWorker(env: Env): Worker<FileScanJobData> {
       // Phase 3: Handle scan result with S3 ops + DB update
       try {
         if (!isInfected) {
-          // CLEAN: copy to submissions bucket, delete from quarantine
-          await copyObject(
-            s3Client,
-            env.S3_QUARANTINE_BUCKET,
+          // CLEAN: move from quarantine to clean bucket
+          await storage.moveBetweenBuckets(
+            storage.quarantineBucket,
             storageKey,
-            env.S3_BUCKET,
+            storage.defaultBucket,
             storageKey,
           );
-          await deleteS3Object(s3Client, env.S3_QUARANTINE_BUCKET, storageKey);
 
           await withRls(rlsCtx, async (tx: DrizzleDb) => {
             await fileService.updateScanStatus(tx, fileId, 'CLEAN');
@@ -113,7 +109,7 @@ export function startFileScanWorker(env: Env): Worker<FileScanJobData> {
           });
         } else {
           // INFECTED: delete from quarantine
-          await deleteS3Object(s3Client, env.S3_QUARANTINE_BUCKET, storageKey);
+          await storage.deleteFromBucket(storage.quarantineBucket, storageKey);
 
           await withRls(rlsCtx, async (tx: DrizzleDb) => {
             await fileService.updateScanStatus(tx, fileId, 'INFECTED');

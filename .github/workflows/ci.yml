@@ -86,6 +86,9 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
+      - name: Build workspace dependencies
+        run: pnpm turbo run build --filter=@colophony/db --filter=@colophony/auth-client --filter=@colophony/types --filter=@colophony/api-contracts --filter=@colophony/plugin-sdk
+
       - name: Check formatting
         run: pnpm format:check
 
@@ -93,7 +96,7 @@ jobs:
         run: pnpm lint
 
       - name: Type check
-        run: pnpm turbo run type-check --filter=@colophony/db --filter=@colophony/auth-client --filter=@colophony/api-contracts --filter=@colophony/api --filter=@colophony/web
+        run: pnpm turbo run type-check --filter=@colophony/db --filter=@colophony/auth-client --filter=@colophony/api-contracts --filter=@colophony/plugin-sdk --filter=@colophony/api --filter=@colophony/web
 
       - name: Audit dependencies
         run: pnpm audit --audit-level=high
@@ -120,7 +123,7 @@ jobs:
           cache: "pnpm"
       - run: pnpm install --frozen-lockfile
       - name: Build workspace dependencies
-        run: pnpm turbo run build --filter=@colophony/db --filter=@colophony/auth-client --filter=@colophony/types --filter=@colophony/api-contracts
+        run: pnpm turbo run build --filter=@colophony/db --filter=@colophony/auth-client --filter=@colophony/types --filter=@colophony/api-contracts --filter=@colophony/plugin-sdk
       - name: Run unit tests
         run: pnpm --filter @colophony/db test && pnpm --filter @colophony/auth-client test && pnpm --filter @colophony/api test && pnpm --filter @colophony/web test
 
@@ -234,7 +237,7 @@ jobs:
           cache: "pnpm"
       - run: pnpm install --frozen-lockfile
       - name: Build workspace dependencies
-        run: pnpm turbo run build --filter=@colophony/db --filter=@colophony/types --filter=@colophony/api-contracts
+        run: pnpm turbo run build --filter=@colophony/db --filter=@colophony/types --filter=@colophony/api-contracts --filter=@colophony/plugin-sdk
       - name: Run RLS integration tests
         run: pnpm --filter @colophony/api test:rls
         env:
@@ -285,7 +288,7 @@ jobs:
           cache: "pnpm"
       - run: pnpm install --frozen-lockfile
       - name: Build workspace dependencies
-        run: pnpm turbo run build --filter=@colophony/db --filter=@colophony/auth-client --filter=@colophony/types --filter=@colophony/api-contracts
+        run: pnpm turbo run build --filter=@colophony/db --filter=@colophony/auth-client --filter=@colophony/types --filter=@colophony/api-contracts --filter=@colophony/plugin-sdk
       - name: Create app_user role
         run: |
           PGPASSWORD=password psql -h localhost -p 5432 -U colophony -d colophony -c "
@@ -370,7 +373,7 @@ jobs:
           cache: "pnpm"
       - run: pnpm install --frozen-lockfile
       - name: Build workspace dependencies
-        run: pnpm turbo run build --filter=@colophony/db --filter=@colophony/auth-client --filter=@colophony/types --filter=@colophony/api-contracts
+        run: pnpm turbo run build --filter=@colophony/db --filter=@colophony/auth-client --filter=@colophony/types --filter=@colophony/api-contracts --filter=@colophony/plugin-sdk
       - name: Create app_user role
         run: |
           PGPASSWORD=password psql -h localhost -p 5432 -U colophony -d colophony -c "
@@ -455,7 +458,7 @@ jobs:
           cache: "pnpm"
       - run: pnpm install --frozen-lockfile
       - name: Build workspace dependencies
-        run: pnpm turbo run build --filter=@colophony/db --filter=@colophony/auth-client --filter=@colophony/types --filter=@colophony/api-contracts
+        run: pnpm turbo run build --filter=@colophony/db --filter=@colophony/auth-client --filter=@colophony/types --filter=@colophony/api-contracts --filter=@colophony/plugin-sdk
       - name: Create app_user role
         run: |
           PGPASSWORD=password psql -h localhost -p 5432 -U colophony -d colophony -c "
@@ -540,7 +543,7 @@ jobs:
           cache: "pnpm"
       - run: pnpm install --frozen-lockfile
       - name: Build workspace dependencies
-        run: pnpm turbo run build --filter=@colophony/db --filter=@colophony/auth-client --filter=@colophony/types --filter=@colophony/api-contracts
+        run: pnpm turbo run build --filter=@colophony/db --filter=@colophony/auth-client --filter=@colophony/types --filter=@colophony/api-contracts --filter=@colophony/plugin-sdk
       - name: Create app_user role
         run: |
           PGPASSWORD=password psql -h localhost -p 5432 -U colophony -d colophony -c "
@@ -661,7 +664,7 @@ jobs:
           cache: "pnpm"
       - run: pnpm install --frozen-lockfile
       - name: Build workspace dependencies
-        run: pnpm turbo run build --filter=@colophony/db --filter=@colophony/auth-client --filter=@colophony/types --filter=@colophony/api-contracts
+        run: pnpm turbo run build --filter=@colophony/db --filter=@colophony/auth-client --filter=@colophony/types --filter=@colophony/api-contracts --filter=@colophony/plugin-sdk
       - name: Create app_user role
         run: |
           PGPASSWORD=password psql -h localhost -p 5432 -U colophony -d colophony -c "
@@ -766,4 +769,4 @@ jobs:
           cache: "pnpm"
       - run: pnpm install --frozen-lockfile
       - name: Build packages
-        run: pnpm turbo run build --filter=@colophony/db --filter=@colophony/auth-client --filter=@colophony/api-contracts --filter=@colophony/api --filter=@colophony/types --filter=@colophony/web
+        run: pnpm turbo run build --filter=@colophony/db --filter=@colophony/auth-client --filter=@colophony/api-contracts --filter=@colophony/plugin-sdk --filter=@colophony/api --filter=@colophony/types --filter=@colophony/web

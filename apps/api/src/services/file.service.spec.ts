@@ -1,15 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { DrizzleDb } from '@colophony/db';
-import type { S3Client } from '@aws-sdk/client-s3';
-
-const mockGetPresignedDownloadUrl = vi.fn();
-const mockDeleteS3Object = vi.fn();
-
-vi.mock('./s3.js', () => ({
-  getPresignedDownloadUrl: (...args: unknown[]) =>
-    mockGetPresignedDownloadUrl(...args),
-  deleteS3Object: (...args: unknown[]) => mockDeleteS3Object(...args),
-}));
 
 // Mock @colophony/db
 vi.mock('@colophony/db', () => ({
@@ -51,6 +41,7 @@ vi.mock('@colophony/types', () => ({
 }));
 
 import { fileService, FileNotCleanError } from './file.service.js';
+import type { S3StorageAdapter } from '../adapters/storage/index.js';
 
 // Helper: create a mock tx that returns a file from getById
 function makeTx(file: Record<string, unknown> | null): DrizzleDb {
@@ -69,7 +60,17 @@ function makeTx(file: Record<string, unknown> | null): DrizzleDb {
   return { select: mockSelect, delete: mockDeleteFn } as unknown as DrizzleDb;
 }
 
-const s3Client = {} as S3Client;
+const mockGetSignedUrlFromBucket = vi
+  .fn()
+  .mockResolvedValue('https://s3.example.com/signed');
+const mockDeleteFromBucket = vi.fn().mockResolvedValue(undefined);
+
+const mockStorage = {
+  defaultBucket: 'main-bucket',
+  quarantineBucket: 'quarantine-bucket',
+  getSignedUrlFromBucket: mockGetSignedUrlFromBucket,
+  deleteFromBucket: mockDeleteFromBucket,
+} as unknown as S3StorageAdapter;
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -85,25 +86,16 @@ describe('fileService.getDownloadUrl', () => {
       scanStatus: 'CLEAN',
     };
     const tx = makeTx(file);
-    mockGetPresignedDownloadUrl.mockResolvedValueOnce(
-      'https://s3.example.com/signed',
-    );
 
-    const result = await fileService.getDownloadUrl(
-      tx,
-      'f1',
-      s3Client,
-      'my-bucket',
-    );
+    const result = await fileService.getDownloadUrl(tx, 'f1', mockStorage);
 
     expect(result).toEqual({
       url: 'https://s3.example.com/signed',
       filename: 'test.pdf',
       mimeType: 'application/pdf',
     });
-    expect(mockGetPresignedDownloadUrl).toHaveBeenCalledWith(
-      s3Client,
-      'my-bucket',
+    expect(mockGetSignedUrlFromBucket).toHaveBeenCalledWith(
+      'main-bucket',
       'uploads/f1.pdf',
     );
   });
@@ -114,12 +106,11 @@ describe('fileService.getDownloadUrl', () => {
     const result = await fileService.getDownloadUrl(
       tx,
       'nonexistent',
-      s3Client,
-      'my-bucket',
+      mockStorage,
     );
 
     expect(result).toBeNull();
-    expect(mockGetPresignedDownloadUrl).not.toHaveBeenCalled();
+    expect(mockGetSignedUrlFromBucket).not.toHaveBeenCalled();
   });
 
   it('throws FileNotCleanError for non-CLEAN files', async () => {
@@ -133,7 +124,7 @@ describe('fileService.getDownloadUrl', () => {
     const tx = makeTx(file);
 
     await expect(
-      fileService.getDownloadUrl(tx, 'f2', s3Client, 'my-bucket'),
+      fileService.getDownloadUrl(tx, 'f2', mockStorage),
     ).rejects.toThrow(FileNotCleanError);
   });
 });
@@ -146,19 +137,11 @@ describe('fileService.deleteWithS3', () => {
       scanStatus: 'CLEAN',
     };
     const tx = makeTx(file);
-    mockDeleteS3Object.mockResolvedValueOnce(undefined);
 
-    const result = await fileService.deleteWithS3(
-      tx,
-      'f1',
-      s3Client,
-      'main-bucket',
-      'quarantine-bucket',
-    );
+    const result = await fileService.deleteWithS3(tx, 'f1', mockStorage);
 
     expect(result).toEqual(file);
-    expect(mockDeleteS3Object).toHaveBeenCalledWith(
-      s3Client,
+    expect(mockDeleteFromBucket).toHaveBeenCalledWith(
       'main-bucket',
       'uploads/f1.pdf',
     );
@@ -171,18 +154,10 @@ describe('fileService.deleteWithS3', () => {
       scanStatus: 'INFECTED',
     };
     const tx = makeTx(file);
-    mockDeleteS3Object.mockResolvedValueOnce(undefined);
 
-    await fileService.deleteWithS3(
-      tx,
-      'f2',
-      s3Client,
-      'main-bucket',
-      'quarantine-bucket',
-    );
+    await fileService.deleteWithS3(tx, 'f2', mockStorage);
 
-    expect(mockDeleteS3Object).toHaveBeenCalledWith(
-      s3Client,
+    expect(mockDeleteFromBucket).toHaveBeenCalledWith(
       'quarantine-bucket',
       'uploads/f2.pdf',
     );
@@ -194,12 +169,10 @@ describe('fileService.deleteWithS3', () => {
     const result = await fileService.deleteWithS3(
       tx,
       'nonexistent',
-      s3Client,
-      'main-bucket',
-      'quarantine-bucket',
+      mockStorage,
     );
 
     expect(result).toBeNull();
-    expect(mockDeleteS3Object).not.toHaveBeenCalled();
+    expect(mockDeleteFromBucket).not.toHaveBeenCalled();
   });
 });

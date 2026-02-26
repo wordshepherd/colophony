@@ -11,6 +11,8 @@ import {
   AuditResources,
   stripeCheckoutMetadataSchema,
 } from '@colophony/types';
+import { getGlobalRegistry } from '../adapters/registry-accessor.js';
+import type { StripePaymentAdapter } from '../adapters/payment/index.js';
 
 export interface StripeWebhookOptions {
   env: Env;
@@ -48,16 +50,6 @@ export async function registerStripeWebhooks(
     encoding: false, // Buffer, not string
     runFirst: true,
   });
-
-  // Lazy Stripe client — only initialized when secret key is configured
-  let stripe: Stripe | null = null;
-
-  function getStripe(): Stripe | null {
-    if (stripe) return stripe;
-    if (!env.STRIPE_SECRET_KEY) return null;
-    stripe = new Stripe(env.STRIPE_SECRET_KEY);
-    return stripe;
-  }
 
   // Lazy Redis connection for webhook rate limiting
   let redis: Redis | null = null;
@@ -150,32 +142,34 @@ export async function registerStripeWebhooks(
         return reply.status(400).send({ error: 'missing_body' });
       }
 
-      // Verify signature — returns generic 401 for both missing config and
-      // invalid signature to prevent configuration state probing.
-      const stripeClient = getStripe();
-      const signature = request.headers['stripe-signature'] as
-        | string
-        | undefined;
+      // Verify signature via payment adapter — returns generic 401 for both
+      // missing config and invalid signature to prevent configuration probing.
+      const paymentAdapter =
+        getGlobalRegistry().tryResolve<StripePaymentAdapter>('payment');
 
-      if (!stripeClient || !env.STRIPE_WEBHOOK_SECRET || !signature) {
-        if (!env.STRIPE_SECRET_KEY) {
-          request.log.error('STRIPE_SECRET_KEY not configured');
-        } else if (!env.STRIPE_WEBHOOK_SECRET) {
-          request.log.error('STRIPE_WEBHOOK_SECRET not configured');
-        } else {
-          request.log.warn('Missing stripe-signature header');
-        }
+      if (!paymentAdapter) {
+        request.log.error('Payment adapter not configured');
         return reply.status(401).send({ error: 'invalid_signature' });
       }
 
       let event: Stripe.Event;
       try {
-        event = stripeClient.webhooks.constructEvent(
-          rawBody,
-          signature,
-          env.STRIPE_WEBHOOK_SECRET,
-          env.WEBHOOK_TIMESTAMP_MAX_AGE_SECONDS,
+        const headers = Object.fromEntries(
+          Object.entries(request.headers).map(([k, v]) => [
+            k,
+            Array.isArray(v) ? (v[0] ?? '') : (v ?? ''),
+          ]),
         );
+        const parsed = await paymentAdapter.verifyWebhook(
+          headers,
+          rawBody.toString(),
+        );
+        // Reconstruct Stripe.Event from parsed webhook event for downstream compatibility
+        event = {
+          id: parsed.id,
+          type: parsed.type,
+          data: { object: parsed.data },
+        } as unknown as Stripe.Event;
       } catch (err) {
         request.log.warn(
           { error: (err as Error).message },

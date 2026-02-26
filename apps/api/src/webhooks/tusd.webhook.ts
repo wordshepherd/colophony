@@ -24,7 +24,8 @@ import { embedTokenService } from '../services/embed-token.service.js';
 import { fileService } from '../services/file.service.js';
 import { auditService } from '../services/audit.service.js';
 import { enqueueFileScan } from '../queues/file-scan.queue.js';
-import { createS3Client, copyObject, deleteS3Object } from '../services/s3.js';
+import { getGlobalRegistry } from '../adapters/registry-accessor.js';
+import type { S3StorageAdapter } from '../adapters/storage/index.js';
 
 export interface TusdWebhookOptions {
   env: Env;
@@ -607,15 +608,14 @@ export async function registerTusdWebhooks(
       // download/delete paths find it in the expected location
       if (!env.VIRUS_SCAN_ENABLED && fileIdToScan && !needsScanEnqueue) {
         try {
-          const s3Client = createS3Client(env);
-          await copyObject(
-            s3Client,
-            env.S3_QUARANTINE_BUCKET,
+          const storage =
+            getGlobalRegistry().resolve<S3StorageAdapter>('storage');
+          await storage.moveBetweenBuckets(
+            storage.quarantineBucket,
             storageKey,
-            env.S3_BUCKET,
+            storage.defaultBucket,
             storageKey,
           );
-          await deleteS3Object(s3Client, env.S3_QUARANTINE_BUCKET, storageKey);
         } catch (s3Err) {
           // Log but don't fail — file is still accessible from quarantine
           // and can be moved by a reconciliation job

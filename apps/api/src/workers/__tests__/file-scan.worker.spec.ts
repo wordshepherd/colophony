@@ -23,17 +23,6 @@ vi.mock('../../services/audit.service.js', () => ({
   },
 }));
 
-const mockGetObjectStream = vi.fn();
-const mockCopyObject = vi.fn();
-const mockDeleteS3Object = vi.fn();
-const mockCreateS3Client = vi.fn().mockReturnValue({});
-vi.mock('../../services/s3.js', () => ({
-  createS3Client: (...args: unknown[]) => mockCreateS3Client(...args),
-  getObjectStream: (...args: unknown[]) => mockGetObjectStream(...args),
-  copyObject: (...args: unknown[]) => mockCopyObject(...args),
-  deleteS3Object: (...args: unknown[]) => mockDeleteS3Object(...args),
-}));
-
 const mockScanStream = vi.fn();
 const mockClamInit = vi.fn();
 vi.mock('clamscan', () => ({
@@ -68,17 +57,28 @@ vi.mock('bullmq', () => ({
 
 import { startFileScanWorker } from '../file-scan.worker.js';
 import type { Env } from '../../config/env.js';
+import type { AdapterRegistry } from '@colophony/plugin-sdk';
+
+const mockDownloadFromBucket = vi.fn();
+const mockMoveBetweenBuckets = vi.fn();
+const mockDeleteFromBucket = vi.fn();
+
+const mockStorage = {
+  defaultBucket: 'submissions',
+  quarantineBucket: 'quarantine',
+  downloadFromBucket: (...args: unknown[]) => mockDownloadFromBucket(...args),
+  moveBetweenBuckets: (...args: unknown[]) => mockMoveBetweenBuckets(...args),
+  deleteFromBucket: (...args: unknown[]) => mockDeleteFromBucket(...args),
+};
+
+const mockRegistry = {
+  resolve: vi.fn(() => mockStorage),
+} as unknown as AdapterRegistry;
 
 const testEnv = {
   REDIS_HOST: 'localhost',
   REDIS_PORT: 6379,
   REDIS_PASSWORD: '',
-  S3_ENDPOINT: 'http://localhost:9000',
-  S3_BUCKET: 'submissions',
-  S3_QUARANTINE_BUCKET: 'quarantine',
-  S3_ACCESS_KEY: 'minioadmin',
-  S3_SECRET_KEY: 'minioadmin',
-  S3_REGION: 'us-east-1',
   CLAMAV_HOST: 'localhost',
   CLAMAV_PORT: 3310,
   VIRUS_SCAN_ENABLED: true,
@@ -106,7 +106,7 @@ describe('file-scan worker', () => {
   });
 
   function getProcessor() {
-    startFileScanWorker(testEnv);
+    startFileScanWorker(testEnv, mockRegistry);
     if (!capturedProcessor) throw new Error('Worker processor not captured');
     return capturedProcessor;
   }
@@ -115,16 +115,15 @@ describe('file-scan worker', () => {
   // CLEAN path
   // -------------------------------------------------------------------------
 
-  it('marks file CLEAN, copies to submissions bucket, deletes quarantine', async () => {
+  it('marks file CLEAN, moves from quarantine to submissions bucket', async () => {
     const processor = getProcessor();
 
-    mockGetObjectStream.mockResolvedValueOnce({ pipe: vi.fn() }); // mock Readable
+    mockDownloadFromBucket.mockResolvedValueOnce({ pipe: vi.fn() }); // mock Readable
     mockScanStream.mockResolvedValueOnce({
       isInfected: false,
       viruses: [],
     });
-    mockCopyObject.mockResolvedValueOnce(undefined);
-    mockDeleteS3Object.mockResolvedValueOnce(undefined);
+    mockMoveBetweenBuckets.mockResolvedValueOnce(undefined);
     mockUpdateScanStatus.mockResolvedValue(null);
     mockAuditLog.mockResolvedValue(undefined);
 
@@ -137,17 +136,11 @@ describe('file-scan worker', () => {
       'SCANNING',
     );
 
-    // Phase 3: CLEAN — copy then delete from quarantine
-    expect(mockCopyObject).toHaveBeenCalledWith(
-      expect.anything(),
+    // Phase 3: CLEAN — move between buckets
+    expect(mockMoveBetweenBuckets).toHaveBeenCalledWith(
       'quarantine',
       'quarantine/upload-abc',
       'submissions',
-      'quarantine/upload-abc',
-    );
-    expect(mockDeleteS3Object).toHaveBeenCalledWith(
-      expect.anything(),
-      'quarantine',
       'quarantine/upload-abc',
     );
 
@@ -173,26 +166,25 @@ describe('file-scan worker', () => {
   // INFECTED path
   // -------------------------------------------------------------------------
 
-  it('marks file INFECTED, deletes from quarantine, does NOT copy', async () => {
+  it('marks file INFECTED, deletes from quarantine, does NOT move', async () => {
     const processor = getProcessor();
 
-    mockGetObjectStream.mockResolvedValueOnce({ pipe: vi.fn() });
+    mockDownloadFromBucket.mockResolvedValueOnce({ pipe: vi.fn() });
     mockScanStream.mockResolvedValueOnce({
       isInfected: true,
       viruses: ['Eicar-Test-Signature'],
     });
-    mockDeleteS3Object.mockResolvedValueOnce(undefined);
+    mockDeleteFromBucket.mockResolvedValueOnce(undefined);
     mockUpdateScanStatus.mockResolvedValue(null);
     mockAuditLog.mockResolvedValue(undefined);
 
     await processor(TEST_JOB);
 
-    // Should NOT copy to submissions bucket
-    expect(mockCopyObject).not.toHaveBeenCalled();
+    // Should NOT move to submissions bucket
+    expect(mockMoveBetweenBuckets).not.toHaveBeenCalled();
 
     // Delete from quarantine
-    expect(mockDeleteS3Object).toHaveBeenCalledWith(
-      expect.anything(),
+    expect(mockDeleteFromBucket).toHaveBeenCalledWith(
       'quarantine',
       'quarantine/upload-abc',
     );
@@ -222,7 +214,7 @@ describe('file-scan worker', () => {
   it('marks file FAILED and re-throws on scan error', async () => {
     const processor = getProcessor();
 
-    mockGetObjectStream.mockRejectedValueOnce(
+    mockDownloadFromBucket.mockRejectedValueOnce(
       new Error('S3 connection timeout'),
     );
     mockUpdateScanStatus.mockResolvedValue(null);
@@ -259,19 +251,19 @@ describe('file-scan worker', () => {
   // FAILED path (post-scan S3 error)
   // -------------------------------------------------------------------------
 
-  it('marks file FAILED when S3 copy fails after clean scan', async () => {
+  it('marks file FAILED when S3 move fails after clean scan', async () => {
     const processor = getProcessor();
 
-    mockGetObjectStream.mockResolvedValueOnce({ pipe: vi.fn() });
+    mockDownloadFromBucket.mockResolvedValueOnce({ pipe: vi.fn() });
     mockScanStream.mockResolvedValueOnce({
       isInfected: false,
       viruses: [],
     });
-    mockCopyObject.mockRejectedValueOnce(new Error('S3 copy failed'));
+    mockMoveBetweenBuckets.mockRejectedValueOnce(new Error('S3 move failed'));
     mockUpdateScanStatus.mockResolvedValue(null);
     mockAuditLog.mockResolvedValue(undefined);
 
-    await expect(processor(TEST_JOB)).rejects.toThrow('S3 copy failed');
+    await expect(processor(TEST_JOB)).rejects.toThrow('S3 move failed');
 
     // Should have set SCANNING, then FAILED (not CLEAN)
     expect(mockUpdateScanStatus).toHaveBeenCalledWith(
@@ -310,13 +302,12 @@ describe('file-scan worker', () => {
   it('wraps all DB operations in withRls with correct orgId', async () => {
     const processor = getProcessor();
 
-    mockGetObjectStream.mockResolvedValueOnce({ pipe: vi.fn() });
+    mockDownloadFromBucket.mockResolvedValueOnce({ pipe: vi.fn() });
     mockScanStream.mockResolvedValueOnce({
       isInfected: false,
       viruses: [],
     });
-    mockCopyObject.mockResolvedValueOnce(undefined);
-    mockDeleteS3Object.mockResolvedValueOnce(undefined);
+    mockMoveBetweenBuckets.mockResolvedValueOnce(undefined);
     mockUpdateScanStatus.mockResolvedValue(null);
     mockAuditLog.mockResolvedValue(undefined);
 
