@@ -66,6 +66,7 @@ Per-directory CLAUDE.md files contain domain-specific details:
 | **Next.js frontend**     | `apps/web/`                                                                      |
 | **tRPC client**          | `apps/web/src/lib/trpc.ts`                                                       |
 | **Env config (Zod)**     | `apps/api/src/config/env.ts`                                                     |
+| **Plugin SDK**           | `packages/plugin-sdk/src/` (adapters, hooks, config, plugin-base, testing)       |
 | **Backlog**              | `docs/backlog.md` (track-organized, drives session focus)                        |
 
 Full project structure: [docs/architecture-v2-planning.md](docs/architecture-v2-planning.md)
@@ -419,7 +420,7 @@ See [docs/architecture-v2-planning.md Section 6](docs/architecture-v2-planning.m
 | 3     | Hopper — Submission Management                           | 5-12   | Pending         |
 | 4     | Slate — Publication Pipeline                             | 8-15   | Pending         |
 | 5     | Register — Identity & Federation                         | 10-18  | **In progress** |
-| 6     | Colophony Plugins                                        | 14-20  | Pending         |
+| 6     | Colophony Plugins                                        | 14-20  | **In progress** |
 | —     | Relay — Notifications (cross-cutting)                    | 1-20   | Pending         |
 
 ---
