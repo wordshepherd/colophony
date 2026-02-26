@@ -2,7 +2,7 @@
 # Production initialization script
 # Runs Drizzle migrations, grants permissions, and verifies RLS
 # Designed to be idempotent — safe to run multiple times
-set -e
+set -eo pipefail
 
 echo "=== Colophony Production Initialization ==="
 
