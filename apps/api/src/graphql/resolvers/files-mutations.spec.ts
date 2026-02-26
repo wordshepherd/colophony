@@ -113,19 +113,16 @@ vi.mock('../../services/scope-check.js', () => ({
   checkApiKeyScopes: vi.fn().mockReturnValue({ allowed: true }),
 }));
 
-vi.mock('../../services/s3.js', () => ({
-  createS3Client: vi.fn().mockReturnValue({}),
-}));
-
-vi.mock('../../config/env.js', () => ({
-  validateEnv: vi.fn().mockReturnValue({
-    S3_ENDPOINT: 'http://localhost:9000',
-    S3_REGION: 'us-east-1',
-    S3_ACCESS_KEY: 'test',
-    S3_SECRET_KEY: 'test',
-    S3_BUCKET: 'submissions',
-    S3_QUARANTINE_BUCKET: 'quarantine',
-  }),
+vi.mock('../../adapters/registry-accessor.js', () => ({
+  getGlobalRegistry: vi.fn(() => ({
+    resolve: vi.fn(() => ({
+      defaultBucket: 'test-bucket',
+      quarantineBucket: 'test-quarantine',
+      getSignedUrlFromBucket: vi.fn(),
+      deleteFromBucket: vi.fn(),
+    })),
+    tryResolve: vi.fn(() => null),
+  })),
 }));
 
 import { requireUserContext, requireScopes } from '../guards.js';

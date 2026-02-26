@@ -1,30 +1,22 @@
 import { Worker } from 'bullmq';
 import { withRls } from '@colophony/db';
 import type { DrizzleDb } from '@colophony/db';
+import type { AdapterRegistry, EmailAdapter } from '@colophony/plugin-sdk';
 import { AuditActions, AuditResources } from '@colophony/types';
 import type { Env } from '../config/env.js';
 import type { EmailJobData } from '../queues/email.queue.js';
 import { emailService } from '../services/email.service.js';
 import { auditService } from '../services/audit.service.js';
-import {
-  createEmailAdapter,
-  type EmailAdapter,
-} from '../adapters/email/index.js';
 import { renderEmailTemplate } from '../templates/email/index.js';
 import type { TemplateName } from '../templates/email/types.js';
 
 let worker: Worker<EmailJobData> | null = null;
-let adapter: EmailAdapter | null = null;
 
-export function startEmailWorker(env: Env): Worker<EmailJobData> {
-  adapter = createEmailAdapter(env);
-  if (!adapter) {
-    throw new Error(
-      `Email adapter could not be created for provider "${env.EMAIL_PROVIDER}"`,
-    );
-  }
-
-  const currentAdapter = adapter;
+export function startEmailWorker(
+  env: Env,
+  registry: AdapterRegistry,
+): Worker<EmailJobData> {
+  const emailAdapter = registry.resolve<EmailAdapter>('email');
 
   worker = new Worker<EmailJobData>(
     'email',
@@ -72,20 +64,24 @@ export function startEmailWorker(env: Env): Worker<EmailJobData> {
         return;
       }
 
-      // Phase 3: Send via adapter
-      const result = await currentAdapter.send({
+      // Phase 3: Send via SDK adapter
+      const result = await emailAdapter.send({
         to,
         from,
         subject: rendered.subject,
         html: rendered.html,
         text: rendered.text,
         replyTo: job.data.replyTo,
-        tags: job.data.tags,
+        metadata: job.data.tags,
       });
+
+      if (!result.success) {
+        throw new Error(result.error ?? 'Email send failed');
+      }
 
       // Phase 4: Mark SENT + audit
       await withRls({ orgId }, async (tx: DrizzleDb) => {
-        await emailService.markSent(tx, emailSendId, result.messageId);
+        await emailService.markSent(tx, emailSendId, result.messageId ?? null);
         await auditService.log(tx, {
           resource: AuditResources.EMAIL,
           action: AuditActions.EMAIL_SENT,

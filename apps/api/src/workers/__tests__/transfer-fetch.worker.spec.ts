@@ -13,6 +13,7 @@ vi.mock('@colophony/db', () => ({
     domain: 'domain',
     status: 'status',
   },
+  inboundTransfers: { id: 'id', status: 'status' },
   eq: vi.fn((_col, val) => ({ _eq: val })),
   and: vi.fn((...args: unknown[]) => ({ _and: args })),
 }));
@@ -22,13 +23,6 @@ vi.mock('../../services/audit.service.js', () => ({
   auditService: {
     logDirect: (...args: unknown[]) => mockAuditLogDirect(...args),
   },
-}));
-
-const mockPutObject = vi.fn().mockResolvedValue(undefined);
-const mockCreateS3Client = vi.fn().mockReturnValue({});
-vi.mock('../../services/s3.js', () => ({
-  createS3Client: (...args: unknown[]) => mockCreateS3Client(...args),
-  putObject: (...args: unknown[]) => mockPutObject(...args),
 }));
 
 // Mock BullMQ Worker — capture the processor function
@@ -62,17 +56,24 @@ vi.stubGlobal('fetch', mockFetch);
 
 import { startTransferFetchWorker } from '../transfer-fetch.worker.js';
 import type { Env } from '../../config/env.js';
+import type { AdapterRegistry } from '@colophony/plugin-sdk';
+
+const mockUploadToBucket = vi.fn().mockResolvedValue(undefined);
+
+const mockStorage = {
+  defaultBucket: 'submissions',
+  quarantineBucket: 'quarantine',
+  uploadToBucket: (...args: unknown[]) => mockUploadToBucket(...args),
+};
+
+const mockRegistry = {
+  resolve: vi.fn(() => mockStorage),
+} as unknown as AdapterRegistry;
 
 const testEnv = {
   REDIS_HOST: 'localhost',
   REDIS_PORT: 6379,
   REDIS_PASSWORD: '',
-  S3_ENDPOINT: 'http://localhost:9000',
-  S3_BUCKET: 'submissions',
-  S3_QUARANTINE_BUCKET: 'quarantine',
-  S3_ACCESS_KEY: 'minioadmin',
-  S3_SECRET_KEY: 'minioadmin',
-  S3_REGION: 'us-east-1',
   FEDERATION_ENABLED: true,
   FEDERATION_DOMAIN: 'magazine.example',
 } as unknown as Env;
@@ -104,7 +105,7 @@ describe('transfer-fetch worker', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     capturedProcessor = null;
-    startTransferFetchWorker(testEnv);
+    startTransferFetchWorker(testEnv, mockRegistry);
   });
 
   it('marks FAILED when transfer token is expired', async () => {
@@ -190,8 +191,8 @@ describe('transfer-fetch worker', () => {
     const job = { data: { ...baseJobData } };
     await capturedProcessor!(job);
 
-    // Should store 2 files in S3
-    expect(mockPutObject).toHaveBeenCalledTimes(2);
+    // Should store 2 files in S3 via storage adapter
+    expect(mockUploadToBucket).toHaveBeenCalledTimes(2);
 
     // Should audit STARTED and COMPLETED
     expect(mockAuditLogDirect).toHaveBeenCalledWith(
@@ -263,7 +264,7 @@ describe('transfer-fetch worker', () => {
     await expect(capturedProcessor!(job)).rejects.toThrow('Partial failure');
 
     // Should still have stored 1 file
-    expect(mockPutObject).toHaveBeenCalledTimes(1);
+    expect(mockUploadToBucket).toHaveBeenCalledTimes(1);
   });
 
   it('handles total failure', async () => {
@@ -299,7 +300,7 @@ describe('transfer-fetch worker', () => {
     );
 
     // No S3 puts
-    expect(mockPutObject).not.toHaveBeenCalled();
+    expect(mockUploadToBucket).not.toHaveBeenCalled();
 
     // Should audit FAILED
     expect(mockAuditLogDirect).toHaveBeenCalledWith(

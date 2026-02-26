@@ -2,7 +2,10 @@ import Fastify, { type FastifyInstance } from 'fastify';
 import cors from '@fastify/cors';
 import helmet from '@fastify/helmet';
 import { pool } from '@colophony/db';
+import { loadConfig } from '@colophony/plugin-sdk';
 import { type Env, validateEnv } from './config/env.js';
+import { buildColophonyConfig } from './colophony.config.js';
+import { setGlobalRegistry } from './adapters/registry-accessor.js';
 import authPlugin from './hooks/auth.js';
 import rateLimitPlugin from './hooks/rate-limit.js';
 import rateLimitAuthPlugin from './hooks/rate-limit-auth.js';
@@ -301,12 +304,21 @@ async function start(): Promise<void> {
   const env = validateEnv();
   const app = await buildApp(env);
 
+  // Initialize plugin SDK adapters + registry
+  const { config, adapterConfigs } = buildColophonyConfig(env);
+  const { registry } = await loadConfig({
+    config,
+    adapterConfigs,
+    logger: app.log,
+  });
+  setGlobalRegistry(registry);
+
   // Start BullMQ workers
   if (env.VIRUS_SCAN_ENABLED) {
-    startFileScanWorker(env);
+    startFileScanWorker(env, registry);
     app.log.info('File scan worker started');
   }
-  startS3CleanupWorker(env);
+  startS3CleanupWorker(env, registry);
   app.log.info('S3 cleanup worker started');
 
   // Start outbox poller for Inngest event delivery
@@ -316,13 +328,13 @@ async function start(): Promise<void> {
 
   // Start transfer fetch worker (federation file downloads with retries)
   if (env.FEDERATION_ENABLED) {
-    startTransferFetchWorker(env);
+    startTransferFetchWorker(env, registry);
     app.log.info('Transfer fetch worker started');
   }
 
   // Start email worker when email provider is configured
   if (env.EMAIL_PROVIDER !== 'none') {
-    startEmailWorker(env);
+    startEmailWorker(env, registry);
     app.log.info('Email worker started');
   }
 
@@ -366,6 +378,7 @@ async function start(): Promise<void> {
       await closeAllSSEConnections();
       await closePublisher();
       await closeSubscriber();
+      await registry.destroyAll();
       // TODO: Close DB pool when connection management is centralized
       app.log.info('Server closed');
     } finally {

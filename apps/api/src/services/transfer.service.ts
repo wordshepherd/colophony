@@ -28,7 +28,8 @@ import type { Env } from '../config/env.js';
 import { auditService } from './audit.service.js';
 import { federationService, domainToDid } from './federation.service.js';
 import { signFederationRequest } from '../federation/http-signatures.js';
-import { createS3Client, getObjectStream, putObject } from './s3.js';
+import { getGlobalRegistry } from '../adapters/registry-accessor.js';
+import type { S3StorageAdapter } from '../adapters/storage/index.js';
 import { enqueueTransferFetch } from '../queues/transfer-fetch.queue.js';
 
 // ---------------------------------------------------------------------------
@@ -609,7 +610,7 @@ export const transferService = {
    * Downloads each file using the transfer token as bearer auth.
    */
   async fetchTransferFiles(
-    env: Env,
+    _env: Env,
     originDomain: string,
     transferId: string,
     transferToken: string,
@@ -631,8 +632,7 @@ export const transferService = {
 
     if (!peer) return;
 
-    const s3Client = createS3Client(env);
-    const bucket = env.S3_BUCKET;
+    const storage = getGlobalRegistry().resolve<S3StorageAdapter>('storage');
     const storedFiles: Array<{ fileId: string; storageKey: string }> = [];
 
     for (const entry of fileManifest) {
@@ -653,7 +653,12 @@ export const transferService = {
         // Store in S3 under transfer-specific key prefix
         const storageKey = `transfers/${localSubmissionId}/${entry.fileId}/${entry.filename}`;
         const buffer = Buffer.from(await response.arrayBuffer());
-        await putObject(s3Client, bucket, storageKey, buffer, entry.mimeType);
+        await storage.uploadToBucket(
+          storage.defaultBucket,
+          storageKey,
+          buffer,
+          entry.mimeType,
+        );
 
         storedFiles.push({ fileId: entry.fileId, storageKey });
       } catch (err) {
@@ -792,7 +797,7 @@ export const transferService = {
 
   /** Stream a file for a verified transfer. */
   async getFileStream(
-    env: Env,
+    _env: Env,
     transferId: string,
     fileId: string,
   ): Promise<{
@@ -856,9 +861,11 @@ export const transferService = {
       throw new TransferFileNotFoundError(fileId);
     }
 
-    const s3Client = createS3Client(env);
-    const bucket = env.S3_BUCKET;
-    const stream = await getObjectStream(s3Client, bucket, file.storageKey);
+    const storage = getGlobalRegistry().resolve<S3StorageAdapter>('storage');
+    const stream = await storage.downloadFromBucket(
+      storage.defaultBucket,
+      file.storageKey,
+    );
 
     return {
       stream,

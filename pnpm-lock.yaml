@@ -45,6 +45,9 @@ importers:
       '@colophony/db':
         specifier: workspace:*
         version: link:../../packages/db
+      '@colophony/plugin-sdk':
+        specifier: workspace:^
+        version: link:../../packages/plugin-sdk
       '@colophony/types':
         specifier: workspace:*
         version: link:../../packages/types

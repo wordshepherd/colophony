@@ -3,25 +3,14 @@ import {
   manuscriptVersionIdParamSchema,
 } from '@colophony/types';
 import { fileService } from '../../services/file.service.js';
-import { createS3Client } from '../../services/s3.js';
-import { validateEnv } from '../../config/env.js';
+import { getGlobalRegistry } from '../../adapters/registry-accessor.js';
+import type { S3StorageAdapter } from '../../adapters/storage/index.js';
 import { toUserServiceContext } from '../../services/context.js';
 import { mapServiceError } from '../error-mapper.js';
 import { userProcedure, requireScopes } from '../context.js';
 
-// Lazily create S3 client (avoid creating at module load for tests)
-let s3ClientInstance: ReturnType<typeof createS3Client> | null = null;
-
-function getS3Client() {
-  if (!s3ClientInstance) {
-    const env = validateEnv();
-    s3ClientInstance = createS3Client(env);
-  }
-  return s3ClientInstance;
-}
-
-function getEnvConfig() {
-  return validateEnv();
+function getStorage(): S3StorageAdapter {
+  return getGlobalRegistry().resolve<S3StorageAdapter>('storage');
 }
 
 // ---------------------------------------------------------------------------
@@ -64,12 +53,10 @@ const download = userProcedure
   .input(fileIdParamSchema)
   .handler(async ({ input, context }) => {
     try {
-      const env = getEnvConfig();
       return await fileService.getDownloadUrlWithAccess(
         toUserServiceContext(context),
         input.fileId,
-        getS3Client(),
-        env.S3_BUCKET,
+        getStorage(),
       );
     } catch (e) {
       mapServiceError(e);
@@ -90,13 +77,10 @@ const del = userProcedure
   .input(fileIdParamSchema)
   .handler(async ({ input, context }) => {
     try {
-      const env = getEnvConfig();
       return await fileService.deleteAsOwner(
         toUserServiceContext(context),
         input.fileId,
-        getS3Client(),
-        env.S3_BUCKET,
-        env.S3_QUARANTINE_BUCKET,
+        getStorage(),
       );
     } catch (e) {
       mapServiceError(e);

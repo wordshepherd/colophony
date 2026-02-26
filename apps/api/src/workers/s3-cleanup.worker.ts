@@ -1,14 +1,18 @@
 import { Worker } from 'bullmq';
+import type { AdapterRegistry } from '@colophony/plugin-sdk';
 import { AuditActions, AuditResources } from '@colophony/types';
 import type { Env } from '../config/env.js';
 import type { S3CleanupJobData } from '../queues/s3-cleanup.queue.js';
-import { createS3Client, deleteS3Object } from '../services/s3.js';
+import type { S3StorageAdapter } from '../adapters/storage/index.js';
 import { auditService } from '../services/audit.service.js';
 
 let worker: Worker<S3CleanupJobData> | null = null;
 
-export function startS3CleanupWorker(env: Env): Worker<S3CleanupJobData> {
-  const s3Client = createS3Client(env);
+export function startS3CleanupWorker(
+  env: Env,
+  registry: AdapterRegistry,
+): Worker<S3CleanupJobData> {
+  const storage = registry.resolve<S3StorageAdapter>('storage');
 
   worker = new Worker<S3CleanupJobData>(
     's3-cleanup',
@@ -18,9 +22,9 @@ export function startS3CleanupWorker(env: Env): Worker<S3CleanupJobData> {
 
       for (const { storageKey, bucket } of storageKeys) {
         const s3Bucket =
-          bucket === 'clean' ? env.S3_BUCKET : env.S3_QUARANTINE_BUCKET;
+          bucket === 'clean' ? storage.defaultBucket : storage.quarantineBucket;
         try {
-          await deleteS3Object(s3Client, s3Bucket, storageKey);
+          await storage.deleteFromBucket(s3Bucket, storageKey);
         } catch (err) {
           errors.push({
             storageKey,
