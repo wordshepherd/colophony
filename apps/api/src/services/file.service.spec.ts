@@ -60,13 +60,16 @@ function makeTx(file: Record<string, unknown> | null): DrizzleDb {
   return { select: mockSelect, delete: mockDeleteFn } as unknown as DrizzleDb;
 }
 
+const mockGetSignedUrlFromBucket = vi
+  .fn()
+  .mockResolvedValue('https://s3.example.com/signed');
+const mockDeleteFromBucket = vi.fn().mockResolvedValue(undefined);
+
 const mockStorage = {
   defaultBucket: 'main-bucket',
   quarantineBucket: 'quarantine-bucket',
-  getSignedUrlFromBucket: vi
-    .fn()
-    .mockResolvedValue('https://s3.example.com/signed'),
-  deleteFromBucket: vi.fn().mockResolvedValue(undefined),
+  getSignedUrlFromBucket: mockGetSignedUrlFromBucket,
+  deleteFromBucket: mockDeleteFromBucket,
 } as unknown as S3StorageAdapter;
 
 beforeEach(() => {
@@ -91,7 +94,7 @@ describe('fileService.getDownloadUrl', () => {
       filename: 'test.pdf',
       mimeType: 'application/pdf',
     });
-    expect(mockStorage.getSignedUrlFromBucket).toHaveBeenCalledWith(
+    expect(mockGetSignedUrlFromBucket).toHaveBeenCalledWith(
       'main-bucket',
       'uploads/f1.pdf',
     );
@@ -107,7 +110,7 @@ describe('fileService.getDownloadUrl', () => {
     );
 
     expect(result).toBeNull();
-    expect(mockStorage.getSignedUrlFromBucket).not.toHaveBeenCalled();
+    expect(mockGetSignedUrlFromBucket).not.toHaveBeenCalled();
   });
 
   it('throws FileNotCleanError for non-CLEAN files', async () => {
@@ -138,7 +141,7 @@ describe('fileService.deleteWithS3', () => {
     const result = await fileService.deleteWithS3(tx, 'f1', mockStorage);
 
     expect(result).toEqual(file);
-    expect(mockStorage.deleteFromBucket).toHaveBeenCalledWith(
+    expect(mockDeleteFromBucket).toHaveBeenCalledWith(
       'main-bucket',
       'uploads/f1.pdf',
     );
@@ -154,7 +157,7 @@ describe('fileService.deleteWithS3', () => {
 
     await fileService.deleteWithS3(tx, 'f2', mockStorage);
 
-    expect(mockStorage.deleteFromBucket).toHaveBeenCalledWith(
+    expect(mockDeleteFromBucket).toHaveBeenCalledWith(
       'quarantine-bucket',
       'uploads/f2.pdf',
     );
@@ -170,6 +173,6 @@ describe('fileService.deleteWithS3', () => {
     );
 
     expect(result).toBeNull();
-    expect(mockStorage.deleteFromBucket).not.toHaveBeenCalled();
+    expect(mockDeleteFromBucket).not.toHaveBeenCalled();
   });
 });
