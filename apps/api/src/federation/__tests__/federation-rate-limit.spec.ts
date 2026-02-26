@@ -37,6 +37,7 @@ async function buildApp(
   redis: ReturnType<typeof createMockRedis> | null,
   env = baseEnv,
   peer?: PeerConfig,
+  capability?: string,
 ): Promise<FastifyInstance> {
   const app = Fastify({ logger: false });
 
@@ -67,7 +68,7 @@ async function buildApp(
 
   // Register the plugin under test
   const mod = await import('../federation-rate-limit.js');
-  await app.register(mod.default as any, { env });
+  await app.register(mod.default as any, { env, capability });
 
   // Test route
   app.get('/test', async (_request, reply) => {
@@ -236,5 +237,95 @@ describe('federation-rate-limit', () => {
       10, // custom limit
     );
     await app.close();
+  });
+
+  it('uses capability in key when provided', async () => {
+    const redis = createMockRedis([1, 0]);
+    const app = await buildApp(
+      redis,
+      baseEnv,
+      {
+        type: 'federation',
+        domain: 'peer.example.com',
+        keyId: 'peer.example.com#main',
+      },
+      'simsub',
+    );
+
+    await app.inject({ method: 'GET', url: '/test' });
+
+    expect(redis.eval).toHaveBeenCalledWith(
+      'mock-lua-script',
+      1,
+      'test:rl:fed:simsub:peer.example.com',
+      expect.any(Number),
+      expect.any(Number),
+      expect.any(String),
+      60_000,
+      60,
+    );
+    await app.close();
+  });
+
+  it('falls back to global key when capability omitted', async () => {
+    const redis = createMockRedis([1, 0]);
+    const app = await buildApp(redis, baseEnv, {
+      type: 'federation',
+      domain: 'peer.example.com',
+      keyId: 'peer.example.com#main',
+    });
+
+    await app.inject({ method: 'GET', url: '/test' });
+
+    expect(redis.eval).toHaveBeenCalledWith(
+      'mock-lua-script',
+      1,
+      'test:rl:fed:peer.example.com',
+      expect.any(Number),
+      expect.any(Number),
+      expect.any(String),
+      60_000,
+      60,
+    );
+    await app.close();
+  });
+
+  it('different capabilities produce different keys', async () => {
+    const redisSimsub = createMockRedis([1, 0]);
+    const appSimsub = await buildApp(
+      redisSimsub,
+      baseEnv,
+      {
+        type: 'federation',
+        domain: 'peer.example.com',
+        keyId: 'peer.example.com#main',
+      },
+      'simsub',
+    );
+
+    const redisTransfer = createMockRedis([1, 0]);
+    const appTransfer = await buildApp(
+      redisTransfer,
+      baseEnv,
+      {
+        type: 'federation',
+        domain: 'peer.example.com',
+        keyId: 'peer.example.com#main',
+      },
+      'transfer',
+    );
+
+    await appSimsub.inject({ method: 'GET', url: '/test' });
+    await appTransfer.inject({ method: 'GET', url: '/test' });
+
+    const simsubKey = redisSimsub.eval.mock.calls[0][2];
+    const transferKey = redisTransfer.eval.mock.calls[0][2];
+
+    expect(simsubKey).toBe('test:rl:fed:simsub:peer.example.com');
+    expect(transferKey).toBe('test:rl:fed:transfer:peer.example.com');
+    expect(simsubKey).not.toBe(transferKey);
+
+    await appSimsub.close();
+    await appTransfer.close();
   });
 });
