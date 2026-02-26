@@ -85,8 +85,9 @@ async function checkEnumCompatibility(
     // Skip if already converted to enum (USER-DEFINED)
     if (colResult.rows[0].data_type === "USER-DEFINED") continue;
 
-    // Query for values not in the target enum set
-    // Table/column names are from hardcoded checks (not user input), safe to interpolate
+    // Table/column names are from MIGRATION_0031_CHECKS (hardcoded, not user input),
+    // so identifier interpolation is safe. If this is extended to accept dynamic checks,
+    // use pg-format or parameterized identifiers.
     const placeholders = check.enumValues.map((_, i) => `$${i + 1}`).join(", ");
 
     const result = await pool.query<{ value: string; count: string }>(

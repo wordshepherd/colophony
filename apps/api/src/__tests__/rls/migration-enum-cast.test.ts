@@ -256,7 +256,11 @@ describe('Migration 0031 partial failure', () => {
   }, 30_000);
 
   it('documents partial state after mid-migration failure', async () => {
-    // Insert dirty data in hub_registered_instances (enum cast #2)
+    // Drizzle-specific behavior: migration statements are applied individually,
+    // NOT wrapped in a transaction. Other ORMs (e.g., Knex, Flyway) may wrap
+    // each migration file in a transaction, producing all-or-nothing semantics.
+    //
+    // Insert dirty data in hub_registered_instances (enum cast #2).
     // The enum CREATEs succeed, identity_migrations ALTER succeeds (empty),
     // but hub_registered_instances ALTER fails on invalid data.
     await adminPool.query(

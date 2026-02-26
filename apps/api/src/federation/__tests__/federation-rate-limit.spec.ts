@@ -328,4 +328,21 @@ describe('federation-rate-limit', () => {
     await appSimsub.close();
     await appTransfer.close();
   });
+
+  it('rejects invalid capability at registration', async () => {
+    const redis = createMockRedis([1, 0]);
+
+    await expect(
+      buildApp(
+        redis,
+        baseEnv,
+        {
+          type: 'federation',
+          domain: 'peer.example.com',
+          keyId: 'peer.example.com#main',
+        },
+        'bogus',
+      ),
+    ).rejects.toThrow(/Invalid federation rate limit capability.*bogus/);
+  });
 });

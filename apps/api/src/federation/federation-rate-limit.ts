@@ -3,6 +3,8 @@ import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import type { Env } from '../config/env.js';
 import { SLIDING_WINDOW_SCRIPT } from '../hooks/rate-limit.js';
 
+const VALID_CAPABILITIES = new Set(['simsub', 'transfer', 'migration', 'hub']);
+
 export interface FederationRateLimitOptions {
   env: Env;
   capability?: string;
@@ -21,6 +23,13 @@ export default fp(
     opts: FederationRateLimitOptions,
   ) {
     const { env, capability } = opts;
+
+    if (capability && !VALID_CAPABILITIES.has(capability)) {
+      throw new Error(
+        `Invalid federation rate limit capability: '${capability}'. ` +
+          `Valid values: ${[...VALID_CAPABILITIES].join(', ')}`,
+      );
+    }
     const limit = env.FEDERATION_RATE_LIMIT_MAX;
     const windowMs = env.FEDERATION_RATE_LIMIT_WINDOW_SECONDS * 1000;
     const prefix = env.RATE_LIMIT_KEY_PREFIX;
