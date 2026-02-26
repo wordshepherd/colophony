@@ -122,6 +122,10 @@ vi.mock('./s3.js', () => ({
   putObject: vi.fn().mockResolvedValue(undefined),
 }));
 
+vi.mock('../queues/transfer-fetch.queue.js', () => ({
+  enqueueTransferFetch: vi.fn().mockResolvedValue(undefined),
+}));
+
 // ---------------------------------------------------------------------------
 // Import after mocks
 // ---------------------------------------------------------------------------
