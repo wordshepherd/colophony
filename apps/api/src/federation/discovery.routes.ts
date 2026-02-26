@@ -17,8 +17,12 @@ export async function registerFederationDiscoveryRoutes(
   const { env } = opts;
 
   // Override app-level CORS for federation routes — RFC 7033 requires
-  // WebFinger to be accessible from any origin
-  await app.register(cors, { origin: true, credentials: false });
+  // WebFinger to be accessible from any origin.
+  // Guard: skip if another scope already registered @fastify/cors (the
+  // plugin decorates the root instance with 'corsPreflightEnabled').
+  if (!app.hasRequestDecorator('corsPreflightEnabled')) {
+    await app.register(cors, { origin: true, credentials: false });
+  }
 
   app.get('/.well-known/colophony', async (_request, reply) => {
     try {
