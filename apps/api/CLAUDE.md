@@ -39,6 +39,9 @@
 | Email worker      | `src/workers/email.worker.ts`                     |
 | Email service     | `src/services/email.service.ts`                   |
 | Notif pref svc    | `src/services/notification-preference.service.ts` |
+| Webhook queue     | `src/queues/webhook.queue.ts`                     |
+| Webhook worker    | `src/workers/webhook.worker.ts`                   |
+| Webhook service   | `src/services/webhook.service.ts`                 |
 | CMS adapters      | `src/adapters/cms/`                               |
 | Documenso adapter | `src/adapters/documenso.adapter.ts`               |
 | Outbox poller     | `src/workers/outbox-poller.worker.ts`             |
@@ -233,6 +236,18 @@ Workers and queues are started in `main.ts` and closed during graceful shutdown.
 - **Flow**: Iterates storage keys, deletes from clean or quarantine bucket, logs audit event
 - **Retries**: 5 attempts, exponential backoff from 60s, 30-day fail retention
 - **Always active**: Not gated on `VIRUS_SCAN_ENABLED` — runs whenever GDPR deletion occurs
+
+### Webhook Worker
+
+- **Queue**: `webhook` — jobs enqueued from `webhookDelivery` Inngest function via `enqueueWebhook()`
+- **Job idempotency**: `jobId: deliveryId` prevents duplicate deliveries
+- **Flow**: QUEUED → DELIVERING → DELIVERED/FAILED (tracked in `webhook_deliveries` table)
+- **Processing**: Compute HMAC-SHA256 signature → HTTP POST with headers (`X-Webhook-Signature`, `X-Webhook-Id`, `User-Agent`) → update status + audit
+- **Retries**: 8 attempts, custom backoff [1s, 5s, 30s, 2m, 10m, 1h, 1h, 1h]
+- **Concurrency**: 10 (I/O-bound HTTP calls)
+- **Timeout**: 30s per delivery (AbortController)
+- **Auto-disable**: After 5 consecutive final failures for an endpoint, sets endpoint status to DISABLED
+- **Always active**: No feature flag — harmless when no endpoints registered
 
 ### Env Vars
 

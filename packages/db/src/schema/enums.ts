@@ -180,6 +180,18 @@ export const emailSendStatusEnum = pgEnum("EmailSendStatus", [
 
 export const notificationChannelEnum = pgEnum("NotificationChannel", ["email"]);
 
+export const webhookEndpointStatusEnum = pgEnum("WebhookEndpointStatus", [
+  "ACTIVE",
+  "DISABLED",
+]);
+
+export const webhookDeliveryStatusEnum = pgEnum("WebhookDeliveryStatus", [
+  "QUEUED",
+  "DELIVERING",
+  "DELIVERED",
+  "FAILED",
+]);
+
 export const contractStatusEnum = pgEnum("ContractStatus", [
   "DRAFT",
   "SENT",
