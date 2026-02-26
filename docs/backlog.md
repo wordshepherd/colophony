@@ -166,6 +166,13 @@
 - [x] [P3] Piece transfer: upgrade fire-and-forget file fetch to BullMQ for retry/dead-letter — (DEVLOG 2026-02-25, v1 acceptable; done 2026-02-25)
 - [x] Identity migration — (architecture doc Track 5; done 2026-02-25)
 - [x] Hub for managed hosting — (architecture doc Track 5; done 2026-02-25)
+- [x] Per-peer federation rate limiting — sliding window plugin on all S2S routes — (plan B1; done 2026-02-25)
+- [x] Enum cleanup — varchar→pgEnum for identity migration direction, hub instance status, trust initiator — (plan C1; done 2026-02-25)
+- [x] Open mode auto-accept for inbound trust — (plan C2; done 2026-02-25)
+- [x] Inbound transfer tracking table with status lifecycle — (plan C4; done 2026-02-25)
+- [ ] [P3] Per-capability rate limiting — rate limit per federation capability (simsub, transfer, etc.) rather than global per-peer — (OpenCode review 2026-02-25, deferred to production hardening)
+- [ ] [P3] Migration rollback testing — enum casts can fail on dirty data; add rollback scenario tests before production deployment — (OpenCode review 2026-02-25, deferred pre-launch)
+- [ ] [P4] Consider splitting schema migrations (enum changes vs new tables) for safer production rollback — (OpenCode review 2026-02-25, deferred pre-launch)
 
 ### Design Decisions
 
