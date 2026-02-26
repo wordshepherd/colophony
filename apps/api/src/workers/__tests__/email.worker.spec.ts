@@ -32,13 +32,17 @@ vi.mock('../../adapters/email/index.js', () => ({
   })),
 }));
 
-const mockRenderEmailTemplate = vi.fn(() => ({
-  html: '<p>Hello</p>',
-  text: 'Hello',
-  subject: 'Test Subject',
-}));
+const mockRenderEmailTemplate = vi.fn(
+  (_name: unknown, _data: unknown) =>
+    ({
+      html: '<p>Hello</p>',
+      text: 'Hello',
+      subject: 'Test Subject',
+    }) as { html: string; text: string; subject: string },
+);
 vi.mock('../../templates/email/index.js', () => ({
-  renderEmailTemplate: (...args: unknown[]) => mockRenderEmailTemplate(...args),
+  renderEmailTemplate: (name: unknown, data: unknown) =>
+    mockRenderEmailTemplate(name, data),
 }));
 
 let workerCallback: (job: unknown) => Promise<unknown>;
