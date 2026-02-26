@@ -170,9 +170,9 @@
 - [x] Enum cleanup — varchar→pgEnum for identity migration direction, hub instance status, trust initiator — (plan C1; done 2026-02-25)
 - [x] Open mode auto-accept for inbound trust — (plan C2; done 2026-02-25)
 - [x] Inbound transfer tracking table with status lifecycle — (plan C4; done 2026-02-25)
-- [ ] [P3] Per-capability rate limiting — rate limit per federation capability (simsub, transfer, etc.) rather than global per-peer — (OpenCode review 2026-02-25, deferred to production hardening)
-- [ ] [P3] Migration rollback testing — enum casts can fail on dirty data; add rollback scenario tests before production deployment — (OpenCode review 2026-02-25, deferred pre-launch)
-- [ ] [P4] Consider splitting schema migrations (enum changes vs new tables) for safer production rollback — (OpenCode review 2026-02-25, deferred pre-launch)
+- [x] [P3] Per-capability rate limiting — rate limit per federation capability (simsub, transfer, etc.) rather than global per-peer — (OpenCode review 2026-02-25, deferred to production hardening; done 2026-02-26)
+- [x] [P3] Migration rollback testing — enum casts can fail on dirty data; add rollback scenario tests before production deployment — (OpenCode review 2026-02-25, deferred pre-launch; done 2026-02-26)
+- [x] [P4] Consider splitting schema migrations (enum changes vs new tables) for safer production rollback — documented as pattern + pre-flight validator instead of splitting 0031 (already applied) — (OpenCode review 2026-02-25, deferred pre-launch; done 2026-02-26)
 
 ### Design Decisions
 
