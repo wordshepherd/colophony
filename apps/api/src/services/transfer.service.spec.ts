@@ -64,6 +64,15 @@ vi.mock('@colophony/db', () => ({
     organizationId: 'trustedPeers.organizationId',
   },
   users: { id: 'users.id', email: 'users.email' },
+  inboundTransfers: {
+    id: 'inboundTransfers.id',
+    organizationId: 'inboundTransfers.organizationId',
+    submissionId: 'inboundTransfers.submissionId',
+    sourceDomain: 'inboundTransfers.sourceDomain',
+    remoteTransferId: 'inboundTransfers.remoteTransferId',
+    submitterDid: 'inboundTransfers.submitterDid',
+    status: 'inboundTransfers.status',
+  },
   eq: vi.fn(),
   and: vi.fn(),
   sql: vi.fn(),
@@ -352,8 +361,9 @@ describe('transferService', () => {
         protectedHeader: { alg: 'EdDSA' },
       } as any);
 
-      // Mock withRls for idempotency check + insert
+      // Mock withRls for idempotency check + insert (submission + inbound transfer)
       mockWithRls.mockImplementation(async (_ctx: any, fn: any) => {
+        let insertCount = 0;
         const mockTx = {
           select: vi.fn().mockReturnThis(),
           from: vi.fn().mockReturnThis(),
@@ -361,7 +371,12 @@ describe('transferService', () => {
           limit: vi.fn().mockResolvedValue([]), // No existing submission
           insert: vi.fn().mockReturnThis(),
           values: vi.fn().mockReturnThis(),
-          returning: vi.fn().mockResolvedValue([{ id: 'new-sub-id' }]),
+          returning: vi.fn().mockImplementation(() => {
+            insertCount++;
+            if (insertCount === 1)
+              return Promise.resolve([{ id: 'new-sub-id' }]);
+            return Promise.resolve([{ id: 'new-inbound-id' }]); // inbound transfer row
+          }),
         };
         return fn(mockTx);
       });
@@ -491,6 +506,140 @@ describe('transferService', () => {
           protocolVersion: '1.0',
         }),
       ).rejects.toThrow(TransferTokenError);
+    });
+  });
+
+  // ─── inbound transfer tracking ───
+
+  describe('inbound transfer tracking', () => {
+    it('creates inbound_transfers row on inbound transfer', async () => {
+      // Mock superuser peer lookup
+      mockDb.limit.mockResolvedValueOnce([
+        {
+          organizationId: validUuid,
+          publicKey:
+            '-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEARhJrpKFgxPmbYP07KnlUuSkZordGLP7bkL8JrMRK0QM=\n-----END PUBLIC KEY-----',
+        },
+      ]);
+
+      vi.mocked(jose.jwtVerify).mockResolvedValue({
+        payload: {
+          jti: validUuid2,
+          iss: 'peer.example.com',
+          fileIds: [validUuid3],
+        },
+        protectedHeader: { alg: 'EdDSA' },
+      } as any);
+
+      let insertCallCount = 0;
+      const insertArgs: unknown[][] = [];
+      mockWithRls.mockImplementation(async (_ctx: any, fn: any) => {
+        const mockTx = {
+          select: vi.fn().mockReturnThis(),
+          from: vi.fn().mockReturnThis(),
+          where: vi.fn().mockReturnThis(),
+          limit: vi.fn().mockResolvedValue([]),
+          insert: vi.fn().mockReturnThis(),
+          values: vi.fn().mockImplementation((...args: unknown[]) => {
+            insertCallCount++;
+            insertArgs.push(args);
+            return mockTx;
+          }),
+          returning: vi.fn().mockImplementation(() => {
+            if (insertCallCount === 1)
+              return Promise.resolve([{ id: 'new-sub-id' }]);
+            return Promise.resolve([{ id: 'new-inbound-id' }]);
+          }),
+        };
+        return fn(mockTx);
+      });
+
+      const result = await transferService.handleInboundTransfer(
+        testEnv,
+        'peer.example.com',
+        {
+          transferToken: 'mock.jwt.token',
+          submitterDid: 'did:web:peer.example.com:users:alice',
+          pieceMetadata: { title: 'Test Piece' },
+          fileManifest: [
+            {
+              fileId: validUuid3,
+              filename: 'test.pdf',
+              mimeType: 'application/pdf',
+              size: 1024,
+            },
+          ],
+          protocolVersion: '1.0',
+        },
+      );
+
+      expect(result.status).toBe('accepted');
+      // Should have 2 inserts: submission + inbound transfer
+      expect(insertCallCount).toBe(2);
+    });
+
+    it('links inbound_transfers to created submission', async () => {
+      mockDb.limit.mockResolvedValueOnce([
+        {
+          organizationId: validUuid,
+          publicKey:
+            '-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEARhJrpKFgxPmbYP07KnlUuSkZordGLP7bkL8JrMRK0QM=\n-----END PUBLIC KEY-----',
+        },
+      ]);
+
+      vi.mocked(jose.jwtVerify).mockResolvedValue({
+        payload: {
+          jti: validUuid2,
+          iss: 'peer.example.com',
+          fileIds: [validUuid3],
+        },
+        protectedHeader: { alg: 'EdDSA' },
+      } as any);
+
+      const insertedValues: unknown[] = [];
+      mockWithRls.mockImplementation(async (_ctx: any, fn: any) => {
+        let insertCount = 0;
+        const mockTx = {
+          select: vi.fn().mockReturnThis(),
+          from: vi.fn().mockReturnThis(),
+          where: vi.fn().mockReturnThis(),
+          limit: vi.fn().mockResolvedValue([]),
+          insert: vi.fn().mockReturnThis(),
+          values: vi.fn().mockImplementation((val: unknown) => {
+            insertCount++;
+            insertedValues.push(val);
+            return mockTx;
+          }),
+          returning: vi.fn().mockImplementation(() => {
+            if (insertCount === 1)
+              return Promise.resolve([{ id: 'new-sub-id' }]);
+            return Promise.resolve([{ id: 'new-inbound-id' }]);
+          }),
+        };
+        return fn(mockTx);
+      });
+
+      await transferService.handleInboundTransfer(testEnv, 'peer.example.com', {
+        transferToken: 'mock.jwt.token',
+        submitterDid: 'did:web:peer.example.com:users:alice',
+        pieceMetadata: { title: 'Test' },
+        fileManifest: [
+          {
+            fileId: validUuid3,
+            filename: 'test.pdf',
+            mimeType: 'application/pdf',
+            size: 1024,
+          },
+        ],
+        protocolVersion: '1.0',
+      });
+
+      // Second insert should be the inbound transfer with submissionId linked
+      expect(insertedValues).toHaveLength(2);
+      const inboundVal = insertedValues[1] as Record<string, unknown>;
+      expect(inboundVal.submissionId).toBe('new-sub-id');
+      expect(inboundVal.sourceDomain).toBe('peer.example.com');
+      expect(inboundVal.status).toBe('RECEIVED');
     });
   });
 

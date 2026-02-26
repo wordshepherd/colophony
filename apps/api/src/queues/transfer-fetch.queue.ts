@@ -10,6 +10,7 @@ export interface TransferFetchJobData {
   tokenExpiresAt: string;
   fileManifest: TransferFileManifestEntry[];
   localSubmissionId: string;
+  inboundTransferId?: string;
 }
 
 let queue: Queue<TransferFetchJobData> | null = null;

@@ -179,7 +179,7 @@ export const remoteMetadataPreviewSchema = z.object({
   publicKey: z.string(),
   keyId: z.string(),
   capabilities: z.array(z.string()),
-  mode: z.string(),
+  mode: z.enum(["allowlist", "open", "managed_hub"]),
   contactEmail: z.string().nullable(),
   publicationCount: z.number(),
 });

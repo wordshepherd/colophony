@@ -175,6 +175,7 @@ export const AuditActions = {
   FEDERATION_TRUST_REJECTED: "FEDERATION_TRUST_REJECTED",
   FEDERATION_TRUST_REVOKED: "FEDERATION_TRUST_REVOKED",
   FEDERATION_TRUST_RECEIVED: "FEDERATION_TRUST_RECEIVED",
+  FEDERATION_TRUST_AUTO_ACCEPTED: "FEDERATION_TRUST_AUTO_ACCEPTED",
 
   // Hub lifecycle
   HUB_INSTANCE_REGISTERED: "HUB_INSTANCE_REGISTERED",
@@ -420,7 +421,8 @@ export interface FederationAuditParams extends BaseAuditParams {
     | typeof AuditActions.FEDERATION_TRUST_ACCEPTED
     | typeof AuditActions.FEDERATION_TRUST_REJECTED
     | typeof AuditActions.FEDERATION_TRUST_REVOKED
-    | typeof AuditActions.FEDERATION_TRUST_RECEIVED;
+    | typeof AuditActions.FEDERATION_TRUST_RECEIVED
+    | typeof AuditActions.FEDERATION_TRUST_AUTO_ACCEPTED;
 }
 
 export interface SimSubAuditParams extends BaseAuditParams {

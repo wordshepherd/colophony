@@ -39,6 +39,12 @@ vi.mock('./hub-auth.js', () => ({
   },
 }));
 
+vi.mock('./federation-rate-limit.js', () => ({
+  default: async () => {
+    /* no-op for test */
+  },
+}));
+
 // Minimal Fastify mock
 type AnyFn = (...args: any[]) => any;
 

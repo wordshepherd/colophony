@@ -1,5 +1,12 @@
 import { Worker, UnrecoverableError } from 'bullmq';
-import { withRls, submissions, trustedPeers, eq, and } from '@colophony/db';
+import {
+  withRls,
+  submissions,
+  trustedPeers,
+  inboundTransfers,
+  eq,
+  and,
+} from '@colophony/db';
 import type { DrizzleDb } from '@colophony/db';
 import { AuditActions, AuditResources } from '@colophony/types';
 import type { Env } from '../config/env.js';
@@ -26,6 +33,7 @@ export function startTransferFetchWorker(
         tokenExpiresAt,
         fileManifest,
         localSubmissionId,
+        inboundTransferId,
       } = job.data;
 
       // Pre-check: token expiration
@@ -40,7 +48,7 @@ export function startTransferFetchWorker(
         throw new UnrecoverableError('Transfer token expired');
       }
 
-      // Phase 1: audit start
+      // Phase 1: audit start + mark inbound transfer as fetching
       await auditService.logDirect({
         resource: AuditResources.TRANSFER,
         action: AuditActions.TRANSFER_FILES_FETCH_STARTED,
@@ -48,6 +56,15 @@ export function startTransferFetchWorker(
         organizationId: orgId,
         newValue: { transferId, fileCount: fileManifest.length },
       });
+
+      if (inboundTransferId) {
+        await withRls({ orgId }, async (tx: DrizzleDb) => {
+          await tx
+            .update(inboundTransfers)
+            .set({ status: 'FILES_FETCHING' })
+            .where(eq(inboundTransfers.id, inboundTransferId));
+        });
+      }
 
       // Resolve peer instance URL via RLS
       const peer = await withRls({ orgId }, async (tx: DrizzleDb) => {
@@ -141,6 +158,15 @@ export function startTransferFetchWorker(
       }
 
       if (totalSuccess) {
+        if (inboundTransferId) {
+          await withRls({ orgId }, async (tx: DrizzleDb) => {
+            await tx
+              .update(inboundTransfers)
+              .set({ status: 'FILES_COMPLETE', completedAt: new Date() })
+              .where(eq(inboundTransfers.id, inboundTransferId));
+          });
+        }
+
         await auditService.logDirect({
           resource: AuditResources.TRANSFER,
           action: AuditActions.TRANSFER_FILES_FETCH_COMPLETED,
@@ -157,6 +183,22 @@ export function startTransferFetchWorker(
 
       if (!hasAnySuccess) {
         // Total failure — no DB update, audit + throw for retry
+        // Mark as FAILED only on last attempt
+        if (
+          inboundTransferId &&
+          job.attemptsMade >= (job.opts.attempts ?? 3) - 1
+        ) {
+          await withRls({ orgId }, async (tx: DrizzleDb) => {
+            await tx
+              .update(inboundTransfers)
+              .set({
+                status: 'FAILED',
+                failureReason: 'All file fetches failed',
+              })
+              .where(eq(inboundTransfers.id, inboundTransferId));
+          });
+        }
+
         await auditService.logDirect({
           resource: AuditResources.TRANSFER,
           action: AuditActions.TRANSFER_FILES_FETCH_FAILED,

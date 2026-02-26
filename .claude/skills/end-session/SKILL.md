@@ -11,8 +11,8 @@ End-of-session housekeeping: update docs, push to PR, and summarize work.
 
 1. Gathers session context from the conversation
 2. Ensures all code changes are committed on a feature branch (not `main`)
-3. Notes any Codex review findings addressed during this session
-4. Updates the current month's devlog (`docs/devlog/YYYY-MM.md`) with a session summary (captures everything including Codex review fixes addressed during this session)
+3. Notes any code review findings addressed during this session
+4. Updates the current month's devlog (`docs/devlog/YYYY-MM.md`) with a session summary (captures everything including code review fixes addressed during this session)
 5. Checks for any `TODO(CLAUDE.md)` comments and proposes updates
 6. Commits doc updates as the final commit on the branch
 7. Pushes the branch and creates/updates a PR (all commits — code + docs — land together so CI covers everything)
@@ -50,12 +50,14 @@ Scan the conversation to identify:
 
    If there are uncommitted code changes from this session, stage and commit them with an appropriate conventional commit message. Do NOT push yet — docs will be committed first so everything lands in one push.
 
-### Step 3: Note Codex review status
+### Step 3: Note code review status
 
-Check the conversation history for any `/codex-review` invocations during this session. **Distinguish between review types** — they are not interchangeable:
+<!-- Active review tool: /opencode-review. To switch back: replace /opencode-review with /codex-review -->
 
-- **Plan review** (`/codex-review plan`): Reviews the _plan file_ for soundness before implementation. Does NOT review actual code written.
-- **Branch review** (`/codex-review branch`): Reviews the _actual code diff_ against `origin/main`. This is the implementation review.
+Check the conversation history for any `/opencode-review` or `/codex-review` invocations during this session. **Distinguish between review types** — they are not interchangeable:
+
+- **Plan review** (`/opencode-review plan`): Reviews the _plan file_ for soundness before implementation. Does NOT review actual code written.
+- **Branch review** (`/opencode-review branch`): Reviews the _actual code diff_ against `origin/main`. This is the implementation review.
 
 Record which types were run:
 
@@ -84,8 +86,8 @@ Use this exact format:
 
 - [ ] or [x] All code committed
 - [ ] or [x] Tests passing
-- [ ] or [x] Codex plan review done
-- [ ] or [x] Codex branch review done
+- [ ] or [x] Plan review done (opencode/codex)
+- [ ] or [x] Branch review done (opencode/codex)
 - [ ] or [x] DEVLOG updated
 - [ ] or [x] PR created/updated
 
@@ -122,7 +124,7 @@ Read the current month's devlog to see the latest entry format, then **prepend**
 
 ### Done
 
-- [bullet points of completed work, INCLUDING any Codex review fixes addressed during this session]
+- [bullet points of completed work, INCLUDING any code review fixes addressed during this session]
 
 ### Decisions
 
@@ -133,7 +135,7 @@ Read the current month's devlog to see the latest entry format, then **prepend**
 
 - The DEVLOG **no longer has a "Next" section** for deferred work. Deferred items go in `docs/backlog.md` instead.
 - Only include an **"Issues Found"** section if there are bugs or problems discovered during this session that need immediate attention (e.g., "CI is broken", "test is flaky"). Routine follow-up work goes in the backlog.
-- The DEVLOG entry should capture the full session including any Codex review outcomes (e.g., "Addressed Codex review: fixed X, deferred Y").
+- The DEVLOG entry should capture the full session including any code review outcomes (e.g., "Addressed review: fixed X, deferred Y").
 
 If today already has a DEVLOG entry for this session's work, **append to the existing entry's sections** rather than creating a duplicate.
 
@@ -144,8 +146,8 @@ If today already has a DEVLOG entry for this session's work, **append to the exi
 Read `docs/backlog.md` and update it:
 
 1. **Check off completed items:** If any backlog items were completed in this session, mark them `[x]`.
-2. **Add new deferrals:** Any items raised during the session that were intentionally deferred (Codex review findings, ideas, discovered work) get added to the appropriate track section with a source annotation (e.g., `— (DEVLOG 2026-02-15, Codex review)`).
-3. **Add items from Codex reviews:** If a `/codex-review` was run, any findings that were noted but not addressed in this session should be added with their priority level (e.g., `- [ ] [P2] Add input validation on X endpoint — (Codex review 2026-02-15)`).
+2. **Add new deferrals:** Any items raised during the session that were intentionally deferred (code review findings, ideas, discovered work) get added to the appropriate track section with a source annotation (e.g., `— (DEVLOG 2026-02-15, code review)`).
+3. **Add items from code reviews:** If `/opencode-review` or `/codex-review` was run, any findings that were noted but not addressed in this session should be added with their priority level (e.g., `- [ ] [P2] Add input validation on X endpoint — (code review 2026-02-15)`).
 
 **Categorize new items** into the correct track section. If unsure which track an item belongs to, add it to the track currently being worked on. Use the existing format: `- [ ] Description — (source)`.
 
@@ -185,15 +187,17 @@ git add docs/devlog/ docs/backlog.md CLAUDE.md docs/testing.md [any other docs]
 git commit -m "docs: update devlog and docs for [session date] session"
 ```
 
-### Step 6.5: Run Codex branch review
+### Step 6.5: Run branch review
 
-After all commits (code + docs) are complete but before pushing, run a Codex branch review:
+<!-- Active review tool: /opencode-review. To switch back: replace /opencode-review with /codex-review -->
+
+After all commits (code + docs) are complete but before pushing, run a branch review:
 
 1. **Check prerequisites:** Verify all code changes are committed (no uncommitted changes except `session-handoff.md` which is gitignored).
 
-2. **Run the review:** Execute `/codex-review branch` (which includes plan drift detection if a plan file exists).
+2. **Run the review:** Execute `/opencode-review branch` (which includes plan drift detection if a plan file exists).
 
-3. **Present findings to the user:** Show the Codex review results and ask which findings (if any) to address before the PR.
+3. **Present findings to the user:** Show the review results and ask which findings (if any) to address before the PR.
 
 4. **If findings are addressed:** Make the fixes, commit them (new commit, not amend), then proceed to Step 7.
 
@@ -203,11 +207,11 @@ After all commits (code + docs) are complete but before pushing, run a Codex bra
 
 - The session had no code changes (doc-only update)
 - The user explicitly says to skip review (e.g., "just push it")
-- A `/codex-review branch` was already run during this session and no code changes were made after it
+- An `/opencode-review branch` (or `/codex-review branch`) was already run during this session and no code changes were made after it
 
-**IMPORTANT: A plan review (`/codex-review plan`) does NOT substitute for a branch review.** Plan reviews check the plan's assumptions against the codebase; branch reviews check the actual implementation. Even if a plan review ran earlier in the session, a branch review is still required here unless explicitly skipped by the user.
+**IMPORTANT: A plan review (`/opencode-review plan`) does NOT substitute for a branch review.** Plan reviews check the plan's assumptions against the codebase; branch reviews check the actual implementation. Even if a plan review ran earlier in the session, a branch review is still required here unless explicitly skipped by the user.
 
-Update the session summary (Step 9) to include the Codex review outcome under "Code Review", distinguishing between plan and branch reviews.
+Update the session summary (Step 9) to include the review outcome under "Code Review", distinguishing between plan and branch reviews.
 
 ### Step 7: Push and create/update PR
 
@@ -253,7 +257,7 @@ Print a summary for the user:
 - [list of commits in this session]
 
 ### Code Review
-- [Codex review findings addressed with counts, or "No review done this session"]
+- [Review findings addressed with counts, or "No review done this session"]
 
 ### Docs Updated
 - [list of doc files updated]

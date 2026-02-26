@@ -133,6 +133,26 @@ export const pieceTransferStatusEnum = pgEnum("PieceTransferStatus", [
   "EXPIRED",
 ]);
 
+export const identityMigrationDirectionEnum = pgEnum(
+  "IdentityMigrationDirection",
+  ["outbound", "inbound"],
+);
+
+export const hubInstanceStatusEnum = pgEnum("HubInstanceStatus", [
+  "active",
+  "suspended",
+  "revoked",
+]);
+
+export const trustInitiatorEnum = pgEnum("TrustInitiator", ["local", "remote"]);
+
+export const inboundTransferStatusEnum = pgEnum("InboundTransferStatus", [
+  "RECEIVED",
+  "FILES_FETCHING",
+  "FILES_COMPLETE",
+  "FAILED",
+]);
+
 export const identityMigrationStatusEnum = pgEnum("IdentityMigrationStatus", [
   "PENDING",
   "PENDING_APPROVAL",

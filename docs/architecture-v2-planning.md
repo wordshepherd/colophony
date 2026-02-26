@@ -3076,7 +3076,7 @@ Create `services/federation` that is **feature-flagged off by default** in self-
 
 1. **Fuzzy fingerprint matching**: Should we support near-duplicate detection (e.g., same poem with minor edits)? This would require sharing more information (n-grams, embeddings) which has privacy implications. **Recommendation: Do not implement in v1.** SHA-256 exact match is sufficient and privacy-preserving.
 
-2. **Federation governance**: Who decides what instances can join the Colophony directory? A nonprofit foundation? The company? A community vote? **Recommendation: Start with a simple editorial process (like npm package review), formalize governance later.**
+2. ~~**Federation governance**: Who decides what instances can join the Colophony directory? A nonprofit foundation? The company? A community vote?~~ **RESOLVED:** Admin-controlled via `HUB_REGISTRATION_TOKEN` for managed hosting; per-instance trust mode (`allowlist`, `open`, `managed_hub`) for self-hosted. Community governance deferred to post-launch.
 
 3. **Sim-sub check for non-federated submissions**: If an author submits via email to a non-Colophony magazine, the system cannot know. **Recommendation: Accept this limitation. Colophony can only enforce within its federation. This is still a massive improvement over the honor system.**
 
@@ -3743,7 +3743,7 @@ Questions that emerged during the interview that need further discussion:
 
 2. ~~**Self-serve org creation:** For managed hosting, can anyone create an org, or is it provisioned? For self-hosted, the deployer is presumably the admin.~~ **PARTIALLY RESOLVED:** Org creation is **self-serve** in both contexts — no approval gates. **Self-hosted:** deployer creates the first org, becomes ADMIN; additional orgs at deployer's discretion (most deployments are single-org). **Managed hosting:** self-serve with a **free tier** (hard quota limits on submissions, storage, etc.) and paid upgrade to remove limits. All features available on all tiers (no feature gating). Managed hosting infrastructure (Coolify provisioning, Stripe subscription billing, quota enforcement, free-tier limits) **deferred** — not in scope until post-Track 3. Implementation details to be decided when managed hosting work begins.
 
-3. **Data model for federation:** What data crosses instance boundaries? Just identity? Submission metadata? Full submissions? How is this governed?
+3. ~~**Data model for federation:** What data crosses instance boundaries? Just identity? Submission metadata? Full submissions? How is this governed?~~ **RESOLVED:** Identity (DID-based user keys), content fingerprints (SHA-256 for sim-sub), submission metadata (title, cover letter), and files (via signed JWT transfer tokens) cross boundaries. Governed per-instance: admin-controlled trust (allowlist/open/managed_hub modes), per-peer capability grants, hub attestation for managed hosting. See Track 5 PRs #180-#184.
 
 4. **CMS "starter home" scope:** How basic is the built-in publishing layer? Static pages? Blog-like? Magazine-format with issue structure?
 

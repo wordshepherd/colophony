@@ -5,6 +5,7 @@ import type { Env } from '../config/env.js';
 import { simsubService } from '../services/simsub.service.js';
 import { auditService } from '../services/audit.service.js';
 import federationAuthPlugin from './federation-auth.js';
+import federationRateLimitPlugin from './federation-rate-limit.js';
 
 /**
  * S2S sim-sub check endpoint.
@@ -19,6 +20,7 @@ export async function registerSimSubRoutes(
 
   // Federation signature verification (scoped — includes raw body plugin)
   await app.register(federationAuthPlugin);
+  await app.register(federationRateLimitPlugin, { env });
 
   /**
    * POST /federation/v1/sim-sub/check

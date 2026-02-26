@@ -358,6 +358,9 @@ describe('trust.service', () => {
         keyId: 'remote.example.com#main',
       });
 
+      // Allowlist mode — should create pending_inbound
+      mockGetPublicConfig.mockResolvedValueOnce({ mode: 'allowlist' });
+
       dbSelectResult = [{ id: '00000000-0000-0000-0000-000000000010' }];
 
       setupWithRls(makeMockTx({ selectResult: [], insertResult: [] }));
@@ -414,6 +417,104 @@ describe('trust.service', () => {
           '{}',
         ),
       ).rejects.toThrow('Signature verification failed');
+    });
+
+    it('auto-accepts inbound trust in open mode', async () => {
+      mockFetch.mockResolvedValueOnce(
+        mockFetchResponse(sampleMetadataResponse),
+      );
+
+      mockVerifyFederationSignature.mockResolvedValueOnce({
+        valid: true,
+        keyId: 'remote.example.com#main',
+      });
+
+      // Open mode — should auto-accept
+      mockGetPublicConfig.mockResolvedValueOnce({ mode: 'open' });
+
+      dbSelectResult = [{ id: '00000000-0000-0000-0000-000000000010' }];
+
+      const mockTx = makeMockTx({ selectResult: [], insertResult: [] });
+      setupWithRls(mockTx);
+
+      const result = await trustService.handleInboundTrustRequest(
+        baseEnv,
+        {
+          instanceUrl: 'https://remote.example.com',
+          domain: 'remote.example.com',
+          publicKey: testKeypair.publicKey,
+          keyId: 'remote.example.com#main',
+          requestedCapabilities: { 'simsub.check': true },
+          protocolVersion: '1.0',
+        },
+        {
+          signature: 'test',
+          'signature-input': 'test',
+          date: new Date().toUTCString(),
+        },
+        'POST',
+        'https://local.example.com/federation/trust',
+        '{}',
+      );
+
+      expect(result.orgIds).toContain('00000000-0000-0000-0000-000000000010');
+
+      // Verify audit logged auto-accept (not pending_inbound)
+      expect(mockAuditLog).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({
+          action: 'FEDERATION_TRUST_AUTO_ACCEPTED',
+        }),
+      );
+    });
+
+    it('creates pending_inbound in allowlist mode', async () => {
+      mockFetch.mockResolvedValueOnce(
+        mockFetchResponse(sampleMetadataResponse),
+      );
+
+      mockVerifyFederationSignature.mockResolvedValueOnce({
+        valid: true,
+        keyId: 'remote.example.com#main',
+      });
+
+      // Explicit allowlist mode
+      mockGetPublicConfig.mockResolvedValueOnce({ mode: 'allowlist' });
+
+      dbSelectResult = [{ id: '00000000-0000-0000-0000-000000000010' }];
+
+      const mockTx = makeMockTx({ selectResult: [], insertResult: [] });
+      setupWithRls(mockTx);
+
+      const result = await trustService.handleInboundTrustRequest(
+        baseEnv,
+        {
+          instanceUrl: 'https://remote.example.com',
+          domain: 'remote.example.com',
+          publicKey: testKeypair.publicKey,
+          keyId: 'remote.example.com#main',
+          requestedCapabilities: {},
+          protocolVersion: '1.0',
+        },
+        {
+          signature: 'test',
+          'signature-input': 'test',
+          date: new Date().toUTCString(),
+        },
+        'POST',
+        'https://local.example.com/federation/trust',
+        '{}',
+      );
+
+      expect(result.orgIds).toContain('00000000-0000-0000-0000-000000000010');
+
+      // Verify audit logged standard trust received (not auto-accepted)
+      expect(mockAuditLog).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({
+          action: 'FEDERATION_TRUST_RECEIVED',
+        }),
+      );
     });
   });
 
