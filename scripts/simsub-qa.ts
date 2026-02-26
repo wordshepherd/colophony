@@ -47,16 +47,6 @@ const DB_B_URL =
 const INSTANCE_A_DOMAIN = "localhost:4000";
 const INSTANCE_B_DOMAIN = "localhost:5000";
 
-/**
- * Hash an API key with SHA-256 for DB storage. API keys are high-entropy
- * random tokens (128 bits), not user-chosen passwords, so a fast hash is
- * appropriate. Matches the production `verify_api_key()` SQL function.
- */
-// lgtm[js/insufficient-password-hash]
-function hashApiKey(key: string): string {
-  return crypto.createHash("sha256").update(key).digest("hex");
-}
-
 // Test content — same title/content produces same fingerprint on both instances
 const SHARED_TITLE = "The Vanishing Point";
 const SHARED_CONTENT =
@@ -66,15 +56,18 @@ const UNIQUE_CONTENT =
   "This is a completely different piece with no overlap whatsoever.";
 
 // API key for Instance B (seeded by this script)
-// Note: API keys use SHA-256 (not bcrypt) by design — they are high-entropy
-// random tokens, not user-chosen passwords. See verify_api_key() in init-db.sh.
+// Hashes are pre-computed SHA-256 of the key strings. API keys use SHA-256
+// (not bcrypt) by design — they are high-entropy random tokens, not passwords.
+// Matches production verify_api_key() in init-db.sh.
 const INSTANCE_B_API_KEY = "col_live_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
-const INSTANCE_B_API_KEY_HASH = hashApiKey(INSTANCE_B_API_KEY);
+const INSTANCE_B_API_KEY_HASH =
+  "883c67d7695d2f1594454ee625e9f2111ea4f6ea608240513dd90f3ecdada4c3";
 const INSTANCE_B_API_KEY_PREFIX = "col_live_bbb";
 
 // Admin API key for Instance B (for override endpoint)
 const INSTANCE_B_ADMIN_KEY = "col_live_bbbbbbbbbbbbbbbbbbbbbbbbbbbadmin";
-const INSTANCE_B_ADMIN_KEY_HASH = hashApiKey(INSTANCE_B_ADMIN_KEY);
+const INSTANCE_B_ADMIN_KEY_HASH =
+  "51069003296dd5b4d65f6917b331ed50b1278ad2d7d47a8d7580e4d67a481718";
 const INSTANCE_B_ADMIN_KEY_PREFIX = "col_live_bbb";
 
 // Generate Ed25519 keypairs for federation
