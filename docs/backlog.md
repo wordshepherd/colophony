@@ -188,8 +188,8 @@
 - [ ] Built-in adapters: SMTP, Stripe, S3 — (plugin research Section 11)
 - [ ] `colophony.config.ts` plugin loader — (plugin research Section 11)
 - [ ] HookEngine with typed hooks for submission lifecycle — (plugin research Section 11)
-- [ ] Webhook delivery via BullMQ with retry + dead letter queue — (plugin research Section 11)
-- [ ] Webhook configuration UI — (plugin research Section 11)
+- [x] Webhook delivery via BullMQ with retry + dead letter queue — (plugin research Section 11; done 2026-02-26 as Relay webhook system)
+- [x] Webhook configuration UI — (plugin research Section 11; done 2026-02-26 as Relay webhook admin pages)
 
 ### Phase 3-4 (v2.1-v2.2)
 
@@ -221,7 +221,7 @@
 
 - [x] Email templates + provider integration (SMTP + SendGrid) — adapters, MJML templates, BullMQ queue/worker, notification preferences, Inngest functions — (architecture doc, Relay; done 2026-02-26)
 - [x] Notification preferences frontend — UI for users to manage email opt-in/opt-out per event type — (DEVLOG 2026-02-26; done 2026-02-26)
-- [ ] Webhook delivery system (outbound) — (architecture doc, Relay)
+- [x] Webhook delivery system (outbound) — (architecture doc, Relay; done 2026-02-26)
 - [ ] In-app notification center — (architecture doc, Relay)
 
 ---

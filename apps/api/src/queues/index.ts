@@ -26,3 +26,10 @@ export {
   closeEmailQueue,
   type EmailJobData,
 } from './email.queue.js';
+
+export {
+  enqueueWebhook,
+  closeWebhookQueue,
+  type WebhookJobData,
+  type WebhookPayload,
+} from './webhook.queue.js';

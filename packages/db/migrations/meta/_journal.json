@@ -232,6 +232,13 @@
       "when": 1775600000000,
       "tag": "0032_relay_email_foundation",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1775800000000,
+      "tag": "0033_webhook_endpoints",
+      "breakpoints": true
     }
   ]
 }

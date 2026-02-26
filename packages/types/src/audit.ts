@@ -192,6 +192,16 @@ export const AuditActions = {
   EMAIL_FAILED: "EMAIL_FAILED",
   NOTIFICATION_PREFERENCE_UPDATED: "NOTIFICATION_PREFERENCE_UPDATED",
 
+  // Relay — webhooks
+  WEBHOOK_ENDPOINT_CREATED: "WEBHOOK_ENDPOINT_CREATED",
+  WEBHOOK_ENDPOINT_UPDATED: "WEBHOOK_ENDPOINT_UPDATED",
+  WEBHOOK_ENDPOINT_DELETED: "WEBHOOK_ENDPOINT_DELETED",
+  WEBHOOK_ENDPOINT_SECRET_ROTATED: "WEBHOOK_ENDPOINT_SECRET_ROTATED",
+  WEBHOOK_DELIVERED: "WEBHOOK_DELIVERED",
+  WEBHOOK_DELIVERY_FAILED: "WEBHOOK_DELIVERY_FAILED",
+  WEBHOOK_DELIVERY_RETRIED: "WEBHOOK_DELIVERY_RETRIED",
+  WEBHOOK_ENDPOINT_AUTO_DISABLED: "WEBHOOK_ENDPOINT_AUTO_DISABLED",
+
   // Audit access
   AUDIT_ACCESSED: "AUDIT_ACCESSED",
 } as const;
@@ -224,6 +234,8 @@ export const AuditResources = {
   HUB: "hub",
   EMAIL: "email",
   NOTIFICATION_PREFERENCE: "notification_preference",
+  WEBHOOK_ENDPOINT: "webhook_endpoint",
+  WEBHOOK_DELIVERY: "webhook_delivery",
   AUDIT: "audit",
 } as const;
 
@@ -498,6 +510,24 @@ export interface NotificationPreferenceAuditParams extends BaseAuditParams {
   action: typeof AuditActions.NOTIFICATION_PREFERENCE_UPDATED;
 }
 
+export interface WebhookEndpointAuditParams extends BaseAuditParams {
+  resource: typeof AuditResources.WEBHOOK_ENDPOINT;
+  action:
+    | typeof AuditActions.WEBHOOK_ENDPOINT_CREATED
+    | typeof AuditActions.WEBHOOK_ENDPOINT_UPDATED
+    | typeof AuditActions.WEBHOOK_ENDPOINT_DELETED
+    | typeof AuditActions.WEBHOOK_ENDPOINT_SECRET_ROTATED
+    | typeof AuditActions.WEBHOOK_ENDPOINT_AUTO_DISABLED;
+}
+
+export interface WebhookDeliveryAuditParams extends BaseAuditParams {
+  resource: typeof AuditResources.WEBHOOK_DELIVERY;
+  action:
+    | typeof AuditActions.WEBHOOK_DELIVERED
+    | typeof AuditActions.WEBHOOK_DELIVERY_FAILED
+    | typeof AuditActions.WEBHOOK_DELIVERY_RETRIED;
+}
+
 export interface AuditAccessAuditParams extends BaseAuditParams {
   resource: typeof AuditResources.AUDIT;
   action: typeof AuditActions.AUDIT_ACCESSED;
@@ -536,6 +566,8 @@ export type AuditLogParams =
   | HubAuditParams
   | EmailAuditParams
   | NotificationPreferenceAuditParams
+  | WebhookEndpointAuditParams
+  | WebhookDeliveryAuditParams
   | AuditAccessAuditParams
   | SystemAuditParams;
 
