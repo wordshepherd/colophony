@@ -92,6 +92,8 @@ const testEnv: Env = {
   FEDERATION_RATE_LIMIT_MAX: 60,
   FEDERATION_RATE_LIMIT_WINDOW_SECONDS: 60,
   INNGEST_DEV: false,
+  EMAIL_PROVIDER: 'none' as const,
+  SMTP_SECURE: false,
 };
 
 describe('Fastify app', () => {

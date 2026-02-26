@@ -225,6 +225,13 @@
       "when": 1775400000000,
       "tag": "0031_federation_cleanup",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1775600000000,
+      "tag": "0032_relay_email_foundation",
+      "breakpoints": true
     }
   ]
 }

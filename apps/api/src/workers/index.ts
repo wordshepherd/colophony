@@ -11,3 +11,4 @@ export {
   startTransferFetchWorker,
   stopTransferFetchWorker,
 } from './transfer-fetch.worker.js';
+export { startEmailWorker, stopEmailWorker } from './email.worker.js';

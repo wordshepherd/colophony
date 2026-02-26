@@ -89,6 +89,52 @@ export interface IssuePublishedEvent {
 }
 
 // ---------------------------------------------------------------------------
+// Hopper event payloads (notification triggers)
+// ---------------------------------------------------------------------------
+
+export interface HopperSubmissionSubmittedEvent {
+  name: 'hopper/submission.submitted';
+  data: {
+    orgId: string;
+    submissionId: string;
+    submitterId: string;
+  };
+}
+
+export interface HopperSubmissionAcceptedEvent {
+  name: 'hopper/submission.accepted';
+  data: {
+    orgId: string;
+    submissionId: string;
+    submitterId: string;
+  };
+}
+
+export interface HopperSubmissionRejectedEvent {
+  name: 'hopper/submission.rejected';
+  data: {
+    orgId: string;
+    submissionId: string;
+    submitterId: string;
+  };
+}
+
+export interface HopperSubmissionWithdrawnEvent {
+  name: 'hopper/submission.withdrawn';
+  data: {
+    orgId: string;
+    submissionId: string;
+    submitterId: string;
+  };
+}
+
+export type HopperEvent =
+  | HopperSubmissionSubmittedEvent
+  | HopperSubmissionAcceptedEvent
+  | HopperSubmissionRejectedEvent
+  | HopperSubmissionWithdrawnEvent;
+
+// ---------------------------------------------------------------------------
 // Union type for all Slate events
 // ---------------------------------------------------------------------------
 

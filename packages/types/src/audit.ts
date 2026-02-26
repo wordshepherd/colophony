@@ -186,6 +186,12 @@ export const AuditActions = {
   HUB_FINGERPRINT_QUERIED: "HUB_FINGERPRINT_QUERIED",
   HUB_AUTO_TRUST_ESTABLISHED: "HUB_AUTO_TRUST_ESTABLISHED",
 
+  // Relay — email & notifications
+  EMAIL_QUEUED: "EMAIL_QUEUED",
+  EMAIL_SENT: "EMAIL_SENT",
+  EMAIL_FAILED: "EMAIL_FAILED",
+  NOTIFICATION_PREFERENCE_UPDATED: "NOTIFICATION_PREFERENCE_UPDATED",
+
   // Audit access
   AUDIT_ACCESSED: "AUDIT_ACCESSED",
 } as const;
@@ -216,6 +222,8 @@ export const AuditResources = {
   TRANSFER: "transfer",
   MIGRATION: "migration",
   HUB: "hub",
+  EMAIL: "email",
+  NOTIFICATION_PREFERENCE: "notification_preference",
   AUDIT: "audit",
 } as const;
 
@@ -477,6 +485,19 @@ export interface HubAuditParams extends BaseAuditParams {
     | typeof AuditActions.HUB_AUTO_TRUST_ESTABLISHED;
 }
 
+export interface EmailAuditParams extends BaseAuditParams {
+  resource: typeof AuditResources.EMAIL;
+  action:
+    | typeof AuditActions.EMAIL_QUEUED
+    | typeof AuditActions.EMAIL_SENT
+    | typeof AuditActions.EMAIL_FAILED;
+}
+
+export interface NotificationPreferenceAuditParams extends BaseAuditParams {
+  resource: typeof AuditResources.NOTIFICATION_PREFERENCE;
+  action: typeof AuditActions.NOTIFICATION_PREFERENCE_UPDATED;
+}
+
 export interface AuditAccessAuditParams extends BaseAuditParams {
   resource: typeof AuditResources.AUDIT;
   action: typeof AuditActions.AUDIT_ACCESSED;
@@ -513,6 +534,8 @@ export type AuditLogParams =
   | TransferAuditParams
   | MigrationAuditParams
   | HubAuditParams
+  | EmailAuditParams
+  | NotificationPreferenceAuditParams
   | AuditAccessAuditParams
   | SystemAuditParams;
 
