@@ -81,13 +81,18 @@ Manuscripts use `owner_id = current_user_id()` instead of org-scoped isolation. 
 ## Migration Workflow
 
 ```bash
-pnpm db:generate        # Generate migration from schema changes
-pnpm db:migrate         # Run Drizzle migrations
-pnpm db:seed            # Seed test data
-pnpm db:reset           # Drop and recreate with migrations + RLS + verify
-pnpm db:verify          # Check FK constraints match expected state (exit 1 on mismatch)
-pnpm db:verify:repair   # Check + auto-repair any mismatched FK constraints
+pnpm db:generate              # Generate migration from schema changes
+pnpm db:migrate               # Validate journal + run Drizzle migrations
+pnpm db:seed                  # Seed test data
+pnpm db:reset                 # Drop and recreate with migrations + RLS + verify
+pnpm db:verify                # Check FK constraints match expected state (exit 1 on mismatch)
+pnpm db:verify:repair         # Check + auto-repair any mismatched FK constraints
+pnpm db:validate-migrations   # Check SQL files ↔ journal consistency
+pnpm db:validate-migrations:fix  # Auto-add missing journal entries
+pnpm db:add-migration <name>  # Add journal entry for a manual migration
 ```
+
+**Manual migration workflow:** When `drizzle-kit generate` blocks (TUI in non-interactive shells), write the SQL file manually, then run `pnpm db:add-migration <name>` to add the journal entry. The `post-migration-validate` Claude hook warns if a journal entry is missing when editing migration files. `pnpm db:migrate` also validates journal consistency before running.
 
 **Drizzle `migrate()` silent no-op workaround:** Drizzle ORM 0.44+ / journal v7 can silently record a migration as applied without executing its DDL on existing databases. `db:verify` detects this for migration 0015 (GDPR FK constraints). Run `db:verify` after `db:migrate` in production deployments. If mismatches are found, run `db:verify:repair` to re-apply the correct DDL.
 
@@ -108,12 +113,12 @@ docker compose exec postgres psql -U colophony -c \
 
 ## Quirks
 
-| Quirk                                          | Details                                                                                                                                                                                                                                                                                    |
-| ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **`pgPolicy` import path**                     | Import `pgPolicy` from `drizzle-orm/pg-core`, not the top-level export                                                                                                                                                                                                                     |
-| **JSONB queries need raw SQL**                 | No native JSONB operators yet. Use `sql` template tag. Track Drizzle JSONB roadmap (Q2 2026)                                                                                                                                                                                               |
-| **`migrate()` silent no-op after schema drop** | `migrate(db, { migrationsFolder })` completes without error but creates zero tables after `DROP SCHEMA CASCADE; CREATE SCHEMA public`. Use manual SQL execution (read `_journal.json`, split on `--> statement-breakpoint`). Affects Drizzle ORM 0.44 with journal v7                      |
-| **`migrate()` skips SQL files not in journal** | If `.sql` migration files exist in `migrations/` but have no corresponding entry in `meta/_journal.json`, `migrate()` silently skips them — no error, no warning. Always verify new migration files have journal entries. Symptom: `relation "X" does not exist` despite SQL file existing |
+| Quirk                                          | Details                                                                                                                                                                                                                                                                                                                                               |
+| ---------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **`pgPolicy` import path**                     | Import `pgPolicy` from `drizzle-orm/pg-core`, not the top-level export                                                                                                                                                                                                                                                                                |
+| **JSONB queries need raw SQL**                 | No native JSONB operators yet. Use `sql` template tag. Track Drizzle JSONB roadmap (Q2 2026)                                                                                                                                                                                                                                                          |
+| **`migrate()` silent no-op after schema drop** | `migrate(db, { migrationsFolder })` completes without error but creates zero tables after `DROP SCHEMA CASCADE; CREATE SCHEMA public`. Use manual SQL execution (read `_journal.json`, split on `--> statement-breakpoint`). Affects Drizzle ORM 0.44 with journal v7                                                                                 |
+| **`migrate()` skips SQL files not in journal** | If `.sql` migration files exist in `migrations/` but have no corresponding entry in `meta/_journal.json`, `migrate()` silently skips them — no error, no warning. Mitigated: `pnpm db:migrate` now validates journal consistency first; `post-migration-validate` hook warns on edit; `pnpm db:add-migration <name>` automates journal entry creation |
 
 ## Version Pin
 

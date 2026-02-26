@@ -28,6 +28,7 @@ import { auditService } from './audit.service.js';
 import { federationService, domainToDid } from './federation.service.js';
 import { signFederationRequest } from '../federation/http-signatures.js';
 import { createS3Client, getObjectStream, putObject } from './s3.js';
+import { enqueueTransferFetch } from '../queues/transfer-fetch.queue.js';
 
 // ---------------------------------------------------------------------------
 // Error classes
@@ -544,23 +545,36 @@ export const transferService = {
       return { transferId: newSubmission.id, isNew: true };
     });
 
-    // Step 4: Fire-and-forget file fetch (v1 — acceptable, BullMQ upgrade later)
+    // Step 4: Enqueue file fetch via BullMQ (retries, exponential backoff)
     if (result.isNew) {
       const originDomain = claims.iss;
       if (originDomain && body.fileManifest.length > 0) {
-        // Fetch files in background — don't block the response
-        void this.fetchTransferFiles(
-          env,
-          originDomain,
-          jti,
-          body.transferToken,
-          body.fileManifest,
-          result.transferId,
-          orgId,
-        ).catch((err) => {
-          // Log but don't fail — transfer stays in PENDING state
-          console.error('Background file fetch failed:', err);
-        });
+        try {
+          await enqueueTransferFetch(env, {
+            transferId: jti,
+            orgId,
+            originDomain,
+            transferToken: body.transferToken,
+            tokenExpiresAt: claims.exp
+              ? new Date(claims.exp * 1000).toISOString()
+              : new Date(Date.now() + 86_400_000).toISOString(),
+            fileManifest: body.fileManifest,
+            localSubmissionId: result.transferId,
+          });
+        } catch {
+          // Redis down — fall back to fire-and-forget (degraded but functional)
+          void this.fetchTransferFiles(
+            env,
+            originDomain,
+            jti,
+            body.transferToken,
+            body.fileManifest,
+            result.transferId,
+            orgId,
+          ).catch((err) => {
+            console.error('Background file fetch failed:', err);
+          });
+        }
       }
     }
 

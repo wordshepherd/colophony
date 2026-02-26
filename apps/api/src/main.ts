@@ -26,12 +26,15 @@ import {
   stopS3CleanupWorker,
   startOutboxPollerWorker,
   stopOutboxPollerWorker,
+  startTransferFetchWorker,
+  stopTransferFetchWorker,
 } from './workers/index.js';
 import {
   closeFileScanQueue,
   closeS3CleanupQueue,
   startOutboxPoller,
   closeOutboxPollerQueue,
+  closeTransferFetchQueue,
 } from './queues/index.js';
 import { registerInngestRoutes } from './inngest/serve.js';
 import { registerFederationDiscoveryRoutes } from './federation/discovery.routes.js';
@@ -46,6 +49,7 @@ import { registerMigrationRoutes } from './federation/migration.routes.js';
 import { registerMigrationAdminRoutes } from './federation/migration-admin.routes.js';
 import { registerHubRoutes } from './federation/hub.routes.js';
 import { registerHubAdminRoutes } from './federation/hub-admin.routes.js';
+import { registerKeyAdminRoutes } from './federation/key-admin.routes.js';
 import { hubClientService } from './services/hub-client.service.js';
 
 export async function buildApp(env: Env): Promise<FastifyInstance> {
@@ -209,6 +213,10 @@ export async function buildApp(env: Env): Promise<FastifyInstance> {
     await app.register(async (scope) => {
       await registerHubAdminRoutes(scope, { env });
     });
+    // Key admin routes (OIDC — user manages own DID keys)
+    await app.register(async (scope) => {
+      await registerKeyAdminRoutes(scope, { env });
+    });
   }
 
   // tRPC adapter
@@ -291,6 +299,12 @@ async function start(): Promise<void> {
   await startOutboxPoller(env);
   app.log.info('Outbox poller worker started');
 
+  // Start transfer fetch worker (federation file downloads with retries)
+  if (env.FEDERATION_ENABLED) {
+    startTransferFetchWorker(env);
+    app.log.info('Transfer fetch worker started');
+  }
+
   // Hub registration (fire-and-forget — don't block startup)
   if (env.HUB_DOMAIN && env.HUB_REGISTRATION_TOKEN) {
     hubClientService.registerWithHub(env).catch((err) => {
@@ -318,6 +332,8 @@ async function start(): Promise<void> {
       await closeS3CleanupQueue();
       await stopOutboxPollerWorker();
       await closeOutboxPollerQueue();
+      await stopTransferFetchWorker();
+      await closeTransferFetchQueue();
       // TODO: Close DB pool when connection management is centralized
       // TODO: Close Redis connections
       app.log.info('Server closed');
