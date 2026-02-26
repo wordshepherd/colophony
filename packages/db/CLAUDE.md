@@ -87,6 +87,7 @@ pnpm db:seed                  # Seed test data
 pnpm db:reset                 # Drop and recreate with migrations + RLS + verify
 pnpm db:verify                # Check FK constraints match expected state (exit 1 on mismatch)
 pnpm db:verify:repair         # Check + auto-repair any mismatched FK constraints
+pnpm db:validate-enums        # Pre-flight check for enum varchar→enum casts
 pnpm db:validate-migrations   # Check SQL files ↔ journal consistency
 pnpm db:validate-migrations:fix  # Auto-add missing journal entries
 pnpm db:add-migration <name>  # Add journal entry for a manual migration
@@ -97,6 +98,18 @@ pnpm db:add-migration <name>  # Add journal entry for a manual migration
 **Drizzle `migrate()` silent no-op workaround:** Drizzle ORM 0.44+ / journal v7 can silently record a migration as applied without executing its DDL on existing databases. `db:verify` detects this for migration 0015 (GDPR FK constraints). Run `db:verify` after `db:migrate` in production deployments. If mismatches are found, run `db:verify:repair` to re-apply the correct DDL.
 
 **init-db.sh caveat:** Only runs on first DB creation. Must `docker compose down -v` to re-run after changes.
+
+### Migration Pattern: Enum Conversions
+
+When converting `varchar` columns to PostgreSQL enums:
+
+1. **Separate concerns into distinct migrations:** `CREATE TYPE` in one statement group, `ALTER COLUMN ... USING` casts in another, `CREATE TABLE` (using the new enum) last. Drizzle applies statements individually, not transactionally — a mid-migration failure leaves partial state (some enum types created, some columns unconverted, later tables missing).
+
+2. **Run `pnpm db:validate-enums` before applying `ALTER COLUMN` migrations.** This pre-flight check queries varchar columns for values not in the target enum set. Exit 1 = dirty data that will cause the cast to fail.
+
+3. **Why this matters:** A `USING "column"::EnumType` cast fails hard if any row contains a value not in the enum (including case mismatches like `'Active'` vs `'active'`). Because Drizzle doesn't wrap migrations in a transaction, earlier statements in the same migration file will have already committed — leaving the database in a partially-migrated state that requires manual cleanup.
+
+See migration 0031 (`federation_cleanup`) and its test suite (`migration-enum-cast.test.ts`) for a concrete example.
 
 ### Production RLS Verification
 

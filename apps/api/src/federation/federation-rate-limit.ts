@@ -3,8 +3,11 @@ import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import type { Env } from '../config/env.js';
 import { SLIDING_WINDOW_SCRIPT } from '../hooks/rate-limit.js';
 
+const VALID_CAPABILITIES = new Set(['simsub', 'transfer', 'migration', 'hub']);
+
 export interface FederationRateLimitOptions {
   env: Env;
+  capability?: string;
 }
 
 /**
@@ -19,7 +22,14 @@ export default fp(
     app: FastifyInstance,
     opts: FederationRateLimitOptions,
   ) {
-    const { env } = opts;
+    const { env, capability } = opts;
+
+    if (capability && !VALID_CAPABILITIES.has(capability)) {
+      throw new Error(
+        `Invalid federation rate limit capability: '${capability}'. ` +
+          `Valid values: ${[...VALID_CAPABILITIES].join(', ')}`,
+      );
+    }
     const limit = env.FEDERATION_RATE_LIMIT_MAX;
     const windowMs = env.FEDERATION_RATE_LIMIT_WINDOW_SECONDS * 1000;
     const prefix = env.RATE_LIMIT_KEY_PREFIX;
@@ -40,7 +50,9 @@ export default fp(
         const redis = app.rateLimitRedis;
         if (!redis) return;
 
-        const key = `${prefix}:fed:${domain}`;
+        const key = capability
+          ? `${prefix}:fed:${capability}:${domain}`
+          : `${prefix}:fed:${domain}`;
         const nowMs = Date.now();
         const requestId = `${nowMs}:${Math.random().toString(36).slice(2, 8)}`;
 
@@ -88,6 +100,7 @@ export default fp(
           request.log.warn(
             {
               identifier: domain,
+              capability,
               path: request.url,
               count,
               limit,
