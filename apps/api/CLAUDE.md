@@ -2,70 +2,74 @@
 
 ## Key Paths
 
-| What              | Path                                              |
-| ----------------- | ------------------------------------------------- |
-| App entry         | `src/main.ts`                                     |
-| Env config (Zod)  | `src/config/env.ts`                               |
-| Fastify hooks     | `src/hooks/`                                      |
-| Service layer     | `src/services/`                                   |
-| Manuscript svc    | `src/services/manuscript.service.ts`              |
-| tRPC router       | `src/trpc/router.ts`                              |
-| tRPC client types | `src/trpc/client-types.ts`                        |
-| tRPC init         | `src/trpc/init.ts`                                |
-| tRPC context      | `src/trpc/context.ts`                             |
-| REST router       | `src/rest/router.ts`                              |
-| REST context      | `src/rest/context.ts`                             |
-| REST error mapper | `src/rest/error-mapper.ts`                        |
-| REST org handlers | `src/rest/routers/organizations.ts`               |
-| GraphQL schema    | `src/graphql/schema.ts`                           |
-| GraphQL builder   | `src/graphql/builder.ts`                          |
-| GraphQL guards    | `src/graphql/guards.ts`                           |
-| GraphQL resolvers | `src/graphql/resolvers/`                          |
-| GraphQL router    | `src/graphql/router.ts`                           |
-| GDPR service      | `src/services/gdpr.service.ts`                    |
-| Embed routes      | `src/routes/embed.routes.ts`                      |
-| Embed token svc   | `src/services/embed-token.service.ts`             |
-| Embed submit svc  | `src/services/embed-submission.service.ts`        |
-| tusd webhook      | `src/webhooks/tusd.webhook.ts`                    |
-| Zitadel webhook   | `src/webhooks/zitadel.webhook.ts`                 |
-| Stripe webhook    | `src/webhooks/stripe.webhook.ts`                  |
-| Documenso webhook | `src/webhooks/documenso.webhook.ts`               |
-| Inngest client    | `src/inngest/client.ts`                           |
-| Inngest functions | `src/inngest/functions/`                          |
-| Inngest serve     | `src/inngest/serve.ts`                            |
-| Email adapters    | `src/adapters/email/` (SMTP, SendGrid)            |
-| Email templates   | `src/templates/email/` (MJML)                     |
-| Email queue       | `src/queues/email.queue.ts`                       |
-| Email worker      | `src/workers/email.worker.ts`                     |
-| Email service     | `src/services/email.service.ts`                   |
-| Notif pref svc    | `src/services/notification-preference.service.ts` |
-| Webhook queue     | `src/queues/webhook.queue.ts`                     |
-| Webhook worker    | `src/workers/webhook.worker.ts`                   |
-| Webhook service   | `src/services/webhook.service.ts`                 |
-| CMS adapters      | `src/adapters/cms/`                               |
-| Documenso adapter | `src/adapters/documenso.adapter.ts`               |
-| Outbox poller     | `src/workers/outbox-poller.worker.ts`             |
-| Federation trust  | `src/federation/trust.routes.ts` (S2S)            |
-| Trust admin       | `src/federation/trust-admin.routes.ts`            |
-| Trust service     | `src/services/trust.service.ts`                   |
-| HTTP signatures   | `src/federation/http-signatures.ts`               |
-| Federation auth   | `src/federation/federation-auth.ts`               |
-| Sim-sub routes    | `src/federation/simsub.routes.ts` (S2S)           |
-| Sim-sub admin     | `src/federation/simsub-admin.routes.ts`           |
-| Sim-sub service   | `src/services/simsub.service.ts`                  |
-| Fingerprint svc   | `src/services/fingerprint.service.ts`             |
-| Transfer routes   | `src/federation/transfer.routes.ts` (S2S)         |
-| Transfer admin    | `src/federation/transfer-admin.routes.ts`         |
-| Transfer service  | `src/services/transfer.service.ts`                |
-| Migration routes  | `src/federation/migration.routes.ts` (S2S)        |
-| Migration admin   | `src/federation/migration-admin.routes.ts`        |
-| Migration service | `src/services/migration.service.ts`               |
-| Migration bundle  | `src/services/migration-bundle.service.ts`        |
-| Hub routes        | `src/federation/hub.routes.ts` (S2S)              |
-| Hub admin         | `src/federation/hub-admin.routes.ts`              |
-| Hub auth          | `src/federation/hub-auth.ts`                      |
-| Hub service       | `src/services/hub.service.ts`                     |
-| Hub client svc    | `src/services/hub-client.service.ts`              |
+| What              | Path                                                           |
+| ----------------- | -------------------------------------------------------------- |
+| App entry         | `src/main.ts`                                                  |
+| Env config (Zod)  | `src/config/env.ts`                                            |
+| Fastify hooks     | `src/hooks/`                                                   |
+| Service layer     | `src/services/`                                                |
+| Manuscript svc    | `src/services/manuscript.service.ts`                           |
+| tRPC router       | `src/trpc/router.ts`                                           |
+| tRPC client types | `src/trpc/client-types.ts`                                     |
+| tRPC init         | `src/trpc/init.ts`                                             |
+| tRPC context      | `src/trpc/context.ts`                                          |
+| REST router       | `src/rest/router.ts`                                           |
+| REST context      | `src/rest/context.ts`                                          |
+| REST error mapper | `src/rest/error-mapper.ts`                                     |
+| REST org handlers | `src/rest/routers/organizations.ts`                            |
+| GraphQL schema    | `src/graphql/schema.ts`                                        |
+| GraphQL builder   | `src/graphql/builder.ts`                                       |
+| GraphQL guards    | `src/graphql/guards.ts`                                        |
+| GraphQL resolvers | `src/graphql/resolvers/`                                       |
+| GraphQL router    | `src/graphql/router.ts`                                        |
+| GDPR service      | `src/services/gdpr.service.ts`                                 |
+| Embed routes      | `src/routes/embed.routes.ts`                                   |
+| Embed token svc   | `src/services/embed-token.service.ts`                          |
+| Embed submit svc  | `src/services/embed-submission.service.ts`                     |
+| tusd webhook      | `src/webhooks/tusd.webhook.ts`                                 |
+| Zitadel webhook   | `src/webhooks/zitadel.webhook.ts`                              |
+| Stripe webhook    | `src/webhooks/stripe.webhook.ts`                               |
+| Documenso webhook | `src/webhooks/documenso.webhook.ts`                            |
+| Inngest client    | `src/inngest/client.ts`                                        |
+| Inngest functions | `src/inngest/functions/`                                       |
+| Inngest serve     | `src/inngest/serve.ts`                                         |
+| Email adapters    | `src/adapters/email/` (SmtpEmailAdapter, SendGridEmailAdapter) |
+| Storage adapter   | `src/adapters/storage/` (S3StorageAdapter)                     |
+| Payment adapter   | `src/adapters/payment/` (StripePaymentAdapter)                 |
+| Registry accessor | `src/adapters/registry-accessor.ts`                            |
+| Config builder    | `src/colophony.config.ts`                                      |
+| Email templates   | `src/templates/email/` (MJML)                                  |
+| Email queue       | `src/queues/email.queue.ts`                                    |
+| Email worker      | `src/workers/email.worker.ts`                                  |
+| Email service     | `src/services/email.service.ts`                                |
+| Notif pref svc    | `src/services/notification-preference.service.ts`              |
+| Webhook queue     | `src/queues/webhook.queue.ts`                                  |
+| Webhook worker    | `src/workers/webhook.worker.ts`                                |
+| Webhook service   | `src/services/webhook.service.ts`                              |
+| CMS adapters      | `src/adapters/cms/`                                            |
+| Documenso adapter | `src/adapters/documenso.adapter.ts`                            |
+| Outbox poller     | `src/workers/outbox-poller.worker.ts`                          |
+| Federation trust  | `src/federation/trust.routes.ts` (S2S)                         |
+| Trust admin       | `src/federation/trust-admin.routes.ts`                         |
+| Trust service     | `src/services/trust.service.ts`                                |
+| HTTP signatures   | `src/federation/http-signatures.ts`                            |
+| Federation auth   | `src/federation/federation-auth.ts`                            |
+| Sim-sub routes    | `src/federation/simsub.routes.ts` (S2S)                        |
+| Sim-sub admin     | `src/federation/simsub-admin.routes.ts`                        |
+| Sim-sub service   | `src/services/simsub.service.ts`                               |
+| Fingerprint svc   | `src/services/fingerprint.service.ts`                          |
+| Transfer routes   | `src/federation/transfer.routes.ts` (S2S)                      |
+| Transfer admin    | `src/federation/transfer-admin.routes.ts`                      |
+| Transfer service  | `src/services/transfer.service.ts`                             |
+| Migration routes  | `src/federation/migration.routes.ts` (S2S)                     |
+| Migration admin   | `src/federation/migration-admin.routes.ts`                     |
+| Migration service | `src/services/migration.service.ts`                            |
+| Migration bundle  | `src/services/migration-bundle.service.ts`                     |
+| Hub routes        | `src/federation/hub.routes.ts` (S2S)                           |
+| Hub admin         | `src/federation/hub-admin.routes.ts`                           |
+| Hub auth          | `src/federation/hub-auth.ts`                                   |
+| Hub service       | `src/services/hub.service.ts`                                  |
+| Hub client svc    | `src/services/hub-client.service.ts`                           |
 
 ### Service Method Naming
 
