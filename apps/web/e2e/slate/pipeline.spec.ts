@@ -23,7 +23,7 @@ test.describe("Pipeline (/slate/pipeline)", () => {
 
     // Pipeline list shows submission title (falls back to truncated ID if missing)
     await expect(
-      authedPage.getByText(slateData.acceptedSubmission.title),
+      authedPage.getByText(slateData.acceptedSubmission.title!),
     ).toBeVisible({
       timeout: 10_000,
     });
@@ -32,7 +32,7 @@ test.describe("Pipeline (/slate/pipeline)", () => {
   test("filters by stage tab", async ({ authedPage, slateData }) => {
     await authedPage.goto("/slate/pipeline");
 
-    const subTitle = slateData.acceptedSubmission.title;
+    const subTitle = slateData.acceptedSubmission.title!;
 
     // Wait for data to load
     await expect(authedPage.getByText(subTitle)).toBeVisible({
@@ -51,7 +51,7 @@ test.describe("Pipeline (/slate/pipeline)", () => {
   test("navigates to detail page", async ({ authedPage, slateData }) => {
     await authedPage.goto("/slate/pipeline");
 
-    const subTitle = slateData.acceptedSubmission.title;
+    const subTitle = slateData.acceptedSubmission.title!;
     await expect(authedPage.getByText(subTitle)).toBeVisible({
       timeout: 10_000,
     });

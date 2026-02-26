@@ -287,7 +287,7 @@ export async function createSubmission(data: {
   content?: string;
   coverLetter?: string;
   status?: string;
-}): Promise<{ id: string; title: string }> {
+}): Promise<{ id: string; title: string | null }> {
   const db = getDb();
   const [row] = await db
     .insert(submissions)
