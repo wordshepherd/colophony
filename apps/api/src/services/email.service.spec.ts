@@ -19,10 +19,15 @@ import { emailService } from './email.service.js';
 
 describe('emailService', () => {
   it('exports expected methods', () => {
+    // eslint-disable-next-line @typescript-eslint/unbound-method
     expect(emailService.create).toBeTypeOf('function');
+    // eslint-disable-next-line @typescript-eslint/unbound-method
     expect(emailService.updateStatus).toBeTypeOf('function');
+    // eslint-disable-next-line @typescript-eslint/unbound-method
     expect(emailService.markSent).toBeTypeOf('function');
+    // eslint-disable-next-line @typescript-eslint/unbound-method
     expect(emailService.markFailed).toBeTypeOf('function');
+    // eslint-disable-next-line @typescript-eslint/unbound-method
     expect(emailService.list).toBeTypeOf('function');
   });
 });

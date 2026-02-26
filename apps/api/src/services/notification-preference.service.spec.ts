@@ -21,9 +21,13 @@ import { notificationPreferenceService } from './notification-preference.service
 
 describe('notificationPreferenceService', () => {
   it('exports expected methods', () => {
+    // eslint-disable-next-line @typescript-eslint/unbound-method
     expect(notificationPreferenceService.isEmailEnabled).toBeTypeOf('function');
+    // eslint-disable-next-line @typescript-eslint/unbound-method
     expect(notificationPreferenceService.listForUser).toBeTypeOf('function');
+    // eslint-disable-next-line @typescript-eslint/unbound-method
     expect(notificationPreferenceService.upsert).toBeTypeOf('function');
+    // eslint-disable-next-line @typescript-eslint/unbound-method
     expect(notificationPreferenceService.bulkUpsert).toBeTypeOf('function');
   });
 

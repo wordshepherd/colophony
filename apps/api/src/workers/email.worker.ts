@@ -109,6 +109,7 @@ export function startEmailWorker(env: Env): Worker<EmailJobData> {
     },
   );
 
+  // eslint-disable-next-line @typescript-eslint/no-misused-promises
   worker.on('failed', async (job, err) => {
     console.error(
       `[email] Job ${job?.id} failed (attempt ${job?.attemptsMade}/${job?.opts.attempts}):`,
