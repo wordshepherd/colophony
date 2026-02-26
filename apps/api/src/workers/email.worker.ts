@@ -42,11 +42,35 @@ export function startEmailWorker(env: Env): Worker<EmailJobData> {
         );
       });
 
-      // Phase 2: Render template
-      const rendered = renderEmailTemplate(
-        templateName as TemplateName,
-        templateData,
-      );
+      // Phase 2: Render template (non-retryable — fail immediately on error)
+      let rendered: { html: string; text: string; subject: string };
+      try {
+        rendered = renderEmailTemplate(
+          templateName as TemplateName,
+          templateData,
+        );
+      } catch (renderErr) {
+        await withRls({ orgId }, async (tx: DrizzleDb) => {
+          await emailService.markFailed(
+            tx,
+            emailSendId,
+            `Template render error: ${renderErr instanceof Error ? renderErr.message : String(renderErr)}`,
+          );
+          await auditService.log(tx, {
+            resource: AuditResources.EMAIL,
+            action: AuditActions.EMAIL_FAILED,
+            resourceId: emailSendId,
+            organizationId: orgId,
+            newValue: {
+              to,
+              templateName,
+              error: 'template-render-failed',
+            },
+          });
+        });
+        // Don't rethrow — job is done (no point retrying a bad template)
+        return;
+      }
 
       // Phase 3: Send via adapter
       const result = await currentAdapter.send({

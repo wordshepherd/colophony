@@ -7,6 +7,7 @@ import {
   eq,
 } from '@colophony/db';
 import { pipelineItems } from '@colophony/db';
+import { AuditActions, AuditResources } from '@colophony/types';
 import { inngest } from '../client.js';
 import type {
   ContractGeneratedEvent,
@@ -14,6 +15,7 @@ import type {
 } from '../events.js';
 import { notificationPreferenceService } from '../../services/notification-preference.service.js';
 import { emailService } from '../../services/email.service.js';
+import { auditService } from '../../services/audit.service.js';
 import { enqueueEmail } from '../../queues/email.queue.js';
 import { validateEnv } from '../../config/env.js';
 
@@ -54,7 +56,7 @@ async function queueEmailForRecipient(params: {
   if (!enabled) return;
 
   const emailSend = await withRls({ orgId: params.orgId }, async (tx) => {
-    return emailService.create(tx, {
+    const row = await emailService.create(tx, {
       organizationId: params.orgId,
       recipientUserId: params.userId,
       recipientEmail: params.email,
@@ -62,6 +64,18 @@ async function queueEmailForRecipient(params: {
       eventType: params.eventType,
       subject: params.subject,
     });
+    await auditService.log(tx, {
+      resource: AuditResources.EMAIL,
+      action: AuditActions.EMAIL_QUEUED,
+      resourceId: row.id,
+      organizationId: params.orgId,
+      newValue: {
+        to: params.email,
+        templateName: params.templateName,
+        eventType: params.eventType,
+      },
+    });
+    return row;
   });
 
   await enqueueEmail(env, {

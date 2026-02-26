@@ -32,12 +32,13 @@ vi.mock('../../adapters/email/index.js', () => ({
   })),
 }));
 
+const mockRenderEmailTemplate = vi.fn(() => ({
+  html: '<p>Hello</p>',
+  text: 'Hello',
+  subject: 'Test Subject',
+}));
 vi.mock('../../templates/email/index.js', () => ({
-  renderEmailTemplate: vi.fn(() => ({
-    html: '<p>Hello</p>',
-    text: 'Hello',
-    subject: 'Test Subject',
-  })),
+  renderEmailTemplate: (...args: unknown[]) => mockRenderEmailTemplate(...args),
 }));
 
 let workerCallback: (job: unknown) => Promise<unknown>;
@@ -111,6 +112,39 @@ describe('email worker', () => {
     // Phase 4: mark SENT + audit
     expect(mockMarkSent).toHaveBeenCalledWith('mock-tx', 'es-1', 'msg-123');
     expect(mockAuditLog).toHaveBeenCalled();
+  });
+
+  it('marks FAILED immediately on template render error', async () => {
+    startEmailWorker(testEnv);
+
+    mockRenderEmailTemplate.mockImplementationOnce(() => {
+      throw new Error('Unknown template: bad-template');
+    });
+
+    await workerCallback({
+      data: {
+        emailSendId: 'es-3',
+        orgId: 'org-1',
+        to: 'recipient@test.com',
+        from: 'noreply@test.com',
+        templateName: 'bad-template',
+        templateData: {},
+      },
+      attemptsMade: 0,
+    });
+
+    // Should mark FAILED without retrying
+    expect(mockMarkFailed).toHaveBeenCalledWith(
+      'mock-tx',
+      'es-3',
+      'Template render error: Unknown template: bad-template',
+    );
+    expect(mockAuditLog).toHaveBeenCalledWith(
+      'mock-tx',
+      expect.objectContaining({ action: 'EMAIL_FAILED' }),
+    );
+    // Should NOT have tried to send
+    expect(mockAdapterSend).not.toHaveBeenCalled();
   });
 
   it('marks FAILED + audit on final failure', async () => {

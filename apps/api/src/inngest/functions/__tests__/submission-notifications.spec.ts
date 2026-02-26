@@ -38,6 +38,18 @@ vi.mock('../../../services/email.service.js', () => ({
   },
 }));
 
+const mockAuditLog = vi.fn();
+vi.mock('../../../services/audit.service.js', () => ({
+  auditService: {
+    log: (...args: unknown[]) => mockAuditLog(...args),
+  },
+}));
+
+vi.mock('@colophony/types', () => ({
+  AuditActions: { EMAIL_QUEUED: 'EMAIL_QUEUED' },
+  AuditResources: { EMAIL: 'email' },
+}));
+
 const mockEnqueueEmail = vi.fn();
 vi.mock('../../../queues/email.queue.js', () => ({
   enqueueEmail: (...args: unknown[]) => mockEnqueueEmail(...args),
