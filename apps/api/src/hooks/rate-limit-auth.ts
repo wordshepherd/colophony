@@ -1,7 +1,7 @@
 import fp from 'fastify-plugin';
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import type { Env } from '../config/env.js';
-import { LUA_SCRIPT } from './rate-limit.js';
+import { SLIDING_WINDOW_SCRIPT } from './rate-limit.js';
 
 export interface RateLimitAuthPluginOptions {
   env: Env;
@@ -54,19 +54,26 @@ export default fp(
         const redis = app.rateLimitRedis;
         if (!redis) return;
 
-        const windowId = Math.floor(Date.now() / windowMs);
-        const key = `${prefix}:auth:${env.RATE_LIMIT_WINDOW_SECONDS}:${windowId}:${userId}`;
+        const key = `${prefix}:auth:${userId}`;
+        const nowMs = Date.now();
+        const requestId = `${nowMs}:${Math.random().toString(36).slice(2, 8)}`;
 
         let count: number;
-        let ttlMs: number;
+        let oldestMs = 0;
 
         try {
-          const result = (await redis.eval(LUA_SCRIPT, 1, key, windowMs)) as [
-            number,
-            number,
-          ];
+          const result = (await redis.eval(
+            SLIDING_WINDOW_SCRIPT,
+            1,
+            key,
+            nowMs - windowMs,
+            nowMs,
+            requestId,
+            windowMs,
+            limit,
+          )) as [number, number];
           count = result[0];
-          ttlMs = result[1];
+          oldestMs = result[1] ?? 0;
         } catch {
           // Graceful degradation: Redis unavailable → allow request
           request.log.warn(
@@ -76,9 +83,9 @@ export default fp(
         }
 
         const remaining = Math.max(0, limit - count);
-        const resetEpochSeconds = Math.ceil(
-          (Date.now() + Math.max(0, ttlMs)) / 1000,
-        );
+        // Reset = when the oldest entry expires (tight estimate)
+        const resetMs = oldestMs > 0 ? oldestMs + windowMs : nowMs + windowMs;
+        const resetEpochSeconds = Math.ceil(resetMs / 1000);
 
         // Override headers from first-pass with higher auth limits
         reply.header('X-RateLimit-Limit', limit);
@@ -86,7 +93,10 @@ export default fp(
         reply.header('X-RateLimit-Reset', resetEpochSeconds);
 
         if (count > limit) {
-          const retryAfterSeconds = Math.ceil(Math.max(0, ttlMs) / 1000);
+          const retryAfterSeconds = Math.max(
+            1,
+            Math.ceil((resetMs - nowMs) / 1000),
+          );
           reply.header('Retry-After', retryAfterSeconds);
           reply.header('Cache-Control', 'no-store');
 

@@ -22,7 +22,7 @@ export const hubClientService = {
    * Called on startup if HUB_DOMAIN + HUB_REGISTRATION_TOKEN are set.
    */
   async registerWithHub(env: Env): Promise<void> {
-    const config = await federationService.getOrInitConfig(env);
+    const config = await federationService.getPublicConfig(env);
     const localDomain = env.FEDERATION_DOMAIN ?? 'localhost';
 
     const body = JSON.stringify({

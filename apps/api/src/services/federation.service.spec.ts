@@ -271,6 +271,118 @@ describe('federationService', () => {
     });
   });
 
+  describe('getPublicConfig', () => {
+    it('returns config without privateKey', async () => {
+      const { federationService } = await import('./federation.service.js');
+
+      const existingRow = {
+        id: 'existing-id',
+        publicKey: 'existing-pub',
+        keyId: 'magazine.example#main',
+        mode: 'allowlist' as const,
+        contactEmail: 'admin@magazine.example',
+        capabilities: ['identity'],
+        enabled: true,
+      };
+
+      dbModule.db.select.mockReturnValueOnce(mockSelectChain([existingRow]));
+
+      const config = await federationService.getPublicConfig(baseEnv);
+
+      expect(config.publicKey).toBe('existing-pub');
+      expect(config.keyId).toBe('magazine.example#main');
+      expect(config.mode).toBe('allowlist');
+      expect(config.enabled).toBe(true);
+      expect('privateKey' in config).toBe(false);
+    });
+
+    it('with env override reads only public key', async () => {
+      const { federationService } = await import('./federation.service.js');
+
+      dbModule.db.select.mockReturnValueOnce(
+        mockSelectChain([
+          {
+            id: 'db-id',
+            keyId: 'magazine.example#main',
+            mode: 'allowlist',
+            contactEmail: null,
+            capabilities: ['identity'],
+            enabled: false,
+          },
+        ]),
+      );
+
+      const envWithKeys: Env = {
+        ...baseEnv,
+        FEDERATION_PUBLIC_KEY: 'env-pub-key',
+        FEDERATION_PRIVATE_KEY: 'env-priv-key',
+      };
+
+      const config = await federationService.getPublicConfig(envWithKeys);
+
+      expect(config.publicKey).toBe('env-pub-key');
+      expect('privateKey' in config).toBe(false);
+    });
+
+    it('auto-generates if no config exists', async () => {
+      const { federationService } = await import('./federation.service.js');
+
+      // getPublicConfig DB path: select public columns returns empty
+      dbModule.db.select
+        .mockReturnValueOnce(mockSelectChain([]))
+        // getOrInitConfig fallback: select returns empty (no existing config)
+        .mockReturnValueOnce(mockSelectChain([]))
+        // After insert, read-back returns the new row
+        .mockReturnValueOnce(
+          mockSelectChain([
+            {
+              id: 'new-id',
+              publicKey: testKeypair.publicKey,
+              privateKey: testKeypair.privateKey,
+              keyId: 'magazine.example#main',
+              mode: 'allowlist',
+              contactEmail: null,
+              capabilities: ['identity'],
+              enabled: false,
+            },
+          ]),
+        );
+
+      dbModule.db.insert.mockReturnValue({
+        values: vi.fn().mockReturnValue({
+          onConflictDoNothing: vi.fn().mockResolvedValue({ rowCount: 1 }),
+        }),
+      });
+
+      const config = await federationService.getPublicConfig(baseEnv);
+
+      expect(config.publicKey).toBe(testKeypair.publicKey);
+      expect(config.keyId).toBe('magazine.example#main');
+      expect('privateKey' in config).toBe(false);
+    });
+
+    it('getOrInitConfig still returns privateKey', async () => {
+      const { federationService } = await import('./federation.service.js');
+
+      const existingRow = {
+        id: 'existing-id',
+        publicKey: 'existing-pub',
+        privateKey: 'existing-priv',
+        keyId: 'magazine.example#main',
+        mode: 'allowlist' as const,
+        contactEmail: null,
+        capabilities: ['identity'],
+        enabled: true,
+      };
+
+      dbModule.db.select.mockReturnValueOnce(mockSelectChain([existingRow]));
+
+      const config = await federationService.getOrInitConfig(baseEnv);
+
+      expect(config.privateKey).toBe('existing-priv');
+    });
+  });
+
   describe('getInstanceMetadata', () => {
     it('returns valid FederationMetadata', async () => {
       const { federationService } = await import('./federation.service.js');

@@ -8,10 +8,12 @@ import {
 } from '@colophony/db';
 import * as jose from 'jose';
 import crypto from 'node:crypto';
+import dns from 'node:dns';
 import {
   AuditActions,
   AuditResources,
   federationMetadataSchema,
+  type FederationMetadata,
   type TrustRequest,
   type TrustAccept,
   type InitiateTrustInput,
@@ -69,6 +71,205 @@ export class TrustSignatureVerificationError extends Error {
 }
 
 // ---------------------------------------------------------------------------
+// SSRF Protection
+// ---------------------------------------------------------------------------
+
+/** Maximum response body size for remote metadata fetches (1 MB). */
+const MAX_METADATA_RESPONSE_BYTES = 1_048_576;
+
+/**
+ * Check whether a hostname resolves to a private/reserved IP address.
+ * Throws RemoteMetadataFetchError if any resolved address is private.
+ * Skipped in development/test environments to allow localhost.
+ */
+async function resolveAndCheckPrivateIp(hostname: string): Promise<void> {
+  // Strip port from hostname before DNS resolution
+  const bareHost = hostname.replace(/:\d+$/, '');
+
+  // Block IP literals directly — DNS resolution may fail for these,
+  // bypassing the private address check entirely
+  if (isPrivateIPv4(bareHost)) {
+    throw new RemoteMetadataFetchError(
+      hostname,
+      new Error(`IP literal resolves to private IPv4 address: ${bareHost}`),
+    );
+  }
+  if (isPrivateIPv6(bareHost) || bareHost === '::1') {
+    throw new RemoteMetadataFetchError(
+      hostname,
+      new Error(`IP literal resolves to private IPv6 address: ${bareHost}`),
+    );
+  }
+
+  // Resolve both IPv4 and IPv6
+  const [ipv4Addrs, ipv6Addrs] = await Promise.all([
+    dns.promises.resolve4(bareHost).catch(() => [] as string[]),
+    dns.promises.resolve6(bareHost).catch(() => [] as string[]),
+  ]);
+
+  for (const addr of ipv4Addrs) {
+    if (isPrivateIPv4(addr)) {
+      throw new RemoteMetadataFetchError(
+        hostname,
+        new Error(`Resolved to private IPv4 address: ${addr}`),
+      );
+    }
+  }
+
+  for (const addr of ipv6Addrs) {
+    if (isPrivateIPv6(addr)) {
+      throw new RemoteMetadataFetchError(
+        hostname,
+        new Error(`Resolved to private IPv6 address: ${addr}`),
+      );
+    }
+  }
+}
+
+function isPrivateIPv4(addr: string): boolean {
+  const parts = addr.split('.').map(Number);
+  if (parts.length !== 4) return false;
+  const [a, b] = parts;
+
+  return (
+    a === 10 || // 10.0.0.0/8
+    (a === 172 && b >= 16 && b <= 31) || // 172.16.0.0/12
+    (a === 192 && b === 168) || // 192.168.0.0/16
+    a === 127 || // 127.0.0.0/8
+    (a === 169 && b === 254) || // 169.254.0.0/16
+    a === 0 // 0.0.0.0/8
+  );
+}
+
+function isPrivateIPv6(addr: string): boolean {
+  const normalized = addr.toLowerCase();
+  if (normalized === '::1') return true; // loopback
+
+  // ULA fc00::/7 — fc00::–fdff::
+  if (normalized.startsWith('fc') || normalized.startsWith('fd')) return true;
+
+  // Link-local fe80::/10 — fe80::–febf::
+  // First 10 bits are 1111 1110 10, so second hex digit ranges 8–b
+  if (normalized.length >= 4 && normalized.startsWith('fe')) {
+    const thirdChar = normalized[2];
+    if (thirdChar >= '8' && thirdChar <= 'b') return true;
+  }
+
+  return false;
+}
+
+/**
+ * Fetch and validate remote instance metadata with full hardening:
+ * - SSRF check (private IP rejection, skipped in dev/test)
+ * - Redirect rejection
+ * - Response size limit (1 MB)
+ * - Zod schema validation
+ * - Domain mismatch detection
+ */
+async function fetchAndValidateMetadata(
+  domain: string,
+): Promise<FederationMetadata> {
+  // SSRF check — skip in development/test for localhost
+  const nodeEnv = process.env.NODE_ENV;
+  if (nodeEnv !== 'development' && nodeEnv !== 'test') {
+    await resolveAndCheckPrivateIp(domain);
+  }
+
+  let response: Response;
+  try {
+    response = await fetch(`https://${domain}/.well-known/colophony`, {
+      signal: AbortSignal.timeout(10_000),
+      headers: { accept: 'application/json' },
+      redirect: 'error', // Prevent redirect-based SSRF
+    });
+  } catch (err) {
+    throw new RemoteMetadataFetchError(domain, err);
+  }
+
+  if (!response.ok) {
+    throw new RemoteMetadataFetchError(
+      domain,
+      new Error(`HTTP ${response.status}`),
+    );
+  }
+
+  // Response size guard: check Content-Length if available
+  const contentLength = response.headers.get('content-length');
+  if (
+    contentLength &&
+    parseInt(contentLength, 10) > MAX_METADATA_RESPONSE_BYTES
+  ) {
+    throw new RemoteMetadataFetchError(
+      domain,
+      new Error(
+        `Response too large: ${contentLength} bytes (max ${MAX_METADATA_RESPONSE_BYTES})`,
+      ),
+    );
+  }
+
+  // Read body with size limit for chunked responses
+  let bodyText: string;
+  try {
+    if (response.body) {
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      const chunks: string[] = [];
+      let totalBytes = 0;
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        totalBytes += value.byteLength;
+        if (totalBytes > MAX_METADATA_RESPONSE_BYTES) {
+          await reader.cancel();
+          throw new Error(
+            `Response body exceeded ${MAX_METADATA_RESPONSE_BYTES} bytes`,
+          );
+        }
+        chunks.push(decoder.decode(value, { stream: true }));
+      }
+      chunks.push(decoder.decode()); // flush
+      bodyText = chunks.join('');
+    } else {
+      bodyText = await response.text();
+    }
+  } catch (err) {
+    throw new RemoteMetadataFetchError(domain, err);
+  }
+
+  // Parse JSON
+  let json: unknown;
+  try {
+    json = JSON.parse(bodyText);
+  } catch (err) {
+    throw new RemoteMetadataFetchError(domain, err);
+  }
+
+  // Zod validation
+  const parsed = federationMetadataSchema.safeParse(json);
+  if (!parsed.success) {
+    throw new RemoteMetadataFetchError(
+      domain,
+      new Error(`Invalid metadata: ${parsed.error.message}`),
+    );
+  }
+
+  const metadata = parsed.data;
+
+  // Domain match check
+  if (metadata.domain !== domain) {
+    throw new RemoteMetadataFetchError(
+      domain,
+      new Error(
+        `Domain mismatch: metadata claims "${metadata.domain}" but was fetched from "${domain}"`,
+      ),
+    );
+  }
+
+  return metadata;
+}
+
+// ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
@@ -97,42 +298,11 @@ function mapPeerRow(row: typeof trustedPeers.$inferSelect): TrustedPeer {
 export const trustService = {
   /**
    * Fetch and preview remote instance metadata.
-   * 10s timeout for SSRF protection.
+   * Uses shared fetchAndValidateMetadata() for SSRF protection, size limits,
+   * domain validation, and schema parsing.
    */
   async fetchRemoteMetadata(domain: string): Promise<RemoteMetadataPreview> {
-    let response: Response;
-    try {
-      response = await fetch(`https://${domain}/.well-known/colophony`, {
-        signal: AbortSignal.timeout(10_000),
-        headers: { accept: 'application/json' },
-      });
-    } catch (err) {
-      throw new RemoteMetadataFetchError(domain, err);
-    }
-
-    if (!response.ok) {
-      throw new RemoteMetadataFetchError(
-        domain,
-        new Error(`HTTP ${response.status}`),
-      );
-    }
-
-    let json: unknown;
-    try {
-      json = await response.json();
-    } catch (err) {
-      throw new RemoteMetadataFetchError(domain, err);
-    }
-
-    const parsed = federationMetadataSchema.safeParse(json);
-    if (!parsed.success) {
-      throw new RemoteMetadataFetchError(
-        domain,
-        new Error(`Invalid metadata: ${parsed.error.message}`),
-      );
-    }
-
-    const metadata = parsed.data;
+    const metadata = await fetchAndValidateMetadata(domain);
     return {
       domain: metadata.domain,
       software: metadata.software,
@@ -253,18 +423,7 @@ export const trustService = {
     // This prevents domain spoofing — attacker can't claim any domain with a self-signed key
     let remotePublicKey: string;
     try {
-      const remoteMetadata = await fetch(
-        `https://${request.domain}/.well-known/colophony`,
-        { signal: AbortSignal.timeout(10_000) },
-      );
-      if (!remoteMetadata.ok) {
-        throw new Error(
-          `Remote metadata fetch failed: ${remoteMetadata.status}`,
-        );
-      }
-      const metadata = federationMetadataSchema.parse(
-        await remoteMetadata.json(),
-      );
+      const metadata = await fetchAndValidateMetadata(request.domain);
       remotePublicKey = metadata.publicKey;
     } catch (err) {
       throw new TrustSignatureVerificationError(
@@ -678,16 +837,7 @@ export const trustService = {
     // Fetch hub's public key from its well-known metadata
     let hubPublicKey: string;
     try {
-      const hubMetadataResponse = await fetch(
-        `https://${request.hubDomain}/.well-known/colophony`,
-        { signal: AbortSignal.timeout(10_000) },
-      );
-      if (!hubMetadataResponse.ok) {
-        throw new Error(`HTTP ${hubMetadataResponse.status}`);
-      }
-      const hubMetadata = federationMetadataSchema.parse(
-        await hubMetadataResponse.json(),
-      );
+      const hubMetadata = await fetchAndValidateMetadata(request.hubDomain);
       hubPublicKey = hubMetadata.publicKey;
     } catch (err) {
       throw new TrustSignatureVerificationError(

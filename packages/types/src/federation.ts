@@ -15,10 +15,15 @@ export type FederationPublication = z.infer<typeof federationPublicationSchema>;
 
 export const federationMetadataSchema = z.object({
   software: z.literal("colophony"),
-  version: z.string(),
-  domain: z.string(),
-  publicKey: z.string(),
-  keyId: z.string(),
+  version: z.string().min(1),
+  domain: z
+    .string()
+    .min(1)
+    .regex(/^[a-zA-Z0-9][a-zA-Z0-9.:-]+[a-zA-Z0-9]$/, "Invalid domain format"),
+  publicKey: z
+    .string()
+    .startsWith("-----BEGIN PUBLIC KEY-----", "Must be PEM-encoded public key"),
+  keyId: z.string().min(1).includes("#", { message: "keyId must contain #" }),
   capabilities: z.array(z.string()),
   mode: z.enum(["allowlist", "open", "managed_hub"]),
   contactEmail: z.string().nullable(),

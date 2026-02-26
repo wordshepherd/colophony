@@ -72,6 +72,8 @@ interface FederationConfigRow {
   enabled: boolean;
 }
 
+export type FederationPublicConfig = Omit<FederationConfigRow, 'privateKey'>;
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -158,6 +160,73 @@ export const federationService = {
   },
 
   /**
+   * Get public-only federation config — private key is never loaded into memory.
+   *
+   * Priority: env vars > DB row > auto-generate (via getOrInitConfig fallback).
+   * For the DB path, only public columns are selected.
+   */
+  async getPublicConfig(env: Env): Promise<FederationPublicConfig> {
+    // Env var override path — require both keys to match getOrInitConfig behavior
+    if (env.FEDERATION_PUBLIC_KEY && env.FEDERATION_PRIVATE_KEY) {
+      // Select only public columns — never load privateKey into memory
+      const [existing] = await db
+        .select({
+          id: federationConfig.id,
+          keyId: federationConfig.keyId,
+          mode: federationConfig.mode,
+          contactEmail: federationConfig.contactEmail,
+          capabilities: federationConfig.capabilities,
+          enabled: federationConfig.enabled,
+        })
+        .from(federationConfig)
+        .limit(1);
+
+      return {
+        id: existing?.id ?? 'env-override',
+        publicKey: env.FEDERATION_PUBLIC_KEY,
+        keyId:
+          existing?.keyId ?? `${env.FEDERATION_DOMAIN ?? 'localhost'}#main`,
+        mode: existing?.mode ?? 'allowlist',
+        contactEmail: env.FEDERATION_CONTACT ?? existing?.contactEmail ?? null,
+        capabilities: existing?.capabilities ?? ['identity'],
+        enabled: existing?.enabled ?? false,
+      };
+    }
+
+    // DB path — select only public columns (privateKey is never loaded)
+    const [existing] = await db
+      .select({
+        id: federationConfig.id,
+        publicKey: federationConfig.publicKey,
+        keyId: federationConfig.keyId,
+        mode: federationConfig.mode,
+        contactEmail: federationConfig.contactEmail,
+        capabilities: federationConfig.capabilities,
+        enabled: federationConfig.enabled,
+      })
+      .from(federationConfig)
+      .limit(1);
+
+    if (existing) {
+      return {
+        id: existing.id,
+        publicKey: existing.publicKey,
+        keyId: existing.keyId,
+        mode: existing.mode,
+        contactEmail: env.FEDERATION_CONTACT ?? existing.contactEmail,
+        capabilities: existing.capabilities,
+        enabled: existing.enabled,
+      };
+    }
+
+    // Auto-generate path — must call getOrInitConfig then strip privateKey
+    const full = await this.getOrInitConfig(env);
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { privateKey, ...publicConfig } = full;
+    return publicConfig;
+  },
+
+  /**
    * Generate an Ed25519 keypair, store it, and audit log the event.
    *
    * INSERT ... ON CONFLICT (singleton) DO NOTHING handles concurrent
@@ -218,7 +287,7 @@ export const federationService = {
    * for cross-org public metadata (same pattern as org-context.ts:78).
    */
   async getInstanceMetadata(env: Env): Promise<FederationMetadata> {
-    const config = await this.getOrInitConfig(env);
+    const config = await this.getPublicConfig(env);
 
     if (!config.enabled) {
       throw new FederationDisabledError();
@@ -269,7 +338,7 @@ export const federationService = {
     env: Env,
     resource: string,
   ): Promise<WebFingerResponse> {
-    const config = await this.getOrInitConfig(env);
+    const config = await this.getPublicConfig(env);
 
     if (!config.enabled) {
       throw new FederationDisabledError();
@@ -324,7 +393,7 @@ export const federationService = {
    * Resolved at GET /.well-known/did.json
    */
   async getInstanceDidDocument(env: Env): Promise<DidDocument> {
-    const config = await this.getOrInitConfig(env);
+    const config = await this.getPublicConfig(env);
 
     if (!config.enabled) {
       throw new FederationDisabledError();
@@ -365,7 +434,7 @@ export const federationService = {
    * Never returns private key material.
    */
   async getUserDidDocument(env: Env, localPart: string): Promise<DidDocument> {
-    const config = await this.getOrInitConfig(env);
+    const config = await this.getPublicConfig(env);
 
     if (!config.enabled) {
       throw new FederationDisabledError();
