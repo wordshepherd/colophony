@@ -234,6 +234,7 @@ All other version pins are in their respective per-directory CLAUDE.md files.
 /start-session        # Session briefing (DEVLOG context, git state, PRs, infra)
 /end-session          # End-of-session housekeeping (DEVLOG, git, PR, summary)
 /codex-review [type]  # Run Codex code review (plan, diff, branch; default: branch)
+/opencode-review [type] # Run OpenCode code review (plan, diff, branch; default: branch)
 ```
 
 ### Claude Code Hooks (run automatically)
@@ -242,9 +243,12 @@ All other version pins are in their respective per-directory CLAUDE.md files.
 
 **Post-edit:** `post-edit-lint.js` (eslint on changed file — fix warnings immediately, do not defer), `post-schema.js` (db:generate reminder), `post-email-template.js` (text version), `post-migration-validate.js` (RLS for new tables), `post-commit-devlog.js` (DEVLOG reminder)
 
-### Codex Review Integration
+### Code Review Integration
 
-`/codex-review [plan|diff|branch]` — non-interactive Codex review. Branch review (default): `codex review --base origin/main`. Diff review: `--uncommitted`. Plan review: `codex exec -s read-only`.
+Two review tools available — use either:
+
+- `/codex-review [plan|diff|branch]` — Codex CLI review. Branch: `codex review --base origin/main`. Diff: `--uncommitted`. Plan: `codex exec -s read-only`.
+- `/opencode-review [plan|diff|branch]` — OpenCode CLI review. All modes use `opencode run` with a review prompt and `-f` to attach diffs/plans.
 
 For interactive Codex in tmux: source nvm, `nvm use v22.22.0`, then `codex`. Use `codex resume` or `codex fork --last` for follow-up.
 
@@ -271,16 +275,18 @@ Wait for user confirmation or redirection on each decision before proceeding to 
 - All decisions were already made in the requirements (backlog item specifies the approach)
 - The user explicitly says "just do it" or "use your judgment"
 
-### Plan Review: Codex Integration
+### Plan Review: OpenCode Integration
 
-Every non-trivial plan **must be reviewed by Codex before presenting to the user for approval**. The workflow is:
+<!-- To switch back to Codex: replace /opencode-review with /codex-review below -->
+
+Every non-trivial plan **must be reviewed before presenting to the user for approval**. The workflow is:
 
 1. **Write the plan** (after decision surfacing, per above)
-2. **Run `/codex-review plan`** automatically — do not ask the user, just run it
-3. **Evaluate Codex findings** — adjust the plan for any critical or important issues; for dismissed suggestions, add a brief note (e.g., "Codex suggested X; dismissed because Y")
-4. **Present the Codex-vetted plan** to the user for approval
+2. **Run `/opencode-review plan`** automatically — do not ask the user, just run it
+3. **Evaluate review findings** — adjust the plan for any critical or important issues; for dismissed suggestions, add a brief note (e.g., "Review suggested X; dismissed because Y")
+4. **Present the reviewed plan** to the user for approval
 
-The user sees a plan that has already been through one round of review. This replaces the previous pattern of creating blocking task list entries for Codex review.
+The user sees a plan that has already been through one round of review. This replaces the previous pattern of creating blocking task list entries for review.
 
 **When to skip:** Trivial plans (typo fix, single config change, doc-only update). If in doubt, run the review.
 
@@ -320,11 +326,11 @@ During implementation, when discoveries require deliberate divergence from the a
 - Bug fixes discovered during implementation that are clearly in-scope
 - Additional test cases that strengthen coverage beyond the plan
 
-Drift detection (in `/codex-review branch`) reads this section and excludes acknowledged overrides from its findings.
+Drift detection (in `/opencode-review branch` or `/codex-review branch`) reads this section and excludes acknowledged overrides from its findings.
 
 ### File Size Guideline
 
-Soft limit of 500 lines per source file. Files exceeding 500 lines should be flagged during `/codex-review` for potential extraction. This is a review trigger, not a hard gate — some files (e.g., schema definitions, test suites) naturally exceed this. When flagged, evaluate whether there is a natural seam for extraction (pure logic vs DB-dependent, CRUD vs validation, etc.).
+Soft limit of 500 lines per source file. Files exceeding 500 lines should be flagged during code review (`/opencode-review` or `/codex-review`) for potential extraction. This is a review trigger, not a hard gate — some files (e.g., schema definitions, test suites) naturally exceed this. When flagged, evaluate whether there is a natural seam for extraction (pure logic vs DB-dependent, CRUD vs validation, etc.).
 
 ### MCP Servers (restart Claude Code to activate)
 

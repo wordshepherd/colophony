@@ -250,7 +250,7 @@ Format everything as a concise briefing:
 - PostgreSQL: [running/stopped]
 - Redis: [running/stopped]
 - MinIO: [running/stopped]
-- Codex review: [active/not started] (run /codex-review when ready)
+- Code review: [available] (run /opencode-review or /codex-review when ready)
 
 ### Track Status
 - Current track: [Track N — Name] ([X]% complete)
