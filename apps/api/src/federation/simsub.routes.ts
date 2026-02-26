@@ -20,7 +20,7 @@ export async function registerSimSubRoutes(
 
   // Federation signature verification (scoped — includes raw body plugin)
   await app.register(federationAuthPlugin);
-  await app.register(federationRateLimitPlugin, { env });
+  await app.register(federationRateLimitPlugin, { env, capability: 'simsub' });
 
   /**
    * POST /federation/v1/sim-sub/check

@@ -64,7 +64,7 @@ export async function registerHubRoutes(
   // Authenticated hub routes — HTTP signature via hubAuthPlugin
   await app.register(async (scope) => {
     await scope.register(hubAuthPlugin);
-    await scope.register(federationRateLimitPlugin, { env });
+    await scope.register(federationRateLimitPlugin, { env, capability: 'hub' });
 
     /**
      * POST /federation/v1/hub/refresh — Refresh attestation.

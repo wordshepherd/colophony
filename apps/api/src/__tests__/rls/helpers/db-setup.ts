@@ -155,6 +155,57 @@ export async function globalTeardown(): Promise<void> {
   isSetUp = false;
 }
 
+/**
+ * Apply migrations from 0000 through the given tag (inclusive).
+ * Uses the same statement-splitting pattern as globalSetup().
+ */
+export async function applyMigrationsUpTo(
+  pool: Pool,
+  upToTag: string,
+): Promise<void> {
+  const journalPath = path.join(migrationsFolder, 'meta', '_journal.json');
+  const journal = JSON.parse(fs.readFileSync(journalPath, 'utf8')) as {
+    entries: Array<{ tag: string }>;
+  };
+
+  for (const entry of journal.entries) {
+    const sqlPath = path.join(migrationsFolder, `${entry.tag}.sql`);
+    const sql = fs.readFileSync(sqlPath, 'utf8');
+
+    const statements = sql
+      .split('--> statement-breakpoint')
+      .map((s) => s.trim())
+      .filter((s) => s.length > 0);
+
+    for (const statement of statements) {
+      await pool.query(statement);
+    }
+
+    if (entry.tag === upToTag) break;
+  }
+}
+
+/**
+ * Apply a single migration by tag.
+ * Throws if any statement fails (useful for testing dirty-data scenarios).
+ */
+export async function applySingleMigration(
+  pool: Pool,
+  tag: string,
+): Promise<void> {
+  const sqlPath = path.join(migrationsFolder, `${tag}.sql`);
+  const sql = fs.readFileSync(sqlPath, 'utf8');
+
+  const statements = sql
+    .split('--> statement-breakpoint')
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0);
+
+  for (const statement of statements) {
+    await pool.query(statement);
+  }
+}
+
 // Automatic cleanup when the process exits (singleFork mode shares pools)
 process.on('beforeExit', () => {
   void globalTeardown();

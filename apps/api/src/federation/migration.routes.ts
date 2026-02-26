@@ -38,7 +38,10 @@ export async function registerMigrationRoutes(
   // Scope 1: S2S endpoints (HTTP signature auth via federationAuthPlugin)
   await app.register(async (s2s) => {
     await s2s.register(federationAuthPlugin);
-    await s2s.register(federationRateLimitPlugin, { env });
+    await s2s.register(federationRateLimitPlugin, {
+      env,
+      capability: 'migration',
+    });
 
     /**
      * POST /federation/v1/migrations/request
