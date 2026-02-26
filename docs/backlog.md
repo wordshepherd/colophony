@@ -169,7 +169,7 @@
 
 ### Design Decisions
 
-- [ ] Data model for federation: what data crosses instance boundaries, governance — (architecture doc Open Question #3)
+- [x] Data model for federation: what data crosses instance boundaries, governance — (architecture doc Open Question #3) — **Resolved:** Identity (DID-based), content fingerprints (SHA-256), submission metadata (title/cover letter), and files cross boundaries. Governed per-instance by admin-controlled trust (allowlist/open/managed_hub modes). See PRs #180-#184.
 
 ---
 
