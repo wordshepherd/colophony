@@ -371,10 +371,12 @@ Full testing guide: [docs/testing.md](docs/testing.md)
 ### Database Management
 
 ```bash
-pnpm db:migrate               # Run Drizzle migrations
+pnpm db:migrate               # Validate journal + run Drizzle migrations
 pnpm db:generate              # Generate migration from schema changes
 pnpm db:seed                  # Seed test data
 pnpm db:reset                 # Drop and recreate with migrations + RLS
+pnpm db:validate-migrations   # Check SQL files ↔ journal consistency
+pnpm db:add-migration <name>  # Add journal entry for a manual migration
 ```
 
 ### Environment Variables

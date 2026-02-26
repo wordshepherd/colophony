@@ -17,6 +17,8 @@ vi.mock('@colophony/db', () => ({
   db: {
     select: vi.fn(),
     insert: vi.fn(),
+    update: vi.fn(),
+    transaction: vi.fn(),
   },
   federationConfig: { singleton: 'singleton' },
   publications: {
@@ -121,12 +123,26 @@ function mockSelectChain(rows: unknown[]) {
   };
 }
 
+/** Like mockSelectChain but .from().where() resolves directly (no .limit()) */
+function mockSelectChainNoLimit(rows: unknown[]) {
+  return {
+    from: vi.fn().mockReturnValue({
+      where: vi.fn().mockResolvedValue(rows),
+    }),
+  };
+}
+
 // Alias for readability in test data
 const testKeypair = testKeypairHoisted;
 
 describe('federationService', () => {
   let dbModule: {
-    db: { select: ReturnType<typeof vi.fn>; insert: ReturnType<typeof vi.fn> };
+    db: {
+      select: ReturnType<typeof vi.fn>;
+      insert: ReturnType<typeof vi.fn>;
+      update: ReturnType<typeof vi.fn>;
+      transaction: ReturnType<typeof vi.fn>;
+    };
   };
   let auditModule: { auditService: { logDirect: ReturnType<typeof vi.fn> } };
   let cryptoModule: {
@@ -698,18 +714,20 @@ describe('federationService', () => {
       const { federationService } = await import('./federation.service.js');
 
       dbModule.db.select
-        // getOrInitConfig
+        // getPublicConfig
         .mockReturnValueOnce(mockSelectChain([enabledConfig]))
         // getUserDidDocument -> user lookup
         .mockReturnValueOnce(
           mockSelectChain([{ id: 'user-1', deletedAt: null, isGuest: false }]),
         )
-        // getOrCreateUserKeypair -> existing keypair lookup
+        // getAllUserKeys -> existing active key
         .mockReturnValueOnce(
-          mockSelectChain([
+          mockSelectChainNoLimit([
             {
               publicKey: testKeypair.publicKey,
               keyId: 'did:web:magazine.example:users:user-1#key-1',
+              status: 'active',
+              createdAt: new Date(),
             },
           ]),
         );
@@ -725,13 +743,15 @@ describe('federationService', () => {
       const { federationService } = await import('./federation.service.js');
 
       dbModule.db.select
-        // getOrInitConfig
+        // getPublicConfig
         .mockReturnValueOnce(mockSelectChain([enabledConfig]))
         // user lookup
         .mockReturnValueOnce(
           mockSelectChain([{ id: 'user-1', deletedAt: null, isGuest: false }]),
         )
-        // getOrCreateUserKeypair -> no existing keypair
+        // getAllUserKeys -> no keys
+        .mockReturnValueOnce(mockSelectChainNoLimit([]))
+        // getOrCreateUserKeypair -> no existing active keypair
         .mockReturnValueOnce(mockSelectChain([]))
         // read-back after insert
         .mockReturnValueOnce(
@@ -838,11 +858,14 @@ describe('federationService', () => {
         .mockReturnValueOnce(
           mockSelectChain([{ id: 'user-1', deletedAt: null, isGuest: false }]),
         )
+        // getAllUserKeys -> active key
         .mockReturnValueOnce(
-          mockSelectChain([
+          mockSelectChainNoLimit([
             {
               publicKey: testKeypair.publicKey,
               keyId: 'did:web:magazine.example:users:user-1#key-1',
+              status: 'active',
+              createdAt: new Date(),
             },
           ]),
         );
@@ -928,6 +951,188 @@ describe('federationService', () => {
       expect(jwk.crv).toBe('Ed25519');
       expect(typeof jwk.x).toBe('string');
       expect(jwk.x.length).toBeGreaterThan(0);
+    });
+  });
+
+  describe('rotateUserKey', () => {
+    it('generates new keypair and revokes previous', async () => {
+      const { federationService } = await import('./federation.service.js');
+
+      // Find active key (uses .limit(1))
+      dbModule.db.select
+        .mockReturnValueOnce(
+          mockSelectChain([
+            {
+              id: 'key-uuid-1',
+              keyId: 'did:web:magazine.example:users:alice#key-1',
+            },
+          ]),
+        )
+        // Count total keys (uses .from().where() — no .limit())
+        .mockReturnValueOnce(mockSelectChainNoLimit([{ total: 1 }]));
+
+      // Transaction mock — type-safe wrapper to avoid no-misused-promises
+      const txMock = {
+        update: vi.fn().mockReturnValue({
+          set: vi.fn().mockReturnValue({
+            where: vi.fn().mockResolvedValue({ rowCount: 1 }),
+          }),
+        }),
+        insert: vi.fn().mockReturnValue({
+          values: vi.fn().mockResolvedValue({ rowCount: 1 }),
+        }),
+      };
+      dbModule.db.transaction.mockResolvedValue(undefined);
+      dbModule.db.transaction.mockImplementationOnce(((
+        fn: (tx: unknown) => unknown,
+      ) => fn(txMock)) as never);
+
+      const result = await federationService.rotateUserKey(
+        'user-1',
+        'magazine.example',
+        'alice',
+        'Security rotation',
+      );
+
+      expect(result.previousKeyId).toBe(
+        'did:web:magazine.example:users:alice#key-1',
+      );
+      expect(result.newKeyId).toBe(
+        'did:web:magazine.example:users:alice#key-2',
+      );
+      expect(auditModule.auditService.logDirect).toHaveBeenCalledWith(
+        expect.objectContaining({
+          action: 'FEDERATION_USER_KEY_ROTATED',
+          actorId: 'user-1',
+        }),
+      );
+    });
+
+    it('throws NoActiveKeyError when no active key exists', async () => {
+      const { federationService, NoActiveKeyError } =
+        await import('./federation.service.js');
+
+      // No active key found
+      dbModule.db.select.mockReturnValueOnce(mockSelectChain([]));
+
+      await expect(
+        federationService.rotateUserKey('user-1', 'magazine.example', 'alice'),
+      ).rejects.toThrow(NoActiveKeyError);
+    });
+  });
+
+  describe('getAllUserKeys', () => {
+    it('returns active and revoked keys', async () => {
+      const { federationService } = await import('./federation.service.js');
+
+      const keys = [
+        {
+          publicKey: 'pub-1',
+          keyId: 'did:web:magazine.example:users:alice#key-1',
+          status: 'revoked',
+          createdAt: new Date('2025-01-01'),
+        },
+        {
+          publicKey: 'pub-2',
+          keyId: 'did:web:magazine.example:users:alice#key-2',
+          status: 'active',
+          createdAt: new Date('2025-06-01'),
+        },
+      ];
+
+      dbModule.db.select.mockReturnValueOnce({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockResolvedValue(keys),
+        }),
+      });
+
+      const result = await federationService.getAllUserKeys('user-1');
+
+      expect(result).toHaveLength(2);
+      expect(result[0].status).toBe('revoked');
+      expect(result[1].status).toBe('active');
+    });
+  });
+
+  describe('getUserDidDocument with key rotation', () => {
+    const enabledConfig = {
+      id: 'cfg-id',
+      publicKey: testKeypair.publicKey,
+      privateKey: testKeypair.privateKey,
+      keyId: 'magazine.example#main',
+      mode: 'allowlist' as const,
+      contactEmail: null,
+      capabilities: ['identity'],
+      enabled: true,
+    };
+
+    it('returns only active keys in verificationMethod', async () => {
+      const { federationService } = await import('./federation.service.js');
+
+      dbModule.db.select
+        // getPublicConfig
+        .mockReturnValueOnce(mockSelectChain([enabledConfig]))
+        // user lookup
+        .mockReturnValueOnce(
+          mockSelectChain([
+            {
+              id: 'user-1',
+              deletedAt: null,
+              isGuest: false,
+              migratedToDid: null,
+            },
+          ]),
+        )
+        // getAllUserKeys — returns active + revoked
+        .mockReturnValueOnce(
+          mockSelectChainNoLimit([
+            {
+              publicKey: 'old-pub',
+              keyId: 'did:web:magazine.example:users:alice#key-1',
+              status: 'revoked',
+              createdAt: new Date('2025-01-01'),
+            },
+            {
+              publicKey: testKeypair.publicKey,
+              keyId: 'did:web:magazine.example:users:alice#key-2',
+              status: 'active',
+              createdAt: new Date('2025-06-01'),
+            },
+          ]),
+        );
+
+      const doc = await federationService.getUserDidDocument(baseEnv, 'alice');
+
+      // Only active key should appear in verificationMethod
+      expect(doc.verificationMethod).toHaveLength(1);
+      expect(doc.verificationMethod[0].id).toBe(
+        'did:web:magazine.example:users:alice#key-2',
+      );
+      expect(doc.authentication).toHaveLength(1);
+    });
+  });
+
+  describe('getOrCreateUserKeypair with status filter', () => {
+    it('only returns active key', async () => {
+      const { federationService } = await import('./federation.service.js');
+
+      // First select returns active key (the WHERE status='active' filter is mocked)
+      dbModule.db.select.mockReturnValueOnce(
+        mockSelectChain([
+          {
+            publicKey: testKeypair.publicKey,
+            keyId: 'did:web:magazine.example:users:alice#key-2',
+          },
+        ]),
+      );
+
+      const result = await federationService.getOrCreateUserKeypair(
+        'user-1',
+        'magazine.example',
+        'alice',
+      );
+
+      expect(result.keyId).toBe('did:web:magazine.example:users:alice#key-2');
     });
   });
 });

@@ -7,3 +7,7 @@ export {
   startOutboxPollerWorker,
   stopOutboxPollerWorker,
 } from './outbox-poller.worker.js';
+export {
+  startTransferFetchWorker,
+  stopTransferFetchWorker,
+} from './transfer-fetch.worker.js';

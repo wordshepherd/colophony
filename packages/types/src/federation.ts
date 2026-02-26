@@ -194,3 +194,40 @@ export const domainParamSchema = z.object({
 });
 
 export type DomainParam = z.infer<typeof domainParamSchema>;
+
+// ---------------------------------------------------------------------------
+// User Key Rotation — Key Admin API
+// ---------------------------------------------------------------------------
+
+export const userKeyRotationRequestSchema = z.object({
+  reason: z.string().max(500).optional(),
+});
+
+export type UserKeyRotationRequest = z.infer<
+  typeof userKeyRotationRequestSchema
+>;
+
+export const userKeyRotationResponseSchema = z.object({
+  newKeyId: z.string(),
+  previousKeyId: z.string(),
+});
+
+export type UserKeyRotationResponse = z.infer<
+  typeof userKeyRotationResponseSchema
+>;
+
+export const userKeySchema = z.object({
+  keyId: z.string(),
+  status: z.string(),
+  algorithm: z.string(),
+  createdAt: z.date(),
+  revokedAt: z.date().nullable(),
+});
+
+export type UserKey = z.infer<typeof userKeySchema>;
+
+export const userKeyListResponseSchema = z.object({
+  keys: z.array(userKeySchema),
+});
+
+export type UserKeyListResponse = z.infer<typeof userKeyListResponseSchema>;

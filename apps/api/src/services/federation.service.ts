@@ -7,7 +7,7 @@ import {
   users,
   userKeys,
 } from '@colophony/db';
-import { eq, and, isNull } from 'drizzle-orm';
+import { eq, and, isNull, count } from 'drizzle-orm';
 import {
   AuditActions,
   AuditResources,
@@ -54,6 +54,13 @@ export class UserDidNotFoundError extends Error {
   override name = 'UserDidNotFoundError' as const;
   constructor(localPart: string) {
     super(`User not found for DID resolution: ${localPart}`);
+  }
+}
+
+export class NoActiveKeyError extends Error {
+  override name = 'NoActiveKeyError' as const;
+  constructor(userId: string) {
+    super(`No active key found for user: ${userId}`);
   }
 }
 
@@ -467,29 +474,45 @@ export const federationService = {
       throw new UserDidNotFoundError(localPart);
     }
 
-    const keypair = await this.getOrCreateUserKeypair(
-      user.id,
-      domain,
-      localPart,
+    // Get all active keys; if none, lazily generate one
+    let activeKeys = (await this.getAllUserKeys(user.id)).filter(
+      (k) => k.status === 'active',
     );
 
+    if (activeKeys.length === 0) {
+      const keypair = await this.getOrCreateUserKeypair(
+        user.id,
+        domain,
+        localPart,
+      );
+      activeKeys = [
+        {
+          publicKey: keypair.publicKey,
+          keyId: keypair.keyId,
+          status: 'active',
+          createdAt: new Date(),
+        },
+      ];
+    }
+
     const didId = `did:web:${domainToDid(domain)}:users:${localPart}`;
-    const keyRef = `${didId}#key-1`;
+
+    const verificationMethod = activeKeys.map((key) => ({
+      id: key.keyId,
+      type: 'JsonWebKey2020' as const,
+      controller: didId,
+      publicKeyJwk: pemToJwk(key.publicKey),
+    }));
+
+    const keyRefs = activeKeys.map((k) => k.keyId);
 
     return {
       '@context': DID_CONTEXT,
       id: didId,
       ...(user.migratedToDid ? { alsoKnownAs: [user.migratedToDid] } : {}),
-      verificationMethod: [
-        {
-          id: keyRef,
-          type: 'JsonWebKey2020',
-          controller: didId,
-          publicKeyJwk: pemToJwk(keypair.publicKey),
-        },
-      ],
-      authentication: [keyRef],
-      assertionMethod: [keyRef],
+      verificationMethod,
+      authentication: keyRefs,
+      assertionMethod: keyRefs,
       service: [
         {
           id: `${didId}#submitter`,
@@ -510,14 +533,14 @@ export const federationService = {
     domain: string,
     localPart: string,
   ): Promise<{ publicKey: string; keyId: string }> {
-    // Check for existing keypair
+    // Check for existing active keypair
     const [existing] = await db
       .select({
         publicKey: userKeys.publicKey,
         keyId: userKeys.keyId,
       })
       .from(userKeys)
-      .where(eq(userKeys.userId, userId))
+      .where(and(eq(userKeys.userId, userId), eq(userKeys.status, 'active')))
       .limit(1);
 
     if (existing) {
@@ -566,5 +589,109 @@ export const federationService = {
 
     // row is guaranteed to exist — either we inserted or another process did
     return { publicKey: row.publicKey, keyId: row.keyId };
+  },
+
+  /**
+   * Get all user keys (active + revoked) for DID document resolution.
+   * Uses superuser `db` pool — justified: cross-user public key lookup
+   * for DID docs (same justification as instance DID doc resolution).
+   */
+  async getAllUserKeys(userId: string): Promise<
+    Array<{
+      publicKey: string;
+      keyId: string;
+      status: string;
+      createdAt: Date;
+    }>
+  > {
+    return db
+      .select({
+        publicKey: userKeys.publicKey,
+        keyId: userKeys.keyId,
+        status: userKeys.status,
+        createdAt: userKeys.createdAt,
+      })
+      .from(userKeys)
+      .where(eq(userKeys.userId, userId));
+  },
+
+  /**
+   * Rotate a user's keypair: revoke current active key, generate new one.
+   * Uses superuser `db` pool in a transaction to ensure atomicity.
+   */
+  async rotateUserKey(
+    userId: string,
+    domain: string,
+    localPart: string,
+    reason?: string,
+  ): Promise<{ newKeyId: string; previousKeyId: string }> {
+    // Find current active key
+    const [activeKey] = await db
+      .select({
+        id: userKeys.id,
+        keyId: userKeys.keyId,
+      })
+      .from(userKeys)
+      .where(and(eq(userKeys.userId, userId), eq(userKeys.status, 'active')))
+      .limit(1);
+
+    if (!activeKey) {
+      throw new NoActiveKeyError(userId);
+    }
+
+    // Count total keys to determine the next key suffix
+    const [keyCount] = await db
+      .select({ total: count() })
+      .from(userKeys)
+      .where(eq(userKeys.userId, userId));
+
+    const nextKeyNum = (keyCount?.total ?? 0) + 1;
+
+    // Generate new Ed25519 keypair
+    const { publicKey, privateKey } = crypto.generateKeyPairSync('ed25519', {
+      publicKeyEncoding: { type: 'spki', format: 'pem' },
+      privateKeyEncoding: { type: 'pkcs8', format: 'pem' },
+    });
+
+    const newKeyId = `did:web:${domainToDid(domain)}:users:${localPart}#key-${nextKeyNum}`;
+    const now = new Date();
+
+    // Revoke old key + insert new key atomically
+    await db.transaction(async (tx) => {
+      await tx
+        .update(userKeys)
+        .set({
+          status: 'revoked',
+          revokedAt: now,
+          revokedReason: reason ?? 'Key rotation',
+          updatedAt: now,
+        })
+        .where(
+          and(eq(userKeys.id, activeKey.id), eq(userKeys.status, 'active')),
+        );
+
+      await tx.insert(userKeys).values({
+        userId,
+        publicKey,
+        privateKey,
+        keyId: newKeyId,
+        algorithm: 'Ed25519',
+        status: 'active',
+      });
+    });
+
+    // Audit log rotation
+    await auditService.logDirect({
+      resource: AuditResources.FEDERATION,
+      action: AuditActions.FEDERATION_USER_KEY_ROTATED,
+      actorId: userId,
+      newValue: {
+        newKeyId,
+        previousKeyId: activeKey.keyId,
+        reason: reason ?? 'Key rotation',
+      },
+    });
+
+    return { newKeyId, previousKeyId: activeKey.keyId };
   },
 };

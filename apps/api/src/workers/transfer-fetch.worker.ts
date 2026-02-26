@@ -1,0 +1,218 @@
+import { Worker, UnrecoverableError } from 'bullmq';
+import { withRls, submissions, trustedPeers, eq, and } from '@colophony/db';
+import type { DrizzleDb } from '@colophony/db';
+import { AuditActions, AuditResources } from '@colophony/types';
+import type { Env } from '../config/env.js';
+import type { TransferFetchJobData } from '../queues/transfer-fetch.queue.js';
+import { auditService } from '../services/audit.service.js';
+import { createS3Client, putObject } from '../services/s3.js';
+
+let worker: Worker<TransferFetchJobData> | null = null;
+
+export function startTransferFetchWorker(
+  env: Env,
+): Worker<TransferFetchJobData> {
+  const s3Client = createS3Client(env);
+  const bucket = env.S3_BUCKET;
+
+  worker = new Worker<TransferFetchJobData>(
+    'transfer-fetch',
+    async (job) => {
+      const {
+        transferId,
+        orgId,
+        originDomain,
+        transferToken,
+        tokenExpiresAt,
+        fileManifest,
+        localSubmissionId,
+      } = job.data;
+
+      // Pre-check: token expiration
+      if (new Date(tokenExpiresAt) < new Date()) {
+        await auditService.logDirect({
+          resource: AuditResources.TRANSFER,
+          action: AuditActions.TRANSFER_FILES_FETCH_FAILED,
+          resourceId: localSubmissionId,
+          organizationId: orgId,
+          newValue: { transferId, reason: 'Transfer token expired' },
+        });
+        throw new UnrecoverableError('Transfer token expired');
+      }
+
+      // Phase 1: audit start
+      await auditService.logDirect({
+        resource: AuditResources.TRANSFER,
+        action: AuditActions.TRANSFER_FILES_FETCH_STARTED,
+        resourceId: localSubmissionId,
+        organizationId: orgId,
+        newValue: { transferId, fileCount: fileManifest.length },
+      });
+
+      // Resolve peer instance URL via RLS
+      const peer = await withRls({ orgId }, async (tx: DrizzleDb) => {
+        const [row] = await tx
+          .select({ instanceUrl: trustedPeers.instanceUrl })
+          .from(trustedPeers)
+          .where(
+            and(
+              eq(trustedPeers.domain, originDomain),
+              eq(trustedPeers.status, 'active'),
+            ),
+          )
+          .limit(1);
+        return row;
+      });
+
+      if (!peer) {
+        await auditService.logDirect({
+          resource: AuditResources.TRANSFER,
+          action: AuditActions.TRANSFER_FILES_FETCH_FAILED,
+          resourceId: localSubmissionId,
+          organizationId: orgId,
+          newValue: {
+            transferId,
+            reason: `No active peer found for domain: ${originDomain}`,
+          },
+        });
+        throw new UnrecoverableError(
+          `No active peer found for domain: ${originDomain}`,
+        );
+      }
+
+      // Phase 2: fetch files
+      const storedFiles: Array<{ fileId: string; storageKey: string }> = [];
+      const failedFiles: string[] = [];
+
+      for (const entry of fileManifest) {
+        try {
+          const url = `${peer.instanceUrl}/federation/v1/transfers/${transferId}/files/${entry.fileId}`;
+          const response = await fetch(url, {
+            headers: { authorization: `Bearer ${transferToken}` },
+            signal: AbortSignal.timeout(60_000),
+          });
+
+          if (!response.ok) {
+            failedFiles.push(entry.fileId);
+            continue;
+          }
+
+          const storageKey = `transfers/${localSubmissionId}/${entry.fileId}/${entry.filename}`;
+          const buffer = Buffer.from(await response.arrayBuffer());
+          await putObject(s3Client, bucket, storageKey, buffer, entry.mimeType);
+          storedFiles.push({ fileId: entry.fileId, storageKey });
+        } catch {
+          failedFiles.push(entry.fileId);
+        }
+      }
+
+      // Phase 3: update submission formData
+      const totalSuccess = storedFiles.length === fileManifest.length;
+      const hasAnySuccess = storedFiles.length > 0;
+
+      if (hasAnySuccess) {
+        await withRls({ orgId }, async (tx: DrizzleDb) => {
+          // Read existing formData to preserve other fields (read-modify-write)
+          const [existing] = await tx
+            .select({ formData: submissions.formData })
+            .from(submissions)
+            .where(eq(submissions.id, localSubmissionId))
+            .limit(1);
+
+          const existingFormData =
+            (existing?.formData as Record<string, unknown>) ?? {};
+
+          const enrichedManifest = fileManifest.map((entry) => {
+            const stored = storedFiles.find((s) => s.fileId === entry.fileId);
+            return { ...entry, storageKey: stored?.storageKey };
+          });
+
+          await tx
+            .update(submissions)
+            .set({
+              formData: {
+                ...existingFormData,
+                _transferFiles: enrichedManifest,
+                _transferStatus: totalSuccess ? 'complete' : 'partial',
+              } as Record<string, unknown>,
+            })
+            .where(eq(submissions.id, localSubmissionId));
+        });
+      }
+
+      if (totalSuccess) {
+        await auditService.logDirect({
+          resource: AuditResources.TRANSFER,
+          action: AuditActions.TRANSFER_FILES_FETCH_COMPLETED,
+          resourceId: localSubmissionId,
+          organizationId: orgId,
+          newValue: {
+            transferId,
+            filesStored: storedFiles.length,
+            status: 'complete',
+          },
+        });
+        return;
+      }
+
+      if (!hasAnySuccess) {
+        // Total failure — no DB update, audit + throw for retry
+        await auditService.logDirect({
+          resource: AuditResources.TRANSFER,
+          action: AuditActions.TRANSFER_FILES_FETCH_FAILED,
+          resourceId: localSubmissionId,
+          organizationId: orgId,
+          newValue: {
+            transferId,
+            failedFiles,
+            reason: 'All file fetches failed',
+          },
+        });
+        throw new Error(
+          `All ${failedFiles.length} file fetches failed for transfer ${transferId}`,
+        );
+      }
+
+      // Partial failure — DB updated with partial results, audit + throw for retry
+      await auditService.logDirect({
+        resource: AuditResources.TRANSFER,
+        action: AuditActions.TRANSFER_FILES_FETCH_COMPLETED,
+        resourceId: localSubmissionId,
+        organizationId: orgId,
+        newValue: {
+          transferId,
+          filesStored: storedFiles.length,
+          filesFailed: failedFiles.length,
+          status: 'partial',
+        },
+      });
+      throw new Error(
+        `Partial failure: ${failedFiles.length}/${fileManifest.length} files failed for transfer ${transferId}`,
+      );
+    },
+    {
+      connection: {
+        host: env.REDIS_HOST,
+        port: env.REDIS_PORT,
+        password: env.REDIS_PASSWORD || undefined,
+      },
+      concurrency: 3,
+    },
+  );
+
+  worker.on('failed', (job, err) => {
+    console.error(
+      `[transfer-fetch] Job ${job?.id} failed (attempt ${job?.attemptsMade}/${job?.opts.attempts}):`,
+      err.message,
+    );
+  });
+
+  return worker;
+}
+
+export async function stopTransferFetchWorker(): Promise<void> {
+  if (worker) {
+    await worker.close();
+    worker = null;
+  }
+}
