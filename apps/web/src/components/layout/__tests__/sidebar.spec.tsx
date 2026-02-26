@@ -7,6 +7,10 @@ let mockIsEditor = false;
 let mockIsAdmin = false;
 let mockPathname = "/";
 
+jest.mock("@/components/plugins/plugin-slot", () => ({
+  PluginSlot: () => null,
+}));
+
 jest.mock("@/hooks/use-organization", () => ({
   useOrganization: () => ({
     isEditor: mockIsEditor,

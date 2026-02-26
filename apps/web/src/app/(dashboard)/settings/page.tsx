@@ -37,6 +37,7 @@ import {
   Settings as SettingsIcon,
 } from "lucide-react";
 import { NotificationPreferencesCard } from "@/components/settings/notification-preferences-card";
+import { PluginSlot } from "@/components/plugins/plugin-slot";
 
 export default function SettingsPage() {
   const { user } = useAuth();
@@ -200,6 +201,8 @@ export default function SettingsPage() {
 
       {/* Notification Preferences */}
       <NotificationPreferencesCard />
+
+      <PluginSlot point="settings.section" className="space-y-6" />
 
       {/* Privacy & Data */}
       <Card>

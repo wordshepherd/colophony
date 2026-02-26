@@ -4,12 +4,16 @@ import { SmtpEmailAdapter } from './adapters/email/smtp-sdk.adapter.js';
 import { SendGridEmailAdapter } from './adapters/email/sendgrid-sdk.adapter.js';
 import { S3StorageAdapter } from './adapters/storage/index.js';
 import { StripePaymentAdapter } from './adapters/payment/index.js';
+import { BuiltInExtensionsPlugin } from './plugins/built-in-extensions.plugin.js';
 
 export function buildColophonyConfig(env: Env): {
   config: ColophonyConfig;
   adapterConfigs: Partial<Record<AdapterType, Record<string, unknown>>>;
 } {
-  const config: ColophonyConfig = { adapters: {} };
+  const config: ColophonyConfig = {
+    adapters: {},
+    plugins: [new BuiltInExtensionsPlugin()],
+  };
   const adapterConfigs: Partial<Record<AdapterType, Record<string, unknown>>> =
     {};
 
