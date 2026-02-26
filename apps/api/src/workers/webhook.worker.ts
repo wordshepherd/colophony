@@ -163,7 +163,9 @@ export function startWebhookWorker(env: Env): Worker<WebhookJobData> {
             },
           });
 
-          // Auto-disable: check if this endpoint has too many consecutive failures
+          // Auto-disable: check if this endpoint has too many recent failures.
+          // Note: concurrent final failures may race, but the consequence is benign
+          // (disable at ±1 of the threshold). Atomic locking isn't worth the complexity.
           const [deliveryRow] = await tx
             .select({ webhookEndpointId: webhookDeliveries.webhookEndpointId })
             .from(webhookDeliveries)

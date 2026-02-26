@@ -18,6 +18,8 @@ export interface WebhookJobData {
 }
 
 // Custom backoff delays: 1s, 5s, 30s, 2m, 10m, 1h, 1h, 1h
+// Final 3 attempts are capped at 1h to avoid multi-day delivery windows
+// while still giving endpoints time to recover from extended outages.
 const BACKOFF_DELAYS = [
   1_000, 5_000, 30_000, 120_000, 600_000, 3_600_000, 3_600_000, 3_600_000,
 ];

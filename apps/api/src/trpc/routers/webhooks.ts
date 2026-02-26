@@ -141,7 +141,10 @@ export const webhooksRouter = createRouter({
   deliveries: orgProcedure
     .input(listWebhookDeliveriesSchema)
     .query(async ({ ctx, input }) => {
-      return webhookService.listDeliveries(ctx.dbTx, input);
+      return webhookService.listDeliveries(ctx.dbTx, {
+        ...input,
+        organizationId: ctx.authContext.orgId,
+      });
     }),
 
   retryDelivery: adminProcedure
@@ -156,6 +159,10 @@ export const webhooksRouter = createRouter({
       );
 
       if (!delivery) {
+        throw new Error('Delivery not found');
+      }
+
+      if (delivery.organizationId !== orgId) {
         throw new Error('Delivery not found');
       }
 

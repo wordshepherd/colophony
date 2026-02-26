@@ -32,6 +32,7 @@ interface CreateDeliveryParams {
 }
 
 interface ListDeliveriesParams {
+  organizationId?: string;
   endpointId?: string;
   eventType?: string;
   status?: 'QUEUED' | 'DELIVERING' | 'DELIVERED' | 'FAILED';
@@ -195,10 +196,13 @@ export const webhookService = {
   },
 
   async listDeliveries(tx: DrizzleDb, params: ListDeliveriesParams) {
-    const { page, limit, endpointId, eventType, status } = params;
+    const { page, limit, organizationId, endpointId, eventType, status } =
+      params;
     const offset = (page - 1) * limit;
 
     const conditions = [];
+    if (organizationId)
+      conditions.push(eq(webhookDeliveries.organizationId, organizationId));
     if (endpointId)
       conditions.push(eq(webhookDeliveries.webhookEndpointId, endpointId));
     if (eventType) conditions.push(eq(webhookDeliveries.eventType, eventType));
@@ -237,6 +241,7 @@ export const webhookService = {
   },
 
   async countRecentFailures(tx: DrizzleDb, endpointId: string) {
+    const since = new Date(Date.now() - 24 * 60 * 60 * 1000); // 24h window
     const [result] = await tx
       .select({ count: count() })
       .from(webhookDeliveries)
@@ -244,6 +249,7 @@ export const webhookService = {
         and(
           eq(webhookDeliveries.webhookEndpointId, endpointId),
           eq(webhookDeliveries.status, 'FAILED'),
+          sql`${webhookDeliveries.createdAt} >= ${since.toISOString()}`,
         ),
       );
     return result?.count ?? 0;
