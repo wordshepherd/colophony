@@ -3,7 +3,9 @@ import { NotificationPreferencesCard } from "../notification-preferences-card";
 import "../../../../test/setup";
 
 // --- Mutable mock state ---
-let mockPreferences: Array<{ eventType: string; enabled: boolean }> | undefined;
+let mockPreferences:
+  | Array<{ eventType: string; channel: string; enabled: boolean }>
+  | undefined;
 let mockIsPending: boolean;
 let mockError: { message: string } | null;
 let mockRefetch: jest.Mock;
@@ -91,11 +93,12 @@ describe("NotificationPreferencesCard", () => {
     expect(mockRefetch).toHaveBeenCalled();
   });
 
-  it("renders all 6 toggles with correct labels", () => {
+  it("renders 12 toggles (email + in-app per event)", () => {
     mockPreferences = [];
     render(<NotificationPreferencesCard />);
     const switches = screen.getAllByRole("switch");
-    expect(switches).toHaveLength(6);
+    // 6 events x 2 channels = 12 switches
+    expect(switches).toHaveLength(12);
     expect(screen.getByText("Submission Received")).toBeInTheDocument();
     expect(screen.getByText("Submission Accepted")).toBeInTheDocument();
     expect(screen.getByText("Submission Rejected")).toBeInTheDocument();
@@ -115,32 +118,45 @@ describe("NotificationPreferencesCard", () => {
 
   it("reflects disabled state from existing preference records", () => {
     mockPreferences = [
-      { eventType: "submission.received", enabled: false },
-      { eventType: "contract.ready", enabled: false },
+      { eventType: "submission.received", channel: "email", enabled: false },
+      { eventType: "contract.ready", channel: "in_app", enabled: false },
     ];
     render(<NotificationPreferencesCard />);
     expect(
-      screen.getByLabelText("Toggle Submission Received notifications"),
+      screen.getByLabelText("Toggle Submission Received email notifications"),
     ).not.toBeChecked();
     expect(
-      screen.getByLabelText("Toggle Contract Ready notifications"),
+      screen.getByLabelText("Toggle Submission Received in-app notifications"),
+    ).toBeChecked();
+    expect(
+      screen.getByLabelText("Toggle Contract Ready email notifications"),
+    ).toBeChecked();
+    expect(
+      screen.getByLabelText("Toggle Contract Ready in-app notifications"),
     ).not.toBeChecked();
-    expect(
-      screen.getByLabelText("Toggle Submission Accepted notifications"),
-    ).toBeChecked();
-    expect(
-      screen.getByLabelText("Toggle Submission Rejected notifications"),
-    ).toBeChecked();
   });
 
-  it("calls upsert mutation on toggle click", () => {
+  it("calls upsert mutation with channel on toggle click", () => {
     mockPreferences = [];
     render(<NotificationPreferencesCard />);
     fireEvent.click(
-      screen.getByLabelText("Toggle Submission Received notifications"),
+      screen.getByLabelText("Toggle Submission Received email notifications"),
     );
     expect(mockMutate).toHaveBeenCalledWith({
       channel: "email",
+      eventType: "submission.received",
+      enabled: false,
+    });
+  });
+
+  it("calls upsert mutation for in-app channel", () => {
+    mockPreferences = [];
+    render(<NotificationPreferencesCard />);
+    fireEvent.click(
+      screen.getByLabelText("Toggle Submission Received in-app notifications"),
+    );
+    expect(mockMutate).toHaveBeenCalledWith({
+      channel: "in_app",
       eventType: "submission.received",
       enabled: false,
     });
@@ -165,6 +181,13 @@ describe("NotificationPreferencesCard", () => {
     switches.forEach((sw) => {
       expect(sw).toBeDisabled();
     });
+  });
+
+  it("shows column headers for Email and In-App", () => {
+    mockPreferences = [];
+    render(<NotificationPreferencesCard />);
+    expect(screen.getAllByText("Email")).toHaveLength(2); // One per group
+    expect(screen.getAllByText("In-App")).toHaveLength(2);
   });
 
   it("shows Submissions and Publication Pipeline group headings", () => {
