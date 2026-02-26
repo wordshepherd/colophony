@@ -16,7 +16,13 @@ ALTER TABLE "identity_migrations"
 --> statement-breakpoint
 
 ALTER TABLE "hub_registered_instances"
+  ALTER COLUMN "status" DROP DEFAULT;
+--> statement-breakpoint
+ALTER TABLE "hub_registered_instances"
   ALTER COLUMN "status" TYPE "HubInstanceStatus" USING "status"::"HubInstanceStatus";
+--> statement-breakpoint
+ALTER TABLE "hub_registered_instances"
+  ALTER COLUMN "status" SET DEFAULT 'active'::"HubInstanceStatus";
 --> statement-breakpoint
 
 ALTER TABLE "trusted_peers"
