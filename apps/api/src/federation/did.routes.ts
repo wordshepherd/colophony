@@ -14,8 +14,12 @@ export async function registerFederationDidRoutes(
 ): Promise<void> {
   const { env } = opts;
 
-  // Permissive CORS — DID documents must be accessible from any origin
-  await app.register(cors, { origin: true, credentials: false });
+  // Permissive CORS — DID documents must be accessible from any origin.
+  // Guard: skip if another scope already registered @fastify/cors (the
+  // plugin decorates the root instance with 'corsPreflightEnabled').
+  if (!app.hasRequestDecorator('corsPreflightEnabled')) {
+    await app.register(cors, { origin: true, credentials: false });
+  }
 
   // Instance DID document: did:web:<domain> → GET /.well-known/did.json
   app.get('/.well-known/did.json', async (_request, reply) => {
