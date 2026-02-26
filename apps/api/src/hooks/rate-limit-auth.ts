@@ -59,9 +59,10 @@ export default fp(
         const requestId = `${nowMs}:${Math.random().toString(36).slice(2, 8)}`;
 
         let count: number;
+        let oldestMs = 0;
 
         try {
-          count = (await redis.eval(
+          const result = (await redis.eval(
             SLIDING_WINDOW_SCRIPT,
             1,
             key,
@@ -70,7 +71,9 @@ export default fp(
             requestId,
             windowMs,
             limit,
-          )) as number;
+          )) as [number, number];
+          count = result[0];
+          oldestMs = result[1] ?? 0;
         } catch {
           // Graceful degradation: Redis unavailable → allow request
           request.log.warn(
@@ -80,7 +83,9 @@ export default fp(
         }
 
         const remaining = Math.max(0, limit - count);
-        const resetEpochSeconds = Math.ceil((nowMs + windowMs) / 1000);
+        // Reset = when the oldest entry expires (tight estimate)
+        const resetMs = oldestMs > 0 ? oldestMs + windowMs : nowMs + windowMs;
+        const resetEpochSeconds = Math.ceil(resetMs / 1000);
 
         // Override headers from first-pass with higher auth limits
         reply.header('X-RateLimit-Limit', limit);
@@ -88,7 +93,10 @@ export default fp(
         reply.header('X-RateLimit-Reset', resetEpochSeconds);
 
         if (count > limit) {
-          const retryAfterSeconds = Math.ceil(windowMs / 1000);
+          const retryAfterSeconds = Math.max(
+            1,
+            Math.ceil((resetMs - nowMs) / 1000),
+          );
           reply.header('Retry-After', retryAfterSeconds);
           reply.header('Cache-Control', 'no-store');
 

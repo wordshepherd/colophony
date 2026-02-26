@@ -46,7 +46,14 @@ if count < tonumber(ARGV[5]) then
   redis.call('ZADD', KEYS[1], ARGV[2], ARGV[3])
 end
 redis.call('PEXPIRE', KEYS[1], ARGV[4])
-return count + 1
+local oldest = 0
+if count > 0 then
+  local entries = redis.call('ZRANGE', KEYS[1], 0, 0, 'WITHSCORES')
+  if entries and #entries >= 2 then
+    oldest = tonumber(entries[2])
+  end
+end
+return {count + 1, oldest}
 `;
 
 /**
@@ -113,9 +120,10 @@ export default fp(
         const requestId = `${nowMs}:${Math.random().toString(36).slice(2, 8)}`;
 
         let count: number;
+        let oldestMs = 0;
 
         try {
-          count = (await redis.eval(
+          const result = (await redis.eval(
             SLIDING_WINDOW_SCRIPT,
             1,
             key,
@@ -124,7 +132,9 @@ export default fp(
             requestId,
             windowMs,
             limit,
-          )) as number;
+          )) as [number, number];
+          count = result[0];
+          oldestMs = result[1] ?? 0;
         } catch {
           // Graceful degradation: Redis unavailable → allow request
           request.log.warn(
@@ -134,14 +144,19 @@ export default fp(
         }
 
         const remaining = Math.max(0, limit - count);
-        const resetEpochSeconds = Math.ceil((nowMs + windowMs) / 1000);
+        // Reset = when the oldest entry expires (tight estimate)
+        const resetMs = oldestMs > 0 ? oldestMs + windowMs : nowMs + windowMs;
+        const resetEpochSeconds = Math.ceil(resetMs / 1000);
 
         reply.header('X-RateLimit-Limit', limit);
         reply.header('X-RateLimit-Remaining', remaining);
         reply.header('X-RateLimit-Reset', resetEpochSeconds);
 
         if (count > limit) {
-          const retryAfterSeconds = Math.ceil(windowMs / 1000);
+          const retryAfterSeconds = Math.max(
+            1,
+            Math.ceil((resetMs - nowMs) / 1000),
+          );
           reply.header('Retry-After', retryAfterSeconds);
           reply.header('Cache-Control', 'no-store');
 

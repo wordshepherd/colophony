@@ -166,9 +166,20 @@ export const federationService = {
    * For the DB path, only public columns are selected.
    */
   async getPublicConfig(env: Env): Promise<FederationPublicConfig> {
-    // Env var override path — only read public key
-    if (env.FEDERATION_PUBLIC_KEY) {
-      const [existing] = await db.select().from(federationConfig).limit(1);
+    // Env var override path — require both keys to match getOrInitConfig behavior
+    if (env.FEDERATION_PUBLIC_KEY && env.FEDERATION_PRIVATE_KEY) {
+      // Select only public columns — never load privateKey into memory
+      const [existing] = await db
+        .select({
+          id: federationConfig.id,
+          keyId: federationConfig.keyId,
+          mode: federationConfig.mode,
+          contactEmail: federationConfig.contactEmail,
+          capabilities: federationConfig.capabilities,
+          enabled: federationConfig.enabled,
+        })
+        .from(federationConfig)
+        .limit(1);
 
       return {
         id: existing?.id ?? 'env-override',

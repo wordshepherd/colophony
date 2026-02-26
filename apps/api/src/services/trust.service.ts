@@ -86,6 +86,21 @@ async function resolveAndCheckPrivateIp(hostname: string): Promise<void> {
   // Strip port from hostname before DNS resolution
   const bareHost = hostname.replace(/:\d+$/, '');
 
+  // Block IP literals directly — DNS resolution may fail for these,
+  // bypassing the private address check entirely
+  if (isPrivateIPv4(bareHost)) {
+    throw new RemoteMetadataFetchError(
+      hostname,
+      new Error(`IP literal resolves to private IPv4 address: ${bareHost}`),
+    );
+  }
+  if (isPrivateIPv6(bareHost) || bareHost === '::1') {
+    throw new RemoteMetadataFetchError(
+      hostname,
+      new Error(`IP literal resolves to private IPv6 address: ${bareHost}`),
+    );
+  }
+
   // Resolve both IPv4 and IPv6
   const [ipv4Addrs, ipv6Addrs] = await Promise.all([
     dns.promises.resolve4(bareHost).catch(() => [] as string[]),
@@ -128,12 +143,19 @@ function isPrivateIPv4(addr: string): boolean {
 
 function isPrivateIPv6(addr: string): boolean {
   const normalized = addr.toLowerCase();
-  return (
-    normalized === '::1' || // loopback
-    normalized.startsWith('fe80') || // link-local fe80::/10
-    normalized.startsWith('fc') || // ULA fc00::/7
-    normalized.startsWith('fd') // ULA fc00::/7
-  );
+  if (normalized === '::1') return true; // loopback
+
+  // ULA fc00::/7 — fc00::–fdff::
+  if (normalized.startsWith('fc') || normalized.startsWith('fd')) return true;
+
+  // Link-local fe80::/10 — fe80::–febf::
+  // First 10 bits are 1111 1110 10, so second hex digit ranges 8–b
+  if (normalized.length >= 4 && normalized.startsWith('fe')) {
+    const thirdChar = normalized[2];
+    if (thirdChar >= '8' && thirdChar <= 'b') return true;
+  }
+
+  return false;
 }
 
 /**

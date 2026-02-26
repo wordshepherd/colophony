@@ -290,7 +290,7 @@ describe('rate-limit-auth plugin (second-pass)', () => {
       vi.spyOn(redis, 'eval').mockImplementation(async () => {
         callCount++;
         if (callCount > 1) throw new Error('Redis down');
-        return 1; // sliding window returns count directly
+        return [1, 0]; // sliding window returns [count, oldestMs]
       });
 
       const response = await app.inject({
@@ -331,6 +331,130 @@ describe('rate-limit-auth plugin (second-pass)', () => {
       expect(response.statusCode).toBe(200);
       // No rate limit headers from second-pass since it's skipped
       // (first-pass also skips /health)
+    });
+  });
+
+  describe('sliding window behavior (auth)', () => {
+    it('stays blocked at half window (entries still within window)', async () => {
+      const { app: testApp, redis: testRedis } = await buildApp({
+        RATE_LIMIT_DEFAULT_MAX: 20, // High IP limit so first-pass doesn't block
+        RATE_LIMIT_AUTH_MAX: 3,
+      });
+
+      const authHeaders = {
+        'x-test-user-id': 'user-sw-1',
+        'x-test-email': 'test@example.com',
+      };
+
+      // Send max requests
+      for (let i = 0; i < 3; i++) {
+        const r = await testApp.inject({
+          method: 'GET',
+          url: '/api/test',
+          headers: authHeaders,
+        });
+        expect(r.statusCode).toBe(200);
+      }
+
+      // Advance clock by half window (30s) — entries still within 60s window
+      vi.useFakeTimers();
+      vi.setSystemTime(Date.now() + 30_000);
+
+      const response = await testApp.inject({
+        method: 'GET',
+        url: '/api/test',
+        headers: authHeaders,
+      });
+      expect(response.statusCode).toBe(429);
+
+      vi.useRealTimers();
+      await testApp.close();
+      await testRedis.flushall();
+    });
+
+    it('allows requests after full window expires', async () => {
+      const { app: testApp, redis: testRedis } = await buildApp({
+        RATE_LIMIT_DEFAULT_MAX: 20,
+        RATE_LIMIT_AUTH_MAX: 3,
+        RATE_LIMIT_WINDOW_SECONDS: 1, // 1-second window for faster test
+      });
+
+      const authHeaders = {
+        'x-test-user-id': 'user-sw-2',
+        'x-test-email': 'test@example.com',
+      };
+
+      // Send max requests at t=0
+      for (let i = 0; i < 3; i++) {
+        const r = await testApp.inject({
+          method: 'GET',
+          url: '/api/test',
+          headers: authHeaders,
+        });
+        expect(r.statusCode).toBe(200);
+      }
+
+      // Verify 4th is blocked
+      const blocked = await testApp.inject({
+        method: 'GET',
+        url: '/api/test',
+        headers: authHeaders,
+      });
+      expect(blocked.statusCode).toBe(429);
+
+      // Advance past full window (1.1s > 1s window)
+      vi.useFakeTimers();
+      vi.setSystemTime(Date.now() + 1100);
+
+      const response = await testApp.inject({
+        method: 'GET',
+        url: '/api/test',
+        headers: authHeaders,
+      });
+      expect(response.statusCode).toBe(200);
+
+      vi.useRealTimers();
+      await testApp.close();
+      await testRedis.flushall();
+    });
+
+    it('burst at boundary does not allow 2x rate (sliding window fix)', async () => {
+      const { app: testApp, redis: testRedis } = await buildApp({
+        RATE_LIMIT_DEFAULT_MAX: 20,
+        RATE_LIMIT_AUTH_MAX: 3,
+        RATE_LIMIT_WINDOW_SECONDS: 60,
+      });
+
+      const authHeaders = {
+        'x-test-user-id': 'user-sw-3',
+        'x-test-email': 'test@example.com',
+      };
+
+      // Send max requests at t=55s (simulate late-window burst)
+      vi.useFakeTimers({ now: 55_000 });
+
+      for (let i = 0; i < 3; i++) {
+        const r = await testApp.inject({
+          method: 'GET',
+          url: '/api/test',
+          headers: authHeaders,
+        });
+        expect(r.statusCode).toBe(200);
+      }
+
+      // Advance to t=61s — sliding window keeps entries from t=55s
+      vi.setSystemTime(61_000);
+
+      const response = await testApp.inject({
+        method: 'GET',
+        url: '/api/test',
+        headers: authHeaders,
+      });
+      expect(response.statusCode).toBe(429);
+
+      vi.useRealTimers();
+      await testApp.close();
+      await testRedis.flushall();
     });
   });
 });
