@@ -20,3 +20,9 @@ export {
   closeTransferFetchQueue,
   type TransferFetchJobData,
 } from './transfer-fetch.queue.js';
+
+export {
+  enqueueEmail,
+  closeEmailQueue,
+  type EmailJobData,
+} from './email.queue.js';

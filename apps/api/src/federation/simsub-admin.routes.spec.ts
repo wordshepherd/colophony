@@ -61,6 +61,8 @@ const testEnv: Env = {
   FEDERATION_RATE_LIMIT_WINDOW_SECONDS: 60,
   FEDERATION_DOMAIN: 'local.example.com',
   INNGEST_DEV: false,
+  EMAIL_PROVIDER: 'none' as const,
+  SMTP_SECURE: false,
 };
 
 const validUuid = '00000000-0000-4000-a000-000000000001';

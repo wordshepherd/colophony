@@ -5,6 +5,12 @@ import {
   pipelineWorkflow,
   contractWorkflow,
   cmsPublishWorkflow,
+  submissionReceivedNotification,
+  submissionAcceptedNotification,
+  submissionRejectedNotification,
+  submissionWithdrawnNotification,
+  contractReadyNotification,
+  copyeditorAssignedNotification,
 } from './functions/index.js';
 
 /**
@@ -19,7 +25,17 @@ export async function registerInngestRoutes(
 ): Promise<void> {
   const handler = serve({
     client: inngest,
-    functions: [pipelineWorkflow, contractWorkflow, cmsPublishWorkflow],
+    functions: [
+      pipelineWorkflow,
+      contractWorkflow,
+      cmsPublishWorkflow,
+      submissionReceivedNotification,
+      submissionAcceptedNotification,
+      submissionRejectedNotification,
+      submissionWithdrawnNotification,
+      contractReadyNotification,
+      copyeditorAssignedNotification,
+    ],
   });
 
   app.route({

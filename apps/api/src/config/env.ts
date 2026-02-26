@@ -103,6 +103,20 @@ const envSchema = z.object({
   // Federation hub (managed hosting)
   HUB_DOMAIN: z.string().optional(),
   HUB_REGISTRATION_TOKEN: z.string().optional(),
+
+  // Email / Relay
+  EMAIL_PROVIDER: z.enum(['smtp', 'sendgrid', 'none']).default('none'),
+  SMTP_HOST: z.string().optional(),
+  SMTP_PORT: z.coerce.number().int().positive().optional(),
+  SMTP_USER: z.string().optional(),
+  SMTP_PASS: z.string().optional(),
+  SMTP_FROM: z.string().optional(),
+  SMTP_SECURE: z
+    .enum(['true', 'false'])
+    .default('false')
+    .transform((v) => v === 'true'),
+  SENDGRID_API_KEY: z.string().optional(),
+  SENDGRID_FROM: z.string().optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;

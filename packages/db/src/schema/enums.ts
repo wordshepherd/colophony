@@ -166,6 +166,20 @@ export const identityMigrationStatusEnum = pgEnum("IdentityMigrationStatus", [
   "CANCELLED",
 ]);
 
+// ---------------------------------------------------------------------------
+// Relay — Notifications & Communications
+// ---------------------------------------------------------------------------
+
+export const emailSendStatusEnum = pgEnum("EmailSendStatus", [
+  "QUEUED",
+  "SENDING",
+  "SENT",
+  "FAILED",
+  "BOUNCED",
+]);
+
+export const notificationChannelEnum = pgEnum("NotificationChannel", ["email"]);
+
 export const contractStatusEnum = pgEnum("ContractStatus", [
   "DRAFT",
   "SENT",
