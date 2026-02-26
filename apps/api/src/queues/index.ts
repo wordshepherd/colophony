@@ -14,3 +14,9 @@ export {
   startOutboxPoller,
   closeOutboxPollerQueue,
 } from './outbox-poller.queue.js';
+
+export {
+  enqueueTransferFetch,
+  closeTransferFetchQueue,
+  type TransferFetchJobData,
+} from './transfer-fetch.queue.js';
