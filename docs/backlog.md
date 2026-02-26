@@ -184,10 +184,10 @@
 
 ### Phase 1-2 (v2 launch)
 
-- [ ] `@colophony/plugin-sdk` with adapter interfaces (Email, Payment, Storage, Search, Auth, Newsletter) — (plugin research Section 11)
-- [ ] Built-in adapters: SMTP, Stripe, S3 — (plugin research Section 11)
-- [ ] `colophony.config.ts` plugin loader — (plugin research Section 11)
-- [ ] HookEngine with typed hooks for submission lifecycle — (plugin research Section 11)
+- [x] `@colophony/plugin-sdk` with adapter interfaces (Email, Payment, Storage, Search, Auth, Newsletter) — (plugin research Section 11; done 2026-02-26)
+- [ ] Built-in adapters: SMTP, Stripe, S3 — refactor existing to implement SDK interfaces (plugin research Section 11; PR2)
+- [ ] `colophony.config.ts` plugin loader — wire `loadConfig()` into `main.ts` (plugin research Section 11; PR2)
+- [x] HookEngine with typed hooks for submission lifecycle — 14 hooks (11 action + 3 filter) (plugin research Section 11; done 2026-02-26)
 - [x] Webhook delivery via BullMQ with retry + dead letter queue — (plugin research Section 11; done 2026-02-26 as Relay webhook system)
 - [x] Webhook configuration UI — (plugin research Section 11; done 2026-02-26 as Relay webhook admin pages)
 
