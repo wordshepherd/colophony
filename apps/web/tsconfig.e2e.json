@@ -1,0 +1,9 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "plugins": [],
+    "paths": {}
+  },
+  "include": ["e2e/**/*.ts"],
+  "exclude": ["node_modules"]
+}

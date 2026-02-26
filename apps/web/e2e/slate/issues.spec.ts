@@ -156,13 +156,13 @@ test.describe("Issues (/slate/issues)", () => {
       ).toBeVisible();
 
       // Dialog table shows submission title
-      await authedPage.getByText(extraSub.title).click();
+      await authedPage.getByText(extraSub.title!).click();
 
       // Click "Add Item" button in dialog
       await authedPage.getByRole("button", { name: "Add Item" }).click();
 
       // Assembly list shows submission title (joined via pipeline item)
-      await expect(authedPage.getByText(extraSub.title)).toBeVisible({
+      await expect(authedPage.getByText(extraSub.title!)).toBeVisible({
         timeout: 5_000,
       });
     } finally {
@@ -215,7 +215,7 @@ test.describe("Issues (/slate/issues)", () => {
       await authedPage.getByRole("tab", { name: "Assembly" }).click();
 
       // Assembly list shows submission title (joined via pipeline item)
-      await expect(authedPage.getByText(extraSub.title)).toBeVisible({
+      await expect(authedPage.getByText(extraSub.title!)).toBeVisible({
         timeout: 5_000,
       });
 
@@ -223,7 +223,7 @@ test.describe("Issues (/slate/issues)", () => {
       await authedPage.getByRole("button", { name: "Remove item" }).click();
 
       // Item should be removed
-      await expect(authedPage.getByText(extraSub.title)).not.toBeVisible({
+      await expect(authedPage.getByText(extraSub.title!)).not.toBeVisible({
         timeout: 10_000,
       });
     } finally {

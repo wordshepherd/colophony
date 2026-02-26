@@ -2,6 +2,7 @@ import type { Config } from "jest";
 
 const config: Config = {
   testEnvironment: "jsdom",
+  coverageProvider: "v8",
   rootDir: ".",
   testRegex: ".*\\.spec\\.(ts|tsx)$",
   transform: {
