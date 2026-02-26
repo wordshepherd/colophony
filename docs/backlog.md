@@ -30,7 +30,7 @@
 - [x] Zitadel webhook two-step idempotency — current one-step pattern doesn't handle crash recovery (row inserted but `processed=false`); align with Stripe webhook's two-step pattern — (Codex review 2026-02-17; done 2026-02-17)
 - [x] Audit query/list endpoints — wait for API surfaces — (DEVLOG 2026-02-13; done 2026-02-18 PR #101)
 - [x] Seed data (`packages/db/src/seed.ts` has TODO) — wait for API layer — (code TODO; done 2026-02-18 PR #104)
-- [ ] [P2] Replace custom rate-limit Lua scripts with `@fastify/rate-limit` plugin — gains sliding window (fixes burst-at-boundary), removes custom Lua, more idiomatic Fastify. Keep two-tier design (IP pre-auth + user post-auth). May also resolve recurring CodeQL `js/missing-rate-limiting` false positives on federation routes. — (dev feedback 2026-02-25)
+- [x] [P2] Sliding window rate limiting — replaced fixed-window Lua script with sliding-window-log algorithm using Redis sorted sets; fixes burst-at-boundary 2x rate vulnerability; kept custom two-tier design (IP pre-auth + user post-auth) — (dev feedback 2026-02-25; done 2026-02-25)
 
 ### QA / Testing
 
@@ -155,9 +155,9 @@
 
 - [x] Discovery: WebFinger + `.well-known` endpoints — (architecture doc Track 5; done 2026-02-24)
 - [x] Identity: `did:web` DID document resolution — per-user Ed25519 keypairs, native crypto (no jose needed) — (architecture doc Track 5; done 2026-02-24)
-- [ ] [P2] Split `getOrInitConfig()` to separate public-key-only read from private-key read — reduces private key exposure surface — (Codex review 2026-02-24, deferred to Phase 3)
+- [x] [P2] Split `getOrInitConfig()` to separate public-key-only read from private-key read — reduces private key exposure surface — (Codex review 2026-02-24, deferred to Phase 3; done 2026-02-25)
 - [ ] [P3] Key rotation mechanism for user keypairs — (architecture doc Track 5, deferred to Phase 7)
-- [ ] [P2] Inbound DID resolution hardening — validate remote DID documents fetched during federation — (Codex review 2026-02-24, deferred to Phase 3)
+- [x] [P2] Inbound metadata fetch hardening — SSRF protection, domain mismatch, size limits, shared `fetchAndValidateMetadata()` helper — (Codex review 2026-02-24, deferred to Phase 3; done 2026-02-25)
 - [x] Trust establishment — bilateral trust with HTTP signatures, trust service, public S2S + admin routes — (architecture doc Track 5; done 2026-02-24)
 - [x] [P2] Federation signature verification middleware — protect all federation endpoints with signature-based auth — (DEVLOG 2026-02-24, done 2026-02-24)
 - [x] Sim-sub enforcement (BSAP) — fingerprint service, sim-sub service (local+remote check), S2S endpoint, admin routes, submission flow integration, all 3 API surfaces — (architecture doc Track 5; done 2026-02-24)

@@ -48,9 +48,11 @@ vi.mock('@colophony/db', () => ({
 }));
 
 const mockGetOrInitConfig = vi.fn();
+const mockGetPublicConfig = vi.fn();
 vi.mock('./federation.service.js', () => ({
   federationService: {
     getOrInitConfig: (...args: unknown[]) => mockGetOrInitConfig(...args),
+    getPublicConfig: (...args: unknown[]) => mockGetPublicConfig(...args),
   },
 }));
 
@@ -130,9 +132,8 @@ describe('hub-client.service', () => {
 
   describe('registerWithHub', () => {
     it('registers with hub on startup', async () => {
-      mockGetOrInitConfig.mockResolvedValueOnce({
+      mockGetPublicConfig.mockResolvedValueOnce({
         publicKey: testKeypair.publicKey,
-        privateKey: testKeypair.privateKey,
         keyId: 'local.example.com#main',
       });
 
@@ -165,9 +166,8 @@ describe('hub-client.service', () => {
     });
 
     it('stores hub attestation after registration', async () => {
-      mockGetOrInitConfig.mockResolvedValueOnce({
+      mockGetPublicConfig.mockResolvedValueOnce({
         publicKey: testKeypair.publicKey,
-        privateKey: testKeypair.privateKey,
         keyId: 'local.example.com#main',
       });
 

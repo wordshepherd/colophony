@@ -333,4 +333,95 @@ describe('rate-limit plugin', () => {
       );
     });
   });
+
+  describe('sliding window behavior', () => {
+    it('stays blocked at half window (entries still within window)', async () => {
+      const { app: testApp, redis: testRedis } = await buildApp({
+        RATE_LIMIT_DEFAULT_MAX: 3,
+      });
+
+      // Send max requests
+      for (let i = 0; i < 3; i++) {
+        const r = await testApp.inject({ method: 'GET', url: '/api/test' });
+        expect(r.statusCode).toBe(200);
+      }
+
+      // Advance clock by half window (30s) — entries are still within 60s window
+      vi.useFakeTimers();
+      vi.setSystemTime(Date.now() + 30_000);
+
+      const response = await testApp.inject({
+        method: 'GET',
+        url: '/api/test',
+      });
+      expect(response.statusCode).toBe(429);
+
+      vi.useRealTimers();
+      await testApp.close();
+      await testRedis.flushall();
+    });
+
+    it('allows requests after full window expires', async () => {
+      const { app: testApp, redis: testRedis } = await buildApp({
+        RATE_LIMIT_DEFAULT_MAX: 3,
+        RATE_LIMIT_WINDOW_SECONDS: 1, // 1-second window for faster test
+      });
+
+      // Send max requests at t=0
+      for (let i = 0; i < 3; i++) {
+        const r = await testApp.inject({ method: 'GET', url: '/api/test' });
+        expect(r.statusCode).toBe(200);
+      }
+
+      // Verify 4th is blocked
+      const blocked = await testApp.inject({
+        method: 'GET',
+        url: '/api/test',
+      });
+      expect(blocked.statusCode).toBe(429);
+
+      // Advance past full window (1.1s > 1s window)
+      vi.useFakeTimers();
+      vi.setSystemTime(Date.now() + 1100);
+
+      const response = await testApp.inject({
+        method: 'GET',
+        url: '/api/test',
+      });
+      expect(response.statusCode).toBe(200);
+
+      vi.useRealTimers();
+      await testApp.close();
+      await testRedis.flushall();
+    });
+
+    it('burst at boundary does not allow 2x rate (sliding window fix)', async () => {
+      const { app: testApp, redis: testRedis } = await buildApp({
+        RATE_LIMIT_DEFAULT_MAX: 3,
+        RATE_LIMIT_WINDOW_SECONDS: 60,
+      });
+
+      // Send max requests at t=55s (simulate late-window burst)
+      vi.useFakeTimers({ now: 55_000 });
+
+      for (let i = 0; i < 3; i++) {
+        const r = await testApp.inject({ method: 'GET', url: '/api/test' });
+        expect(r.statusCode).toBe(200);
+      }
+
+      // Advance to t=61s — with fixed-window this would reset, but sliding window
+      // keeps entries from t=55s since they're within the 60s window at t=61s
+      vi.setSystemTime(61_000);
+
+      const response = await testApp.inject({
+        method: 'GET',
+        url: '/api/test',
+      });
+      expect(response.statusCode).toBe(429);
+
+      vi.useRealTimers();
+      await testApp.close();
+      await testRedis.flushall();
+    });
+  });
 });

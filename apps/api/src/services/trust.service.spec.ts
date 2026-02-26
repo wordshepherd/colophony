@@ -57,9 +57,11 @@ vi.mock('./audit.service.js', () => ({
 }));
 
 const mockGetOrInitConfig = vi.fn();
+const mockGetPublicConfig = vi.fn();
 vi.mock('./federation.service.js', () => ({
   federationService: {
     getOrInitConfig: (...args: unknown[]) => mockGetOrInitConfig(...args),
+    getPublicConfig: (...args: unknown[]) => mockGetPublicConfig(...args),
   },
 }));
 
@@ -74,6 +76,37 @@ vi.mock('../federation/http-signatures.js', () => ({
 
 const mockFetch = vi.fn();
 vi.stubGlobal('fetch', mockFetch);
+
+// Mock dns.promises — SSRF checks are skipped in test but we still mock for explicitness
+vi.mock('node:dns', () => ({
+  default: {
+    promises: {
+      resolve4: vi.fn().mockResolvedValue(['93.184.216.34']),
+      resolve6: vi.fn().mockResolvedValue([]),
+    },
+  },
+}));
+
+/**
+ * Create a mock Response object compatible with fetchAndValidateMetadata's
+ * streaming body reader. Falls back to text() when body is null.
+ */
+function mockFetchResponse(json: unknown, opts: { ok?: boolean } = {}) {
+  const bodyText = JSON.stringify(json);
+  return {
+    ok: opts.ok ?? true,
+    status: opts.ok === false ? 500 : 200,
+    headers: {
+      get: (name: string) => {
+        if (name.toLowerCase() === 'content-length')
+          return String(bodyText.length);
+        return null;
+      },
+    },
+    body: null, // No streaming body — will use text() fallback
+    text: async () => bodyText,
+  };
+}
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -183,10 +216,9 @@ describe('trust.service', () => {
 
   describe('fetchRemoteMetadata', () => {
     it('returns preview for valid domain', async () => {
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => sampleMetadataResponse,
-      });
+      mockFetch.mockResolvedValueOnce(
+        mockFetchResponse(sampleMetadataResponse),
+      );
 
       const result =
         await trustService.fetchRemoteMetadata('remote.example.com');
@@ -205,13 +237,52 @@ describe('trust.service', () => {
     });
 
     it('throws on invalid response', async () => {
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({ invalid: true }),
-      });
+      mockFetch.mockResolvedValueOnce(mockFetchResponse({ invalid: true }));
 
       await expect(
         trustService.fetchRemoteMetadata('bad.example.com'),
+      ).rejects.toThrow('Failed to fetch metadata');
+    });
+
+    it('rejects domain mismatch', async () => {
+      mockFetch.mockResolvedValueOnce(
+        mockFetchResponse({
+          ...sampleMetadataResponse,
+          domain: 'evil.example.com',
+        }),
+      );
+
+      await expect(
+        trustService.fetchRemoteMetadata('good.example.com'),
+      ).rejects.toThrow('Failed to fetch metadata');
+    });
+
+    it('rejects oversized response', async () => {
+      const oversizedBody = JSON.stringify(sampleMetadataResponse);
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        headers: {
+          get: (name: string) => {
+            if (name.toLowerCase() === 'content-length') return '2000000';
+            return null;
+          },
+        },
+        body: null,
+        text: async () => oversizedBody,
+      });
+
+      await expect(
+        trustService.fetchRemoteMetadata('remote.example.com'),
+      ).rejects.toThrow('Failed to fetch metadata');
+    });
+
+    it('rejects redirects', async () => {
+      // redirect: 'error' causes fetch to throw on redirect
+      mockFetch.mockRejectedValueOnce(new TypeError('redirect mode is error'));
+
+      await expect(
+        trustService.fetchRemoteMetadata('redirect.example.com'),
       ).rejects.toThrow('Failed to fetch metadata');
     });
   });
@@ -219,10 +290,7 @@ describe('trust.service', () => {
   describe('initiateTrust', () => {
     it('creates pending_outbound peer and sends POST', async () => {
       mockFetch
-        .mockResolvedValueOnce({
-          ok: true,
-          json: async () => sampleMetadataResponse,
-        })
+        .mockResolvedValueOnce(mockFetchResponse(sampleMetadataResponse))
         .mockResolvedValueOnce({ ok: true });
 
       mockGetOrInitConfig.mockResolvedValueOnce({
@@ -255,10 +323,9 @@ describe('trust.service', () => {
     });
 
     it('throws for duplicate domain', async () => {
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => sampleMetadataResponse,
-      });
+      mockFetch.mockResolvedValueOnce(
+        mockFetchResponse(sampleMetadataResponse),
+      );
 
       mockGetOrInitConfig.mockResolvedValueOnce({
         publicKey: testKeypair.publicKey,
@@ -282,10 +349,9 @@ describe('trust.service', () => {
   describe('handleInboundTrustRequest', () => {
     it('verifies signature and creates pending_inbound peers', async () => {
       // Mock remote metadata fetch for key validation
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => sampleMetadataResponse,
-      });
+      mockFetch.mockResolvedValueOnce(
+        mockFetchResponse(sampleMetadataResponse),
+      );
 
       mockVerifyFederationSignature.mockResolvedValueOnce({
         valid: true,
@@ -322,10 +388,9 @@ describe('trust.service', () => {
 
     it('rejects invalid signature', async () => {
       // Mock remote metadata fetch for key validation
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => sampleMetadataResponse,
-      });
+      mockFetch.mockResolvedValueOnce(
+        mockFetchResponse(sampleMetadataResponse),
+      );
 
       mockVerifyFederationSignature.mockResolvedValueOnce({
         valid: false,
@@ -552,15 +617,14 @@ describe('trust.service', () => {
       const token = await makeAttestation();
 
       // Mock hub metadata fetch
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({
+      mockFetch.mockResolvedValueOnce(
+        mockFetchResponse({
           ...sampleMetadataResponse,
           domain: 'hub.example.com',
           publicKey: hubKeypair.publicKey,
           keyId: 'hub.example.com#main',
         }),
-      });
+      );
 
       // Mock org query — two orgs, both opted in
       dbSelectResult = [
@@ -584,15 +648,14 @@ describe('trust.service', () => {
 
     it('rejects invalid attestation JWT', async () => {
       // Mock hub metadata fetch
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({
+      mockFetch.mockResolvedValueOnce(
+        mockFetchResponse({
           ...sampleMetadataResponse,
           domain: 'hub.example.com',
           publicKey: hubKeypair.publicKey,
           keyId: 'hub.example.com#main',
         }),
-      });
+      );
 
       await expect(
         trustService.handleHubAttestedTrust(baseEnv, {
@@ -608,15 +671,14 @@ describe('trust.service', () => {
       });
 
       // Mock hub metadata fetch
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({
+      mockFetch.mockResolvedValueOnce(
+        mockFetchResponse({
           ...sampleMetadataResponse,
           domain: 'hub.example.com',
           publicKey: hubKeypair.publicKey,
           keyId: 'hub.example.com#main',
         }),
-      });
+      );
 
       await expect(
         trustService.handleHubAttestedTrust(baseEnv, {
@@ -636,6 +698,147 @@ describe('trust.service', () => {
           hubDomain: 'evil.example.com',
         }),
       ).rejects.toThrow('Untrusted hub domain');
+    });
+  });
+
+  describe('SSRF protection', () => {
+    it('rejects private IPv4 in production', async () => {
+      const dnsModule = await import('node:dns');
+      vi.spyOn(dnsModule.default.promises, 'resolve4').mockResolvedValueOnce([
+        '192.168.1.1',
+      ]);
+
+      // Temporarily set NODE_ENV to production for this test
+      const original = process.env.NODE_ENV;
+      process.env.NODE_ENV = 'production';
+      try {
+        await expect(
+          trustService.fetchRemoteMetadata('internal.example.com'),
+        ).rejects.toThrow('Failed to fetch metadata');
+      } finally {
+        process.env.NODE_ENV = original;
+      }
+    });
+
+    it('rejects private IPv6 in production', async () => {
+      const dnsModule = await import('node:dns');
+      vi.spyOn(dnsModule.default.promises, 'resolve4').mockResolvedValueOnce(
+        [],
+      );
+      vi.spyOn(dnsModule.default.promises, 'resolve6').mockResolvedValueOnce([
+        '::1',
+      ]);
+
+      const original = process.env.NODE_ENV;
+      process.env.NODE_ENV = 'production';
+      try {
+        await expect(
+          trustService.fetchRemoteMetadata('loopback.example.com'),
+        ).rejects.toThrow('Failed to fetch metadata');
+      } finally {
+        process.env.NODE_ENV = original;
+      }
+    });
+
+    it('rejects localhost (127.0.0.1) in production', async () => {
+      const dnsModule = await import('node:dns');
+      vi.spyOn(dnsModule.default.promises, 'resolve4').mockResolvedValueOnce([
+        '127.0.0.1',
+      ]);
+
+      const original = process.env.NODE_ENV;
+      process.env.NODE_ENV = 'production';
+      try {
+        await expect(
+          trustService.fetchRemoteMetadata('localhost.example.com'),
+        ).rejects.toThrow('Failed to fetch metadata');
+      } finally {
+        process.env.NODE_ENV = original;
+      }
+    });
+
+    it('skips SSRF check in development', async () => {
+      const dnsModule = await import('node:dns');
+      vi.spyOn(dnsModule.default.promises, 'resolve4').mockResolvedValueOnce([
+        '192.168.1.1',
+      ]);
+
+      const original = process.env.NODE_ENV;
+      process.env.NODE_ENV = 'development';
+      try {
+        // Should proceed to fetch (which will fail on network, not SSRF)
+        mockFetch.mockResolvedValueOnce(
+          mockFetchResponse(sampleMetadataResponse),
+        );
+
+        const result =
+          await trustService.fetchRemoteMetadata('remote.example.com');
+        expect(result.domain).toBe('remote.example.com');
+      } finally {
+        process.env.NODE_ENV = original;
+      }
+    });
+  });
+
+  describe('handleInboundTrustRequest domain mismatch', () => {
+    it('rejects domain mismatch in metadata', async () => {
+      // Metadata fetch returns mismatched domain
+      mockFetch.mockResolvedValueOnce(
+        mockFetchResponse({
+          ...sampleMetadataResponse,
+          domain: 'evil.example.com',
+        }),
+      );
+
+      await expect(
+        trustService.handleInboundTrustRequest(
+          baseEnv,
+          {
+            instanceUrl: 'https://remote.example.com',
+            domain: 'remote.example.com',
+            publicKey: testKeypair.publicKey,
+            keyId: 'remote.example.com#main',
+            requestedCapabilities: {},
+            protocolVersion: '1.0',
+          },
+          { signature: 'test', 'signature-input': 'test' },
+          'POST',
+          'https://local.example.com/federation/trust',
+          '{}',
+        ),
+      ).rejects.toThrow('Cannot verify remote identity');
+    });
+  });
+
+  describe('handleHubAttestedTrust domain mismatch', () => {
+    const hubKeypairForMismatch = crypto.generateKeyPairSync('ed25519', {
+      publicKeyEncoding: { type: 'spki', format: 'pem' },
+      privateKeyEncoding: { type: 'pkcs8', format: 'pem' },
+    });
+
+    it('rejects hub domain mismatch in metadata', async () => {
+      // Hub metadata returns mismatched domain
+      mockFetch.mockResolvedValueOnce(
+        mockFetchResponse({
+          ...sampleMetadataResponse,
+          domain: 'wrong-hub.example.com',
+          publicKey: hubKeypairForMismatch.publicKey,
+          keyId: 'wrong-hub.example.com#main',
+        }),
+      );
+
+      await expect(
+        trustService.handleHubAttestedTrust(baseEnv, {
+          instanceUrl: 'https://peer.example.com',
+          domain: 'peer.example.com',
+          publicKey: testKeypair.publicKey,
+          keyId: 'peer.example.com#main',
+          hubDomain: 'hub.example.com',
+          attestationToken: 'unused',
+          requestedCapabilities: {},
+          protocolVersion: '1.0',
+        }),
+      ).rejects.toThrow('Cannot fetch hub metadata');
     });
   });
 
