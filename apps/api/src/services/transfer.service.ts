@@ -8,6 +8,7 @@ import {
   manuscriptVersions,
   files,
   pieceTransfers,
+  inboundTransfers,
   trustedPeers,
   users,
   eq,
@@ -530,6 +531,22 @@ export const transferService = {
         })
         .returning({ id: submissions.id });
 
+      // Track inbound transfer
+      const [inboundRow] = await tx
+        .insert(inboundTransfers)
+        .values({
+          organizationId: orgId,
+          submissionId: newSubmission.id,
+          sourceDomain: peerDomain,
+          remoteTransferId: jti,
+          submitterDid: body.submitterDid,
+          contentFingerprint:
+            body.pieceMetadata.contentFingerprint ?? undefined,
+          fileManifest: body.fileManifest,
+          status: 'RECEIVED',
+        })
+        .returning({ id: inboundTransfers.id });
+
       await auditService.log(tx, {
         resource: AuditResources.TRANSFER,
         action: AuditActions.TRANSFER_INBOUND_RECEIVED,
@@ -539,10 +556,15 @@ export const transferService = {
           peerDomain,
           submitterDid: body.submitterDid,
           fileCount: body.fileManifest.length,
+          inboundTransferId: inboundRow.id,
         },
       });
 
-      return { transferId: newSubmission.id, isNew: true };
+      return {
+        transferId: newSubmission.id,
+        isNew: true,
+        inboundTransferId: inboundRow.id,
+      };
     });
 
     // Step 4: Enqueue file fetch via BullMQ (retries, exponential backoff)
@@ -560,6 +582,7 @@ export const transferService = {
               : new Date(Date.now() + 86_400_000).toISOString(),
             fileManifest: body.fileManifest,
             localSubmissionId: result.transferId,
+            inboundTransferId: result.inboundTransferId,
           });
         } catch {
           // Redis down — fall back to fire-and-forget (degraded but functional)

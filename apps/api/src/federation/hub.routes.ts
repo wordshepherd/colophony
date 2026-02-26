@@ -13,6 +13,7 @@ import {
   HubInstanceSuspendedError,
 } from '../services/hub.service.js';
 import hubAuthPlugin from './hub-auth.js';
+import federationRateLimitPlugin from './federation-rate-limit.js';
 
 /**
  * Hub S2S routes — registration (bearer token) + authenticated hub operations.
@@ -63,6 +64,7 @@ export async function registerHubRoutes(
   // Authenticated hub routes — HTTP signature via hubAuthPlugin
   await app.register(async (scope) => {
     await scope.register(hubAuthPlugin);
+    await scope.register(federationRateLimitPlugin, { env });
 
     /**
      * POST /federation/v1/hub/refresh — Refresh attestation.

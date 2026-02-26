@@ -10,6 +10,7 @@ import {
 } from '../services/transfer.service.js';
 import { auditService } from '../services/audit.service.js';
 import federationAuthPlugin from './federation-auth.js';
+import federationRateLimitPlugin from './federation-rate-limit.js';
 
 /**
  * S2S piece transfer endpoints.
@@ -30,6 +31,7 @@ export async function registerTransferRoutes(
   // Scope 1: S2S initiation (HTTP signature auth via federationAuthPlugin)
   await app.register(async (s2s) => {
     await s2s.register(federationAuthPlugin);
+    await s2s.register(federationRateLimitPlugin, { env });
 
     /**
      * POST /federation/v1/transfers/initiate

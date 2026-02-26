@@ -78,7 +78,7 @@ function mapInstanceRow(
     id: row.id,
     domain: row.domain,
     instanceUrl: row.instanceUrl,
-    status: row.status as 'active' | 'suspended' | 'revoked',
+    status: row.status,
     lastSeenAt: row.lastSeenAt,
     metadata: row.metadata,
     createdAt: row.createdAt,
@@ -319,7 +319,7 @@ export const hubService = {
    * List registered instances (admin).
    */
   async listInstances(filter?: {
-    status?: string;
+    status?: 'active' | 'suspended' | 'revoked';
   }): Promise<HubRegisteredInstance[]> {
     const query = filter?.status
       ? db

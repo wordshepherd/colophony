@@ -412,7 +412,7 @@ export const trustService = {
    * for all non-opted-out organizations.
    */
   async handleInboundTrustRequest(
-    _env: Env,
+    env: Env,
     request: TrustRequest,
     sigHeaders: Record<string, string>,
     method: string,
@@ -452,6 +452,15 @@ export const trustService = {
       throw new TrustSignatureVerificationError('Invalid signature');
     }
 
+    // Check if federation is in open mode — auto-accept if so
+    let isOpenMode = false;
+    try {
+      const config = await federationService.getPublicConfig(env);
+      isOpenMode = config?.mode === 'open';
+    } catch {
+      // Config not available — fall back to default (pending_inbound)
+    }
+
     // Query non-opted-out org IDs via superuser db (read-only, no tenant data)
     const orgs = await db
       .select({ id: organizations.id })
@@ -459,8 +468,12 @@ export const trustService = {
       .where(eq(organizations.federationOptedOut, false));
 
     const orgIds: string[] = [];
+    const capabilities = (request.requestedCapabilities ?? {}) as Record<
+      string,
+      boolean
+    >;
 
-    // For each org, create a pending_inbound peer if not exists
+    // For each org, create peer — auto-accept in open mode, pending_inbound otherwise
     for (const org of orgs) {
       try {
         await withRls({ orgId: org.id }, async (tx) => {
@@ -473,27 +486,52 @@ export const trustService = {
 
           if (existing) return; // Skip — already have a relationship
 
-          await tx.insert(trustedPeers).values({
-            organizationId: org.id,
-            domain: request.domain,
-            instanceUrl: request.instanceUrl,
-            publicKey: request.publicKey,
-            keyId: request.keyId,
-            grantedCapabilities: {},
-            status: 'pending_inbound',
-            initiatedBy: 'remote',
-            protocolVersion: request.protocolVersion,
-          });
-
-          await auditService.log(tx, {
-            resource: AuditResources.FEDERATION,
-            action: AuditActions.FEDERATION_TRUST_RECEIVED,
-            organizationId: org.id,
-            newValue: {
+          if (isOpenMode) {
+            await tx.insert(trustedPeers).values({
+              organizationId: org.id,
               domain: request.domain,
-              capabilities: request.requestedCapabilities,
-            },
-          });
+              instanceUrl: request.instanceUrl,
+              publicKey: request.publicKey,
+              keyId: request.keyId,
+              grantedCapabilities: capabilities,
+              status: 'active',
+              initiatedBy: 'remote',
+              protocolVersion: request.protocolVersion,
+              lastVerifiedAt: new Date(),
+            });
+
+            await auditService.log(tx, {
+              resource: AuditResources.FEDERATION,
+              action: AuditActions.FEDERATION_TRUST_AUTO_ACCEPTED,
+              organizationId: org.id,
+              newValue: {
+                domain: request.domain,
+                capabilities,
+              },
+            });
+          } else {
+            await tx.insert(trustedPeers).values({
+              organizationId: org.id,
+              domain: request.domain,
+              instanceUrl: request.instanceUrl,
+              publicKey: request.publicKey,
+              keyId: request.keyId,
+              grantedCapabilities: {},
+              status: 'pending_inbound',
+              initiatedBy: 'remote',
+              protocolVersion: request.protocolVersion,
+            });
+
+            await auditService.log(tx, {
+              resource: AuditResources.FEDERATION,
+              action: AuditActions.FEDERATION_TRUST_RECEIVED,
+              organizationId: org.id,
+              newValue: {
+                domain: request.domain,
+                capabilities: request.requestedCapabilities,
+              },
+            });
+          }
 
           orgIds.push(org.id);
         });
