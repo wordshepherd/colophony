@@ -49,6 +49,8 @@ export function createTestEnv(overrides?: Partial<Env>): Env {
     DEV_AUTH_BYPASS: false,
     FEDERATION_DOMAIN: undefined,
     FEDERATION_ENABLED: false,
+    FEDERATION_RATE_LIMIT_MAX: 60,
+    FEDERATION_RATE_LIMIT_WINDOW_SECONDS: 60,
     INNGEST_DEV: false,
     ...overrides,
   };

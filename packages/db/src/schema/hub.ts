@@ -9,6 +9,7 @@ import {
   unique,
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
+import { hubInstanceStatusEnum } from "./enums";
 
 /**
  * Hub-registered instances — global table for managed hosting hub.
@@ -28,7 +29,7 @@ export const hubRegisteredInstances = pgTable(
     attestationExpiresAt: timestamp("attestation_expires_at", {
       withTimezone: true,
     }),
-    status: varchar("status", { length: 20 }).notNull().default("active"),
+    status: hubInstanceStatusEnum("status").notNull().default("active"),
     lastSeenAt: timestamp("last_seen_at", { withTimezone: true }),
     metadata: jsonb("metadata")
       .$type<Record<string, unknown>>()

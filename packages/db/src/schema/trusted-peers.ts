@@ -11,7 +11,7 @@ import {
   unique,
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
-import { peerTrustStatusEnum } from "./enums";
+import { peerTrustStatusEnum, trustInitiatorEnum } from "./enums";
 import { organizations } from "./organizations";
 
 export const trustedPeers = pgTable(
@@ -30,9 +30,7 @@ export const trustedPeers = pgTable(
       .notNull()
       .default(sql`'{}'::jsonb`),
     status: peerTrustStatusEnum("status").notNull().default("pending_outbound"),
-    initiatedBy: varchar("initiated_by", { length: 10 })
-      .notNull()
-      .$type<"local" | "remote">(),
+    initiatedBy: trustInitiatorEnum("initiated_by").notNull(),
     protocolVersion: varchar("protocol_version", { length: 20 })
       .notNull()
       .default("1.0"),

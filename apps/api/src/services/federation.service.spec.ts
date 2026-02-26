@@ -105,6 +105,8 @@ const baseEnv: Env = {
   DEV_AUTH_BYPASS: false,
   FEDERATION_ENABLED: true,
   FEDERATION_DOMAIN: 'magazine.example',
+  FEDERATION_RATE_LIMIT_MAX: 60,
+  FEDERATION_RATE_LIMIT_WINDOW_SECONDS: 60,
   INNGEST_DEV: false,
 };
 

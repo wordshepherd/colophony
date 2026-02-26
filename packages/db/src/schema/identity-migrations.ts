@@ -10,7 +10,10 @@ import {
   uniqueIndex,
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
-import { identityMigrationStatusEnum } from "./enums";
+import {
+  identityMigrationDirectionEnum,
+  identityMigrationStatusEnum,
+} from "./enums";
 import { users } from "./users";
 import { organizations } from "./organizations";
 
@@ -24,7 +27,7 @@ export const identityMigrations = pgTable(
     organizationId: uuid("organization_id").references(() => organizations.id, {
       onDelete: "cascade",
     }),
-    direction: varchar("direction", { length: 10 }).notNull(),
+    direction: identityMigrationDirectionEnum("direction").notNull(),
     peerDomain: varchar("peer_domain", { length: 512 }).notNull(),
     peerInstanceUrl: varchar("peer_instance_url", { length: 1024 }),
     userDid: varchar("user_did", { length: 512 }),
