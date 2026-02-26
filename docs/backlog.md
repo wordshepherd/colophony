@@ -220,7 +220,7 @@
 ## Cross-Cutting — Relay (Notifications & Communications)
 
 - [x] Email templates + provider integration (SMTP + SendGrid) — adapters, MJML templates, BullMQ queue/worker, notification preferences, Inngest functions — (architecture doc, Relay; done 2026-02-26)
-- [ ] Notification preferences frontend — UI for users to manage email opt-in/opt-out per event type — (DEVLOG 2026-02-26)
+- [x] Notification preferences frontend — UI for users to manage email opt-in/opt-out per event type — (DEVLOG 2026-02-26; done 2026-02-26)
 - [ ] Webhook delivery system (outbound) — (architecture doc, Relay)
 - [ ] In-app notification center — (architecture doc, Relay)
 
