@@ -36,6 +36,7 @@ import {
   Plus,
   Settings as SettingsIcon,
 } from "lucide-react";
+import { NotificationPreferencesCard } from "@/components/settings/notification-preferences-card";
 
 export default function SettingsPage() {
   const { user } = useAuth();
@@ -196,6 +197,9 @@ export default function SettingsPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Notification Preferences */}
+      <NotificationPreferencesCard />
 
       {/* Privacy & Data */}
       <Card>
