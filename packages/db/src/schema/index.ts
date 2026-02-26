@@ -25,4 +25,5 @@ export * from "./transfers";
 export * from "./identity-migrations";
 export * from "./hub";
 export * from "./notifications";
+export * from "./webhook-endpoints";
 export * from "./relations";

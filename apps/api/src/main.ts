@@ -30,6 +30,8 @@ import {
   stopTransferFetchWorker,
   startEmailWorker,
   stopEmailWorker,
+  startWebhookWorker,
+  stopWebhookWorker,
 } from './workers/index.js';
 import {
   closeFileScanQueue,
@@ -38,6 +40,7 @@ import {
   closeOutboxPollerQueue,
   closeTransferFetchQueue,
   closeEmailQueue,
+  closeWebhookQueue,
 } from './queues/index.js';
 import { registerInngestRoutes } from './inngest/serve.js';
 import { registerFederationDiscoveryRoutes } from './federation/discovery.routes.js';
@@ -314,6 +317,10 @@ async function start(): Promise<void> {
     app.log.info('Email worker started');
   }
 
+  // Start webhook delivery worker
+  startWebhookWorker(env);
+  app.log.info('Webhook delivery worker started');
+
   // Hub registration (fire-and-forget — don't block startup)
   if (env.HUB_DOMAIN && env.HUB_REGISTRATION_TOKEN) {
     hubClientService.registerWithHub(env).catch((err) => {
@@ -345,6 +352,8 @@ async function start(): Promise<void> {
       await closeTransferFetchQueue();
       await stopEmailWorker();
       await closeEmailQueue();
+      await stopWebhookWorker();
+      await closeWebhookQueue();
       // TODO: Close DB pool when connection management is centralized
       // TODO: Close Redis connections
       app.log.info('Server closed');

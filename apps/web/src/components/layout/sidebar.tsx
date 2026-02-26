@@ -19,6 +19,7 @@ import {
   LayoutDashboard,
   Library,
   Settings,
+  Webhook,
 } from "lucide-react";
 
 const navigation = [
@@ -49,6 +50,11 @@ const adminNavigation = [
     name: "Organization",
     href: "/organizations/settings",
     icon: Building2,
+  },
+  {
+    name: "Webhooks",
+    href: "/webhooks",
+    icon: Webhook,
   },
 ];
 
