@@ -57,7 +57,7 @@
 ### Housekeeping
 
 - [x] Clean up v1 components (`_v1/` directory) — (DEVLOG 2026-02-15; done 2026-02-17)
-- [ ] Consider Playwright tsconfig extending web for E2E type-checking — nice-to-have — (DEVLOG 2026-02-15)
+- [x] Consider Playwright tsconfig extending web for E2E type-checking — nice-to-have — (DEVLOG 2026-02-15; done 2026-02-26)
 - [x] Rewrite `docs/testing.md` for v2 — still references v1 patterns (Prisma, NestJS, old test counts/tiers); Playwright section updated but rest is stale — (DEVLOG 2026-02-18; done 2026-02-18)
 - [x] Migrate `forwardRef` → ref-as-prop in 19 shadcn/ui components — React 19 deprecation — (DEVLOG 2026-02-16; done 2026-02-17)
 - [x] Migrate `Context.Provider` → `Context` — React 19 deprecation — (DEVLOG 2026-02-16; done 2026-02-17)
