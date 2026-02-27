@@ -1,6 +1,6 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { toKebabCase } from "./utils.js";
+import { toKebabCase, toPluginId } from "./utils.js";
 import type { PluginAnswers } from "./prompts.js";
 import { generatePackageJson } from "./templates/package-json.js";
 import { generateTsConfig } from "./templates/tsconfig.js";
@@ -20,8 +20,8 @@ export function buildFileMap(
   answers: PluginAnswers,
   options?: { cwd?: string },
 ): ScaffoldInput {
-  const kebab = toKebabCase(answers.name);
-  const dirName = `colophony-plugin-${kebab}`;
+  const safeId = toPluginId(answers.name);
+  const dirName = `colophony-plugin-${safeId}`;
   const cwd = options?.cwd ?? process.cwd();
   const outputDir = path.join(cwd, dirName);
 
@@ -67,9 +67,18 @@ export async function scaffoldProject(input: ScaffoldInput): Promise<void> {
     throw new Error(`Directory already exists: ${input.outputDir}`);
   }
 
-  for (const [relativePath, content] of Object.entries(input.files)) {
-    const fullPath = path.join(input.outputDir, relativePath);
-    await fs.mkdir(path.dirname(fullPath), { recursive: true });
-    await fs.writeFile(fullPath, content, "utf-8");
+  const dirs = new Set(
+    Object.keys(input.files).map((p) =>
+      path.dirname(path.join(input.outputDir, p)),
+    ),
+  );
+  for (const dir of dirs) {
+    await fs.mkdir(dir, { recursive: true });
   }
+
+  await Promise.all(
+    Object.entries(input.files).map(([relativePath, content]) =>
+      fs.writeFile(path.join(input.outputDir, relativePath), content, "utf-8"),
+    ),
+  );
 }

@@ -6,6 +6,15 @@ interface AdapterInput {
   adapterType: AdapterKind;
 }
 
+const NOT_IMPLEMENTED_ERROR = `
+class NotImplementedError extends Error {
+  constructor(method: string) {
+    super(\`Not implemented: \${method}\`);
+    this.name = "NotImplementedError";
+  }
+}
+`;
+
 const ADAPTER_TEMPLATES: Record<AdapterKind, (pascal: string) => string> = {
   email: (
     pascal,
@@ -30,7 +39,7 @@ export class ${pascal}Adapter implements EmailAdapter {
 
   async send(options: SendEmailOptions): Promise<SendEmailResult> {
     // TODO: Implement email sending
-    throw new Error("Not implemented: send()");
+    throw new NotImplementedError(" send()");
   }
 
   // Optional: implement sendBulk for batch email sending
@@ -75,22 +84,22 @@ export class ${pascal}Adapter implements PaymentAdapter {
 
   async createCheckoutSession(params: CheckoutSessionParams): Promise<CheckoutSessionResult> {
     // TODO: Implement checkout session creation
-    throw new Error("Not implemented: createCheckoutSession()");
+    throw new NotImplementedError(" createCheckoutSession()");
   }
 
   async verifyWebhook(headers: Record<string, string>, body: string): Promise<PaymentWebhookEvent> {
     // TODO: Verify webhook signature and parse event
-    throw new Error("Not implemented: verifyWebhook()");
+    throw new NotImplementedError(" verifyWebhook()");
   }
 
   async handleWebhookEvent(event: PaymentWebhookEvent): Promise<WebhookHandleResult> {
     // TODO: Handle payment events
-    throw new Error("Not implemented: handleWebhookEvent()");
+    throw new NotImplementedError(" handleWebhookEvent()");
   }
 
   async refund(paymentId: string, amount?: number): Promise<RefundResult> {
     // TODO: Implement refund
-    throw new Error("Not implemented: refund()");
+    throw new NotImplementedError(" refund()");
   }
 
   async healthCheck(): Promise<AdapterHealthResult> {
@@ -127,32 +136,32 @@ export class ${pascal}Adapter implements StorageAdapter {
 
   async upload(options: UploadOptions): Promise<UploadResult> {
     // TODO: Implement file upload
-    throw new Error("Not implemented: upload()");
+    throw new NotImplementedError(" upload()");
   }
 
   async download(key: string): Promise<Readable> {
     // TODO: Implement file download
-    throw new Error("Not implemented: download()");
+    throw new NotImplementedError(" download()");
   }
 
   async delete(key: string): Promise<void> {
     // TODO: Implement file deletion
-    throw new Error("Not implemented: delete()");
+    throw new NotImplementedError(" delete()");
   }
 
   async exists(key: string): Promise<boolean> {
     // TODO: Implement existence check
-    throw new Error("Not implemented: exists()");
+    throw new NotImplementedError(" exists()");
   }
 
   async getSignedUrl(key: string, expiresInSeconds?: number): Promise<string> {
     // TODO: Implement signed URL generation
-    throw new Error("Not implemented: getSignedUrl()");
+    throw new NotImplementedError(" getSignedUrl()");
   }
 
   async move(sourceKey: string, destinationKey: string): Promise<void> {
     // TODO: Implement file move
-    throw new Error("Not implemented: move()");
+    throw new NotImplementedError(" move()");
   }
 
   async healthCheck(): Promise<AdapterHealthResult> {
@@ -192,22 +201,22 @@ export class ${pascal}Adapter implements SearchAdapter {
 
   async index(document: SearchDocument): Promise<void> {
     // TODO: Implement document indexing
-    throw new Error("Not implemented: index()");
+    throw new NotImplementedError(" index()");
   }
 
   async indexBulk(documents: SearchDocument[]): Promise<void> {
     // TODO: Implement bulk indexing
-    throw new Error("Not implemented: indexBulk()");
+    throw new NotImplementedError(" indexBulk()");
   }
 
   async search(query: SearchQuery): Promise<SearchResult> {
     // TODO: Implement search
-    throw new Error("Not implemented: search()");
+    throw new NotImplementedError(" search()");
   }
 
   async remove(documentId: string, index: string): Promise<void> {
     // TODO: Implement document removal
-    throw new Error("Not implemented: remove()");
+    throw new NotImplementedError(" remove()");
   }
 
   async healthCheck(): Promise<AdapterHealthResult> {
@@ -224,5 +233,11 @@ export class ${pascal}Adapter implements SearchAdapter {
 export function generateAdapterClass(input: AdapterInput): string {
   const pascal = toPascalCase(input.name);
   const template = ADAPTER_TEMPLATES[input.adapterType];
-  return template(pascal);
+  const code = template(pascal);
+  // Inject NotImplementedError after the last import line
+  const lastImportIdx = code.lastIndexOf("import ");
+  const insertIdx = code.indexOf("\n", lastImportIdx) + 1;
+  return (
+    code.slice(0, insertIdx) + NOT_IMPLEMENTED_ERROR + code.slice(insertIdx)
+  );
 }

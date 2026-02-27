@@ -51,11 +51,19 @@ export async function collectAnswers(): Promise<PluginAnswers> {
         type: "text",
         name: "description",
         message: "Description",
+        validate: (v: string) =>
+          v.length > 200 ? "Description must be at most 200 characters" : true,
       },
       {
         type: "text",
         name: "author",
         message: "Author",
+        validate: (v: string) =>
+          !v.trim()
+            ? "Author is required"
+            : v.length > 100
+              ? "Author must be at most 100 characters"
+              : true,
       },
       {
         type: "text",

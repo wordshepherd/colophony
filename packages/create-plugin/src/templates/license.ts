@@ -3,13 +3,18 @@ interface LicenseInput {
   license: string;
 }
 
+function sanitizeAuthor(author: string): string {
+  return author.replace(/[<>]/g, "").trim();
+}
+
 export function generateLicense(input: LicenseInput): string {
   const year = new Date().getFullYear();
+  const author = sanitizeAuthor(input.author);
 
   if (input.license === "MIT") {
     return `MIT License
 
-Copyright (c) ${year} ${input.author}
+Copyright (c) ${year} ${author}
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -33,6 +38,6 @@ SOFTWARE.
 
   return `TODO: Add ${input.license} license text here.
 
-Copyright (c) ${year} ${input.author}
+Copyright (c) ${year} ${author}
 `;
 }
