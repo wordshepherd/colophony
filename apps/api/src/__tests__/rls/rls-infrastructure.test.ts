@@ -20,10 +20,16 @@ const RLS_TABLES = [
   'embed_tokens',
   'piece_transfers',
   'identity_migrations',
+  'journal_directory',
+  'external_submissions',
+  'correspondence',
+  'writer_profiles',
 ];
 
-/** RLS tables where app_user has full DML (excludes audit_events which is SELECT-only + function). */
-const RLS_TABLES_FULL_DML = RLS_TABLES.filter((t) => t !== 'audit_events');
+/** RLS tables where app_user has full DML (excludes audit_events which is SELECT-only + function, journal_directory which is SELECT-only). */
+const RLS_TABLES_FULL_DML = RLS_TABLES.filter(
+  (t) => t !== 'audit_events' && t !== 'journal_directory',
+);
 
 const NON_RLS_TABLES = [
   'organizations',
@@ -146,6 +152,34 @@ describe('RLS Infrastructure', () => {
           true,
         );
       }
+    });
+
+    it('should have SELECT-only on journal_directory (writes via superuser)', async () => {
+      const admin = getAdminPool();
+
+      // SELECT: yes
+      const { rows: selRows } = await admin.query<{ has_priv: boolean }>(
+        `SELECT has_table_privilege('app_user', 'journal_directory', 'SELECT') as has_priv`,
+      );
+      expect(selRows[0].has_priv).toBe(true);
+
+      // INSERT: no
+      const { rows: insRows } = await admin.query<{ has_priv: boolean }>(
+        `SELECT has_table_privilege('app_user', 'journal_directory', 'INSERT') as has_priv`,
+      );
+      expect(insRows[0].has_priv).toBe(false);
+
+      // UPDATE: no
+      const { rows: updRows } = await admin.query<{ has_priv: boolean }>(
+        `SELECT has_table_privilege('app_user', 'journal_directory', 'UPDATE') as has_priv`,
+      );
+      expect(updRows[0].has_priv).toBe(false);
+
+      // DELETE: no
+      const { rows: delRows } = await admin.query<{ has_priv: boolean }>(
+        `SELECT has_table_privilege('app_user', 'journal_directory', 'DELETE') as has_priv`,
+      );
+      expect(delRows[0].has_priv).toBe(false);
     });
 
     it('should have SELECT-only on audit_events (INSERT via function)', async () => {

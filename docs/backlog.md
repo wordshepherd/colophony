@@ -301,6 +301,148 @@
 
 ---
 
+## Track 7 — Editorial Experience (Pre-Launch)
+
+> **Status:** Not started. Addresses gaps in the editor-to-writer relationship and editorial workflow that are critical for Write or Die launch and early adopter credibility.
+
+### Correspondence & Communication
+
+- [ ] [P0] Editor-to-writer personalized correspondence — compose and send messages to individual submitters from the submission detail view; editor comments on status transitions should optionally be included in the notification email to the writer — (persona gap analysis 2026-02-27)
+- [ ] [P0] Customizable email templates — admin UI for editing MJML templates per org (acceptance, rejection, under review, custom); replace hardcoded boilerplate with org-branded voice — (persona gap analysis 2026-02-27)
+- [ ] [P1] "Revise and resubmit" status — add R&R to SubmissionStatus enum + transition map; editor sends revision notes, writer resubmits against the same submission record — (persona gap analysis 2026-02-27)
+- [ ] [P2] Embed submitter confirmation email — send a receipt email to the address provided in the embed identity step; include submission title, journal name, and a status-check token/link — (persona gap analysis 2026-02-27)
+- [ ] [P2] Embed submitter status check — public page at `/embed/status/:token` where embed submitters (no account) can check their submission status — (persona gap analysis 2026-02-27)
+
+### Editorial Workflow
+
+- [ ] [P1] Reviewer assignment per submission — assign one or more org members as readers on a submission; track who has read it; show assignment in submission detail — (persona gap analysis 2026-02-27)
+- [ ] [P1] Internal discussion threads on submissions — comment system on Hopper submissions (pre-acceptance), separate from the Slate pipeline comments (post-acceptance) — (persona gap analysis 2026-02-27)
+- [ ] [P2] Voting / scoring on submissions — readers cast votes (accept/reject/maybe + optional score); configurable per org; summary visible to editors making final decisions — (persona gap analysis 2026-02-27)
+- [ ] [P2] Blind / anonymous review mode — hide submitter identity from reviewers; admin toggle per submission period — (persona gap analysis 2026-02-27)
+- [ ] [P2] Batch operations — checkbox selection in submission queue; bulk status transitions (reject, move to review); bulk assignment — (persona gap analysis 2026-02-27)
+- [ ] [P3] Submission reading mode — distraction-free view for reading the submitted work; "next unread" navigation within the queue — (persona gap analysis 2026-02-27)
+
+### Analytics & Reporting
+
+- [ ] [P1] Submission analytics dashboard — acceptance rate, response time distribution, submissions per period, funnel (submitted → reviewed → accepted/rejected), aging submissions — (persona gap analysis 2026-02-27)
+- [ ] [P2] Publication data export — CSV/JSON export of all org submissions, with filters (date range, status, period); admin-only — (persona gap analysis 2026-02-27)
+- [ ] [P3] Response time tracking and reminders — flag submissions pending over N days (configurable); optional email reminder to editors — (persona gap analysis 2026-02-27)
+
+### UI Polish
+
+- [ ] [P1] Mobile navigation — hamburger menu or bottom nav for `< md` breakpoints; sidebar is currently `hidden md:flex` with no mobile alternative — (persona gap analysis 2026-02-27)
+- [ ] [P2] Column sorting in submission queue — sortable by title, submitter, date, status; currently hardcoded `DESC createdAt` — (persona gap analysis 2026-02-27)
+- [ ] [P2] Submission period filter in editor queue — the API supports `submissionPeriodId` filter but the UI doesn't expose a period dropdown — (persona gap analysis 2026-02-27)
+- [ ] [P3] Saved filter presets / views — editors can save named filter+sort combos for their queue — (persona gap analysis 2026-02-27)
+
+---
+
+## Track 8 — Register Data Standard & Writer Tools (Pre-Launch)
+
+> **Status:** Spec drafted (`docs/research/register-data-standard.md`). Defines the Colophony Submission Record (CSR) format, writer-as-top-level-entity architecture, correspondence tracking, and import pipeline. Prerequisite for Chill Subs integration (Track 11) and writer-side demand generation.
+
+### Data Standard
+
+- [x] [P0] Define CSR Zod schemas in `packages/types/src/csr.ts` — core CSR type hierarchy (Genre, CSRStatus, JournalRef, Correspondence, ExternalSubmission, WriterProfile, create/update schemas); full CSR v1.0 export envelope deferred to export endpoint work — (register-data-standard.md Section 2; done 2026-02-27 PR pending)
+- [x] [P0] Genre enum + schema migration — `genre` JSONB column on manuscripts + PrimaryGenre enum + Zod schema; API surface updates deferred — (register-data-standard.md Section 2.4, 4.2; done 2026-02-27 PR pending)
+- [ ] [P0] Align MigrationBundle with CSR — refactor `MigrationBundle` and `MigrationSubmissionHistory` in `packages/types/src/migration.ts` to use CSR types; fix gaps: derive `decidedAt` from submission_history, fetch `periodName` via JOIN, populate `genre` from manuscript, include `statusHistory` array — (register-data-standard.md Section 4.1; 2026-02-27)
+- [ ] [P1] CSR export endpoint — tRPC + REST endpoint for writers to download their full CSR as JSON; aggregates Colophony-native submissions (cross-org), external submissions, correspondence, and piece groupings — replaces GDPR export placeholder — (register-data-standard.md Section 2.1; 2026-02-27)
+- [ ] [P1] CSR import endpoint — ingest external submission records from JSON/CSV; flexible column mapping for CSV; piece grouping by normalized title; source tagging (`importedFrom` field) — (register-data-standard.md Section 3; 2026-02-27)
+- [ ] [P2] CSR format documentation — human-readable spec with field descriptions, examples, status mapping table, and extension points; publishable as part of project docs — (register-data-standard.md; 2026-02-27)
+
+### Correspondence Tracking
+
+- [x] [P0] `correspondence` DB table — new table for editor-writer messages linked to submissions; fields: direction (inbound/outbound), channel (email/portal/in_app), body, senderName, senderEmail, isPersonalized flag; RLS scoped to submission owner + org editors; XOR CHECK on submission_id/external_submission_id — (register-data-standard.md Section 2.8, 4.2; done 2026-02-27 PR pending)
+- [ ] [P1] Auto-capture Colophony correspondence — when Track 7 personalized correspondence ships, auto-insert records into the correspondence table; also capture status transition comments that are shared with writers — (register-data-standard.md Section 2.8; 2026-02-27)
+- [ ] [P2] Manual correspondence logging — writers can paste/enter notable editor messages (personalized rejections, encouragement letters) for external submissions; lightweight form: paste text, mark as personalized, save — (register-data-standard.md Section 2.8; 2026-02-27)
+- [ ] [P2] Correspondence in CSR export — include all correspondence records in the writer's CSR download, linked to submission records — (register-data-standard.md Section 2.8; 2026-02-27)
+
+### Writer as Top-Level Entity
+
+- [x] [P0] `external_submissions` DB table — manually-tracked non-Colophony submissions; mirrors CSR SubmissionRecord fields; scoped by `user_id` (not org); linked to `manuscripts` for piece grouping — (register-data-standard.md Section 4.2, 4.3; done 2026-02-27 PR pending)
+- [x] [P0] `journal_directory` DB table — local cache of known journals with name, externalUrl, directoryIds (JSONB), optional colophonyDomain; SELECT-only for app_user, writes via superuser pool — (register-data-standard.md Section 4.2; done 2026-02-27 PR pending)
+- [x] [P1] `writer_profiles` DB table — external platform links (Chill Subs ID, Submittable ID, etc.) per user; unique on (user_id, platform) — (register-data-standard.md Section 2.2, 4.2; done 2026-02-27 PR pending)
+- [ ] [P1] Writer workspace UI — new top-level nav section ("My Writing" or "Portfolio"); unified cross-org + external submission view, correspondence archive, piece library with submission history per piece — (register-data-standard.md Section 4.3; 2026-02-27)
+- [ ] [P1] External submission tracking UI — form to log submissions to non-Colophony journals (journal name via directory autocomplete or freetext, date sent, status, method, notes); table/kanban view matching Chill Subs UX patterns — (register-data-standard.md Section 3; 2026-02-27)
+- [ ] [P2] Cross-org submission portfolio — aggregated view: Colophony-native submissions from all orgs + external tracked submissions, unified by piece grouping — (persona gap analysis 2026-02-27)
+- [ ] [P2] Writer-facing analytics — personal response time stats, submissions pending, acceptance rate, submissions per month; derived from both native and manually-tracked records — (persona gap analysis 2026-02-27)
+- [ ] [P2] Import flows — Submittable CSV import, Chill Subs import (via directoryIds mapping), generic CSV with column mapping UI — (register-data-standard.md Section 3; 2026-02-27)
+
+### Design Decisions
+
+- [x] Personal workspace architecture — **Resolved:** Writers as top-level entities. New user-scoped tables (external_submissions, correspondence, writer_profiles, journal_directory) with RLS matching manuscripts pattern. No pseudo-org needed. — (2026-02-27)
+- [x] CSR field set — **Resolved:** Layered format (core/extended/identity/metadata) with correspondence as first-class. Genre as structured enum (primary + sub + hybrid). Piece grouping via manuscriptId. See `docs/research/register-data-standard.md` — (2026-02-27)
+- [x] External journal identity — **Resolved:** JournalRef type with freetext name (always present) + optional colophonyDomain + optional directoryIds map (keyed by platform: chillsubs, duotrope, etc.). Degrades gracefully from full federation to freetext. — (2026-02-27)
+- [x] Genre model — **Resolved:** Structured enum with primary (10 values), freetext sub for subgenres, and hybrid array for cross-genre work. Lives on manuscripts (the work), not submissions (the act of sending). — (2026-02-27)
+- [x] Community stats model — **Resolved:** Carried in CSR, distinguished as "community" (aggregated from tracker users, may over-report acceptances) vs. "editor_reported" (journal's own stats, authoritative). Following Chill Subs model. — (2026-02-27)
+
+---
+
+## Track 9 — Governance & Community Readiness (Pre-Launch)
+
+> **Status:** Not started. Non-code deliverables required for community publisher evaluation and open-source credibility.
+
+- [ ] [P0] AGPL license boundary documentation — clearly document what is AGPL (Zitadel), what license Colophony uses, obligations for self-hosters, and how the boundary works — (CLAUDE.md security checklist + persona gap analysis 2026-02-27)
+- [ ] [P0] Choose and document Colophony's own license — (persona gap analysis 2026-02-27)
+- [ ] [P1] CONTRIBUTING.md — how to contribute, development setup, PR process, code of conduct reference — (persona gap analysis 2026-02-27)
+- [ ] [P1] CODE_OF_CONDUCT.md — (persona gap analysis 2026-02-27)
+- [ ] [P1] README.md rewrite — project description in brand voice, architecture overview, quick start, screenshots, link to docs — (persona gap analysis 2026-02-27)
+- [ ] [P2] Governance model documentation — who makes decisions, how contributions are evaluated, roadmap transparency — (persona gap analysis 2026-02-27)
+- [ ] [P2] Fix deployment docs NestJS reference — deployment guide references NestJS but the system is Fastify — (persona gap analysis 2026-02-27)
+- [ ] [P3] Public instance identity page — human-readable page showing federation status, trust relationships, and governance commitments (the `.well-known/colophony` endpoint is machine-only) — (persona gap analysis 2026-02-27)
+
+---
+
+## Track 10 — Federation Admin UI (Pre-Launch)
+
+> **Status:** Not started. All federation management is currently API-only. Required before any instance other than Write or Die joins the network.
+
+- [ ] [P1] Trust management dashboard — list trusted peers with status, capabilities, last-verified; initiate/accept/reject/revoke trust relationships; preview remote instance metadata before trusting — (persona gap analysis 2026-02-27)
+- [ ] [P1] Federation status overview — current instance mode (allowlist/open/managed_hub), capabilities enabled, instance public key, DID document link — (persona gap analysis 2026-02-27)
+- [ ] [P2] Sim-sub admin UI — view sim-sub check history per submission, grant overrides, see conflict details — (persona gap analysis 2026-02-27)
+- [ ] [P2] Transfer management UI — list inbound/outbound transfers, view status, cancel pending — (persona gap analysis 2026-02-27)
+- [ ] [P2] Migration management UI — list pending migrations, approve/reject outbound, view history — (persona gap analysis 2026-02-27)
+- [ ] [P3] Hub admin UI (managed hosting only) — list registered instances, suspend/revoke, view attestation status — (persona gap analysis 2026-02-27)
+- [ ] [P3] Audit log viewer — browse audit events with filters (actor, action, resource, date range) — (persona gap analysis 2026-02-27)
+
+---
+
+## Track 11 — Chill Subs Integration (Post-Launch)
+
+> **Status:** Conceptual. Depends on Track 8 (CSR format) and the Chill Subs relationship timeline. Sequencing: relationship → data format alignment → technical integration.
+
+- [ ] CSR ↔ Chill Subs tracker data mapping — document field-level mapping between CSR format and Chill Subs submission tracker fields (title, journal, date sent, date responded, status, notes, submission method) — (strategy session 2026-02-27)
+- [ ] Chill Subs journal directory integration — if Chill Subs exposes a journal API or data feed, use it to populate the external journal identity field in CSR records; writers who track in Chill Subs and submit via Colophony get auto-linked records — (strategy session 2026-02-27)
+- [ ] Bidirectional sync protocol — define how a writer's Chill Subs tracker and Colophony submission history stay in sync; CSR as the interchange format — (strategy session 2026-02-27)
+- [ ] Partnership scope definition — technical partnership vs. data integration vs. deeper structural relationship; depends on Slushpile (Chill Subs submissions manager) architecture — (strategy session 2026-02-27)
+
+---
+
+## Track 12 — Slate & Pipeline Polish (Post-Launch)
+
+> **Status:** Not started. Quality-of-life improvements for the post-acceptance pipeline.
+
+- [ ] [P2] Contract signer auto-population — populate Documenso signers from submission/author data instead of passing `signers: []` — (codebase audit 2026-02-27)
+- [ ] [P2] Author name in CMS publish payload — `CmsPiecePayload.author` is always `null`; fetch submitter name from user record — (codebase audit 2026-02-27)
+- [ ] [P2] CMS external ID tracking — store `externalId`/`externalUrl` returned from CMS publish back on the issue/items — (codebase audit 2026-02-27)
+- [ ] [P3] Additional CMS adapters — Substack, Contentful, or other targets based on early adopter needs — (codebase audit 2026-02-27)
+- [ ] [P3] In-browser copyediting or diff view between manuscript versions — (persona gap analysis 2026-02-27)
+- [ ] [P3] READER role enforcement — define what READER can and cannot do distinct from EDITOR; currently decorative — (persona gap analysis 2026-02-27)
+- [ ] [P3] Email invitation workflow — invite by email link/token instead of requiring pre-existing Zitadel account — (persona gap analysis 2026-02-27)
+- [ ] [P3] Custom org roles beyond ADMIN/EDITOR/READER — named roles with configurable permission scopes — (persona gap analysis 2026-02-27)
+
+---
+
+## Accessibility (Cross-Cutting, Pre-Launch)
+
+- [ ] [P2] Status badges: add icons alongside color to support color-blind users — (persona gap analysis 2026-02-27)
+- [ ] [P2] File drop zones: add keyboard focus handling, `role="button"`, `tabIndex` — (persona gap analysis 2026-02-27)
+- [ ] [P2] Scan status: add `aria-live` region for screen reader announcements during file scanning — (persona gap analysis 2026-02-27)
+- [ ] [P2] Sidebar: add `aria-label` to `<nav>` element — (persona gap analysis 2026-02-27)
+- [ ] [P3] Sim-sub error message: show human-readable explanation ("This manuscript appears to be under consideration at another publication that prohibits simultaneous submissions") instead of generic tRPC error — (persona gap analysis 2026-02-27)
+
+---
+
 ## Production Deployment Checklist
 
 ### Infrastructure Setup
