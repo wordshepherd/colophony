@@ -47,6 +47,8 @@ export async function registerFederationTrustRoutes(
     }
 
     try {
+      // rawBody is string (not Buffer) because fastify-raw-body is registered
+      // with encoding: 'utf8' in this scope (see plugin registration above).
       const rawBody = request.rawBody as string;
       const result = await trustService.handleInboundTrustRequest(
         env,
@@ -87,6 +89,7 @@ export async function registerFederationTrustRoutes(
     }
 
     try {
+      // rawBody is string — see encoding note above.
       const rawBody = request.rawBody as string;
       await trustService.handleInboundTrustAccept(
         env,

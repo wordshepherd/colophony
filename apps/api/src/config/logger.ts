@@ -4,19 +4,29 @@ import type { FastifyBaseLogger } from 'fastify';
  * Shared logger reference for BullMQ workers and other non-request code.
  *
  * Initialized from `main.ts` after the Fastify instance is created.
- * Workers call `getLogger()` instead of `console.error()`.
+ * Falls back to console-based logging if called before initialization
+ * (e.g., during tests or unusual startup sequences).
  */
 let _logger: FastifyBaseLogger | null = null;
+
+/* eslint-disable no-console */
+const _fallback = {
+  fatal: console.error.bind(console),
+  error: console.error.bind(console),
+  warn: console.warn.bind(console),
+  info: console.info.bind(console),
+  debug: console.debug.bind(console),
+  trace: console.debug.bind(console),
+  silent: () => {},
+  child: () => _fallback,
+  level: 'info',
+} as unknown as FastifyBaseLogger;
+/* eslint-enable no-console */
 
 export function setWorkerLogger(logger: FastifyBaseLogger): void {
   _logger = logger;
 }
 
 export function getLogger(): FastifyBaseLogger {
-  if (!_logger) {
-    throw new Error(
-      'Worker logger not initialized — call setWorkerLogger() from main.ts first',
-    );
-  }
-  return _logger;
+  return _logger ?? _fallback;
 }

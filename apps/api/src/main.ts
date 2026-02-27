@@ -387,7 +387,10 @@ async function start(): Promise<void> {
       await closePublisher();
       await closeSubscriber();
       await registry.destroyAll();
-      await Promise.all([pool.end(), appPool.end()]);
+      await Promise.all([
+        pool.end().catch(() => {}),
+        appPool.end().catch(() => {}),
+      ]);
       app.log.info('Server closed');
     } finally {
       clearTimeout(forceExit);
