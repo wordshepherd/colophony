@@ -253,6 +253,13 @@
       "when": 1776200000000,
       "tag": "0035_issue_items_section_idx",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1776400000000,
+      "tag": "0036_writer_workspace",
+      "breakpoints": true
     }
   ]
 }

@@ -204,3 +204,45 @@ export const contractStatusEnum = pgEnum("ContractStatus", [
   "COMPLETED",
   "VOIDED",
 ]);
+
+// ---------------------------------------------------------------------------
+// Register — Writer Workspace (CSR)
+// ---------------------------------------------------------------------------
+
+export const primaryGenreEnum = pgEnum("PrimaryGenre", [
+  "poetry",
+  "fiction",
+  "creative_nonfiction",
+  "nonfiction",
+  "drama",
+  "translation",
+  "visual_art",
+  "comics",
+  "audio",
+  "other",
+]);
+
+export const csrStatusEnum = pgEnum("CsrStatus", [
+  "draft",
+  "sent",
+  "in_review",
+  "hold",
+  "accepted",
+  "rejected",
+  "withdrawn",
+  "no_response",
+  "revise",
+  "unknown",
+]);
+
+export const correspondenceDirectionEnum = pgEnum("CorrespondenceDirection", [
+  "inbound",
+  "outbound",
+]);
+
+export const correspondenceChannelEnum = pgEnum("CorrespondenceChannel", [
+  "email",
+  "portal",
+  "in_app",
+  "other",
+]);

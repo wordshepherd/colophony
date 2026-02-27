@@ -130,6 +130,12 @@ export async function globalSetup(): Promise<void> {
     'REVOKE INSERT, UPDATE, DELETE ON "audit_events" FROM app_user',
   );
 
+  // Revoke DML on journal_directory (migration 0036 grants SELECT only,
+  // but the broad GRANT above re-grants it — must revoke after)
+  await admin.query(
+    'REVOKE INSERT, UPDATE, DELETE ON "journal_directory" FROM app_user',
+  );
+
   // Verify app_user is NOSUPERUSER and NOBYPASSRLS
   const { rows } = await admin.query<{
     usesuper: boolean;

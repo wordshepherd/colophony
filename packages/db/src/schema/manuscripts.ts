@@ -7,6 +7,7 @@ import {
   timestamp,
   integer,
   bigint,
+  jsonb,
   index,
   unique,
 } from "drizzle-orm/pg-core";
@@ -30,6 +31,11 @@ export const manuscripts = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
+    genre: jsonb("genre").$type<{
+      primary: string;
+      sub: string | null;
+      hybrid: string[];
+    }>(),
     updatedAt: timestamp("updated_at", { withTimezone: true })
       .defaultNow()
       .notNull()
