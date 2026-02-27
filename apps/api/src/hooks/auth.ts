@@ -41,6 +41,7 @@ const PUBLIC_EXACT = [
   '/',
   '/health',
   '/ready',
+  '/metrics',
   '/trpc/health',
   '/v1/openapi.json',
   '/v1/docs',

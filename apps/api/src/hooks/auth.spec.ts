@@ -86,6 +86,9 @@ const baseEnv: Env = {
   INNGEST_DEV: false,
   EMAIL_PROVIDER: 'none' as const,
   SMTP_SECURE: false,
+  SENTRY_ENVIRONMENT: 'test',
+  SENTRY_TRACES_SAMPLE_RATE: 0,
+  METRICS_ENABLED: false,
 };
 
 describe('auth plugin', () => {
@@ -142,6 +145,15 @@ describe('auth plugin', () => {
       const response = await app.inject({
         method: 'GET',
         url: '/trpc/health',
+      });
+      // 404 because no route registered, but auth hook didn't block
+      expect(response.statusCode).toBe(404);
+    });
+
+    it('allows /metrics without auth', async () => {
+      const response = await app.inject({
+        method: 'GET',
+        url: '/metrics',
       });
       // 404 because no route registered, but auth hook didn't block
       expect(response.statusCode).toBe(404);

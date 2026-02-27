@@ -1,4 +1,5 @@
-import { Worker, UnrecoverableError } from 'bullmq';
+import { UnrecoverableError } from 'bullmq';
+import type { Worker } from 'bullmq';
 import {
   withRls,
   submissions,
@@ -14,7 +15,7 @@ import type { Env } from '../config/env.js';
 import type { TransferFetchJobData } from '../queues/transfer-fetch.queue.js';
 import { auditService } from '../services/audit.service.js';
 import type { S3StorageAdapter } from '../adapters/storage/index.js';
-import { getLogger } from '../config/logger.js';
+import { createInstrumentedWorker } from '../config/instrumented-worker.js';
 
 let worker: Worker<TransferFetchJobData> | null = null;
 
@@ -24,9 +25,9 @@ export function startTransferFetchWorker(
 ): Worker<TransferFetchJobData> {
   const storage = registry.resolve<S3StorageAdapter>('storage');
 
-  worker = new Worker<TransferFetchJobData>(
-    'transfer-fetch',
-    async (job) => {
+  worker = createInstrumentedWorker<TransferFetchJobData>({
+    name: 'transfer-fetch',
+    processor: async (job) => {
       const {
         transferId,
         orgId,
@@ -239,7 +240,7 @@ export function startTransferFetchWorker(
         `Partial failure: ${failedFiles.length}/${fileManifest.length} files failed for transfer ${transferId}`,
       );
     },
-    {
+    workerOpts: {
       connection: {
         host: env.REDIS_HOST,
         port: env.REDIS_PORT,
@@ -247,18 +248,6 @@ export function startTransferFetchWorker(
       },
       concurrency: 3,
     },
-  );
-
-  worker.on('failed', (job, err) => {
-    getLogger().error(
-      {
-        jobId: job?.id,
-        attempt: job?.attemptsMade,
-        maxAttempts: job?.opts.attempts,
-        err,
-      },
-      '[transfer-fetch] Job failed',
-    );
   });
 
   return worker;

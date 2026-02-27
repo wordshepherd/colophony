@@ -40,6 +40,10 @@ export async function enqueueEmail(
   await getQueue(env).add('send', data, { jobId: data.emailSendId });
 }
 
+export function getEmailQueueInstance(): Queue<EmailJobData> | null {
+  return queue;
+}
+
 export async function closeEmailQueue(): Promise<void> {
   if (queue) {
     await queue.close();

@@ -1,11 +1,11 @@
-import { Worker } from 'bullmq';
 import type { AdapterRegistry } from '@colophony/plugin-sdk';
 import { AuditActions, AuditResources } from '@colophony/types';
 import type { Env } from '../config/env.js';
 import type { S3CleanupJobData } from '../queues/s3-cleanup.queue.js';
 import type { S3StorageAdapter } from '../adapters/storage/index.js';
 import { auditService } from '../services/audit.service.js';
-import { getLogger } from '../config/logger.js';
+import { createInstrumentedWorker } from '../config/instrumented-worker.js';
+import type { Worker } from 'bullmq';
 
 let worker: Worker<S3CleanupJobData> | null = null;
 
@@ -15,9 +15,9 @@ export function startS3CleanupWorker(
 ): Worker<S3CleanupJobData> {
   const storage = registry.resolve<S3StorageAdapter>('storage');
 
-  worker = new Worker<S3CleanupJobData>(
-    's3-cleanup',
-    async (job) => {
+  worker = createInstrumentedWorker<S3CleanupJobData>({
+    name: 's3-cleanup',
+    processor: async (job) => {
       const { storageKeys, sourceId } = job.data;
       const errors: Array<{ storageKey: string; error: string }> = [];
 
@@ -60,7 +60,7 @@ export function startS3CleanupWorker(
         },
       });
     },
-    {
+    workerOpts: {
       connection: {
         host: env.REDIS_HOST,
         port: env.REDIS_PORT,
@@ -68,18 +68,6 @@ export function startS3CleanupWorker(
       },
       concurrency: 2,
     },
-  );
-
-  worker.on('failed', (job, err) => {
-    getLogger().error(
-      {
-        jobId: job?.id,
-        attempt: job?.attemptsMade,
-        maxAttempts: job?.opts.attempts,
-        err,
-      },
-      '[s3-cleanup] Job failed',
-    );
   });
 
   return worker;

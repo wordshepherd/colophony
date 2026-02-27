@@ -1,5 +1,5 @@
 import crypto from 'node:crypto';
-import { Worker } from 'bullmq';
+import type { Worker } from 'bullmq';
 import { withRls, webhookDeliveries, eq } from '@colophony/db';
 import type { DrizzleDb } from '@colophony/db';
 import { AuditActions, AuditResources } from '@colophony/types';
@@ -8,7 +8,7 @@ import type { WebhookJobData } from '../queues/webhook.queue.js';
 import { getWebhookBackoffDelay } from '../queues/webhook.queue.js';
 import { webhookService } from '../services/webhook.service.js';
 import { auditService } from '../services/audit.service.js';
-import { getLogger } from '../config/logger.js';
+import { createInstrumentedWorker } from '../config/instrumented-worker.js';
 
 const AUTO_DISABLE_THRESHOLD = 5;
 const DELIVERY_TIMEOUT_MS = 30_000;
@@ -16,9 +16,9 @@ const DELIVERY_TIMEOUT_MS = 30_000;
 let worker: Worker<WebhookJobData> | null = null;
 
 export function startWebhookWorker(env: Env): Worker<WebhookJobData> {
-  worker = new Worker<WebhookJobData>(
-    'webhook',
-    async (job) => {
+  worker = createInstrumentedWorker<WebhookJobData>({
+    name: 'webhook',
+    processor: async (job) => {
       const { deliveryId, orgId, endpointUrl, secret, payload } = job.data;
 
       // Phase 1: Mark as DELIVERING + increment attempts
@@ -121,7 +121,7 @@ export function startWebhookWorker(env: Env): Worker<WebhookJobData> {
         throw new Error(`Webhook delivery failed: HTTP ${response.status}`);
       }
     },
-    {
+    workerOpts: {
       connection: {
         host: env.REDIS_HOST,
         port: env.REDIS_PORT,
@@ -134,23 +134,9 @@ export function startWebhookWorker(env: Env): Worker<WebhookJobData> {
         },
       },
     },
-  );
-
-  // eslint-disable-next-line @typescript-eslint/no-misused-promises
-  worker.on('failed', async (job, err) => {
-    getLogger().error(
-      {
-        jobId: job?.id,
-        attempt: job?.attemptsMade,
-        maxAttempts: job?.opts.attempts,
-        err,
-      },
-      '[webhook] Job failed',
-    );
-
-    // On final failure, mark as FAILED + audit + auto-disable check
-    if (job && job.attemptsMade >= (job.opts.attempts ?? 8)) {
-      try {
+    onFailed: async (job, err) => {
+      // On final failure, mark as FAILED + audit + auto-disable check
+      if (job && job.attemptsMade >= (job.opts.attempts ?? 8)) {
         const { deliveryId, orgId, endpointUrl, payload } = job.data;
         await withRls({ orgId }, async (tx: DrizzleDb) => {
           await webhookService.updateDeliveryStatus(tx, deliveryId, 'FAILED', {
@@ -201,13 +187,8 @@ export function startWebhookWorker(env: Env): Worker<WebhookJobData> {
             }
           }
         });
-      } catch (auditErr) {
-        getLogger().error(
-          { jobId: job.id, err: auditErr },
-          '[webhook] Failed to record failure audit',
-        );
       }
-    }
+    },
   });
 
   return worker;

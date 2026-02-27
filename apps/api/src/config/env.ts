@@ -120,6 +120,18 @@ const envSchema = z.object({
 
   // Plugin registry
   PLUGIN_REGISTRY_URL: z.string().url().optional(),
+
+  // Monitoring — Sentry
+  SENTRY_DSN: z.string().url().optional(),
+  SENTRY_ENVIRONMENT: z.string().default('development'),
+  SENTRY_TRACES_SAMPLE_RATE: z.coerce.number().min(0).max(1).default(0),
+  SENTRY_RELEASE: z.string().optional(),
+
+  // Monitoring — Prometheus
+  METRICS_ENABLED: z
+    .enum(['true', 'false'])
+    .default('false')
+    .transform((v) => v === 'true'),
 });
 
 export type Env = z.infer<typeof envSchema>;

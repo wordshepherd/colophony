@@ -41,6 +41,10 @@ export async function enqueueTransferFetch(
   await getQueue(env).add('fetch', data, { jobId: data.transferId });
 }
 
+export function getTransferFetchQueueInstance(): Queue<TransferFetchJobData> | null {
+  return queue;
+}
+
 export async function closeTransferFetchQueue(): Promise<void> {
   if (queue) {
     await queue.close();

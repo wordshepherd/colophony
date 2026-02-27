@@ -91,6 +91,9 @@ const testEnv: Env = {
   INNGEST_DEV: false,
   EMAIL_PROVIDER: 'none' as const,
   SMTP_SECURE: false,
+  SENTRY_ENVIRONMENT: 'test',
+  SENTRY_TRACES_SAMPLE_RATE: 0,
+  METRICS_ENABLED: false,
 };
 
 async function buildApp(
@@ -125,6 +128,7 @@ describe('rate-limit plugin', () => {
       app.get('/health', async () => ({ status: 'ok' }));
       app.get('/ready', async () => ({ status: 'ready' }));
       app.get('/', async () => ({ name: 'API' }));
+      app.get('/metrics', async () => ({ metrics: 'ok' }));
       app.get('/.well-known/openid-configuration', async () => ({}));
     });
 
@@ -156,6 +160,12 @@ describe('rate-limit plugin', () => {
         method: 'GET',
         url: '/.well-known/openid-configuration',
       });
+      expect(response.statusCode).toBe(200);
+      expect(response.headers['x-ratelimit-limit']).toBeUndefined();
+    });
+
+    it('skips /metrics', async () => {
+      const response = await app.inject({ method: 'GET', url: '/metrics' });
       expect(response.statusCode).toBe(200);
       expect(response.headers['x-ratelimit-limit']).toBeUndefined();
     });
