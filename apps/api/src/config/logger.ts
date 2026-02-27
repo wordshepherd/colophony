@@ -9,7 +9,6 @@ import type { FastifyBaseLogger } from 'fastify';
  */
 let _logger: FastifyBaseLogger | null = null;
 
-/* eslint-disable no-console */
 const _fallback = {
   fatal: console.error.bind(console),
   error: console.error.bind(console),
@@ -21,7 +20,6 @@ const _fallback = {
   child: () => _fallback,
   level: 'info',
 } as unknown as FastifyBaseLogger;
-/* eslint-enable no-console */
 
 export function setWorkerLogger(logger: FastifyBaseLogger): void {
   _logger = logger;
