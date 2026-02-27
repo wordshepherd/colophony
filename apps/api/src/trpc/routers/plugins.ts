@@ -1,7 +1,19 @@
 import { z } from 'zod';
-import type { UIExtensionDeclaration } from '@colophony/plugin-sdk';
-import { createRouter, orgProcedure } from '../init.js';
+import {
+  pluginRegistryEntrySchema,
+  type UIExtensionDeclaration,
+} from '@colophony/plugin-sdk';
+import { createRouter, adminProcedure, orgProcedure } from '../init.js';
 import { getGlobalExtensions } from '../../adapters/extensions-accessor.js';
+import { validateEnv } from '../../config/env.js';
+import {
+  listRegistryEntries,
+  getRegistryEntry,
+} from '../../services/plugin-registry.service.js';
+
+const registryEntryWithStatusSchema = pluginRegistryEntrySchema.extend({
+  installed: z.boolean(),
+});
 
 const uiExtensionPointEnum = z.enum([
   'dashboard.widget',
@@ -79,6 +91,23 @@ function extensionAllowed(
 }
 
 export const pluginsRouter = createRouter({
+  listRegistry: adminProcedure
+    .output(z.array(registryEntryWithStatusSchema))
+    .query(async () => {
+      const env = validateEnv();
+      if (!env.PLUGIN_REGISTRY_URL) return [];
+      return listRegistryEntries(env.PLUGIN_REGISTRY_URL);
+    }),
+
+  getRegistryEntry: adminProcedure
+    .input(z.object({ pluginId: z.string().min(1) }))
+    .output(registryEntryWithStatusSchema.nullable())
+    .query(async ({ input }) => {
+      const env = validateEnv();
+      if (!env.PLUGIN_REGISTRY_URL) return null;
+      return getRegistryEntry(env.PLUGIN_REGISTRY_URL, input.pluginId);
+    }),
+
   listExtensions: orgProcedure
     .input(
       z

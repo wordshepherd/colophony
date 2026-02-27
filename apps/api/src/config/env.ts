@@ -117,6 +117,9 @@ const envSchema = z.object({
     .transform((v) => v === 'true'),
   SENDGRID_API_KEY: z.string().optional(),
   SENDGRID_FROM: z.string().optional(),
+
+  // Plugin registry
+  PLUGIN_REGISTRY_URL: z.string().url().optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;

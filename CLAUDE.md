@@ -46,6 +46,8 @@ Per-directory CLAUDE.md files contain domain-specific details:
 | **Inngest functions**    | `apps/api/src/inngest/`                                                          |
 | **Adapter registry**     | `apps/api/src/adapters/registry-accessor.ts` (module-level singleton)            |
 | **Extensions store**     | `apps/api/src/adapters/extensions-accessor.ts` (UI extension singleton)          |
+| **Plugins store**        | `apps/api/src/adapters/plugins-accessor.ts` (plugin manifest singleton)          |
+| **Plugin registry svc**  | `apps/api/src/services/plugin-registry.service.ts` (remote registry fetch+cache) |
 | **Config builder**       | `apps/api/src/colophony.config.ts` (maps env → adapter configs + plugins)        |
 | **Built-in plugins**     | `apps/api/src/plugins/` (plugin classes registered in config)                    |
 | **SDK adapters**         | `apps/api/src/adapters/{email,storage,payment}/` (SDK-compatible)                |
@@ -413,6 +415,7 @@ Canonical env definition with Zod validation: `apps/api/src/config/env.ts`
 | `NEXT_PUBLIC_API_URL`                                             | No       | `http://localhost:4000`      | Web            |
 | `NEXT_PUBLIC_ZITADEL_AUTHORITY` / `NEXT_PUBLIC_ZITADEL_CLIENT_ID` | —        | —                            | Web            |
 | `API_URL`                                                         | —        | —                            | Web (SSR only) |
+| `PLUGIN_REGISTRY_URL`                                             | No       | —                            | API            |
 
 ---
 

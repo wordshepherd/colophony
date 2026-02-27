@@ -69,6 +69,14 @@ export type {
   UIExtensionDeclaration,
 } from "./ui/types.js";
 
+// Registry types
+export {
+  pluginRegistryEntrySchema,
+  pluginRegistrySchema,
+  type PluginRegistryEntry,
+  type PluginRegistry,
+} from "./registry-types.js";
+
 // Config
 export {
   defineConfig,

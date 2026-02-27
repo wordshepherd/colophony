@@ -6,6 +6,7 @@ import { loadConfig } from '@colophony/plugin-sdk';
 import { type Env, validateEnv } from './config/env.js';
 import { buildColophonyConfig } from './colophony.config.js';
 import { setGlobalExtensions } from './adapters/extensions-accessor.js';
+import { setGlobalPluginManifests } from './adapters/plugins-accessor.js';
 import { setGlobalRegistry } from './adapters/registry-accessor.js';
 import authPlugin from './hooks/auth.js';
 import rateLimitPlugin from './hooks/rate-limit.js';
@@ -307,13 +308,14 @@ async function start(): Promise<void> {
 
   // Initialize plugin SDK adapters + registry
   const { config, adapterConfigs } = buildColophonyConfig(env);
-  const { registry, uiExtensions } = await loadConfig({
+  const { registry, plugins, uiExtensions } = await loadConfig({
     config,
     adapterConfigs,
     logger: app.log,
   });
   setGlobalRegistry(registry);
   setGlobalExtensions(uiExtensions);
+  setGlobalPluginManifests(plugins.map((p) => p.manifest));
 
   // Start BullMQ workers
   if (env.VIRUS_SCAN_ENABLED) {
