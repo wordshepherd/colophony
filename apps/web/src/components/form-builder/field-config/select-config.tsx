@@ -59,7 +59,10 @@ export function SelectConfig({ config, onChange }: SelectConfigProps) {
       <Label className="text-xs">Options</Label>
       <div className="space-y-2">
         {options.map((option, index) => (
-          <div key={index} className="flex items-center gap-2">
+          <div
+            key={option.value || `opt-${index}`}
+            className="flex items-center gap-2"
+          >
             <Input
               value={option.label}
               onChange={(e) => updateOption(index, "label", e.target.value)}

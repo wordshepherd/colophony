@@ -23,6 +23,8 @@ interface PipelineContractsTabProps {
   isAdmin: boolean;
 }
 
+const SKELETON_ITEMS = Array.from({ length: 3 });
+
 export function PipelineContractsTab({
   pipelineItemId,
   isAdmin,
@@ -35,7 +37,7 @@ export function PipelineContractsTab({
   if (isLoading) {
     return (
       <div className="space-y-2">
-        {Array.from({ length: 3 }).map((_, i) => (
+        {SKELETON_ITEMS.map((_, i) => (
           <Skeleton key={i} className="h-12 w-full" />
         ))}
       </div>

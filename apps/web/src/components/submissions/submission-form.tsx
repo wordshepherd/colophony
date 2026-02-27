@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo, useRef } from "react";
+import { useDebounce } from "@/hooks/use-debounce";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -132,6 +133,7 @@ export function SubmissionForm({ mode, submissionId }: SubmissionFormProps) {
 
   // Watch formData to reactively rebuild the conditional validation schema
   const watchedFormData = form.watch("formData") as Record<string, unknown>;
+  const debouncedFormData = useDebounce(watchedFormData, 300);
 
   // Rebuild schema reactively when form values change conditional visibility
   useEffect(() => {
@@ -143,10 +145,10 @@ export function SubmissionForm({ mode, submissionId }: SubmissionFormProps) {
     }
     const { schema: conditionalSchema } = buildConditionalFormSchema(
       formDefinition.fields,
-      watchedFormData ?? {},
+      debouncedFormData ?? {},
     );
     schemaRef.current = formSchema.extend({ formData: conditionalSchema });
-  }, [formDefinition, watchedFormData]);
+  }, [formDefinition, debouncedFormData]);
 
   // Populate form when editing (re-runs when formDefinition loads to apply defaults)
   useEffect(() => {
