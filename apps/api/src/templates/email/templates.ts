@@ -1,3 +1,4 @@
+import sanitizeHtml from 'sanitize-html';
 import type {
   TemplateName,
   SubmissionTemplateData,
@@ -6,6 +7,33 @@ import type {
   EditorMessageTemplateData,
 } from './types.js';
 import { wrapInLayout } from './layout.js';
+
+/** Sanitize Tiptap HTML to only allow safe formatting tags */
+function sanitizeTiptapHtml(html: string): string {
+  return sanitizeHtml(html, {
+    allowedTags: [
+      'p',
+      'br',
+      'strong',
+      'b',
+      'em',
+      'i',
+      'u',
+      'a',
+      'ul',
+      'ol',
+      'li',
+      'blockquote',
+      'h1',
+      'h2',
+      'h3',
+    ],
+    allowedAttributes: {
+      a: ['href', 'target', 'rel'],
+    },
+    allowedSchemes: ['http', 'https', 'mailto'],
+  });
+}
 
 interface TemplateResult {
   mjml: string;
@@ -156,7 +184,7 @@ function editorMessage(data: Record<string, unknown>): TemplateResult {
       </mj-text>
       <mj-divider border-color="#e5e7eb" border-width="1px" padding="16px 0" />
       <mj-text>
-        ${d.messageBody}
+        ${sanitizeTiptapHtml(d.messageBody)}
       </mj-text>`,
       d.orgName,
     ),
@@ -164,7 +192,7 @@ function editorMessage(data: Record<string, unknown>): TemplateResult {
       `You have received a message from the editorial team at ${d.orgName}.`,
       `Regarding: ${d.submissionTitle}`,
       '',
-      stripHtml(d.messageBody),
+      stripHtml(sanitizeTiptapHtml(d.messageBody)),
     ].join('\n'),
   };
 }

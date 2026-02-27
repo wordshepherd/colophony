@@ -1,3 +1,4 @@
+import sanitizeHtml from 'sanitize-html';
 import { z } from 'zod';
 import {
   sendEditorMessageSchema,
@@ -9,10 +10,11 @@ import { correspondenceService } from '../../services/correspondence.service.js'
 import { mapServiceError } from '../error-mapper.js';
 
 function stripHtmlAndTruncate(html: string, maxLen: number): string {
-  const text = html
-    .replace(/<[^>]*>/g, '')
-    .replace(/&nbsp;/g, ' ')
-    .trim();
+  const sanitized = sanitizeHtml(html, {
+    allowedTags: [],
+    allowedAttributes: {},
+  });
+  const text = sanitized.replace(/&nbsp;/g, ' ').trim();
   return text.length > maxLen ? text.slice(0, maxLen - 1) + '\u2026' : text;
 }
 
