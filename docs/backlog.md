@@ -306,7 +306,7 @@
 ### Infrastructure Setup
 
 - [ ] Coolify + Hetzner managed hosting setup — (architecture doc Track 1)
-- [ ] Monitoring stack: Prometheus + Grafana + Loki — (architecture doc Track 1)
+- [x] Monitoring stack: Prometheus + Grafana (Sentry for errors) — done 2026-02-27 PR pending; Loki deferred to production
 
 ### Database Hardening
 
