@@ -247,23 +247,27 @@ export const submissionAcceptedNotification = inngest.createFunction(
     });
 
     await step.run('capture-correspondence', async () => {
-      await withRls({ orgId }, async (tx) => {
-        await correspondenceService.create(tx, {
-          userId: submitterId,
-          submissionId,
-          direction: 'outbound',
-          channel: 'email',
-          sentAt: new Date(),
-          subject: `Your submission has been accepted: ${submission.title}`,
-          body: comment
-            ? `Congratulations! Your submission has been accepted.\n\nNote from the editors:\n${comment}`
-            : 'Congratulations! Your submission has been accepted.',
-          senderName: null,
-          senderEmail: null,
-          isPersonalized: !!comment,
-          source: 'colophony',
+      try {
+        await withRls({ orgId }, async (tx) => {
+          await correspondenceService.create(tx, {
+            userId: submitterId,
+            submissionId,
+            direction: 'outbound',
+            channel: 'email',
+            sentAt: new Date(),
+            subject: `Your submission has been accepted: ${submission.title}`,
+            body: comment
+              ? `Congratulations! Your submission has been accepted.\n\nNote from the editors:\n${comment}`
+              : 'Congratulations! Your submission has been accepted.',
+            senderName: null,
+            senderEmail: null,
+            isPersonalized: !!comment,
+            source: 'colophony',
+          });
         });
-      });
+      } catch {
+        // Non-fatal: correspondence capture should not block notifications
+      }
     });
 
     return { notified: 1 };
@@ -322,23 +326,27 @@ export const submissionRejectedNotification = inngest.createFunction(
     });
 
     await step.run('capture-correspondence', async () => {
-      await withRls({ orgId }, async (tx) => {
-        await correspondenceService.create(tx, {
-          userId: submitterId,
-          submissionId,
-          direction: 'outbound',
-          channel: 'email',
-          sentAt: new Date(),
-          subject: `Update on your submission: ${submission.title}`,
-          body: comment
-            ? `Thank you for your submission. After careful review, we are unable to accept it at this time.\n\nNote from the editors:\n${comment}`
-            : 'Thank you for your submission. After careful review, we are unable to accept it at this time.',
-          senderName: null,
-          senderEmail: null,
-          isPersonalized: !!comment,
-          source: 'colophony',
+      try {
+        await withRls({ orgId }, async (tx) => {
+          await correspondenceService.create(tx, {
+            userId: submitterId,
+            submissionId,
+            direction: 'outbound',
+            channel: 'email',
+            sentAt: new Date(),
+            subject: `Update on your submission: ${submission.title}`,
+            body: comment
+              ? `Thank you for your submission. After careful review, we are unable to accept it at this time.\n\nNote from the editors:\n${comment}`
+              : 'Thank you for your submission. After careful review, we are unable to accept it at this time.',
+            senderName: null,
+            senderEmail: null,
+            isPersonalized: !!comment,
+            source: 'colophony',
+          });
         });
-      });
+      } catch {
+        // Non-fatal: correspondence capture should not block notifications
+      }
     });
 
     return { notified: 1 };
