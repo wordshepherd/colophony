@@ -158,8 +158,8 @@ describe('correspondenceService', () => {
 
   describe('sendEditorMessage', () => {
     function setupMocks() {
-      const mockedGetById = vi.mocked(submissionService.getById);
-      mockedGetById.mockResolvedValue({
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      vi.mocked(submissionService.getById).mockResolvedValue({
         id: 'sub-1',
         submitterId: 'writer-1',
         title: 'My Poem',
@@ -177,8 +177,8 @@ describe('correspondenceService', () => {
         // org lookup
         .mockReturnValueOnce([{ name: 'Test Mag' }]);
 
-      const mockedEmailCreate = vi.mocked(emailService.create);
-      mockedEmailCreate.mockResolvedValue({
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      vi.mocked(emailService.create).mockResolvedValue({
         id: 'email-1',
       } as Awaited<ReturnType<typeof emailService.create>>);
     }
@@ -242,8 +242,8 @@ describe('correspondenceService', () => {
     });
 
     it('throws NotFoundError for missing submission', async () => {
-      const mockedGetById = vi.mocked(submissionService.getById);
-      mockedGetById.mockResolvedValue(null);
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      vi.mocked(submissionService.getById).mockResolvedValue(null);
       const svc = makeSvc();
 
       await expect(
