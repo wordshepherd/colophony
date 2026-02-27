@@ -4,6 +4,9 @@ import { useState } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { trpc, getTrpcClient } from "@/lib/trpc";
 
+// Side-effect: registers built-in plugin components at module parse time
+import "@/components/plugins/extensions";
+
 /**
  * Root providers component
  * Wraps the app with tRPC and TanStack Query providers.

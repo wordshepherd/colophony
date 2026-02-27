@@ -4,6 +4,7 @@ import { HookEngine } from "./hooks/engine.js";
 import type { Logger } from "./logger.js";
 import type { ColophonyPlugin } from "./plugin-base.js";
 import { AdapterRegistry } from "./registry.js";
+import type { UIExtensionDeclaration } from "./ui/types.js";
 
 export type AdapterConstructor<T extends BaseAdapter = BaseAdapter> =
   new () => T;
@@ -29,6 +30,7 @@ export interface LoadConfigResult {
   registry: AdapterRegistry;
   hookEngine: HookEngine;
   plugins: ColophonyPlugin[];
+  uiExtensions: UIExtensionDeclaration[];
 }
 
 export function defineConfig(config: ColophonyConfig): ColophonyConfig {
@@ -77,7 +79,7 @@ export async function loadConfig(
   const auditFn = audit ?? noopAudit;
 
   // Phase 2: Plugin register
-  const uiExtensions: unknown[] = [];
+  const uiExtensions: UIExtensionDeclaration[] = [];
   for (const plugin of plugins) {
     await plugin.register({
       registerAdapter: (type, adapter) => registry.register(type, adapter),
@@ -111,5 +113,5 @@ export async function loadConfig(
     });
   }
 
-  return { registry, hookEngine, plugins };
+  return { registry, hookEngine, plugins, uiExtensions };
 }

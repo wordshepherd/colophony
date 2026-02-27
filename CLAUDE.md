@@ -45,7 +45,9 @@ Per-directory CLAUDE.md files contain domain-specific details:
 | **Documenso webhook**    | `apps/api/src/webhooks/documenso.webhook.ts`                                     |
 | **Inngest functions**    | `apps/api/src/inngest/`                                                          |
 | **Adapter registry**     | `apps/api/src/adapters/registry-accessor.ts` (module-level singleton)            |
-| **Config builder**       | `apps/api/src/colophony.config.ts` (maps env → adapter configs)                  |
+| **Extensions store**     | `apps/api/src/adapters/extensions-accessor.ts` (UI extension singleton)          |
+| **Config builder**       | `apps/api/src/colophony.config.ts` (maps env → adapter configs + plugins)        |
+| **Built-in plugins**     | `apps/api/src/plugins/` (plugin classes registered in config)                    |
 | **SDK adapters**         | `apps/api/src/adapters/{email,storage,payment}/` (SDK-compatible)                |
 | **CMS adapters**         | `apps/api/src/adapters/cms/`                                                     |
 | **Federation discovery** | `apps/api/src/federation/discovery.routes.ts`                                    |
@@ -68,6 +70,8 @@ Per-directory CLAUDE.md files contain domain-specific details:
 | **Hub client service**   | `apps/api/src/services/hub-client.service.ts`                                    |
 | **Next.js frontend**     | `apps/web/`                                                                      |
 | **tRPC client**          | `apps/web/src/lib/trpc.ts`                                                       |
+| **Plugin components**    | `apps/web/src/components/plugins/` (PluginSlot, extensions, error boundary)      |
+| **Component registry**   | `apps/web/src/lib/plugin-components.ts` (build-time Map registry)                |
 | **Env config (Zod)**     | `apps/api/src/config/env.ts`                                                     |
 | **Plugin SDK**           | `packages/plugin-sdk/src/` (adapters, hooks, config, plugin-base, testing)       |
 | **Backlog**              | `docs/backlog.md` (track-organized, drives session focus)                        |

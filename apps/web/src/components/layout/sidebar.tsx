@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { useOrganization } from "@/hooks/use-organization";
+import { PluginSlot } from "@/components/plugins/plugin-slot";
 import {
   BookCopy,
   BookMarked,
@@ -182,6 +183,8 @@ export function Sidebar() {
             })}
           </>
         )}
+
+        <PluginSlot point="navigation.item" className="space-y-1" />
       </nav>
     </div>
   );
