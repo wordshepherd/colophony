@@ -44,8 +44,8 @@ export const correspondenceRouter = createRouter({
         );
         return rows.map((r) => ({
           id: r.id,
-          direction: r.direction as 'inbound' | 'outbound',
-          channel: r.channel as 'email' | 'portal' | 'in_app' | 'other',
+          direction: r.direction,
+          channel: r.channel,
           sentAt: r.sentAt.toISOString(),
           subject: r.subject,
           bodyPreview: stripHtmlAndTruncate(r.body, 200),

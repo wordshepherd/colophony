@@ -158,7 +158,8 @@ describe('correspondenceService', () => {
 
   describe('sendEditorMessage', () => {
     function setupMocks() {
-      vi.mocked(submissionService.getById).mockResolvedValue({
+      const mockedGetById = vi.mocked(submissionService.getById);
+      mockedGetById.mockResolvedValue({
         id: 'sub-1',
         submitterId: 'writer-1',
         title: 'My Poem',
@@ -176,7 +177,8 @@ describe('correspondenceService', () => {
         // org lookup
         .mockReturnValueOnce([{ name: 'Test Mag' }]);
 
-      vi.mocked(emailService.create).mockResolvedValue({
+      const mockedEmailCreate = vi.mocked(emailService.create);
+      mockedEmailCreate.mockResolvedValue({
         id: 'email-1',
       } as Awaited<ReturnType<typeof emailService.create>>);
     }
@@ -240,7 +242,8 @@ describe('correspondenceService', () => {
     });
 
     it('throws NotFoundError for missing submission', async () => {
-      vi.mocked(submissionService.getById).mockResolvedValue(null);
+      const mockedGetById = vi.mocked(submissionService.getById);
+      mockedGetById.mockResolvedValue(null);
       const svc = makeSvc();
 
       await expect(
