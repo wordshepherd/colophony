@@ -163,6 +163,13 @@ export const correspondence = pgTable(
         WHERE organization_id = current_org_id()
       )`,
     }),
+    pgPolicy("correspondence_org_insert", {
+      for: "insert",
+      withCheck: sql`submission_id IN (
+        SELECT id FROM submissions
+        WHERE organization_id = current_org_id()
+      )`,
+    }),
   ],
 ).enableRLS();
 

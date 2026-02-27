@@ -9,6 +9,8 @@ import { useOrganization } from "@/hooks/use-organization";
 import { PluginSlot } from "@/components/plugins/plugin-slot";
 import { StatusBadge } from "./status-badge";
 import { StatusTransition } from "./status-transition";
+import { ComposeMessageDialog } from "./compose-message-dialog";
+import { CorrespondenceHistory } from "./correspondence-history";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -39,6 +41,7 @@ import {
   AlertCircle,
   Loader2,
   BookOpen,
+  Mail,
 } from "lucide-react";
 import {
   EDITOR_ALLOWED_TRANSITIONS,
@@ -77,6 +80,7 @@ export function SubmissionDetail({
   const { user, isEditor, isAdmin } = useOrganization();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showWithdrawDialog, setShowWithdrawDialog] = useState(false);
+  const [showComposeDialog, setShowComposeDialog] = useState(false);
   const utils = trpc.useUtils();
 
   const { data: submission, isPending: isLoading } =
@@ -221,6 +225,16 @@ export function SubmissionDetail({
                 submissionId={submissionId}
                 currentStatus={submission.status as SubmissionStatus}
               />
+              <div className="mt-4 pt-4 border-t">
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => setShowComposeDialog(true)}
+                >
+                  <Mail className="mr-2 h-4 w-4" />
+                  Send Message
+                </Button>
+              </div>
             </CardContent>
           </Card>
         )}
@@ -420,8 +434,20 @@ export function SubmissionDetail({
               )}
             </CardContent>
           </Card>
+
+          {(isEditor || isAdmin) && (
+            <CorrespondenceHistory submissionId={submissionId} />
+          )}
         </div>
       </div>
+
+      {/* Compose message dialog */}
+      <ComposeMessageDialog
+        open={showComposeDialog}
+        onOpenChange={setShowComposeDialog}
+        submissionId={submissionId}
+        submissionTitle={submission.title ?? "Untitled"}
+      />
 
       {/* Delete confirmation dialog */}
       <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>

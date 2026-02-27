@@ -303,11 +303,11 @@
 
 ## Track 7 — Editorial Experience (Pre-Launch)
 
-> **Status:** Not started. Addresses gaps in the editor-to-writer relationship and editorial workflow that are critical for Write or Die launch and early adopter credibility.
+> **Status:** In progress. PR1 (correspondence) shipped.
 
 ### Correspondence & Communication
 
-- [ ] [P0] Editor-to-writer personalized correspondence — compose and send messages to individual submitters from the submission detail view; editor comments on status transitions should optionally be included in the notification email to the writer — (persona gap analysis 2026-02-27)
+- [x] [P0] Editor-to-writer personalized correspondence — compose and send messages to individual submitters from the submission detail view; editor comments on status transitions included in notification emails — (persona gap analysis 2026-02-27; done 2026-02-27 PR pending)
 - [ ] [P0] Customizable email templates — admin UI for editing MJML templates per org (acceptance, rejection, under review, custom); replace hardcoded boilerplate with org-branded voice — (persona gap analysis 2026-02-27)
 - [ ] [P1] "Revise and resubmit" status — add R&R to SubmissionStatus enum + transition map; editor sends revision notes, writer resubmits against the same submission record — (persona gap analysis 2026-02-27)
 - [ ] [P2] Embed submitter confirmation email — send a receipt email to the address provided in the embed identity step; include submission title, journal name, and a status-check token/link — (persona gap analysis 2026-02-27)
@@ -356,7 +356,7 @@
 ### Correspondence Tracking
 
 - [x] [P0] `correspondence` DB table — new table for editor-writer messages linked to submissions; fields: direction (inbound/outbound), channel (email/portal/in_app), body, senderName, senderEmail, isPersonalized flag; RLS scoped to submission owner + org editors; XOR CHECK on submission_id/external_submission_id — (register-data-standard.md Section 2.8, 4.2; done 2026-02-27 PR pending)
-- [ ] [P1] Auto-capture Colophony correspondence — when Track 7 personalized correspondence ships, auto-insert records into the correspondence table; also capture status transition comments that are shared with writers — (register-data-standard.md Section 2.8; 2026-02-27)
+- [x] [P1] Auto-capture Colophony correspondence — auto-insert correspondence records on acceptance/rejection notifications + editor messages; captures status transition comments — (register-data-standard.md Section 2.8; done 2026-02-27 PR pending)
 - [ ] [P2] Manual correspondence logging — writers can paste/enter notable editor messages (personalized rejections, encouragement letters) for external submissions; lightweight form: paste text, mark as personalized, save — (register-data-standard.md Section 2.8; 2026-02-27)
 - [ ] [P2] Correspondence in CSR export — include all correspondence records in the writer's CSR download, linked to submission records — (register-data-standard.md Section 2.8; 2026-02-27)
 

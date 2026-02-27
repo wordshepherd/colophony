@@ -21,6 +21,7 @@ import { notificationPreferencesRouter } from './routers/notification-preference
 import { notificationsRouter } from './routers/notifications.js';
 import { pluginsRouter } from './routers/plugins.js';
 import { webhooksRouter } from './routers/webhooks.js';
+import { correspondenceRouter } from './routers/correspondence.js';
 
 // Re-export procedure builders for convenience
 export {
@@ -63,6 +64,7 @@ export const appRouter = t.router({
   notifications: notificationsRouter,
   webhooks: webhooksRouter,
   plugins: pluginsRouter,
+  correspondence: correspondenceRouter,
   retention: t.router({}),
 });
 

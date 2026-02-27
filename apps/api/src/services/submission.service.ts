@@ -726,12 +726,14 @@ export const submissionService = {
         orgId: svc.actor.orgId,
         submissionId: id,
         submitterId: existing.submitterId,
+        comment,
       });
     } else if (status === 'REJECTED') {
       await enqueueOutboxEvent(svc.tx, 'hopper/submission.rejected', {
         orgId: svc.actor.orgId,
         submissionId: id,
         submitterId: existing.submitterId,
+        comment,
       });
     }
 
