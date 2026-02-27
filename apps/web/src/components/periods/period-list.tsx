@@ -35,6 +35,8 @@ import {
   X,
 } from "lucide-react";
 
+const SKELETON_ITEMS = Array.from({ length: 5 });
+
 const STATUS_TABS: Array<{ value: PeriodStatus | "ALL"; label: string }> = [
   { value: "ALL", label: "All" },
   { value: "UPCOMING", label: "Upcoming" },
@@ -87,7 +89,7 @@ export function PeriodList() {
       <div className="space-y-6">
         <Skeleton className="h-8 w-48" />
         <div className="space-y-2">
-          {Array.from({ length: 5 }).map((_, i) => (
+          {SKELETON_ITEMS.map((_, i) => (
             <Skeleton key={i} className="h-10 w-full" />
           ))}
         </div>

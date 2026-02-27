@@ -19,6 +19,8 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { Plus, Webhook } from "lucide-react";
 
+const SKELETON_ITEMS = Array.from({ length: 5 });
+
 export function WebhookList() {
   const { isAdmin } = useOrganization();
   const [page, setPage] = useState(1);
@@ -54,7 +56,7 @@ export function WebhookList() {
         <CardContent>
           {isLoading ? (
             <div className="space-y-2">
-              {Array.from({ length: 5 }).map((_, i) => (
+              {SKELETON_ITEMS.map((_, i) => (
                 <Skeleton key={i} className="h-12 w-full" />
               ))}
             </div>

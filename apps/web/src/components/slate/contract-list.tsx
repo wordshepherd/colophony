@@ -21,6 +21,8 @@ import {
 } from "@/components/ui/table";
 import { FileSignature } from "lucide-react";
 
+const SKELETON_ITEMS = Array.from({ length: 5 });
+
 export function ContractList() {
   const [statusFilter, setStatusFilter] = useState<ContractStatus | "ALL">(
     "ALL",
@@ -72,7 +74,7 @@ export function ContractList() {
         <CardContent>
           {isLoading ? (
             <div className="space-y-2">
-              {Array.from({ length: 5 }).map((_, i) => (
+              {SKELETON_ITEMS.map((_, i) => (
                 <Skeleton key={i} className="h-12 w-full" />
               ))}
             </div>

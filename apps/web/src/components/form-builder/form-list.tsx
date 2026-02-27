@@ -12,6 +12,8 @@ import { Plus, FileText, Search } from "lucide-react";
 import { toast } from "sonner";
 import type { FormStatus } from "@colophony/types";
 
+const SKELETON_ITEMS = Array.from({ length: 6 });
+
 const statusTabs: Array<{ value: FormStatus | "ALL"; label: string }> = [
   { value: "ALL", label: "All" },
   { value: "DRAFT", label: "Drafts" },
@@ -131,7 +133,7 @@ export function FormList() {
       {/* Loading state */}
       {isLoading && (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {Array.from({ length: 6 }).map((_, i) => (
+          {SKELETON_ITEMS.map((_, i) => (
             <Skeleton key={i} className="h-36" />
           ))}
         </div>

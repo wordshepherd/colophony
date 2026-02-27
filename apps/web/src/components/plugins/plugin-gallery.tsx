@@ -11,6 +11,8 @@ import { usePluginRegistry } from "@/hooks/use-plugin-registry";
 import { PluginCard } from "./plugin-card";
 import { PluginDetailDialog } from "./plugin-detail-dialog";
 
+const SKELETON_ITEMS = Array.from({ length: 6 });
+
 const CATEGORIES = [
   { value: "all", label: "All" },
   { value: "adapter", label: "Adapters" },
@@ -92,7 +94,7 @@ export function PluginGallery() {
       {/* Loading state */}
       {isLoading && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {Array.from({ length: 6 }).map((_, i) => (
+          {SKELETON_ITEMS.map((_, i) => (
             <Card key={i} className="p-6 space-y-3">
               <Skeleton className="h-5 w-32" />
               <Skeleton className="h-4 w-24" />

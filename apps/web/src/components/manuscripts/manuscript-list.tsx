@@ -1,22 +1,16 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { trpc } from "@/lib/trpc";
+import { useDebounce } from "@/hooks/use-debounce";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ManuscriptCard } from "./manuscript-card";
 import { Plus, BookOpen, Search } from "lucide-react";
 
-function useDebounce<T>(value: T, delay: number): T {
-  const [debouncedValue, setDebouncedValue] = useState(value);
-  useEffect(() => {
-    const timer = setTimeout(() => setDebouncedValue(value), delay);
-    return () => clearTimeout(timer);
-  }, [value, delay]);
-  return debouncedValue;
-}
+const SKELETON_ITEMS = Array.from({ length: 6 });
 
 export function ManuscriptList() {
   const [search, setSearch] = useState("");
@@ -83,7 +77,7 @@ export function ManuscriptList() {
       {/* Loading state */}
       {isLoading && (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {Array.from({ length: 6 }).map((_, i) => (
+          {SKELETON_ITEMS.map((_, i) => (
             <Skeleton key={i} className="h-32" />
           ))}
         </div>

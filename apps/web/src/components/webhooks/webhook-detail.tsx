@@ -40,6 +40,8 @@ import {
 } from "lucide-react";
 import { SecretDisplayDialog } from "./secret-display-dialog";
 
+const SKELETON_ITEMS = Array.from({ length: 5 });
+
 const STATUS_COLORS: Record<string, string> = {
   QUEUED: "bg-yellow-500",
   DELIVERING: "bg-blue-500",
@@ -292,7 +294,7 @@ export function WebhookDetail({ endpointId }: WebhookDetailProps) {
         <CardContent>
           {deliveriesLoading ? (
             <div className="space-y-2">
-              {Array.from({ length: 5 }).map((_, i) => (
+              {SKELETON_ITEMS.map((_, i) => (
                 <Skeleton key={i} className="h-10 w-full" />
               ))}
             </div>

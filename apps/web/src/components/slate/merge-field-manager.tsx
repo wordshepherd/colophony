@@ -76,7 +76,10 @@ export function MergeFieldManager({
       )}
 
       {fields.map((field, index) => (
-        <div key={index} className="flex items-start gap-2">
+        <div
+          key={field.key || `field-${index}`}
+          className="flex items-start gap-2"
+        >
           <div className="flex-1 space-y-2">
             <div className="grid grid-cols-2 gap-2">
               <Input

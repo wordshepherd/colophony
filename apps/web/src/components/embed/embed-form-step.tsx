@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
+import { useDebounce } from "@/hooks/use-debounce";
 import { useForm, useFormContext, FormProvider } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -115,16 +116,17 @@ export function EmbedFormStep({
     },
   });
 
-  // Rebuild schema reactively on formData changes
+  // Rebuild schema reactively on formData changes (debounced to avoid thrashing)
   const watchedFormData = form.watch("formData") as Record<string, unknown>;
+  const debouncedFormData = useDebounce(watchedFormData, 300);
 
   useEffect(() => {
     const { schema: conditionalSchema } = buildConditionalFormSchema(
       fields,
-      watchedFormData ?? {},
+      debouncedFormData ?? {},
     );
     schemaRef.current = baseFormSchema.extend({ formData: conditionalSchema });
-  }, [fields, watchedFormData]);
+  }, [fields, debouncedFormData]);
 
   const handleUploadStateChange = useCallback((state: UploadState) => {
     setUploadState(state);
