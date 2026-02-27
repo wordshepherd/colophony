@@ -19,6 +19,7 @@ import { count } from 'drizzle-orm';
 import {
   AuditActions,
   AuditResources,
+  csrToHopperStatus,
   type MigrationInitiateRequest,
   type MigrationInitiateResponse,
   type MigrationBundleDelivery,
@@ -314,7 +315,7 @@ export const migrationService = {
           submitterId: migration.userId,
           title: hist.title ?? 'Migrated submission',
           coverLetter: hist.coverLetter,
-          status: hist.status as 'REJECTED' | 'WITHDRAWN' | 'ACCEPTED',
+          status: csrToHopperStatus(hist.status) ?? 'REJECTED',
           formData: hist.formData ?? undefined,
           submittedAt: hist.submittedAt
             ? new Date(hist.submittedAt)

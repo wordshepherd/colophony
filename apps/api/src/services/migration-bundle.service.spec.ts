@@ -12,6 +12,7 @@ const { mockDb } = vi.hoisted(() => {
     limit: vi.fn().mockReturnThis(),
     insert: vi.fn().mockReturnThis(),
     values: vi.fn().mockReturnThis(),
+    innerJoin: vi.fn().mockReturnThis(),
   };
   return { mockDb };
 });
@@ -29,6 +30,7 @@ vi.mock('@colophony/db', () => ({
     submittedAt: 'submissions.submittedAt',
     organizationId: 'submissions.organizationId',
     manuscriptVersionId: 'submissions.manuscriptVersionId',
+    submissionPeriodId: 'submissions.submissionPeriodId',
   },
   files: {
     id: 'files.id',
@@ -41,9 +43,24 @@ vi.mock('@colophony/db', () => ({
   manuscriptVersions: {
     id: 'manuscriptVersions.id',
     contentFingerprint: 'manuscriptVersions.contentFingerprint',
+    manuscriptId: 'manuscriptVersions.manuscriptId',
+  },
+  manuscripts: {
+    id: 'manuscripts.id',
+    genre: 'manuscripts.genre',
   },
   organizations: { id: 'organizations.id', name: 'organizations.name' },
-  submissionPeriods: {},
+  submissionPeriods: {
+    id: 'submissionPeriods.id',
+    name: 'submissionPeriods.name',
+  },
+  submissionHistory: {
+    submissionId: 'submissionHistory.submissionId',
+    fromStatus: 'submissionHistory.fromStatus',
+    toStatus: 'submissionHistory.toStatus',
+    changedAt: 'submissionHistory.changedAt',
+    comment: 'submissionHistory.comment',
+  },
   users: { id: 'users.id' },
   eq: vi.fn(),
   and: vi.fn(),
@@ -146,8 +163,8 @@ describe('migrationBundleService', () => {
         return mockDb;
       });
 
-      // Call tracking: select calls resolve differently based on count
-      // New batch flow: 1. submissions, 2. orgs, 3. batch files, 4. batch versions
+      // Batch flow: 1. submissions, 2. orgs, 3. periods, 4. genre JOIN,
+      //             5. history, 6. batch files, 7. batch versions
       mockDb.where.mockImplementation(() => {
         if (selectCallCount === 1) {
           // Submissions query
@@ -162,6 +179,7 @@ describe('migrationBundleService', () => {
               submittedAt: new Date('2025-01-01'),
               organizationId: validUuid2,
               manuscriptVersionId: null,
+              submissionPeriodId: null,
             },
             {
               id: validUuid2,
@@ -173,15 +191,25 @@ describe('migrationBundleService', () => {
               submittedAt: new Date('2025-02-01'),
               organizationId: validUuid2,
               manuscriptVersionId: validUuid,
+              submissionPeriodId: null,
             },
           ];
         }
         if (selectCallCount === 2) {
-          // Orgs lookup (inArray)
+          // Orgs lookup
           return [{ id: validUuid2, name: 'Test Magazine' }];
         }
-        // Batch files fetch (all versions at once)
+        // 3: periods — skipped (no submissionPeriodIds)
         if (selectCallCount === 3) {
+          // Genre JOIN (one version)
+          return [{ versionId: validUuid, genre: null }];
+        }
+        if (selectCallCount === 4) {
+          // History
+          return [];
+        }
+        if (selectCallCount === 5) {
+          // Batch files
           return [
             {
               id: 'file-1',
@@ -192,8 +220,8 @@ describe('migrationBundleService', () => {
             },
           ];
         }
-        // Batch versions fetch (all versions at once)
-        if (selectCallCount === 4) {
+        if (selectCallCount === 6) {
+          // Batch versions
           return [{ id: validUuid, contentFingerprint: 'abc123' }];
         }
         return [];
@@ -215,6 +243,12 @@ describe('migrationBundleService', () => {
       expect(bundle.originDomain).toBe('local.example.com');
       expect(bundle.bundleToken).toBe('mock.bundle.jwt');
       expect(bundle.identity.email).toBe('user@test.com');
+      // CSR status mapping
+      expect(bundle.submissionHistory[0].status).toBe('rejected');
+      expect(bundle.activeSubmissions[0].status).toBe('sent');
+      // statusHistory present
+      expect(bundle.submissionHistory[0].statusHistory).toEqual([]);
+      expect(bundle.activeSubmissions[0].statusHistory).toEqual([]);
     });
 
     it('handles no submissions gracefully', async () => {
@@ -284,6 +318,7 @@ describe('migrationBundleService', () => {
               submittedAt: new Date('2025-01-01'),
               organizationId: validUuid2,
               manuscriptVersionId: mvId1,
+              submissionPeriodId: null,
             },
             {
               id: validUuid2,
@@ -295,6 +330,7 @@ describe('migrationBundleService', () => {
               submittedAt: new Date('2025-02-01'),
               organizationId: validUuid2,
               manuscriptVersionId: mvId2,
+              submissionPeriodId: null,
             },
           ];
         }
@@ -302,7 +338,19 @@ describe('migrationBundleService', () => {
           // Orgs lookup (via inArray)
           return [{ id: validUuid2, name: 'Test Mag' }];
         }
+        // 3: periods — skipped (no submissionPeriodIds)
         if (selectCallCount === 3) {
+          // Genre JOIN (both versions)
+          return [
+            { versionId: mvId1, genre: null },
+            { versionId: mvId2, genre: null },
+          ];
+        }
+        if (selectCallCount === 4) {
+          // History
+          return [];
+        }
+        if (selectCallCount === 5) {
           // Batch files fetch (single query for both versions)
           return [
             {
@@ -321,7 +369,7 @@ describe('migrationBundleService', () => {
             },
           ];
         }
-        if (selectCallCount === 4) {
+        if (selectCallCount === 6) {
           // Batch versions fetch
           return [
             { id: mvId1, contentFingerprint: 'fp-1' },
@@ -343,9 +391,10 @@ describe('migrationBundleService', () => {
         },
       );
 
-      // Should have made exactly 4 select calls:
-      // 1. submissions, 2. orgs, 3. batch files, 4. batch versions
-      expect(selectCallCount).toBe(4);
+      // Should have made exactly 6 select calls:
+      // 1. submissions, 2. orgs, 3. genre JOIN, 4. history,
+      // 5. batch files, 6. batch versions (no periods — all null)
+      expect(selectCallCount).toBe(6);
       expect(bundle.activeSubmissions).toHaveLength(2);
       expect(bundle.activeSubmissions[0].fileManifest).toHaveLength(1);
       expect(bundle.activeSubmissions[1].fileManifest).toHaveLength(1);
@@ -371,11 +420,17 @@ describe('migrationBundleService', () => {
               submittedAt: null,
               organizationId: validUuid2,
               manuscriptVersionId: null,
+              submissionPeriodId: null,
             },
           ];
         }
         if (selectCallCount === 2) {
+          // Orgs lookup
           return [{ id: validUuid2, name: 'Test Mag' }];
+        }
+        if (selectCallCount === 3) {
+          // History
+          return [];
         }
         return [];
       });
@@ -392,11 +447,266 @@ describe('migrationBundleService', () => {
         },
       );
 
-      // Only 2 select calls: submissions + orgs (no batch files/versions)
-      expect(selectCallCount).toBe(2);
+      // 3 select calls: submissions + orgs + history (no periods, no genre, no files/versions)
+      expect(selectCallCount).toBe(3);
       expect(bundle.activeSubmissions).toHaveLength(1);
       expect(bundle.activeSubmissions[0].fileManifest).toEqual([]);
       expect(bundle.activeSubmissions[0].contentFingerprint).toBeNull();
+    });
+
+    it('populates genre from manuscripts via version join', async () => {
+      let selectCallCount = 0;
+      mockDb.select.mockImplementation(() => {
+        selectCallCount++;
+        return mockDb;
+      });
+
+      const mvId = '00000000-0000-4000-a000-000000000010';
+
+      mockDb.where.mockImplementation(() => {
+        if (selectCallCount === 1) {
+          return [
+            {
+              id: validUuid,
+              title: 'Poetry Sub',
+              coverLetter: null,
+              content: null,
+              status: 'REJECTED',
+              formData: null,
+              submittedAt: new Date('2025-01-01'),
+              organizationId: validUuid2,
+              manuscriptVersionId: mvId,
+              submissionPeriodId: null,
+            },
+          ];
+        }
+        if (selectCallCount === 2) {
+          return [{ id: validUuid2, name: 'Test Mag' }];
+        }
+        // 3: genre JOIN
+        if (selectCallCount === 3) {
+          return [
+            {
+              versionId: mvId,
+              genre: { primary: 'poetry', sub: 'lyric', hybrid: [] },
+            },
+          ];
+        }
+        // 4: history
+        if (selectCallCount === 4) return [];
+        return [];
+      });
+
+      const bundle = await migrationBundleService.assembleBundleForUser(
+        testEnv,
+        {
+          userId: validUuid,
+          userEmail: 'user@test.com',
+          userDid: 'did:web:local.example.com:users:user',
+          destinationDomain: 'remote.example.com',
+          destinationUserDid: null,
+          migrationId: validUuid2,
+        },
+      );
+
+      expect(bundle.submissionHistory[0].genre).toEqual({
+        primary: 'poetry',
+        sub: 'lyric',
+        hybrid: [],
+      });
+    });
+
+    it('populates periodName from submission_periods', async () => {
+      let selectCallCount = 0;
+      mockDb.select.mockImplementation(() => {
+        selectCallCount++;
+        return mockDb;
+      });
+
+      const periodId = '00000000-0000-4000-a000-000000000030';
+
+      mockDb.where.mockImplementation(() => {
+        if (selectCallCount === 1) {
+          return [
+            {
+              id: validUuid,
+              title: 'Period Sub',
+              coverLetter: null,
+              content: null,
+              status: 'ACCEPTED',
+              formData: null,
+              submittedAt: new Date('2025-01-01'),
+              organizationId: validUuid2,
+              manuscriptVersionId: null,
+              submissionPeriodId: periodId,
+            },
+          ];
+        }
+        if (selectCallCount === 2) {
+          return [{ id: validUuid2, name: 'Test Mag' }];
+        }
+        // 3: periods
+        if (selectCallCount === 3) {
+          return [{ id: periodId, name: 'Spring 2025' }];
+        }
+        // 4: history
+        if (selectCallCount === 4) return [];
+        return [];
+      });
+
+      const bundle = await migrationBundleService.assembleBundleForUser(
+        testEnv,
+        {
+          userId: validUuid,
+          userEmail: 'user@test.com',
+          userDid: 'did:web:local.example.com:users:user',
+          destinationDomain: 'remote.example.com',
+          destinationUserDid: null,
+          migrationId: validUuid2,
+        },
+      );
+
+      expect(bundle.submissionHistory[0].periodName).toBe('Spring 2025');
+    });
+
+    it('derives decidedAt from submission_history terminal transition', async () => {
+      let selectCallCount = 0;
+      mockDb.select.mockImplementation(() => {
+        selectCallCount++;
+        return mockDb;
+      });
+
+      mockDb.where.mockImplementation(() => {
+        if (selectCallCount === 1) {
+          return [
+            {
+              id: validUuid,
+              title: 'Decided Sub',
+              coverLetter: null,
+              content: null,
+              status: 'REJECTED',
+              formData: null,
+              submittedAt: new Date('2025-01-01'),
+              organizationId: validUuid2,
+              manuscriptVersionId: null,
+              submissionPeriodId: null,
+            },
+          ];
+        }
+        if (selectCallCount === 2) {
+          return [{ id: validUuid2, name: 'Test Mag' }];
+        }
+        // 3: history
+        if (selectCallCount === 3) {
+          return [
+            {
+              submissionId: validUuid,
+              fromStatus: null,
+              toStatus: 'SUBMITTED',
+              changedAt: new Date('2025-01-01T10:00:00Z'),
+              comment: null,
+            },
+            {
+              submissionId: validUuid,
+              fromStatus: 'SUBMITTED',
+              toStatus: 'UNDER_REVIEW',
+              changedAt: new Date('2025-01-15T10:00:00Z'),
+              comment: null,
+            },
+            {
+              submissionId: validUuid,
+              fromStatus: 'UNDER_REVIEW',
+              toStatus: 'REJECTED',
+              changedAt: new Date('2025-02-01T10:00:00Z'),
+              comment: 'Not a fit',
+            },
+          ];
+        }
+        return [];
+      });
+
+      const bundle = await migrationBundleService.assembleBundleForUser(
+        testEnv,
+        {
+          userId: validUuid,
+          userEmail: 'user@test.com',
+          userDid: 'did:web:local.example.com:users:user',
+          destinationDomain: 'remote.example.com',
+          destinationUserDid: null,
+          migrationId: validUuid2,
+        },
+      );
+
+      expect(bundle.submissionHistory[0].decidedAt).toBe(
+        '2025-02-01T10:00:00.000Z',
+      );
+      expect(bundle.submissionHistory[0].statusHistory).toHaveLength(3);
+      expect(bundle.submissionHistory[0].statusHistory[2]).toEqual({
+        from: 'in_review',
+        to: 'rejected',
+        changedAt: '2025-02-01T10:00:00.000Z',
+        comment: 'Not a fit',
+      });
+    });
+
+    it('maps Hopper status to CSR status in bundle', async () => {
+      let selectCallCount = 0;
+      mockDb.select.mockImplementation(() => {
+        selectCallCount++;
+        return mockDb;
+      });
+
+      mockDb.where.mockImplementation(() => {
+        if (selectCallCount === 1) {
+          return [
+            {
+              id: validUuid,
+              title: 'Rejected',
+              coverLetter: null,
+              content: null,
+              status: 'REJECTED',
+              formData: null,
+              submittedAt: new Date('2025-01-01'),
+              organizationId: validUuid2,
+              manuscriptVersionId: null,
+              submissionPeriodId: null,
+            },
+            {
+              id: validUuid2,
+              title: 'Active',
+              coverLetter: null,
+              content: 'Text',
+              status: 'SUBMITTED',
+              formData: null,
+              submittedAt: new Date('2025-02-01'),
+              organizationId: validUuid2,
+              manuscriptVersionId: null,
+              submissionPeriodId: null,
+            },
+          ];
+        }
+        if (selectCallCount === 2) {
+          return [{ id: validUuid2, name: 'Test Mag' }];
+        }
+        // 3: history
+        if (selectCallCount === 3) return [];
+        return [];
+      });
+
+      const bundle = await migrationBundleService.assembleBundleForUser(
+        testEnv,
+        {
+          userId: validUuid,
+          userEmail: 'user@test.com',
+          userDid: 'did:web:local.example.com:users:user',
+          destinationDomain: 'remote.example.com',
+          destinationUserDid: null,
+          migrationId: validUuid2,
+        },
+      );
+
+      expect(bundle.submissionHistory[0].status).toBe('rejected');
+      expect(bundle.activeSubmissions[0].status).toBe('sent');
     });
   });
 
