@@ -80,6 +80,10 @@ Per-directory CLAUDE.md files contain domain-specific details:
 | **TypeScript SDK**       | `sdks/typescript/` (`@colophony/sdk` — openapi-fetch + generated types)          |
 | **Python SDK**           | `sdks/python/` (`colophony` — openapi-python-client generated)                   |
 | **SDK generation**       | `scripts/generate-sdks.ts` (regenerate both SDKs from committed spec)            |
+| **Sentry config**        | `apps/api/src/config/sentry.ts` (init, captureException, isSentryEnabled)        |
+| **Metrics registry**     | `apps/api/src/config/metrics.ts` (Prometheus counters, histograms, gauges)       |
+| **Metrics plugin**       | `apps/api/src/hooks/metrics.ts` (Fastify plugin — HTTP request instrumentation)  |
+| **Instrumented worker**  | `apps/api/src/config/instrumented-worker.ts` (BullMQ wrapper with metrics)       |
 | **Backlog**              | `docs/backlog.md` (track-organized, drives session focus)                        |
 
 Full project structure: [docs/architecture-v2-planning.md](docs/architecture-v2-planning.md)
@@ -183,7 +187,7 @@ All other version pins are in their respective per-directory CLAUDE.md files.
 - [ ] `pg_stat_statements` for query monitoring
 - [ ] Rotate credentials quarterly
 - [ ] AGPL license boundary documented (Zitadel is AGPL; Colophony code is unaffected)
-- [ ] Monitoring: Prometheus + Grafana + Loki
+- [x] Monitoring: Prometheus + Grafana (Sentry error tracking, `/metrics` endpoint, `--profile monitoring`)
 - [ ] Verify RLS in production — see `packages/db/CLAUDE.md` for verification queries
 
 ---
@@ -428,6 +432,11 @@ Canonical env definition with Zod validation: `apps/api/src/config/env.ts`
 | `NEXT_PUBLIC_ZITADEL_AUTHORITY` / `NEXT_PUBLIC_ZITADEL_CLIENT_ID` | —        | —                            | Web            |
 | `API_URL`                                                         | —        | —                            | Web (SSR only) |
 | `PLUGIN_REGISTRY_URL`                                             | No       | —                            | API            |
+| `SENTRY_DSN`                                                      | No       | —                            | API            |
+| `SENTRY_ENVIRONMENT`                                              | No       | `development`                | API            |
+| `SENTRY_TRACES_SAMPLE_RATE`                                       | No       | `0`                          | API            |
+| `SENTRY_RELEASE`                                                  | No       | —                            | API            |
+| `METRICS_ENABLED`                                                 | No       | `false`                      | API            |
 
 ---
 

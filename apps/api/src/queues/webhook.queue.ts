@@ -58,6 +58,10 @@ export async function enqueueWebhook(
   await getQueue(env).add('deliver', data, { jobId: data.deliveryId });
 }
 
+export function getWebhookQueueInstance(): Queue<WebhookJobData> | null {
+  return queue;
+}
+
 export async function closeWebhookQueue(): Promise<void> {
   if (queue) {
     await queue.close();

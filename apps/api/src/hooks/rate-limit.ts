@@ -11,7 +11,7 @@ export interface RateLimitPluginOptions {
 
 /** Routes that skip rate limiting entirely. */
 const SKIP_PREFIXES = ['/health', '/ready', '/webhooks/', '/.well-known/'];
-const SKIP_EXACT = ['/', '/health', '/ready'];
+const SKIP_EXACT = ['/', '/health', '/ready', '/metrics'];
 
 function shouldSkip(request: FastifyRequest): boolean {
   if (request.method === 'OPTIONS') return true;
