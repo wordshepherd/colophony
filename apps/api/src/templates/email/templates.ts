@@ -208,8 +208,7 @@ export const templates: Record<TemplateName, TemplateRenderer> = {
 };
 
 function stripHtml(html: string): string {
-  return html
-    .replace(/<[^>]*>/g, '')
+  return sanitizeHtml(html, { allowedTags: [], allowedAttributes: {} })
     .replace(/&nbsp;/g, ' ')
     .trim();
 }
