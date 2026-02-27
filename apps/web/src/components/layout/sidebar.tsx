@@ -19,6 +19,7 @@ import {
   Inbox,
   LayoutDashboard,
   Library,
+  Puzzle,
   Settings,
   Webhook,
 } from "lucide-react";
@@ -56,6 +57,11 @@ const adminNavigation = [
     name: "Webhooks",
     href: "/webhooks",
     icon: Webhook,
+  },
+  {
+    name: "Plugins",
+    href: "/plugins",
+    icon: Puzzle,
   },
 ];
 
