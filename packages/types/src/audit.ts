@@ -207,6 +207,10 @@ export const AuditActions = {
   WEBHOOK_DELIVERY_RETRIED: "WEBHOOK_DELIVERY_RETRIED",
   WEBHOOK_ENDPOINT_AUTO_DISABLED: "WEBHOOK_ENDPOINT_AUTO_DISABLED",
 
+  // Correspondence lifecycle
+  CORRESPONDENCE_SENT: "CORRESPONDENCE_SENT",
+  CORRESPONDENCE_AUTO_CAPTURED: "CORRESPONDENCE_AUTO_CAPTURED",
+
   // Audit access
   AUDIT_ACCESSED: "AUDIT_ACCESSED",
 } as const;
@@ -242,6 +246,7 @@ export const AuditResources = {
   NOTIFICATION_PREFERENCE: "notification_preference",
   WEBHOOK_ENDPOINT: "webhook_endpoint",
   WEBHOOK_DELIVERY: "webhook_delivery",
+  CORRESPONDENCE: "correspondence",
   AUDIT: "audit",
 } as const;
 
@@ -542,6 +547,13 @@ export interface WebhookDeliveryAuditParams extends BaseAuditParams {
     | typeof AuditActions.WEBHOOK_DELIVERY_RETRIED;
 }
 
+export interface CorrespondenceAuditParams extends BaseAuditParams {
+  resource: typeof AuditResources.CORRESPONDENCE;
+  action:
+    | typeof AuditActions.CORRESPONDENCE_SENT
+    | typeof AuditActions.CORRESPONDENCE_AUTO_CAPTURED;
+}
+
 export interface AuditAccessAuditParams extends BaseAuditParams {
   resource: typeof AuditResources.AUDIT;
   action: typeof AuditActions.AUDIT_ACCESSED;
@@ -583,6 +595,7 @@ export type AuditLogParams =
   | NotificationPreferenceAuditParams
   | WebhookEndpointAuditParams
   | WebhookDeliveryAuditParams
+  | CorrespondenceAuditParams
   | AuditAccessAuditParams
   | SystemAuditParams;
 
