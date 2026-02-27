@@ -147,6 +147,7 @@ describe('migrationBundleService', () => {
       });
 
       // Call tracking: select calls resolve differently based on count
+      // New batch flow: 1. submissions, 2. orgs, 3. batch files, 4. batch versions
       mockDb.where.mockImplementation(() => {
         if (selectCallCount === 1) {
           // Submissions query
@@ -176,10 +177,10 @@ describe('migrationBundleService', () => {
           ];
         }
         if (selectCallCount === 2) {
-          // Orgs lookup
+          // Orgs lookup (inArray)
           return [{ id: validUuid2, name: 'Test Magazine' }];
         }
-        // Files for active submission
+        // Batch files fetch (all versions at once)
         if (selectCallCount === 3) {
           return [
             {
@@ -187,21 +188,16 @@ describe('migrationBundleService', () => {
               filename: 'story.docx',
               mimeType: 'application/docx',
               size: 12345,
+              manuscriptVersionId: validUuid,
             },
           ];
         }
-        // Manuscript version fingerprint
+        // Batch versions fetch (all versions at once)
         if (selectCallCount === 4) {
-          mockDb.limit.mockResolvedValueOnce([
-            { contentFingerprint: 'abc123' },
-          ]);
-          return mockDb;
+          return [{ id: validUuid, contentFingerprint: 'abc123' }];
         }
-        return mockDb;
+        return [];
       });
-
-      // For the limit() calls on specific queries
-      mockDb.limit.mockResolvedValue([{ contentFingerprint: 'abc123' }]);
 
       const bundle = await migrationBundleService.assembleBundleForUser(
         testEnv,
@@ -261,6 +257,146 @@ describe('migrationBundleService', () => {
         'remote.example.com',
       );
       expect(mockSignJWT.setJti).toHaveBeenCalledWith(validUuid2);
+    });
+
+    it('batch-fetches files and versions instead of per-submission queries', async () => {
+      let selectCallCount = 0;
+      mockDb.select.mockImplementation(() => {
+        selectCallCount++;
+        return mockDb;
+      });
+
+      // Two active submissions with different manuscriptVersionIds
+      const mvId1 = '00000000-0000-4000-a000-000000000010';
+      const mvId2 = '00000000-0000-4000-a000-000000000020';
+
+      mockDb.where.mockImplementation(() => {
+        if (selectCallCount === 1) {
+          // Submissions query
+          return [
+            {
+              id: validUuid,
+              title: 'Active 1',
+              coverLetter: null,
+              content: 'Text',
+              status: 'SUBMITTED',
+              formData: null,
+              submittedAt: new Date('2025-01-01'),
+              organizationId: validUuid2,
+              manuscriptVersionId: mvId1,
+            },
+            {
+              id: validUuid2,
+              title: 'Active 2',
+              coverLetter: null,
+              content: 'Text2',
+              status: 'UNDER_REVIEW',
+              formData: null,
+              submittedAt: new Date('2025-02-01'),
+              organizationId: validUuid2,
+              manuscriptVersionId: mvId2,
+            },
+          ];
+        }
+        if (selectCallCount === 2) {
+          // Orgs lookup (via inArray)
+          return [{ id: validUuid2, name: 'Test Mag' }];
+        }
+        if (selectCallCount === 3) {
+          // Batch files fetch (single query for both versions)
+          return [
+            {
+              id: 'f1',
+              filename: 'a.docx',
+              mimeType: 'application/docx',
+              size: 100,
+              manuscriptVersionId: mvId1,
+            },
+            {
+              id: 'f2',
+              filename: 'b.docx',
+              mimeType: 'application/docx',
+              size: 200,
+              manuscriptVersionId: mvId2,
+            },
+          ];
+        }
+        if (selectCallCount === 4) {
+          // Batch versions fetch
+          return [
+            { id: mvId1, contentFingerprint: 'fp-1' },
+            { id: mvId2, contentFingerprint: 'fp-2' },
+          ];
+        }
+        return [];
+      });
+
+      const bundle = await migrationBundleService.assembleBundleForUser(
+        testEnv,
+        {
+          userId: validUuid,
+          userEmail: 'user@test.com',
+          userDid: 'did:web:local.example.com:users:user',
+          destinationDomain: 'remote.example.com',
+          destinationUserDid: null,
+          migrationId: validUuid2,
+        },
+      );
+
+      // Should have made exactly 4 select calls:
+      // 1. submissions, 2. orgs, 3. batch files, 4. batch versions
+      expect(selectCallCount).toBe(4);
+      expect(bundle.activeSubmissions).toHaveLength(2);
+      expect(bundle.activeSubmissions[0].fileManifest).toHaveLength(1);
+      expect(bundle.activeSubmissions[1].fileManifest).toHaveLength(1);
+    });
+
+    it('handles submissions with no manuscriptVersionId (skips batch)', async () => {
+      let selectCallCount = 0;
+      mockDb.select.mockImplementation(() => {
+        selectCallCount++;
+        return mockDb;
+      });
+
+      mockDb.where.mockImplementation(() => {
+        if (selectCallCount === 1) {
+          return [
+            {
+              id: validUuid,
+              title: 'Draft No Version',
+              coverLetter: null,
+              content: 'Text',
+              status: 'DRAFT',
+              formData: null,
+              submittedAt: null,
+              organizationId: validUuid2,
+              manuscriptVersionId: null,
+            },
+          ];
+        }
+        if (selectCallCount === 2) {
+          return [{ id: validUuid2, name: 'Test Mag' }];
+        }
+        return [];
+      });
+
+      const bundle = await migrationBundleService.assembleBundleForUser(
+        testEnv,
+        {
+          userId: validUuid,
+          userEmail: 'user@test.com',
+          userDid: 'did:web:local.example.com:users:user',
+          destinationDomain: 'remote.example.com',
+          destinationUserDid: null,
+          migrationId: validUuid2,
+        },
+      );
+
+      // Only 2 select calls: submissions + orgs (no batch files/versions)
+      expect(selectCallCount).toBe(2);
+      expect(bundle.activeSubmissions).toHaveLength(1);
+      expect(bundle.activeSubmissions[0].fileManifest).toEqual([]);
+      expect(bundle.activeSubmissions[0].contentFingerprint).toBeNull();
     });
   });
 

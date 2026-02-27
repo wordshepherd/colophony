@@ -1,5 +1,6 @@
 import Fastify, { type FastifyInstance } from 'fastify';
 import cors from '@fastify/cors';
+import compress from '@fastify/compress';
 import helmet from '@fastify/helmet';
 import { pool, appPool } from '@colophony/db';
 import { loadConfig } from '@colophony/plugin-sdk';
@@ -113,6 +114,9 @@ export async function buildApp(env: Env): Promise<FastifyInstance> {
     // CORP defaults to same-origin; no override needed for a JSON API
     // (cross-origin fetch/XHR is governed by CORS, not CORP)
   });
+
+  // Response compression (brotli + gzip, skip small payloads)
+  await app.register(compress, { threshold: 1024 });
 
   // Permissions-Policy — helmet v8 dropped support; set manually
   app.addHook('onSend', async (_request, reply) => {
