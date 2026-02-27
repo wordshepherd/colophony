@@ -3,6 +3,9 @@ import {
   createSubmissionPeriodSchema,
   updateSubmissionPeriodSchema,
   idParamSchema,
+  submissionPeriodSchema,
+  paginatedResponseSchema,
+  successResponseSchema,
 } from '@colophony/types';
 import { restPaginationQuery } from '@colophony/api-contracts';
 import {
@@ -16,6 +19,8 @@ import { orgProcedure, requireScopes } from '../context.js';
 // ---------------------------------------------------------------------------
 // Query schemas — override page/limit with z.coerce for REST query strings
 // ---------------------------------------------------------------------------
+
+const paginatedPeriodsSchema = paginatedResponseSchema(submissionPeriodSchema);
 
 const restListPeriodsQuery = listSubmissionPeriodsSchema
   .omit({ page: true, limit: true })
@@ -37,6 +42,7 @@ const list = orgProcedure
     tags: ['Periods'],
   })
   .input(restListPeriodsQuery)
+  .output(paginatedPeriodsSchema)
   .handler(async ({ input, context }) => {
     return periodService.list(context.dbTx, input);
   });
@@ -54,6 +60,7 @@ const create = orgProcedure
     tags: ['Periods'],
   })
   .input(createSubmissionPeriodSchema)
+  .output(submissionPeriodSchema)
   .handler(async ({ input, context }) => {
     try {
       return await periodService.createWithAudit(
@@ -76,6 +83,7 @@ const get = orgProcedure
     tags: ['Periods'],
   })
   .input(idParamSchema)
+  .output(submissionPeriodSchema)
   .handler(async ({ input, context }) => {
     try {
       const period = await periodService.getById(context.dbTx, input.id);
@@ -97,6 +105,7 @@ const update = orgProcedure
     tags: ['Periods'],
   })
   .input(idParamSchema.merge(updateSubmissionPeriodSchema))
+  .output(submissionPeriodSchema)
   .handler(async ({ input, context }) => {
     const { id, ...data } = input;
     try {
@@ -122,6 +131,7 @@ const del = orgProcedure
     tags: ['Periods'],
   })
   .input(idParamSchema)
+  .output(successResponseSchema)
   .handler(async ({ input, context }) => {
     try {
       return await periodService.deleteWithAudit(

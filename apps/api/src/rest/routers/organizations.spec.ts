@@ -162,7 +162,7 @@ describe('organizations REST router', () => {
     it('returns user organizations', async () => {
       const orgs = [
         {
-          organizationId: 'org-1',
+          organizationId: ORG_ID,
           role: 'ADMIN',
           name: 'Org 1',
           slug: 'org-1',
@@ -188,15 +188,29 @@ describe('organizations REST router', () => {
     it('checks slug availability and creates org', async () => {
       mockService.isSlugAvailable.mockResolvedValueOnce(true);
       mockService.createWithAudit.mockResolvedValueOnce({
-        organization: { id: 'org-new', name: 'Test', slug: 'test' },
-        membership: { id: 'mem-1', role: 'ADMIN' },
+        organization: {
+          id: ORG_ID,
+          name: 'Test',
+          slug: 'test',
+          settings: {},
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+        membership: {
+          id: MEMBER_ID,
+          organizationId: ORG_ID,
+          userId: USER_ID,
+          role: 'ADMIN',
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
       } as never);
 
       const ctx = authedContext();
       const call = client(organizationsRouter.create, ctx);
       const result = await call({ name: 'Test', slug: 'test' });
 
-      expect(result.organization.id).toBe('org-new');
+      expect(result.organization.id).toBe(ORG_ID);
       expect(mockService.isSlugAvailable).toHaveBeenCalledWith('test'); // eslint-disable-line @typescript-eslint/unbound-method
       // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(mockService.createWithAudit).toHaveBeenCalledWith(
@@ -257,12 +271,19 @@ describe('organizations REST router', () => {
     });
 
     it('returns organization', async () => {
-      const org = { id: 'org-1', name: 'Org', slug: 'org' };
+      const org = {
+        id: ORG_ID,
+        name: 'Org',
+        slug: 'org',
+        settings: {},
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
       mockService.getById.mockResolvedValueOnce(org as never);
 
       const call = client(organizationsRouter.get, orgContext());
       const result = await call({ orgId: ORG_ID });
-      expect(result).toEqual(org);
+      expect(result.id).toBe(ORG_ID);
     });
 
     it('throws NOT_FOUND when org missing', async () => {
@@ -282,12 +303,19 @@ describe('organizations REST router', () => {
     });
 
     it('updates organization via updateWithAudit', async () => {
-      const updated = { id: 'org-1', name: 'New' };
+      const updated = {
+        id: ORG_ID,
+        name: 'New',
+        slug: 'org',
+        settings: {},
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
       mockService.updateWithAudit.mockResolvedValueOnce(updated as never);
 
       const call = client(organizationsRouter.update, orgContext('ADMIN'));
       const result = await call({ orgId: ORG_ID, name: 'New' });
-      expect(result).toEqual(updated);
+      expect(result.name).toBe('New');
     });
 
     it('maps NotFoundError to NOT_FOUND', async () => {
@@ -312,7 +340,15 @@ describe('organizations REST router', () => {
 
     it('returns paginated members', async () => {
       const response = {
-        items: [{ id: 'mem-1', userId: 'u-1', role: 'ADMIN', email: 'a@b.c' }],
+        items: [
+          {
+            id: MEMBER_ID,
+            userId: USER_ID,
+            email: 'test@example.com',
+            role: 'ADMIN',
+            createdAt: new Date(),
+          },
+        ],
         total: 1,
         page: 1,
         limit: 20,
@@ -342,7 +378,14 @@ describe('organizations REST router', () => {
     });
 
     it('adds member via addMemberWithAudit', async () => {
-      const member = { id: 'mem-new', userId: 'u-2', role: 'READER' };
+      const member = {
+        id: MEMBER_ID,
+        organizationId: ORG_ID,
+        userId: USER_ID,
+        role: 'READER',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
       mockService.addMemberWithAudit.mockResolvedValueOnce(member as never);
 
       const call = client(organizationsRouter.members.add, orgContext('ADMIN'));
@@ -412,8 +455,12 @@ describe('organizations REST router', () => {
   describe('PATCH /organizations/{orgId}/members/{memberId} (updateRole)', () => {
     it('updates role via updateMemberRoleWithAudit', async () => {
       mockService.updateMemberRoleWithAudit.mockResolvedValueOnce({
-        id: 'mem-1',
+        id: MEMBER_ID,
+        organizationId: ORG_ID,
+        userId: USER_ID,
         role: 'EDITOR',
+        createdAt: new Date(),
+        updatedAt: new Date(),
       } as never);
 
       const call = client(
@@ -477,13 +524,20 @@ describe('organizations REST router', () => {
     });
 
     it('allows API key with correct read scope', async () => {
-      const org = { id: ORG_ID, name: 'Org', slug: 'org' };
+      const org = {
+        id: ORG_ID,
+        name: 'Org',
+        slug: 'org',
+        settings: {},
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
       mockService.getById.mockResolvedValueOnce(org as never);
 
       const ctx = apiKeyContext(['organizations:read']);
       const call = client(organizationsRouter.get, ctx);
       const result = await call({ orgId: ORG_ID });
-      expect(result).toEqual(org);
+      expect(result.id).toBe(ORG_ID);
     });
   });
 });

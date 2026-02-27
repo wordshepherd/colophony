@@ -1,6 +1,27 @@
 import { ORPCError } from '@orpc/server';
+import { z } from 'zod';
+import { roleSchema } from '@colophony/types';
 import { userService } from '../../services/user.service.js';
 import { authedProcedure, requireScopes } from '../context.js';
+
+// ---------------------------------------------------------------------------
+// Output schemas
+// ---------------------------------------------------------------------------
+
+const userProfileOutputSchema = z.object({
+  id: z.string().uuid(),
+  email: z.string(),
+  emailVerified: z.boolean(),
+  createdAt: z.date(),
+  organizations: z.array(
+    z.object({
+      id: z.string().uuid(),
+      name: z.string(),
+      slug: z.string(),
+      role: roleSchema,
+    }),
+  ),
+});
 
 // ---------------------------------------------------------------------------
 // User routes
@@ -17,6 +38,7 @@ const me = authedProcedure
     operationId: 'getCurrentUser',
     tags: ['Users'],
   })
+  .output(userProfileOutputSchema)
   .handler(async ({ context }) => {
     const profile = await userService.getProfile(context.authContext.userId);
     if (!profile) {

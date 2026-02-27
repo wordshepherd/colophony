@@ -1,6 +1,9 @@
+import { z } from 'zod';
 import {
   fileIdParamSchema,
+  fileSchema,
   manuscriptVersionIdParamSchema,
+  successResponseSchema,
 } from '@colophony/types';
 import { fileService } from '../../services/file.service.js';
 import { getGlobalRegistry } from '../../adapters/registry-accessor.js';
@@ -8,6 +11,16 @@ import type { S3StorageAdapter } from '../../adapters/storage/index.js';
 import { toUserServiceContext } from '../../services/context.js';
 import { mapServiceError } from '../error-mapper.js';
 import { userProcedure, requireScopes } from '../context.js';
+
+// ---------------------------------------------------------------------------
+// Output schemas
+// ---------------------------------------------------------------------------
+
+const downloadUrlOutputSchema = z.object({
+  url: z.string(),
+  filename: z.string(),
+  mimeType: z.string(),
+});
 
 function getStorage(): S3StorageAdapter {
   return getGlobalRegistry().resolve<S3StorageAdapter>('storage');
@@ -28,6 +41,7 @@ const list = userProcedure
     tags: ['Files'],
   })
   .input(manuscriptVersionIdParamSchema)
+  .output(z.array(fileSchema))
   .handler(async ({ input, context }) => {
     try {
       return await fileService.listByManuscriptVersionWithAccess(
@@ -51,6 +65,7 @@ const download = userProcedure
     tags: ['Files'],
   })
   .input(fileIdParamSchema)
+  .output(downloadUrlOutputSchema)
   .handler(async ({ input, context }) => {
     try {
       return await fileService.getDownloadUrlWithAccess(
@@ -75,6 +90,7 @@ const del = userProcedure
     tags: ['Files'],
   })
   .input(fileIdParamSchema)
+  .output(successResponseSchema)
   .handler(async ({ input, context }) => {
     try {
       return await fileService.deleteAsOwner(

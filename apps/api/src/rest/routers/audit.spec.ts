@@ -113,7 +113,23 @@ describe('audit REST router', () => {
 
     it('returns paginated audit events', async () => {
       const response = {
-        items: [{ id: EVENT_ID, action: 'USER_CREATED', resource: 'user' }],
+        items: [
+          {
+            id: EVENT_ID,
+            action: 'USER_CREATED',
+            resource: 'user',
+            resourceId: null,
+            actorId: USER_ID,
+            oldValue: null,
+            newValue: null,
+            ipAddress: null,
+            userAgent: null,
+            requestId: null,
+            method: null,
+            route: null,
+            createdAt: new Date(),
+          },
+        ],
         total: 1,
         page: 1,
         limit: 20,

@@ -7,6 +7,10 @@ import {
   addIssueSectionSchema,
   reorderItemsSchema,
   idParamSchema,
+  issueSchema,
+  issueItemSchema,
+  issueSectionSchema,
+  paginatedResponseSchema,
 } from '@colophony/types';
 import { restPaginationQuery } from '@colophony/api-contracts';
 import {
@@ -20,6 +24,8 @@ import { orgProcedure, adminProcedure, requireScopes } from '../context.js';
 // ---------------------------------------------------------------------------
 // Query schemas
 // ---------------------------------------------------------------------------
+
+const paginatedIssuesSchema = paginatedResponseSchema(issueSchema);
 
 const restListQuery = listIssuesSchema
   .omit({ page: true, limit: true })
@@ -40,6 +46,7 @@ const list = orgProcedure
     tags: ['Issues'],
   })
   .input(restListQuery)
+  .output(paginatedIssuesSchema)
   .handler(async ({ input, context }) => {
     return issueService.list(context.dbTx, input);
   });
@@ -55,6 +62,7 @@ const get = orgProcedure
     tags: ['Issues'],
   })
   .input(idParamSchema)
+  .output(issueSchema)
   .handler(async ({ input, context }) => {
     try {
       const issue = await issueService.getById(context.dbTx, input.id);
@@ -76,6 +84,7 @@ const getItems = orgProcedure
     tags: ['Issues'],
   })
   .input(idParamSchema)
+  .output(z.array(issueItemSchema))
   .handler(async ({ input, context }) => {
     return issueService.getItems(context.dbTx, input.id);
   });
@@ -91,6 +100,7 @@ const getSections = orgProcedure
     tags: ['Issues'],
   })
   .input(idParamSchema)
+  .output(z.array(issueSectionSchema))
   .handler(async ({ input, context }) => {
     return issueService.getSections(context.dbTx, input.id);
   });
@@ -107,6 +117,7 @@ const create = adminProcedure
     tags: ['Issues'],
   })
   .input(createIssueSchema)
+  .output(issueSchema)
   .handler(async ({ input, context }) => {
     try {
       return await issueService.createWithAudit(
@@ -129,6 +140,7 @@ const update = adminProcedure
     tags: ['Issues'],
   })
   .input(idParamSchema.merge(updateIssueSchema))
+  .output(issueSchema)
   .handler(async ({ input, context }) => {
     const { id, ...data } = input;
     try {
@@ -153,6 +165,7 @@ const publish = adminProcedure
     tags: ['Issues'],
   })
   .input(idParamSchema)
+  .output(issueSchema)
   .handler(async ({ input, context }) => {
     try {
       return await issueService.publishWithAudit(
@@ -175,6 +188,7 @@ const archive = adminProcedure
     tags: ['Issues'],
   })
   .input(idParamSchema)
+  .output(issueSchema)
   .handler(async ({ input, context }) => {
     try {
       return await issueService.archiveWithAudit(
@@ -198,6 +212,7 @@ const addItem = adminProcedure
     tags: ['Issues'],
   })
   .input(idParamSchema.merge(addIssueItemSchema))
+  .output(issueItemSchema)
   .handler(async ({ input, context }) => {
     const { id, ...data } = input;
     try {
@@ -222,6 +237,7 @@ const removeItem = adminProcedure
     tags: ['Issues'],
   })
   .input(z.object({ id: z.string().uuid(), itemId: z.string().uuid() }))
+  .output(issueItemSchema)
   .handler(async ({ input, context }) => {
     try {
       return await issueService.removeItemWithAudit(
@@ -245,6 +261,7 @@ const reorderItems = adminProcedure
     tags: ['Issues'],
   })
   .input(idParamSchema.merge(reorderItemsSchema))
+  .output(z.array(issueItemSchema))
   .handler(async ({ input, context }) => {
     const { id, ...data } = input;
     return issueService.reorderItems(context.dbTx, id, data);
@@ -262,6 +279,7 @@ const addSection = adminProcedure
     tags: ['Issues'],
   })
   .input(idParamSchema.merge(addIssueSectionSchema))
+  .output(issueSectionSchema)
   .handler(async ({ input, context }) => {
     const { id, ...data } = input;
     return issueService.addSection(context.dbTx, id, data);
@@ -278,6 +296,7 @@ const removeSection = adminProcedure
     tags: ['Issues'],
   })
   .input(z.object({ id: z.string().uuid(), sectionId: z.string().uuid() }))
+  .output(issueSectionSchema)
   .handler(async ({ input, context }) => {
     return issueService.removeSection(context.dbTx, input.id, input.sectionId);
   });

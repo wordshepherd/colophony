@@ -3,6 +3,8 @@ import {
   createPublicationSchema,
   updatePublicationSchema,
   idParamSchema,
+  publicationSchema,
+  paginatedResponseSchema,
 } from '@colophony/types';
 import { restPaginationQuery } from '@colophony/api-contracts';
 import {
@@ -16,6 +18,8 @@ import { orgProcedure, requireScopes } from '../context.js';
 // ---------------------------------------------------------------------------
 // Query schemas — override page/limit with z.coerce for REST query strings
 // ---------------------------------------------------------------------------
+
+const paginatedPublicationsSchema = paginatedResponseSchema(publicationSchema);
 
 const restListPublicationsQuery = listPublicationsSchema
   .omit({ page: true, limit: true })
@@ -37,6 +41,7 @@ const list = orgProcedure
     tags: ['Publications'],
   })
   .input(restListPublicationsQuery)
+  .output(paginatedPublicationsSchema)
   .handler(async ({ input, context }) => {
     return publicationService.list(context.dbTx, input);
   });
@@ -54,6 +59,7 @@ const create = orgProcedure
     tags: ['Publications'],
   })
   .input(createPublicationSchema)
+  .output(publicationSchema)
   .handler(async ({ input, context }) => {
     try {
       return await publicationService.createWithAudit(
@@ -76,6 +82,7 @@ const get = orgProcedure
     tags: ['Publications'],
   })
   .input(idParamSchema)
+  .output(publicationSchema)
   .handler(async ({ input, context }) => {
     try {
       const publication = await publicationService.getById(
@@ -100,6 +107,7 @@ const update = orgProcedure
     tags: ['Publications'],
   })
   .input(idParamSchema.merge(updatePublicationSchema))
+  .output(publicationSchema)
   .handler(async ({ input, context }) => {
     const { id, ...data } = input;
     try {
@@ -124,6 +132,7 @@ const archive = orgProcedure
     tags: ['Publications'],
   })
   .input(idParamSchema)
+  .output(publicationSchema)
   .handler(async ({ input, context }) => {
     try {
       return await publicationService.archiveWithAudit(

@@ -192,6 +192,8 @@ function makeFormField(overrides: Record<string, unknown> = {}) {
     sortOrder: 0,
     config: null,
     conditionalRules: null,
+    branchId: null,
+    pageId: null,
     createdAt: new Date(),
     updatedAt: new Date(),
     ...overrides,
@@ -299,6 +301,7 @@ describe('forms REST router', () => {
       const form = {
         ...makeFormDefinition(),
         fields: [makeFormField()],
+        pages: [],
       };
       mockService.getById.mockResolvedValueOnce(form as never);
 

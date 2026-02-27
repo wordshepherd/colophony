@@ -76,6 +76,10 @@ Per-directory CLAUDE.md files contain domain-specific details:
 | **Component registry**   | `apps/web/src/lib/plugin-components.ts` (build-time Map registry)                |
 | **Env config (Zod)**     | `apps/api/src/config/env.ts`                                                     |
 | **Plugin SDK**           | `packages/plugin-sdk/src/` (adapters, hooks, config, plugin-base, testing)       |
+| **OpenAPI spec**         | `sdks/openapi.json` (exported from running API, 67 paths, 15 tag groups)         |
+| **TypeScript SDK**       | `sdks/typescript/` (`@colophony/sdk` — openapi-fetch + generated types)          |
+| **Python SDK**           | `sdks/python/` (`colophony` — openapi-python-client generated)                   |
+| **SDK generation**       | `scripts/generate-sdks.ts` (regenerate both SDKs from committed spec)            |
 | **Backlog**              | `docs/backlog.md` (track-organized, drives session focus)                        |
 
 Full project structure: [docs/architecture-v2-planning.md](docs/architecture-v2-planning.md)
@@ -393,6 +397,14 @@ pnpm db:seed                  # Seed test data
 pnpm db:reset                 # Drop and recreate with migrations + RLS
 pnpm db:validate-migrations   # Check SQL files ↔ journal consistency
 pnpm db:add-migration <name>  # Add journal entry for a manual migration
+```
+
+### SDK Management
+
+```bash
+pnpm sdk:export-spec          # Export OpenAPI spec from running dev server → sdks/openapi.json
+pnpm sdk:export-schema        # Export GraphQL schema → sdks/schema.graphql
+pnpm sdk:generate             # Regenerate TypeScript + Python SDKs from committed spec
 ```
 
 ### Environment Variables
