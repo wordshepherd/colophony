@@ -1,9 +1,9 @@
-import { Worker } from 'bullmq';
 import { db, outboxEvents, eq, sql, isNull, asc } from '@colophony/db';
 import type { Env } from '../config/env.js';
 import type { OutboxPollerJobData } from '../queues/outbox-poller.queue.js';
 import { inngest } from '../inngest/client.js';
-import { getLogger } from '../config/logger.js';
+import { createInstrumentedWorker } from '../config/instrumented-worker.js';
+import type { Worker } from 'bullmq';
 
 let worker: Worker<OutboxPollerJobData> | null = null;
 
@@ -84,12 +84,12 @@ async function processOutboxEvents(): Promise<number> {
 export function startOutboxPollerWorker(env: Env): void {
   if (worker) return;
 
-  worker = new Worker<OutboxPollerJobData>(
-    'outbox-poller',
-    async () => {
+  worker = createInstrumentedWorker<OutboxPollerJobData>({
+    name: 'outbox-poller',
+    processor: async () => {
       await processOutboxEvents();
     },
-    {
+    workerOpts: {
       connection: {
         host: env.REDIS_HOST,
         port: env.REDIS_PORT,
@@ -97,10 +97,6 @@ export function startOutboxPollerWorker(env: Env): void {
       },
       concurrency: 1, // Single poller to avoid duplicate sends
     },
-  );
-
-  worker.on('failed', (job, err) => {
-    getLogger().error({ jobId: job?.id, err }, '[outbox-poller] Job failed');
   });
 }
 

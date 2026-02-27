@@ -185,6 +185,39 @@ services:
     profiles:
       - slate
 
+  # Prometheus metrics collection (optional — for monitoring)
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: colophony-prometheus
+    ports:
+      - '9090:9090'
+    volumes:
+      - ./docker/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    extra_hosts:
+      - 'host.docker.internal:host-gateway'
+    profiles:
+      - monitoring
+
+  # Grafana dashboards (optional — for monitoring)
+  grafana:
+    image: grafana/grafana:latest
+    container_name: colophony-grafana
+    ports:
+      - '3001:3000'
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_USERS_ALLOW_SIGN_UP: 'false'
+    volumes:
+      - ./docker/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./docker/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana_data:/var/lib/grafana
+    depends_on:
+      - prometheus
+    profiles:
+      - monitoring
+
   # ClamAV for virus scanning (optional in development)
   clamav:
     image: clamav/clamav:stable
@@ -210,3 +243,5 @@ volumes:
   redis_data:
   minio_data:
   clamav_data:
+  prometheus_data:
+  grafana_data:

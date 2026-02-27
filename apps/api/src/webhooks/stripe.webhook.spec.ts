@@ -146,6 +146,9 @@ const testEnv: Env = {
   INNGEST_DEV: false,
   EMAIL_PROVIDER: 'none' as const,
   SMTP_SECURE: false,
+  SENTRY_ENVIRONMENT: 'test',
+  SENTRY_TRACES_SAMPLE_RATE: 0,
+  METRICS_ENABLED: false,
   STRIPE_SECRET_KEY: 'sk_test_xxx',
   STRIPE_WEBHOOK_SECRET: WEBHOOK_SECRET,
 };

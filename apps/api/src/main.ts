@@ -4,6 +4,15 @@ import helmet from '@fastify/helmet';
 import { pool, appPool } from '@colophony/db';
 import { loadConfig } from '@colophony/plugin-sdk';
 import { type Env, validateEnv } from './config/env.js';
+import { initSentry, captureException } from './config/sentry.js';
+import {
+  initMetrics,
+  startQueueDepthPolling,
+  stopMetricsPolling,
+  getMetricsOutput,
+  getContentType,
+} from './config/metrics.js';
+import metricsPlugin from './hooks/metrics.js';
 import { buildColophonyConfig } from './colophony.config.js';
 import { setGlobalExtensions } from './adapters/extensions-accessor.js';
 import { setGlobalPluginManifests } from './adapters/plugins-accessor.js';
@@ -46,6 +55,12 @@ import {
   closeTransferFetchQueue,
   closeEmailQueue,
   closeWebhookQueue,
+  getFileScanQueueInstance,
+  getS3CleanupQueueInstance,
+  getOutboxPollerQueueInstance,
+  getTransferFetchQueueInstance,
+  getEmailQueueInstance,
+  getWebhookQueueInstance,
 } from './queues/index.js';
 import { registerInngestRoutes } from './inngest/serve.js';
 import { registerFederationDiscoveryRoutes } from './federation/discovery.routes.js';
@@ -155,6 +170,11 @@ export async function buildApp(env: Env): Promise<FastifyInstance> {
     maxAge: 86400, // 24 hours
   });
 
+  // Metrics plugin — before rate limit so it measures full lifecycle including auth
+  if (env.METRICS_ENABLED) {
+    await app.register(metricsPlugin);
+  }
+
   // Rate limit (IP) → auth → rate limit (user) → org context → per-request RLS transaction
   // First-pass rate limit runs before auth so unauthenticated 401s are still throttled (DoS protection)
   // Second-pass rate limit runs after auth to apply higher per-user limits
@@ -184,6 +204,16 @@ export async function buildApp(env: Env): Promise<FastifyInstance> {
   await app.register(async (scope) => {
     await registerEmbedRoutes(scope, { env });
   });
+
+  // Prometheus metrics endpoint — isolated scope (public, no auth/rate-limit)
+  if (env.METRICS_ENABLED) {
+    await app.register(async (scope) => {
+      scope.get('/metrics', async (_request, reply) => {
+        const output = await getMetricsOutput();
+        return reply.type(getContentType()).send(output);
+      });
+    });
+  }
 
   // Inngest serve endpoint — isolated scope (Inngest handles its own auth)
   await app.register(async (scope) => {
@@ -242,8 +272,11 @@ export async function buildApp(env: Env): Promise<FastifyInstance> {
     trpcOptions: {
       router: appRouter,
       createContext,
-      onError({ error }: { error: { message: string } }) {
+      onError({ error }: { error: { message: string; code?: string } }) {
         app.log.error(error, 'tRPC error');
+        if (!error.code || error.code === 'INTERNAL_SERVER_ERROR') {
+          captureException(error, { source: 'trpc' });
+        }
       },
     },
   });
@@ -283,13 +316,21 @@ export async function buildApp(env: Env): Promise<FastifyInstance> {
   }));
 
   // Error handlers
-  app.setErrorHandler<Error>((error, _request, reply) => {
+  app.setErrorHandler<Error>((error, request, reply) => {
     app.log.error(error);
     const statusCode =
       'statusCode' in error &&
       typeof (error as Record<string, unknown>).statusCode === 'number'
         ? ((error as Record<string, unknown>).statusCode as number)
         : 500;
+    if (statusCode >= 500) {
+      captureException(error, {
+        url: request.url,
+        method: request.method,
+        userId: request.authContext?.userId,
+        orgId: request.authContext?.orgId,
+      });
+    }
     void reply.status(statusCode).send({
       error: statusCode >= 500 ? 'internal_error' : error.message,
     });
@@ -304,6 +345,10 @@ export async function buildApp(env: Env): Promise<FastifyInstance> {
 
 async function start(): Promise<void> {
   const env = validateEnv();
+
+  // Initialize Sentry early for global exception handlers
+  initSentry(env);
+
   const app = await buildApp(env);
 
   // Initialize plugin SDK adapters + registry
@@ -320,6 +365,12 @@ async function start(): Promise<void> {
   // Initialize shared logger for BullMQ workers
   const { setWorkerLogger } = await import('./config/logger.js');
   setWorkerLogger(app.log);
+
+  // Initialize Prometheus metrics (DB pool polling)
+  if (env.METRICS_ENABLED) {
+    initMetrics({ admin: pool, app: appPool });
+    app.log.info('Prometheus metrics enabled');
+  }
 
   // Start BullMQ workers
   if (env.VIRUS_SCAN_ENABLED) {
@@ -350,6 +401,23 @@ async function start(): Promise<void> {
   startWebhookWorker(env);
   app.log.info('Webhook delivery worker started');
 
+  // Start queue depth polling for Prometheus metrics
+  if (env.METRICS_ENABLED) {
+    const allQueues: Array<{ name: string; queue: unknown }> = [
+      { name: 'file-scan', queue: getFileScanQueueInstance() },
+      { name: 's3-cleanup', queue: getS3CleanupQueueInstance() },
+      { name: 'outbox-poller', queue: getOutboxPollerQueueInstance() },
+      { name: 'transfer-fetch', queue: getTransferFetchQueueInstance() },
+      { name: 'email', queue: getEmailQueueInstance() },
+      { name: 'webhook', queue: getWebhookQueueInstance() },
+    ];
+    const activeQueues = allQueues.filter((q) => q.queue !== null) as Array<{
+      name: string;
+      queue: import('bullmq').Queue;
+    }>;
+    startQueueDepthPolling(activeQueues);
+  }
+
   // Hub registration (fire-and-forget — don't block startup)
   if (env.HUB_DOMAIN && env.HUB_REGISTRATION_TOKEN) {
     hubClientService.registerWithHub(env).catch((err) => {
@@ -370,6 +438,7 @@ async function start(): Promise<void> {
     }, 10_000);
 
     try {
+      stopMetricsPolling();
       await app.close();
       await stopFileScanWorker();
       await stopS3CleanupWorker();

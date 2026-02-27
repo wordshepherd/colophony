@@ -1,4 +1,4 @@
-import { Worker } from 'bullmq';
+import type { Worker } from 'bullmq';
 import { withRls } from '@colophony/db';
 import type { DrizzleDb } from '@colophony/db';
 import type { AdapterRegistry, EmailAdapter } from '@colophony/plugin-sdk';
@@ -9,7 +9,7 @@ import { emailService } from '../services/email.service.js';
 import { auditService } from '../services/audit.service.js';
 import { renderEmailTemplate } from '../templates/email/index.js';
 import type { TemplateName } from '../templates/email/types.js';
-import { getLogger } from '../config/logger.js';
+import { createInstrumentedWorker } from '../config/instrumented-worker.js';
 
 let worker: Worker<EmailJobData> | null = null;
 
@@ -19,9 +19,9 @@ export function startEmailWorker(
 ): Worker<EmailJobData> {
   const emailAdapter = registry.resolve<EmailAdapter>('email');
 
-  worker = new Worker<EmailJobData>(
-    'email',
-    async (job) => {
+  worker = createInstrumentedWorker<EmailJobData>({
+    name: 'email',
+    processor: async (job) => {
       const { emailSendId, orgId, to, from, templateName, templateData } =
         job.data;
 
@@ -96,7 +96,7 @@ export function startEmailWorker(
         });
       });
     },
-    {
+    workerOpts: {
       connection: {
         host: env.REDIS_HOST,
         port: env.REDIS_PORT,
@@ -104,23 +104,9 @@ export function startEmailWorker(
       },
       concurrency: 5,
     },
-  );
-
-  // eslint-disable-next-line @typescript-eslint/no-misused-promises
-  worker.on('failed', async (job, err) => {
-    getLogger().error(
-      {
-        jobId: job?.id,
-        attempt: job?.attemptsMade,
-        maxAttempts: job?.opts.attempts,
-        err,
-      },
-      '[email] Job failed',
-    );
-
-    // On final failure, mark as FAILED + audit
-    if (job && job.attemptsMade >= (job.opts.attempts ?? 5)) {
-      try {
+    onFailed: async (job, err) => {
+      // On final failure, mark as FAILED + audit
+      if (job && job.attemptsMade >= (job.opts.attempts ?? 5)) {
         const { emailSendId, orgId, to, templateName } = job.data;
         await withRls({ orgId }, async (tx: DrizzleDb) => {
           await emailService.markFailed(tx, emailSendId, err.message);
@@ -137,13 +123,8 @@ export function startEmailWorker(
             },
           });
         });
-      } catch (auditErr) {
-        getLogger().error(
-          { jobId: job.id, err: auditErr },
-          '[email] Failed to record failure audit',
-        );
       }
-    }
+    },
   });
 
   return worker;

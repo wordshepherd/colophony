@@ -38,6 +38,10 @@ export async function enqueueFileScan(
   await getQueue(env).add('scan', data, { jobId: data.fileId });
 }
 
+export function getFileScanQueueInstance(): Queue<FileScanJobData> | null {
+  return queue;
+}
+
 export async function closeFileScanQueue(): Promise<void> {
   if (queue) {
     await queue.close();

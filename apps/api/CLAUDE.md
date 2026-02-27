@@ -255,18 +255,23 @@ Workers and queues are started in `main.ts` and closed during graceful shutdown.
 
 ### Env Vars
 
-| Variable             | Default     | Purpose                                     |
-| -------------------- | ----------- | ------------------------------------------- |
-| `CLAMAV_HOST`        | `localhost` | ClamAV daemon TCP host                      |
-| `CLAMAV_PORT`        | `3310`      | ClamAV daemon TCP port                      |
-| `VIRUS_SCAN_ENABLED` | `true`      | Enable/disable virus scans                  |
-| `DEV_AUTH_BYPASS`    | `false`     | Allow unauthed requests in dev (no Zitadel) |
-| `EMAIL_PROVIDER`     | `none`      | Email provider: `smtp`, `sendgrid`, `none`  |
-| `SMTP_HOST`          | —           | SMTP server hostname                        |
-| `SMTP_PORT`          | `587`       | SMTP server port                            |
-| `SMTP_FROM`          | —           | SMTP sender address                         |
-| `SENDGRID_API_KEY`   | —           | SendGrid API key                            |
-| `SENDGRID_FROM`      | —           | SendGrid sender address                     |
+| Variable                    | Default       | Purpose                                     |
+| --------------------------- | ------------- | ------------------------------------------- |
+| `CLAMAV_HOST`               | `localhost`   | ClamAV daemon TCP host                      |
+| `CLAMAV_PORT`               | `3310`        | ClamAV daemon TCP port                      |
+| `VIRUS_SCAN_ENABLED`        | `true`        | Enable/disable virus scans                  |
+| `DEV_AUTH_BYPASS`           | `false`       | Allow unauthed requests in dev (no Zitadel) |
+| `EMAIL_PROVIDER`            | `none`        | Email provider: `smtp`, `sendgrid`, `none`  |
+| `SMTP_HOST`                 | —             | SMTP server hostname                        |
+| `SMTP_PORT`                 | `587`         | SMTP server port                            |
+| `SMTP_FROM`                 | —             | SMTP sender address                         |
+| `SENDGRID_API_KEY`          | —             | SendGrid API key                            |
+| `SENDGRID_FROM`             | —             | SendGrid sender address                     |
+| `SENTRY_DSN`                | —             | Sentry DSN (enables error tracking)         |
+| `SENTRY_ENVIRONMENT`        | `development` | Sentry environment label                    |
+| `SENTRY_TRACES_SAMPLE_RATE` | `0`           | Sentry tracing sample rate (0-1)            |
+| `SENTRY_RELEASE`            | —             | Sentry release tag                          |
+| `METRICS_ENABLED`           | `false`       | Enable Prometheus `/metrics` endpoint       |
 
 ---
 

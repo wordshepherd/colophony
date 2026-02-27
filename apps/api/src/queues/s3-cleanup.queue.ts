@@ -35,6 +35,10 @@ export async function enqueueS3Cleanup(
   await getQueue(env).add('cleanup', data);
 }
 
+export function getS3CleanupQueueInstance(): Queue<S3CleanupJobData> | null {
+  return queue;
+}
+
 export async function closeS3CleanupQueue(): Promise<void> {
   if (queue) {
     await queue.close();

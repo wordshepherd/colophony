@@ -63,6 +63,9 @@ const testEnv: Env = {
   INNGEST_DEV: false,
   EMAIL_PROVIDER: 'none' as const,
   SMTP_SECURE: false,
+  SENTRY_ENVIRONMENT: 'test',
+  SENTRY_TRACES_SAMPLE_RATE: 0,
+  METRICS_ENABLED: false,
 };
 
 const validUuid = '00000000-0000-4000-a000-000000000001';

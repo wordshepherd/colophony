@@ -1,4 +1,3 @@
-import { Worker } from 'bullmq';
 import NodeClam from 'clamscan';
 import { withRls } from '@colophony/db';
 import type { DrizzleDb } from '@colophony/db';
@@ -9,7 +8,8 @@ import type { FileScanJobData } from '../queues/file-scan.queue.js';
 import { fileService } from '../services/file.service.js';
 import { auditService } from '../services/audit.service.js';
 import type { S3StorageAdapter } from '../adapters/storage/index.js';
-import { getLogger } from '../config/logger.js';
+import { createInstrumentedWorker } from '../config/instrumented-worker.js';
+import type { Worker } from 'bullmq';
 
 let worker: Worker<FileScanJobData> | null = null;
 let clamInstance: NodeClam | null = null;
@@ -48,9 +48,9 @@ export function startFileScanWorker(
 ): Worker<FileScanJobData> {
   const storage = registry.resolve<S3StorageAdapter>('storage');
 
-  worker = new Worker<FileScanJobData>(
-    'file-scan',
-    async (job) => {
+  worker = createInstrumentedWorker<FileScanJobData>({
+    name: 'file-scan',
+    processor: async (job) => {
       const { fileId, storageKey } = job.data;
       const rlsCtx = buildRlsContext(job.data);
 
@@ -142,7 +142,7 @@ export function startFileScanWorker(
         throw err;
       }
     },
-    {
+    workerOpts: {
       connection: {
         host: env.REDIS_HOST,
         port: env.REDIS_PORT,
@@ -150,18 +150,6 @@ export function startFileScanWorker(
       },
       concurrency: 5,
     },
-  );
-
-  worker.on('failed', (job, err) => {
-    getLogger().error(
-      {
-        jobId: job?.id,
-        attempt: job?.attemptsMade,
-        maxAttempts: job?.opts.attempts,
-        err,
-      },
-      '[file-scan] Job failed',
-    );
   });
 
   return worker;

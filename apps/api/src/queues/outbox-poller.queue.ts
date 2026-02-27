@@ -40,6 +40,10 @@ export async function startOutboxPoller(env: Env): Promise<void> {
   );
 }
 
+export function getOutboxPollerQueueInstance(): Queue<OutboxPollerJobData> | null {
+  return queue;
+}
+
 export async function closeOutboxPollerQueue(): Promise<void> {
   if (queue) {
     await queue.close();

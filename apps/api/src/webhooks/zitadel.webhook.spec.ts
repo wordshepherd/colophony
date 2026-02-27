@@ -150,6 +150,9 @@ const testEnv: Env = {
   INNGEST_DEV: false,
   EMAIL_PROVIDER: 'none' as const,
   SMTP_SECURE: false,
+  SENTRY_ENVIRONMENT: 'test',
+  SENTRY_TRACES_SAMPLE_RATE: 0,
+  METRICS_ENABLED: false,
 };
 
 function signPayload(body: string): string {
