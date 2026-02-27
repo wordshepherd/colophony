@@ -18,6 +18,8 @@ function useDebounce<T>(value: T, delay: number): T {
   return debouncedValue;
 }
 
+const SKELETON_ITEMS = Array.from({ length: 6 });
+
 export function ManuscriptList() {
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebounce(search, 300);
@@ -83,7 +85,7 @@ export function ManuscriptList() {
       {/* Loading state */}
       {isLoading && (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {Array.from({ length: 6 }).map((_, i) => (
+          {SKELETON_ITEMS.map((_, i) => (
             <Skeleton key={i} className="h-32" />
           ))}
         </div>
