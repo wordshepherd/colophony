@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { genreSchema, csrStatusSchema } from "./csr";
 import { transferFileManifestEntrySchema } from "./transfer";
 
 // ---------------------------------------------------------------------------
@@ -22,20 +23,35 @@ export type IdentityMigrationStatus = z.infer<
 >;
 
 // ---------------------------------------------------------------------------
+// Migration bundle — status history entry (CSR-aligned)
+// ---------------------------------------------------------------------------
+
+export const migrationStatusHistoryEntrySchema = z.object({
+  from: csrStatusSchema.nullable(),
+  to: csrStatusSchema,
+  changedAt: z.string().datetime(),
+  comment: z.string().nullable(),
+});
+export type MigrationStatusHistoryEntry = z.infer<
+  typeof migrationStatusHistoryEntrySchema
+>;
+
+// ---------------------------------------------------------------------------
 // Migration bundle — submission history (closed submissions, metadata only)
 // ---------------------------------------------------------------------------
 
 export const migrationSubmissionHistorySchema = z.object({
   originSubmissionId: z.string().uuid(),
   title: z.string().nullable(),
-  genre: z.string().nullable(),
+  genre: genreSchema.nullable(),
   coverLetter: z.string().nullable(),
-  status: z.string(),
+  status: csrStatusSchema,
   formData: z.record(z.string(), z.unknown()).nullable(),
   submittedAt: z.string().datetime().nullable(),
   decidedAt: z.string().datetime().nullable(),
   publicationName: z.string().nullable(),
   periodName: z.string().nullable(),
+  statusHistory: z.array(migrationStatusHistoryEntrySchema),
 });
 export type MigrationSubmissionHistory = z.infer<
   typeof migrationSubmissionHistorySchema
@@ -48,14 +64,15 @@ export type MigrationSubmissionHistory = z.infer<
 export const migrationActiveSubmissionSchema = z.object({
   originSubmissionId: z.string().uuid(),
   title: z.string().nullable(),
-  genre: z.string().nullable(),
+  genre: genreSchema.nullable(),
   coverLetter: z.string().nullable(),
-  status: z.string(),
+  status: csrStatusSchema,
   formData: z.record(z.string(), z.unknown()).nullable(),
   submittedAt: z.string().datetime().nullable(),
   decidedAt: z.string().datetime().nullable(),
   publicationName: z.string().nullable(),
   periodName: z.string().nullable(),
+  statusHistory: z.array(migrationStatusHistoryEntrySchema),
   content: z.string().nullable(),
   fileManifest: z.array(transferFileManifestEntrySchema),
   contentFingerprint: z.string().nullable(),

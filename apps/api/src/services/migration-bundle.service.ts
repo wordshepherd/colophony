@@ -5,7 +5,10 @@ import {
   submissions,
   files,
   manuscriptVersions,
+  manuscripts,
   organizations,
+  submissionPeriods,
+  submissionHistory,
   eq,
   and,
   inArray,
@@ -14,8 +17,11 @@ import type {
   MigrationBundle,
   MigrationSubmissionHistory,
   MigrationActiveSubmission,
+  MigrationStatusHistoryEntry,
   TransferFileManifestEntry,
 } from '@colophony/types';
+import type { Genre } from '@colophony/types';
+import { hopperToCsrStatus } from '@colophony/types';
 import type { Env } from '../config/env.js';
 import { federationService } from './federation.service.js';
 
@@ -77,6 +83,7 @@ export const migrationBundleService = {
         submittedAt: submissions.submittedAt,
         organizationId: submissions.organizationId,
         manuscriptVersionId: submissions.manuscriptVersionId,
+        submissionPeriodId: submissions.submissionPeriodId,
       })
       .from(submissions)
       .where(eq(submissions.submitterId, params.userId));
@@ -91,6 +98,105 @@ export const migrationBundleService = {
         .where(inArray(organizations.id, orgIds));
       for (const org of orgs) {
         orgMap.set(org.id, org.name);
+      }
+    }
+
+    // Batch-fetch submission periods
+    const periodIds = [
+      ...new Set(
+        allSubmissions
+          .map((s) => s.submissionPeriodId)
+          .filter((id): id is string => id != null),
+      ),
+    ];
+    const periodMap = new Map<string, string>();
+    if (periodIds.length > 0) {
+      const periods = await db
+        .select({ id: submissionPeriods.id, name: submissionPeriods.name })
+        .from(submissionPeriods)
+        .where(inArray(submissionPeriods.id, periodIds));
+      for (const p of periods) {
+        periodMap.set(p.id, p.name);
+      }
+    }
+
+    // Batch-fetch genre via manuscript JOIN (all submissions, not just active)
+    const allVersionIds = allSubmissions
+      .map((s) => s.manuscriptVersionId)
+      .filter((id): id is string => id != null);
+    const genreMap = new Map<string, Genre | null>();
+    if (allVersionIds.length > 0) {
+      const genreRows = await db
+        .select({
+          versionId: manuscriptVersions.id,
+          genre: manuscripts.genre,
+        })
+        .from(manuscriptVersions)
+        .innerJoin(
+          manuscripts,
+          eq(manuscriptVersions.manuscriptId, manuscripts.id),
+        )
+        .where(inArray(manuscriptVersions.id, allVersionIds));
+      for (const row of genreRows) {
+        genreMap.set(row.versionId, (row.genre as Genre | null) ?? null);
+      }
+    }
+
+    // Batch-fetch submission history
+    const allSubIds = allSubmissions.map((s) => s.id);
+    const historyMap = new Map<
+      string,
+      { decidedAt: string | null; statusHistory: MigrationStatusHistoryEntry[] }
+    >();
+    if (allSubIds.length > 0) {
+      const historyRows = await db
+        .select({
+          submissionId: submissionHistory.submissionId,
+          fromStatus: submissionHistory.fromStatus,
+          toStatus: submissionHistory.toStatus,
+          changedAt: submissionHistory.changedAt,
+          comment: submissionHistory.comment,
+        })
+        .from(submissionHistory)
+        .where(inArray(submissionHistory.submissionId, allSubIds));
+
+      // Group by submissionId
+      const grouped = new Map<string, typeof historyRows>();
+      for (const row of historyRows) {
+        const existing = grouped.get(row.submissionId);
+        if (existing) {
+          existing.push(row);
+        } else {
+          grouped.set(row.submissionId, [row]);
+        }
+      }
+
+      const terminalStatuses = new Set(['ACCEPTED', 'REJECTED', 'WITHDRAWN']);
+
+      for (const [subId, rows] of grouped) {
+        // Sort by changedAt ASC
+        rows.sort(
+          (a, b) =>
+            new Date(a.changedAt).getTime() - new Date(b.changedAt).getTime(),
+        );
+
+        const statusHistory: MigrationStatusHistoryEntry[] = rows.map((r) => ({
+          from: r.fromStatus ? hopperToCsrStatus(r.fromStatus) : null,
+          to: hopperToCsrStatus(r.toStatus),
+          changedAt: new Date(r.changedAt).toISOString(),
+          comment: r.comment,
+        }));
+
+        // Derive decidedAt from first terminal transition
+        let decidedAt: string | null = null;
+        for (const r of rows) {
+          if (terminalStatuses.has(r.toStatus)) {
+            decidedAt = new Date(r.changedAt).toISOString();
+            break;
+          }
+        }
+
+        historyMap.set(subId, { decidedAt, statusHistory });
       }
     }
 
@@ -153,25 +259,34 @@ export const migrationBundleService = {
     }
 
     // Build closed submissions (metadata only)
-    const submissionHistory: MigrationSubmissionHistory[] = [];
+    const closedHistory: MigrationSubmissionHistory[] = [];
     const activeSubmissions: MigrationActiveSubmission[] = [];
     const allFileIds: string[] = [];
 
     for (const sub of allSubmissions) {
       const pubName = orgMap.get(sub.organizationId) ?? null;
 
+      const genre = sub.manuscriptVersionId
+        ? (genreMap.get(sub.manuscriptVersionId) ?? null)
+        : null;
+      const periodName = sub.submissionPeriodId
+        ? (periodMap.get(sub.submissionPeriodId) ?? null)
+        : null;
+      const history = historyMap.get(sub.id);
+
       if ((CLOSED_STATUSES as readonly string[]).includes(sub.status)) {
-        submissionHistory.push({
+        closedHistory.push({
           originSubmissionId: sub.id,
           title: sub.title,
-          genre: null,
+          genre,
           coverLetter: sub.coverLetter,
-          status: sub.status,
+          status: hopperToCsrStatus(sub.status),
           formData: sub.formData ?? null,
           submittedAt: sub.submittedAt?.toISOString() ?? null,
-          decidedAt: null,
+          decidedAt: history?.decidedAt ?? null,
           publicationName: pubName,
-          periodName: null,
+          periodName,
+          statusHistory: history?.statusHistory ?? [],
         });
       } else if ((ACTIVE_STATUSES as readonly string[]).includes(sub.status)) {
         let fileManifest: TransferFileManifestEntry[] = [];
@@ -187,15 +302,16 @@ export const migrationBundleService = {
         activeSubmissions.push({
           originSubmissionId: sub.id,
           title: sub.title,
-          genre: null,
+          genre,
           coverLetter: sub.coverLetter,
           content: sub.content ?? null,
-          status: sub.status,
+          status: hopperToCsrStatus(sub.status),
           formData: sub.formData ?? null,
           submittedAt: sub.submittedAt?.toISOString() ?? null,
-          decidedAt: null,
+          decidedAt: history?.decidedAt ?? null,
           publicationName: pubName,
-          periodName: null,
+          periodName,
+          statusHistory: history?.statusHistory ?? [],
           fileManifest,
           contentFingerprint,
         });
@@ -220,7 +336,7 @@ export const migrationBundleService = {
         email: params.userEmail,
         alsoKnownAs: [],
       },
-      submissionHistory,
+      submissionHistory: closedHistory,
       activeSubmissions,
       bundleToken: token,
       createdAt: new Date().toISOString(),
