@@ -770,3 +770,39 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - name: Build packages
         run: pnpm turbo run build --filter=@colophony/db --filter=@colophony/auth-client --filter=@colophony/api-contracts --filter=@colophony/plugin-sdk --filter=@colophony/api --filter=@colophony/types --filter=@colophony/web
+
+  # ──────────────────────────────────────────────────
+  # SDK drift check — ensure committed SDKs match spec
+  # ──────────────────────────────────────────────────
+  sdk-check:
+    name: SDK Drift Check
+    runs-on: ubuntu-latest
+    if: needs.changes.outputs.docs_only != 'true'
+    needs: [changes]
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v6
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+      - uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "pnpm"
+      - run: pnpm install --frozen-lockfile
+      - name: Install TS SDK deps
+        run: cd sdks/typescript && npm ci
+      - name: Regenerate TypeScript SDK
+        run: |
+          cd sdks/typescript
+          npx openapi-typescript ../openapi.json -o src/generated/openapi.ts
+          npx tsc -p tsconfig.build.json
+      - name: Check for drift
+        run: |
+          if ! git diff --quiet sdks/typescript/src/generated/; then
+            echo "::error::TypeScript SDK is out of date. Run 'pnpm sdk:generate' and commit."
+            git diff --stat sdks/typescript/src/generated/
+            exit 1
+          fi
+          echo "TypeScript SDK is up to date."
