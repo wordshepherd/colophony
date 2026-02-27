@@ -11,6 +11,7 @@ export type RegistryEntryWithStatus = PluginRegistryEntry & {
 // In-memory cache
 let _cache: { entries: PluginRegistryEntry[]; fetchedAt: number } | null = null;
 const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
+const FETCH_TIMEOUT_MS = 10_000; // 10 seconds
 
 export async function fetchPluginRegistry(
   registryUrl: string,
@@ -20,7 +21,9 @@ export async function fetchPluginRegistry(
     return _cache.entries;
   }
 
-  const response = await fetch(registryUrl);
+  const response = await fetch(registryUrl, {
+    signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+  });
   if (!response.ok) {
     throw new Error(
       `Failed to fetch plugin registry: ${response.status} ${response.statusText}`,
@@ -28,9 +31,16 @@ export async function fetchPluginRegistry(
   }
 
   const json: unknown = await response.json();
-  const entries = pluginRegistrySchema.parse(json);
-  _cache = { entries, fetchedAt: now };
-  return entries;
+
+  const result = pluginRegistrySchema.safeParse(json);
+  if (!result.success) {
+    throw new Error(
+      `Plugin registry response failed validation: ${result.error.issues.map((i) => i.message).join(', ')}`,
+    );
+  }
+
+  _cache = { entries: result.data, fetchedAt: now };
+  return result.data;
 }
 
 export async function listRegistryEntries(

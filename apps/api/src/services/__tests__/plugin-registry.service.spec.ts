@@ -98,7 +98,7 @@ describe('plugin-registry.service', () => {
 
     await expect(
       fetchPluginRegistry('https://example.com/registry.json'),
-    ).rejects.toThrow();
+    ).rejects.toThrow('Plugin registry response failed validation');
   });
 
   it('marks installed plugins correctly', async () => {
