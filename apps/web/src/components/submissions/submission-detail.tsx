@@ -6,6 +6,7 @@ import Link from "next/link";
 import { formatDistanceToNow, format } from "date-fns";
 import { trpc } from "@/lib/trpc";
 import { useOrganization } from "@/hooks/use-organization";
+import { PluginSlot } from "@/components/plugins/plugin-slot";
 import { StatusBadge } from "./status-badge";
 import { StatusTransition } from "./status-transition";
 import { Button } from "@/components/ui/button";
@@ -354,6 +355,12 @@ export function SubmissionDetail({
               </CardContent>
             </Card>
           )}
+
+          <PluginSlot
+            point="submission.detail.section"
+            context={{ submissionId: submission.id }}
+            className="space-y-4"
+          />
         </div>
 
         {/* Sidebar */}

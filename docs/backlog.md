@@ -193,7 +193,7 @@
 
 ### Phase 3-4 (v2.1-v2.2)
 
-- [ ] UI contribution point system (dashboard widgets, settings pages, submission detail sections) — (plugin research Section 11)
+- [x] UI contribution point system (dashboard widgets, settings pages, submission detail sections) — (plugin research Section 11; done 2026-02-26 PR3)
 - [ ] In-app Plugin Gallery (JSON registry, one-click install) — (plugin research Section 11)
 - [ ] `@colophony/create-plugin` scaffolding CLI — (plugin research Section 11)
 - [ ] Evaluate n8n / Activepieces as recommended external automation target — security: must be network-isolated — (decision 2026-02-15)

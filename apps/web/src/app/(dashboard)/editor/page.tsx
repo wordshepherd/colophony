@@ -8,6 +8,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { ClipboardList, Inbox } from "lucide-react";
+import { DashboardPluginSlot } from "./dashboard-plugin-slot";
 
 export default function EditorPage() {
   return (
@@ -66,6 +67,8 @@ export default function EditorPage() {
           </Card>
         </Link>
       </div>
+
+      <DashboardPluginSlot />
     </div>
   );
 }
