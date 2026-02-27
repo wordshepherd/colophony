@@ -2,6 +2,8 @@
 
 import { trpc } from "@/lib/trpc";
 
+// Keep in sync with packages/plugin-sdk/src/ui/types.ts UIContributionPoint
+// and apps/api/src/trpc/routers/plugins.ts uiExtensionPointEnum
 export type UIContributionPoint =
   | "dashboard.widget"
   | "submission.detail.section"

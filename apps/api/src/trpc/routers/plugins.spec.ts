@@ -96,6 +96,16 @@ describe('plugins router', () => {
       expect(result[0].id).toBe('widget-1');
     });
 
+    it('filters by requiredPermissions for EDITOR', async () => {
+      const caller = createCaller(orgContext('EDITOR'));
+      const result = await caller.plugins.listExtensions({});
+
+      // EDITOR has database:write but not settings:read
+      expect(result).toHaveLength(2);
+      // widget-2 (order=5) sorts before widget-1 (order=10)
+      expect(result.map((e: any) => e.id)).toEqual(['widget-2', 'widget-1']);
+    });
+
     it('filters by point', async () => {
       const caller = createCaller(orgContext('ADMIN'));
       const result = await caller.plugins.listExtensions({

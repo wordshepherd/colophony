@@ -107,7 +107,17 @@ export function PluginSlot({
       ): entry is {
         ext: (typeof extensions)[number];
         Component: React.ComponentType<PluginComponentProps>;
-      } => entry.Component !== null,
+      } => {
+        if (entry.Component === null) {
+          if (process.env.NODE_ENV === "development") {
+            console.warn(
+              `[PluginSlot] No component registered for key "${entry.ext.component}" (extension "${entry.ext.id}")`,
+            );
+          }
+          return false;
+        }
+        return true;
+      },
     );
 
   if (resolved.length === 0 && hideEmpty) {
