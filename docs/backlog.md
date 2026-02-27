@@ -195,11 +195,14 @@
 
 - [x] UI contribution point system (dashboard widgets, settings pages, submission detail sections) — (plugin research Section 11; done 2026-02-26 PR3)
 - [x] In-app Plugin Gallery (JSON registry, browse + install instructions) — (plugin research Section 11; done 2026-02-26 PR4)
-- [ ] `@colophony/create-plugin` scaffolding CLI — (plugin research Section 11)
-- [ ] Evaluate n8n / Activepieces as recommended external automation target — security: must be network-isolated — (decision 2026-02-15)
+- [x] `@colophony/create-plugin` scaffolding CLI — (plugin research Section 11; done 2026-02-26)
+- [x] Evaluate n8n / Activepieces as recommended external automation target — **Resolved:** Recommend n8n (no privileged container, mature webhooks, 5800+ nodes); Activepieces as MIT-licensed alternative. Deliverables (docs, custom n8n node, Docker profile) deferred post-v2.0. See `docs/research/automation-platform-evaluation.md` — (decision 2026-02-15; resolved 2026-02-26)
 
 ### Phase 5-6 (v2.3+)
 
+- [ ] `n8n-nodes-colophony` custom node — API credential type, webhook triggers for Tier 0 events, common API actions — (automation eval 2026-02-26)
+- [ ] Docker Compose `--profile automation` — n8n sidecar on internal network, pre-configured webhook URL — (automation eval 2026-02-26)
+- [ ] "Automation with n8n" documentation — sidecar setup, webhook config, example workflows, Activepieces alternative note — (automation eval 2026-02-26)
 - [ ] Plugin signing via npm trusted publishing + Sigstore Cosign — (plugin research Section 6, decision 2026-02-15)
 - [ ] OPA load-time permission policy for managed hosting — (plugin research Section 6, decision 2026-02-15)
 - [ ] Frontend sandboxing for community UI plugins — (plugin research Section 11)
@@ -208,12 +211,12 @@
 
 ### Design Decisions
 
-- [ ] Plugin configuration storage: database per-org (encrypted) vs env vars per-deployment — (plugin research Open Question #1)
-- [ ] Hot-reload in production: loadable without restart vs requires restart — (plugin research Open Question #2)
-- [ ] Plugin marketplace governance: review criteria, signing key management — (plugin research Open Question #3)
-- [ ] Database access for Tier 4 plugins: direct DB (with RLS) vs service API — (plugin research Open Question #4)
-- [ ] Frontend plugin bundling: runtime dynamic import vs compile-time — (plugin research Open Question #5)
-- [ ] Webhook vs event bus for Tier 0: webhooks only vs Redis pub/sub or NATS — (plugin research Open Question #6)
+- [x] Plugin configuration storage: env vars only per-deployment for v2.0; per-org DB deferred to managed-hosting milestone — (plugin research Open Question #1; resolved 2026-02-26)
+- [x] Hot-reload in production: restart required for v2.0; `destroy()` lifecycle exists for future support — (plugin research Open Question #2; resolved 2026-02-26)
+- [x] Plugin marketplace governance: define criteria spec now, defer enforcement to v2.3+ — (plugin research Open Question #3; resolved 2026-02-26)
+- [x] Database access for Tier 4 plugins: plugin data namespace (`ctx.store`) + read-only service API for v2.0 — (plugin research Open Question #4; resolved 2026-02-26)
+- [x] Frontend plugin bundling: build-time only for v2.0; runtime loading deferred to v2.3+ — (plugin research Open Question #5; resolved 2026-02-26)
+- [x] Webhook vs event bus for Tier 0: webhooks only for v2.0; pub/sub deferred post-launch — (plugin research Open Question #6; resolved 2026-02-26)
 
 ---
 

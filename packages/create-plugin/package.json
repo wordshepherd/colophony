@@ -1,0 +1,37 @@
+{
+  "name": "@colophony/create-plugin",
+  "version": "0.1.0",
+  "description": "Scaffold a new Colophony plugin project",
+  "type": "module",
+  "bin": {
+    "create-plugin": "./dist/cli.js"
+  },
+  "main": "./dist/run.js",
+  "types": "./dist/run.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/run.d.ts",
+      "default": "./dist/run.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "clean": "rm -rf dist",
+    "type-check": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "prompts": "^2.4.2"
+  },
+  "devDependencies": {
+    "@colophony/typescript-config": "workspace:*",
+    "@types/prompts": "^2.4.9",
+    "typescript": "^5.7.2",
+    "vitest": "^4.0.18"
+  },
+  "files": [
+    "dist"
+  ],
+  "license": "MIT"
+}
