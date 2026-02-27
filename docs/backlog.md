@@ -80,7 +80,7 @@
 - [x] tRPC `.output()` runtime response validation — all 30 procedures wired with Zod output schemas; 9 new response schemas added — (input validation audit 2026-02-18; done 2026-02-18)
 - [x] Pothos + GraphQL Yoga surface — PR 1: foundation (types, queries, DataLoaders, scope enforcement, Fastify integration) done 2026-02-19; PR 2: mutations done 2026-02-19 — (architecture doc Track 2, Section 6.6)
 - [x] GraphQL mutations (PR 2) — 16 mutations + API key list query, unit tests (36 new tests) — done 2026-02-19
-- [ ] SDK generation (TypeScript, Python) — (architecture doc Track 2)
+- [x] SDK generation (TypeScript, Python) — openapi-typescript + openapi-fetch TS SDK, openapi-python-client Python SDK, generation script + CI drift check — (architecture doc Track 2; done 2026-02-27)
 - [x] API documentation — Zod descriptions, oRPC metadata, GraphQL Pothos descriptions, Scalar UI, export scripts — (architecture doc Track 2; done 2026-02-19)
 
 ### Design Decisions

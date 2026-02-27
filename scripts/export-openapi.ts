@@ -29,6 +29,11 @@ async function main() {
 
   const spec = (await res.json()) as Record<string, unknown>;
 
+  // Pin to 3.1.0 for broader tool compatibility (functionally identical to 3.1.1)
+  if (typeof spec.openapi === "string" && spec.openapi.startsWith("3.1.")) {
+    spec.openapi = "3.1.0";
+  }
+
   const outPath = resolve(
     dirname(new URL(import.meta.url).pathname),
     "../sdks/openapi.json",

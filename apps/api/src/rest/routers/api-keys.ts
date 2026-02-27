@@ -2,6 +2,9 @@ import { ORPCError } from '@orpc/server';
 import { z } from 'zod';
 import {
   createApiKeySchema,
+  revokeApiKeyResponseSchema,
+  paginatedResponseSchema,
+  successResponseSchema,
   AuditActions,
   AuditResources,
 } from '@colophony/types';
@@ -14,6 +17,28 @@ import { orgProcedure, adminProcedure, requireScopes } from '../context.js';
 // ---------------------------------------------------------------------------
 
 const keyIdParam = z.object({ keyId: z.string().uuid() });
+
+// ---------------------------------------------------------------------------
+// Output schemas
+// ---------------------------------------------------------------------------
+
+// Use z.array(z.string()) for scopes because Drizzle returns string[] from JSONB
+const apiKeyOutputSchema = z.object({
+  id: z.string().uuid(),
+  name: z.string(),
+  scopes: z.array(z.string()),
+  keyPrefix: z.string(),
+  createdAt: z.date(),
+  expiresAt: z.date().nullable(),
+  lastUsedAt: z.date().nullable(),
+  revokedAt: z.date().nullable(),
+});
+
+const createApiKeyOutputSchema = apiKeyOutputSchema.extend({
+  plainTextKey: z.string(),
+});
+
+const paginatedApiKeysSchema = paginatedResponseSchema(apiKeyOutputSchema);
 
 // ---------------------------------------------------------------------------
 // API key routes
@@ -31,6 +56,7 @@ const list = orgProcedure
     tags: ['API Keys'],
   })
   .input(restPaginationQuery)
+  .output(paginatedApiKeysSchema)
   .handler(async ({ input, context }) => {
     return apiKeyService.list(context.dbTx, input);
   });
@@ -48,6 +74,7 @@ const create = adminProcedure
     tags: ['API Keys'],
   })
   .input(createApiKeySchema)
+  .output(createApiKeyOutputSchema)
   .handler(async ({ input, context }) => {
     const result = await apiKeyService.create(
       context.dbTx,
@@ -76,6 +103,7 @@ const revoke = adminProcedure
     tags: ['API Keys'],
   })
   .input(keyIdParam)
+  .output(revokeApiKeyResponseSchema)
   .handler(async ({ input, context }) => {
     const revoked = await apiKeyService.revoke(context.dbTx, input.keyId);
     if (!revoked) {
@@ -100,6 +128,7 @@ const del = adminProcedure
     tags: ['API Keys'],
   })
   .input(keyIdParam)
+  .output(successResponseSchema)
   .handler(async ({ input, context }) => {
     const deleted = await apiKeyService.delete(context.dbTx, input.keyId);
     if (!deleted) {

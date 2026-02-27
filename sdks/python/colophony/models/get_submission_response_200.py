@@ -1,0 +1,384 @@
+from __future__ import annotations
+
+from collections.abc import Mapping
+from typing import Any, TypeVar, BinaryIO, TextIO, TYPE_CHECKING, Generator
+
+from attrs import define as _attrs_define
+from attrs import field as _attrs_field
+
+from ..types import UNSET, Unset
+
+from ..models.get_submission_response_200_status import GetSubmissionResponse200Status
+from dateutil.parser import isoparse
+from typing import cast
+from uuid import UUID
+import datetime
+
+if TYPE_CHECKING:
+  from ..models.get_submission_response_200_files_item import GetSubmissionResponse200FilesItem
+  from ..models.get_submission_response_200_form_data_type_0 import GetSubmissionResponse200FormDataType0
+
+
+
+
+
+T = TypeVar("T", bound="GetSubmissionResponse200")
+
+
+
+@_attrs_define
+class GetSubmissionResponse200:
+    """ 
+        Attributes:
+            id (UUID): Unique identifier for the submission
+            organization_id (UUID): ID of the organization this submission belongs to
+            submitter_id (None | UUID): ID of the user who created the submission
+            submission_period_id (None | UUID): ID of the submission period, if applicable
+            title (None | str): Title of the submission
+            content (None | str): Body content of the submission
+            cover_letter (None | str): Optional cover letter
+            form_definition_id (None | UUID): ID of the form definition used, if applicable
+            form_data (GetSubmissionResponse200FormDataType0 | None): Structured form data keyed by field key
+            manuscript_version_id (None | UUID): ID of the manuscript version attached to this submission
+            status (GetSubmissionResponse200Status): Current status in the submission workflow
+            submitted_at (datetime.datetime | None): When the submission was formally submitted
+            created_at (datetime.datetime): When the submission was created
+            updated_at (datetime.datetime): When the submission was last updated
+            files (list[GetSubmissionResponse200FilesItem]):
+            submitter_email (None | str):
+     """
+
+    id: UUID
+    organization_id: UUID
+    submitter_id: None | UUID
+    submission_period_id: None | UUID
+    title: None | str
+    content: None | str
+    cover_letter: None | str
+    form_definition_id: None | UUID
+    form_data: GetSubmissionResponse200FormDataType0 | None
+    manuscript_version_id: None | UUID
+    status: GetSubmissionResponse200Status
+    submitted_at: datetime.datetime | None
+    created_at: datetime.datetime
+    updated_at: datetime.datetime
+    files: list[GetSubmissionResponse200FilesItem]
+    submitter_email: None | str
+    additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
+
+
+
+
+
+    def to_dict(self) -> dict[str, Any]:
+        from ..models.get_submission_response_200_form_data_type_0 import GetSubmissionResponse200FormDataType0
+        from ..models.get_submission_response_200_files_item import GetSubmissionResponse200FilesItem
+        id = str(self.id)
+
+        organization_id = str(self.organization_id)
+
+        submitter_id: None | str
+        if isinstance(self.submitter_id, UUID):
+            submitter_id = str(self.submitter_id)
+        else:
+            submitter_id = self.submitter_id
+
+        submission_period_id: None | str
+        if isinstance(self.submission_period_id, UUID):
+            submission_period_id = str(self.submission_period_id)
+        else:
+            submission_period_id = self.submission_period_id
+
+        title: None | str
+        title = self.title
+
+        content: None | str
+        content = self.content
+
+        cover_letter: None | str
+        cover_letter = self.cover_letter
+
+        form_definition_id: None | str
+        if isinstance(self.form_definition_id, UUID):
+            form_definition_id = str(self.form_definition_id)
+        else:
+            form_definition_id = self.form_definition_id
+
+        form_data: dict[str, Any] | None
+        if isinstance(self.form_data, GetSubmissionResponse200FormDataType0):
+            form_data = self.form_data.to_dict()
+        else:
+            form_data = self.form_data
+
+        manuscript_version_id: None | str
+        if isinstance(self.manuscript_version_id, UUID):
+            manuscript_version_id = str(self.manuscript_version_id)
+        else:
+            manuscript_version_id = self.manuscript_version_id
+
+        status = self.status.value
+
+        submitted_at: None | str
+        if isinstance(self.submitted_at, datetime.datetime):
+            submitted_at = self.submitted_at.isoformat()
+        else:
+            submitted_at = self.submitted_at
+
+        created_at = self.created_at.isoformat()
+
+        updated_at = self.updated_at.isoformat()
+
+        files = []
+        for files_item_data in self.files:
+            files_item = files_item_data.to_dict()
+            files.append(files_item)
+
+
+
+        submitter_email: None | str
+        submitter_email = self.submitter_email
+
+
+        field_dict: dict[str, Any] = {}
+        field_dict.update(self.additional_properties)
+        field_dict.update({
+            "id": id,
+            "organizationId": organization_id,
+            "submitterId": submitter_id,
+            "submissionPeriodId": submission_period_id,
+            "title": title,
+            "content": content,
+            "coverLetter": cover_letter,
+            "formDefinitionId": form_definition_id,
+            "formData": form_data,
+            "manuscriptVersionId": manuscript_version_id,
+            "status": status,
+            "submittedAt": submitted_at,
+            "createdAt": created_at,
+            "updatedAt": updated_at,
+            "files": files,
+            "submitterEmail": submitter_email,
+        })
+
+        return field_dict
+
+
+
+    @classmethod
+    def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
+        from ..models.get_submission_response_200_files_item import GetSubmissionResponse200FilesItem
+        from ..models.get_submission_response_200_form_data_type_0 import GetSubmissionResponse200FormDataType0
+        d = dict(src_dict)
+        id = UUID(d.pop("id"))
+
+
+
+
+        organization_id = UUID(d.pop("organizationId"))
+
+
+
+
+        def _parse_submitter_id(data: object) -> None | UUID:
+            if data is None:
+                return data
+            try:
+                if not isinstance(data, str):
+                    raise TypeError()
+                submitter_id_type_0 = UUID(data)
+
+
+
+                return submitter_id_type_0
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(None | UUID, data)
+
+        submitter_id = _parse_submitter_id(d.pop("submitterId"))
+
+
+        def _parse_submission_period_id(data: object) -> None | UUID:
+            if data is None:
+                return data
+            try:
+                if not isinstance(data, str):
+                    raise TypeError()
+                submission_period_id_type_0 = UUID(data)
+
+
+
+                return submission_period_id_type_0
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(None | UUID, data)
+
+        submission_period_id = _parse_submission_period_id(d.pop("submissionPeriodId"))
+
+
+        def _parse_title(data: object) -> None | str:
+            if data is None:
+                return data
+            return cast(None | str, data)
+
+        title = _parse_title(d.pop("title"))
+
+
+        def _parse_content(data: object) -> None | str:
+            if data is None:
+                return data
+            return cast(None | str, data)
+
+        content = _parse_content(d.pop("content"))
+
+
+        def _parse_cover_letter(data: object) -> None | str:
+            if data is None:
+                return data
+            return cast(None | str, data)
+
+        cover_letter = _parse_cover_letter(d.pop("coverLetter"))
+
+
+        def _parse_form_definition_id(data: object) -> None | UUID:
+            if data is None:
+                return data
+            try:
+                if not isinstance(data, str):
+                    raise TypeError()
+                form_definition_id_type_0 = UUID(data)
+
+
+
+                return form_definition_id_type_0
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(None | UUID, data)
+
+        form_definition_id = _parse_form_definition_id(d.pop("formDefinitionId"))
+
+
+        def _parse_form_data(data: object) -> GetSubmissionResponse200FormDataType0 | None:
+            if data is None:
+                return data
+            try:
+                if not isinstance(data, dict):
+                    raise TypeError()
+                form_data_type_0 = GetSubmissionResponse200FormDataType0.from_dict(data)
+
+
+
+                return form_data_type_0
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(GetSubmissionResponse200FormDataType0 | None, data)
+
+        form_data = _parse_form_data(d.pop("formData"))
+
+
+        def _parse_manuscript_version_id(data: object) -> None | UUID:
+            if data is None:
+                return data
+            try:
+                if not isinstance(data, str):
+                    raise TypeError()
+                manuscript_version_id_type_0 = UUID(data)
+
+
+
+                return manuscript_version_id_type_0
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(None | UUID, data)
+
+        manuscript_version_id = _parse_manuscript_version_id(d.pop("manuscriptVersionId"))
+
+
+        status = GetSubmissionResponse200Status(d.pop("status"))
+
+
+
+
+        def _parse_submitted_at(data: object) -> datetime.datetime | None:
+            if data is None:
+                return data
+            try:
+                if not isinstance(data, str):
+                    raise TypeError()
+                submitted_at_type_0 = isoparse(data)
+
+
+
+                return submitted_at_type_0
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(datetime.datetime | None, data)
+
+        submitted_at = _parse_submitted_at(d.pop("submittedAt"))
+
+
+        created_at = isoparse(d.pop("createdAt"))
+
+
+
+
+        updated_at = isoparse(d.pop("updatedAt"))
+
+
+
+
+        files = []
+        _files = d.pop("files")
+        for files_item_data in (_files):
+            files_item = GetSubmissionResponse200FilesItem.from_dict(files_item_data)
+
+
+
+            files.append(files_item)
+
+
+        def _parse_submitter_email(data: object) -> None | str:
+            if data is None:
+                return data
+            return cast(None | str, data)
+
+        submitter_email = _parse_submitter_email(d.pop("submitterEmail"))
+
+
+        get_submission_response_200 = cls(
+            id=id,
+            organization_id=organization_id,
+            submitter_id=submitter_id,
+            submission_period_id=submission_period_id,
+            title=title,
+            content=content,
+            cover_letter=cover_letter,
+            form_definition_id=form_definition_id,
+            form_data=form_data,
+            manuscript_version_id=manuscript_version_id,
+            status=status,
+            submitted_at=submitted_at,
+            created_at=created_at,
+            updated_at=updated_at,
+            files=files,
+            submitter_email=submitter_email,
+        )
+
+
+        get_submission_response_200.additional_properties = d
+        return get_submission_response_200
+
+    @property
+    def additional_keys(self) -> list[str]:
+        return list(self.additional_properties.keys())
+
+    def __getitem__(self, key: str) -> Any:
+        return self.additional_properties[key]
+
+    def __setitem__(self, key: str, value: Any) -> None:
+        self.additional_properties[key] = value
+
+    def __delitem__(self, key: str) -> None:
+        del self.additional_properties[key]
+
+    def __contains__(self, key: str) -> bool:
+        return key in self.additional_properties

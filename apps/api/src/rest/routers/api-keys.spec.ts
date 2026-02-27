@@ -112,7 +112,18 @@ describe('api-keys REST router', () => {
 
     it('returns paginated API keys for any org member', async () => {
       const response = {
-        items: [{ id: KEY_ID, name: 'Test Key' }],
+        items: [
+          {
+            id: KEY_ID,
+            name: 'Test Key',
+            scopes: ['submissions:read'],
+            keyPrefix: 'col_live_',
+            createdAt: new Date(),
+            expiresAt: null,
+            lastUsedAt: null,
+            revokedAt: null,
+          },
+        ],
         total: 1,
         page: 1,
         limit: 20,
@@ -285,7 +296,18 @@ describe('api-keys REST router', () => {
 
     it('allows API key with api-keys:read scope for list', async () => {
       const response = {
-        items: [{ id: KEY_ID, name: 'Test Key' }],
+        items: [
+          {
+            id: KEY_ID,
+            name: 'Test Key',
+            scopes: ['submissions:read'],
+            keyPrefix: 'col_live_',
+            createdAt: new Date(),
+            expiresAt: null,
+            lastUsedAt: null,
+            revokedAt: null,
+          },
+        ],
         total: 1,
         page: 1,
         limit: 20,

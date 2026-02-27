@@ -3,6 +3,12 @@ import {
   createManuscriptSchema,
   updateManuscriptSchema,
   listManuscriptsSchema,
+  manuscriptSchema,
+  manuscriptDetailSchema,
+  manuscriptVersionSchema,
+  relatedSubmissionSchema,
+  paginatedResponseSchema,
+  successResponseSchema,
 } from '@colophony/types';
 import { toUserServiceContext } from '../../services/context.js';
 import {
@@ -11,6 +17,12 @@ import {
 } from '../../services/manuscript.service.js';
 import { mapServiceError } from '../error-mapper.js';
 import { userProcedure, requireScopes } from '../context.js';
+
+// ---------------------------------------------------------------------------
+// Output schemas
+// ---------------------------------------------------------------------------
+
+const paginatedManuscriptsSchema = paginatedResponseSchema(manuscriptSchema);
 
 // ---------------------------------------------------------------------------
 // Manuscript routes (user-scoped, no org required)
@@ -27,6 +39,7 @@ const list = userProcedure
     tags: ['Manuscripts'],
   })
   .input(listManuscriptsSchema)
+  .output(paginatedManuscriptsSchema)
   .handler(async ({ input, context }) => {
     try {
       return await manuscriptService.list(
@@ -50,6 +63,7 @@ const getById = userProcedure
     tags: ['Manuscripts'],
   })
   .input(z.object({ manuscriptId: z.string().uuid() }))
+  .output(manuscriptDetailSchema)
   .handler(async ({ input, context }) => {
     try {
       const detail = await manuscriptService.getDetail(
@@ -74,6 +88,7 @@ const create = userProcedure
     tags: ['Manuscripts'],
   })
   .input(createManuscriptSchema)
+  .output(manuscriptSchema)
   .handler(async ({ input, context }) => {
     try {
       return await manuscriptService.createWithAudit(
@@ -98,6 +113,7 @@ const update = userProcedure
   .input(
     z.object({ manuscriptId: z.string().uuid() }).merge(updateManuscriptSchema),
   )
+  .output(manuscriptSchema)
   .handler(async ({ input, context }) => {
     try {
       const { manuscriptId, ...data } = input;
@@ -122,6 +138,7 @@ const del = userProcedure
     tags: ['Manuscripts'],
   })
   .input(z.object({ manuscriptId: z.string().uuid() }))
+  .output(successResponseSchema)
   .handler(async ({ input, context }) => {
     try {
       await manuscriptService.deleteWithAudit(
@@ -150,6 +167,7 @@ const createVersion = userProcedure
       label: z.string().max(255).optional(),
     }),
   )
+  .output(manuscriptVersionSchema)
   .handler(async ({ input, context }) => {
     try {
       return await manuscriptService.createVersionWithAudit(
@@ -173,6 +191,7 @@ const listVersions = userProcedure
     tags: ['Manuscripts'],
   })
   .input(z.object({ manuscriptId: z.string().uuid() }))
+  .output(z.array(manuscriptVersionSchema))
   .handler(async ({ input, context }) => {
     try {
       const manuscript = await manuscriptService.getById(
@@ -201,6 +220,7 @@ const getRelatedSubmissions = userProcedure
     tags: ['Manuscripts'],
   })
   .input(z.object({ manuscriptId: z.string().uuid() }))
+  .output(z.array(relatedSubmissionSchema))
   .handler(async ({ input, context }) => {
     try {
       const manuscript = await manuscriptService.getById(

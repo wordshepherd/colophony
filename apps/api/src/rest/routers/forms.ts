@@ -10,6 +10,12 @@ import {
   reorderFormPagesSchema,
   listFormDefinitionsSchema,
   idParamSchema,
+  formDefinitionSchema,
+  formDefinitionDetailSchema,
+  formFieldSchema,
+  formPageSchema,
+  paginatedResponseSchema,
+  successResponseSchema,
 } from '@colophony/types';
 import { restPaginationQuery } from '@colophony/api-contracts';
 import { formService, FormNotFoundError } from '../../services/form.service.js';
@@ -20,6 +26,8 @@ import { orgProcedure, requireScopes } from '../context.js';
 // ---------------------------------------------------------------------------
 // Query schemas — override page/limit with z.coerce for REST query strings
 // ---------------------------------------------------------------------------
+
+const paginatedFormsSchema = paginatedResponseSchema(formDefinitionSchema);
 
 const restListFormsQuery = listFormDefinitionsSchema
   .omit({ page: true, limit: true })
@@ -55,6 +63,7 @@ const list = orgProcedure
     tags: ['Forms'],
   })
   .input(restListFormsQuery)
+  .output(paginatedFormsSchema)
   .handler(async ({ input, context }) => {
     return formService.list(context.dbTx, input);
   });
@@ -71,6 +80,7 @@ const create = orgProcedure
     tags: ['Forms'],
   })
   .input(createFormDefinitionSchema)
+  .output(formDefinitionSchema)
   .handler(async ({ input, context }) => {
     try {
       return await formService.createWithAudit(
@@ -94,6 +104,7 @@ const get = orgProcedure
     tags: ['Forms'],
   })
   .input(idParamSchema)
+  .output(formDefinitionDetailSchema)
   .handler(async ({ input, context }) => {
     try {
       const form = await formService.getById(context.dbTx, input.id);
@@ -115,6 +126,7 @@ const update = orgProcedure
     tags: ['Forms'],
   })
   .input(idParamSchema.merge(updateFormDefinitionSchema))
+  .output(formDefinitionSchema)
   .handler(async ({ input, context }) => {
     const { id, ...data } = input;
     try {
@@ -140,6 +152,7 @@ const publish = orgProcedure
     tags: ['Forms'],
   })
   .input(idParamSchema)
+  .output(formDefinitionSchema)
   .handler(async ({ input, context }) => {
     try {
       return await formService.publishWithAudit(
@@ -162,6 +175,7 @@ const archive = orgProcedure
     tags: ['Forms'],
   })
   .input(idParamSchema)
+  .output(formDefinitionSchema)
   .handler(async ({ input, context }) => {
     try {
       return await formService.archiveWithAudit(
@@ -186,6 +200,7 @@ const duplicate = orgProcedure
     tags: ['Forms'],
   })
   .input(idParamSchema)
+  .output(formDefinitionDetailSchema)
   .handler(async ({ input, context }) => {
     try {
       const result = await formService.duplicateWithAudit(
@@ -210,6 +225,7 @@ const del = orgProcedure
     tags: ['Forms'],
   })
   .input(idParamSchema)
+  .output(successResponseSchema)
   .handler(async ({ input, context }) => {
     try {
       return await formService.deleteWithAudit(
@@ -233,6 +249,7 @@ const addField = orgProcedure
     tags: ['Forms'],
   })
   .input(idParamSchema.merge(createFormFieldSchema))
+  .output(formFieldSchema)
   .handler(async ({ input, context }) => {
     const { id, ...fieldData } = input;
     try {
@@ -257,6 +274,7 @@ const updateField = orgProcedure
     tags: ['Forms'],
   })
   .input(formFieldIdParam.merge(updateFormFieldSchema))
+  .output(formFieldSchema)
   .handler(async ({ input, context }) => {
     const { id, fieldId, ...data } = input;
     try {
@@ -282,6 +300,7 @@ const removeField = orgProcedure
     tags: ['Forms'],
   })
   .input(formFieldIdParam)
+  .output(formFieldSchema)
   .handler(async ({ input, context }) => {
     try {
       return await formService.removeFieldWithAudit(
@@ -305,6 +324,7 @@ const reorderFields = orgProcedure
     tags: ['Forms'],
   })
   .input(idParamSchema.merge(reorderFormFieldsSchema))
+  .output(z.array(formFieldSchema))
   .handler(async ({ input, context }) => {
     const { id, ...data } = input;
     try {
@@ -334,6 +354,7 @@ const addPage = orgProcedure
     tags: ['Forms'],
   })
   .input(idParamSchema.merge(createFormPageSchema))
+  .output(formPageSchema)
   .handler(async ({ input, context }) => {
     const { id, ...pageData } = input;
     try {
@@ -358,6 +379,7 @@ const updatePage = orgProcedure
     tags: ['Forms'],
   })
   .input(formPageIdParam.merge(updateFormPageSchema))
+  .output(formPageSchema)
   .handler(async ({ input, context }) => {
     const { id, pageId, ...data } = input;
     try {
@@ -383,6 +405,7 @@ const removePage = orgProcedure
     tags: ['Forms'],
   })
   .input(formPageIdParam)
+  .output(formPageSchema)
   .handler(async ({ input, context }) => {
     try {
       return await formService.removePageWithAudit(
@@ -406,6 +429,7 @@ const reorderPages = orgProcedure
     tags: ['Forms'],
   })
   .input(idParamSchema.merge(reorderFormPagesSchema))
+  .output(z.array(formPageSchema))
   .handler(async ({ input, context }) => {
     const { id, ...data } = input;
     try {

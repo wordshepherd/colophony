@@ -3,6 +3,8 @@ import {
   createContractTemplateSchema,
   updateContractTemplateSchema,
   idParamSchema,
+  contractTemplateSchema,
+  paginatedResponseSchema,
 } from '@colophony/types';
 import { restPaginationQuery } from '@colophony/api-contracts';
 import {
@@ -16,6 +18,10 @@ import { orgProcedure, requireScopes } from '../context.js';
 // ---------------------------------------------------------------------------
 // Query schemas — override page/limit with z.coerce for REST query strings
 // ---------------------------------------------------------------------------
+
+const paginatedTemplatesSchema = paginatedResponseSchema(
+  contractTemplateSchema,
+);
 
 const restListQuery = listContractTemplatesSchema
   .omit({ page: true, limit: true })
@@ -37,6 +43,7 @@ const list = orgProcedure
     tags: ['Contract Templates'],
   })
   .input(restListQuery)
+  .output(paginatedTemplatesSchema)
   .handler(async ({ input, context }) => {
     return contractTemplateService.list(context.dbTx, input);
   });
@@ -52,6 +59,7 @@ const get = orgProcedure
     tags: ['Contract Templates'],
   })
   .input(idParamSchema)
+  .output(contractTemplateSchema)
   .handler(async ({ input, context }) => {
     try {
       const template = await contractTemplateService.getById(
@@ -77,6 +85,7 @@ const create = orgProcedure
     tags: ['Contract Templates'],
   })
   .input(createContractTemplateSchema)
+  .output(contractTemplateSchema)
   .handler(async ({ input, context }) => {
     try {
       return await contractTemplateService.createWithAudit(
@@ -99,6 +108,7 @@ const update = orgProcedure
     tags: ['Contract Templates'],
   })
   .input(idParamSchema.merge(updateContractTemplateSchema))
+  .output(contractTemplateSchema)
   .handler(async ({ input, context }) => {
     const { id, ...data } = input;
     try {
@@ -123,6 +133,7 @@ const del = orgProcedure
     tags: ['Contract Templates'],
   })
   .input(idParamSchema)
+  .output(contractTemplateSchema)
   .handler(async ({ input, context }) => {
     try {
       return await contractTemplateService.deleteWithAudit(

@@ -1,8 +1,11 @@
+import { z } from 'zod';
 import {
   listCmsConnectionsSchema,
   createCmsConnectionSchema,
   updateCmsConnectionSchema,
   idParamSchema,
+  cmsConnectionSchema,
+  paginatedResponseSchema,
 } from '@colophony/types';
 import { restPaginationQuery } from '@colophony/api-contracts';
 import {
@@ -16,6 +19,13 @@ import { orgProcedure, requireScopes } from '../context.js';
 // ---------------------------------------------------------------------------
 // Query schemas — override page/limit with z.coerce for REST query strings
 // ---------------------------------------------------------------------------
+
+const paginatedConnectionsSchema = paginatedResponseSchema(cmsConnectionSchema);
+
+const testConnectionOutputSchema = z.object({
+  success: z.boolean(),
+  message: z.string().optional(),
+});
 
 const restListCmsConnectionsQuery = listCmsConnectionsSchema
   .omit({ page: true, limit: true })
@@ -37,6 +47,7 @@ const list = orgProcedure
     tags: ['CMS Connections'],
   })
   .input(restListCmsConnectionsQuery)
+  .output(paginatedConnectionsSchema)
   .handler(async ({ input, context }) => {
     return cmsConnectionService.list(context.dbTx, input);
   });
@@ -54,6 +65,7 @@ const create = orgProcedure
     tags: ['CMS Connections'],
   })
   .input(createCmsConnectionSchema)
+  .output(cmsConnectionSchema)
   .handler(async ({ input, context }) => {
     try {
       return await cmsConnectionService.createWithAudit(
@@ -76,6 +88,7 @@ const get = orgProcedure
     tags: ['CMS Connections'],
   })
   .input(idParamSchema)
+  .output(cmsConnectionSchema)
   .handler(async ({ input, context }) => {
     try {
       const connection = await cmsConnectionService.getById(
@@ -100,6 +113,7 @@ const update = orgProcedure
     tags: ['CMS Connections'],
   })
   .input(idParamSchema.merge(updateCmsConnectionSchema))
+  .output(cmsConnectionSchema)
   .handler(async ({ input, context }) => {
     const { id, ...data } = input;
     try {
@@ -124,6 +138,7 @@ const del = orgProcedure
     tags: ['CMS Connections'],
   })
   .input(idParamSchema)
+  .output(cmsConnectionSchema)
   .handler(async ({ input, context }) => {
     try {
       return await cmsConnectionService.deleteWithAudit(
@@ -147,6 +162,7 @@ const test = orgProcedure
     tags: ['CMS Connections'],
   })
   .input(idParamSchema)
+  .output(testConnectionOutputSchema)
   .handler(async ({ input, context }) => {
     try {
       return await cmsConnectionService.testConnectionWithAudit(

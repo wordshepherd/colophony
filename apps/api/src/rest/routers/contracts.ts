@@ -3,6 +3,8 @@ import {
   listContractsSchema,
   generateContractSchema,
   idParamSchema,
+  contractSchema,
+  paginatedResponseSchema,
 } from '@colophony/types';
 import { restPaginationQuery } from '@colophony/api-contracts';
 import {
@@ -16,6 +18,8 @@ import { orgProcedure, requireScopes } from '../context.js';
 // ---------------------------------------------------------------------------
 // Query schemas — override page/limit with z.coerce for REST query strings
 // ---------------------------------------------------------------------------
+
+const paginatedContractsSchema = paginatedResponseSchema(contractSchema);
 
 const restListQuery = listContractsSchema
   .omit({ page: true, limit: true })
@@ -36,6 +40,7 @@ const list = orgProcedure
     tags: ['Contracts'],
   })
   .input(restListQuery)
+  .output(paginatedContractsSchema)
   .handler(async ({ input, context }) => {
     return contractService.list(context.dbTx, input);
   });
@@ -51,6 +56,7 @@ const get = orgProcedure
     tags: ['Contracts'],
   })
   .input(idParamSchema)
+  .output(contractSchema)
   .handler(async ({ input, context }) => {
     try {
       const contract = await contractService.getById(context.dbTx, input.id);
@@ -72,6 +78,7 @@ const listByPipelineItem = orgProcedure
     tags: ['Contracts'],
   })
   .input(z.object({ pipelineItemId: z.string().uuid() }))
+  .output(z.array(contractSchema))
   .handler(async ({ input, context }) => {
     return contractService.getByPipelineItemId(
       context.dbTx,
@@ -91,6 +98,7 @@ const generate = orgProcedure
     tags: ['Contracts'],
   })
   .input(generateContractSchema)
+  .output(contractSchema)
   .handler(async ({ input, context }) => {
     try {
       return await contractService.generateWithAudit(
@@ -113,6 +121,7 @@ const send = orgProcedure
     tags: ['Contracts'],
   })
   .input(idParamSchema)
+  .output(contractSchema)
   .handler(async ({ input, context }) => {
     try {
       return await contractService.sendWithAudit(
@@ -135,6 +144,7 @@ const voidContract = orgProcedure
     tags: ['Contracts'],
   })
   .input(idParamSchema)
+  .output(contractSchema)
   .handler(async ({ input, context }) => {
     try {
       return await contractService.voidWithAudit(

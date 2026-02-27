@@ -1,9 +1,15 @@
+import { z } from 'zod';
 import {
   createSubmissionSchema,
   updateSubmissionSchema,
   updateSubmissionStatusSchema,
   listSubmissionsSchema,
   idParamSchema,
+  submissionSchema,
+  submissionHistorySchema,
+  fileSchema,
+  paginatedResponseSchema,
+  successResponseSchema,
 } from '@colophony/types';
 import { restPaginationQuery } from '@colophony/api-contracts';
 import { submissionService } from '../../services/submission.service.js';
@@ -17,6 +23,18 @@ import { validateEnv } from '../../config/env.js';
 // ---------------------------------------------------------------------------
 // Query schemas — override page/limit with z.coerce for REST query strings
 // ---------------------------------------------------------------------------
+
+const paginatedSubmissionsSchema = paginatedResponseSchema(submissionSchema);
+
+const submissionWithDetailsSchema = submissionSchema.extend({
+  files: z.array(fileSchema),
+  submitterEmail: z.string().nullable(),
+});
+
+const statusUpdateResponseSchema = z.object({
+  submission: submissionSchema,
+  historyEntry: submissionHistorySchema,
+});
 
 const restListSubmissionsQuery = listSubmissionsSchema
   .omit({ page: true, limit: true })
@@ -38,6 +56,7 @@ const mine = orgProcedure
     tags: ['Submissions'],
   })
   .input(restListSubmissionsQuery)
+  .output(paginatedSubmissionsSchema)
   .handler(async ({ input, context }) => {
     return submissionService.listBySubmitter(
       context.dbTx,
@@ -58,6 +77,7 @@ const list = orgProcedure
     tags: ['Submissions'],
   })
   .input(restListSubmissionsQuery)
+  .output(paginatedSubmissionsSchema)
   .handler(async ({ input, context }) => {
     try {
       assertEditorOrAdmin(context.authContext.role);
@@ -79,6 +99,7 @@ const create = orgProcedure
     tags: ['Submissions'],
   })
   .input(createSubmissionSchema)
+  .output(submissionSchema)
   .handler(async ({ input, context }) => {
     try {
       return await submissionService.createWithAudit(
@@ -102,6 +123,7 @@ const get = orgProcedure
     tags: ['Submissions'],
   })
   .input(idParamSchema)
+  .output(submissionWithDetailsSchema)
   .handler(async ({ input, context }) => {
     try {
       return await submissionService.getByIdWithAccess(
@@ -125,6 +147,7 @@ const update = orgProcedure
     tags: ['Submissions'],
   })
   .input(idParamSchema.merge(updateSubmissionSchema))
+  .output(submissionSchema)
   .handler(async ({ input, context }) => {
     const { id, ...data } = input;
     try {
@@ -150,6 +173,7 @@ const submit = orgProcedure
     tags: ['Submissions'],
   })
   .input(idParamSchema)
+  .output(statusUpdateResponseSchema)
   .handler(async ({ input, context }) => {
     try {
       const env = validateEnv();
@@ -179,6 +203,7 @@ const del = orgProcedure
     tags: ['Submissions'],
   })
   .input(idParamSchema)
+  .output(successResponseSchema)
   .handler(async ({ input, context }) => {
     try {
       return await submissionService.deleteAsOwner(
@@ -202,6 +227,7 @@ const withdraw = orgProcedure
     tags: ['Submissions'],
   })
   .input(idParamSchema)
+  .output(statusUpdateResponseSchema)
   .handler(async ({ input, context }) => {
     try {
       return await submissionService.withdrawAsOwner(
@@ -225,6 +251,7 @@ const updateStatus = orgProcedure
     tags: ['Submissions'],
   })
   .input(idParamSchema.merge(updateSubmissionStatusSchema))
+  .output(statusUpdateResponseSchema)
   .handler(async ({ input, context }) => {
     const { id, status, comment } = input;
     try {
@@ -250,6 +277,7 @@ const history = orgProcedure
     tags: ['Submissions'],
   })
   .input(idParamSchema)
+  .output(z.array(submissionHistorySchema))
   .handler(async ({ input, context }) => {
     try {
       return await submissionService.getHistoryWithAccess(
