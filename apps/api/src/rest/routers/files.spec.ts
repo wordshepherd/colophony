@@ -153,8 +153,14 @@ describe('files REST router', () => {
       const files = [
         {
           id: FILE_ID,
-          filename: 'test.pdf',
           manuscriptVersionId: MANUSCRIPT_VERSION_ID,
+          filename: 'test.pdf',
+          mimeType: 'application/pdf',
+          size: 1024,
+          storageKey: 'uploads/test.pdf',
+          scanStatus: 'CLEAN',
+          scannedAt: null,
+          uploadedAt: new Date(),
         },
       ];
       mockFileService.listByManuscriptVersionWithAccess.mockResolvedValueOnce(
@@ -290,7 +296,19 @@ describe('files REST router', () => {
     });
 
     it('allows API key with correct read scope', async () => {
-      const files = [{ id: FILE_ID, filename: 'test.pdf' }];
+      const files = [
+        {
+          id: FILE_ID,
+          manuscriptVersionId: MANUSCRIPT_VERSION_ID,
+          filename: 'test.pdf',
+          mimeType: 'application/pdf',
+          size: 1024,
+          storageKey: 'uploads/test.pdf',
+          scanStatus: 'CLEAN',
+          scannedAt: null,
+          uploadedAt: new Date(),
+        },
+      ];
       mockFileService.listByManuscriptVersionWithAccess.mockResolvedValueOnce(
         files as never,
       );

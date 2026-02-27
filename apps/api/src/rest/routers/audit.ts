@@ -1,8 +1,22 @@
 import { ORPCError } from '@orpc/server';
-import { AuditActions, AuditResources, idParamSchema } from '@colophony/types';
+import {
+  AuditActions,
+  AuditResources,
+  idParamSchema,
+  auditEventResponseSchema,
+  paginatedResponseSchema,
+} from '@colophony/types';
 import { restListAuditEventsQuery } from '@colophony/api-contracts';
 import { auditService } from '../../services/audit.service.js';
 import { adminProcedure, requireScopes } from '../context.js';
+
+// ---------------------------------------------------------------------------
+// Output schemas
+// ---------------------------------------------------------------------------
+
+const paginatedAuditEventsSchema = paginatedResponseSchema(
+  auditEventResponseSchema,
+);
 
 // ---------------------------------------------------------------------------
 // Audit event routes
@@ -20,6 +34,7 @@ const list = adminProcedure
     tags: ['Audit'],
   })
   .input(restListAuditEventsQuery)
+  .output(paginatedAuditEventsSchema)
   .handler(async ({ input, context }) => {
     const result = await auditService.list(context.dbTx, input);
     await context.audit({
@@ -41,6 +56,7 @@ const getById = adminProcedure
     tags: ['Audit'],
   })
   .input(idParamSchema)
+  .output(auditEventResponseSchema)
   .handler(async ({ input, context }) => {
     const event = await auditService.getById(context.dbTx, input.id);
     if (!event) {

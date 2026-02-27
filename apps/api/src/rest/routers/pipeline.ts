@@ -1,3 +1,4 @@
+import { z } from 'zod';
 import {
   listPipelineItemsSchema,
   createPipelineItemSchema,
@@ -5,6 +6,10 @@ import {
   assignPipelineRoleSchema,
   addPipelineCommentSchema,
   idParamSchema,
+  pipelineItemSchema,
+  pipelineCommentSchema,
+  pipelineHistoryEntrySchema,
+  paginatedResponseSchema,
 } from '@colophony/types';
 import { restPaginationQuery } from '@colophony/api-contracts';
 import {
@@ -18,6 +23,8 @@ import { orgProcedure, requireScopes } from '../context.js';
 // ---------------------------------------------------------------------------
 // Query schemas — override page/limit with z.coerce for REST query strings
 // ---------------------------------------------------------------------------
+
+const paginatedPipelineSchema = paginatedResponseSchema(pipelineItemSchema);
 
 const restListPipelineQuery = listPipelineItemsSchema
   .omit({ page: true, limit: true })
@@ -39,6 +46,7 @@ const list = orgProcedure
     tags: ['Pipeline'],
   })
   .input(restListPipelineQuery)
+  .output(paginatedPipelineSchema)
   .handler(async ({ input, context }) => {
     return pipelineService.list(context.dbTx, input);
   });
@@ -55,6 +63,7 @@ const create = orgProcedure
     tags: ['Pipeline'],
   })
   .input(createPipelineItemSchema)
+  .output(pipelineItemSchema)
   .handler(async ({ input, context }) => {
     try {
       return await pipelineService.createWithAudit(
@@ -77,6 +86,7 @@ const get = orgProcedure
     tags: ['Pipeline'],
   })
   .input(idParamSchema)
+  .output(pipelineItemSchema)
   .handler(async ({ input, context }) => {
     try {
       const item = await pipelineService.getById(context.dbTx, input.id);
@@ -98,6 +108,7 @@ const updateStage = orgProcedure
     tags: ['Pipeline'],
   })
   .input(idParamSchema.merge(updatePipelineStageSchema))
+  .output(pipelineItemSchema)
   .handler(async ({ input, context }) => {
     const { id, ...data } = input;
     try {
@@ -122,6 +133,7 @@ const assignCopyeditor = orgProcedure
     tags: ['Pipeline'],
   })
   .input(idParamSchema.merge(assignPipelineRoleSchema))
+  .output(pipelineItemSchema)
   .handler(async ({ input, context }) => {
     const { id, ...data } = input;
     try {
@@ -146,6 +158,7 @@ const assignProofreader = orgProcedure
     tags: ['Pipeline'],
   })
   .input(idParamSchema.merge(assignPipelineRoleSchema))
+  .output(pipelineItemSchema)
   .handler(async ({ input, context }) => {
     const { id, ...data } = input;
     try {
@@ -171,6 +184,7 @@ const addComment = orgProcedure
     tags: ['Pipeline'],
   })
   .input(idParamSchema.merge(addPipelineCommentSchema))
+  .output(pipelineCommentSchema)
   .handler(async ({ input, context }) => {
     const { id, ...data } = input;
     try {
@@ -195,6 +209,7 @@ const listComments = orgProcedure
     tags: ['Pipeline'],
   })
   .input(idParamSchema)
+  .output(z.array(pipelineCommentSchema))
   .handler(async ({ input, context }) => {
     return pipelineService.listComments(context.dbTx, input.id);
   });
@@ -210,6 +225,7 @@ const getHistory = orgProcedure
     tags: ['Pipeline'],
   })
   .input(idParamSchema)
+  .output(z.array(pipelineHistoryEntrySchema))
   .handler(async ({ input, context }) => {
     return pipelineService.getHistory(context.dbTx, input.id);
   });

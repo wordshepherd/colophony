@@ -6,6 +6,11 @@ import {
   checkSlugSchema,
   inviteMemberSchema,
   roleSchema,
+  organizationMemberSchema,
+  userOrganizationSchema,
+  organizationMemberMutationResponseSchema,
+  paginatedResponseSchema,
+  successResponseSchema,
 } from '@colophony/types';
 import { restPaginationQuery } from '@colophony/api-contracts';
 import { organizationService } from '../../services/organization.service.js';
@@ -38,6 +43,43 @@ const memberIdParam = z.object({
  * X-Organization-Id header. Prevents URL/resource mismatch where a client
  * could request /organizations/{A} but operate on organization B.
  */
+// ---------------------------------------------------------------------------
+// Output schemas
+// ---------------------------------------------------------------------------
+
+const checkSlugResponseSchema = z.object({ available: z.boolean() });
+
+// Drizzle returns settings as `unknown` and includes extra columns like
+// federationOptedOut — use passthrough to accept the actual DB shape.
+const organizationOutputSchema = z
+  .object({
+    id: z.string().uuid(),
+    name: z.string(),
+    slug: z.string(),
+    settings: z.unknown(),
+    createdAt: z.date(),
+    updatedAt: z.date(),
+  })
+  .passthrough();
+
+const createOrgOutputSchema = z.object({
+  organization: organizationOutputSchema,
+  membership: z
+    .object({
+      id: z.string().uuid(),
+      organizationId: z.string().uuid(),
+      userId: z.string().uuid(),
+      role: roleSchema,
+      createdAt: z.date(),
+      updatedAt: z.date(),
+    })
+    .passthrough(),
+});
+
+const paginatedMembersSchema = paginatedResponseSchema(
+  organizationMemberSchema,
+);
+
 function assertOrgIdMatch(pathOrgId: string, contextOrgId: string): void {
   if (pathOrgId !== contextOrgId) {
     throw new ORPCError('BAD_REQUEST', {
@@ -63,6 +105,7 @@ const membersList = orgProcedure
     tags: ['Organizations'],
   })
   .input(orgIdParam.merge(restPaginationQuery))
+  .output(paginatedMembersSchema)
   .handler(async ({ input, context }) => {
     assertOrgIdMatch(input.orgId, context.authContext.orgId);
     return organizationService.listMembers(context.dbTx, {
@@ -84,6 +127,7 @@ const membersAdd = adminProcedure
     tags: ['Organizations'],
   })
   .input(orgIdParam.merge(inviteMemberSchema))
+  .output(organizationMemberMutationResponseSchema)
   .handler(async ({ input, context }) => {
     assertOrgIdMatch(input.orgId, context.authContext.orgId);
     try {
@@ -108,6 +152,7 @@ const membersRemove = adminProcedure
     tags: ['Organizations'],
   })
   .input(memberIdParam)
+  .output(successResponseSchema)
   .handler(async ({ context, input }) => {
     assertOrgIdMatch(input.orgId, context.authContext.orgId);
     try {
@@ -132,6 +177,7 @@ const membersUpdateRole = adminProcedure
     tags: ['Organizations'],
   })
   .input(memberIdParam.merge(z.object({ role: roleSchema })))
+  .output(organizationMemberMutationResponseSchema)
   .handler(async ({ context, input }) => {
     assertOrgIdMatch(input.orgId, context.authContext.orgId);
     try {
@@ -160,6 +206,7 @@ const orgsList = authedProcedure
     operationId: 'listOrganizations',
     tags: ['Organizations'],
   })
+  .output(z.array(userOrganizationSchema))
   .handler(async ({ context }) => {
     return organizationService.listUserOrganizations(
       context.authContext.userId,
@@ -179,6 +226,7 @@ const orgsCreate = authedProcedure
     tags: ['Organizations'],
   })
   .input(createOrganizationSchema)
+  .output(createOrgOutputSchema)
   .handler(async ({ context, input }) => {
     const available = await organizationService.isSlugAvailable(input.slug);
     if (!available) {
@@ -210,6 +258,7 @@ const orgsCheckSlug = authedProcedure
     tags: ['Organizations'],
   })
   .input(checkSlugSchema)
+  .output(checkSlugResponseSchema)
   .handler(async ({ input }) => {
     const available = await organizationService.isSlugAvailable(input.slug);
     return { available };
@@ -226,6 +275,7 @@ const orgsGet = orgProcedure
     tags: ['Organizations'],
   })
   .input(orgIdParam)
+  .output(organizationOutputSchema)
   .handler(async ({ input, context }) => {
     assertOrgIdMatch(input.orgId, context.authContext.orgId);
     const org = await organizationService.getById(
@@ -250,6 +300,7 @@ const orgsUpdate = adminProcedure
     tags: ['Organizations'],
   })
   .input(orgIdParam.merge(updateOrganizationSchema))
+  .output(organizationOutputSchema)
   .handler(async ({ context, input }) => {
     assertOrgIdMatch(input.orgId, context.authContext.orgId);
     try {
@@ -274,6 +325,7 @@ const orgsDelete = adminProcedure
     tags: ['Organizations'],
   })
   .input(orgIdParam)
+  .output(successResponseSchema)
   .handler(async ({ input, context }) => {
     assertOrgIdMatch(input.orgId, context.authContext.orgId);
     const env = validateEnv();

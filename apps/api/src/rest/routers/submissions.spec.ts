@@ -172,6 +172,43 @@ function apiKeyContext(
 }
 
 // ---------------------------------------------------------------------------
+// Fixture helpers
+// ---------------------------------------------------------------------------
+
+function makeSubmission(overrides: Record<string, unknown> = {}) {
+  return {
+    id: SUBMISSION_ID,
+    organizationId: ORG_ID,
+    submitterId: USER_ID,
+    submissionPeriodId: null,
+    title: 'Test',
+    content: null,
+    coverLetter: null,
+    formDefinitionId: null,
+    formData: null,
+    manuscriptVersionId: null,
+    status: 'DRAFT',
+    submittedAt: null,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    ...overrides,
+  };
+}
+
+function makeHistoryEntry(overrides: Record<string, unknown> = {}) {
+  return {
+    id: 'e0000000-0000-4000-a000-000000000001',
+    submissionId: SUBMISSION_ID,
+    fromStatus: null,
+    toStatus: 'DRAFT',
+    changedBy: USER_ID,
+    comment: null,
+    changedAt: new Date(),
+    ...overrides,
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
 
@@ -197,7 +234,7 @@ describe('submissions REST router', () => {
 
     it('returns submissions for the current user', async () => {
       const response = {
-        items: [{ id: SUBMISSION_ID, title: 'My Sub' }],
+        items: [makeSubmission({ title: 'My Sub' })],
         total: 1,
         page: 1,
         limit: 20,
@@ -236,7 +273,7 @@ describe('submissions REST router', () => {
 
     it('returns all submissions for EDITOR', async () => {
       const response = {
-        items: [{ id: SUBMISSION_ID }],
+        items: [makeSubmission()],
         total: 1,
         page: 1,
         limit: 20,
@@ -276,11 +313,7 @@ describe('submissions REST router', () => {
     });
 
     it('creates a submission', async () => {
-      const submission = {
-        id: SUBMISSION_ID,
-        title: 'Test',
-        status: 'DRAFT',
-      };
+      const submission = makeSubmission();
       mockService.createWithAudit.mockResolvedValueOnce(submission as never);
 
       const call = client(submissionsRouter.create, orgContext('READER'));
@@ -301,8 +334,7 @@ describe('submissions REST router', () => {
 
     it('returns submission with details', async () => {
       const submission = {
-        id: SUBMISSION_ID,
-        title: 'Test',
+        ...makeSubmission(),
         files: [],
         submitterEmail: 'test@example.com',
       };
@@ -349,7 +381,7 @@ describe('submissions REST router', () => {
     });
 
     it('updates a DRAFT submission', async () => {
-      const updated = { id: SUBMISSION_ID, title: 'New Title' };
+      const updated = makeSubmission({ title: 'New Title' });
       mockService.updateAsOwner.mockResolvedValueOnce(updated as never);
 
       const call = client(submissionsRouter.update, orgContext('READER'));
@@ -392,8 +424,14 @@ describe('submissions REST router', () => {
 
     it('submits a DRAFT submission', async () => {
       const result = {
-        submission: { id: SUBMISSION_ID, status: 'SUBMITTED' },
-        historyEntry: { id: 'h-1' },
+        submission: makeSubmission({
+          status: 'SUBMITTED',
+          submittedAt: new Date(),
+        }),
+        historyEntry: makeHistoryEntry({
+          fromStatus: 'DRAFT',
+          toStatus: 'SUBMITTED',
+        }),
       };
       mockService.submitAsOwner.mockResolvedValueOnce(result as never);
 
@@ -465,8 +503,11 @@ describe('submissions REST router', () => {
 
     it('withdraws a submission', async () => {
       const result = {
-        submission: { id: SUBMISSION_ID, status: 'WITHDRAWN' },
-        historyEntry: { id: 'h-1' },
+        submission: makeSubmission({ status: 'WITHDRAWN' }),
+        historyEntry: makeHistoryEntry({
+          fromStatus: 'SUBMITTED',
+          toStatus: 'WITHDRAWN',
+        }),
       };
       mockService.withdrawAsOwner.mockResolvedValueOnce(result as never);
 
@@ -510,8 +551,11 @@ describe('submissions REST router', () => {
 
     it('updates status as EDITOR', async () => {
       const result = {
-        submission: { id: SUBMISSION_ID, status: 'UNDER_REVIEW' },
-        historyEntry: { id: 'h-1' },
+        submission: makeSubmission({ status: 'UNDER_REVIEW' }),
+        historyEntry: makeHistoryEntry({
+          fromStatus: 'SUBMITTED',
+          toStatus: 'UNDER_REVIEW',
+        }),
       };
       mockService.updateStatusAsEditor.mockResolvedValueOnce(result as never);
 
@@ -538,8 +582,12 @@ describe('submissions REST router', () => {
 
     it('passes comment when provided', async () => {
       const result = {
-        submission: { id: SUBMISSION_ID, status: 'REJECTED' },
-        historyEntry: { id: 'h-1' },
+        submission: makeSubmission({ status: 'REJECTED' }),
+        historyEntry: makeHistoryEntry({
+          fromStatus: 'UNDER_REVIEW',
+          toStatus: 'REJECTED',
+          comment: 'Not a fit',
+        }),
       };
       mockService.updateStatusAsEditor.mockResolvedValueOnce(result as never);
 
@@ -571,8 +619,16 @@ describe('submissions REST router', () => {
 
     it('returns history for submission', async () => {
       const history = [
-        { id: 'h-1', fromStatus: null, toStatus: 'DRAFT' },
-        { id: 'h-2', fromStatus: 'DRAFT', toStatus: 'SUBMITTED' },
+        makeHistoryEntry({
+          id: 'e0000000-0000-4000-a000-000000000001',
+          fromStatus: null,
+          toStatus: 'DRAFT',
+        }),
+        makeHistoryEntry({
+          id: 'e1000000-0000-4000-a000-000000000002',
+          fromStatus: 'DRAFT',
+          toStatus: 'SUBMITTED',
+        }),
       ];
       mockService.getHistoryWithAccess.mockResolvedValueOnce(history as never);
 
