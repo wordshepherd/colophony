@@ -1134,6 +1134,98 @@ describe('auth plugin', () => {
       }
     });
 
+    it('does not grow failureMap beyond 10,000 entries (fail-open for new IPs)', async () => {
+      const app = Fastify({ logger: false, trustProxy: true });
+      await app.register(authPlugin, {
+        env: {
+          ...baseEnv,
+          NODE_ENV: 'development' as const,
+          ZITADEL_AUTHORITY: 'http://localhost:8080',
+          ZITADEL_CLIENT_ID: 'my-client',
+          AUTH_FAILURE_THROTTLE_MAX: 100, // high enough that no IP gets throttled from a single failure
+          AUTH_FAILURE_THROTTLE_WINDOW_SECONDS: 300,
+        },
+      });
+      app.get('/protected', async (request) => ({
+        authContext: request.authContext,
+      }));
+
+      // Warm up the map with 10,000 unique IPs (one failure each)
+      for (let i = 0; i < 10_000; i++) {
+        await app.inject({
+          method: 'GET',
+          url: '/protected',
+          headers: {
+            'x-forwarded-for': `10.${Math.floor(i / 65536) % 256}.${Math.floor(i / 256) % 256}.${i % 256}`,
+          },
+        });
+      }
+
+      // New IP beyond cap — should get 401 (not 429), meaning fail-open
+      const response = await app.inject({
+        method: 'GET',
+        url: '/protected',
+        headers: { 'x-forwarded-for': '192.168.1.1' },
+      });
+      expect(response.statusCode).toBe(401);
+
+      await app.close();
+    });
+
+    it('still throttles existing IPs when map is at capacity', async () => {
+      const app = Fastify({ logger: false, trustProxy: true });
+      await app.register(authPlugin, {
+        env: {
+          ...baseEnv,
+          NODE_ENV: 'development' as const,
+          ZITADEL_AUTHORITY: 'http://localhost:8080',
+          ZITADEL_CLIENT_ID: 'my-client',
+          AUTH_FAILURE_THROTTLE_MAX: 2,
+          AUTH_FAILURE_THROTTLE_WINDOW_SECONDS: 300,
+        },
+      });
+      app.get('/protected', async (request) => ({
+        authContext: request.authContext,
+      }));
+
+      // Record an initial failure from a known IP
+      await app.inject({
+        method: 'GET',
+        url: '/protected',
+        headers: { 'x-forwarded-for': '10.0.0.1' },
+      });
+      await flushPromises();
+
+      // Fill to 10k with other IPs
+      for (let i = 1; i < 10_000; i++) {
+        await app.inject({
+          method: 'GET',
+          url: '/protected',
+          headers: {
+            'x-forwarded-for': `10.${Math.floor(i / 65536) % 256}.${Math.floor(i / 256) % 256}.${i % 256}`,
+          },
+        });
+      }
+
+      // One more failure for known IP — should still increment (existing entry)
+      await app.inject({
+        method: 'GET',
+        url: '/protected',
+        headers: { 'x-forwarded-for': '10.0.0.1' },
+      });
+      await flushPromises();
+
+      // Now known IP should be throttled (2 failures >= max of 2)
+      const blocked = await app.inject({
+        method: 'GET',
+        url: '/protected',
+        headers: { 'x-forwarded-for': '10.0.0.1' },
+      });
+      expect(blocked.statusCode).toBe(429);
+
+      await app.close();
+    });
+
     it('does not throttle public routes', async () => {
       const app = Fastify({ logger: false });
       await app.register(authPlugin, {

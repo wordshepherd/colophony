@@ -73,6 +73,7 @@ export default fp(
     // --- Per-IP auth failure throttle ---
     const throttleMax = env.AUTH_FAILURE_THROTTLE_MAX;
     const throttleWindowMs = env.AUTH_FAILURE_THROTTLE_WINDOW_SECONDS * 1000;
+    const FAILURE_MAP_MAX_SIZE = 10_000;
     const failureMap = new Map<
       string,
       { count: number; windowStart: number }
@@ -82,6 +83,12 @@ export default fp(
       const now = Date.now();
       const entry = failureMap.get(ip);
       if (!entry || now - entry.windowStart >= throttleWindowMs) {
+        // New entry or expired window — check capacity before inserting new IP
+        if (!entry && failureMap.size >= FAILURE_MAP_MAX_SIZE) {
+          // Fail-open: skip tracking for new IPs when map is at capacity.
+          // Redis rate-limit hook provides broader DDoS protection.
+          return;
+        }
         failureMap.set(ip, { count: 1, windowStart: now });
       } else {
         entry.count++;
