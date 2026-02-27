@@ -246,6 +246,13 @@
       "when": 1776000000000,
       "tag": "0034_notifications_inbox",
       "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "7",
+      "when": 1776200000000,
+      "tag": "0035_issue_items_section_idx",
+      "breakpoints": true
     }
   ]
 }

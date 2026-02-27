@@ -94,6 +94,64 @@ export const migrationBundleService = {
       }
     }
 
+    // Batch-fetch files and versions for active submissions (avoids N+1)
+    const versionIds = allSubmissions
+      .filter(
+        (s) =>
+          (ACTIVE_STATUSES as readonly string[]).includes(s.status) &&
+          s.manuscriptVersionId,
+      )
+      .map((s) => s.manuscriptVersionId!);
+
+    const filesMap = new Map<string, TransferFileManifestEntry[]>();
+    const versionFingerprintMap = new Map<string, string | null>();
+
+    if (versionIds.length > 0) {
+      const fileRows = await db
+        .select({
+          id: files.id,
+          filename: files.filename,
+          mimeType: files.mimeType,
+          size: files.size,
+          manuscriptVersionId: files.manuscriptVersionId,
+        })
+        .from(files)
+        .where(
+          and(
+            inArray(files.manuscriptVersionId, versionIds),
+            eq(files.scanStatus, 'CLEAN'),
+          ),
+        );
+
+      for (const f of fileRows) {
+        const key = f.manuscriptVersionId;
+        const entry: TransferFileManifestEntry = {
+          fileId: f.id,
+          filename: f.filename,
+          mimeType: f.mimeType,
+          size: Number(f.size),
+        };
+        const existing = filesMap.get(key);
+        if (existing) {
+          existing.push(entry);
+        } else {
+          filesMap.set(key, [entry]);
+        }
+      }
+
+      const versionRows = await db
+        .select({
+          id: manuscriptVersions.id,
+          contentFingerprint: manuscriptVersions.contentFingerprint,
+        })
+        .from(manuscriptVersions)
+        .where(inArray(manuscriptVersions.id, versionIds));
+
+      for (const v of versionRows) {
+        versionFingerprintMap.set(v.id, v.contentFingerprint);
+      }
+    }
+
     // Build closed submissions (metadata only)
     const submissionHistory: MigrationSubmissionHistory[] = [];
     const activeSubmissions: MigrationActiveSubmission[] = [];
@@ -116,46 +174,14 @@ export const migrationBundleService = {
           periodName: null,
         });
       } else if ((ACTIVE_STATUSES as readonly string[]).includes(sub.status)) {
-        // Get file manifest for active submissions
         let fileManifest: TransferFileManifestEntry[] = [];
         let contentFingerprint: string | null = null;
 
         if (sub.manuscriptVersionId) {
-          // CLEAN files only (same filter as transfer.service.ts)
-          const fileRows = await db
-            .select({
-              id: files.id,
-              filename: files.filename,
-              mimeType: files.mimeType,
-              size: files.size,
-            })
-            .from(files)
-            .where(
-              and(
-                eq(files.manuscriptVersionId, sub.manuscriptVersionId),
-                eq(files.scanStatus, 'CLEAN'),
-              ),
-            );
-
-          fileManifest = fileRows.map((f) => ({
-            fileId: f.id,
-            filename: f.filename,
-            mimeType: f.mimeType,
-            size: Number(f.size),
-          }));
-
+          fileManifest = filesMap.get(sub.manuscriptVersionId) ?? [];
           allFileIds.push(...fileManifest.map((f) => f.fileId));
-
-          // Content fingerprint from manuscript version
-          const [version] = await db
-            .select({
-              contentFingerprint: manuscriptVersions.contentFingerprint,
-            })
-            .from(manuscriptVersions)
-            .where(eq(manuscriptVersions.id, sub.manuscriptVersionId))
-            .limit(1);
-
-          contentFingerprint = version?.contentFingerprint ?? null;
+          contentFingerprint =
+            versionFingerprintMap.get(sub.manuscriptVersionId) ?? null;
         }
 
         activeSubmissions.push({

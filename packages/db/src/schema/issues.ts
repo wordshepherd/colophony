@@ -118,6 +118,7 @@ export const issueItems = pgTable(
     ),
     index("issue_items_issue_id_idx").on(table.issueId),
     index("issue_items_pipeline_item_id_idx").on(table.pipelineItemId),
+    index("issue_items_section_id_idx").on(table.issueSectionId),
     issueItemRlsPolicy,
   ],
 ).enableRLS();

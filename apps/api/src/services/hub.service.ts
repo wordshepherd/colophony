@@ -326,7 +326,8 @@ export const hubService = {
           .select()
           .from(hubRegisteredInstances)
           .where(eq(hubRegisteredInstances.status, filter.status))
-      : db.select().from(hubRegisteredInstances);
+          .limit(500)
+      : db.select().from(hubRegisteredInstances).limit(500);
 
     const rows = await query;
     return rows.map(mapInstanceRow);

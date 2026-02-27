@@ -62,6 +62,7 @@ export const dbPoolWaiting = new client.Gauge({
 
 let poolInterval: ReturnType<typeof setInterval> | null = null;
 let queueInterval: ReturnType<typeof setInterval> | null = null;
+let isQueuePolling = false;
 
 export function initMetrics(pools: { admin: Pool; app: Pool }): void {
   client.collectDefaultMetrics();
@@ -83,23 +84,35 @@ export function startQueueDepthPolling(
   queues: Array<{ name: string; queue: Queue }>,
 ): void {
   queueInterval = setInterval(() => {
+    if (isQueuePolling) return;
+    isQueuePolling = true;
     void (async () => {
-      for (const { name, queue } of queues) {
-        try {
-          const counts = await queue.getJobCounts(
-            'waiting',
-            'active',
-            'delayed',
-            'failed',
-          );
-          const labels = { queue: name };
-          bullmqQueueDepth.set({ ...labels, state: 'waiting' }, counts.waiting);
-          bullmqQueueDepth.set({ ...labels, state: 'active' }, counts.active);
-          bullmqQueueDepth.set({ ...labels, state: 'delayed' }, counts.delayed);
-          bullmqQueueDepth.set({ ...labels, state: 'failed' }, counts.failed);
-        } catch {
-          // Swallow errors — queue might be closing
+      try {
+        for (const { name, queue } of queues) {
+          try {
+            const counts = await queue.getJobCounts(
+              'waiting',
+              'active',
+              'delayed',
+              'failed',
+            );
+            const labels = { queue: name };
+            bullmqQueueDepth.set(
+              { ...labels, state: 'waiting' },
+              counts.waiting,
+            );
+            bullmqQueueDepth.set({ ...labels, state: 'active' }, counts.active);
+            bullmqQueueDepth.set(
+              { ...labels, state: 'delayed' },
+              counts.delayed,
+            );
+            bullmqQueueDepth.set({ ...labels, state: 'failed' }, counts.failed);
+          } catch {
+            // Swallow errors — queue might be closing
+          }
         }
+      } finally {
+        isQueuePolling = false;
       }
     })();
   }, 30_000);
@@ -114,6 +127,7 @@ export function stopMetricsPolling(): void {
   if (queueInterval) {
     clearInterval(queueInterval);
     queueInterval = null;
+    isQueuePolling = false;
   }
 }
 

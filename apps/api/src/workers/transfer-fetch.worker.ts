@@ -1,5 +1,6 @@
 import { UnrecoverableError } from 'bullmq';
 import type { Worker } from 'bullmq';
+import pLimit from 'p-limit';
 import {
   withRls,
   submissions,
@@ -100,34 +101,45 @@ export function startTransferFetchWorker(
         );
       }
 
-      // Phase 2: fetch files
+      // Phase 2: fetch files (concurrent with limit of 5)
       const storedFiles: Array<{ fileId: string; storageKey: string }> = [];
       const failedFiles: string[] = [];
+      const limit = pLimit(5);
 
-      for (const entry of fileManifest) {
-        try {
-          const url = `${peer.instanceUrl}/federation/v1/transfers/${transferId}/files/${entry.fileId}`;
-          const response = await fetch(url, {
-            headers: { authorization: `Bearer ${transferToken}` },
-            signal: AbortSignal.timeout(60_000),
-          });
+      const results = await Promise.allSettled(
+        fileManifest.map((entry) =>
+          limit(async () => {
+            const url = `${peer.instanceUrl}/federation/v1/transfers/${transferId}/files/${entry.fileId}`;
+            const response = await fetch(url, {
+              headers: { authorization: `Bearer ${transferToken}` },
+              signal: AbortSignal.timeout(60_000),
+            });
 
-          if (!response.ok) {
-            failedFiles.push(entry.fileId);
-            continue;
-          }
+            if (!response.ok) {
+              throw new Error(
+                `HTTP ${response.status} for file ${entry.fileId}`,
+              );
+            }
 
-          const storageKey = `transfers/${localSubmissionId}/${entry.fileId}/${entry.filename}`;
-          const buffer = Buffer.from(await response.arrayBuffer());
-          await storage.uploadToBucket(
-            storage.defaultBucket,
-            storageKey,
-            buffer,
-            entry.mimeType,
-          );
-          storedFiles.push({ fileId: entry.fileId, storageKey });
-        } catch {
-          failedFiles.push(entry.fileId);
+            const storageKey = `transfers/${localSubmissionId}/${entry.fileId}/${entry.filename}`;
+            const buffer = Buffer.from(await response.arrayBuffer());
+            await storage.uploadToBucket(
+              storage.defaultBucket,
+              storageKey,
+              buffer,
+              entry.mimeType,
+            );
+            return { fileId: entry.fileId, storageKey };
+          }),
+        ),
+      );
+
+      for (let i = 0; i < results.length; i++) {
+        const result = results[i];
+        if (result.status === 'fulfilled') {
+          storedFiles.push(result.value);
+        } else {
+          failedFiles.push(fileManifest[i].fileId);
         }
       }
 
