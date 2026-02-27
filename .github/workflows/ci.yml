@@ -798,6 +798,7 @@ jobs:
         run: |
           cd sdks/typescript
           npx openapi-typescript ../openapi.json -o src/generated/openapi.ts
+          npx prettier --write src/generated/openapi.ts
           npx tsc -p tsconfig.build.json
       - name: Check for drift
         run: |
