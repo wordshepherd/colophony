@@ -60,6 +60,15 @@ vi.mock('@colophony/types', () => ({
   },
 }));
 
+vi.mock('../../config/logger.js', () => ({
+  getLogger: () => ({
+    error: vi.fn(),
+    warn: vi.fn(),
+    info: vi.fn(),
+    debug: vi.fn(),
+  }),
+}));
+
 const mockGetWebhookBackoffDelay = vi.fn().mockReturnValue(1000);
 vi.mock('../../queues/webhook.queue.js', () => ({
   getWebhookBackoffDelay: (...args: unknown[]) =>

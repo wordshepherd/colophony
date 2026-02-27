@@ -4,6 +4,15 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 // Mocks — must be set up before imports
 // ---------------------------------------------------------------------------
 
+vi.mock('../../config/logger.js', () => ({
+  getLogger: () => ({
+    error: vi.fn(),
+    warn: vi.fn(),
+    info: vi.fn(),
+    debug: vi.fn(),
+  }),
+}));
+
 const mockWithRls = vi.fn();
 vi.mock('@colophony/db', () => ({
   withRls: (...args: unknown[]) => mockWithRls(...args),

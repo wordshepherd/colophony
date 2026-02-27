@@ -8,6 +8,7 @@ import type { WebhookJobData } from '../queues/webhook.queue.js';
 import { getWebhookBackoffDelay } from '../queues/webhook.queue.js';
 import { webhookService } from '../services/webhook.service.js';
 import { auditService } from '../services/audit.service.js';
+import { getLogger } from '../config/logger.js';
 
 const AUTO_DISABLE_THRESHOLD = 5;
 const DELIVERY_TIMEOUT_MS = 30_000;
@@ -137,9 +138,14 @@ export function startWebhookWorker(env: Env): Worker<WebhookJobData> {
 
   // eslint-disable-next-line @typescript-eslint/no-misused-promises
   worker.on('failed', async (job, err) => {
-    console.error(
-      `[webhook] Job ${job?.id} failed (attempt ${job?.attemptsMade}/${job?.opts.attempts}):`,
-      err.message,
+    getLogger().error(
+      {
+        jobId: job?.id,
+        attempt: job?.attemptsMade,
+        maxAttempts: job?.opts.attempts,
+        err,
+      },
+      '[webhook] Job failed',
     );
 
     // On final failure, mark as FAILED + audit + auto-disable check
@@ -196,9 +202,9 @@ export function startWebhookWorker(env: Env): Worker<WebhookJobData> {
           }
         });
       } catch (auditErr) {
-        console.error(
-          `[webhook] Failed to record failure for job ${job.id}:`,
-          auditErr,
+        getLogger().error(
+          { jobId: job.id, err: auditErr },
+          '[webhook] Failed to record failure audit',
         );
       }
     }

@@ -150,7 +150,7 @@ export default fp(
         // Reconstruct full URL for signature verification.
         // Use request.host (not hostname) to preserve the port for non-default ports.
         const fullUrl = `${request.protocol}://${request.host}${request.url}`;
-        const rawBody = (request as any).rawBody as string | undefined;
+        const rawBody = request.rawBody;
 
         try {
           const result = await verifyFederationSignature(
