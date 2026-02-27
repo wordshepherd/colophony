@@ -23,6 +23,15 @@ vi.mock('../../services/audit.service.js', () => ({
   },
 }));
 
+vi.mock('../../config/logger.js', () => ({
+  getLogger: () => ({
+    error: vi.fn(),
+    warn: vi.fn(),
+    info: vi.fn(),
+    debug: vi.fn(),
+  }),
+}));
+
 const mockRenderEmailTemplate = vi.fn(
   (_name: unknown, _data: unknown) =>
     ({

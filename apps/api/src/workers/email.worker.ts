@@ -9,6 +9,7 @@ import { emailService } from '../services/email.service.js';
 import { auditService } from '../services/audit.service.js';
 import { renderEmailTemplate } from '../templates/email/index.js';
 import type { TemplateName } from '../templates/email/types.js';
+import { getLogger } from '../config/logger.js';
 
 let worker: Worker<EmailJobData> | null = null;
 
@@ -107,9 +108,14 @@ export function startEmailWorker(
 
   // eslint-disable-next-line @typescript-eslint/no-misused-promises
   worker.on('failed', async (job, err) => {
-    console.error(
-      `[email] Job ${job?.id} failed (attempt ${job?.attemptsMade}/${job?.opts.attempts}):`,
-      err.message,
+    getLogger().error(
+      {
+        jobId: job?.id,
+        attempt: job?.attemptsMade,
+        maxAttempts: job?.opts.attempts,
+        err,
+      },
+      '[email] Job failed',
     );
 
     // On final failure, mark as FAILED + audit
@@ -132,9 +138,9 @@ export function startEmailWorker(
           });
         });
       } catch (auditErr) {
-        console.error(
-          `[email] Failed to record failure for job ${job.id}:`,
-          auditErr,
+        getLogger().error(
+          { jobId: job.id, err: auditErr },
+          '[email] Failed to record failure audit',
         );
       }
     }

@@ -9,6 +9,7 @@ import type { FileScanJobData } from '../queues/file-scan.queue.js';
 import { fileService } from '../services/file.service.js';
 import { auditService } from '../services/audit.service.js';
 import type { S3StorageAdapter } from '../adapters/storage/index.js';
+import { getLogger } from '../config/logger.js';
 
 let worker: Worker<FileScanJobData> | null = null;
 let clamInstance: NodeClam | null = null;
@@ -152,9 +153,14 @@ export function startFileScanWorker(
   );
 
   worker.on('failed', (job, err) => {
-    console.error(
-      `[file-scan] Job ${job?.id} failed (attempt ${job?.attemptsMade}/${job?.opts.attempts}):`,
-      err.message,
+    getLogger().error(
+      {
+        jobId: job?.id,
+        attempt: job?.attemptsMade,
+        maxAttempts: job?.opts.attempts,
+        err,
+      },
+      '[file-scan] Job failed',
     );
   });
 

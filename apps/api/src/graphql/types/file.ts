@@ -35,6 +35,3 @@ export const FileType = builder.objectRef<File>('File').implement({
     }),
   }),
 });
-
-/** @deprecated Use FileType — aliased for backwards compat */
-export const SubmissionFileType = FileType;
