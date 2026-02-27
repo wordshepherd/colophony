@@ -20,6 +20,7 @@ import type {
 import { notificationPreferenceService } from '../../services/notification-preference.service.js';
 import { emailService } from '../../services/email.service.js';
 import { auditService } from '../../services/audit.service.js';
+import { correspondenceService } from '../../services/correspondence.service.js';
 import { enqueueEmail } from '../../queues/email.queue.js';
 import { validateEnv } from '../../config/env.js';
 import { queueInAppNotification } from '../helpers/queue-in-app-notification.js';
@@ -202,7 +203,7 @@ export const submissionAcceptedNotification = inngest.createFunction(
   },
   { event: 'hopper/submission.accepted' },
   async ({ event, step }) => {
-    const { orgId, submissionId, submitterId } =
+    const { orgId, submissionId, submitterId, comment } =
       event.data as HopperSubmissionAcceptedEvent['data'];
 
     const { submission, orgName } = await step.run('resolve-data', async () =>
@@ -229,6 +230,7 @@ export const submissionAcceptedNotification = inngest.createFunction(
           submitterName: submitter.email,
           submitterEmail: submitter.email,
           orgName,
+          editorComment: comment,
         },
         subject: `Your submission has been accepted: ${submission.title}`,
       });
@@ -244,6 +246,30 @@ export const submissionAcceptedNotification = inngest.createFunction(
       });
     });
 
+    await step.run('capture-correspondence', async () => {
+      try {
+        await withRls({ orgId }, async (tx) => {
+          await correspondenceService.create(tx, {
+            userId: submitterId,
+            submissionId,
+            direction: 'outbound',
+            channel: 'email',
+            sentAt: new Date(),
+            subject: `Your submission has been accepted: ${submission.title}`,
+            body: comment
+              ? `Congratulations! Your submission has been accepted.\n\nNote from the editors:\n${comment}`
+              : 'Congratulations! Your submission has been accepted.',
+            senderName: null,
+            senderEmail: null,
+            isPersonalized: !!comment,
+            source: 'colophony',
+          });
+        });
+      } catch {
+        // Non-fatal: correspondence capture should not block notifications
+      }
+    });
+
     return { notified: 1 };
   },
 );
@@ -256,7 +282,7 @@ export const submissionRejectedNotification = inngest.createFunction(
   },
   { event: 'hopper/submission.rejected' },
   async ({ event, step }) => {
-    const { orgId, submissionId, submitterId } =
+    const { orgId, submissionId, submitterId, comment } =
       event.data as HopperSubmissionRejectedEvent['data'];
 
     const { submission, orgName } = await step.run('resolve-data', async () =>
@@ -283,6 +309,7 @@ export const submissionRejectedNotification = inngest.createFunction(
           submitterName: submitter.email,
           submitterEmail: submitter.email,
           orgName,
+          editorComment: comment,
         },
         subject: `Update on your submission: ${submission.title}`,
       });
@@ -296,6 +323,30 @@ export const submissionRejectedNotification = inngest.createFunction(
         title: `Update on your submission: ${submission.title}`,
         link: `/submissions/${submissionId}`,
       });
+    });
+
+    await step.run('capture-correspondence', async () => {
+      try {
+        await withRls({ orgId }, async (tx) => {
+          await correspondenceService.create(tx, {
+            userId: submitterId,
+            submissionId,
+            direction: 'outbound',
+            channel: 'email',
+            sentAt: new Date(),
+            subject: `Update on your submission: ${submission.title}`,
+            body: comment
+              ? `Thank you for your submission. After careful review, we are unable to accept it at this time.\n\nNote from the editors:\n${comment}`
+              : 'Thank you for your submission. After careful review, we are unable to accept it at this time.',
+            senderName: null,
+            senderEmail: null,
+            isPersonalized: !!comment,
+            source: 'colophony',
+          });
+        });
+      } catch {
+        // Non-fatal: correspondence capture should not block notifications
+      }
     });
 
     return { notified: 1 };

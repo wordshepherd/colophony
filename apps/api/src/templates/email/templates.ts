@@ -1,10 +1,39 @@
+import sanitizeHtml from 'sanitize-html';
 import type {
   TemplateName,
   SubmissionTemplateData,
   ContractTemplateData,
   CopyeditorAssignedData,
+  EditorMessageTemplateData,
 } from './types.js';
 import { wrapInLayout } from './layout.js';
+
+/** Sanitize Tiptap HTML to only allow safe formatting tags */
+function sanitizeTiptapHtml(html: string): string {
+  return sanitizeHtml(html, {
+    allowedTags: [
+      'p',
+      'br',
+      'strong',
+      'b',
+      'em',
+      'i',
+      'u',
+      'a',
+      'ul',
+      'ol',
+      'li',
+      'blockquote',
+      'h1',
+      'h2',
+      'h3',
+    ],
+    allowedAttributes: {
+      a: ['href', 'target', 'rel'],
+    },
+    allowedSchemes: ['http', 'https', 'mailto'],
+  });
+}
 
 interface TemplateResult {
   mjml: string;
@@ -46,13 +75,16 @@ function submissionAccepted(data: Record<string, unknown>): TemplateResult {
         <p>Congratulations! Your submission has been accepted.</p>
         <p><strong>Title:</strong> ${escapeHtml(d.submissionTitle)}</p>
         <p>The editorial team at ${escapeHtml(d.orgName)} will be in touch with next steps.</p>
-      </mj-text>`,
+      </mj-text>${d.editorComment ? `<mj-divider border-color="#e5e7eb" border-width="1px" padding="16px 0" /><mj-text><p><strong>Note from the editors:</strong></p><p>${escapeHtml(d.editorComment)}</p></mj-text>` : ''}`,
       d.orgName,
     ),
     text: [
       `Congratulations! Your submission "${d.submissionTitle}" has been accepted.`,
       `The editorial team at ${d.orgName} will be in touch with next steps.`,
-    ].join('\n'),
+      d.editorComment ? `\nNote from the editors:\n${d.editorComment}` : '',
+    ]
+      .filter(Boolean)
+      .join('\n'),
   };
 }
 
@@ -65,14 +97,17 @@ function submissionRejected(data: Record<string, unknown>): TemplateResult {
         <p>Thank you for your submission. After careful review, we are unable to accept it at this time.</p>
         <p><strong>Title:</strong> ${escapeHtml(d.submissionTitle)}</p>
         <p>We appreciate your interest in ${escapeHtml(d.orgName)} and encourage future submissions.</p>
-      </mj-text>`,
+      </mj-text>${d.editorComment ? `<mj-divider border-color="#e5e7eb" border-width="1px" padding="16px 0" /><mj-text><p><strong>Note from the editors:</strong></p><p>${escapeHtml(d.editorComment)}</p></mj-text>` : ''}`,
       d.orgName,
     ),
     text: [
       `Thank you for your submission "${d.submissionTitle}".`,
       `After careful review, we are unable to accept it at this time.`,
       `We appreciate your interest in ${d.orgName} and encourage future submissions.`,
-    ].join('\n'),
+      d.editorComment ? `\nNote from the editors:\n${d.editorComment}` : '',
+    ]
+      .filter(Boolean)
+      .join('\n'),
   };
 }
 
@@ -138,6 +173,30 @@ function copyeditorAssigned(data: Record<string, unknown>): TemplateResult {
   };
 }
 
+function editorMessage(data: Record<string, unknown>): TemplateResult {
+  const d = data as unknown as EditorMessageTemplateData;
+  return {
+    subject: d.messageSubject,
+    mjml: wrapInLayout(
+      `<mj-text>
+        <p>You have received a message from the editorial team at ${escapeHtml(d.orgName)}.</p>
+        <p><strong>Regarding:</strong> ${escapeHtml(d.submissionTitle)}</p>
+      </mj-text>
+      <mj-divider border-color="#e5e7eb" border-width="1px" padding="16px 0" />
+      <mj-text>
+        ${sanitizeTiptapHtml(d.messageBody)}
+      </mj-text>`,
+      d.orgName,
+    ),
+    text: [
+      `You have received a message from the editorial team at ${d.orgName}.`,
+      `Regarding: ${d.submissionTitle}`,
+      '',
+      stripHtml(sanitizeTiptapHtml(d.messageBody)),
+    ].join('\n'),
+  };
+}
+
 export const templates: Record<TemplateName, TemplateRenderer> = {
   'submission-received': submissionReceived,
   'submission-accepted': submissionAccepted,
@@ -145,7 +204,14 @@ export const templates: Record<TemplateName, TemplateRenderer> = {
   'submission-withdrawn': submissionWithdrawn,
   'contract-ready': contractReady,
   'copyeditor-assigned': copyeditorAssigned,
+  'editor-message': editorMessage,
 };
+
+function stripHtml(html: string): string {
+  return sanitizeHtml(html, { allowedTags: [], allowedAttributes: {} })
+    .replace(/&nbsp;/g, ' ')
+    .trim();
+}
 
 function escapeHtml(text: string): string {
   return text

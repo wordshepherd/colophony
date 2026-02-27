@@ -107,6 +107,7 @@ export interface HopperSubmissionAcceptedEvent {
     orgId: string;
     submissionId: string;
     submitterId: string;
+    comment?: string;
   };
 }
 
@@ -116,6 +117,7 @@ export interface HopperSubmissionRejectedEvent {
     orgId: string;
     submissionId: string;
     submitterId: string;
+    comment?: string;
   };
 }
 
