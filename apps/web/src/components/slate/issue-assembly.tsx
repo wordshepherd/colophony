@@ -1,6 +1,12 @@
 "use client";
 
-import { useState, useRef, useCallback, type MutableRefObject } from "react";
+import {
+  useState,
+  useRef,
+  useCallback,
+  useMemo,
+  type MutableRefObject,
+} from "react";
 import { trpc } from "@/lib/trpc";
 import { IssueSectionCard } from "./issue-section-card";
 import { SortableIssueItem } from "./sortable-issue-item";
@@ -169,14 +175,22 @@ export function IssueAssembly({
     );
   };
 
-  // Group items by section
-  const sortedSections = [...sections].sort(
-    (a, b) => a.sortOrder - b.sortOrder,
+  // Group items by section (memoized to avoid recalc on every drag event)
+  const sortedSections = useMemo(
+    () => [...sections].sort((a, b) => a.sortOrder - b.sortOrder),
+    [sections],
   );
-  const unsectionedItems = items
-    .filter((i) => !i.issueSectionId)
-    .sort((a, b) => a.sortOrder - b.sortOrder);
-  const existingPipelineIds = new Set(items.map((i) => i.pipelineItemId));
+  const unsectionedItems = useMemo(
+    () =>
+      items
+        .filter((i) => !i.issueSectionId)
+        .sort((a, b) => a.sortOrder - b.sortOrder),
+    [items],
+  );
+  const existingPipelineIds = useMemo(
+    () => new Set(items.map((i) => i.pipelineItemId)),
+    [items],
+  );
 
   // Unsectioned DnD handlers
   const handleUnsectionedDragEnd = (event: DragEndEvent) => {
