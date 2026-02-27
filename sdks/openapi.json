@@ -83,7 +83,7 @@
     "description": "Colophony source code and documentation",
     "url": "https://github.com/colophony/colophony"
   },
-  "openapi": "3.1.1",
+  "openapi": "3.1.0",
   "paths": {
     "/organizations": {
       "get": {
