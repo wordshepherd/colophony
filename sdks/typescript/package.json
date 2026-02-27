@@ -1,0 +1,31 @@
+{
+  "name": "@colophony/sdk",
+  "version": "0.1.0",
+  "description": "TypeScript SDK for the Colophony REST API",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "scripts": {
+    "generate": "openapi-typescript ../openapi.json -o src/generated/openapi.ts",
+    "build": "tsc -p tsconfig.build.json",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "openapi-fetch": "^0.13.4"
+  },
+  "devDependencies": {
+    "openapi-typescript": "^7.6.1",
+    "typescript": "^5.7.0"
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "license": "MIT"
+}
