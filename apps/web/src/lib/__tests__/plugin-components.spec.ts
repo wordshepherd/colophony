@@ -1,19 +1,17 @@
+import type { ComponentType } from "react";
 import {
   registerComponent,
   resolveComponent,
   listRegisteredKeys,
+  type PluginComponentProps,
 } from "../plugin-components";
 
-// Reset registry between tests — since it's a module-level Map, we clear it
-beforeEach(() => {
-  // Re-register nothing; resolveComponent returns null for unregistered
-  // We need to clear by re-importing or just testing in order
-});
+const stub = (() => null) as unknown as ComponentType<PluginComponentProps>;
 
 describe("plugin-components registry", () => {
   it("registerComponent stores and resolveComponent retrieves", () => {
-    const TestComponent = () => null;
-    registerComponent("test.component", TestComponent as any);
+    const TestComponent = stub;
+    registerComponent("test.component", TestComponent);
     expect(resolveComponent("test.component")).toBe(TestComponent);
   });
 
@@ -23,11 +21,12 @@ describe("plugin-components registry", () => {
 
   it("registerComponent warns on duplicate and overwrites", () => {
     const warnSpy = jest.spyOn(console, "warn").mockImplementation(() => {});
-    const First = () => null;
-    const Second = () => null;
+    const First = stub;
+    const Second = (() =>
+      null) as unknown as ComponentType<PluginComponentProps>;
 
-    registerComponent("dup.key", First as any);
-    registerComponent("dup.key", Second as any);
+    registerComponent("dup.key", First);
+    registerComponent("dup.key", Second);
 
     expect(warnSpy).toHaveBeenCalledWith(
       expect.stringContaining("Overwriting"),
@@ -37,8 +36,8 @@ describe("plugin-components registry", () => {
   });
 
   it("listRegisteredKeys returns all keys", () => {
-    registerComponent("key.a", (() => null) as any);
-    registerComponent("key.b", (() => null) as any);
+    registerComponent("key.a", stub);
+    registerComponent("key.b", stub);
 
     const keys = listRegisteredKeys();
     expect(keys).toContain("key.a");

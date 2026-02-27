@@ -1,3 +1,4 @@
+import type { ComponentType } from "react";
 import { render, screen } from "@testing-library/react";
 import { PluginSlot } from "../plugin-slot";
 import {
@@ -6,16 +7,29 @@ import {
 } from "@/lib/plugin-components";
 
 // --- Mutable mock state ---
-let mockExtensions: any[] = [];
+let mockExtensions: {
+  point: string;
+  id: string;
+  label: string;
+  component: string;
+  order?: number;
+}[] = [];
 let mockIsLoading = false;
 let mockError: Error | null = null;
 
-let mockCurrentOrg: any = {
+let mockCurrentOrg: {
+  id: string;
+  name: string;
+  role: string;
+} | null = {
   id: "org-1",
   name: "Test Org",
   role: "ADMIN",
 };
-let mockUser: any = { id: "user-1", email: "test@example.com" };
+let mockUser: { id: string; email: string } | null = {
+  id: "user-1",
+  email: "test@example.com",
+};
 
 jest.mock("@/hooks/use-plugin-extensions", () => ({
   usePluginExtensions: () => ({
@@ -77,7 +91,10 @@ describe("PluginSlot", () => {
     const ErrorWidget = () => {
       throw new Error("Widget crashed");
     };
-    registerComponent("test.error-widget", ErrorWidget as any);
+    registerComponent(
+      "test.error-widget",
+      ErrorWidget as unknown as ComponentType<PluginComponentProps>,
+    );
 
     mockExtensions = [
       {
@@ -143,7 +160,10 @@ describe("PluginSlot", () => {
 
   it("sets data-plugin-slot attribute", () => {
     const SlotWidget = () => <div>Slot</div>;
-    registerComponent("test.slot-attr-widget", SlotWidget as any);
+    registerComponent(
+      "test.slot-attr-widget",
+      SlotWidget as unknown as ComponentType<PluginComponentProps>,
+    );
 
     mockExtensions = [
       {

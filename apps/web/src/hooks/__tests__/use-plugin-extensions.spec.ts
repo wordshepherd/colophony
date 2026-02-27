@@ -2,17 +2,23 @@ import { renderHook } from "@testing-library/react";
 import { usePluginExtensions } from "../use-plugin-extensions";
 
 // --- Mutable mock state ---
-let mockData: any[] | undefined;
+interface MockExtension {
+  point: string;
+  id: string;
+  label: string;
+  component: string;
+}
+let mockData: MockExtension[] | undefined;
 let mockIsPending = false;
 let mockError: Error | null = null;
-let lastQueryArgs: any;
-let lastQueryOptions: any;
+let lastQueryArgs: { point: string } | undefined;
+let lastQueryOptions: { staleTime: number } | undefined;
 
 jest.mock("@/lib/trpc", () => ({
   trpc: {
     plugins: {
       listExtensions: {
-        useQuery: (args: any, opts: any) => {
+        useQuery: (args: { point: string }, opts: { staleTime: number }) => {
           lastQueryArgs = args;
           lastQueryOptions = opts;
           return { data: mockData, isPending: mockIsPending, error: mockError };
