@@ -47,7 +47,7 @@ export async function registerFederationTrustRoutes(
     }
 
     try {
-      const rawBody = (request as any).rawBody as string;
+      const rawBody = request.rawBody as string;
       const result = await trustService.handleInboundTrustRequest(
         env,
         parsed.data,
@@ -87,7 +87,7 @@ export async function registerFederationTrustRoutes(
     }
 
     try {
-      const rawBody = (request as any).rawBody as string;
+      const rawBody = request.rawBody as string;
       await trustService.handleInboundTrustAccept(
         env,
         parsed.data,

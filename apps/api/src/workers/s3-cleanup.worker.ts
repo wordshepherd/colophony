@@ -5,6 +5,7 @@ import type { Env } from '../config/env.js';
 import type { S3CleanupJobData } from '../queues/s3-cleanup.queue.js';
 import type { S3StorageAdapter } from '../adapters/storage/index.js';
 import { auditService } from '../services/audit.service.js';
+import { getLogger } from '../config/logger.js';
 
 let worker: Worker<S3CleanupJobData> | null = null;
 
@@ -70,9 +71,14 @@ export function startS3CleanupWorker(
   );
 
   worker.on('failed', (job, err) => {
-    console.error(
-      `[s3-cleanup] Job ${job?.id} failed (attempt ${job?.attemptsMade}/${job?.opts.attempts}):`,
-      err.message,
+    getLogger().error(
+      {
+        jobId: job?.id,
+        attempt: job?.attemptsMade,
+        maxAttempts: job?.opts.attempts,
+        err,
+      },
+      '[s3-cleanup] Job failed',
     );
   });
 

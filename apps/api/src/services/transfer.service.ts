@@ -31,6 +31,7 @@ import { signFederationRequest } from '../federation/http-signatures.js';
 import { getGlobalRegistry } from '../adapters/registry-accessor.js';
 import type { S3StorageAdapter } from '../adapters/storage/index.js';
 import { enqueueTransferFetch } from '../queues/transfer-fetch.queue.js';
+import { getLogger } from '../config/logger.js';
 
 // ---------------------------------------------------------------------------
 // Error classes
@@ -596,7 +597,10 @@ export const transferService = {
             result.transferId,
             orgId,
           ).catch((err) => {
-            console.error('Background file fetch failed:', err);
+            getLogger().error(
+              { err },
+              '[transfer] Background file fetch failed',
+            );
           });
         }
       }
@@ -644,8 +648,9 @@ export const transferService = {
         });
 
         if (!response.ok) {
-          console.error(
-            `File fetch failed for ${entry.fileId}: ${response.status}`,
+          getLogger().error(
+            { fileId: entry.fileId, status: response.status },
+            '[transfer] File fetch failed',
           );
           continue;
         }
@@ -662,7 +667,10 @@ export const transferService = {
 
         storedFiles.push({ fileId: entry.fileId, storageKey });
       } catch (err) {
-        console.error(`File fetch error for ${entry.fileId}:`, err);
+        getLogger().error(
+          { fileId: entry.fileId, err },
+          '[transfer] File fetch error',
+        );
       }
     }
 

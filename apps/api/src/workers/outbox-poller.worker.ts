@@ -3,6 +3,7 @@ import { db, outboxEvents, eq, sql, isNull, asc } from '@colophony/db';
 import type { Env } from '../config/env.js';
 import type { OutboxPollerJobData } from '../queues/outbox-poller.queue.js';
 import { inngest } from '../inngest/client.js';
+import { getLogger } from '../config/logger.js';
 
 let worker: Worker<OutboxPollerJobData> | null = null;
 
@@ -99,7 +100,7 @@ export function startOutboxPollerWorker(env: Env): void {
   );
 
   worker.on('failed', (job, err) => {
-    console.error(`Outbox poller job ${job?.id} failed:`, err.message);
+    getLogger().error({ jobId: job?.id, err }, '[outbox-poller] Job failed');
   });
 }
 

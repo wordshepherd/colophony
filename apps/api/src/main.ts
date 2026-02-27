@@ -1,7 +1,7 @@
 import Fastify, { type FastifyInstance } from 'fastify';
 import cors from '@fastify/cors';
 import helmet from '@fastify/helmet';
-import { pool } from '@colophony/db';
+import { pool, appPool } from '@colophony/db';
 import { loadConfig } from '@colophony/plugin-sdk';
 import { type Env, validateEnv } from './config/env.js';
 import { buildColophonyConfig } from './colophony.config.js';
@@ -317,6 +317,10 @@ async function start(): Promise<void> {
   setGlobalExtensions(uiExtensions);
   setGlobalPluginManifests(plugins.map((p) => p.manifest));
 
+  // Initialize shared logger for BullMQ workers
+  const { setWorkerLogger } = await import('./config/logger.js');
+  setWorkerLogger(app.log);
+
   // Start BullMQ workers
   if (env.VIRUS_SCAN_ENABLED) {
     startFileScanWorker(env, registry);
@@ -383,7 +387,7 @@ async function start(): Promise<void> {
       await closePublisher();
       await closeSubscriber();
       await registry.destroyAll();
-      // TODO: Close DB pool when connection management is centralized
+      await Promise.all([pool.end(), appPool.end()]);
       app.log.info('Server closed');
     } finally {
       clearTimeout(forceExit);
