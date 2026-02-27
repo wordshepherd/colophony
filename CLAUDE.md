@@ -84,6 +84,8 @@ Per-directory CLAUDE.md files contain domain-specific details:
 | **Metrics registry**     | `apps/api/src/config/metrics.ts` (Prometheus counters, histograms, gauges)       |
 | **Metrics plugin**       | `apps/api/src/hooks/metrics.ts` (Fastify plugin — HTTP request instrumentation)  |
 | **Instrumented worker**  | `apps/api/src/config/instrumented-worker.ts` (BullMQ wrapper with metrics)       |
+| **Writer workspace**     | `packages/db/src/schema/writer-workspace.ts`                                     |
+| **CSR types**            | `packages/types/src/csr.ts`                                                      |
 | **Backlog**              | `docs/backlog.md` (track-organized, drives session focus)                        |
 
 Full project structure: [docs/architecture-v2-planning.md](docs/architecture-v2-planning.md)

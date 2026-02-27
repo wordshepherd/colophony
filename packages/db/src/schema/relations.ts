@@ -19,6 +19,12 @@ import { contractTemplates, contracts } from "./contracts";
 import { issues, issueSections, issueItems } from "./issues";
 import { cmsConnections } from "./cms";
 import { trustedPeers } from "./trusted-peers";
+import {
+  journalDirectory,
+  externalSubmissions,
+  correspondence,
+  writerProfiles,
+} from "./writer-workspace";
 
 // --- organizations ---
 
@@ -52,6 +58,9 @@ export const usersRelations = relations(users, ({ many }) => ({
   dsarRequests: many(dsarRequests),
   userConsents: many(userConsents),
   apiKeys: many(apiKeys),
+  externalSubmissions: many(externalSubmissions),
+  correspondence: many(correspondence),
+  writerProfiles: many(writerProfiles),
 }));
 
 // --- organization_members ---
@@ -121,6 +130,7 @@ export const manuscriptsRelations = relations(manuscripts, ({ one, many }) => ({
     references: [users.id],
   }),
   versions: many(manuscriptVersions),
+  externalSubmissions: many(externalSubmissions),
 }));
 
 // --- manuscript_versions ---
@@ -193,6 +203,7 @@ export const submissionsRelations = relations(submissions, ({ one, many }) => ({
   history: many(submissionHistory),
   payments: many(payments),
   pipelineItems: many(pipelineItems),
+  correspondence: many(correspondence),
 }));
 
 // --- submission_history ---
@@ -454,5 +465,61 @@ export const cmsConnectionsRelations = relations(cmsConnections, ({ one }) => ({
   publication: one(publications, {
     fields: [cmsConnections.publicationId],
     references: [publications.id],
+  }),
+}));
+
+// --- journal_directory ---
+
+export const journalDirectoryRelations = relations(
+  journalDirectory,
+  ({ many }) => ({
+    externalSubmissions: many(externalSubmissions),
+  }),
+);
+
+// --- external_submissions ---
+
+export const externalSubmissionsRelations = relations(
+  externalSubmissions,
+  ({ one, many }) => ({
+    user: one(users, {
+      fields: [externalSubmissions.userId],
+      references: [users.id],
+    }),
+    manuscript: one(manuscripts, {
+      fields: [externalSubmissions.manuscriptId],
+      references: [manuscripts.id],
+    }),
+    journal: one(journalDirectory, {
+      fields: [externalSubmissions.journalDirectoryId],
+      references: [journalDirectory.id],
+    }),
+    correspondence: many(correspondence),
+  }),
+);
+
+// --- correspondence ---
+
+export const correspondenceRelations = relations(correspondence, ({ one }) => ({
+  user: one(users, {
+    fields: [correspondence.userId],
+    references: [users.id],
+  }),
+  submission: one(submissions, {
+    fields: [correspondence.submissionId],
+    references: [submissions.id],
+  }),
+  externalSubmission: one(externalSubmissions, {
+    fields: [correspondence.externalSubmissionId],
+    references: [externalSubmissions.id],
+  }),
+}));
+
+// --- writer_profiles ---
+
+export const writerProfilesRelations = relations(writerProfiles, ({ one }) => ({
+  user: one(users, {
+    fields: [writerProfiles.userId],
+    references: [users.id],
   }),
 }));

@@ -15,6 +15,10 @@ import {
   auditEvents,
   retentionPolicies,
   userConsents,
+  journalDirectory,
+  externalSubmissions,
+  correspondence,
+  writerProfiles,
   type Organization,
   type User,
   type OrganizationMember,
@@ -28,6 +32,10 @@ import {
   type AuditEvent,
   type RetentionPolicy,
   type UserConsent,
+  type JournalDirectoryEntry,
+  type ExternalSubmission,
+  type CorrespondenceRecord,
+  type WriterProfile,
 } from '@colophony/db';
 
 // (different optional peer dep contexts); runtime is single copy, types diverge. Cast to unify.
@@ -250,6 +258,84 @@ export async function createUserConsent(
     })
     .returning();
   return consent;
+}
+
+export async function createJournalDirectoryEntry(
+  overrides?: Partial<JournalDirectoryEntry>,
+): Promise<JournalDirectoryEntry> {
+  const db = adminDb();
+  const name = overrides?.name ?? faker.company.name();
+  const [entry] = await db
+    .insert(journalDirectory)
+    .values({
+      name,
+      normalizedName:
+        overrides?.normalizedName ??
+        name.toLowerCase().replace(/[^a-z0-9]+/g, '_'),
+      ...overrides,
+    })
+    .returning();
+  return entry;
+}
+
+export async function createExternalSubmission(
+  userId: string,
+  overrides?: Partial<ExternalSubmission>,
+): Promise<ExternalSubmission> {
+  const db = adminDb();
+  const [extSub] = await db
+    .insert(externalSubmissions)
+    .values({
+      userId,
+      journalName: faker.company.name(),
+      status: 'sent',
+      ...overrides,
+    })
+    .returning();
+  return extSub;
+}
+
+export async function createCorrespondence(
+  userId: string,
+  overrides?: Partial<CorrespondenceRecord>,
+): Promise<CorrespondenceRecord> {
+  const db = adminDb();
+  const [corr] = await db
+    .insert(correspondence)
+    .values({
+      userId,
+      direction: 'inbound',
+      channel: 'email',
+      sentAt: new Date(),
+      body: faker.lorem.paragraph(),
+      source: 'manual',
+      ...overrides,
+    })
+    .returning();
+  return corr;
+}
+
+export async function createWriterProfile(
+  userId: string,
+  overrides?: Partial<WriterProfile>,
+): Promise<WriterProfile> {
+  const db = adminDb();
+  const [profile] = await db
+    .insert(writerProfiles)
+    .values({
+      userId,
+      platform:
+        overrides?.platform ??
+        faker.helpers.arrayElement([
+          'submittable',
+          'duotrope',
+          'chillsubs',
+          'moksha',
+        ]),
+      ...overrides,
+    })
+    .returning();
+  return profile;
 }
 
 export interface TwoOrgScenario {
