@@ -124,7 +124,7 @@ export const migrationBundleService = {
         );
 
       for (const f of fileRows) {
-        const key = f.manuscriptVersionId!;
+        const key = f.manuscriptVersionId;
         const entry: TransferFileManifestEntry = {
           fileId: f.id,
           filename: f.filename,
