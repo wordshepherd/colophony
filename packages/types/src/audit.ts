@@ -211,6 +211,11 @@ export const AuditActions = {
   CORRESPONDENCE_SENT: "CORRESPONDENCE_SENT",
   CORRESPONDENCE_AUTO_CAPTURED: "CORRESPONDENCE_AUTO_CAPTURED",
 
+  // Email template lifecycle
+  EMAIL_TEMPLATE_CREATED: "EMAIL_TEMPLATE_CREATED",
+  EMAIL_TEMPLATE_UPDATED: "EMAIL_TEMPLATE_UPDATED",
+  EMAIL_TEMPLATE_DELETED: "EMAIL_TEMPLATE_DELETED",
+
   // Audit access
   AUDIT_ACCESSED: "AUDIT_ACCESSED",
 } as const;
@@ -247,6 +252,7 @@ export const AuditResources = {
   WEBHOOK_ENDPOINT: "webhook_endpoint",
   WEBHOOK_DELIVERY: "webhook_delivery",
   CORRESPONDENCE: "correspondence",
+  EMAIL_TEMPLATE: "email_template",
   AUDIT: "audit",
 } as const;
 
@@ -554,6 +560,14 @@ export interface CorrespondenceAuditParams extends BaseAuditParams {
     | typeof AuditActions.CORRESPONDENCE_AUTO_CAPTURED;
 }
 
+export interface EmailTemplateAuditParams extends BaseAuditParams {
+  resource: typeof AuditResources.EMAIL_TEMPLATE;
+  action:
+    | typeof AuditActions.EMAIL_TEMPLATE_CREATED
+    | typeof AuditActions.EMAIL_TEMPLATE_UPDATED
+    | typeof AuditActions.EMAIL_TEMPLATE_DELETED;
+}
+
 export interface AuditAccessAuditParams extends BaseAuditParams {
   resource: typeof AuditResources.AUDIT;
   action: typeof AuditActions.AUDIT_ACCESSED;
@@ -596,6 +610,7 @@ export type AuditLogParams =
   | WebhookEndpointAuditParams
   | WebhookDeliveryAuditParams
   | CorrespondenceAuditParams
+  | EmailTemplateAuditParams
   | AuditAccessAuditParams
   | SystemAuditParams;
 
