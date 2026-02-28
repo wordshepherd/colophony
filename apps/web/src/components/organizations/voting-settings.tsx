@@ -17,16 +17,22 @@ import {
   FormField,
   FormItem,
   FormLabel,
+  FormMessage,
 } from "@/components/ui/form";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 
-const formSchema = z.object({
-  votingEnabled: z.boolean(),
-  scoringEnabled: z.boolean(),
-  scoreMin: z.coerce.number().int().min(0),
-  scoreMax: z.coerce.number().int().min(1),
-});
+const formSchema = z
+  .object({
+    votingEnabled: z.boolean(),
+    scoringEnabled: z.boolean(),
+    scoreMin: z.coerce.number().int().min(0),
+    scoreMax: z.coerce.number().int().min(1),
+  })
+  .refine((data) => data.scoreMin < data.scoreMax, {
+    message: "Min score must be less than max score",
+    path: ["scoreMax"],
+  });
 
 type FormData = z.infer<typeof formSchema>;
 
@@ -190,6 +196,7 @@ export function VotingSettings() {
                     disabled={!watchVotingEnabled}
                   />
                 </FormControl>
+                <FormMessage />
               </FormItem>
             )}
           />

@@ -11,6 +11,7 @@ const mockUpdate = vi.fn();
 const mockDeleteFn = vi.fn();
 const mockValues = vi.fn();
 const mockReturning = vi.fn();
+const mockOnConflictDoUpdate = vi.fn();
 const mockSet = vi.fn();
 const mockFrom = vi.fn();
 const mockWhere = vi.fn();
@@ -88,7 +89,11 @@ function makeTx(selectResults: unknown[][]) {
 
   const resetChain = () => {
     mockReturning.mockReturnValue([{ id: 'vote-1' }]);
-    mockValues.mockReturnValue({ returning: mockReturning });
+    mockOnConflictDoUpdate.mockReturnValue({ returning: mockReturning });
+    mockValues.mockReturnValue({
+      returning: mockReturning,
+      onConflictDoUpdate: mockOnConflictDoUpdate,
+    });
     mockInsert.mockReturnValue({ values: mockValues });
 
     mockSet.mockReturnValue({ where: mockWhere });
@@ -400,6 +405,33 @@ describe('submissionVoteService', () => {
       });
 
       expect(result).toBeDefined();
+    });
+
+    it('score 0 accepted when scoreMin is 0', async () => {
+      const ORG_SCORE_MIN_ZERO = {
+        settings: {
+          votingEnabled: true,
+          scoringEnabled: true,
+          scoreMin: 0,
+          scoreMax: 10,
+        },
+      };
+      const VOTE_WITH_ZERO_SCORE = { ...VOTE_ROW, score: '0' };
+      const svc = makeSvc('EDITOR', 'user-editor', [
+        [SUB_ROW], // getSubmissionOrThrow
+        [ORG_SCORE_MIN_ZERO], // resolveVotingConfig
+        [], // upsert: no existing vote
+        [VOTE_WITH_ZERO_SCORE], // return full vote
+      ]);
+
+      const result = await submissionVoteService.castVoteWithAudit(svc, {
+        submissionId: 'sub-1',
+        decision: 'ACCEPT',
+        score: 0,
+      });
+
+      expect(result).toBeDefined();
+      expect(result.score).toBe(0);
     });
   });
 

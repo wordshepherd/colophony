@@ -88,7 +88,12 @@ export function VotingPanel({
 
   const handleSubmit = () => {
     if (!decision) return;
-    const scoreNum = scoringEnabled && score ? Number(score) : undefined;
+    let scoreNum: number | undefined;
+    if (scoringEnabled && score) {
+      const parsed = Number(score);
+      if (Number.isNaN(parsed)) return;
+      scoreNum = parsed;
+    }
     castVoteMutation.mutate({
       submissionId,
       decision,

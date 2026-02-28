@@ -58,7 +58,7 @@ export type VoteSummary = z.infer<typeof voteSummarySchema>;
 export const castVoteInputSchema = z.object({
   submissionId: z.string().uuid(),
   decision: voteDecisionSchema,
-  score: z.number().optional(),
+  score: z.number().min(0).max(1000).optional(),
 });
 
 export type CastVoteInput = z.infer<typeof castVoteInputSchema>;

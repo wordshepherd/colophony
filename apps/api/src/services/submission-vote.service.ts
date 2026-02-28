@@ -142,7 +142,7 @@ async function upsert(
     score: string | null;
   },
 ): Promise<{ id: string; isNew: boolean }> {
-  // Try insert first; on conflict update
+  // Check for existing vote to determine audit action (CAST vs UPDATED)
   const [existing] = await tx
     .select({ id: submissionVotes.id })
     .from(submissionVotes)
@@ -154,18 +154,7 @@ async function upsert(
     )
     .limit(1);
 
-  if (existing) {
-    await tx
-      .update(submissionVotes)
-      .set({
-        decision: params.decision as 'ACCEPT' | 'REJECT' | 'MAYBE',
-        score: params.score,
-        updatedAt: new Date(),
-      })
-      .where(eq(submissionVotes.id, existing.id));
-    return { id: existing.id, isNew: false };
-  }
-
+  // Atomic upsert via ON CONFLICT
   const [row] = await tx
     .insert(submissionVotes)
     .values({
@@ -175,9 +164,17 @@ async function upsert(
       decision: params.decision as 'ACCEPT' | 'REJECT' | 'MAYBE',
       score: params.score,
     })
+    .onConflictDoUpdate({
+      target: [submissionVotes.submissionId, submissionVotes.voterUserId],
+      set: {
+        decision: params.decision as 'ACCEPT' | 'REJECT' | 'MAYBE',
+        score: params.score,
+        updatedAt: new Date(),
+      },
+    })
     .returning({ id: submissionVotes.id });
 
-  return { id: row.id, isNew: true };
+  return { id: row.id, isNew: !existing };
 }
 
 async function listBySubmission(
@@ -202,7 +199,7 @@ async function listBySubmission(
 
   return rows.map((r) => ({
     ...r,
-    score: r.score ? Number(r.score) : null,
+    score: r.score != null ? Number(r.score) : null,
   }));
 }
 
@@ -235,7 +232,8 @@ async function getSummary(
     rejectCount: result.rejectCount,
     maybeCount: result.maybeCount,
     totalVotes: result.totalVotes,
-    averageScore: result.averageScore ? Number(result.averageScore) : null,
+    averageScore:
+      result.averageScore != null ? Number(result.averageScore) : null,
   };
 }
 
