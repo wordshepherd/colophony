@@ -1,5 +1,5 @@
 import React from "react";
-import { render, screen, act } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { Header } from "../header";
 
@@ -7,9 +7,6 @@ import { Header } from "../header";
 let mockPathname = "/";
 let mockIsAuthenticated = true;
 const mockLogin = jest.fn();
-
-// Track pathname subscribers for simulating navigation
-let pathnameCallback: (() => string) | null = null;
 
 jest.mock("next/navigation", () => ({
   useRouter: () => ({
@@ -125,7 +122,7 @@ describe("Header", () => {
     rerender(<Header />);
 
     // The sheet content should no longer be visible
-    // (controlled state set to false by useEffect on pathname change)
+    // (controlled state reset during render when pathname changes)
     expect(screen.queryByText("Navigation")).not.toBeInTheDocument();
   });
 
