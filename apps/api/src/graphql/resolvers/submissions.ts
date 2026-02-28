@@ -5,6 +5,8 @@ import {
   updateSubmissionSchema,
   updateSubmissionStatusSchema,
   idParamSchema,
+  batchStatusChangeInputSchema,
+  batchAssignReviewersInputSchema,
 } from '@colophony/types';
 import { builder } from '../builder.js';
 import { requireOrgContext, requireScopes } from '../guards.js';
@@ -24,6 +26,8 @@ import {
 } from '../types/index.js';
 import {
   SubmissionStatusChangePayload,
+  BatchStatusChangePayload,
+  BatchAssignReviewersPayload,
   SuccessPayload,
 } from '../types/payloads.js';
 
@@ -653,6 +657,81 @@ builder.mutationFields((t) => ({
             parentId: args.parentId ?? undefined,
             content: args.content,
           },
+        );
+      } catch (e) {
+        mapServiceError(e);
+      }
+    },
+  }),
+
+  /**
+   * Batch update submission status (editor/admin only).
+   */
+  batchUpdateSubmissionStatus: t.field({
+    type: BatchStatusChangePayload,
+    description:
+      'Transition multiple submissions to a new status. Requires EDITOR or ADMIN role.',
+    args: {
+      submissionIds: t.arg.stringList({
+        required: true,
+        description: 'Submission IDs to update.',
+      }),
+      status: t.arg.string({
+        required: true,
+        description: 'Target status for all submissions.',
+      }),
+      comment: t.arg.string({
+        required: false,
+        description: 'Optional comment explaining the decision.',
+      }),
+    },
+    resolve: async (_root, args, ctx) => {
+      const orgCtx = requireOrgContext(ctx);
+      await requireScopes(ctx, 'submissions:write');
+      const input = batchStatusChangeInputSchema.parse({
+        submissionIds: args.submissionIds,
+        status: args.status,
+        comment: args.comment ?? undefined,
+      });
+      try {
+        return await submissionService.batchUpdateStatusAsEditor(
+          toServiceContext(orgCtx),
+          input,
+        );
+      } catch (e) {
+        mapServiceError(e);
+      }
+    },
+  }),
+
+  /**
+   * Batch assign reviewers (editor/admin only).
+   */
+  batchAssignReviewers: t.field({
+    type: BatchAssignReviewersPayload,
+    description:
+      'Assign reviewers to multiple submissions. Requires EDITOR or ADMIN role.',
+    args: {
+      submissionIds: t.arg.stringList({
+        required: true,
+        description: 'Submission IDs to assign reviewers to.',
+      }),
+      reviewerUserIds: t.arg.stringList({
+        required: true,
+        description: 'User IDs to assign as reviewers.',
+      }),
+    },
+    resolve: async (_root, args, ctx) => {
+      const orgCtx = requireOrgContext(ctx);
+      await requireScopes(ctx, 'submissions:write');
+      const input = batchAssignReviewersInputSchema.parse({
+        submissionIds: args.submissionIds,
+        reviewerUserIds: args.reviewerUserIds,
+      });
+      try {
+        return await submissionService.batchAssignReviewersAsEditor(
+          toServiceContext(orgCtx),
+          input,
         );
       } catch (e) {
         mapServiceError(e);

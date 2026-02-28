@@ -40,6 +40,10 @@ import {
   deleteVoteInputSchema,
   submissionVoteSchema,
   voteSummarySchema,
+  batchStatusChangeInputSchema,
+  batchStatusChangeResponseSchema,
+  batchAssignReviewersInputSchema,
+  batchAssignReviewersResponseSchema,
 } from '@colophony/types';
 import {
   orgProcedure,
@@ -226,6 +230,38 @@ export const submissionsRouter = createRouter({
           id,
           status,
           comment,
+        );
+      } catch (e) {
+        mapServiceError(e);
+      }
+    }),
+
+  /** Batch status change — editor/admin only. */
+  batchUpdateStatus: orgProcedure
+    .use(requireScopes('submissions:write'))
+    .input(batchStatusChangeInputSchema)
+    .output(batchStatusChangeResponseSchema)
+    .mutation(async ({ ctx, input }) => {
+      try {
+        return await submissionService.batchUpdateStatusAsEditor(
+          toServiceContext(ctx),
+          input,
+        );
+      } catch (e) {
+        mapServiceError(e);
+      }
+    }),
+
+  /** Batch assign reviewers — editor/admin only. */
+  batchAssignReviewers: orgProcedure
+    .use(requireScopes('submissions:write'))
+    .input(batchAssignReviewersInputSchema)
+    .output(batchAssignReviewersResponseSchema)
+    .mutation(async ({ ctx, input }) => {
+      try {
+        return await submissionService.batchAssignReviewersAsEditor(
+          toServiceContext(ctx),
+          input,
         );
       } catch (e) {
         mapServiceError(e);
