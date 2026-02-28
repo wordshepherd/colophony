@@ -150,13 +150,25 @@ export interface HopperReviewerAssignedEvent {
   };
 }
 
+export interface HopperDiscussionCommentEvent {
+  name: 'hopper/discussion.comment_added';
+  data: {
+    orgId: string;
+    submissionId: string;
+    commentId: string;
+    authorId: string;
+    recipientUserIds: string[];
+  };
+}
+
 export type HopperEvent =
   | HopperSubmissionSubmittedEvent
   | HopperSubmissionAcceptedEvent
   | HopperSubmissionRejectedEvent
   | HopperSubmissionWithdrawnEvent
   | HopperSubmissionReviseAndResubmitEvent
-  | HopperReviewerAssignedEvent;
+  | HopperReviewerAssignedEvent
+  | HopperDiscussionCommentEvent;
 
 // ---------------------------------------------------------------------------
 // Union type for all Slate events

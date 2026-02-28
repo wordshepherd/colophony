@@ -277,3 +277,34 @@ export const submissionReviewers = pgTable(
     orgIsolationPolicy,
   ],
 ).enableRLS();
+
+// --- submission_discussions ---
+
+export const submissionDiscussions = pgTable(
+  "submission_discussions",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    organizationId: uuid("organization_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    submissionId: uuid("submission_id")
+      .notNull()
+      .references(() => submissions.id, { onDelete: "cascade" }),
+    authorId: uuid("author_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    parentId: uuid("parent_id"),
+    content: text("content").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }),
+  },
+  (table) => [
+    index("submission_discussions_org_id_idx").on(table.organizationId),
+    index("submission_discussions_submission_id_idx").on(table.submissionId),
+    index("submission_discussions_parent_id_idx").on(table.parentId),
+    index("submission_discussions_author_id_idx").on(table.authorId),
+    orgIsolationPolicy,
+  ],
+).enableRLS();

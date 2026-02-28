@@ -14,6 +14,7 @@ import { ComposeMessageDialog } from "./compose-message-dialog";
 import { CorrespondenceHistory } from "./correspondence-history";
 import { ReviewerList } from "./reviewer-list";
 import { ReviewerPicker } from "./reviewer-picker";
+import { DiscussionThread } from "./discussion-thread";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -45,6 +46,7 @@ import {
   Loader2,
   BookOpen,
   Mail,
+  MessageSquare,
 } from "lucide-react";
 import {
   EDITOR_ALLOWED_TRANSITIONS,
@@ -299,6 +301,27 @@ export function SubmissionDetail({
           </CardContent>
         </Card>
       )}
+
+      {/* Internal Discussion — editors, admins, and assigned reviewers only */}
+      {(isEditor ||
+        isAdmin ||
+        (reviewers ?? []).some((r) => r.reviewerUserId === user?.id)) &&
+        !isOwner && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <MessageSquare className="h-5 w-5" />
+                Internal Discussion
+              </CardTitle>
+              <CardDescription>
+                Visible to editors, admins, and assigned reviewers only.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <DiscussionThread submissionId={submissionId} />
+            </CardContent>
+          </Card>
+        )}
 
       {/* Content */}
       <div className="grid gap-6 md:grid-cols-3">

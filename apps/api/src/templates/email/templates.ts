@@ -6,6 +6,7 @@ import type {
   CopyeditorAssignedData,
   EditorMessageTemplateData,
   ReviewerAssignedTemplateData,
+  DiscussionCommentTemplateData,
 } from './types.js';
 import { wrapInLayout } from './layout.js';
 
@@ -246,6 +247,29 @@ function reviewerAssigned(data: Record<string, unknown>): TemplateResult {
   };
 }
 
+function discussionComment(data: Record<string, unknown>): TemplateResult {
+  const d = data as unknown as DiscussionCommentTemplateData;
+  return {
+    subject: `New discussion comment on: ${d.submissionTitle}`,
+    mjml: wrapInLayout(
+      `<mj-text>
+        <p>A team member commented on the internal discussion for a submission.</p>
+        <p><strong>Title:</strong> ${escapeHtml(d.submissionTitle)}</p>
+        <p><strong>Comment by:</strong> ${escapeHtml(d.authorName)}</p>
+        ${d.submissionUrl ? `<p><a href="${escapeHtml(d.submissionUrl)}">View Submission</a></p>` : ''}
+      </mj-text>`,
+      d.orgName,
+    ),
+    text: [
+      `A team member commented on the internal discussion for "${d.submissionTitle}".`,
+      `Comment by: ${d.authorName}`,
+      d.submissionUrl ? `View: ${d.submissionUrl}` : '',
+    ]
+      .filter(Boolean)
+      .join('\n'),
+  };
+}
+
 export const templates: Record<TemplateName, TemplateRenderer> = {
   'submission-received': submissionReceived,
   'submission-accepted': submissionAccepted,
@@ -256,6 +280,7 @@ export const templates: Record<TemplateName, TemplateRenderer> = {
   'copyeditor-assigned': copyeditorAssigned,
   'editor-message': editorMessage,
   'reviewer-assigned': reviewerAssigned,
+  'discussion-comment': discussionComment,
 };
 
 function stripHtml(html: string): string {

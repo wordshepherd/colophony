@@ -12,10 +12,13 @@ import {
   paginatedResponseSchema,
   successResponseSchema,
   submissionReviewerSchema,
+  createDiscussionCommentSchema,
+  submissionDiscussionSchema,
 } from '@colophony/types';
 import { restPaginationQuery } from '@colophony/api-contracts';
 import { submissionService } from '../../services/submission.service.js';
 import { submissionReviewerService } from '../../services/submission-reviewer.service.js';
+import { submissionDiscussionService } from '../../services/submission-discussion.service.js';
 import { simsubService } from '../../services/simsub.service.js';
 import { toServiceContext } from '../../services/context.js';
 import { assertEditorOrAdmin } from '../../services/errors.js';
@@ -432,6 +435,62 @@ const markReviewerRead = orgProcedure
     }
   });
 
+const listDiscussions = orgProcedure
+  .use(requireScopes('submissions:read'))
+  .route({
+    method: 'GET',
+    path: '/submissions/{id}/discussions',
+    summary: 'List internal discussion comments',
+    description:
+      'List all internal discussion comments on a submission. Only accessible to editors, admins, and assigned reviewers.',
+    operationId: 'listSubmissionDiscussions',
+    tags: ['Submissions'],
+  })
+  .input(idParamSchema)
+  .output(z.array(submissionDiscussionSchema))
+  .handler(async ({ input, context }) => {
+    try {
+      return await submissionDiscussionService.listWithAccess(
+        toServiceContext(context),
+        input.id,
+      );
+    } catch (e) {
+      mapServiceError(e);
+    }
+  });
+
+const addDiscussion = orgProcedure
+  .use(requireScopes('submissions:write'))
+  .route({
+    method: 'POST',
+    path: '/submissions/{id}/discussions',
+    summary: 'Add a discussion comment',
+    description:
+      'Add an internal discussion comment on a submission. Only accessible to editors, admins, and assigned reviewers.',
+    operationId: 'addSubmissionDiscussion',
+    tags: ['Submissions'],
+  })
+  .input(
+    idParamSchema.merge(
+      createDiscussionCommentSchema.pick({ parentId: true, content: true }),
+    ),
+  )
+  .output(submissionDiscussionSchema)
+  .handler(async ({ input, context }) => {
+    try {
+      return await submissionDiscussionService.createWithAudit(
+        toServiceContext(context),
+        {
+          submissionId: input.id,
+          parentId: input.parentId,
+          content: input.content,
+        },
+      );
+    } catch (e) {
+      mapServiceError(e);
+    }
+  });
+
 // ---------------------------------------------------------------------------
 // Assembled router
 // ---------------------------------------------------------------------------
@@ -452,4 +511,6 @@ export const submissionsRouter = {
   assignReviewers,
   unassignReviewer,
   markReviewerRead,
+  listDiscussions,
+  addDiscussion,
 };

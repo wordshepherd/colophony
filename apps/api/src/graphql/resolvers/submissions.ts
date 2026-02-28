@@ -12,6 +12,7 @@ import { toServiceContext } from '../../services/context.js';
 import { assertEditorOrAdmin } from '../../services/errors.js';
 import { submissionService } from '../../services/submission.service.js';
 import { submissionReviewerService } from '../../services/submission-reviewer.service.js';
+import { submissionDiscussionService } from '../../services/submission-discussion.service.js';
 import { simsubService } from '../../services/simsub.service.js';
 import { mapServiceError } from '../error-mapper.js';
 import { validateEnv } from '../../config/env.js';
@@ -19,6 +20,7 @@ import {
   SubmissionType,
   SubmissionHistoryType,
   SubmissionReviewerType,
+  SubmissionDiscussionType,
 } from '../types/index.js';
 import {
   SubmissionStatusChangePayload,
@@ -227,6 +229,36 @@ builder.queryFields((t) => ({
       });
       try {
         return await submissionService.getHistoryWithAccess(
+          toServiceContext(orgCtx),
+          submissionId,
+        );
+      } catch (e) {
+        mapServiceError(e);
+      }
+    },
+  }),
+
+  /**
+   * List internal discussion comments on a submission.
+   */
+  submissionDiscussions: t.field({
+    type: [SubmissionDiscussionType],
+    description:
+      'List internal discussion comments. Only accessible to editors, admins, and assigned reviewers.',
+    args: {
+      submissionId: t.arg.string({
+        required: true,
+        description: 'Submission ID.',
+      }),
+    },
+    resolve: async (_root, args, ctx) => {
+      const orgCtx = requireOrgContext(ctx);
+      await requireScopes(ctx, 'submissions:read');
+      const { id: submissionId } = idParamSchema.parse({
+        id: args.submissionId,
+      });
+      try {
+        return await submissionDiscussionService.listWithAccess(
           toServiceContext(orgCtx),
           submissionId,
         );
@@ -575,6 +607,48 @@ builder.mutationFields((t) => ({
           id,
           status,
           comment,
+        );
+      } catch (e) {
+        mapServiceError(e);
+      }
+    },
+  }),
+
+  /**
+   * Add a discussion comment on a submission.
+   */
+  addSubmissionDiscussion: t.field({
+    type: SubmissionDiscussionType,
+    description:
+      'Add an internal discussion comment. Only accessible to editors, admins, and assigned reviewers.',
+    args: {
+      submissionId: t.arg.string({
+        required: true,
+        description: 'Submission ID.',
+      }),
+      parentId: t.arg.string({
+        required: false,
+        description: 'Parent comment ID for threaded replies.',
+      }),
+      content: t.arg.string({
+        required: true,
+        description: 'HTML content of the comment.',
+      }),
+    },
+    resolve: async (_root, args, ctx) => {
+      const orgCtx = requireOrgContext(ctx);
+      await requireScopes(ctx, 'submissions:write');
+      const { id: submissionId } = idParamSchema.parse({
+        id: args.submissionId,
+      });
+      try {
+        return await submissionDiscussionService.createWithAudit(
+          toServiceContext(orgCtx),
+          {
+            submissionId,
+            parentId: args.parentId ?? undefined,
+            content: args.content,
+          },
         );
       } catch (e) {
         mapServiceError(e);
