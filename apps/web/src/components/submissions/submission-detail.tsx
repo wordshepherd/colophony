@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { formatDistanceToNow, format } from "date-fns";
@@ -12,6 +12,8 @@ import { StatusTransition } from "./status-transition";
 import { ReviseAndResubmitCard } from "./revise-and-resubmit-card";
 import { ComposeMessageDialog } from "./compose-message-dialog";
 import { CorrespondenceHistory } from "./correspondence-history";
+import { ReviewerList } from "./reviewer-list";
+import { ReviewerPicker } from "./reviewer-picker";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -99,6 +101,12 @@ export function SubmissionDetail({
     submissionId,
   });
 
+  const { data: reviewers } = trpc.submissions.listReviewers.useQuery({
+    submissionId,
+  });
+
+  const markReadMutation = trpc.submissions.markReviewerRead.useMutation();
+
   const deleteMutation = trpc.submissions.delete.useMutation({
     onSuccess: () => {
       toast.success("Submission deleted");
@@ -119,6 +127,14 @@ export function SubmissionDetail({
       toast.error(err.message);
     },
   });
+
+  // Mark submission as read when a non-owner views it (fire-and-forget, idempotent)
+  useEffect(() => {
+    if (submission && user?.id !== submission.submitterId) {
+      markReadMutation.mutate({ submissionId });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [submission?.id]);
 
   const handleDownload = async (fileId: string) => {
     try {
@@ -256,6 +272,33 @@ export function SubmissionDetail({
             }
           />
         )}
+
+      {/* Reviewers */}
+      {(isEditor || isAdmin || isOwner) && (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle>Reviewers</CardTitle>
+                <CardDescription>
+                  Assigned reviewers and read status
+                </CardDescription>
+              </div>
+              {(isEditor || isAdmin) && (
+                <ReviewerPicker
+                  submissionId={submissionId}
+                  existingReviewerIds={
+                    reviewers?.map((r) => r.reviewerUserId) ?? []
+                  }
+                />
+              )}
+            </div>
+          </CardHeader>
+          <CardContent>
+            <ReviewerList submissionId={submissionId} />
+          </CardContent>
+        </Card>
+      )}
 
       {/* Content */}
       <div className="grid gap-6 md:grid-cols-3">

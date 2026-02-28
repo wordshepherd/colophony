@@ -19,6 +19,10 @@ import {
   requestMigrationInputSchema,
   migrationIdParamSchema,
   migrationListQuerySchema,
+  assignReviewerInputSchema,
+  unassignReviewerInputSchema,
+  markReviewerReadInputSchema,
+  submissionReviewerSchema,
 } from '@colophony/types';
 import {
   orgProcedure,
@@ -27,6 +31,7 @@ import {
   requireScopes,
 } from '../init.js';
 import { submissionService } from '../../services/submission.service.js';
+import { submissionReviewerService } from '../../services/submission-reviewer.service.js';
 import { simsubService } from '../../services/simsub.service.js';
 import { transferService } from '../../services/transfer.service.js';
 import { migrationService } from '../../services/migration.service.js';
@@ -264,6 +269,75 @@ export const submissionsRouter = createRouter({
           input.transferId,
         );
         return { success: true };
+      } catch (e) {
+        mapServiceError(e);
+      }
+    }),
+
+  // ─── Reviewer assignment procedures ───
+
+  /** Assign reviewers to a submission — editor/admin only. */
+  assignReviewers: orgProcedure
+    .use(requireScopes('submissions:write'))
+    .input(assignReviewerInputSchema)
+    .output(z.array(submissionReviewerSchema))
+    .mutation(async ({ ctx, input }) => {
+      try {
+        return await submissionReviewerService.assignWithAudit(
+          toServiceContext(ctx),
+          input.submissionId,
+          input.reviewerUserIds,
+        );
+      } catch (e) {
+        mapServiceError(e);
+      }
+    }),
+
+  /** Unassign a reviewer from a submission — editor/admin only. */
+  unassignReviewer: orgProcedure
+    .use(requireScopes('submissions:write'))
+    .input(unassignReviewerInputSchema)
+    .output(successResponseSchema)
+    .mutation(async ({ ctx, input }) => {
+      try {
+        await submissionReviewerService.unassignWithAudit(
+          toServiceContext(ctx),
+          input.submissionId,
+          input.reviewerUserId,
+        );
+        return { success: true as const };
+      } catch (e) {
+        mapServiceError(e);
+      }
+    }),
+
+  /** List reviewers for a submission — owner or editor/admin. */
+  listReviewers: orgProcedure
+    .use(requireScopes('submissions:read'))
+    .input(submissionIdParamSchema)
+    .output(z.array(submissionReviewerSchema))
+    .query(async ({ ctx, input }) => {
+      try {
+        return await submissionReviewerService.listBySubmissionWithAccess(
+          toServiceContext(ctx),
+          input.submissionId,
+        );
+      } catch (e) {
+        mapServiceError(e);
+      }
+    }),
+
+  /** Mark a submission as read by the current user (reviewer). */
+  markReviewerRead: orgProcedure
+    .use(requireScopes('submissions:read'))
+    .input(markReviewerReadInputSchema)
+    .output(successResponseSchema)
+    .mutation(async ({ ctx, input }) => {
+      try {
+        return await submissionReviewerService.markReadWithAudit(
+          toServiceContext(ctx),
+          input.submissionId,
+        );
       } catch (e) {
         mapServiceError(e);
       }

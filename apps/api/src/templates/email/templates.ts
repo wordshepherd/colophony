@@ -5,6 +5,7 @@ import type {
   ContractTemplateData,
   CopyeditorAssignedData,
   EditorMessageTemplateData,
+  ReviewerAssignedTemplateData,
 } from './types.js';
 import { wrapInLayout } from './layout.js';
 
@@ -222,6 +223,29 @@ function editorMessage(data: Record<string, unknown>): TemplateResult {
   };
 }
 
+function reviewerAssigned(data: Record<string, unknown>): TemplateResult {
+  const d = data as unknown as ReviewerAssignedTemplateData;
+  return {
+    subject: `You've been assigned to review: ${d.submissionTitle}`,
+    mjml: wrapInLayout(
+      `<mj-text>
+        <p>You have been assigned as a reviewer for a submission.</p>
+        <p><strong>Title:</strong> ${escapeHtml(d.submissionTitle)}</p>
+        <p><strong>Assigned by:</strong> ${escapeHtml(d.assignedByName)}</p>
+        ${d.submissionUrl ? `<p><a href="${escapeHtml(d.submissionUrl)}">View Submission</a></p>` : ''}
+      </mj-text>`,
+      d.orgName,
+    ),
+    text: [
+      `You have been assigned as a reviewer for "${d.submissionTitle}".`,
+      `Assigned by: ${d.assignedByName}`,
+      d.submissionUrl ? `View: ${d.submissionUrl}` : '',
+    ]
+      .filter(Boolean)
+      .join('\n'),
+  };
+}
+
 export const templates: Record<TemplateName, TemplateRenderer> = {
   'submission-received': submissionReceived,
   'submission-accepted': submissionAccepted,
@@ -231,6 +255,7 @@ export const templates: Record<TemplateName, TemplateRenderer> = {
   'contract-ready': contractReady,
   'copyeditor-assigned': copyeditorAssigned,
   'editor-message': editorMessage,
+  'reviewer-assigned': reviewerAssigned,
 };
 
 function stripHtml(html: string): string {

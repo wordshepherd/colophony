@@ -70,6 +70,11 @@ import {
   EmailTemplateNotFoundError,
   InvalidMergeFieldError,
 } from '../services/email-template.service.js';
+import {
+  ReviewerAlreadyAssignedError,
+  ReviewerNotAssignedError,
+  ReviewerNotOrgMemberError,
+} from '../services/submission-reviewer.service.js';
 
 type TRPCErrorCode = ConstructorParameters<typeof TRPCError>[0]['code'];
 
@@ -136,6 +141,10 @@ const errorCodeMap: [new (...args: never[]) => Error, TRPCErrorCode][] = [
   // Email template errors
   [EmailTemplateNotFoundError, 'NOT_FOUND'],
   [InvalidMergeFieldError, 'BAD_REQUEST'],
+  // Reviewer errors
+  [ReviewerAlreadyAssignedError, 'CONFLICT'],
+  [ReviewerNotAssignedError, 'NOT_FOUND'],
+  [ReviewerNotOrgMemberError, 'BAD_REQUEST'],
   // Precondition
   [FileNotCleanError, 'PRECONDITION_FAILED'],
 ];
