@@ -23,6 +23,9 @@ import {
   unassignReviewerInputSchema,
   markReviewerReadInputSchema,
   submissionReviewerSchema,
+  listDiscussionCommentsSchema,
+  createDiscussionCommentSchema,
+  submissionDiscussionSchema,
 } from '@colophony/types';
 import {
   orgProcedure,
@@ -32,6 +35,7 @@ import {
 } from '../init.js';
 import { submissionService } from '../../services/submission.service.js';
 import { submissionReviewerService } from '../../services/submission-reviewer.service.js';
+import { submissionDiscussionService } from '../../services/submission-discussion.service.js';
 import { simsubService } from '../../services/simsub.service.js';
 import { transferService } from '../../services/transfer.service.js';
 import { migrationService } from '../../services/migration.service.js';
@@ -405,6 +409,38 @@ export const submissionsRouter = createRouter({
       try {
         return await migrationService.listMigrationsForUser(
           ctx.authContext.userId,
+          input,
+        );
+      } catch (e) {
+        mapServiceError(e);
+      }
+    }),
+
+  /** List internal discussion comments on a submission. */
+  listDiscussionComments: orgProcedure
+    .use(requireScopes('submissions:read'))
+    .input(listDiscussionCommentsSchema)
+    .output(z.array(submissionDiscussionSchema))
+    .query(async ({ ctx, input }) => {
+      try {
+        return await submissionDiscussionService.listWithAccess(
+          toServiceContext(ctx),
+          input.submissionId,
+        );
+      } catch (e) {
+        mapServiceError(e);
+      }
+    }),
+
+  /** Add a comment to the internal discussion on a submission. */
+  addDiscussionComment: orgProcedure
+    .use(requireScopes('submissions:write'))
+    .input(createDiscussionCommentSchema)
+    .output(submissionDiscussionSchema)
+    .mutation(async ({ ctx, input }) => {
+      try {
+        return await submissionDiscussionService.createWithAudit(
+          toServiceContext(ctx),
           input,
         );
       } catch (e) {

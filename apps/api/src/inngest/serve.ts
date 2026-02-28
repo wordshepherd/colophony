@@ -13,6 +13,7 @@ import {
   contractReadyNotification,
   copyeditorAssignedNotification,
   reviewerAssignedNotification,
+  discussionCommentNotification,
   webhookDelivery,
 } from './functions/index.js';
 
@@ -40,6 +41,7 @@ export async function registerInngestRoutes(
       contractReadyNotification,
       copyeditorAssignedNotification,
       reviewerAssignedNotification,
+      discussionCommentNotification,
       webhookDelivery,
     ],
   });

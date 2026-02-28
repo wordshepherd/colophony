@@ -7,7 +7,8 @@ export type TemplateName =
   | 'contract-ready'
   | 'copyeditor-assigned'
   | 'editor-message'
-  | 'reviewer-assigned';
+  | 'reviewer-assigned'
+  | 'discussion-comment';
 
 export interface SubmissionTemplateData {
   submissionTitle: string;
@@ -47,9 +48,17 @@ export interface ReviewerAssignedTemplateData {
   submissionUrl?: string;
 }
 
+export interface DiscussionCommentTemplateData {
+  submissionTitle: string;
+  orgName: string;
+  authorName: string;
+  submissionUrl?: string;
+}
+
 export type TemplateData =
   | SubmissionTemplateData
   | ContractTemplateData
   | CopyeditorAssignedData
   | EditorMessageTemplateData
-  | ReviewerAssignedTemplateData;
+  | ReviewerAssignedTemplateData
+  | DiscussionCommentTemplateData;

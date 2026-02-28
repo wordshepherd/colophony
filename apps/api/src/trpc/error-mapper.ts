@@ -75,6 +75,10 @@ import {
   ReviewerNotAssignedError,
   ReviewerNotOrgMemberError,
 } from '../services/submission-reviewer.service.js';
+import {
+  DiscussionCommentNotFoundError,
+  DiscussionParentNotFoundError,
+} from '../services/submission-discussion.service.js';
 
 type TRPCErrorCode = ConstructorParameters<typeof TRPCError>[0]['code'];
 
@@ -145,6 +149,9 @@ const errorCodeMap: [new (...args: never[]) => Error, TRPCErrorCode][] = [
   [ReviewerAlreadyAssignedError, 'CONFLICT'],
   [ReviewerNotAssignedError, 'NOT_FOUND'],
   [ReviewerNotOrgMemberError, 'BAD_REQUEST'],
+  // Discussion errors
+  [DiscussionCommentNotFoundError, 'NOT_FOUND'],
+  [DiscussionParentNotFoundError, 'NOT_FOUND'],
   // Precondition
   [FileNotCleanError, 'PRECONDITION_FAILED'],
 ];
