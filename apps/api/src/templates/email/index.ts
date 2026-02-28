@@ -7,6 +7,7 @@ export type {
 } from './types.js';
 export {
   renderEmailTemplate,
+  renderCustomTemplate,
   renderMjml,
   type RenderedEmail,
 } from './render.js';

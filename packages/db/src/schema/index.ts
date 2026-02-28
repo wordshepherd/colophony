@@ -28,4 +28,5 @@ export * from "./notifications";
 export * from "./notifications-inbox";
 export * from "./webhook-endpoints";
 export * from "./writer-workspace";
+export * from "./email-templates";
 export * from "./relations";

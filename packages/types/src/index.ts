@@ -27,3 +27,4 @@ export * from "./webhook";
 export * from "./correspondence";
 export * from "./csr";
 export * from "./status-mapping";
+export * from "./email-templates";

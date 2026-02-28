@@ -40,9 +40,31 @@ const mockRenderEmailTemplate = vi.fn(
       subject: 'Test Subject',
     }) as { html: string; text: string; subject: string },
 );
+const mockGetActiveTemplate = vi.fn();
+vi.mock('../../services/email-template.service.js', () => ({
+  emailTemplateService: {
+    getActiveTemplate: (...args: unknown[]) => mockGetActiveTemplate(...args),
+  },
+}));
+
+const mockRenderCustomTemplate = vi
+  .fn<
+    (
+      template: unknown,
+      data: unknown,
+      orgName: unknown,
+    ) => { html: string; text: string; subject: string }
+  >()
+  .mockReturnValue({
+    html: '<p>Custom</p>',
+    text: 'Custom',
+    subject: 'Custom Subject',
+  });
 vi.mock('../../templates/email/index.js', () => ({
   renderEmailTemplate: (name: unknown, data: unknown) =>
     mockRenderEmailTemplate(name, data),
+  renderCustomTemplate: (template: unknown, data: unknown, orgName: unknown) =>
+    mockRenderCustomTemplate(template, data, orgName),
 }));
 
 let workerCallback: (job: unknown) => Promise<unknown>;
@@ -93,6 +115,8 @@ describe('email worker', () => {
       async (_ctx: unknown, fn: (tx: unknown) => Promise<unknown>) =>
         fn('mock-tx'),
     );
+    // Default: no custom template override
+    mockGetActiveTemplate.mockResolvedValue(null);
   });
 
   it('starts worker and processes job successfully', async () => {

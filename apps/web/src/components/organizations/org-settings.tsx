@@ -9,6 +9,7 @@ import { useRouter } from "next/navigation";
 import { trpc } from "@/lib/trpc";
 import { useOrganization } from "@/hooks/use-organization";
 import { MemberList } from "./member-list";
+import { EmailTemplateSettings } from "./email-template-settings";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -136,6 +137,7 @@ export function OrgSettings() {
         <TabsList>
           <TabsTrigger value="general">General</TabsTrigger>
           <TabsTrigger value="members">Members</TabsTrigger>
+          <TabsTrigger value="email-templates">Email Templates</TabsTrigger>
         </TabsList>
 
         <TabsContent value="general" className="mt-6">
@@ -214,6 +216,22 @@ export function OrgSettings() {
             </CardHeader>
             <CardContent>
               <MemberList />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="email-templates" className="mt-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Email Templates</CardTitle>
+              <CardDescription>
+                {isAdmin
+                  ? "Customize the email notifications sent by your magazine."
+                  : "Email notification templates (admin access required to customize)."}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <EmailTemplateSettings />
             </CardContent>
           </Card>
         </TabsContent>
