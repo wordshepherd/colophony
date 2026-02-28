@@ -10,6 +10,7 @@ export const submissionStatusSchema = z
     "REJECTED",
     "HOLD",
     "WITHDRAWN",
+    "REVISE_AND_RESUBMIT",
   ])
   .describe("Current status in the submission workflow");
 
@@ -205,6 +206,13 @@ export type UpdateSubmissionStatusInput = z.infer<
   typeof updateSubmissionStatusSchema
 >;
 
+export const resubmitSchema = z.object({
+  id: z.string().uuid(),
+  manuscriptVersionId: z.string().uuid(),
+});
+
+export type ResubmitInput = z.infer<typeof resubmitSchema>;
+
 export const listSubmissionsSchema = z.object({
   status: submissionStatusSchema
     .optional()
@@ -364,8 +372,9 @@ export type ListSubmissionPeriodsInput = z.infer<
  * Workflow:
  * - DRAFT -> SUBMITTED (by submitter) or WITHDRAWN (by submitter)
  * - SUBMITTED -> UNDER_REVIEW, REJECTED, WITHDRAWN
- * - UNDER_REVIEW -> ACCEPTED, REJECTED, HOLD, WITHDRAWN
- * - HOLD -> UNDER_REVIEW, ACCEPTED, REJECTED, WITHDRAWN
+ * - UNDER_REVIEW -> ACCEPTED, REJECTED, HOLD, REVISE_AND_RESUBMIT, WITHDRAWN
+ * - HOLD -> UNDER_REVIEW, ACCEPTED, REJECTED, REVISE_AND_RESUBMIT, WITHDRAWN
+ * - REVISE_AND_RESUBMIT -> SUBMITTED (resubmit), WITHDRAWN
  * - ACCEPTED -> (terminal state, no transitions except admin override)
  * - REJECTED -> (terminal state, no transitions except admin override)
  * - WITHDRAWN -> (terminal state, no transitions)
@@ -376,8 +385,21 @@ export const VALID_STATUS_TRANSITIONS: Record<
 > = {
   DRAFT: ["SUBMITTED", "WITHDRAWN"],
   SUBMITTED: ["UNDER_REVIEW", "REJECTED", "WITHDRAWN"],
-  UNDER_REVIEW: ["ACCEPTED", "REJECTED", "HOLD", "WITHDRAWN"],
-  HOLD: ["UNDER_REVIEW", "ACCEPTED", "REJECTED", "WITHDRAWN"],
+  UNDER_REVIEW: [
+    "ACCEPTED",
+    "REJECTED",
+    "HOLD",
+    "REVISE_AND_RESUBMIT",
+    "WITHDRAWN",
+  ],
+  HOLD: [
+    "UNDER_REVIEW",
+    "ACCEPTED",
+    "REJECTED",
+    "REVISE_AND_RESUBMIT",
+    "WITHDRAWN",
+  ],
+  REVISE_AND_RESUBMIT: ["SUBMITTED", "WITHDRAWN"],
   ACCEPTED: [], // Terminal state
   REJECTED: [], // Terminal state
   WITHDRAWN: [], // Terminal state
@@ -402,8 +424,9 @@ export const EDITOR_ALLOWED_TRANSITIONS: Record<
 > = {
   DRAFT: [], // Editors cannot transition drafts
   SUBMITTED: ["UNDER_REVIEW", "REJECTED"],
-  UNDER_REVIEW: ["ACCEPTED", "REJECTED", "HOLD"],
-  HOLD: ["UNDER_REVIEW", "ACCEPTED", "REJECTED"],
+  UNDER_REVIEW: ["ACCEPTED", "REJECTED", "HOLD", "REVISE_AND_RESUBMIT"],
+  HOLD: ["UNDER_REVIEW", "ACCEPTED", "REJECTED", "REVISE_AND_RESUBMIT"],
+  REVISE_AND_RESUBMIT: [], // Submitter handles exit (resubmit or withdraw)
   ACCEPTED: [],
   REJECTED: [],
   WITHDRAWN: [],

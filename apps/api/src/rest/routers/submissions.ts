@@ -4,6 +4,7 @@ import {
   updateSubmissionSchema,
   updateSubmissionStatusSchema,
   listSubmissionsSchema,
+  resubmitSchema,
   idParamSchema,
   submissionSchema,
   submissionHistorySchema,
@@ -215,6 +216,31 @@ const del = orgProcedure
     }
   });
 
+const resubmit = orgProcedure
+  .use(requireScopes('submissions:write'))
+  .route({
+    method: 'POST',
+    path: '/submissions/{id}/resubmit',
+    summary: 'Resubmit with a new manuscript version',
+    description:
+      'Resubmit a submission that is in REVISE_AND_RESUBMIT status with a new manuscript version. Only the submitter can resubmit.',
+    operationId: 'resubmitSubmission',
+    tags: ['Submissions'],
+  })
+  .input(resubmitSchema)
+  .output(statusUpdateResponseSchema)
+  .handler(async ({ input, context }) => {
+    try {
+      return await submissionService.resubmitAsOwner(
+        toServiceContext(context),
+        input.id,
+        input.manuscriptVersionId,
+      );
+    } catch (e) {
+      mapServiceError(e);
+    }
+  });
+
 const withdraw = orgProcedure
   .use(requireScopes('submissions:write'))
   .route({
@@ -300,6 +326,7 @@ export const submissionsRouter = {
   get,
   update,
   submit,
+  resubmit,
   delete: del,
   withdraw,
   updateStatus,

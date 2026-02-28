@@ -33,6 +33,11 @@ const statusConfig: Record<
     className:
       "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200",
   },
+  REVISE_AND_RESUBMIT: {
+    label: "Revise & Resubmit",
+    className:
+      "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200",
+  },
   WITHDRAWN: {
     label: "Withdrawn",
     className:
