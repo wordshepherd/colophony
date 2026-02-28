@@ -10,6 +10,7 @@ import {
   users,
   eq,
   and,
+  inArray,
   sql,
   type DrizzleDb,
 } from '@colophony/db';
@@ -256,12 +257,22 @@ export const submissionService = {
       ];
 
       if (periodIds.length > 0) {
+        const rows = await tx
+          .select({
+            id: submissionPeriods.id,
+            blindReviewMode: submissionPeriods.blindReviewMode,
+          })
+          .from(submissionPeriods)
+          .where(inArray(submissionPeriods.id, periodIds));
         const blindModes = new Map<
           string,
           import('@colophony/types').BlindReviewMode
         >();
-        for (const periodId of periodIds) {
-          blindModes.set(periodId, await resolveBlindMode(tx, periodId));
+        for (const row of rows) {
+          blindModes.set(
+            row.id,
+            row.blindReviewMode as import('@colophony/types').BlindReviewMode,
+          );
         }
         blindedItems = items.map((item) => {
           const mode = item.submissionPeriodId

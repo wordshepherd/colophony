@@ -87,19 +87,19 @@ export const SubmissionType = builder
           'The user who created this submission. Returns null when blind review is active.',
         resolve: async (submission, _args, ctx) => {
           if (!submission.submitterId) return null;
-          if (ctx.authContext?.role && ctx.dbTx) {
-            const blindMode = await resolveBlindMode(
-              ctx.dbTx,
-              submission.submissionPeriodId,
-            );
-            if (
-              shouldBlindSubmitter({
-                blindMode,
-                callerRole: ctx.authContext.role,
-              })
-            ) {
-              return null;
-            }
+          // Fail secure: if we can't determine blind mode, hide submitter
+          if (!ctx.authContext?.role || !ctx.dbTx) return null;
+          const blindMode = await resolveBlindMode(
+            ctx.dbTx,
+            submission.submissionPeriodId,
+          );
+          if (
+            shouldBlindSubmitter({
+              blindMode,
+              callerRole: ctx.authContext.role,
+            })
+          ) {
+            return null;
           }
           return ctx.loaders.user.load(submission.submitterId);
         },
