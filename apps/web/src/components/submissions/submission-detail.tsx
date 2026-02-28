@@ -9,6 +9,7 @@ import { useOrganization } from "@/hooks/use-organization";
 import { PluginSlot } from "@/components/plugins/plugin-slot";
 import { StatusBadge } from "./status-badge";
 import { StatusTransition } from "./status-transition";
+import { ReviseAndResubmitCard } from "./revise-and-resubmit-card";
 import { ComposeMessageDialog } from "./compose-message-dialog";
 import { CorrespondenceHistory } from "./correspondence-history";
 import { Button } from "@/components/ui/button";
@@ -154,7 +155,9 @@ export function SubmissionDetail({
   const canDelete = isOwner && submission.status === "DRAFT";
   const canWithdraw =
     isOwner &&
-    ["SUBMITTED", "UNDER_REVIEW", "HOLD"].includes(submission.status);
+    ["SUBMITTED", "UNDER_REVIEW", "HOLD", "REVISE_AND_RESUBMIT"].includes(
+      submission.status,
+    );
 
   return (
     <div className="space-y-6">
@@ -237,6 +240,21 @@ export function SubmissionDetail({
               </div>
             </CardContent>
           </Card>
+        )}
+
+      {/* Revise and Resubmit card — shown to owner when in R&R status */}
+      {isOwner &&
+        submission.status === "REVISE_AND_RESUBMIT" &&
+        submission.manuscript && (
+          <ReviseAndResubmitCard
+            submissionId={submissionId}
+            manuscriptId={submission.manuscript.manuscriptId}
+            revisionNotes={
+              history
+                ?.filter((h) => h.toStatus === "REVISE_AND_RESUBMIT")
+                .at(-1)?.comment ?? null
+            }
+          />
         )}
 
       {/* Content */}

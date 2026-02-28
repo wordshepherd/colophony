@@ -5,6 +5,7 @@ export {
   submissionReceivedNotification,
   submissionAcceptedNotification,
   submissionRejectedNotification,
+  submissionReviseAndResubmitNotification,
   submissionWithdrawnNotification,
 } from './submission-notifications.js';
 export {

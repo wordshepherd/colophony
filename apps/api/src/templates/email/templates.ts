@@ -111,6 +111,31 @@ function submissionRejected(data: Record<string, unknown>): TemplateResult {
   };
 }
 
+function submissionReviseResubmit(
+  data: Record<string, unknown>,
+): TemplateResult {
+  const d = data as unknown as SubmissionTemplateData;
+  return {
+    subject: `Revision requested for your submission: ${d.submissionTitle}`,
+    mjml: wrapInLayout(
+      `<mj-text>
+        <p>After careful review, the editors at ${escapeHtml(d.orgName)} are interested in your work but are requesting revisions before a final decision.</p>
+        <p><strong>Title:</strong> ${escapeHtml(d.submissionTitle)}</p>
+      </mj-text>${d.editorComment ? `<mj-divider border-color="#e5e7eb" border-width="1px" padding="16px 0" /><mj-text><p><strong>Revision notes:</strong></p><p>${escapeHtml(d.editorComment)}</p></mj-text>` : ''}<mj-text><p>Please review the feedback and submit a revised version through your submission portal.</p>${d.submissionUrl ? `<p><a href="${escapeHtml(d.submissionUrl)}">View Submission</a></p>` : ''}</mj-text>`,
+      d.orgName,
+    ),
+    text: [
+      `Revision requested for your submission: ${d.submissionTitle}`,
+      `After careful review, the editors at ${d.orgName} are interested in your work but are requesting revisions.`,
+      d.editorComment ? `\nRevision notes:\n${d.editorComment}` : '',
+      `\nPlease review the feedback and submit a revised version through your submission portal.`,
+      d.submissionUrl ? `\nView: ${d.submissionUrl}` : '',
+    ]
+      .filter(Boolean)
+      .join('\n'),
+  };
+}
+
 function submissionWithdrawn(data: Record<string, unknown>): TemplateResult {
   const d = data as unknown as SubmissionTemplateData;
   return {
@@ -201,6 +226,7 @@ export const templates: Record<TemplateName, TemplateRenderer> = {
   'submission-received': submissionReceived,
   'submission-accepted': submissionAccepted,
   'submission-rejected': submissionRejected,
+  'submission-revise-resubmit': submissionReviseResubmit,
   'submission-withdrawn': submissionWithdrawn,
   'contract-ready': contractReady,
   'copyeditor-assigned': copyeditorAssigned,

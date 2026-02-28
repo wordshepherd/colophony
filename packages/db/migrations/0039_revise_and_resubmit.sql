@@ -1,0 +1,1 @@
+ALTER TYPE "SubmissionStatus" ADD VALUE 'REVISE_AND_RESUBMIT';

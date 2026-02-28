@@ -4,7 +4,7 @@ import type { CSRStatus } from "./csr";
 
 describe("status-mapping", () => {
   describe("hopperToCsrStatus", () => {
-    it("maps all 7 Hopper statuses to CSR equivalents", () => {
+    it("maps all 8 Hopper statuses to CSR equivalents", () => {
       expect(hopperToCsrStatus("DRAFT")).toBe("draft");
       expect(hopperToCsrStatus("SUBMITTED")).toBe("sent");
       expect(hopperToCsrStatus("UNDER_REVIEW")).toBe("in_review");
@@ -12,6 +12,7 @@ describe("status-mapping", () => {
       expect(hopperToCsrStatus("ACCEPTED")).toBe("accepted");
       expect(hopperToCsrStatus("REJECTED")).toBe("rejected");
       expect(hopperToCsrStatus("WITHDRAWN")).toBe("withdrawn");
+      expect(hopperToCsrStatus("REVISE_AND_RESUBMIT")).toBe("revise");
     });
 
     it("maps unknown Hopper status to 'unknown'", () => {
@@ -30,10 +31,11 @@ describe("status-mapping", () => {
       expect(csrToHopperStatus("accepted")).toBe("ACCEPTED");
       expect(csrToHopperStatus("rejected")).toBe("REJECTED");
       expect(csrToHopperStatus("withdrawn")).toBe("WITHDRAWN");
+      expect(csrToHopperStatus("revise")).toBe("REVISE_AND_RESUBMIT");
     });
 
-    it("returns null for unmappable CSR statuses (no_response, revise, unknown)", () => {
-      const unmappable: CSRStatus[] = ["no_response", "revise", "unknown"];
+    it("returns null for unmappable CSR statuses (no_response, unknown)", () => {
+      const unmappable: CSRStatus[] = ["no_response", "unknown"];
       for (const status of unmappable) {
         expect(csrToHopperStatus(status)).toBeNull();
       }

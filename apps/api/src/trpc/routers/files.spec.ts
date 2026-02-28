@@ -55,6 +55,7 @@ vi.mock('../../services/submission.service.js', () => ({
     deleteAsOwner: vi.fn(),
     withdrawAsOwner: vi.fn(),
     updateStatusAsEditor: vi.fn(),
+    resubmitAsOwner: vi.fn(),
     getHistoryWithAccess: vi.fn(),
   },
   SubmissionNotFoundError: class SubmissionNotFoundError extends Error {
@@ -80,6 +81,12 @@ vi.mock('../../services/submission.service.js', () => ({
   },
   FormDefinitionMismatchError: class extends Error {
     name = 'FormDefinitionMismatchError';
+  },
+  MissingRevisionNotesError: class extends Error {
+    name = 'MissingRevisionNotesError';
+  },
+  NotReviseAndResubmitError: class extends Error {
+    name = 'NotReviseAndResubmitError';
   },
 }));
 

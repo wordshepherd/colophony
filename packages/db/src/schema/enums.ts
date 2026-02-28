@@ -10,6 +10,7 @@ export const submissionStatusEnum = pgEnum("SubmissionStatus", [
   "REJECTED",
   "HOLD",
   "WITHDRAWN",
+  "REVISE_AND_RESUBMIT",
 ]);
 
 export const scanStatusEnum = pgEnum("ScanStatus", [

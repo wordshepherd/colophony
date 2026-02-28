@@ -20,6 +20,7 @@ vi.mock('../../services/submission.service.js', () => ({
     deleteAsOwner: vi.fn(),
     withdrawAsOwner: vi.fn(),
     updateStatusAsEditor: vi.fn(),
+    resubmitAsOwner: vi.fn(),
     getHistoryWithAccess: vi.fn(),
   },
   SubmissionNotFoundError: class SubmissionNotFoundError extends Error {
@@ -58,6 +59,20 @@ vi.mock('../../services/submission.service.js', () => ({
     name = 'FormDefinitionMismatchError';
     constructor() {
       super('Form definition mismatch');
+    }
+  },
+  MissingRevisionNotesError: class MissingRevisionNotesError extends Error {
+    name = 'MissingRevisionNotesError';
+    constructor() {
+      super('Revision notes are required when requesting revisions');
+    }
+  },
+  NotReviseAndResubmitError: class NotReviseAndResubmitError extends Error {
+    name = 'NotReviseAndResubmitError';
+    constructor() {
+      super(
+        'Submission must be in REVISE_AND_RESUBMIT status to resubmit a new version',
+      );
     }
   },
 }));

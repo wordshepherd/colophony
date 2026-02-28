@@ -2,6 +2,7 @@ export type TemplateName =
   | 'submission-received'
   | 'submission-accepted'
   | 'submission-rejected'
+  | 'submission-revise-resubmit'
   | 'submission-withdrawn'
   | 'contract-ready'
   | 'copyeditor-assigned'

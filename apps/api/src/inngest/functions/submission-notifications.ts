@@ -16,6 +16,7 @@ import type {
   HopperSubmissionAcceptedEvent,
   HopperSubmissionRejectedEvent,
   HopperSubmissionWithdrawnEvent,
+  HopperSubmissionReviseAndResubmitEvent,
 } from '../events.js';
 import { notificationPreferenceService } from '../../services/notification-preference.service.js';
 import { emailService } from '../../services/email.service.js';
@@ -341,6 +342,83 @@ export const submissionRejectedNotification = inngest.createFunction(
             senderName: null,
             senderEmail: null,
             isPersonalized: !!comment,
+            source: 'colophony',
+          });
+        });
+      } catch {
+        // Non-fatal: correspondence capture should not block notifications
+      }
+    });
+
+    return { notified: 1 };
+  },
+);
+
+export const submissionReviseAndResubmitNotification = inngest.createFunction(
+  {
+    id: 'submission-revise-and-resubmit-notification',
+    name: 'Submission Revise and Resubmit Notification',
+    retries: 3,
+  },
+  { event: 'hopper/submission.revise_and_resubmit' },
+  async ({ event, step }) => {
+    const { orgId, submissionId, submitterId, comment } =
+      event.data as HopperSubmissionReviseAndResubmitEvent['data'];
+
+    const { submission, orgName } = await step.run('resolve-data', async () =>
+      getSubmissionAndOrg(orgId, submissionId),
+    );
+
+    if (!submission) return { skipped: true, reason: 'submission-not-found' };
+
+    const submitter = await step.run('get-submitter', async () =>
+      getUserEmail(submitterId),
+    );
+
+    if (!submitter) return { skipped: true, reason: 'submitter-not-found' };
+
+    await step.run('queue-email', async () => {
+      await queueEmailForRecipient({
+        orgId,
+        userId: submitterId,
+        email: submitter.email,
+        eventType: 'submission.revise_and_resubmit',
+        templateName: 'submission-revise-resubmit',
+        templateData: {
+          submissionTitle: submission.title,
+          submitterName: submitter.email,
+          submitterEmail: submitter.email,
+          orgName,
+          editorComment: comment,
+        },
+        subject: `Revision requested for your submission: ${submission.title}`,
+      });
+    });
+
+    await step.run('queue-in-app', async () => {
+      await queueInAppNotification({
+        orgId,
+        userId: submitterId,
+        eventType: 'submission.revise_and_resubmit',
+        title: `Revisions requested for: ${submission.title}`,
+        link: `/submissions/${submissionId}`,
+      });
+    });
+
+    await step.run('capture-correspondence', async () => {
+      try {
+        await withRls({ orgId }, async (tx) => {
+          await correspondenceService.create(tx, {
+            userId: submitterId,
+            submissionId,
+            direction: 'outbound',
+            channel: 'email',
+            sentAt: new Date(),
+            subject: `Revision requested for your submission: ${submission.title}`,
+            body: `After careful review, the editors are interested in your work but are requesting revisions.\n\nRevision notes:\n${comment}`,
+            senderName: null,
+            senderEmail: null,
+            isPersonalized: true,
             source: 'colophony',
           });
         });
