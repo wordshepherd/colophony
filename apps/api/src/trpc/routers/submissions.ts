@@ -35,6 +35,11 @@ import {
   submissionTimeSeriesSchema,
   responseTimeDistributionSchema,
   agingSubmissionsSchema,
+  castVoteInputSchema,
+  listVotesInputSchema,
+  deleteVoteInputSchema,
+  submissionVoteSchema,
+  voteSummarySchema,
 } from '@colophony/types';
 import {
   orgProcedure,
@@ -45,6 +50,7 @@ import {
 import { submissionService } from '../../services/submission.service.js';
 import { submissionReviewerService } from '../../services/submission-reviewer.service.js';
 import { submissionDiscussionService } from '../../services/submission-discussion.service.js';
+import { submissionVoteService } from '../../services/submission-vote.service.js';
 import { submissionAnalyticsService } from '../../services/submission-analytics.service.js';
 import { simsubService } from '../../services/simsub.service.js';
 import { transferService } from '../../services/transfer.service.js';
@@ -452,6 +458,72 @@ export const submissionsRouter = createRouter({
         return await submissionDiscussionService.createWithAudit(
           toServiceContext(ctx),
           input,
+        );
+      } catch (e) {
+        mapServiceError(e);
+      }
+    }),
+
+  // ─── Voting procedures ───
+
+  /** Cast or update a vote on a submission. */
+  castVote: orgProcedure
+    .use(requireScopes('submissions:write'))
+    .input(castVoteInputSchema)
+    .output(submissionVoteSchema)
+    .mutation(async ({ ctx, input }) => {
+      try {
+        return await submissionVoteService.castVoteWithAudit(
+          toServiceContext(ctx),
+          input,
+        );
+      } catch (e) {
+        mapServiceError(e);
+      }
+    }),
+
+  /** List all votes on a submission. */
+  listVotes: orgProcedure
+    .use(requireScopes('submissions:read'))
+    .input(listVotesInputSchema)
+    .output(z.array(submissionVoteSchema))
+    .query(async ({ ctx, input }) => {
+      try {
+        return await submissionVoteService.listVotesWithAccess(
+          toServiceContext(ctx),
+          input.submissionId,
+        );
+      } catch (e) {
+        mapServiceError(e);
+      }
+    }),
+
+  /** Get vote summary (tallies + average score) — editor/admin only. */
+  getVoteSummary: orgProcedure
+    .use(requireScopes('submissions:read'))
+    .input(z.object({ submissionId: z.string().uuid() }))
+    .output(voteSummarySchema)
+    .query(async ({ ctx, input }) => {
+      try {
+        return await submissionVoteService.getVoteSummaryWithAccess(
+          toServiceContext(ctx),
+          input.submissionId,
+        );
+      } catch (e) {
+        mapServiceError(e);
+      }
+    }),
+
+  /** Delete the current user's vote on a submission. */
+  deleteVote: orgProcedure
+    .use(requireScopes('submissions:write'))
+    .input(deleteVoteInputSchema)
+    .output(successResponseSchema)
+    .mutation(async ({ ctx, input }) => {
+      try {
+        return await submissionVoteService.deleteVoteWithAudit(
+          toServiceContext(ctx),
+          input.submissionId,
         );
       } catch (e) {
         mapServiceError(e);

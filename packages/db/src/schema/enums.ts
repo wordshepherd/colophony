@@ -67,6 +67,12 @@ export const formFieldTypeEnum = pgEnum("FormFieldType", [
   "info_text",
 ]);
 
+export const voteDecisionEnum = pgEnum("VoteDecision", [
+  "ACCEPT",
+  "REJECT",
+  "MAYBE",
+]);
+
 // ---------------------------------------------------------------------------
 // Slate — Publication Pipeline
 // ---------------------------------------------------------------------------

@@ -14,3 +14,4 @@ import './contracts.js';
 import './issues.js';
 import './cms-connections.js';
 import './submission-analytics.js';
+import './submission-votes.js';

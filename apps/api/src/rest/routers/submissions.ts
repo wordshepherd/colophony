@@ -20,11 +20,15 @@ import {
   submissionTimeSeriesSchema,
   responseTimeDistributionSchema,
   agingSubmissionsSchema,
+  castVoteInputSchema,
+  submissionVoteSchema,
+  voteSummarySchema,
 } from '@colophony/types';
 import { restPaginationQuery } from '@colophony/api-contracts';
 import { submissionService } from '../../services/submission.service.js';
 import { submissionReviewerService } from '../../services/submission-reviewer.service.js';
 import { submissionDiscussionService } from '../../services/submission-discussion.service.js';
+import { submissionVoteService } from '../../services/submission-vote.service.js';
 import { submissionAnalyticsService } from '../../services/submission-analytics.service.js';
 import { simsubService } from '../../services/simsub.service.js';
 import { toServiceContext } from '../../services/context.js';
@@ -499,6 +503,114 @@ const addDiscussion = orgProcedure
   });
 
 // ---------------------------------------------------------------------------
+// Vote routes
+// ---------------------------------------------------------------------------
+
+const castVote = orgProcedure
+  .use(requireScopes('submissions:write'))
+  .route({
+    method: 'POST',
+    path: '/submissions/{id}/votes',
+    successStatus: 201,
+    summary: 'Cast or update a vote',
+    description:
+      'Cast or update a vote on a submission. One vote per user per submission (upsert).',
+    operationId: 'castSubmissionVote',
+    tags: ['Submission Votes'],
+  })
+  .input(
+    idParamSchema.merge(
+      castVoteInputSchema.pick({ decision: true, score: true }),
+    ),
+  )
+  .output(submissionVoteSchema)
+  .handler(async ({ input, context }) => {
+    try {
+      return await submissionVoteService.castVoteWithAudit(
+        toServiceContext(context),
+        {
+          submissionId: input.id,
+          decision: input.decision,
+          score: input.score,
+        },
+      );
+    } catch (e) {
+      mapServiceError(e);
+    }
+  });
+
+const listVotes = orgProcedure
+  .use(requireScopes('submissions:read'))
+  .route({
+    method: 'GET',
+    path: '/submissions/{id}/votes',
+    summary: 'List submission votes',
+    description:
+      'List all votes on a submission. Accessible to editors, admins, and assigned reviewers.',
+    operationId: 'listSubmissionVotes',
+    tags: ['Submission Votes'],
+  })
+  .input(idParamSchema)
+  .output(z.array(submissionVoteSchema))
+  .handler(async ({ input, context }) => {
+    try {
+      return await submissionVoteService.listVotesWithAccess(
+        toServiceContext(context),
+        input.id,
+      );
+    } catch (e) {
+      mapServiceError(e);
+    }
+  });
+
+const voteSummary = orgProcedure
+  .use(requireScopes('submissions:read'))
+  .route({
+    method: 'GET',
+    path: '/submissions/{id}/votes/summary',
+    summary: 'Get vote summary',
+    description:
+      'Get aggregated vote tallies and average score for a submission. Editor/admin only.',
+    operationId: 'getSubmissionVoteSummary',
+    tags: ['Submission Votes'],
+  })
+  .input(idParamSchema)
+  .output(voteSummarySchema)
+  .handler(async ({ input, context }) => {
+    try {
+      return await submissionVoteService.getVoteSummaryWithAccess(
+        toServiceContext(context),
+        input.id,
+      );
+    } catch (e) {
+      mapServiceError(e);
+    }
+  });
+
+const deleteVote = orgProcedure
+  .use(requireScopes('submissions:write'))
+  .route({
+    method: 'DELETE',
+    path: '/submissions/{id}/votes',
+    summary: 'Delete your vote',
+    description: "Remove the current user's vote on a submission.",
+    operationId: 'deleteSubmissionVote',
+    tags: ['Submission Votes'],
+  })
+  .input(idParamSchema)
+  .output(successResponseSchema)
+  .handler(async ({ input, context }) => {
+    try {
+      return await submissionVoteService.deleteVoteWithAudit(
+        toServiceContext(context),
+        input.id,
+      );
+    } catch (e) {
+      mapServiceError(e);
+    }
+  });
+
+// ---------------------------------------------------------------------------
 // Analytics routes
 // ---------------------------------------------------------------------------
 
@@ -684,6 +796,10 @@ export const submissionsRouter = {
   markReviewerRead,
   listDiscussions,
   addDiscussion,
+  castVote,
+  listVotes,
+  voteSummary,
+  deleteVote,
   analyticsOverview,
   analyticsStatusBreakdown,
   analyticsFunnel,

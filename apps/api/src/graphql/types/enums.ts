@@ -35,6 +35,15 @@ export const ScanStatusEnum = builder.enumType('ScanStatus', {
   } as const,
 });
 
+export const VoteDecisionEnum = builder.enumType('VoteDecision', {
+  description: 'Decision cast on a submission vote.',
+  values: {
+    ACCEPT: { description: 'Accept the submission for publication.' },
+    REJECT: { description: 'Reject the submission.' },
+    MAYBE: { description: 'Uncertain — needs further discussion.' },
+  } as const,
+});
+
 export const RoleEnum = builder.enumType('Role', {
   description: 'Member role within an organization.',
   values: {

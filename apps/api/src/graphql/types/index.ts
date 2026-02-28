@@ -1,5 +1,10 @@
 // Barrel export — ensures all types are registered with the builder
-export { SubmissionStatusEnum, ScanStatusEnum, RoleEnum } from './enums.js';
+export {
+  SubmissionStatusEnum,
+  ScanStatusEnum,
+  RoleEnum,
+  VoteDecisionEnum,
+} from './enums.js';
 export { UserType } from './user.js';
 export { OrganizationType, OrganizationMemberType } from './organization.js';
 export { SubmissionType, SubmissionHistoryType } from './submission.js';
@@ -36,6 +41,7 @@ export {
 } from './issue.js';
 export { CmsConnectionType, CmsAdapterTypeEnum } from './cms-connection.js';
 export { SubmissionDiscussionType } from './discussion.js';
+export { SubmissionVoteType, VoteSummaryType } from './submission-vote.js';
 export {
   SubmissionOverviewStatsType,
   SubmissionStatusBreakdownType,

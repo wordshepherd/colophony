@@ -10,6 +10,7 @@ import { trpc } from "@/lib/trpc";
 import { useOrganization } from "@/hooks/use-organization";
 import { MemberList } from "./member-list";
 import { EmailTemplateSettings } from "./email-template-settings";
+import { VotingSettings } from "./voting-settings";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -138,6 +139,7 @@ export function OrgSettings() {
           <TabsTrigger value="general">General</TabsTrigger>
           <TabsTrigger value="members">Members</TabsTrigger>
           <TabsTrigger value="email-templates">Email Templates</TabsTrigger>
+          <TabsTrigger value="voting">Voting</TabsTrigger>
         </TabsList>
 
         <TabsContent value="general" className="mt-6">
@@ -232,6 +234,22 @@ export function OrgSettings() {
             </CardHeader>
             <CardContent>
               <EmailTemplateSettings />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="voting" className="mt-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Voting</CardTitle>
+              <CardDescription>
+                {isAdmin
+                  ? "Configure how reviewers and editors vote on submissions."
+                  : "Voting configuration for this organization."}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <VotingSettings />
             </CardContent>
           </Card>
         </TabsContent>
