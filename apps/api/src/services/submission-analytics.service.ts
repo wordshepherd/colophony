@@ -13,15 +13,8 @@ import type {
 } from '@colophony/types';
 
 // ---------------------------------------------------------------------------
-// Terminal and non-terminal status sets
+// Status sets
 // ---------------------------------------------------------------------------
-
-const NON_TERMINAL_STATUSES = [
-  'SUBMITTED',
-  'UNDER_REVIEW',
-  'HOLD',
-  'REVISE_AND_RESUBMIT',
-] as const;
 
 /** Funnel stage ordering — matches the submission workflow progression. */
 const FUNNEL_STAGE_ORDER = [
