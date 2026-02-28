@@ -26,6 +26,15 @@ import {
   listDiscussionCommentsSchema,
   createDiscussionCommentSchema,
   submissionDiscussionSchema,
+  analyticsFilterSchema,
+  timeSeriesFilterSchema,
+  agingFilterSchema,
+  submissionOverviewStatsSchema,
+  submissionStatusBreakdownSchema,
+  submissionFunnelSchema,
+  submissionTimeSeriesSchema,
+  responseTimeDistributionSchema,
+  agingSubmissionsSchema,
 } from '@colophony/types';
 import {
   orgProcedure,
@@ -36,6 +45,7 @@ import {
 import { submissionService } from '../../services/submission.service.js';
 import { submissionReviewerService } from '../../services/submission-reviewer.service.js';
 import { submissionDiscussionService } from '../../services/submission-discussion.service.js';
+import { submissionAnalyticsService } from '../../services/submission-analytics.service.js';
 import { simsubService } from '../../services/simsub.service.js';
 import { transferService } from '../../services/transfer.service.js';
 import { migrationService } from '../../services/migration.service.js';
@@ -441,6 +451,104 @@ export const submissionsRouter = createRouter({
       try {
         return await submissionDiscussionService.createWithAudit(
           toServiceContext(ctx),
+          input,
+        );
+      } catch (e) {
+        mapServiceError(e);
+      }
+    }),
+
+  // ─── Analytics procedures ───
+
+  /** Overview stats: totals, acceptance rate, avg response time. */
+  analyticsOverview: orgProcedure
+    .use(requireScopes('submissions:read'))
+    .input(analyticsFilterSchema)
+    .output(submissionOverviewStatsSchema)
+    .query(async ({ ctx, input }) => {
+      try {
+        assertEditorOrAdmin(ctx.authContext.role);
+        return await submissionAnalyticsService.getOverviewStats(
+          ctx.dbTx,
+          input,
+        );
+      } catch (e) {
+        mapServiceError(e);
+      }
+    }),
+
+  /** Status breakdown: count per status. */
+  analyticsStatusBreakdown: orgProcedure
+    .use(requireScopes('submissions:read'))
+    .input(analyticsFilterSchema)
+    .output(submissionStatusBreakdownSchema)
+    .query(async ({ ctx, input }) => {
+      try {
+        assertEditorOrAdmin(ctx.authContext.role);
+        return await submissionAnalyticsService.getStatusBreakdown(
+          ctx.dbTx,
+          input,
+        );
+      } catch (e) {
+        mapServiceError(e);
+      }
+    }),
+
+  /** Funnel: submission workflow progression. */
+  analyticsFunnel: orgProcedure
+    .use(requireScopes('submissions:read'))
+    .input(analyticsFilterSchema)
+    .output(submissionFunnelSchema)
+    .query(async ({ ctx, input }) => {
+      try {
+        assertEditorOrAdmin(ctx.authContext.role);
+        return await submissionAnalyticsService.getFunnel(ctx.dbTx, input);
+      } catch (e) {
+        mapServiceError(e);
+      }
+    }),
+
+  /** Time series: submissions over time by granularity. */
+  analyticsTimeSeries: orgProcedure
+    .use(requireScopes('submissions:read'))
+    .input(timeSeriesFilterSchema)
+    .output(submissionTimeSeriesSchema)
+    .query(async ({ ctx, input }) => {
+      try {
+        assertEditorOrAdmin(ctx.authContext.role);
+        return await submissionAnalyticsService.getTimeSeries(ctx.dbTx, input);
+      } catch (e) {
+        mapServiceError(e);
+      }
+    }),
+
+  /** Response time distribution: histogram buckets + median. */
+  analyticsResponseTime: orgProcedure
+    .use(requireScopes('submissions:read'))
+    .input(analyticsFilterSchema)
+    .output(responseTimeDistributionSchema)
+    .query(async ({ ctx, input }) => {
+      try {
+        assertEditorOrAdmin(ctx.authContext.role);
+        return await submissionAnalyticsService.getResponseTimeDistribution(
+          ctx.dbTx,
+          input,
+        );
+      } catch (e) {
+        mapServiceError(e);
+      }
+    }),
+
+  /** Aging submissions: non-terminal submissions older than threshold. */
+  analyticsAging: orgProcedure
+    .use(requireScopes('submissions:read'))
+    .input(agingFilterSchema)
+    .output(agingSubmissionsSchema)
+    .query(async ({ ctx, input }) => {
+      try {
+        assertEditorOrAdmin(ctx.authContext.role);
+        return await submissionAnalyticsService.getAgingSubmissions(
+          ctx.dbTx,
           input,
         );
       } catch (e) {

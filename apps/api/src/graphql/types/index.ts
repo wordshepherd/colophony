@@ -37,6 +37,14 @@ export {
 export { CmsConnectionType, CmsAdapterTypeEnum } from './cms-connection.js';
 export { SubmissionDiscussionType } from './discussion.js';
 export {
+  SubmissionOverviewStatsType,
+  SubmissionStatusBreakdownType,
+  SubmissionFunnelType,
+  SubmissionTimeSeriesType,
+  ResponseTimeDistributionType,
+  AgingSubmissionsType,
+} from './analytics.js';
+export {
   SubmissionStatusChangePayload,
   CreateOrganizationPayload,
   CreateApiKeyPayload,

@@ -14,11 +14,18 @@ import {
   submissionReviewerSchema,
   createDiscussionCommentSchema,
   submissionDiscussionSchema,
+  submissionOverviewStatsSchema,
+  submissionStatusBreakdownSchema,
+  submissionFunnelSchema,
+  submissionTimeSeriesSchema,
+  responseTimeDistributionSchema,
+  agingSubmissionsSchema,
 } from '@colophony/types';
 import { restPaginationQuery } from '@colophony/api-contracts';
 import { submissionService } from '../../services/submission.service.js';
 import { submissionReviewerService } from '../../services/submission-reviewer.service.js';
 import { submissionDiscussionService } from '../../services/submission-discussion.service.js';
+import { submissionAnalyticsService } from '../../services/submission-analytics.service.js';
 import { simsubService } from '../../services/simsub.service.js';
 import { toServiceContext } from '../../services/context.js';
 import { assertEditorOrAdmin } from '../../services/errors.js';
@@ -492,6 +499,170 @@ const addDiscussion = orgProcedure
   });
 
 // ---------------------------------------------------------------------------
+// Analytics routes
+// ---------------------------------------------------------------------------
+
+const restAnalyticsFilterSchema = z.object({
+  startDate: z.coerce.date().optional(),
+  endDate: z.coerce.date().optional(),
+  submissionPeriodId: z.string().uuid().optional(),
+});
+
+const restTimeSeriesFilterSchema = restAnalyticsFilterSchema.extend({
+  granularity: z.enum(['daily', 'weekly', 'monthly']).default('monthly'),
+});
+
+const restAgingFilterSchema = restAnalyticsFilterSchema.extend({
+  thresholdDays: z.coerce.number().int().min(1).default(14),
+});
+
+const analyticsOverview = orgProcedure
+  .use(requireScopes('submissions:read'))
+  .route({
+    method: 'GET',
+    path: '/submissions/analytics/overview',
+    summary: 'Submission analytics overview',
+    description:
+      'Returns key submission statistics: totals, acceptance rate, avg response time, and month-over-month counts.',
+    operationId: 'getSubmissionAnalyticsOverview',
+    tags: ['Submission Analytics'],
+  })
+  .input(restAnalyticsFilterSchema)
+  .output(submissionOverviewStatsSchema)
+  .handler(async ({ input, context }) => {
+    try {
+      assertEditorOrAdmin(context.authContext.role);
+      return await submissionAnalyticsService.getOverviewStats(
+        context.dbTx,
+        input,
+      );
+    } catch (e) {
+      mapServiceError(e);
+    }
+  });
+
+const analyticsStatusBreakdown = orgProcedure
+  .use(requireScopes('submissions:read'))
+  .route({
+    method: 'GET',
+    path: '/submissions/analytics/status-breakdown',
+    summary: 'Submission status breakdown',
+    description: 'Returns the count of submissions grouped by status.',
+    operationId: 'getSubmissionAnalyticsStatusBreakdown',
+    tags: ['Submission Analytics'],
+  })
+  .input(restAnalyticsFilterSchema)
+  .output(submissionStatusBreakdownSchema)
+  .handler(async ({ input, context }) => {
+    try {
+      assertEditorOrAdmin(context.authContext.role);
+      return await submissionAnalyticsService.getStatusBreakdown(
+        context.dbTx,
+        input,
+      );
+    } catch (e) {
+      mapServiceError(e);
+    }
+  });
+
+const analyticsFunnel = orgProcedure
+  .use(requireScopes('submissions:read'))
+  .route({
+    method: 'GET',
+    path: '/submissions/analytics/funnel',
+    summary: 'Submission funnel',
+    description:
+      'Returns distinct submission counts at each workflow stage for funnel visualization.',
+    operationId: 'getSubmissionAnalyticsFunnel',
+    tags: ['Submission Analytics'],
+  })
+  .input(restAnalyticsFilterSchema)
+  .output(submissionFunnelSchema)
+  .handler(async ({ input, context }) => {
+    try {
+      assertEditorOrAdmin(context.authContext.role);
+      return await submissionAnalyticsService.getFunnel(context.dbTx, input);
+    } catch (e) {
+      mapServiceError(e);
+    }
+  });
+
+const analyticsTimeSeries = orgProcedure
+  .use(requireScopes('submissions:read'))
+  .route({
+    method: 'GET',
+    path: '/submissions/analytics/time-series',
+    summary: 'Submission time series',
+    description:
+      'Returns submission counts over time, grouped by the specified granularity.',
+    operationId: 'getSubmissionAnalyticsTimeSeries',
+    tags: ['Submission Analytics'],
+  })
+  .input(restTimeSeriesFilterSchema)
+  .output(submissionTimeSeriesSchema)
+  .handler(async ({ input, context }) => {
+    try {
+      assertEditorOrAdmin(context.authContext.role);
+      return await submissionAnalyticsService.getTimeSeries(
+        context.dbTx,
+        input,
+      );
+    } catch (e) {
+      mapServiceError(e);
+    }
+  });
+
+const analyticsResponseTime = orgProcedure
+  .use(requireScopes('submissions:read'))
+  .route({
+    method: 'GET',
+    path: '/submissions/analytics/response-time',
+    summary: 'Response time distribution',
+    description:
+      'Returns a histogram of response times (days to first ACCEPTED/REJECTED) and the median.',
+    operationId: 'getSubmissionAnalyticsResponseTime',
+    tags: ['Submission Analytics'],
+  })
+  .input(restAnalyticsFilterSchema)
+  .output(responseTimeDistributionSchema)
+  .handler(async ({ input, context }) => {
+    try {
+      assertEditorOrAdmin(context.authContext.role);
+      return await submissionAnalyticsService.getResponseTimeDistribution(
+        context.dbTx,
+        input,
+      );
+    } catch (e) {
+      mapServiceError(e);
+    }
+  });
+
+const analyticsAging = orgProcedure
+  .use(requireScopes('submissions:read'))
+  .route({
+    method: 'GET',
+    path: '/submissions/analytics/aging',
+    summary: 'Aging submissions',
+    description:
+      'Returns non-terminal submissions older than the threshold, grouped by age bracket.',
+    operationId: 'getSubmissionAnalyticsAging',
+    tags: ['Submission Analytics'],
+  })
+  .input(restAgingFilterSchema)
+  .output(agingSubmissionsSchema)
+  .handler(async ({ input, context }) => {
+    try {
+      assertEditorOrAdmin(context.authContext.role);
+      return await submissionAnalyticsService.getAgingSubmissions(
+        context.dbTx,
+        input,
+      );
+    } catch (e) {
+      mapServiceError(e);
+    }
+  });
+
+// ---------------------------------------------------------------------------
 // Assembled router
 // ---------------------------------------------------------------------------
 
@@ -513,4 +684,10 @@ export const submissionsRouter = {
   markReviewerRead,
   listDiscussions,
   addDiscussion,
+  analyticsOverview,
+  analyticsStatusBreakdown,
+  analyticsFunnel,
+  analyticsTimeSeries,
+  analyticsResponseTime,
+  analyticsAging,
 };
