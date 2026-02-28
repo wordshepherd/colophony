@@ -214,6 +214,11 @@ export const AuditActions = {
   CORRESPONDENCE_SENT: "CORRESPONDENCE_SENT",
   CORRESPONDENCE_AUTO_CAPTURED: "CORRESPONDENCE_AUTO_CAPTURED",
 
+  // Voting lifecycle
+  SUBMISSION_VOTE_CAST: "SUBMISSION_VOTE_CAST",
+  SUBMISSION_VOTE_UPDATED: "SUBMISSION_VOTE_UPDATED",
+  SUBMISSION_VOTE_DELETED: "SUBMISSION_VOTE_DELETED",
+
   // Discussion lifecycle
   DISCUSSION_COMMENT_ADDED: "DISCUSSION_COMMENT_ADDED",
 
@@ -318,7 +323,10 @@ export interface SubmissionAuditParams extends BaseAuditParams {
     | typeof AuditActions.REVIEWER_ASSIGNED
     | typeof AuditActions.REVIEWER_UNASSIGNED
     | typeof AuditActions.REVIEWER_READ
-    | typeof AuditActions.DISCUSSION_COMMENT_ADDED;
+    | typeof AuditActions.DISCUSSION_COMMENT_ADDED
+    | typeof AuditActions.SUBMISSION_VOTE_CAST
+    | typeof AuditActions.SUBMISSION_VOTE_UPDATED
+    | typeof AuditActions.SUBMISSION_VOTE_DELETED;
 }
 
 export interface FileAuditParams extends BaseAuditParams {

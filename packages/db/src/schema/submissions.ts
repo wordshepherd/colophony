@@ -14,7 +14,11 @@ import {
   customType,
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
-import { submissionStatusEnum, simSubCheckResultEnum } from "./enums";
+import {
+  submissionStatusEnum,
+  simSubCheckResultEnum,
+  voteDecisionEnum,
+} from "./enums";
 import { organizations } from "./organizations";
 import { users } from "./users";
 import { formDefinitions } from "./forms";
@@ -305,6 +309,43 @@ export const submissionDiscussions = pgTable(
     index("submission_discussions_submission_id_idx").on(table.submissionId),
     index("submission_discussions_parent_id_idx").on(table.parentId),
     index("submission_discussions_author_id_idx").on(table.authorId),
+    orgIsolationPolicy,
+  ],
+).enableRLS();
+
+// --- submission_votes ---
+
+export const submissionVotes = pgTable(
+  "submission_votes",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    organizationId: uuid("organization_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    submissionId: uuid("submission_id")
+      .notNull()
+      .references(() => submissions.id, { onDelete: "cascade" }),
+    voterUserId: uuid("voter_user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    decision: voteDecisionEnum("decision").notNull(),
+    score: numeric("score", { precision: 5, scale: 2 }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull()
+      .$defaultFn(() => new Date()),
+  },
+  (table) => [
+    uniqueIndex("submission_votes_sub_voter_idx").on(
+      table.submissionId,
+      table.voterUserId,
+    ),
+    index("submission_votes_org_id_idx").on(table.organizationId),
+    index("submission_votes_submission_id_idx").on(table.submissionId),
+    index("submission_votes_voter_user_id_idx").on(table.voterUserId),
     orgIsolationPolicy,
   ],
 ).enableRLS();
