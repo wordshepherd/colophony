@@ -15,6 +15,7 @@ import { CorrespondenceHistory } from "./correspondence-history";
 import { ReviewerList } from "./reviewer-list";
 import { ReviewerPicker } from "./reviewer-picker";
 import { DiscussionThread } from "./discussion-thread";
+import { VotingPanel } from "./voting-panel";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -50,6 +51,7 @@ import {
 } from "lucide-react";
 import {
   EDITOR_ALLOWED_TRANSITIONS,
+  votingConfigSchema,
   type ScanStatus,
   type SubmissionStatus,
 } from "@colophony/types";
@@ -106,6 +108,11 @@ export function SubmissionDetail({
   const { data: reviewers } = trpc.submissions.listReviewers.useQuery({
     submissionId,
   });
+
+  const { data: org } = trpc.organizations.get.useQuery();
+  const votingConfig = votingConfigSchema.parse(
+    (org?.settings as Record<string, unknown>) ?? {},
+  );
 
   const markReadMutation = trpc.submissions.markReviewerRead.useMutation();
 
@@ -321,6 +328,21 @@ export function SubmissionDetail({
               <DiscussionThread submissionId={submissionId} />
             </CardContent>
           </Card>
+        )}
+
+      {/* Voting — editors, admins, and assigned reviewers (not submitter) */}
+      {(isEditor ||
+        isAdmin ||
+        (reviewers ?? []).some((r) => r.reviewerUserId === user?.id)) &&
+        !isOwner &&
+        submission.status !== "DRAFT" && (
+          <VotingPanel
+            submissionId={submissionId}
+            votingEnabled={votingConfig.votingEnabled}
+            scoringEnabled={votingConfig.scoringEnabled}
+            scoreMin={votingConfig.scoreMin}
+            scoreMax={votingConfig.scoreMax}
+          />
         )}
 
       {/* Content */}

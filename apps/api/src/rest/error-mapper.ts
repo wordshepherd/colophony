@@ -75,6 +75,12 @@ import {
   DiscussionCommentNotFoundError,
   DiscussionParentNotFoundError,
 } from '../services/submission-discussion.service.js';
+import {
+  VoteNotFoundError,
+  VotingDisabledError,
+  VoteOnTerminalSubmissionError,
+  ScoreOutOfRangeError,
+} from '../services/submission-vote.service.js';
 
 type ORPCErrorCode = ConstructorParameters<typeof ORPCError>[0];
 
@@ -145,6 +151,11 @@ const errorCodeMap: [new (...args: never[]) => Error, ORPCErrorCode][] = [
   // Discussion errors
   [DiscussionCommentNotFoundError, 'NOT_FOUND'],
   [DiscussionParentNotFoundError, 'NOT_FOUND'],
+  // Vote errors
+  [VoteNotFoundError, 'NOT_FOUND'],
+  [VotingDisabledError, 'BAD_REQUEST'],
+  [VoteOnTerminalSubmissionError, 'BAD_REQUEST'],
+  [ScoreOutOfRangeError, 'BAD_REQUEST'],
   // Precondition
   [FileNotCleanError, 'BAD_REQUEST'],
 ];
