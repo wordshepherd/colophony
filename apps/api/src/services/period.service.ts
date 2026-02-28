@@ -140,6 +140,7 @@ export const periodService = {
         fee: input.fee != null ? String(input.fee) : null,
         maxSubmissions: input.maxSubmissions ?? null,
         formDefinitionId: input.formDefinitionId ?? null,
+        blindReviewMode: input.blindReviewMode ?? 'none',
       })
       .returning();
 
@@ -178,6 +179,8 @@ export const periodService = {
       values.maxSubmissions = input.maxSubmissions ?? null;
     if (input.formDefinitionId !== undefined)
       values.formDefinitionId = input.formDefinitionId ?? null;
+    if (input.blindReviewMode !== undefined)
+      values.blindReviewMode = input.blindReviewMode;
 
     const [row] = await tx
       .update(submissionPeriods)

@@ -109,7 +109,7 @@ describe("EditorSubmissionQueue", () => {
     expect(screen.getByText("(Untitled)")).toBeInTheDocument();
   });
 
-  it('renders "\u2014" for null submitterEmail', () => {
+  it('renders "[Anonymous]" for null submitterEmail', () => {
     mockData = {
       items: [makeItem({ id: "sub-3", submitterEmail: null })],
       total: 1,
@@ -118,7 +118,7 @@ describe("EditorSubmissionQueue", () => {
       totalPages: 1,
     };
     render(<EditorSubmissionQueue />);
-    expect(screen.getByText("\u2014")).toBeInTheDocument();
+    expect(screen.getByText("[Anonymous]")).toBeInTheDocument();
   });
 
   it("title link points to /editor/[id]", () => {

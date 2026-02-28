@@ -3,6 +3,8 @@ import { builder } from '../builder.js';
 import { SubmissionStatusEnum } from './enums.js';
 import { FileType } from './file.js';
 import { UserType } from './user.js';
+import { resolveBlindMode } from '../../services/blind-review.helper.js';
+import { shouldBlindSubmitter } from '@colophony/types';
 
 export const SubmissionType = builder
   .objectRef<Submission>('Submission')
@@ -81,11 +83,26 @@ export const SubmissionType = builder
       submitter: t.field({
         type: UserType,
         nullable: true,
-        description: 'The user who created this submission.',
-        resolve: (submission, _args, ctx) =>
-          submission.submitterId
-            ? ctx.loaders.user.load(submission.submitterId)
-            : null,
+        description:
+          'The user who created this submission. Returns null when blind review is active.',
+        resolve: async (submission, _args, ctx) => {
+          if (!submission.submitterId) return null;
+          // Fail secure: if we can't determine blind mode, hide submitter
+          if (!ctx.authContext?.role || !ctx.dbTx) return null;
+          const blindMode = await resolveBlindMode(
+            ctx.dbTx,
+            submission.submissionPeriodId,
+          );
+          if (
+            shouldBlindSubmitter({
+              blindMode,
+              callerRole: ctx.authContext.role,
+            })
+          ) {
+            return null;
+          }
+          return ctx.loaders.user.load(submission.submitterId);
+        },
       }),
     }),
   });

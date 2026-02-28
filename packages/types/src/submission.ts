@@ -240,6 +240,12 @@ export const listSubmissionsSchema = z.object({
 
 export type ListSubmissionsInput = z.infer<typeof listSubmissionsSchema>;
 
+export const blindReviewModeSchema = z
+  .enum(["none", "single_blind", "double_blind"])
+  .describe("Blind review mode for the submission period");
+
+export type BlindReviewMode = z.infer<typeof blindReviewModeSchema>;
+
 export const submissionPeriodSchema = z.object({
   id: z.string().uuid().describe("Unique identifier for the submission period"),
   organizationId: z.string().uuid().describe("ID of the owning organization"),
@@ -263,6 +269,7 @@ export const submissionPeriodSchema = z.object({
   simSubProhibited: z
     .boolean()
     .describe("Whether simultaneous submissions are prohibited"),
+  blindReviewMode: blindReviewModeSchema,
   createdAt: z.date().describe("When the period was created"),
   updatedAt: z.date().describe("When the period was last updated"),
 });
@@ -303,6 +310,11 @@ export const createSubmissionPeriodSchema = z.object({
     .optional()
     .describe(
       "Whether simultaneous submissions are prohibited (default: false)",
+    ),
+  blindReviewMode: blindReviewModeSchema
+    .optional()
+    .describe(
+      "Blind review mode: none, single_blind, or double_blind (default: none)",
     ),
 });
 
@@ -450,7 +462,7 @@ export const submissionReviewerSchema = z.object({
   id: z.string().uuid(),
   submissionId: z.string().uuid(),
   reviewerUserId: z.string().uuid(),
-  reviewerEmail: z.string().email(),
+  reviewerEmail: z.string().nullable(),
   reviewerRole: z.enum(["ADMIN", "EDITOR", "READER"]),
   assignedBy: z.string().uuid().nullable(),
   assignedAt: z.coerce.date(),

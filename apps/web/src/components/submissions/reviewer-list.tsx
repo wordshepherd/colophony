@@ -54,7 +54,7 @@ export function ReviewerList({ submissionId }: ReviewerListProps) {
         >
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium truncate">
-              {reviewer.reviewerEmail}
+              {reviewer.reviewerEmail ?? "[Anonymous]"}
             </p>
             <div className="flex items-center gap-1.5 mt-0.5">
               <Badge variant="outline" className="text-xs">

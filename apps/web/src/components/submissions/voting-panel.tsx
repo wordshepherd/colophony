@@ -211,7 +211,7 @@ export function VotingPanel({
                     className="flex items-center justify-between text-sm"
                   >
                     <span className="text-muted-foreground truncate">
-                      {vote.voterEmail ?? "Unknown"}
+                      {vote.voterEmail ?? "[Anonymous]"}
                     </span>
                     <div className="flex items-center gap-2">
                       <Badge variant={DECISION_LABELS[vote.decision].variant}>
