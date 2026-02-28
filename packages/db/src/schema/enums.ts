@@ -73,6 +73,12 @@ export const voteDecisionEnum = pgEnum("VoteDecision", [
   "MAYBE",
 ]);
 
+export const blindReviewModeEnum = pgEnum("BlindReviewMode", [
+  "none",
+  "single_blind",
+  "double_blind",
+]);
+
 // ---------------------------------------------------------------------------
 // Slate — Publication Pipeline
 // ---------------------------------------------------------------------------

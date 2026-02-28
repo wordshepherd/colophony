@@ -176,7 +176,7 @@ function CommentItem({
       <div className="space-y-1">
         <div className="flex items-center gap-2">
           <span className="text-sm font-medium">
-            {comment.authorEmail ?? "Unknown"}
+            {comment.authorEmail ?? "[Anonymous]"}
           </span>
           <span className="text-xs text-muted-foreground">
             {formatDistanceToNow(new Date(comment.createdAt), {

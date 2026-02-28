@@ -18,6 +18,7 @@ import {
   submissionStatusEnum,
   simSubCheckResultEnum,
   voteDecisionEnum,
+  blindReviewModeEnum,
 } from "./enums";
 import { organizations } from "./organizations";
 import { users } from "./users";
@@ -59,6 +60,9 @@ export const submissionPeriods = pgTable(
       onDelete: "set null",
     }),
     simSubProhibited: boolean("sim_sub_prohibited").notNull().default(false),
+    blindReviewMode: blindReviewModeEnum("blind_review_mode")
+      .notNull()
+      .default("none"),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),

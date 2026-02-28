@@ -22,6 +22,7 @@ import type { ServiceContext } from './types.js';
 import { ForbiddenError } from './errors.js';
 import { assertEditorOrAdmin } from './errors.js';
 import { SubmissionNotFoundError } from './submission.service.js';
+import { resolveBlindMode, applyVoterBlinding } from './blind-review.helper.js';
 
 // ---------------------------------------------------------------------------
 // Error classes
@@ -72,6 +73,7 @@ async function getSubmissionOrThrow(tx: DrizzleDb, submissionId: string) {
       submitterId: submissions.submitterId,
       organizationId: submissions.organizationId,
       status: submissions.status,
+      submissionPeriodId: submissions.submissionPeriodId,
     })
     .from(submissions)
     .where(eq(submissions.id, submissionId))
@@ -339,10 +341,16 @@ async function castVoteWithAudit(
     .where(eq(submissionVotes.id, id))
     .limit(1);
 
-  return {
+  const castResult: SubmissionVote = {
     ...vote,
     score: vote.score ? Number(vote.score) : null,
   };
+
+  const blindMode = await resolveBlindMode(
+    svc.tx,
+    submission.submissionPeriodId,
+  );
+  return applyVoterBlinding(castResult, blindMode, svc.actor.role);
 }
 
 async function listVotesWithAccess(
@@ -357,7 +365,13 @@ async function listVotesWithAccess(
     submissionId,
     submission.submitterId,
   );
-  return listBySubmission(svc.tx, submissionId);
+  const votes = await listBySubmission(svc.tx, submissionId);
+
+  const blindMode = await resolveBlindMode(
+    svc.tx,
+    submission.submissionPeriodId,
+  );
+  return votes.map((v) => applyVoterBlinding(v, blindMode, svc.actor.role));
 }
 
 async function getVoteSummaryWithAccess(

@@ -98,7 +98,11 @@ const list = orgProcedure
   .handler(async ({ input, context }) => {
     try {
       assertEditorOrAdmin(context.authContext.role);
-      return await submissionService.listAll(context.dbTx, input);
+      return await submissionService.listAll(
+        context.dbTx,
+        input,
+        context.authContext.role,
+      );
     } catch (e) {
       mapServiceError(e);
     }

@@ -45,6 +45,7 @@ interface PeriodData {
   fee: number | null;
   maxSubmissions: number | null;
   formDefinitionId: string | null;
+  blindReviewMode?: string;
 }
 
 /**
@@ -59,6 +60,7 @@ const formSchema = z.object({
   fee: z.string().optional(),
   maxSubmissions: z.string().optional(),
   formDefinitionId: z.string().optional(),
+  blindReviewMode: z.string().optional(),
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -93,6 +95,7 @@ export function PeriodFormDialog({
       fee: "",
       maxSubmissions: "",
       formDefinitionId: "__none__",
+      blindReviewMode: "none",
     },
   });
 
@@ -107,6 +110,7 @@ export function PeriodFormDialog({
         maxSubmissions:
           period.maxSubmissions != null ? String(period.maxSubmissions) : "",
         formDefinitionId: period.formDefinitionId ?? "__none__",
+        blindReviewMode: period.blindReviewMode ?? "none",
       });
     } else if (open) {
       form.reset({
@@ -117,6 +121,7 @@ export function PeriodFormDialog({
         fee: "",
         maxSubmissions: "",
         formDefinitionId: "__none__",
+        blindReviewMode: "none",
       });
     }
   }, [open, period, form]);
@@ -159,6 +164,10 @@ export function PeriodFormDialog({
       formDefinitionId:
         data.formDefinitionId && data.formDefinitionId !== "__none__"
           ? data.formDefinitionId
+          : undefined,
+      blindReviewMode:
+        data.blindReviewMode && data.blindReviewMode !== "none"
+          ? (data.blindReviewMode as "single_blind" | "double_blind")
           : undefined,
     };
 
@@ -308,6 +317,29 @@ export function PeriodFormDialog({
                           {f.name}
                         </SelectItem>
                       ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="blindReviewMode"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Blind Review</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="None" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="none">None</SelectItem>
+                      <SelectItem value="single_blind">Single Blind</SelectItem>
+                      <SelectItem value="double_blind">Double Blind</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />

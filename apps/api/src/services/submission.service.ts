@@ -35,6 +35,10 @@ import {
   assertEditorOrAdmin,
 } from './errors.js';
 import {
+  resolveBlindMode,
+  applySubmitterBlinding,
+} from './blind-review.helper.js';
+import {
   formService,
   FormNotFoundError,
   FormNotPublishedError,
@@ -182,7 +186,11 @@ export const submissionService = {
    * List all submissions in the org (editor view).
    * RLS handles org filtering.
    */
-  async listAll(tx: DrizzleDb, input: ListSubmissionsInput) {
+  async listAll(
+    tx: DrizzleDb,
+    input: ListSubmissionsInput,
+    callerRole?: import('@colophony/types').Role,
+  ) {
     const { status, submissionPeriodId, search, page, limit } = input;
     const offset = (page - 1) * limit;
 
@@ -236,8 +244,42 @@ export const submissionService = {
       tx.select({ count: count() }).from(submissions).where(where),
     ]);
 
+    // Apply blind review: batch-fetch blind modes for all distinct periods
+    let blindedItems = items;
+    if (callerRole && callerRole !== 'ADMIN') {
+      const periodIds = [
+        ...new Set(
+          items
+            .map((i) => i.submissionPeriodId)
+            .filter((id): id is string => id != null),
+        ),
+      ];
+
+      if (periodIds.length > 0) {
+        const blindModes = new Map<
+          string,
+          import('@colophony/types').BlindReviewMode
+        >();
+        for (const periodId of periodIds) {
+          blindModes.set(periodId, await resolveBlindMode(tx, periodId));
+        }
+        blindedItems = items.map((item) => {
+          const mode = item.submissionPeriodId
+            ? (blindModes.get(item.submissionPeriodId) ?? 'none')
+            : 'none';
+          return applySubmitterBlinding(item, mode, callerRole);
+        });
+      }
+    }
+
     const total = countResult[0]?.count ?? 0;
-    return { items, total, page, limit, totalPages: Math.ceil(total / limit) };
+    return {
+      items: blindedItems,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    };
   },
 
   /**
@@ -577,6 +619,16 @@ export const submissionService = {
       svc.actor.role,
       submission.submitterId,
     );
+
+    // Apply blind review if caller is not the submitter
+    if (submission.submitterId !== svc.actor.userId) {
+      const blindMode = await resolveBlindMode(
+        svc.tx,
+        submission.submissionPeriodId,
+      );
+      return applySubmitterBlinding(submission, blindMode, svc.actor.role);
+    }
+
     return submission;
   },
 

@@ -90,6 +90,8 @@ vi.mock('drizzle-orm', () => ({
 vi.mock('@colophony/types', () => ({
   isValidStatusTransition: vi.fn(() => true),
   isEditorAllowedTransition: vi.fn(() => true),
+  shouldBlindSubmitter: vi.fn(() => false),
+  shouldBlindPeerIdentity: vi.fn(() => false),
   AuditActions: {
     SUBMISSION_CREATED: 'SUBMISSION_CREATED',
     SUBMISSION_UPDATED: 'SUBMISSION_UPDATED',

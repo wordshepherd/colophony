@@ -98,7 +98,11 @@ builder.queryFields((t) => ({
       });
       try {
         assertEditorOrAdmin(orgCtx.authContext.role);
-        return await submissionService.listAll(orgCtx.dbTx, input);
+        return await submissionService.listAll(
+          orgCtx.dbTx,
+          input,
+          orgCtx.authContext.role,
+        );
       } catch (e) {
         mapServiceError(e);
       }
