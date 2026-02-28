@@ -130,11 +130,11 @@ export function SubmissionDetail({
 
   // Mark submission as read when a non-owner views it (fire-and-forget, idempotent)
   useEffect(() => {
-    if (submission && user?.id !== submission.submitterId) {
+    if (submission && user && user.id !== submission.submitterId) {
       markReadMutation.mutate({ submissionId });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [submission?.id]);
+  }, [submission?.id, user?.id]);
 
   const handleDownload = async (fileId: string) => {
     try {
