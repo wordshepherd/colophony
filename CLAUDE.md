@@ -70,6 +70,8 @@ Per-directory CLAUDE.md files contain domain-specific details:
 | **Hub auth**             | `apps/api/src/federation/hub-auth.ts` (S2S hub auth middleware)                  |
 | **Hub service**          | `apps/api/src/services/hub.service.ts`                                           |
 | **Hub client service**   | `apps/api/src/services/hub-client.service.ts`                                    |
+| **Analytics service**    | `apps/api/src/services/submission-analytics.service.ts`                          |
+| **Analytics components** | `apps/web/src/components/analytics/` (charts, filters, dashboard page)           |
 | **Next.js frontend**     | `apps/web/`                                                                      |
 | **tRPC client**          | `apps/web/src/lib/trpc.ts`                                                       |
 | **Plugin components**    | `apps/web/src/components/plugins/` (PluginSlot, extensions, error boundary)      |

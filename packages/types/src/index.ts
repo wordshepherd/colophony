@@ -29,3 +29,4 @@ export * from "./csr";
 export * from "./status-mapping";
 export * from "./email-templates";
 export * from "./discussion";
+export * from "./analytics";
