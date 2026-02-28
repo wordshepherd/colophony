@@ -29,6 +29,9 @@ export const AuditActions = {
   SUBMISSION_STATUS_CHANGED: "SUBMISSION_STATUS_CHANGED",
   SUBMISSION_DELETED: "SUBMISSION_DELETED",
   SUBMISSION_WITHDRAWN: "SUBMISSION_WITHDRAWN",
+  REVIEWER_ASSIGNED: "REVIEWER_ASSIGNED",
+  REVIEWER_UNASSIGNED: "REVIEWER_UNASSIGNED",
+  REVIEWER_READ: "REVIEWER_READ",
 
   // File lifecycle
   FILE_UPLOADED: "FILE_UPLOADED",
@@ -308,7 +311,10 @@ export interface SubmissionAuditParams extends BaseAuditParams {
     | typeof AuditActions.SUBMISSION_SUBMITTED
     | typeof AuditActions.SUBMISSION_STATUS_CHANGED
     | typeof AuditActions.SUBMISSION_DELETED
-    | typeof AuditActions.SUBMISSION_WITHDRAWN;
+    | typeof AuditActions.SUBMISSION_WITHDRAWN
+    | typeof AuditActions.REVIEWER_ASSIGNED
+    | typeof AuditActions.REVIEWER_UNASSIGNED
+    | typeof AuditActions.REVIEWER_READ;
 }
 
 export interface FileAuditParams extends BaseAuditParams {

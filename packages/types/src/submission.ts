@@ -441,3 +441,36 @@ export function isEditorAllowedTransition(
 ): boolean {
   return EDITOR_ALLOWED_TRANSITIONS[from].includes(to);
 }
+
+// ---------------------------------------------------------------------------
+// Reviewer assignment schemas
+// ---------------------------------------------------------------------------
+
+export const submissionReviewerSchema = z.object({
+  id: z.string().uuid(),
+  submissionId: z.string().uuid(),
+  reviewerUserId: z.string().uuid(),
+  reviewerEmail: z.string().email(),
+  reviewerRole: z.enum(["ADMIN", "EDITOR", "READER"]),
+  assignedBy: z.string().uuid().nullable(),
+  assignedAt: z.coerce.date(),
+  readAt: z.coerce.date().nullable(),
+});
+export type SubmissionReviewer = z.infer<typeof submissionReviewerSchema>;
+
+export const assignReviewerInputSchema = z.object({
+  submissionId: z.string().uuid(),
+  reviewerUserIds: z.array(z.string().uuid()).min(1).max(20),
+});
+export type AssignReviewerInput = z.infer<typeof assignReviewerInputSchema>;
+
+export const unassignReviewerInputSchema = z.object({
+  submissionId: z.string().uuid(),
+  reviewerUserId: z.string().uuid(),
+});
+export type UnassignReviewerInput = z.infer<typeof unassignReviewerInputSchema>;
+
+export const markReviewerReadInputSchema = z.object({
+  submissionId: z.string().uuid(),
+});
+export type MarkReviewerReadInput = z.infer<typeof markReviewerReadInputSchema>;

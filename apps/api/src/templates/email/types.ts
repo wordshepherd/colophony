@@ -6,7 +6,8 @@ export type TemplateName =
   | 'submission-withdrawn'
   | 'contract-ready'
   | 'copyeditor-assigned'
-  | 'editor-message';
+  | 'editor-message'
+  | 'reviewer-assigned';
 
 export interface SubmissionTemplateData {
   submissionTitle: string;
@@ -39,8 +40,16 @@ export interface EditorMessageTemplateData {
   messageBody: string; // HTML from Tiptap
 }
 
+export interface ReviewerAssignedTemplateData {
+  submissionTitle: string;
+  orgName: string;
+  assignedByName: string;
+  submissionUrl?: string;
+}
+
 export type TemplateData =
   | SubmissionTemplateData
   | ContractTemplateData
   | CopyeditorAssignedData
-  | EditorMessageTemplateData;
+  | EditorMessageTemplateData
+  | ReviewerAssignedTemplateData;
