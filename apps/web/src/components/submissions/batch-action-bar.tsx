@@ -208,12 +208,16 @@ export function BatchActionBar({
                   >
                     <Checkbox
                       checked={selectedReviewers.has(member.userId)}
+                      disabled={
+                        !selectedReviewers.has(member.userId) &&
+                        selectedReviewers.size >= 20
+                      }
                       onCheckedChange={(checked) => {
                         setSelectedReviewers((prev) => {
                           const next = new Set(prev);
-                          if (checked) {
+                          if (checked && next.size < 20) {
                             next.add(member.userId);
-                          } else {
+                          } else if (!checked) {
                             next.delete(member.userId);
                           }
                           return next;

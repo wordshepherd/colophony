@@ -129,6 +129,7 @@ function makeTx() {
     returning: vi.fn().mockResolvedValue([]),
     select: vi.fn().mockReturnThis(),
     from: vi.fn().mockReturnThis(),
+    for: vi.fn(),
   };
   return tx;
 }
@@ -181,13 +182,11 @@ describe('submissionService batch operations', () => {
       vi.mocked(isEditorAllowedTransition).mockReturnValue(true);
 
       const svc = makeSvc();
-      svc.tx.execute.mockResolvedValueOnce({
-        rows: [
-          { id: SUB_1, status: 'SUBMITTED', submitter_id: 'submitter-1' },
-          { id: SUB_2, status: 'SUBMITTED', submitter_id: 'submitter-2' },
-          { id: SUB_3, status: 'SUBMITTED', submitter_id: 'submitter-3' },
-        ],
-      });
+      svc.tx.for.mockResolvedValueOnce([
+        { id: SUB_1, status: 'SUBMITTED', submitterId: 'submitter-1' },
+        { id: SUB_2, status: 'SUBMITTED', submitterId: 'submitter-2' },
+        { id: SUB_3, status: 'SUBMITTED', submitterId: 'submitter-3' },
+      ]);
 
       const result = await submissionService.batchUpdateStatusAsEditor(svc, {
         submissionIds: [SUB_1, SUB_2, SUB_3],
@@ -205,13 +204,11 @@ describe('submissionService batch operations', () => {
       );
 
       const svc = makeSvc();
-      svc.tx.execute.mockResolvedValueOnce({
-        rows: [
-          { id: SUB_1, status: 'SUBMITTED', submitter_id: 'submitter-1' },
-          { id: SUB_2, status: 'SUBMITTED', submitter_id: 'submitter-2' },
-          { id: SUB_3, status: 'ACCEPTED', submitter_id: 'submitter-3' },
-        ],
-      });
+      svc.tx.for.mockResolvedValueOnce([
+        { id: SUB_1, status: 'SUBMITTED', submitterId: 'submitter-1' },
+        { id: SUB_2, status: 'SUBMITTED', submitterId: 'submitter-2' },
+        { id: SUB_3, status: 'ACCEPTED', submitterId: 'submitter-3' },
+      ]);
 
       const result = await submissionService.batchUpdateStatusAsEditor(svc, {
         submissionIds: [SUB_1, SUB_2, SUB_3],
@@ -228,12 +225,10 @@ describe('submissionService batch operations', () => {
       vi.mocked(isEditorAllowedTransition).mockReturnValue(true);
 
       const svc = makeSvc();
-      svc.tx.execute.mockResolvedValueOnce({
-        rows: [
-          { id: SUB_1, status: 'SUBMITTED', submitter_id: 'submitter-1' },
-          { id: SUB_2, status: 'SUBMITTED', submitter_id: 'submitter-2' },
-        ],
-      });
+      svc.tx.for.mockResolvedValueOnce([
+        { id: SUB_1, status: 'SUBMITTED', submitterId: 'submitter-1' },
+        { id: SUB_2, status: 'SUBMITTED', submitterId: 'submitter-2' },
+      ]);
 
       const result = await submissionService.batchUpdateStatusAsEditor(svc, {
         submissionIds: [SUB_1, SUB_2, SUB_3],
@@ -250,12 +245,10 @@ describe('submissionService batch operations', () => {
       vi.mocked(isEditorAllowedTransition).mockReturnValue(true);
 
       const svc = makeSvc();
-      svc.tx.execute.mockResolvedValueOnce({
-        rows: [
-          { id: SUB_1, status: 'SUBMITTED', submitter_id: 'submitter-1' },
-          { id: SUB_2, status: 'SUBMITTED', submitter_id: 'submitter-2' },
-        ],
-      });
+      svc.tx.for.mockResolvedValueOnce([
+        { id: SUB_1, status: 'SUBMITTED', submitterId: 'submitter-1' },
+        { id: SUB_2, status: 'SUBMITTED', submitterId: 'submitter-2' },
+      ]);
 
       await submissionService.batchUpdateStatusAsEditor(svc, {
         submissionIds: [SUB_1, SUB_2],
@@ -279,20 +272,18 @@ describe('submissionService batch operations', () => {
       vi.mocked(isEditorAllowedTransition).mockReturnValue(true);
 
       const svc = makeSvc();
-      svc.tx.execute.mockResolvedValueOnce({
-        rows: [
-          {
-            id: SUB_1,
-            status: 'UNDER_REVIEW',
-            submitter_id: 'submitter-1',
-          },
-          {
-            id: SUB_2,
-            status: 'UNDER_REVIEW',
-            submitter_id: 'submitter-2',
-          },
-        ],
-      });
+      svc.tx.for.mockResolvedValueOnce([
+        {
+          id: SUB_1,
+          status: 'UNDER_REVIEW',
+          submitterId: 'submitter-1',
+        },
+        {
+          id: SUB_2,
+          status: 'UNDER_REVIEW',
+          submitterId: 'submitter-2',
+        },
+      ]);
 
       await submissionService.batchUpdateStatusAsEditor(svc, {
         submissionIds: [SUB_1, SUB_2],

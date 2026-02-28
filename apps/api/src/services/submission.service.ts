@@ -962,16 +962,27 @@ export const submissionService = {
       throw new MissingRevisionNotesError();
     }
 
-    // Pass 1: Lock and fetch all submissions
-    const rows = await svc.tx.execute<{
-      id: string;
-      status: SubmissionStatus;
-      submitter_id: string | null;
-    }>(
-      sql`SELECT id, status, submitter_id FROM submissions WHERE id = ANY(${submissionIds}) FOR UPDATE`,
-    );
+    // Pass 1: Lock and fetch all submissions via Drizzle (goes through RLS)
+    const rows = await svc.tx
+      .select({
+        id: submissions.id,
+        status: submissions.status,
+        submitterId: submissions.submitterId,
+      })
+      .from(submissions)
+      .where(inArray(submissions.id, submissionIds))
+      .for('update');
 
-    const foundMap = new Map(rows.rows.map((r) => [r.id, r]));
+    const foundMap = new Map(
+      rows.map((r) => [
+        r.id,
+        {
+          id: r.id,
+          status: r.status as SubmissionStatus,
+          submitterId: r.submitterId,
+        },
+      ]),
+    );
 
     const succeeded: BatchStatusChangeResponse['succeeded'] = [];
     const failed: BatchStatusChangeResponse['failed'] = [];
@@ -1017,24 +1028,25 @@ export const submissionService = {
         await enqueueOutboxEvent(svc.tx, 'hopper/submission.accepted', {
           orgId: svc.actor.orgId,
           submissionId: id,
-          submitterId: row.submitter_id,
+          submitterId: row.submitterId,
           comment,
         });
       } else if (status === 'REJECTED') {
         await enqueueOutboxEvent(svc.tx, 'hopper/submission.rejected', {
           orgId: svc.actor.orgId,
           submissionId: id,
-          submitterId: row.submitter_id,
+          submitterId: row.submitterId,
           comment,
         });
       } else if (status === 'REVISE_AND_RESUBMIT') {
+        // comment! is safe: R&R without comment is rejected at the top of this method
         await enqueueOutboxEvent(
           svc.tx,
           'hopper/submission.revise_and_resubmit',
           {
             orgId: svc.actor.orgId,
             submissionId: id,
-            submitterId: row.submitter_id,
+            submitterId: row.submitterId,
             comment: comment!,
           },
         );
@@ -1087,6 +1099,8 @@ export const submissionService = {
         continue;
       }
 
+      // Individual inserts: intentional for per-reviewer error handling
+      // (e.g., skip already-assigned). Worst case: reviewerUserIds.length * submissionIds.length inserts.
       let assignedCount = 0;
       for (const reviewerUserId of reviewerUserIds) {
         try {
