@@ -330,7 +330,7 @@
 
 ### UI Polish
 
-- [ ] [P1] Mobile navigation — hamburger menu or bottom nav for `< md` breakpoints; sidebar is currently `hidden md:flex` with no mobile alternative — (persona gap analysis 2026-02-27)
+- [x] [P1] Mobile navigation — hamburger menu or bottom nav for `< md` breakpoints; sidebar is currently `hidden md:flex` with no mobile alternative — (persona gap analysis 2026-02-27; done 2026-02-28)
 - [ ] [P2] Column sorting in submission queue — sortable by title, submitter, date, status; currently hardcoded `DESC createdAt` — (persona gap analysis 2026-02-27)
 - [ ] [P2] Submission period filter in editor queue — the API supports `submissionPeriodId` filter but the UI doesn't expose a period dropdown — (persona gap analysis 2026-02-27)
 - [ ] [P3] Saved filter presets / views — editors can save named filter+sort combos for their queue — (persona gap analysis 2026-02-27)
