@@ -3,6 +3,7 @@ export { SubmissionStatusEnum, ScanStatusEnum, RoleEnum } from './enums.js';
 export { UserType } from './user.js';
 export { OrganizationType, OrganizationMemberType } from './organization.js';
 export { SubmissionType, SubmissionHistoryType } from './submission.js';
+export { SubmissionReviewerType } from './submission-reviewer.js';
 export { FileType } from './file.js';
 export { ManuscriptType, ManuscriptVersionType } from './manuscript.js';
 export { AuditEventType } from './audit.js';

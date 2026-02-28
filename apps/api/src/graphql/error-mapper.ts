@@ -54,6 +54,11 @@ import {
 } from '../services/issue.service.js';
 import { CmsConnectionNotFoundError } from '../services/cms-connection.service.js';
 import { SimSubConflictError } from '../services/simsub.service.js';
+import {
+  ReviewerAlreadyAssignedError,
+  ReviewerNotAssignedError,
+  ReviewerNotOrgMemberError,
+} from '../services/submission-reviewer.service.js';
 
 type GraphQLErrorCode = string;
 
@@ -107,6 +112,10 @@ const errorCodeMap: [new (...args: never[]) => Error, GraphQLErrorCode][] = [
   [IssueItemAlreadyExistsError, 'CONFLICT'],
   // CMS errors
   [CmsConnectionNotFoundError, 'NOT_FOUND'],
+  // Reviewer errors
+  [ReviewerAlreadyAssignedError, 'CONFLICT'],
+  [ReviewerNotAssignedError, 'NOT_FOUND'],
+  [ReviewerNotOrgMemberError, 'BAD_REQUEST'],
   // Precondition
   [FileNotCleanError, 'BAD_REQUEST'],
 ];

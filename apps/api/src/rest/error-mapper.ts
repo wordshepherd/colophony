@@ -66,6 +66,11 @@ import {
   MigrationAlreadyActiveError,
   MigrationUserNotFoundError,
 } from '../services/migration.service.js';
+import {
+  ReviewerAlreadyAssignedError,
+  ReviewerNotAssignedError,
+  ReviewerNotOrgMemberError,
+} from '../services/submission-reviewer.service.js';
 
 type ORPCErrorCode = ConstructorParameters<typeof ORPCError>[0];
 
@@ -129,6 +134,10 @@ const errorCodeMap: [new (...args: never[]) => Error, ORPCErrorCode][] = [
   [MigrationCapabilityError, 'BAD_REQUEST'],
   [MigrationAlreadyActiveError, 'CONFLICT'],
   [MigrationUserNotFoundError, 'NOT_FOUND'],
+  // Reviewer errors
+  [ReviewerAlreadyAssignedError, 'CONFLICT'],
+  [ReviewerNotAssignedError, 'NOT_FOUND'],
+  [ReviewerNotOrgMemberError, 'BAD_REQUEST'],
   // Precondition
   [FileNotCleanError, 'BAD_REQUEST'],
 ];

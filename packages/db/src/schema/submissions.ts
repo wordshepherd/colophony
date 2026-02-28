@@ -10,6 +10,7 @@ import {
   numeric,
   jsonb,
   index,
+  uniqueIndex,
   customType,
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
@@ -239,5 +240,40 @@ export const simSubChecks = pgTable(
         WHERE organization_id = current_org_id()
       )`,
     }),
+  ],
+).enableRLS();
+
+// --- submission_reviewers ---
+
+export const submissionReviewers = pgTable(
+  "submission_reviewers",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    organizationId: uuid("organization_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    submissionId: uuid("submission_id")
+      .notNull()
+      .references(() => submissions.id, { onDelete: "cascade" }),
+    reviewerUserId: uuid("reviewer_user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    assignedBy: uuid("assigned_by").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    assignedAt: timestamp("assigned_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    readAt: timestamp("read_at", { withTimezone: true }),
+  },
+  (table) => [
+    uniqueIndex("submission_reviewers_sub_user_idx").on(
+      table.submissionId,
+      table.reviewerUserId,
+    ),
+    index("submission_reviewers_org_id_idx").on(table.organizationId),
+    index("submission_reviewers_submission_id_idx").on(table.submissionId),
+    index("submission_reviewers_reviewer_user_id_idx").on(table.reviewerUserId),
+    orgIsolationPolicy,
   ],
 ).enableRLS();

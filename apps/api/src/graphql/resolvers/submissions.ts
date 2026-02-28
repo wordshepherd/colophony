@@ -11,10 +11,15 @@ import { requireOrgContext, requireScopes } from '../guards.js';
 import { toServiceContext } from '../../services/context.js';
 import { assertEditorOrAdmin } from '../../services/errors.js';
 import { submissionService } from '../../services/submission.service.js';
+import { submissionReviewerService } from '../../services/submission-reviewer.service.js';
 import { simsubService } from '../../services/simsub.service.js';
 import { mapServiceError } from '../error-mapper.js';
 import { validateEnv } from '../../config/env.js';
-import { SubmissionType, SubmissionHistoryType } from '../types/index.js';
+import {
+  SubmissionType,
+  SubmissionHistoryType,
+  SubmissionReviewerType,
+} from '../types/index.js';
 import {
   SubmissionStatusChangePayload,
   SuccessPayload,
@@ -165,6 +170,36 @@ builder.queryFields((t) => ({
         return await submissionService.getByIdWithAccess(
           toServiceContext(orgCtx),
           id,
+        );
+      } catch (e) {
+        mapServiceError(e);
+      }
+    },
+  }),
+
+  /**
+   * List reviewers assigned to a submission.
+   */
+  submissionReviewers: t.field({
+    type: [SubmissionReviewerType],
+    description:
+      'List reviewers assigned to a submission. Visible to submitter and editors/admins.',
+    args: {
+      submissionId: t.arg.string({
+        required: true,
+        description: 'Submission ID.',
+      }),
+    },
+    resolve: async (_root, args, ctx) => {
+      const orgCtx = requireOrgContext(ctx);
+      await requireScopes(ctx, 'submissions:read');
+      const { id: submissionId } = idParamSchema.parse({
+        id: args.submissionId,
+      });
+      try {
+        return await submissionReviewerService.listBySubmissionWithAccess(
+          toServiceContext(orgCtx),
+          submissionId,
         );
       } catch (e) {
         mapServiceError(e);
@@ -400,6 +435,107 @@ builder.mutationFields((t) => ({
           toServiceContext(orgCtx),
           id,
           args.manuscriptVersionId,
+        );
+      } catch (e) {
+        mapServiceError(e);
+      }
+    },
+  }),
+
+  /**
+   * Assign reviewers to a submission (editor/admin only).
+   */
+  assignReviewers: t.field({
+    type: [SubmissionReviewerType],
+    description:
+      'Assign one or more org members as reviewers on a submission. Requires EDITOR or ADMIN role.',
+    args: {
+      submissionId: t.arg.string({
+        required: true,
+        description: 'Submission ID.',
+      }),
+      reviewerUserIds: t.arg.stringList({
+        required: true,
+        description: 'User IDs to assign as reviewers.',
+      }),
+    },
+    resolve: async (_root, args, ctx) => {
+      const orgCtx = requireOrgContext(ctx);
+      await requireScopes(ctx, 'submissions:write');
+      const { id: submissionId } = idParamSchema.parse({
+        id: args.submissionId,
+      });
+      try {
+        return await submissionReviewerService.assignWithAudit(
+          toServiceContext(orgCtx),
+          submissionId,
+          args.reviewerUserIds,
+        );
+      } catch (e) {
+        mapServiceError(e);
+      }
+    },
+  }),
+
+  /**
+   * Unassign a reviewer from a submission (editor/admin only).
+   */
+  unassignReviewer: t.field({
+    type: SuccessPayload,
+    description:
+      'Remove a reviewer from a submission. Requires EDITOR or ADMIN role.',
+    args: {
+      submissionId: t.arg.string({
+        required: true,
+        description: 'Submission ID.',
+      }),
+      reviewerUserId: t.arg.string({
+        required: true,
+        description: 'User ID to unassign.',
+      }),
+    },
+    resolve: async (_root, args, ctx) => {
+      const orgCtx = requireOrgContext(ctx);
+      await requireScopes(ctx, 'submissions:write');
+      const { id: submissionId } = idParamSchema.parse({
+        id: args.submissionId,
+      });
+      try {
+        await submissionReviewerService.unassignWithAudit(
+          toServiceContext(orgCtx),
+          submissionId,
+          args.reviewerUserId,
+        );
+        return { success: true };
+      } catch (e) {
+        mapServiceError(e);
+      }
+    },
+  }),
+
+  /**
+   * Mark a submission as read by the current reviewer.
+   */
+  markSubmissionRead: t.field({
+    type: SuccessPayload,
+    description:
+      'Mark the current user as having read the submission. Idempotent.',
+    args: {
+      submissionId: t.arg.string({
+        required: true,
+        description: 'Submission ID.',
+      }),
+    },
+    resolve: async (_root, args, ctx) => {
+      const orgCtx = requireOrgContext(ctx);
+      await requireScopes(ctx, 'submissions:read');
+      const { id: submissionId } = idParamSchema.parse({
+        id: args.submissionId,
+      });
+      try {
+        return await submissionReviewerService.markReadWithAudit(
+          toServiceContext(orgCtx),
+          submissionId,
         );
       } catch (e) {
         mapServiceError(e);

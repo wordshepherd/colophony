@@ -11,9 +11,11 @@ import {
   fileSchema,
   paginatedResponseSchema,
   successResponseSchema,
+  submissionReviewerSchema,
 } from '@colophony/types';
 import { restPaginationQuery } from '@colophony/api-contracts';
 import { submissionService } from '../../services/submission.service.js';
+import { submissionReviewerService } from '../../services/submission-reviewer.service.js';
 import { simsubService } from '../../services/simsub.service.js';
 import { toServiceContext } from '../../services/context.js';
 import { assertEditorOrAdmin } from '../../services/errors.js';
@@ -316,6 +318,121 @@ const history = orgProcedure
   });
 
 // ---------------------------------------------------------------------------
+// Reviewer routes
+// ---------------------------------------------------------------------------
+
+const listReviewers = orgProcedure
+  .use(requireScopes('submissions:read'))
+  .route({
+    method: 'GET',
+    path: '/submissions/{id}/reviewers',
+    summary: 'List submission reviewers',
+    description:
+      'Returns reviewers assigned to a submission. Visible to the submitter and editors/admins.',
+    operationId: 'listSubmissionReviewers',
+    tags: ['Submissions'],
+  })
+  .input(idParamSchema)
+  .output(z.array(submissionReviewerSchema))
+  .handler(async ({ input, context }) => {
+    try {
+      return await submissionReviewerService.listBySubmissionWithAccess(
+        toServiceContext(context),
+        input.id,
+      );
+    } catch (e) {
+      mapServiceError(e);
+    }
+  });
+
+const assignReviewers = orgProcedure
+  .use(requireScopes('submissions:write'))
+  .route({
+    method: 'POST',
+    path: '/submissions/{id}/reviewers',
+    successStatus: 201,
+    summary: 'Assign reviewers',
+    description:
+      'Assign one or more org members as reviewers on a submission. Requires EDITOR or ADMIN role.',
+    operationId: 'assignSubmissionReviewers',
+    tags: ['Submissions'],
+  })
+  .input(
+    idParamSchema.merge(
+      z.object({
+        reviewerUserIds: z.array(z.string().uuid()).min(1).max(20),
+      }),
+    ),
+  )
+  .output(z.array(submissionReviewerSchema))
+  .handler(async ({ input, context }) => {
+    try {
+      return await submissionReviewerService.assignWithAudit(
+        toServiceContext(context),
+        input.id,
+        input.reviewerUserIds,
+      );
+    } catch (e) {
+      mapServiceError(e);
+    }
+  });
+
+const unassignReviewer = orgProcedure
+  .use(requireScopes('submissions:write'))
+  .route({
+    method: 'DELETE',
+    path: '/submissions/{id}/reviewers/{reviewerUserId}',
+    summary: 'Unassign a reviewer',
+    description:
+      'Remove a reviewer from a submission. Requires EDITOR or ADMIN role.',
+    operationId: 'unassignSubmissionReviewer',
+    tags: ['Submissions'],
+  })
+  .input(
+    z.object({
+      id: z.string().uuid(),
+      reviewerUserId: z.string().uuid(),
+    }),
+  )
+  .output(successResponseSchema)
+  .handler(async ({ input, context }) => {
+    try {
+      await submissionReviewerService.unassignWithAudit(
+        toServiceContext(context),
+        input.id,
+        input.reviewerUserId,
+      );
+      return { success: true as const };
+    } catch (e) {
+      mapServiceError(e);
+    }
+  });
+
+const markReviewerRead = orgProcedure
+  .use(requireScopes('submissions:read'))
+  .route({
+    method: 'POST',
+    path: '/submissions/{id}/reviewers/mark-read',
+    summary: 'Mark submission as read',
+    description:
+      'Mark the current user as having read the submission. Idempotent — no-op if not a reviewer or already read.',
+    operationId: 'markSubmissionReviewerRead',
+    tags: ['Submissions'],
+  })
+  .input(idParamSchema)
+  .output(successResponseSchema)
+  .handler(async ({ input, context }) => {
+    try {
+      return await submissionReviewerService.markReadWithAudit(
+        toServiceContext(context),
+        input.id,
+      );
+    } catch (e) {
+      mapServiceError(e);
+    }
+  });
+
+// ---------------------------------------------------------------------------
 // Assembled router
 // ---------------------------------------------------------------------------
 
@@ -331,4 +448,8 @@ export const submissionsRouter = {
   withdraw,
   updateStatus,
   history,
+  listReviewers,
+  assignReviewers,
+  unassignReviewer,
+  markReviewerRead,
 };
