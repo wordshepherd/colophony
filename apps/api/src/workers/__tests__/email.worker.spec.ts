@@ -47,19 +47,24 @@ vi.mock('../../services/email-template.service.js', () => ({
   },
 }));
 
-const mockRenderCustomTemplate = vi.fn(
-  () =>
-    ({
-      html: '<p>Custom</p>',
-      text: 'Custom',
-      subject: 'Custom Subject',
-    }) as { html: string; text: string; subject: string },
-);
+const mockRenderCustomTemplate = vi
+  .fn<
+    (
+      template: unknown,
+      data: unknown,
+      orgName: unknown,
+    ) => { html: string; text: string; subject: string }
+  >()
+  .mockReturnValue({
+    html: '<p>Custom</p>',
+    text: 'Custom',
+    subject: 'Custom Subject',
+  });
 vi.mock('../../templates/email/index.js', () => ({
   renderEmailTemplate: (name: unknown, data: unknown) =>
     mockRenderEmailTemplate(name, data),
-  renderCustomTemplate: (...args: unknown[]) =>
-    mockRenderCustomTemplate(...args),
+  renderCustomTemplate: (template: unknown, data: unknown, orgName: unknown) =>
+    mockRenderCustomTemplate(template, data, orgName),
 }));
 
 let workerCallback: (job: unknown) => Promise<unknown>;
