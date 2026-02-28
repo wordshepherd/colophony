@@ -312,6 +312,7 @@ export const submissionReviewerService = {
   unassign,
   listBySubmission,
   markRead,
+  validateOrgMembership,
   assignWithAudit,
   unassignWithAudit,
   listBySubmissionWithAccess,

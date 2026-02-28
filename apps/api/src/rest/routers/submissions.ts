@@ -14,6 +14,10 @@ import {
   submissionReviewerSchema,
   createDiscussionCommentSchema,
   submissionDiscussionSchema,
+  batchStatusChangeInputSchema,
+  batchStatusChangeResponseSchema,
+  batchAssignReviewersInputSchema,
+  batchAssignReviewersResponseSchema,
   submissionOverviewStatsSchema,
   submissionStatusBreakdownSchema,
   submissionFunnelSchema,
@@ -779,6 +783,58 @@ const analyticsAging = orgProcedure
   });
 
 // ---------------------------------------------------------------------------
+// Batch operation routes
+// ---------------------------------------------------------------------------
+
+const batchUpdateStatus = orgProcedure
+  .use(requireScopes('submissions:write'))
+  .route({
+    method: 'POST',
+    path: '/submissions/batch/status',
+    summary: 'Batch update submission status',
+    description:
+      'Transition multiple submissions to a new status in one request. Requires EDITOR or ADMIN role.',
+    operationId: 'batchUpdateSubmissionStatus',
+    tags: ['Submissions'],
+  })
+  .input(batchStatusChangeInputSchema)
+  .output(batchStatusChangeResponseSchema)
+  .handler(async ({ input, context }) => {
+    try {
+      return await submissionService.batchUpdateStatusAsEditor(
+        toServiceContext(context),
+        input,
+      );
+    } catch (e) {
+      mapServiceError(e);
+    }
+  });
+
+const batchAssignReviewers = orgProcedure
+  .use(requireScopes('submissions:write'))
+  .route({
+    method: 'POST',
+    path: '/submissions/batch/assign-reviewers',
+    summary: 'Batch assign reviewers',
+    description:
+      'Assign reviewers to multiple submissions in one request. Requires EDITOR or ADMIN role.',
+    operationId: 'batchAssignReviewers',
+    tags: ['Submissions'],
+  })
+  .input(batchAssignReviewersInputSchema)
+  .output(batchAssignReviewersResponseSchema)
+  .handler(async ({ input, context }) => {
+    try {
+      return await submissionService.batchAssignReviewersAsEditor(
+        toServiceContext(context),
+        input,
+      );
+    } catch (e) {
+      mapServiceError(e);
+    }
+  });
+
+// ---------------------------------------------------------------------------
 // Assembled router
 // ---------------------------------------------------------------------------
 
@@ -810,4 +866,6 @@ export const submissionsRouter = {
   analyticsTimeSeries,
   analyticsResponseTime,
   analyticsAging,
+  batchUpdateStatus,
+  batchAssignReviewers,
 };
