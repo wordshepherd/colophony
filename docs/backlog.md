@@ -315,7 +315,7 @@
 
 ### Editorial Workflow
 
-- [ ] [P1] Reviewer assignment per submission — assign one or more org members as readers on a submission; track who has read it; show assignment in submission detail — (persona gap analysis 2026-02-27)
+- [x] [P1] Reviewer assignment per submission — assign one or more org members as readers on a submission; track who has read it; show assignment in submission detail — (persona gap analysis 2026-02-27; done 2026-02-28)
 - [ ] [P1] Internal discussion threads on submissions — comment system on Hopper submissions (pre-acceptance), separate from the Slate pipeline comments (post-acceptance) — (persona gap analysis 2026-02-27)
 - [ ] [P2] Voting / scoring on submissions — readers cast votes (accept/reject/maybe + optional score); configurable per org; summary visible to editors making final decisions — (persona gap analysis 2026-02-27)
 - [ ] [P2] Blind / anonymous review mode — hide submitter identity from reviewers; admin toggle per submission period — (persona gap analysis 2026-02-27)
