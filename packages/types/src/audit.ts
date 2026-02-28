@@ -214,6 +214,9 @@ export const AuditActions = {
   CORRESPONDENCE_SENT: "CORRESPONDENCE_SENT",
   CORRESPONDENCE_AUTO_CAPTURED: "CORRESPONDENCE_AUTO_CAPTURED",
 
+  // Discussion lifecycle
+  DISCUSSION_COMMENT_ADDED: "DISCUSSION_COMMENT_ADDED",
+
   // Email template lifecycle
   EMAIL_TEMPLATE_CREATED: "EMAIL_TEMPLATE_CREATED",
   EMAIL_TEMPLATE_UPDATED: "EMAIL_TEMPLATE_UPDATED",
@@ -314,7 +317,8 @@ export interface SubmissionAuditParams extends BaseAuditParams {
     | typeof AuditActions.SUBMISSION_WITHDRAWN
     | typeof AuditActions.REVIEWER_ASSIGNED
     | typeof AuditActions.REVIEWER_UNASSIGNED
-    | typeof AuditActions.REVIEWER_READ;
+    | typeof AuditActions.REVIEWER_READ
+    | typeof AuditActions.DISCUSSION_COMMENT_ADDED;
 }
 
 export interface FileAuditParams extends BaseAuditParams {

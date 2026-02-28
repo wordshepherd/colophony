@@ -35,6 +35,7 @@ export {
   IssueStatusEnum,
 } from './issue.js';
 export { CmsConnectionType, CmsAdapterTypeEnum } from './cms-connection.js';
+export { SubmissionDiscussionType } from './discussion.js';
 export {
   SubmissionStatusChangePayload,
   CreateOrganizationPayload,

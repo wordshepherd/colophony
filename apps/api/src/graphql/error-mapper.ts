@@ -59,6 +59,10 @@ import {
   ReviewerNotAssignedError,
   ReviewerNotOrgMemberError,
 } from '../services/submission-reviewer.service.js';
+import {
+  DiscussionCommentNotFoundError,
+  DiscussionParentNotFoundError,
+} from '../services/submission-discussion.service.js';
 
 type GraphQLErrorCode = string;
 
@@ -116,6 +120,9 @@ const errorCodeMap: [new (...args: never[]) => Error, GraphQLErrorCode][] = [
   [ReviewerAlreadyAssignedError, 'CONFLICT'],
   [ReviewerNotAssignedError, 'NOT_FOUND'],
   [ReviewerNotOrgMemberError, 'BAD_REQUEST'],
+  // Discussion errors
+  [DiscussionCommentNotFoundError, 'NOT_FOUND'],
+  [DiscussionParentNotFoundError, 'NOT_FOUND'],
   // Precondition
   [FileNotCleanError, 'BAD_REQUEST'],
 ];
