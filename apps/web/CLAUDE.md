@@ -78,6 +78,8 @@ Key functions in `trpc.ts`:
 | **Next.js 16 async params**                      | Next.js 16 types require `params: Promise<>`. In server components use `await params`; in client components use `use(params)` (React 19 exports `use()`)                                                                                                                   |
 | **`getUserManager()` returns `null` during SSR** | `getUserManager()` checks `typeof window === "undefined"` — always `null` on server. Never call it in `useState` initializers or render-time expressions; use `useEffect` for OIDC checks. See `eslint-disable` comments in `callback/page.tsx`, `page.tsx`, `use-auth.ts` |
 | **TipTap ProseMirror contenteditable**           | ProseMirror ignores Playwright's `fill()` and `pressSequentially()`. Use `editor.click()` + `page.keyboard.type(text, { delay: 20 })` + 500ms wait for debounced `onChange`. Selector: `[contenteditable='true']`                                                          |
+| **Playwright `page.route` URL glob with ports**  | Glob patterns like `**://localhost:4010/**` or `${origin}/**` fail silently (no requests matched). Use URL predicate function `(url) => url.port === "4010"` instead.                                                                                                      |
+| **E2E auth failure throttle**                    | The API has a per-IP auth failure throttle (10 failures → block all requests from that IP). E2E route interceptor in `e2e/helpers/auth.ts` MUST cover ALL API requests (not just tRPC) to prevent fake OIDC tokens from poisoning the throttle across test runs.           |
 
 ## Version Pins
 
