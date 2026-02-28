@@ -269,10 +269,7 @@ export const submissionService = {
           import('@colophony/types').BlindReviewMode
         >();
         for (const row of rows) {
-          blindModes.set(
-            row.id,
-            row.blindReviewMode as import('@colophony/types').BlindReviewMode,
-          );
+          blindModes.set(row.id, row.blindReviewMode);
         }
         blindedItems = items.map((item) => {
           const mode = item.submissionPeriodId

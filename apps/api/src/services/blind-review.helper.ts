@@ -21,7 +21,7 @@ export async function resolveBlindMode(
     .where(eq(submissionPeriods.id, submissionPeriodId))
     .limit(1);
 
-  return (period?.blindReviewMode as BlindReviewMode) ?? 'none';
+  return period?.blindReviewMode ?? 'none';
 }
 
 /**

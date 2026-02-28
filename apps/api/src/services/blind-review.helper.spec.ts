@@ -31,6 +31,7 @@ describe('resolveBlindMode', () => {
   it('returns none when periodId is null', async () => {
     const tx = createMockTx();
     expect(await resolveBlindMode(tx, null)).toBe('none');
+    // eslint-disable-next-line @typescript-eslint/unbound-method
     expect(tx.select).not.toHaveBeenCalled();
   });
 
