@@ -23,6 +23,9 @@ function resetMocks() {
 
 jest.mock("@/lib/trpc", () => ({
   trpc: {
+    useUtils: () => ({
+      submissions: { list: { invalidate: jest.fn() } },
+    }),
     submissions: {
       list: {
         useQuery: () => ({
@@ -30,6 +33,19 @@ jest.mock("@/lib/trpc", () => ({
           isPending: mockIsPending,
           error: mockError,
         }),
+      },
+      batchUpdateStatus: {
+        useMutation: () => ({ mutate: jest.fn(), isPending: false }),
+      },
+      batchAssignReviewers: {
+        useMutation: () => ({ mutate: jest.fn(), isPending: false }),
+      },
+    },
+    organizations: {
+      members: {
+        list: {
+          useQuery: () => ({ data: undefined }),
+        },
       },
     },
   },

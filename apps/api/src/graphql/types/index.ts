@@ -52,6 +52,8 @@ export {
 } from './analytics.js';
 export {
   SubmissionStatusChangePayload,
+  BatchStatusChangePayload,
+  BatchAssignReviewersPayload,
   CreateOrganizationPayload,
   CreateApiKeyPayload,
   RevokeApiKeyPayload,

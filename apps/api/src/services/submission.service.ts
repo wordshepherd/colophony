@@ -20,6 +20,10 @@ import type {
   UpdateSubmissionInput,
   ListSubmissionsInput,
   SubmissionStatus,
+  BatchStatusChangeInput,
+  BatchStatusChangeResponse,
+  BatchAssignReviewersInput,
+  BatchAssignReviewersResponse,
 } from '@colophony/types';
 import {
   isValidStatusTransition,
@@ -46,6 +50,8 @@ import {
   InvalidFormDataError,
 } from './form.service.js';
 import { MigrationInvalidStateError } from './migration.service.js';
+import { submissionReviewerService } from './submission-reviewer.service.js';
+import { ReviewerAlreadyAssignedError } from './submission-reviewer.service.js';
 
 // ---------------------------------------------------------------------------
 // Error classes
@@ -932,5 +938,199 @@ export const submissionService = {
       submission.submitterId,
     );
     return submissionService.getHistory(svc.tx, submissionId);
+  },
+
+  // ---------------------------------------------------------------------------
+  // Batch operations (editor/admin only)
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Batch status change with partial success support.
+   * Pass 1: SELECT FOR UPDATE + validate transitions.
+   * Pass 2: apply updates + history + audit + outbox for valid submissions.
+   */
+  async batchUpdateStatusAsEditor(
+    svc: ServiceContext,
+    input: BatchStatusChangeInput,
+  ): Promise<BatchStatusChangeResponse> {
+    assertEditorOrAdmin(svc.actor.role);
+
+    const { submissionIds, status, comment } = input;
+
+    // R&R requires revision notes
+    if (status === 'REVISE_AND_RESUBMIT' && !comment?.trim()) {
+      throw new MissingRevisionNotesError();
+    }
+
+    // Pass 1: Lock and fetch all submissions via Drizzle (goes through RLS)
+    const rows = await svc.tx
+      .select({
+        id: submissions.id,
+        status: submissions.status,
+        submitterId: submissions.submitterId,
+      })
+      .from(submissions)
+      .where(inArray(submissions.id, submissionIds))
+      .for('update');
+
+    const foundMap = new Map(
+      rows.map((r) => [
+        r.id,
+        {
+          id: r.id,
+          status: r.status,
+          submitterId: r.submitterId,
+        },
+      ]),
+    );
+
+    const succeeded: BatchStatusChangeResponse['succeeded'] = [];
+    const failed: BatchStatusChangeResponse['failed'] = [];
+
+    // Partition: missing IDs and invalid transitions
+    for (const id of submissionIds) {
+      const row = foundMap.get(id);
+      if (!row) {
+        failed.push({ submissionId: id, error: 'Submission not found' });
+        continue;
+      }
+      if (!isEditorAllowedTransition(row.status, status)) {
+        failed.push({
+          submissionId: id,
+          error: `Invalid transition from "${row.status}" to "${status}"`,
+        });
+        continue;
+      }
+
+      // Pass 2: Apply update
+      await svc.tx
+        .update(submissions)
+        .set({ status, updatedAt: new Date() })
+        .where(eq(submissions.id, id));
+
+      await svc.tx.insert(submissionHistory).values({
+        submissionId: id,
+        fromStatus: row.status,
+        toStatus: status,
+        changedBy: svc.actor.userId,
+        comment: comment ?? null,
+      });
+
+      await svc.audit({
+        action: AuditActions.SUBMISSION_STATUS_CHANGED,
+        resource: AuditResources.SUBMISSION,
+        resourceId: id,
+        newValue: { status, comment },
+      });
+
+      // Enqueue outbox events for terminal/notification statuses
+      if (status === 'ACCEPTED') {
+        await enqueueOutboxEvent(svc.tx, 'hopper/submission.accepted', {
+          orgId: svc.actor.orgId,
+          submissionId: id,
+          submitterId: row.submitterId,
+          comment,
+        });
+      } else if (status === 'REJECTED') {
+        await enqueueOutboxEvent(svc.tx, 'hopper/submission.rejected', {
+          orgId: svc.actor.orgId,
+          submissionId: id,
+          submitterId: row.submitterId,
+          comment,
+        });
+      } else if (status === 'REVISE_AND_RESUBMIT') {
+        // comment! is safe: R&R without comment is rejected at the top of this method
+        await enqueueOutboxEvent(
+          svc.tx,
+          'hopper/submission.revise_and_resubmit',
+          {
+            orgId: svc.actor.orgId,
+            submissionId: id,
+            submitterId: row.submitterId,
+            comment: comment!,
+          },
+        );
+      }
+
+      succeeded.push({
+        submissionId: id,
+        previousStatus: row.status,
+        status,
+      });
+    }
+
+    return { succeeded, failed };
+  },
+
+  /**
+   * Batch assign reviewers with partial success support.
+   * Validates reviewer org membership first (fails fast), then assigns
+   * to each submission individually.
+   */
+  async batchAssignReviewersAsEditor(
+    svc: ServiceContext,
+    input: BatchAssignReviewersInput,
+  ): Promise<BatchAssignReviewersResponse> {
+    assertEditorOrAdmin(svc.actor.role);
+
+    const { submissionIds, reviewerUserIds } = input;
+
+    // Fail fast: validate all reviewers are org members
+    await submissionReviewerService.validateOrgMembership(
+      svc.tx,
+      svc.actor.orgId,
+      reviewerUserIds,
+    );
+
+    // Fetch existing submissions
+    const rows = await svc.tx
+      .select({ id: submissions.id })
+      .from(submissions)
+      .where(inArray(submissions.id, submissionIds));
+
+    const foundIds = new Set(rows.map((r) => r.id));
+
+    const succeeded: BatchAssignReviewersResponse['succeeded'] = [];
+    const failed: BatchAssignReviewersResponse['failed'] = [];
+
+    for (const id of submissionIds) {
+      if (!foundIds.has(id)) {
+        failed.push({ submissionId: id, error: 'Submission not found' });
+        continue;
+      }
+
+      // Individual inserts: intentional for per-reviewer error handling
+      // (e.g., skip already-assigned). Worst case: reviewerUserIds.length * submissionIds.length inserts.
+      let assignedCount = 0;
+      for (const reviewerUserId of reviewerUserIds) {
+        try {
+          await submissionReviewerService.assign(
+            svc.tx,
+            svc.actor.orgId,
+            id,
+            reviewerUserId,
+            svc.actor.userId,
+          );
+          assignedCount++;
+
+          await svc.audit({
+            resource: AuditResources.SUBMISSION,
+            action: AuditActions.REVIEWER_ASSIGNED,
+            resourceId: id,
+            newValue: { reviewerUserId },
+          });
+        } catch (err) {
+          // Skip already-assigned reviewers
+          if (err instanceof ReviewerAlreadyAssignedError) {
+            continue;
+          }
+          throw err;
+        }
+      }
+
+      succeeded.push({ submissionId: id, assignedCount });
+    }
+
+    return { succeeded, failed };
   },
 };

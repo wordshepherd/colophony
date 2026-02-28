@@ -486,3 +486,58 @@ export const markReviewerReadInputSchema = z.object({
   submissionId: z.string().uuid(),
 });
 export type MarkReviewerReadInput = z.infer<typeof markReviewerReadInputSchema>;
+
+// ---------------------------------------------------------------------------
+// Batch operation schemas
+// ---------------------------------------------------------------------------
+
+export const BATCH_MAX_SIZE = 50;
+
+export const batchStatusChangeInputSchema = z.object({
+  submissionIds: z.array(z.string().uuid()).min(1).max(BATCH_MAX_SIZE),
+  status: submissionStatusSchema,
+  comment: z.string().max(1000).optional(),
+});
+export type BatchStatusChangeInput = z.infer<
+  typeof batchStatusChangeInputSchema
+>;
+
+export const batchAssignReviewersInputSchema = z.object({
+  submissionIds: z.array(z.string().uuid()).min(1).max(BATCH_MAX_SIZE),
+  reviewerUserIds: z.array(z.string().uuid()).min(1).max(20),
+});
+export type BatchAssignReviewersInput = z.infer<
+  typeof batchAssignReviewersInputSchema
+>;
+
+export const batchResultItemSchema = z.object({
+  submissionId: z.string().uuid(),
+  error: z.string(),
+});
+
+export const batchStatusChangeResponseSchema = z.object({
+  succeeded: z.array(
+    z.object({
+      submissionId: z.string().uuid(),
+      previousStatus: submissionStatusSchema,
+      status: submissionStatusSchema,
+    }),
+  ),
+  failed: z.array(batchResultItemSchema),
+});
+export type BatchStatusChangeResponse = z.infer<
+  typeof batchStatusChangeResponseSchema
+>;
+
+export const batchAssignReviewersResponseSchema = z.object({
+  succeeded: z.array(
+    z.object({
+      submissionId: z.string().uuid(),
+      assignedCount: z.number().int(),
+    }),
+  ),
+  failed: z.array(batchResultItemSchema),
+});
+export type BatchAssignReviewersResponse = z.infer<
+  typeof batchAssignReviewersResponseSchema
+>;

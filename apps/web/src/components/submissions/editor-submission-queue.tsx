@@ -5,8 +5,11 @@ import Link from "next/link";
 import { format } from "date-fns";
 import { trpc } from "@/lib/trpc";
 import { StatusBadge } from "./status-badge";
+import { BatchActionBar } from "./batch-action-bar";
+import { useRowSelection } from "@/hooks/use-row-selection";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Table,
   TableBody,
@@ -43,6 +46,7 @@ export function EditorSubmissionQueue() {
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [page, setPage] = useState(1);
+  const selection = useRowSelection<{ id: string }>();
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -51,6 +55,14 @@ export function EditorSubmissionQueue() {
     }, 300);
     return () => clearTimeout(timer);
   }, [search]);
+
+  // Clear selection when page, filter, or search changes
+  useEffect(() => {
+    selection.clear();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, statusFilter, debouncedSearch]);
+
+  const utils = trpc.useUtils();
 
   const { data, isPending, error } = trpc.submissions.list.useQuery({
     status: statusFilter === "ALL" ? undefined : statusFilter,
@@ -127,6 +139,19 @@ export function EditorSubmissionQueue() {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-[40px]">
+                  <Checkbox
+                    checked={
+                      selection.isAllSelected(data.items)
+                        ? true
+                        : selection.isIndeterminate(data.items)
+                          ? "indeterminate"
+                          : false
+                    }
+                    onCheckedChange={() => selection.toggleAll(data.items)}
+                    aria-label="Select all"
+                  />
+                </TableHead>
                 <TableHead className="w-[100px]">Status</TableHead>
                 <TableHead>Title</TableHead>
                 <TableHead>Submitter</TableHead>
@@ -136,7 +161,19 @@ export function EditorSubmissionQueue() {
             </TableHeader>
             <TableBody>
               {data.items.map((item) => (
-                <TableRow key={item.id}>
+                <TableRow
+                  key={item.id}
+                  data-state={
+                    selection.isSelected(item.id) ? "selected" : undefined
+                  }
+                >
+                  <TableCell>
+                    <Checkbox
+                      checked={selection.isSelected(item.id)}
+                      onCheckedChange={() => selection.toggle(item.id)}
+                      aria-label={`Select ${item.title ?? "submission"}`}
+                    />
+                  </TableCell>
                   <TableCell>
                     <StatusBadge status={item.status as SubmissionStatus} />
                   </TableCell>
@@ -216,6 +253,17 @@ export function EditorSubmissionQueue() {
           </p>
         </div>
       )}
+
+      <BatchActionBar
+        selectedCount={selection.count}
+        selectedIds={[...selection.selectedIds]}
+        statusFilter={statusFilter}
+        onClear={selection.clear}
+        onSuccess={() => {
+          selection.clear();
+          utils.submissions.list.invalidate();
+        }}
+      />
     </div>
   );
 }

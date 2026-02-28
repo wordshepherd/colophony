@@ -34,6 +34,112 @@ export const SubmissionStatusChangePayload = builder
   });
 
 // ---------------------------------------------------------------------------
+// Batch operation payloads
+// ---------------------------------------------------------------------------
+
+export const BatchStatusChangeSuccessItem = builder
+  .objectRef<{
+    submissionId: string;
+    previousStatus: string;
+    status: string;
+  }>('BatchStatusChangeSuccessItem')
+  .implement({
+    description: 'A single successful status change in a batch operation.',
+    fields: (t) => ({
+      submissionId: t.exposeString('submissionId', {
+        description: 'Submission that was updated.',
+      }),
+      previousStatus: t.exposeString('previousStatus', {
+        description: 'Status before the change.',
+      }),
+      status: t.exposeString('status', {
+        description: 'New status after the change.',
+      }),
+    }),
+  });
+
+export const BatchFailureItem = builder
+  .objectRef<{
+    submissionId: string;
+    error: string;
+  }>('BatchFailureItem')
+  .implement({
+    description: 'A single failure in a batch operation.',
+    fields: (t) => ({
+      submissionId: t.exposeString('submissionId', {
+        description: 'Submission that failed.',
+      }),
+      error: t.exposeString('error', {
+        description: 'Error message explaining the failure.',
+      }),
+    }),
+  });
+
+export const BatchStatusChangePayload = builder
+  .objectRef<{
+    succeeded: Array<{
+      submissionId: string;
+      previousStatus: string;
+      status: string;
+    }>;
+    failed: Array<{ submissionId: string; error: string }>;
+  }>('BatchStatusChangePayload')
+  .implement({
+    description: 'Result of a batch status change operation.',
+    fields: (t) => ({
+      succeeded: t.field({
+        type: [BatchStatusChangeSuccessItem],
+        description: 'Submissions that were successfully updated.',
+        resolve: (r) => r.succeeded,
+      }),
+      failed: t.field({
+        type: [BatchFailureItem],
+        description: 'Submissions that failed to update.',
+        resolve: (r) => r.failed,
+      }),
+    }),
+  });
+
+export const BatchAssignReviewersSuccessItem = builder
+  .objectRef<{
+    submissionId: string;
+    assignedCount: number;
+  }>('BatchAssignReviewersSuccessItem')
+  .implement({
+    description:
+      'A single successful reviewer assignment in a batch operation.',
+    fields: (t) => ({
+      submissionId: t.exposeString('submissionId', {
+        description: 'Submission that was updated.',
+      }),
+      assignedCount: t.exposeInt('assignedCount', {
+        description: 'Number of reviewers assigned.',
+      }),
+    }),
+  });
+
+export const BatchAssignReviewersPayload = builder
+  .objectRef<{
+    succeeded: Array<{ submissionId: string; assignedCount: number }>;
+    failed: Array<{ submissionId: string; error: string }>;
+  }>('BatchAssignReviewersPayload')
+  .implement({
+    description: 'Result of a batch reviewer assignment operation.',
+    fields: (t) => ({
+      succeeded: t.field({
+        type: [BatchAssignReviewersSuccessItem],
+        description: 'Submissions that were successfully assigned.',
+        resolve: (r) => r.succeeded,
+      }),
+      failed: t.field({
+        type: [BatchFailureItem],
+        description: 'Submissions that failed to assign.',
+        resolve: (r) => r.failed,
+      }),
+    }),
+  });
+
+// ---------------------------------------------------------------------------
 // Organization mutation payloads
 // ---------------------------------------------------------------------------
 
