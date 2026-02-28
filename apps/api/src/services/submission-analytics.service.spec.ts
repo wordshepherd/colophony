@@ -14,13 +14,21 @@ vi.mock('@colophony/db', () => ({
   sql: vi.fn(),
 }));
 
-vi.mock('drizzle-orm', () => ({
-  eq: vi.fn(),
-  and: vi.fn(),
-  sql: { raw: (s: string) => s },
-  desc: vi.fn(),
-  count: vi.fn(),
-}));
+vi.mock('drizzle-orm', () => {
+  // sql is both a tagged template function AND has static methods
+  const sqlTag = (_strings: TemplateStringsArray, ..._values: unknown[]) =>
+    'sql-fragment';
+  sqlTag.raw = (s: string) => s;
+  sqlTag.join = (parts: unknown[], _sep: unknown) =>
+    parts.length > 0 ? 'joined-where' : '';
+  return {
+    eq: vi.fn(),
+    and: vi.fn(),
+    sql: sqlTag,
+    desc: vi.fn(),
+    count: vi.fn(),
+  };
+});
 
 import { submissionAnalyticsService } from './submission-analytics.service.js';
 import type { DrizzleDb } from '@colophony/db';

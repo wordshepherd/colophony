@@ -1,4 +1,4 @@
-import { sql } from 'drizzle-orm';
+import { sql, type SQL } from 'drizzle-orm';
 import type { DrizzleDb } from '@colophony/db';
 import type {
   AnalyticsFilter,
@@ -35,33 +35,30 @@ const FUNNEL_STAGE_ORDER = [
 ] as const;
 
 // ---------------------------------------------------------------------------
-// Helpers
+// Helpers — parameterized SQL fragments (defense-in-depth)
 // ---------------------------------------------------------------------------
 
-function buildFilterConditions(filter: AnalyticsFilter): string[] {
-  const conditions: string[] = [];
-  // Exclude DRAFTs from all analytics
-  conditions.push(`s.status != 'DRAFT'`);
+/**
+ * Build parameterized WHERE conditions from the analytics filter.
+ * Returns SQL fragments using Drizzle's tagged template for safe interpolation.
+ * The `alias` param controls the table alias (e.g., 's', 's2', 'sub').
+ */
+function buildFilterWhere(filter: AnalyticsFilter, alias = 's'): SQL {
+  const parts: SQL[] = [sql.raw(`${alias}.status != 'DRAFT'`)];
+
   if (filter.startDate) {
-    conditions.push(
-      `s.submitted_at >= '${filter.startDate.toISOString()}'::timestamptz`,
-    );
+    parts.push(sql`${sql.raw(`${alias}.submitted_at`)} >= ${filter.startDate}`);
   }
   if (filter.endDate) {
-    conditions.push(
-      `s.submitted_at <= '${filter.endDate.toISOString()}'::timestamptz`,
-    );
+    parts.push(sql`${sql.raw(`${alias}.submitted_at`)} <= ${filter.endDate}`);
   }
   if (filter.submissionPeriodId) {
-    conditions.push(
-      `s.submission_period_id = '${filter.submissionPeriodId}'::uuid`,
+    parts.push(
+      sql`${sql.raw(`${alias}.submission_period_id`)} = ${filter.submissionPeriodId}::uuid`,
     );
   }
-  return conditions;
-}
 
-function whereClause(conditions: string[]): string {
-  return conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+  return sql.join(parts, sql.raw(' AND '));
 }
 
 // ---------------------------------------------------------------------------
@@ -73,15 +70,14 @@ export const submissionAnalyticsService = {
     tx: DrizzleDb,
     filter: AnalyticsFilter,
   ): Promise<SubmissionOverviewStats> {
-    const conditions = buildFilterConditions(filter);
-    const where = whereClause(conditions);
+    const where = buildFilterWhere(filter);
+    const subWhere = buildFilterWhere(filter, 's2');
 
     const now = new Date();
     const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
     const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
 
-    const result = await tx.execute(
-      sql.raw(`
+    const result = await tx.execute(sql`
       SELECT
         COUNT(*)::int AS "totalSubmissions",
         COUNT(*) FILTER (WHERE s.status IN ('SUBMITTED', 'UNDER_REVIEW', 'HOLD', 'REVISE_AND_RESUBMIT'))::int AS "pendingCount",
@@ -103,14 +99,13 @@ export const submissionAnalyticsService = {
             WHERE sh.submission_id = s2.id
               AND sh.to_status IN ('ACCEPTED', 'REJECTED')
           ) h ON h.changed_at IS NOT NULL
-          ${where.replace(/\bs\./g, 's2.')}
+          WHERE ${subWhere}
         ) AS "avgResponseTimeDays",
-        COUNT(*) FILTER (WHERE s.submitted_at >= '${thisMonthStart.toISOString()}'::timestamptz)::int AS "submissionsThisMonth",
-        COUNT(*) FILTER (WHERE s.submitted_at >= '${lastMonthStart.toISOString()}'::timestamptz AND s.submitted_at < '${thisMonthStart.toISOString()}'::timestamptz)::int AS "submissionsLastMonth"
+        COUNT(*) FILTER (WHERE s.submitted_at >= ${thisMonthStart})::int AS "submissionsThisMonth",
+        COUNT(*) FILTER (WHERE s.submitted_at >= ${lastMonthStart} AND s.submitted_at < ${thisMonthStart})::int AS "submissionsLastMonth"
       FROM submissions s
-      ${where}
-    `),
-    );
+      WHERE ${where}
+    `);
 
     const row = result.rows[0];
     return {
@@ -127,18 +122,15 @@ export const submissionAnalyticsService = {
     tx: DrizzleDb,
     filter: AnalyticsFilter,
   ): Promise<SubmissionStatusBreakdown> {
-    const conditions = buildFilterConditions(filter);
-    const where = whereClause(conditions);
+    const where = buildFilterWhere(filter);
 
-    const result = await tx.execute(
-      sql.raw(`
+    const result = await tx.execute(sql`
       SELECT s.status, COUNT(*)::int AS count
       FROM submissions s
-      ${where}
+      WHERE ${where}
       GROUP BY s.status
       ORDER BY count DESC
-    `),
-    );
+    `);
 
     return {
       breakdown: result.rows.map((row) => ({
@@ -152,26 +144,15 @@ export const submissionAnalyticsService = {
     tx: DrizzleDb,
     filter: AnalyticsFilter,
   ): Promise<SubmissionFunnel> {
-    const conditions = buildFilterConditions(filter);
-    // For funnel, we count distinct submissions that have ever entered each stage
-    // via submission_history
-    const historyConditions = conditions.map((c) =>
-      c.replace(/\bs\./g, 'sub.'),
-    );
-    const historyWhere =
-      historyConditions.length > 0
-        ? `WHERE ${historyConditions.join(' AND ')}`
-        : '';
+    const where = buildFilterWhere(filter, 'sub');
 
-    const result = await tx.execute(
-      sql.raw(`
+    const result = await tx.execute(sql`
       SELECT sh.to_status AS stage, COUNT(DISTINCT sh.submission_id)::int AS count
       FROM submission_history sh
       JOIN submissions sub ON sub.id = sh.submission_id
-      ${historyWhere}
+      WHERE ${where}
       GROUP BY sh.to_status
-    `),
-    );
+    `);
 
     const countMap = new Map<string, number>();
     for (const row of result.rows) {
@@ -190,21 +171,25 @@ export const submissionAnalyticsService = {
     tx: DrizzleDb,
     filter: TimeSeriesFilter,
   ): Promise<SubmissionTimeSeries> {
-    const conditions = buildFilterConditions(filter);
-    const where = whereClause(conditions);
+    const where = buildFilterWhere(filter);
+    // Granularity is validated by Zod enum — safe to use in sql.raw
+    const truncUnit =
+      filter.granularity === 'daily'
+        ? 'day'
+        : filter.granularity === 'weekly'
+          ? 'week'
+          : 'month';
 
-    const result = await tx.execute(
-      sql.raw(`
+    const result = await tx.execute(sql`
       SELECT
-        date_trunc('${filter.granularity === 'daily' ? 'day' : filter.granularity === 'weekly' ? 'week' : 'month'}', s.submitted_at)::date::text AS date,
+        date_trunc(${truncUnit}, s.submitted_at)::date::text AS date,
         COUNT(*)::int AS count
       FROM submissions s
-      ${where}
+      WHERE ${where}
         AND s.submitted_at IS NOT NULL
       GROUP BY 1
       ORDER BY 1 ASC
-    `),
-    );
+    `);
 
     return {
       granularity: filter.granularity,
@@ -219,11 +204,9 @@ export const submissionAnalyticsService = {
     tx: DrizzleDb,
     filter: AnalyticsFilter,
   ): Promise<ResponseTimeDistribution> {
-    const conditions = buildFilterConditions(filter);
-    const where = whereClause(conditions);
+    const where = buildFilterWhere(filter);
 
-    const result = await tx.execute(
-      sql.raw(`
+    const result = await tx.execute(sql`
       WITH response_times AS (
         SELECT
           EXTRACT(EPOCH FROM (h.changed_at - s.submitted_at)) / 86400 AS response_days
@@ -234,7 +217,7 @@ export const submissionAnalyticsService = {
           WHERE sh.submission_id = s.id
             AND sh.to_status IN ('ACCEPTED', 'REJECTED')
         ) h ON h.changed_at IS NOT NULL
-        ${where}
+        WHERE ${where}
       )
       SELECT
         COUNT(*) FILTER (WHERE response_days < 7)::int AS "bucket_0_7",
@@ -244,8 +227,7 @@ export const submissionAnalyticsService = {
         COUNT(*) FILTER (WHERE response_days >= 60)::int AS "bucket_60_plus",
         PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY response_days)::float AS "medianDays"
       FROM response_times
-    `),
-    );
+    `);
 
     const row = result.rows[0];
 
@@ -290,16 +272,9 @@ export const submissionAnalyticsService = {
     tx: DrizzleDb,
     filter: AgingFilter,
   ): Promise<AgingSubmissions> {
-    const conditions = buildFilterConditions(filter);
-    // Only non-terminal submissions
-    conditions.push(
-      `s.status IN (${NON_TERMINAL_STATUSES.map((s) => `'${s}'`).join(', ')})`,
-    );
-    conditions.push(`s.submitted_at IS NOT NULL`);
-    const where = whereClause(conditions);
+    const baseWhere = buildFilterWhere(filter);
 
-    const result = await tx.execute(
-      sql.raw(`
+    const result = await tx.execute(sql`
       SELECT
         s.id,
         s.title,
@@ -307,10 +282,11 @@ export const submissionAnalyticsService = {
         s.submitted_at AS "submittedAt",
         EXTRACT(EPOCH FROM (NOW() - s.submitted_at)) / 86400 AS "daysPending"
       FROM submissions s
-      ${where}
+      WHERE ${baseWhere}
+        AND s.status IN ('SUBMITTED', 'UNDER_REVIEW', 'HOLD', 'REVISE_AND_RESUBMIT')
+        AND s.submitted_at IS NOT NULL
       ORDER BY s.submitted_at ASC
-    `),
-    );
+    `);
 
     const threshold = filter.thresholdDays;
 
