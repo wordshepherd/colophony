@@ -7,7 +7,11 @@ import type { Env } from '../config/env.js';
 import type { EmailJobData } from '../queues/email.queue.js';
 import { emailService } from '../services/email.service.js';
 import { auditService } from '../services/audit.service.js';
-import { renderEmailTemplate } from '../templates/email/index.js';
+import { emailTemplateService } from '../services/email-template.service.js';
+import {
+  renderEmailTemplate,
+  renderCustomTemplate,
+} from '../templates/email/index.js';
 import type { TemplateName } from '../templates/email/types.js';
 import { createInstrumentedWorker } from '../config/instrumented-worker.js';
 
@@ -36,12 +40,34 @@ export function startEmailWorker(
       });
 
       // Phase 2: Render template (non-retryable — fail immediately on error)
+      // Check for a custom org template override first; fall back to built-in.
       let rendered: { html: string; text: string; subject: string };
       try {
-        rendered = renderEmailTemplate(
-          templateName as TemplateName,
-          templateData,
-        );
+        let customTemplate: {
+          subjectTemplate: string;
+          bodyHtml: string;
+        } | null = null;
+        await withRls({ orgId }, async (tx: DrizzleDb) => {
+          customTemplate = await emailTemplateService.getActiveTemplate(
+            tx,
+            templateName,
+          );
+        });
+
+        if (customTemplate) {
+          const orgNameVal =
+            (templateData as Record<string, unknown>).orgName ?? '';
+          rendered = renderCustomTemplate(
+            customTemplate,
+            templateData,
+            String(orgNameVal),
+          );
+        } else {
+          rendered = renderEmailTemplate(
+            templateName as TemplateName,
+            templateData,
+          );
+        }
       } catch (renderErr) {
         await withRls({ orgId }, async (tx: DrizzleDb) => {
           await emailService.markFailed(

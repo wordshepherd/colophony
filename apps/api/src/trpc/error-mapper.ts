@@ -64,6 +64,10 @@ import {
   MigrationAlreadyActiveError,
   MigrationUserNotFoundError,
 } from '../services/migration.service.js';
+import {
+  EmailTemplateNotFoundError,
+  InvalidMergeFieldError,
+} from '../services/email-template.service.js';
 
 type TRPCErrorCode = ConstructorParameters<typeof TRPCError>[0]['code'];
 
@@ -125,6 +129,9 @@ const errorCodeMap: [new (...args: never[]) => Error, TRPCErrorCode][] = [
   [MigrationCapabilityError, 'BAD_REQUEST'],
   [MigrationAlreadyActiveError, 'CONFLICT'],
   [MigrationUserNotFoundError, 'NOT_FOUND'],
+  // Email template errors
+  [EmailTemplateNotFoundError, 'NOT_FOUND'],
+  [InvalidMergeFieldError, 'BAD_REQUEST'],
   // Precondition
   [FileNotCleanError, 'PRECONDITION_FAILED'],
 ];
