@@ -97,17 +97,27 @@ export async function setupPageAuth(
     { storageKey: OIDC_STORAGE_KEY, orgId, json: oidcUserJson },
   );
 
-  // Intercept tRPC requests: remove fake Bearer token, add real API key
-  await page.route("**/trpc/**", async (route) => {
-    const request = route.request();
-    const headers = { ...request.headers() };
+  // Intercept ALL API requests (tRPC + SSE + REST): remove fake Bearer
+  // token and add real API key. Must cover all API endpoints, not just
+  // /trpc/**, because non-tRPC requests (e.g. /api/notifications/stream)
+  // carry the fake OIDC Bearer token which triggers AUTH_TOKEN_INVALID — after
+  // 10 failures the per-IP auth throttle blocks ALL requests from localhost.
+  //
+  // Use a predicate function since Playwright's URL glob matching is unreliable
+  // with full URLs containing ports.
+  await page.route(
+    (url) => url.port === "4010",
+    async (route) => {
+      const request = route.request();
+      const headers = { ...request.headers() };
 
-    // Remove the fake OIDC Bearer token
-    delete headers["authorization"];
+      // Remove the fake OIDC Bearer token
+      delete headers["authorization"];
 
-    // Add the real API key
-    headers["x-api-key"] = apiKey;
+      // Add the real API key
+      headers["x-api-key"] = apiKey;
 
-    await route.continue({ headers });
-  });
+      await route.continue({ headers });
+    },
+  );
 }

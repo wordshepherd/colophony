@@ -7,6 +7,7 @@ import {
 
 test.describe("Submission Detail & Edit", () => {
   let draftId: string;
+  let submitFlowId: string;
   let submitTestId: string;
   let deleteTestId: string;
 
@@ -30,12 +31,24 @@ test.describe("Submission Detail & Edit", () => {
     });
     draftId = draft.id;
 
-    const submitTest = await createSubmission({
+    // DRAFT submission for the "Submit for Review" transition test
+    const submitFlow = await createSubmission({
       orgId: org.id,
       submitterId: user.id,
       submissionPeriodId: period?.id,
       title: "E2E Detail: Submit Flow",
       content: "Content for the submit flow test.",
+    });
+    submitFlowId = submitFlow.id;
+
+    // Pre-SUBMITTED submission for Withdraw tests (avoids inter-test dependency)
+    const submitTest = await createSubmission({
+      orgId: org.id,
+      submitterId: user.id,
+      submissionPeriodId: period?.id,
+      title: "E2E Detail: Withdraw Test",
+      content: "Content for the withdraw test.",
+      status: "SUBMITTED",
     });
     submitTestId = submitTest.id;
 
@@ -51,6 +64,7 @@ test.describe("Submission Detail & Edit", () => {
   test.afterAll(async () => {
     // Clean up — ignore errors if already deleted by tests
     await deleteSubmission(draftId).catch(() => {});
+    await deleteSubmission(submitFlowId).catch(() => {});
     await deleteSubmission(submitTestId).catch(() => {});
     await deleteSubmission(deleteTestId).catch(() => {});
   });
@@ -78,7 +92,10 @@ test.describe("Submission Detail & Edit", () => {
       authedPage.getByRole("heading", { name: "E2E Detail: View Test" }),
     ).toBeVisible({ timeout: 10_000 });
 
-    await expect(authedPage.getByRole("link", { name: /Edit/ })).toBeVisible();
+    // Edit/Delete depend on user profile loading (isOwner check)
+    await expect(authedPage.getByRole("link", { name: /Edit/ })).toBeVisible({
+      timeout: 10_000,
+    });
     await expect(
       authedPage.getByRole("button", { name: /Delete/ }),
     ).toBeVisible();
@@ -135,7 +152,7 @@ test.describe("Submission Detail & Edit", () => {
   test("Submit for Review transitions DRAFT to SUBMITTED", async ({
     authedPage,
   }) => {
-    await authedPage.goto(`/submissions/${submitTestId}/edit`);
+    await authedPage.goto(`/submissions/${submitFlowId}/edit`);
 
     // Wait for form to load
     await expect(authedPage.getByLabel("Title *")).toHaveValue(
@@ -148,7 +165,7 @@ test.describe("Submission Detail & Edit", () => {
 
     // Should redirect to detail page
     await expect(authedPage).toHaveURL(
-      new RegExp(`/submissions/${submitTestId}$`),
+      new RegExp(`/submissions/${submitFlowId}$`),
       { timeout: 10_000 },
     );
 
@@ -166,17 +183,18 @@ test.describe("Submission Detail & Edit", () => {
   test("SUBMITTED submission shows Withdraw button, no Edit button", async ({
     authedPage,
   }) => {
-    // submitTestId was submitted in the previous test
+    // submitTestId is created as SUBMITTED in beforeAll (no inter-test dependency)
     await authedPage.goto(`/submissions/${submitTestId}`);
 
     await expect(
-      authedPage.getByRole("heading", { name: "E2E Detail: Submit Flow" }),
+      authedPage.getByRole("heading", { name: "E2E Detail: Withdraw Test" }),
     ).toBeVisible({ timeout: 10_000 });
 
-    // Withdraw should be visible, Edit should not
+    // Withdraw should be visible (depends on user profile loading via
+    // users.me query — may take longer than default 5s in CI)
     await expect(
       authedPage.getByRole("button", { name: "Withdraw" }),
-    ).toBeVisible();
+    ).toBeVisible({ timeout: 10_000 });
     await expect(
       authedPage.getByRole("link", { name: /Edit/ }),
     ).not.toBeVisible();
@@ -188,11 +206,13 @@ test.describe("Submission Detail & Edit", () => {
     await authedPage.goto(`/submissions/${submitTestId}`);
 
     await expect(
-      authedPage.getByRole("heading", { name: "E2E Detail: Submit Flow" }),
+      authedPage.getByRole("heading", { name: "E2E Detail: Withdraw Test" }),
     ).toBeVisible({ timeout: 10_000 });
 
-    // Wait for network to settle (listReviewers, getHistory etc.)
-    await authedPage.waitForLoadState("networkidle");
+    // Wait for user profile + network to settle (users.me, listReviewers, getHistory etc.)
+    await expect(
+      authedPage.getByRole("button", { name: "Withdraw" }),
+    ).toBeVisible({ timeout: 10_000 });
 
     // Click Withdraw
     await authedPage.getByRole("button", { name: "Withdraw" }).click();
@@ -224,7 +244,10 @@ test.describe("Submission Detail & Edit", () => {
       authedPage.getByRole("heading", { name: "E2E Detail: Delete Test" }),
     ).toBeVisible({ timeout: 10_000 });
 
-    // Click Delete
+    // Wait for Delete button (depends on user profile loading for isOwner check)
+    await expect(
+      authedPage.getByRole("button", { name: /Delete/ }),
+    ).toBeVisible({ timeout: 10_000 });
     await authedPage.getByRole("button", { name: /Delete/ }).click();
 
     // Confirmation dialog should appear
