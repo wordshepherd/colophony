@@ -978,7 +978,7 @@ export const submissionService = {
         r.id,
         {
           id: r.id,
-          status: r.status as SubmissionStatus,
+          status: r.status,
           submitterId: r.submitterId,
         },
       ]),
