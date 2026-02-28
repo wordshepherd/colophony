@@ -68,10 +68,9 @@ export function EmailTemplateEditor({
   });
 
   // Load existing template if customized
-  const { data: existing, isPending: isLoadingTemplate } =
-    trpc.emailTemplates.getByName.useQuery({
-      templateName: templateName as EmailTemplateName,
-    });
+  const { data: existing } = trpc.emailTemplates.getByName.useQuery({
+    templateName: templateName as EmailTemplateName,
+  });
 
   // Sync subject from server data once loaded
   const [hasSynced, setHasSynced] = useState(false);

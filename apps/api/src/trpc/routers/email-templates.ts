@@ -112,8 +112,7 @@ export const emailTemplatesRouter = createRouter({
     .input(previewEmailTemplateSchema)
     .output(emailTemplatePreviewSchema)
     .mutation(async ({ input }) => {
-      const sampleData =
-        TEMPLATE_SAMPLE_DATA[input.templateName as EmailTemplateName];
+      const sampleData = TEMPLATE_SAMPLE_DATA[input.templateName];
       const rendered = renderCustomTemplate(
         {
           subjectTemplate: input.subjectTemplate,

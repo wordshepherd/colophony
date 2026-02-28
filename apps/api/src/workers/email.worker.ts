@@ -55,8 +55,7 @@ export function startEmailWorker(
         });
 
         if (customTemplate) {
-          const orgNameVal =
-            (templateData as Record<string, unknown>).orgName ?? '';
+          const orgNameVal = templateData.orgName ?? '';
           rendered = renderCustomTemplate(
             customTemplate,
             templateData,
