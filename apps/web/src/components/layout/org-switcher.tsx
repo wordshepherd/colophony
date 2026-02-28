@@ -32,14 +32,17 @@ export function OrgSwitcher() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" className="w-[200px] justify-between">
+        <Button
+          variant="outline"
+          className="w-auto sm:w-[200px] justify-between"
+        >
           <div className="flex items-center gap-2 truncate">
             <Building2 className="h-4 w-4 flex-shrink-0" />
-            <span className="truncate">
+            <span className="hidden sm:inline truncate">
               {currentOrg?.name ?? "Select organization"}
             </span>
           </div>
-          <ChevronsUpDown className="h-4 w-4 opacity-50 flex-shrink-0" />
+          <ChevronsUpDown className="hidden sm:block h-4 w-4 opacity-50 flex-shrink-0" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-[200px]" align="end">
