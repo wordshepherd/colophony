@@ -191,6 +191,9 @@ test.describe("Submission Detail & Edit", () => {
       authedPage.getByRole("heading", { name: "E2E Detail: Submit Flow" }),
     ).toBeVisible({ timeout: 10_000 });
 
+    // Wait for network to settle (listReviewers, getHistory etc.)
+    await authedPage.waitForLoadState("networkidle");
+
     // Click Withdraw
     await authedPage.getByRole("button", { name: "Withdraw" }).click();
 
