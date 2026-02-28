@@ -12,6 +12,8 @@ import {
   UnscannedFilesError,
   InfectedFilesError,
   FormDefinitionMismatchError,
+  MissingRevisionNotesError,
+  NotReviseAndResubmitError,
 } from '../services/submission.service.js';
 import { LastAdminError } from '../services/organization.service.js';
 import {
@@ -88,6 +90,8 @@ const errorCodeMap: [new (...args: never[]) => Error, TRPCErrorCode][] = [
   [UnscannedFilesError, 'BAD_REQUEST'],
   [InfectedFilesError, 'BAD_REQUEST'],
   [FormDefinitionMismatchError, 'BAD_REQUEST'],
+  [MissingRevisionNotesError, 'BAD_REQUEST'],
+  [NotReviseAndResubmitError, 'BAD_REQUEST'],
   [LastAdminError, 'BAD_REQUEST'],
   // Form errors
   [FormNotFoundError, 'NOT_FOUND'],

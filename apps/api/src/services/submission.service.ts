@@ -92,6 +92,22 @@ export class InfectedFilesError extends Error {
   }
 }
 
+export class MissingRevisionNotesError extends Error {
+  constructor() {
+    super('Revision notes are required when requesting revisions');
+    this.name = 'MissingRevisionNotesError';
+  }
+}
+
+export class NotReviseAndResubmitError extends Error {
+  constructor() {
+    super(
+      'Submission must be in REVISE_AND_RESUBMIT status to resubmit a new version',
+    );
+    this.name = 'NotReviseAndResubmitError';
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Migration guard
 // ---------------------------------------------------------------------------
@@ -701,6 +717,11 @@ export const submissionService = {
   ) {
     assertEditorOrAdmin(svc.actor.role);
 
+    // R&R requires revision notes
+    if (status === 'REVISE_AND_RESUBMIT' && !comment?.trim()) {
+      throw new MissingRevisionNotesError();
+    }
+
     // Fetch submitterId before the update for notification routing
     const existing = await submissionService.getById(svc.tx, id);
     if (!existing) throw new SubmissionNotFoundError(id);
@@ -735,7 +756,106 @@ export const submissionService = {
         submitterId: existing.submitterId,
         comment,
       });
+    } else if (status === 'REVISE_AND_RESUBMIT') {
+      await enqueueOutboxEvent(
+        svc.tx,
+        'hopper/submission.revise_and_resubmit',
+        {
+          orgId: svc.actor.orgId,
+          submissionId: id,
+          submitterId: existing.submitterId,
+          comment: comment!,
+        },
+      );
     }
+
+    return result;
+  },
+
+  /**
+   * Resubmit with a new manuscript version from REVISE_AND_RESUBMIT — owner only.
+   */
+  async resubmitAsOwner(
+    svc: ServiceContext,
+    id: string,
+    manuscriptVersionId: string,
+  ) {
+    const existing = await submissionService.getById(svc.tx, id);
+    if (!existing) throw new SubmissionNotFoundError(id);
+    if (existing.submitterId !== svc.actor.userId) {
+      throw new ForbiddenError(
+        'Only the submitter can resubmit this submission',
+      );
+    }
+    if (existing.status !== 'REVISE_AND_RESUBMIT') {
+      throw new NotReviseAndResubmitError();
+    }
+
+    // Verify ownership of new manuscript version
+    const [version] = await svc.tx
+      .select({
+        id: manuscriptVersions.id,
+        ownerId: manuscripts.ownerId,
+      })
+      .from(manuscriptVersions)
+      .innerJoin(
+        manuscripts,
+        eq(manuscriptVersions.manuscriptId, manuscripts.id),
+      )
+      .where(eq(manuscriptVersions.id, manuscriptVersionId))
+      .limit(1);
+
+    if (!version) {
+      throw new SubmissionNotFoundError(manuscriptVersionId);
+    }
+    if (version.ownerId !== svc.actor.userId) {
+      throw new ForbiddenError(
+        'Manuscript version does not belong to the submitter',
+      );
+    }
+
+    // Validate scan status on new version's files
+    const versionFiles = await svc.tx
+      .select({ scanStatus: files.scanStatus })
+      .from(files)
+      .where(eq(files.manuscriptVersionId, manuscriptVersionId));
+
+    const hasUnscanned = versionFiles.some(
+      (f) => f.scanStatus === 'PENDING' || f.scanStatus === 'SCANNING',
+    );
+    if (hasUnscanned) throw new UnscannedFilesError();
+
+    const hasInfected = versionFiles.some((f) => f.scanStatus === 'INFECTED');
+    if (hasInfected) throw new InfectedFilesError();
+
+    // Update manuscript version on submission
+    await svc.tx
+      .update(submissions)
+      .set({ manuscriptVersionId, updatedAt: new Date() })
+      .where(eq(submissions.id, id));
+
+    // Transition to SUBMITTED
+    const result = await submissionService.updateStatus(
+      svc.tx,
+      id,
+      'SUBMITTED',
+      svc.actor.userId,
+      undefined,
+      'submitter',
+    );
+
+    await svc.audit({
+      action: AuditActions.SUBMISSION_SUBMITTED,
+      resource: AuditResources.SUBMISSION,
+      resourceId: id,
+      newValue: { manuscriptVersionId, resubmit: true },
+    });
+
+    await enqueueOutboxEvent(svc.tx, 'hopper/submission.submitted', {
+      orgId: svc.actor.orgId,
+      submissionId: id,
+      submitterId: svc.actor.userId,
+    });
 
     return result;
   },

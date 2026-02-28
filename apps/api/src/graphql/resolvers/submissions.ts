@@ -378,6 +378,36 @@ builder.mutationFields((t) => ({
   }),
 
   /**
+   * Resubmit with a new manuscript version from REVISE_AND_RESUBMIT (owner only).
+   */
+  resubmitSubmission: t.field({
+    type: SubmissionStatusChangePayload,
+    description:
+      'Resubmit a submission in REVISE_AND_RESUBMIT status with a new manuscript version. Only the submitter can resubmit.',
+    args: {
+      id: t.arg.string({ required: true, description: 'Submission ID.' }),
+      manuscriptVersionId: t.arg.string({
+        required: true,
+        description: 'New manuscript version ID.',
+      }),
+    },
+    resolve: async (_root, args, ctx) => {
+      const orgCtx = requireOrgContext(ctx);
+      await requireScopes(ctx, 'submissions:write');
+      const { id } = idParamSchema.parse({ id: args.id });
+      try {
+        return await submissionService.resubmitAsOwner(
+          toServiceContext(orgCtx),
+          id,
+          args.manuscriptVersionId,
+        );
+      } catch (e) {
+        mapServiceError(e);
+      }
+    },
+  }),
+
+  /**
    * Update submission status (editor/admin transition with comment).
    */
   updateSubmissionStatus: t.field({

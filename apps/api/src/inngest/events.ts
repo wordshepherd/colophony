@@ -130,11 +130,22 @@ export interface HopperSubmissionWithdrawnEvent {
   };
 }
 
+export interface HopperSubmissionReviseAndResubmitEvent {
+  name: 'hopper/submission.revise_and_resubmit';
+  data: {
+    orgId: string;
+    submissionId: string;
+    submitterId: string;
+    comment: string;
+  };
+}
+
 export type HopperEvent =
   | HopperSubmissionSubmittedEvent
   | HopperSubmissionAcceptedEvent
   | HopperSubmissionRejectedEvent
-  | HopperSubmissionWithdrawnEvent;
+  | HopperSubmissionWithdrawnEvent
+  | HopperSubmissionReviseAndResubmitEvent;
 
 // ---------------------------------------------------------------------------
 // Union type for all Slate events

@@ -11,7 +11,8 @@ export type HopperStatus =
   | "HOLD"
   | "ACCEPTED"
   | "REJECTED"
-  | "WITHDRAWN";
+  | "WITHDRAWN"
+  | "REVISE_AND_RESUBMIT";
 
 // ---------------------------------------------------------------------------
 // Hopper → CSR mapping
@@ -25,6 +26,7 @@ const HOPPER_TO_CSR: Record<HopperStatus, CSRStatus> = {
   ACCEPTED: "accepted",
   REJECTED: "rejected",
   WITHDRAWN: "withdrawn",
+  REVISE_AND_RESUBMIT: "revise",
 };
 
 /**
@@ -47,12 +49,13 @@ const CSR_TO_HOPPER: Partial<Record<CSRStatus, HopperStatus>> = {
   accepted: "ACCEPTED",
   rejected: "REJECTED",
   withdrawn: "WITHDRAWN",
+  revise: "REVISE_AND_RESUBMIT",
 };
 
 /**
  * Reverse-map a CSR status back to a Hopper status.
  * Returns `null` for CSR statuses with no Hopper equivalent
- * (`no_response`, `revise`, `unknown`).
+ * (`no_response`, `unknown`).
  */
 export function csrToHopperStatus(csr: CSRStatus): HopperStatus | null {
   return CSR_TO_HOPPER[csr] ?? null;

@@ -14,6 +14,10 @@ export const SubmissionStatusEnum = builder.enumType('SubmissionStatus', {
     ACCEPTED: { description: 'Submission has been accepted for publication.' },
     REJECTED: { description: 'Submission has been declined.' },
     HOLD: { description: 'Temporarily set aside for later consideration.' },
+    REVISE_AND_RESUBMIT: {
+      description:
+        'Editor has requested revisions — author can resubmit a new version.',
+    },
     WITHDRAWN: { description: 'Author has withdrawn the submission.' },
   } as const,
 });

@@ -50,6 +50,12 @@ vi.mock('../../services/submission.service.js', () => ({
   FormDefinitionMismatchError: class FormDefinitionMismatchError extends Error {
     name = 'FormDefinitionMismatchError';
   },
+  MissingRevisionNotesError: class MissingRevisionNotesError extends Error {
+    name = 'MissingRevisionNotesError';
+  },
+  NotReviseAndResubmitError: class NotReviseAndResubmitError extends Error {
+    name = 'NotReviseAndResubmitError';
+  },
 }));
 
 // Mock adapter registry (replaces old S3 + env mocks)

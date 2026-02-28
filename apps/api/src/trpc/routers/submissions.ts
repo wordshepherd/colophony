@@ -4,6 +4,7 @@ import {
   updateSubmissionSchema,
   updateSubmissionStatusSchema,
   listSubmissionsSchema,
+  resubmitSchema,
   idParamSchema,
   submissionIdParamSchema,
   submissionSchema,
@@ -160,6 +161,23 @@ export const submissionsRouter = createRouter({
         return await submissionService.withdrawAsOwner(
           toServiceContext(ctx),
           input.id,
+        );
+      } catch (e) {
+        mapServiceError(e);
+      }
+    }),
+
+  /** Resubmit with a new manuscript version from REVISE_AND_RESUBMIT — owner only. */
+  resubmit: orgProcedure
+    .use(requireScopes('submissions:write'))
+    .input(resubmitSchema)
+    .output(submissionStatusChangeResponseSchema)
+    .mutation(async ({ ctx, input }) => {
+      try {
+        return await submissionService.resubmitAsOwner(
+          toServiceContext(ctx),
+          input.id,
+          input.manuscriptVersionId,
         );
       } catch (e) {
         mapServiceError(e);

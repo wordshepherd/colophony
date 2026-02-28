@@ -371,6 +371,131 @@ describe('submissionService access-aware methods', () => {
     });
   });
 
+  describe('updateStatusAsEditor — R&R comment guard', () => {
+    it('throws MissingRevisionNotesError when R&R without comment', async () => {
+      const { MissingRevisionNotesError } =
+        await import('./submission.service.js');
+
+      const svc = makeSvc({
+        actor: { userId: 'user-1', orgId: 'org-1', role: 'EDITOR' },
+      });
+      await expect(
+        submissionService.updateStatusAsEditor(
+          svc,
+          SUBMISSION_ID,
+          'REVISE_AND_RESUBMIT' as never,
+          undefined,
+        ),
+      ).rejects.toThrow(MissingRevisionNotesError);
+    });
+
+    it('throws MissingRevisionNotesError when R&R with empty comment', async () => {
+      const { MissingRevisionNotesError } =
+        await import('./submission.service.js');
+
+      const svc = makeSvc({
+        actor: { userId: 'user-1', orgId: 'org-1', role: 'EDITOR' },
+      });
+      await expect(
+        submissionService.updateStatusAsEditor(
+          svc,
+          SUBMISSION_ID,
+          'REVISE_AND_RESUBMIT' as never,
+          '   ',
+        ),
+      ).rejects.toThrow(MissingRevisionNotesError);
+    });
+
+    it('succeeds with R&R and valid comment', async () => {
+      const sub = makeSubmission('user-1');
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      vi.mocked(submissionService.getById).mockResolvedValueOnce(sub as never);
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      vi.mocked(submissionService.updateStatus).mockResolvedValueOnce({
+        submission: { id: SUBMISSION_ID, status: 'REVISE_AND_RESUBMIT' },
+        historyEntry: { id: 'h-4' },
+      } as never);
+
+      const svc = makeSvc({
+        actor: { userId: 'user-1', orgId: 'org-1', role: 'EDITOR' },
+      });
+      const result = await submissionService.updateStatusAsEditor(
+        svc,
+        SUBMISSION_ID,
+        'REVISE_AND_RESUBMIT' as never,
+        'Please revise the opening stanza',
+      );
+
+      expect(result.submission.status).toBe('REVISE_AND_RESUBMIT');
+      expect(svc.audit).toHaveBeenCalledWith(
+        expect.objectContaining({ action: 'SUBMISSION_STATUS_CHANGED' }),
+      );
+    });
+  });
+
+  describe('resubmitAsOwner', () => {
+    const MANUSCRIPT_VERSION_ID = 'b2222222-2222-2222-b222-222222222222';
+
+    function makeRnRSubmission(submitterId = 'user-1') {
+      return {
+        ...makeSubmission(submitterId),
+        status: 'REVISE_AND_RESUBMIT' as const,
+        manuscript: {
+          manuscriptId: 'ms-1',
+          manuscriptTitle: 'Test MS',
+          versionNumber: 1,
+        },
+      };
+    }
+
+    it('throws ForbiddenError for non-owner', async () => {
+      const sub = makeRnRSubmission('other-user');
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      vi.mocked(submissionService.getById).mockResolvedValueOnce(sub as never);
+
+      const svc = makeSvc();
+      await expect(
+        submissionService.resubmitAsOwner(
+          svc,
+          SUBMISSION_ID,
+          MANUSCRIPT_VERSION_ID,
+        ),
+      ).rejects.toThrow(ForbiddenError);
+    });
+
+    it('throws NotReviseAndResubmitError from non-R&R status', async () => {
+      const { NotReviseAndResubmitError } =
+        await import('./submission.service.js');
+
+      const sub = makeSubmission('user-1'); // status is DRAFT
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      vi.mocked(submissionService.getById).mockResolvedValueOnce(sub as never);
+
+      const svc = makeSvc();
+      await expect(
+        submissionService.resubmitAsOwner(
+          svc,
+          SUBMISSION_ID,
+          MANUSCRIPT_VERSION_ID,
+        ),
+      ).rejects.toThrow(NotReviseAndResubmitError);
+    });
+
+    it('throws SubmissionNotFoundError when not found', async () => {
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      vi.mocked(submissionService.getById).mockResolvedValueOnce(null as never);
+
+      const svc = makeSvc();
+      await expect(
+        submissionService.resubmitAsOwner(
+          svc,
+          SUBMISSION_ID,
+          MANUSCRIPT_VERSION_ID,
+        ),
+      ).rejects.toThrow(SubmissionNotFoundError);
+    });
+  });
+
   describe('getHistoryWithAccess', () => {
     it('returns history for owner', async () => {
       const sub = makeSubmission('user-1');

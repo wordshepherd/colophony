@@ -32,6 +32,7 @@ const statusLabels: Record<SubmissionStatus, string> = {
   ACCEPTED: "Accept",
   REJECTED: "Reject",
   HOLD: "Put on Hold",
+  REVISE_AND_RESUBMIT: "Request Revisions",
   WITHDRAWN: "Withdrawn",
 };
 
@@ -45,6 +46,7 @@ const statusButtonVariants: Record<
   ACCEPTED: "default",
   REJECTED: "destructive",
   HOLD: "outline",
+  REVISE_AND_RESUBMIT: "outline",
   WITHDRAWN: "outline",
 };
 
@@ -121,26 +123,36 @@ export function StatusTransition({
                 ? "Reject Submission"
                 : selectedStatus === "ACCEPTED"
                   ? "Accept Submission"
-                  : `Change Status to ${selectedStatus ? statusLabels[selectedStatus] : ""}`}
+                  : selectedStatus === "REVISE_AND_RESUBMIT"
+                    ? "Request Revisions"
+                    : `Change Status to ${selectedStatus ? statusLabels[selectedStatus] : ""}`}
             </DialogTitle>
             <DialogDescription>
               {selectedStatus === "REJECTED"
                 ? "This will reject the submission. Consider providing feedback."
                 : selectedStatus === "ACCEPTED"
                   ? "This will accept the submission for publication."
-                  : "Add an optional comment for this status change."}
+                  : selectedStatus === "REVISE_AND_RESUBMIT"
+                    ? "Provide revision notes for the submitter. They will be able to resubmit a new manuscript version."
+                    : "Add an optional comment for this status change."}
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="comment">Comment (optional)</Label>
+              <Label htmlFor="comment">
+                {selectedStatus === "REVISE_AND_RESUBMIT"
+                  ? "Revision Notes (required)"
+                  : "Comment (optional)"}
+              </Label>
               <Textarea
                 id="comment"
                 placeholder={
                   selectedStatus === "REJECTED"
                     ? "Provide feedback for the submitter..."
-                    : "Add a note about this status change..."
+                    : selectedStatus === "REVISE_AND_RESUBMIT"
+                      ? "Describe the revisions needed..."
+                      : "Add a note about this status change..."
                 }
                 value={comment}
                 onChange={(e) => setComment(e.target.value)}
@@ -163,7 +175,10 @@ export function StatusTransition({
                 selectedStatus === "REJECTED" ? "destructive" : "default"
               }
               onClick={handleConfirm}
-              disabled={updateStatusMutation.isPending}
+              disabled={
+                updateStatusMutation.isPending ||
+                (selectedStatus === "REVISE_AND_RESUBMIT" && !comment.trim())
+              }
             >
               {updateStatusMutation.isPending
                 ? "Updating..."
