@@ -15,6 +15,10 @@ import { enqueueOutboxEvent } from './outbox.js';
 import type { ServiceContext } from './types.js';
 import { ForbiddenError } from './errors.js';
 import { SubmissionNotFoundError } from './submission.service.js';
+import {
+  resolveBlindMode,
+  applyAuthorBlinding,
+} from './blind-review.helper.js';
 
 // ---------------------------------------------------------------------------
 // Error classes
@@ -74,6 +78,7 @@ async function getSubmissionOrThrow(tx: DrizzleDb, submissionId: string) {
       id: submissions.id,
       submitterId: submissions.submitterId,
       organizationId: submissions.organizationId,
+      submissionPeriodId: submissions.submissionPeriodId,
     })
     .from(submissions)
     .where(eq(submissions.id, submissionId))
@@ -212,7 +217,13 @@ async function listWithAccess(
     submissionId,
     submission.submitterId,
   );
-  return listBySubmission(svc.tx, submissionId);
+  const comments = await listBySubmission(svc.tx, submissionId);
+
+  const blindMode = await resolveBlindMode(
+    svc.tx,
+    submission.submissionPeriodId,
+  );
+  return comments.map((c) => applyAuthorBlinding(c, blindMode, svc.actor.role));
 }
 
 async function createWithAudit(
@@ -300,7 +311,11 @@ async function createWithAudit(
     .where(eq(submissionDiscussions.id, id))
     .limit(1);
 
-  return comment;
+  const blindMode = await resolveBlindMode(
+    svc.tx,
+    submission.submissionPeriodId,
+  );
+  return applyAuthorBlinding(comment, blindMode, svc.actor.role);
 }
 
 // ---------------------------------------------------------------------------

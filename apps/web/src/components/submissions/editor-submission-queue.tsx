@@ -149,7 +149,7 @@ export function EditorSubmissionQueue() {
                     </Link>
                   </TableCell>
                   <TableCell className="text-muted-foreground">
-                    {item.submitterEmail ?? "\u2014"}
+                    {item.submitterEmail ?? "[Anonymous]"}
                   </TableCell>
                   <TableCell className="text-muted-foreground">
                     {item.submittedAt

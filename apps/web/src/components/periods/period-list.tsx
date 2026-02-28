@@ -25,6 +25,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Calendar,
@@ -34,6 +35,11 @@ import {
   Trash2,
   X,
 } from "lucide-react";
+
+const BLIND_REVIEW_LABELS: Record<string, string> = {
+  single_blind: "Single Blind",
+  double_blind: "Double Blind",
+};
 
 const SKELETON_ITEMS = Array.from({ length: 5 });
 
@@ -172,7 +178,16 @@ export function PeriodList() {
                     <TableCell>
                       <PeriodStatusBadge status={status} />
                     </TableCell>
-                    <TableCell className="font-medium">{item.name}</TableCell>
+                    <TableCell className="font-medium">
+                      {item.name}
+                      {item.blindReviewMode &&
+                        item.blindReviewMode !== "none" && (
+                          <Badge variant="secondary" className="ml-2 text-xs">
+                            {BLIND_REVIEW_LABELS[item.blindReviewMode] ??
+                              item.blindReviewMode}
+                          </Badge>
+                        )}
+                    </TableCell>
                     <TableCell className="text-muted-foreground">
                       {format(new Date(item.opensAt), "MMM d, yyyy h:mm a")}
                     </TableCell>

@@ -82,7 +82,11 @@ export const submissionsRouter = createRouter({
     .query(async ({ ctx, input }) => {
       try {
         assertEditorOrAdmin(ctx.authContext.role);
-        return await submissionService.listAll(ctx.dbTx, input);
+        return await submissionService.listAll(
+          ctx.dbTx,
+          input,
+          ctx.authContext.role,
+        );
       } catch (e) {
         mapServiceError(e);
       }
