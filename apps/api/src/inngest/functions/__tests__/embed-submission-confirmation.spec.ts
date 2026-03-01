@@ -126,30 +126,34 @@ describe('embedSubmissionConfirmation', () => {
     } as ReturnType<typeof validateEnv>);
 
     // Mock withRls to resolve data
-    mockWithRls.mockImplementation(async (_ctx: unknown, fn: Function) => {
-      const mockTx = {};
-      return fn(mockTx);
-    });
+    mockWithRls.mockImplementation(
+      async (_ctx: unknown, fn: (tx: unknown) => Promise<unknown>) => {
+        const mockTx = {};
+        return fn(mockTx);
+      },
+    );
 
     // First call: resolve-data (withRls for submission + org lookup)
     let resolveDataCallIndex = 0;
-    mockWithRls.mockImplementation(async (_ctx: unknown, fn: Function) => {
-      resolveDataCallIndex++;
-      const mockTx = {
-        select: vi.fn().mockReturnThis(),
-        from: vi.fn().mockReturnThis(),
-        where: vi.fn().mockReturnThis(),
-        limit: vi.fn().mockImplementation(() => {
-          // First limit call: submission query
-          // Second limit call: org query
-          if (resolveDataCallIndex === 1) {
-            return Promise.resolve([{ title: 'My Great Poem' }]);
-          }
-          return Promise.resolve([{ name: 'Poetry Review' }]);
-        }),
-      };
-      return fn(mockTx);
-    });
+    mockWithRls.mockImplementation(
+      async (_ctx: unknown, fn: (tx: unknown) => Promise<unknown>) => {
+        resolveDataCallIndex++;
+        const mockTx = {
+          select: vi.fn().mockReturnThis(),
+          from: vi.fn().mockReturnThis(),
+          where: vi.fn().mockReturnThis(),
+          limit: vi.fn().mockImplementation(() => {
+            // First limit call: submission query
+            // Second limit call: org query
+            if (resolveDataCallIndex === 1) {
+              return Promise.resolve([{ title: 'My Great Poem' }]);
+            }
+            return Promise.resolve([{ name: 'Poetry Review' }]);
+          }),
+        };
+        return fn(mockTx);
+      },
+    );
 
     const step = makeStep();
     // Override step.run to actually execute functions but also let us check calls

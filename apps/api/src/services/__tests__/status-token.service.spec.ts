@@ -20,6 +20,9 @@ vi.mock('@colophony/types', () => ({
 import { statusTokenService } from '../status-token.service.js';
 import { pool } from '@colophony/db';
 
+// Extract to avoid @typescript-eslint/unbound-method on pool.query
+const mockPoolQuery = vi.mocked(pool.query);
+
 describe('statusTokenService', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -57,21 +60,21 @@ describe('statusTokenService', () => {
 
   describe('verifyToken', () => {
     it('returns null for unknown token', async () => {
-      vi.mocked(pool.query).mockResolvedValue({ rows: [] } as never);
+      mockPoolQuery.mockResolvedValue({ rows: [] } as never);
 
       const result = await statusTokenService.verifyToken(
         'col_sta_0000000000000000000000000000dead',
       );
 
       expect(result).toBeNull();
-      expect(pool.query).toHaveBeenCalledWith(
+      expect(mockPoolQuery).toHaveBeenCalledWith(
         'SELECT * FROM verify_status_token($1)',
         [expect.stringMatching(/^[a-f0-9]{64}$/)],
       );
     });
 
     it('returns mapped result for valid token with user-friendly status', async () => {
-      vi.mocked(pool.query).mockResolvedValue({
+      mockPoolQuery.mockResolvedValue({
         rows: [
           {
             submission_id: 'sub-1',
@@ -99,7 +102,7 @@ describe('statusTokenService', () => {
     });
 
     it('maps ACCEPTED status correctly', async () => {
-      vi.mocked(pool.query).mockResolvedValue({
+      mockPoolQuery.mockResolvedValue({
         rows: [
           {
             submission_id: 'sub-2',
@@ -118,7 +121,7 @@ describe('statusTokenService', () => {
     });
 
     it('maps REJECTED to Not Accepted', async () => {
-      vi.mocked(pool.query).mockResolvedValue({
+      mockPoolQuery.mockResolvedValue({
         rows: [
           {
             submission_id: 'sub-3',
