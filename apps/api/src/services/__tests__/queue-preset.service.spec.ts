@@ -20,6 +20,7 @@ const mockUpdate = vi.fn().mockReturnValue({
   set: mockSet,
 });
 const mockDeleteFn = vi.fn().mockReturnValue({ where: mockWhere });
+const mockExecute = vi.fn().mockResolvedValue({ rows: [] });
 
 vi.mock('@colophony/db', () => ({
   savedQueuePresets: {
@@ -34,6 +35,7 @@ vi.mock('@colophony/db', () => ({
   },
   eq: vi.fn(),
   and: vi.fn(),
+  sql: vi.fn(),
 }));
 
 vi.mock('drizzle-orm', async (importOriginal) => {
@@ -58,12 +60,14 @@ function makeTx() {
     insert: mockInsert,
     update: mockUpdate,
     delete: mockDeleteFn,
+    execute: mockExecute,
   } as unknown as Parameters<typeof queuePresetService.list>[0];
 }
 
 beforeEach(() => {
   vi.clearAllMocks();
   mockRows = [];
+  mockExecute.mockResolvedValue({ rows: [] });
 });
 
 describe('queuePresetService', () => {
@@ -87,10 +91,8 @@ describe('queuePresetService', () => {
 
   describe('create', () => {
     it('throws at 20 presets', async () => {
-      // Mock count returning 20
-      mockFrom.mockReturnValue({
-        where: vi.fn().mockResolvedValue([{ value: 20 }]),
-      });
+      // Atomic insert returns empty rows when at limit
+      mockExecute.mockResolvedValue({ rows: [] });
 
       await expect(
         queuePresetService.create(makeTx(), 'user-1', 'org-1', {
@@ -102,17 +104,13 @@ describe('queuePresetService', () => {
     });
 
     it('unsets other defaults when isDefault=true', async () => {
-      // Mock count returning 0
-      mockFrom.mockReturnValue({
-        where: vi.fn().mockResolvedValue([{ value: 0 }]),
-      });
-
       const newPreset = {
         id: 'p-new',
         name: 'Default',
         isDefault: true,
       };
-      mockReturning.mockResolvedValue([newPreset]);
+      // Atomic insert succeeds
+      mockExecute.mockResolvedValue({ rows: [newPreset] });
 
       const result = await queuePresetService.create(
         makeTx(),

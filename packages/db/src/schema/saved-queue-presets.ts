@@ -43,6 +43,9 @@ export const savedQueuePresets = pgTable(
       table.organizationId,
       table.userId,
     ),
+    uniqueIndex("saved_queue_presets_one_default_per_user_idx")
+      .on(table.organizationId, table.userId)
+      .where(sql`is_default = true`),
     pgPolicy("org_isolation", {
       for: "all",
       using: sql`organization_id = current_org_id()`,

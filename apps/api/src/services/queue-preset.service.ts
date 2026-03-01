@@ -1,5 +1,5 @@
-import { savedQueuePresets, eq, and, type DrizzleDb } from '@colophony/db';
-import { asc, count, ne } from 'drizzle-orm';
+import { savedQueuePresets, eq, and, sql, type DrizzleDb } from '@colophony/db';
+import { asc, ne } from 'drizzle-orm';
 import type {
   CreateQueuePresetInput,
   UpdateQueuePresetInput,
@@ -23,6 +23,22 @@ export class PresetNotFoundError extends Error {
   }
 }
 
+export class PresetDefaultConflictError extends Error {
+  constructor() {
+    super('Another preset was set as default concurrently. Please retry.');
+    this.name = 'PresetDefaultConflictError';
+  }
+}
+
+function isUniqueViolation(err: unknown): boolean {
+  return (
+    typeof err === 'object' &&
+    err !== null &&
+    'code' in err &&
+    (err as { code: unknown }).code === '23505'
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Service
 // ---------------------------------------------------------------------------
@@ -44,17 +60,7 @@ export const queuePresetService = {
     organizationId: string,
     input: CreateQueuePresetInput,
   ) {
-    // Check limit
-    const [{ value: existing }] = await tx
-      .select({ value: count() })
-      .from(savedQueuePresets)
-      .where(eq(savedQueuePresets.userId, userId));
-
-    if (existing >= MAX_PRESETS) {
-      throw new PresetLimitExceededError();
-    }
-
-    // If isDefault, unset other defaults
+    // If isDefault, unset other defaults first
     if (input.isDefault) {
       await tx
         .update(savedQueuePresets)
@@ -67,16 +73,30 @@ export const queuePresetService = {
         );
     }
 
-    const [row] = await tx
-      .insert(savedQueuePresets)
-      .values({
-        organizationId,
-        userId,
-        name: input.name,
-        filters: input.filters,
-        isDefault: input.isDefault ?? false,
-      })
-      .returning();
+    // Atomic insert-with-count-guard: INSERT ... SELECT ... WHERE count < MAX
+    const isDefault = input.isDefault ?? false;
+    const result = await tx.execute<{
+      id: string;
+      organization_id: string;
+      user_id: string;
+      name: string;
+      filters: unknown;
+      is_default: boolean;
+      created_at: Date;
+      updated_at: Date;
+    }>(sql`
+      INSERT INTO saved_queue_presets (organization_id, user_id, name, filters, is_default)
+      SELECT ${organizationId}, ${userId}, ${input.name}, ${JSON.stringify(input.filters)}::jsonb, ${isDefault}
+      WHERE (
+        SELECT count(*) FROM saved_queue_presets WHERE user_id = ${userId}
+      ) < ${MAX_PRESETS}
+      RETURNING *
+    `);
+
+    const row = result.rows[0];
+    if (!row) {
+      throw new PresetLimitExceededError();
+    }
 
     return row;
   },
@@ -116,13 +136,20 @@ export const queuePresetService = {
     if (input.filters !== undefined) updates.filters = input.filters;
     if (input.isDefault !== undefined) updates.isDefault = input.isDefault;
 
-    const [row] = await tx
-      .update(savedQueuePresets)
-      .set(updates)
-      .where(eq(savedQueuePresets.id, input.id))
-      .returning();
+    try {
+      const [row] = await tx
+        .update(savedQueuePresets)
+        .set(updates)
+        .where(eq(savedQueuePresets.id, input.id))
+        .returning();
 
-    return row;
+      return row;
+    } catch (err) {
+      if (isUniqueViolation(err)) {
+        throw new PresetDefaultConflictError();
+      }
+      throw err;
+    }
   },
 
   async delete(tx: DrizzleDb, userId: string, id: string) {
