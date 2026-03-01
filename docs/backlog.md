@@ -303,7 +303,7 @@
 
 ## Track 7 — Editorial Experience (Pre-Launch)
 
-> **Status:** In progress. PR1 (correspondence) shipped. PR2 (email templates) pending.
+> **Status:** Complete. All P0-P3 items shipped.
 
 ### Correspondence & Communication
 
@@ -320,20 +320,20 @@
 - [x] [P2] Voting / scoring on submissions — readers cast votes (accept/reject/maybe + optional score); configurable per org; summary visible to editors making final decisions — (persona gap analysis 2026-02-27; done 2026-02-28)
 - [x] [P2] Blind / anonymous review mode — hide submitter identity from reviewers; admin toggle per submission period — (persona gap analysis 2026-02-27; done 2026-02-28)
 - [x] [P2] Batch operations — checkbox selection in submission queue; bulk status transitions (reject, move to review); bulk assignment — (persona gap analysis 2026-02-27; done 2026-02-28)
-- [ ] [P3] Submission reading mode — distraction-free view for reading the submitted work; "next unread" navigation within the queue — (persona gap analysis 2026-02-27)
+- [x] [P3] Submission reading mode — distraction-free view for reading the submitted work; "next unread" navigation within the queue — (persona gap analysis 2026-02-27; done 2026-02-28)
 
 ### Analytics & Reporting
 
 - [x] [P1] Submission analytics dashboard — acceptance rate, response time distribution, submissions per period, funnel (submitted → reviewed → accepted/rejected), aging submissions — (persona gap analysis 2026-02-27, implemented 2026-02-28)
 - [x] [P2] Publication data export — CSV/JSON export of all org submissions, with filters (date range, status, period); admin-only — (persona gap analysis 2026-02-27; done 2026-02-28)
-- [ ] [P3] Response time tracking and reminders — flag submissions pending over N days (configurable); optional email reminder to editors — (persona gap analysis 2026-02-27)
+- [x] [P3] Response time tracking and reminders — flag submissions pending over N days (configurable); optional email reminder to editors — (persona gap analysis 2026-02-27; done 2026-02-28)
 
 ### UI Polish
 
 - [x] [P1] Mobile navigation — hamburger menu or bottom nav for `< md` breakpoints; sidebar is currently `hidden md:flex` with no mobile alternative — (persona gap analysis 2026-02-27; done 2026-02-28)
 - [x] [P2] Column sorting in submission queue — sortable by title, submitter, date, status; currently hardcoded `DESC createdAt` — (persona gap analysis 2026-02-27; done 2026-02-28)
 - [x] [P2] Submission period filter in editor queue — the API supports `submissionPeriodId` filter but the UI doesn't expose a period dropdown — (persona gap analysis 2026-02-27; done 2026-02-28)
-- [ ] [P3] Saved filter presets / views — editors can save named filter+sort combos for their queue — (persona gap analysis 2026-02-27)
+- [x] [P3] Saved filter presets / views — editors can save named filter+sort combos for their queue — (persona gap analysis 2026-02-27; done 2026-02-28)
 
 ---
 
