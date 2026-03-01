@@ -238,6 +238,7 @@ export const submissionService = {
           createdAt: submissions.createdAt,
           updatedAt: submissions.updatedAt,
           searchVector: submissions.searchVector,
+          statusTokenHash: submissions.statusTokenHash,
           transferredFromDomain: submissions.transferredFromDomain,
           transferredFromTransferId: submissions.transferredFromTransferId,
           submitterEmail: users.email,

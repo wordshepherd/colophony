@@ -1,8 +1,10 @@
 import type {
   EmbedFormResponse,
   EmbedSubmitInput,
+  EmbedSubmitResponse,
   EmbedPrepareUploadResponse,
   EmbedUploadStatusResponse,
+  EmbedStatusCheckResponse,
 } from "@colophony/types";
 
 export interface EmbedApiError {
@@ -50,7 +52,7 @@ export async function submitEmbedForm(
   apiUrl: string,
   token: string,
   body: EmbedSubmitInput,
-): Promise<{ success: boolean; submissionId: string; message: string }> {
+): Promise<EmbedSubmitResponse> {
   const res = await fetch(`${apiUrl}/embed/${token}/submit`, {
     method: "POST",
     headers: {
@@ -92,4 +94,14 @@ export async function fetchUploadStatus(
     },
   );
   return handleResponse<EmbedUploadStatusResponse>(res);
+}
+
+export async function fetchSubmissionStatus(
+  apiUrl: string,
+  statusToken: string,
+): Promise<EmbedStatusCheckResponse> {
+  const res = await fetch(`${apiUrl}/embed/status/${statusToken}`, {
+    headers: { Accept: "application/json" },
+  });
+  return handleResponse<EmbedStatusCheckResponse>(res);
 }

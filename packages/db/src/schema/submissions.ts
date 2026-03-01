@@ -130,6 +130,7 @@ export const submissions = pgTable(
     transferredFromTransferId: varchar("transferred_from_transfer_id", {
       length: 255,
     }),
+    statusTokenHash: varchar("status_token_hash", { length: 128 }),
     searchVector: tsvector("search_vector"),
   },
   (table) => [
@@ -149,6 +150,7 @@ export const submissions = pgTable(
       table.status,
       table.submittedAt,
     ),
+    index("submissions_status_token_hash_idx").on(table.statusTokenHash),
     index("submissions_search_vector_idx").using("gin", table.searchVector),
     orgIsolationPolicy,
     // Submitter-scoped read: submitters can see their own submissions cross-org
