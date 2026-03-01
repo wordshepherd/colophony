@@ -1,13 +1,19 @@
 import {
   correspondence,
+  externalSubmissions,
+  submissions,
   users,
   organizations,
   eq,
   desc,
   type DrizzleDb,
 } from '@colophony/db';
+import { count } from 'drizzle-orm';
 import { AuditActions, AuditResources } from '@colophony/types';
-import type { SendEditorMessageInput } from '@colophony/types';
+import type {
+  SendEditorMessageInput,
+  ListCorrespondenceByUserInput,
+} from '@colophony/types';
 import type { ServiceContext } from './types.js';
 import { assertEditorOrAdmin, NotFoundError } from './errors.js';
 import { submissionService } from './submission.service.js';
@@ -68,6 +74,73 @@ export const correspondenceService = {
       .orderBy(desc(correspondence.sentAt));
 
     return rows;
+  },
+
+  async listByUser(
+    tx: DrizzleDb,
+    userId: string,
+    input: ListCorrespondenceByUserInput,
+  ) {
+    const { page, limit } = input;
+    const offset = (page - 1) * limit;
+
+    const where = eq(correspondence.userId, userId);
+
+    const [items, countResult] = await Promise.all([
+      tx
+        .select({
+          id: correspondence.id,
+          submissionId: correspondence.submissionId,
+          externalSubmissionId: correspondence.externalSubmissionId,
+          direction: correspondence.direction,
+          channel: correspondence.channel,
+          sentAt: correspondence.sentAt,
+          subject: correspondence.subject,
+          body: correspondence.body,
+          senderName: correspondence.senderName,
+          isPersonalized: correspondence.isPersonalized,
+          source: correspondence.source,
+          externalJournalName: externalSubmissions.journalName,
+          orgName: organizations.name,
+        })
+        .from(correspondence)
+        .leftJoin(
+          externalSubmissions,
+          eq(correspondence.externalSubmissionId, externalSubmissions.id),
+        )
+        .leftJoin(submissions, eq(correspondence.submissionId, submissions.id))
+        .leftJoin(
+          organizations,
+          eq(submissions.organizationId, organizations.id),
+        )
+        .where(where)
+        .orderBy(desc(correspondence.sentAt))
+        .limit(limit)
+        .offset(offset),
+      tx.select({ count: count() }).from(correspondence).where(where),
+    ]);
+
+    const total = countResult[0]?.count ?? 0;
+    return {
+      items: items.map((r) => ({
+        id: r.id,
+        submissionId: r.submissionId,
+        externalSubmissionId: r.externalSubmissionId,
+        direction: r.direction,
+        channel: r.channel,
+        sentAt: r.sentAt,
+        subject: r.subject,
+        body: r.body,
+        senderName: r.senderName,
+        isPersonalized: r.isPersonalized,
+        source: r.source,
+        journalName: r.externalJournalName ?? r.orgName ?? null,
+      })),
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    };
   },
 
   async sendEditorMessage(

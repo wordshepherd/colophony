@@ -19,14 +19,26 @@ import {
   Inbox,
   LayoutDashboard,
   Library,
+  Mail,
   Puzzle,
+  Send,
   Settings,
   Webhook,
 } from "lucide-react";
 
-const navigation = [
+const writerNavigation = [
+  { name: "Dashboard", href: "/workspace", icon: LayoutDashboard },
+  { name: "Manuscripts", href: "/manuscripts", icon: BookOpen },
+  { name: "External Subs", href: "/workspace/external", icon: Send },
+  {
+    name: "Correspondence",
+    href: "/workspace/correspondence",
+    icon: Mail,
+  },
+];
+
+const submitterNavigation = [
   { name: "My Submissions", href: "/submissions", icon: FileText },
-  { name: "My Manuscripts", href: "/manuscripts", icon: BookOpen },
   { name: "Settings", href: "/settings", icon: Settings },
 ];
 
@@ -68,6 +80,7 @@ const adminNavigation = [
 function isActiveLink(pathname: string, href: string): boolean {
   if (href === "/editor") return pathname === "/editor";
   if (href === "/slate") return pathname === "/slate";
+  if (href === "/workspace") return pathname === "/workspace";
   return pathname.startsWith(href);
 }
 
@@ -86,8 +99,33 @@ export function Sidebar() {
 
       {/* Navigation */}
       <nav className="flex-1 space-y-1 p-2">
-        {/* Main navigation */}
-        {navigation.map((item) => {
+        {/* My Writing */}
+        <p className="px-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+          My Writing
+        </p>
+        {writerNavigation.map((item) => {
+          const isActive = isActiveLink(pathname, item.href);
+          return (
+            <Link
+              key={item.name}
+              href={item.href}
+              className={cn(
+                "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
+                isActive
+                  ? "bg-accent text-accent-foreground"
+                  : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
+              )}
+            >
+              <item.icon className="h-4 w-4" />
+              {item.name}
+            </Link>
+          );
+        })}
+
+        <div className="my-4 border-t" />
+
+        {/* Submissions & Settings */}
+        {submitterNavigation.map((item) => {
           const isActive = isActiveLink(pathname, item.href);
           return (
             <Link
