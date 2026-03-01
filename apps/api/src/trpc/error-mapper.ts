@@ -89,6 +89,7 @@ import {
   PresetLimitExceededError,
   PresetNotFoundError,
 } from '../services/queue-preset.service.js';
+import { CSRImportError } from '../services/csr.service.js';
 
 type TRPCErrorCode = ConstructorParameters<typeof TRPCError>[0]['code'];
 
@@ -170,6 +171,8 @@ const errorCodeMap: [new (...args: never[]) => Error, TRPCErrorCode][] = [
   // Preset errors
   [PresetLimitExceededError, 'BAD_REQUEST'],
   [PresetNotFoundError, 'NOT_FOUND'],
+  // CSR errors
+  [CSRImportError, 'BAD_REQUEST'],
   // Precondition
   [FileNotCleanError, 'PRECONDITION_FAILED'],
 ];
