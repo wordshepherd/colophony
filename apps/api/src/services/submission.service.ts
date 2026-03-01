@@ -14,7 +14,15 @@ import {
   sql,
   type DrizzleDb,
 } from '@colophony/db';
-import { desc, asc, ilike, count } from 'drizzle-orm';
+import {
+  desc,
+  asc,
+  ilike,
+  count,
+  lte,
+  notInArray,
+  isNotNull,
+} from 'drizzle-orm';
 import type {
   CreateSubmissionInput,
   UpdateSubmissionInput,
@@ -1239,5 +1247,58 @@ export const submissionService = {
     }
 
     return { succeeded, failed };
+  },
+
+  async listAgingByOrg(
+    tx: DrizzleDb,
+    thresholdDays: number,
+  ): Promise<
+    Array<{
+      id: string;
+      title: string | null;
+      submittedAt: Date | null;
+      submitterEmail: string | null;
+      daysPending: number;
+    }>
+  > {
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - thresholdDays);
+
+    const rows = await tx
+      .select({
+        id: submissions.id,
+        title: submissions.title,
+        submittedAt: submissions.submittedAt,
+        submitterEmail: users.email,
+      })
+      .from(submissions)
+      .leftJoin(users, eq(users.id, submissions.submitterId))
+      .where(
+        and(
+          notInArray(submissions.status, [
+            'ACCEPTED',
+            'REJECTED',
+            'WITHDRAWN',
+            'DRAFT',
+          ]),
+          isNotNull(submissions.submittedAt),
+          lte(submissions.submittedAt, cutoffDate),
+        ),
+      )
+      .orderBy(asc(submissions.submittedAt));
+
+    const now = new Date();
+    return rows.map((row) => ({
+      id: row.id,
+      title: row.title,
+      submittedAt: row.submittedAt,
+      submitterEmail: row.submitterEmail,
+      daysPending: row.submittedAt
+        ? Math.floor(
+            (now.getTime() - new Date(row.submittedAt).getTime()) /
+              (1000 * 60 * 60 * 24),
+          )
+        : 0,
+    }));
   },
 };

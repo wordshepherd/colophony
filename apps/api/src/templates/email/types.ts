@@ -9,7 +9,8 @@ export type TemplateName =
   | 'editor-message'
   | 'reviewer-assigned'
   | 'discussion-comment'
-  | 'embed-submission-confirmation';
+  | 'embed-submission-confirmation'
+  | 'submission-response-reminder';
 
 export interface SubmissionTemplateData {
   submissionTitle: string;
@@ -62,6 +63,17 @@ export interface EmbedSubmissionConfirmationData {
   statusCheckUrl: string;
 }
 
+export interface ResponseReminderTemplateData {
+  orgName: string;
+  editorName: string;
+  agingSubmissions: Array<{
+    title: string;
+    submitterEmail: string;
+    daysPending: number;
+  }>;
+  queueUrl?: string;
+}
+
 export type TemplateData =
   | SubmissionTemplateData
   | ContractTemplateData
@@ -69,4 +81,5 @@ export type TemplateData =
   | EditorMessageTemplateData
   | ReviewerAssignedTemplateData
   | DiscussionCommentTemplateData
-  | EmbedSubmissionConfirmationData;
+  | EmbedSubmissionConfirmationData
+  | ResponseReminderTemplateData;
