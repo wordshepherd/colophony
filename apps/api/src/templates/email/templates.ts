@@ -8,6 +8,7 @@ import type {
   ReviewerAssignedTemplateData,
   DiscussionCommentTemplateData,
   EmbedSubmissionConfirmationData,
+  ResponseReminderTemplateData,
 } from './types.js';
 import { wrapInLayout } from './layout.js';
 
@@ -301,6 +302,54 @@ function embedSubmissionConfirmation(
   };
 }
 
+function submissionResponseReminder(
+  data: Record<string, unknown>,
+): TemplateResult {
+  const d = data as unknown as ResponseReminderTemplateData;
+  const rows = d.agingSubmissions
+    .map(
+      (s) =>
+        `<tr>
+          <td style="padding:8px;border-bottom:1px solid #e5e7eb">${escapeHtml(s.title)}</td>
+          <td style="padding:8px;border-bottom:1px solid #e5e7eb">${escapeHtml(s.submitterEmail)}</td>
+          <td style="padding:8px;border-bottom:1px solid #e5e7eb;text-align:right">${s.daysPending}d</td>
+        </tr>`,
+    )
+    .join('');
+  return {
+    subject: `Response reminder: ${d.agingSubmissions.length} submission${d.agingSubmissions.length !== 1 ? 's' : ''} awaiting review`,
+    mjml: wrapInLayout(
+      `<mj-text>
+        <p>Hi ${escapeHtml(d.editorName)},</p>
+        <p>The following submissions at ${escapeHtml(d.orgName)} have been waiting for a response:</p>
+      </mj-text>
+      <mj-table>
+        <tr style="background-color:#f3f4f6;text-align:left">
+          <th style="padding:8px">Title</th>
+          <th style="padding:8px">Submitter</th>
+          <th style="padding:8px;text-align:right">Age</th>
+        </tr>
+        ${rows}
+      </mj-table>
+      ${d.queueUrl ? `<mj-button href="${escapeHtml(d.queueUrl)}" background-color="#2563eb" color="#ffffff" font-size="14px" padding="16px 0">View Queue</mj-button>` : ''}`,
+      d.orgName,
+    ),
+    text: [
+      `Hi ${d.editorName},`,
+      ``,
+      `The following submissions at ${d.orgName} have been waiting for a response:`,
+      ``,
+      ...d.agingSubmissions.map(
+        (s) => `- ${s.title} (${s.submitterEmail}) — ${s.daysPending} days`,
+      ),
+      ``,
+      d.queueUrl ? `View queue: ${d.queueUrl}` : '',
+    ]
+      .filter(Boolean)
+      .join('\n'),
+  };
+}
+
 export const templates: Record<TemplateName, TemplateRenderer> = {
   'submission-received': submissionReceived,
   'submission-accepted': submissionAccepted,
@@ -313,6 +362,7 @@ export const templates: Record<TemplateName, TemplateRenderer> = {
   'reviewer-assigned': reviewerAssigned,
   'discussion-comment': discussionComment,
   'embed-submission-confirmation': embedSubmissionConfirmation,
+  'submission-response-reminder': submissionResponseReminder,
 };
 
 function stripHtml(html: string): string {
