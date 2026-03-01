@@ -20,7 +20,7 @@ vi.mock('@colophony/types', () => ({
 import { statusTokenService } from '../status-token.service.js';
 import { pool } from '@colophony/db';
 
-// Extract to avoid @typescript-eslint/unbound-method on pool.query
+// eslint-disable-next-line @typescript-eslint/unbound-method -- pool.query is a mock
 const mockPoolQuery = vi.mocked(pool.query);
 
 describe('statusTokenService', () => {
