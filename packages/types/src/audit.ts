@@ -32,6 +32,7 @@ export const AuditActions = {
   REVIEWER_ASSIGNED: "REVIEWER_ASSIGNED",
   REVIEWER_UNASSIGNED: "REVIEWER_UNASSIGNED",
   REVIEWER_READ: "REVIEWER_READ",
+  SUBMISSION_EXPORTED: "SUBMISSION_EXPORTED",
 
   // File lifecycle
   FILE_UPLOADED: "FILE_UPLOADED",
@@ -326,7 +327,8 @@ export interface SubmissionAuditParams extends BaseAuditParams {
     | typeof AuditActions.DISCUSSION_COMMENT_ADDED
     | typeof AuditActions.SUBMISSION_VOTE_CAST
     | typeof AuditActions.SUBMISSION_VOTE_UPDATED
-    | typeof AuditActions.SUBMISSION_VOTE_DELETED;
+    | typeof AuditActions.SUBMISSION_VOTE_DELETED
+    | typeof AuditActions.SUBMISSION_EXPORTED;
 }
 
 export interface FileAuditParams extends BaseAuditParams {

@@ -24,6 +24,7 @@ import type {
   BatchStatusChangeResponse,
   BatchAssignReviewersInput,
   BatchAssignReviewersResponse,
+  ExportSubmissionsInput,
 } from '@colophony/types';
 import {
   isValidStatusTransition,
@@ -217,6 +218,16 @@ export const submissionService = {
 
     const where = conditions.length > 0 ? and(...conditions) : undefined;
 
+    const sortColumnMap = {
+      title: submissions.title,
+      submitterEmail: users.email,
+      submittedAt: submissions.submittedAt,
+      status: submissions.status,
+      createdAt: submissions.createdAt,
+    } as const;
+    const sortColumn = sortColumnMap[input.sortBy ?? 'createdAt'];
+    const orderFn = input.sortOrder === 'asc' ? asc : desc;
+
     const [items, countResult] = await Promise.all([
       tx
         .select({
@@ -246,7 +257,7 @@ export const submissionService = {
         .from(submissions)
         .leftJoin(users, eq(users.id, submissions.submitterId))
         .where(where)
-        .orderBy(desc(submissions.createdAt))
+        .orderBy(orderFn(sortColumn))
         .limit(limit)
         .offset(offset),
       tx.select({ count: count() }).from(submissions).where(where),
@@ -295,6 +306,101 @@ export const submissionService = {
       limit,
       totalPages: Math.ceil(total / limit),
     };
+  },
+
+  /**
+   * Export all matching submissions (no pagination) for data export.
+   * Safety cap of 10,000 rows.
+   */
+  async exportAll(
+    tx: DrizzleDb,
+    input: ExportSubmissionsInput,
+    callerRole?: import('@colophony/types').Role,
+  ) {
+    const MAX_EXPORT_ROWS = 10000;
+
+    const conditions = [];
+    if (input.status) conditions.push(eq(submissions.status, input.status));
+    if (input.submissionPeriodId)
+      conditions.push(
+        eq(submissions.submissionPeriodId, input.submissionPeriodId),
+      );
+    if (input.search) {
+      if (input.search.length >= 3) {
+        conditions.push(
+          sql`${submissions.searchVector} @@ plainto_tsquery('english', ${input.search})`,
+        );
+      } else {
+        conditions.push(ilike(submissions.title, `%${input.search}%`));
+      }
+    }
+
+    const where = conditions.length > 0 ? and(...conditions) : undefined;
+
+    const items = await tx
+      .select({
+        id: submissions.id,
+        organizationId: submissions.organizationId,
+        submitterId: submissions.submitterId,
+        submissionPeriodId: submissions.submissionPeriodId,
+        title: submissions.title,
+        content: submissions.content,
+        coverLetter: submissions.coverLetter,
+        formDefinitionId: submissions.formDefinitionId,
+        formData: submissions.formData,
+        manuscriptVersionId: submissions.manuscriptVersionId,
+        status: submissions.status,
+        submittedAt: submissions.submittedAt,
+        createdAt: submissions.createdAt,
+        updatedAt: submissions.updatedAt,
+        submitterEmail: users.email,
+        periodName: submissionPeriods.name,
+      })
+      .from(submissions)
+      .leftJoin(users, eq(users.id, submissions.submitterId))
+      .leftJoin(
+        submissionPeriods,
+        eq(submissionPeriods.id, submissions.submissionPeriodId),
+      )
+      .where(where)
+      .orderBy(desc(submissions.createdAt))
+      .limit(MAX_EXPORT_ROWS);
+
+    // Apply blind review
+    if (callerRole && callerRole !== 'ADMIN') {
+      const periodIds = [
+        ...new Set(
+          items
+            .map((i) => i.submissionPeriodId)
+            .filter((id): id is string => id != null),
+        ),
+      ];
+
+      if (periodIds.length > 0) {
+        const rows = await tx
+          .select({
+            id: submissionPeriods.id,
+            blindReviewMode: submissionPeriods.blindReviewMode,
+          })
+          .from(submissionPeriods)
+          .where(inArray(submissionPeriods.id, periodIds));
+        const blindModes = new Map<
+          string,
+          import('@colophony/types').BlindReviewMode
+        >();
+        for (const row of rows) {
+          blindModes.set(row.id, row.blindReviewMode);
+        }
+        return items.map((item) => {
+          const mode = item.submissionPeriodId
+            ? (blindModes.get(item.submissionPeriodId) ?? 'none')
+            : 'none';
+          return applySubmitterBlinding(item, mode, callerRole);
+        });
+      }
+    }
+
+    return items;
   },
 
   /**

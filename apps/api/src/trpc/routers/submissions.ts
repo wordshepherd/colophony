@@ -44,9 +44,14 @@ import {
   batchStatusChangeResponseSchema,
   batchAssignReviewersInputSchema,
   batchAssignReviewersResponseSchema,
+  exportSubmissionsSchema,
+  submissionExportItemSchema,
+  AuditActions,
+  AuditResources,
 } from '@colophony/types';
 import {
   orgProcedure,
+  adminProcedure,
   userProcedure,
   createRouter,
   requireScopes,
@@ -91,6 +96,36 @@ export const submissionsRouter = createRouter({
           input,
           ctx.authContext.role,
         );
+      } catch (e) {
+        mapServiceError(e);
+      }
+    }),
+
+  /** Export submissions (admin only) — no pagination, safety-capped at 10k rows. */
+  export: adminProcedure
+    .use(requireScopes('submissions:read'))
+    .input(exportSubmissionsSchema)
+    .output(z.array(submissionExportItemSchema))
+    .query(async ({ ctx, input }) => {
+      try {
+        const result = await submissionService.exportAll(
+          ctx.dbTx,
+          input,
+          ctx.authContext.role,
+        );
+        await ctx.audit({
+          action: AuditActions.SUBMISSION_EXPORTED,
+          resource: AuditResources.SUBMISSION,
+          newValue: {
+            format: input.format,
+            filters: {
+              status: input.status,
+              submissionPeriodId: input.submissionPeriodId,
+              search: input.search,
+            },
+          },
+        });
+        return result;
       } catch (e) {
         mapServiceError(e);
       }

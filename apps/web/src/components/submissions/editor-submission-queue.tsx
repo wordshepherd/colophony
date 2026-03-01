@@ -1,9 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { format } from "date-fns";
 import { trpc } from "@/lib/trpc";
+import { toast } from "sonner";
+import { useOrganization } from "@/hooks/use-organization";
+import { toCsv, downloadFile } from "@/lib/csv-export";
 import { StatusBadge } from "./status-badge";
 import { BatchActionBar } from "./batch-action-bar";
 import { useRowSelection } from "@/hooks/use-row-selection";
@@ -20,14 +23,34 @@ import {
 } from "@/components/ui/table";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Inbox, MoreHorizontal, Eye, X } from "lucide-react";
-import type { SubmissionStatus } from "@colophony/types";
+import {
+  Inbox,
+  MoreHorizontal,
+  Eye,
+  X,
+  ArrowUp,
+  ArrowDown,
+  ArrowUpDown,
+  Download,
+} from "lucide-react";
+import type {
+  SubmissionStatus,
+  SubmissionSortBy,
+  SortOrder,
+} from "@colophony/types";
 
 const STATUS_TABS: Array<{ value: SubmissionStatus | "ALL"; label: string }> = [
   { value: "ALL", label: "All" },
@@ -39,6 +62,46 @@ const STATUS_TABS: Array<{ value: SubmissionStatus | "ALL"; label: string }> = [
   { value: "WITHDRAWN", label: "Withdrawn" },
 ];
 
+const SORTABLE_COLUMNS: Array<{
+  key: SubmissionSortBy;
+  label: string;
+  className?: string;
+}> = [
+  { key: "status", label: "Status", className: "w-[100px]" },
+  { key: "title", label: "Title" },
+  { key: "submitterEmail", label: "Submitter" },
+  { key: "submittedAt", label: "Submitted", className: "w-[140px]" },
+];
+
+const EXPORT_COLUMNS = [
+  { key: "id", label: "ID" },
+  { key: "title", label: "Title" },
+  { key: "status", label: "Status" },
+  { key: "submitterEmail", label: "Submitter Email" },
+  { key: "submittedAt", label: "Submitted At" },
+  { key: "createdAt", label: "Created At" },
+  { key: "periodName", label: "Submission Period" },
+];
+
+function SortIcon({
+  column,
+  currentSort,
+  currentOrder,
+}: {
+  column: SubmissionSortBy;
+  currentSort: SubmissionSortBy;
+  currentOrder: SortOrder;
+}) {
+  if (column !== currentSort) {
+    return <ArrowUpDown className="ml-1 inline h-3 w-3" />;
+  }
+  return currentOrder === "asc" ? (
+    <ArrowUp className="ml-1 inline h-3 w-3" />
+  ) : (
+    <ArrowDown className="ml-1 inline h-3 w-3" />
+  );
+}
+
 export function EditorSubmissionQueue() {
   const [statusFilter, setStatusFilter] = useState<SubmissionStatus | "ALL">(
     "ALL",
@@ -46,7 +109,12 @@ export function EditorSubmissionQueue() {
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [page, setPage] = useState(1);
+  const [sortBy, setSortBy] = useState<SubmissionSortBy>("createdAt");
+  const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
+  const [periodFilter, setPeriodFilter] = useState("");
+  const [isExporting, setIsExporting] = useState(false);
   const selection = useRowSelection<{ id: string }>();
+  const { isAdmin } = useOrganization();
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -60,13 +128,18 @@ export function EditorSubmissionQueue() {
   useEffect(() => {
     selection.clear();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, statusFilter, debouncedSearch]);
+  }, [page, statusFilter, debouncedSearch, periodFilter]);
 
   const utils = trpc.useUtils();
+
+  const { data: periods } = trpc.periods.list.useQuery({ limit: 100 });
 
   const { data, isPending, error } = trpc.submissions.list.useQuery({
     status: statusFilter === "ALL" ? undefined : statusFilter,
     search: debouncedSearch || undefined,
+    submissionPeriodId: periodFilter || undefined,
+    sortBy,
+    sortOrder,
     page,
     limit: 20,
   });
@@ -75,6 +148,63 @@ export function EditorSubmissionQueue() {
     setStatusFilter(value as SubmissionStatus | "ALL");
     setPage(1);
   };
+
+  const handleSort = useCallback(
+    (column: SubmissionSortBy) => {
+      if (column === sortBy) {
+        setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"));
+      } else {
+        setSortBy(column);
+        setSortOrder("desc");
+      }
+      setPage(1);
+    },
+    [sortBy],
+  );
+
+  const handlePeriodChange = useCallback((value: string) => {
+    setPeriodFilter(value === "all" ? "" : value);
+    setPage(1);
+  }, []);
+
+  const handleExport = useCallback(
+    async (exportFormat: "json" | "csv") => {
+      setIsExporting(true);
+      try {
+        const result = await utils.submissions.export.fetch({
+          status: statusFilter === "ALL" ? undefined : statusFilter,
+          search: debouncedSearch || undefined,
+          submissionPeriodId: periodFilter || undefined,
+          format: exportFormat,
+        });
+
+        const timestamp = format(new Date(), "yyyy-MM-dd");
+        if (exportFormat === "csv") {
+          const csv = toCsv(
+            result as unknown as Record<string, unknown>[],
+            EXPORT_COLUMNS,
+          );
+          downloadFile(csv, `submissions-${timestamp}.csv`, "text/csv");
+        } else {
+          const json = JSON.stringify(result, null, 2);
+          downloadFile(
+            json,
+            `submissions-${timestamp}.json`,
+            "application/json",
+          );
+        }
+
+        toast.success(
+          `Exported ${result.length}${result.length === 10000 ? "+ (results truncated at 10,000)" : ""} submissions`,
+        );
+      } catch {
+        toast.error("Failed to export submissions. Please try again.");
+      } finally {
+        setIsExporting(false);
+      }
+    },
+    [utils, statusFilter, debouncedSearch, periodFilter],
+  );
 
   if (isPending) {
     return (
@@ -102,24 +232,62 @@ export function EditorSubmissionQueue() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Submissions</h1>
-
-      {/* Search */}
-      <div className="relative max-w-sm">
-        <Input
-          placeholder="Search by title..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
-        {search && (
-          <button
-            type="button"
-            onClick={() => setSearch("")}
-            className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-          >
-            <X className="h-4 w-4" />
-          </button>
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold">Submissions</h1>
+        {isAdmin && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" disabled={isExporting}>
+                <Download className="mr-2 h-4 w-4" />
+                {isExporting ? "Exporting..." : "Export"}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => handleExport("csv")}>
+                Export as CSV
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleExport("json")}>
+                Export as JSON
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         )}
+      </div>
+
+      {/* Search + Period filter */}
+      <div className="flex flex-wrap items-center gap-4">
+        <div className="relative max-w-sm flex-1">
+          <Input
+            placeholder="Search by title..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+          {search && (
+            <button
+              type="button"
+              onClick={() => setSearch("")}
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          )}
+        </div>
+        <Select
+          value={periodFilter || "all"}
+          onValueChange={handlePeriodChange}
+        >
+          <SelectTrigger className="w-48">
+            <SelectValue placeholder="All periods" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All periods</SelectItem>
+            {periods?.items.map((p) => (
+              <SelectItem key={p.id} value={p.id}>
+                {p.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       {/* Status tabs */}
@@ -152,10 +320,22 @@ export function EditorSubmissionQueue() {
                     aria-label="Select all"
                   />
                 </TableHead>
-                <TableHead className="w-[100px]">Status</TableHead>
-                <TableHead>Title</TableHead>
-                <TableHead>Submitter</TableHead>
-                <TableHead className="w-[140px]">Submitted</TableHead>
+                {SORTABLE_COLUMNS.map((col) => (
+                  <TableHead key={col.key} className={col.className}>
+                    <button
+                      type="button"
+                      className="inline-flex items-center hover:text-foreground"
+                      onClick={() => handleSort(col.key)}
+                    >
+                      {col.label}
+                      <SortIcon
+                        column={col.key}
+                        currentSort={sortBy}
+                        currentOrder={sortOrder}
+                      />
+                    </button>
+                  </TableHead>
+                ))}
                 <TableHead className="w-[60px]">Actions</TableHead>
               </TableRow>
             </TableHeader>

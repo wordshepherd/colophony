@@ -14,31 +14,60 @@ let mockData:
   | undefined;
 let mockIsPending: boolean;
 let mockError: { message: string } | null;
+let mockPeriodsData: { items: Array<{ id: string; name: string }> } | undefined;
+let mockIsAdmin: boolean;
+let mockQueryInput: Record<string, unknown> | undefined;
 
 function resetMocks() {
   mockData = undefined;
   mockIsPending = false;
   mockError = null;
+  mockPeriodsData = undefined;
+  mockIsAdmin = false;
+  mockQueryInput = undefined;
 }
+
+jest.mock("@/hooks/use-organization", () => ({
+  useOrganization: () => ({
+    isAdmin: mockIsAdmin,
+    isEditor: true,
+    currentOrg: {
+      id: "org-1",
+      name: "Test Org",
+      role: mockIsAdmin ? "ADMIN" : "EDITOR",
+    },
+  }),
+}));
 
 jest.mock("@/lib/trpc", () => ({
   trpc: {
     useUtils: () => ({
-      submissions: { list: { invalidate: jest.fn() } },
+      submissions: {
+        list: { invalidate: jest.fn() },
+        export: { fetch: jest.fn().mockResolvedValue([]) },
+      },
     }),
     submissions: {
       list: {
-        useQuery: () => ({
-          data: mockData,
-          isPending: mockIsPending,
-          error: mockError,
-        }),
+        useQuery: (input: Record<string, unknown>) => {
+          mockQueryInput = input;
+          return {
+            data: mockData,
+            isPending: mockIsPending,
+            error: mockError,
+          };
+        },
       },
       batchUpdateStatus: {
         useMutation: () => ({ mutate: jest.fn(), isPending: false }),
       },
       batchAssignReviewers: {
         useMutation: () => ({ mutate: jest.fn(), isPending: false }),
+      },
+    },
+    periods: {
+      list: {
+        useQuery: () => ({ data: mockPeriodsData }),
       },
     },
     organizations: {
@@ -177,5 +206,90 @@ describe("EditorSubmissionQueue", () => {
     // No crash — component still renders
     expect(screen.getByText("No submissions")).toBeInTheDocument();
     jest.useRealTimers();
+  });
+
+  // --- Column sorting tests ---
+
+  it("renders sort indicators on sortable column headers", () => {
+    mockData = {
+      items: [makeItem()],
+      total: 1,
+      page: 1,
+      limit: 20,
+      totalPages: 1,
+    };
+    render(<EditorSubmissionQueue />);
+    // All sortable columns should have clickable buttons
+    expect(screen.getByRole("button", { name: /Title/ })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /Submitter/ }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /Submitted/ }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Status/ })).toBeInTheDocument();
+  });
+
+  it("clicking a column header updates sort parameters", () => {
+    mockData = {
+      items: [makeItem()],
+      total: 1,
+      page: 1,
+      limit: 20,
+      totalPages: 1,
+    };
+    render(<EditorSubmissionQueue />);
+    // Default sort is createdAt desc
+    expect(mockQueryInput?.sortBy).toBe("createdAt");
+    expect(mockQueryInput?.sortOrder).toBe("desc");
+
+    // Click "Title" header
+    fireEvent.click(screen.getByRole("button", { name: /Title/ }));
+    expect(mockQueryInput?.sortBy).toBe("title");
+    expect(mockQueryInput?.sortOrder).toBe("desc");
+  });
+
+  // --- Period filter tests ---
+
+  it("renders submission period dropdown", () => {
+    mockData = { items: [], total: 0, page: 1, limit: 20, totalPages: 0 };
+    mockPeriodsData = {
+      items: [
+        { id: "period-1", name: "Fall 2026" },
+        { id: "period-2", name: "Spring 2027" },
+      ],
+    };
+    render(<EditorSubmissionQueue />);
+    expect(screen.getByText("All periods")).toBeInTheDocument();
+  });
+
+  // --- Export button tests ---
+
+  it("shows export button for admin users", () => {
+    mockIsAdmin = true;
+    mockData = {
+      items: [makeItem()],
+      total: 1,
+      page: 1,
+      limit: 20,
+      totalPages: 1,
+    };
+    render(<EditorSubmissionQueue />);
+    expect(screen.getByRole("button", { name: /Export/ })).toBeInTheDocument();
+  });
+
+  it("hides export button for non-admin users", () => {
+    mockIsAdmin = false;
+    mockData = {
+      items: [makeItem()],
+      total: 1,
+      page: 1,
+      limit: 20,
+      totalPages: 1,
+    };
+    render(<EditorSubmissionQueue />);
+    expect(
+      screen.queryByRole("button", { name: /Export/ }),
+    ).not.toBeInTheDocument();
   });
 });
