@@ -9,6 +9,7 @@ export interface StatusCheckResult {
   submittedAt: Date | null;
   organizationName: string;
   periodName: string | null;
+  expired: boolean;
 }
 
 function hashToken(plainText: string): string {
@@ -37,15 +38,29 @@ export const statusTokenService = {
   /**
    * Generate a status token, hash it, and store the hash on the submission.
    * Returns the plain-text token (shown once to the submitter).
+   *
+   * @param ttlDays - Number of days until the token expires. Pass 0 or omit for no expiry.
    */
-  async generateAndStore(tx: DrizzleDb, submissionId: string): Promise<string> {
+  async generateAndStore(
+    tx: DrizzleDb,
+    submissionId: string,
+    ttlDays?: number,
+  ): Promise<string> {
     const randomHex = crypto.randomBytes(16).toString('hex'); // 32 hex chars
     const plainToken = `${STATUS_TOKEN_PREFIX}${randomHex}`;
     const tokenHash = hashToken(plainToken);
 
+    const expiresAt =
+      ttlDays && ttlDays > 0
+        ? new Date(Date.now() + ttlDays * 24 * 60 * 60 * 1000)
+        : null;
+
     await tx
       .update(submissions)
-      .set({ statusTokenHash: tokenHash })
+      .set({
+        statusTokenHash: tokenHash,
+        statusTokenExpiresAt: expiresAt,
+      })
       .where(eq(submissions.id, submissionId));
 
     return plainToken;
@@ -65,6 +80,7 @@ export const statusTokenService = {
       submitted_at: Date | null;
       organization_name: string;
       period_name: string | null;
+      token_expired: boolean;
     }>('SELECT * FROM verify_status_token($1)', [tokenHash]);
 
     if (result.rows.length === 0) return null;
@@ -77,6 +93,7 @@ export const statusTokenService = {
       submittedAt: row.submitted_at,
       organizationName: row.organization_name,
       periodName: row.period_name,
+      expired: row.token_expired,
     };
   },
 };

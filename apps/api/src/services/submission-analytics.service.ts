@@ -263,7 +263,7 @@ export const submissionAnalyticsService = {
 
   async getAgingSubmissions(
     tx: DrizzleDb,
-    filter: AgingFilter,
+    filter: Omit<AgingFilter, 'maxPerBracket'> & { maxPerBracket?: number },
   ): Promise<AgingSubmissions> {
     const baseWhere = buildFilterWhere(filter);
 
@@ -279,9 +279,11 @@ export const submissionAnalyticsService = {
         AND s.status IN ('SUBMITTED', 'UNDER_REVIEW', 'HOLD', 'REVISE_AND_RESUBMIT')
         AND s.submitted_at IS NOT NULL
       ORDER BY s.submitted_at ASC
+      LIMIT 10000
     `);
 
     const threshold = filter.thresholdDays;
+    const maxPerBracket = filter.maxPerBracket ?? 25;
 
     // Define age brackets relative to threshold
     const bracketDefs = [
@@ -329,8 +331,10 @@ export const submissionAnalyticsService = {
 
       for (let i = brackets.length - 1; i >= 0; i--) {
         if (daysPending >= bracketDefs[i].min) {
-          brackets[i].submissions.push(sub);
           brackets[i].count++;
+          if (brackets[i].submissions.length < maxPerBracket) {
+            brackets[i].submissions.push(sub);
+          }
           break;
         }
       }

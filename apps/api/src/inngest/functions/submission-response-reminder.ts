@@ -58,19 +58,26 @@ export const submissionResponseReminderCron = inngest.createFunction(
     for (const org of eligibleOrgs) {
       const result = await step.run(`process-org-${org.id}`, async () => {
         // Get aging submissions (within RLS context)
-        const agingSubmissions = await withRls(
-          { orgId: org.id },
-          async (tx) => {
+        const { submissions: agingList, totalCount: totalAging } =
+          await withRls({ orgId: org.id }, async (tx) => {
             return submissionService.listAgingByOrg(
               tx,
               org.settings.responseReminderDays,
             );
-          },
-        );
+          });
 
-        if (agingSubmissions.length === 0) {
+        if (agingList.length === 0) {
           return { emailsSent: 0 };
         }
+
+        // Take top 10 for email, compute summary
+        const topSubmissions = agingList.slice(0, 10).map((s) => ({
+          title: s.title ?? '(Untitled)',
+          submitterEmail: s.submitterEmail ?? '[Anonymous]',
+          daysPending: s.daysPending,
+        }));
+        const oldestDays = agingList.length > 0 ? agingList[0].daysPending : 0;
+        const hasMore = totalAging > 10;
 
         // Get editors for this org
         const editors = await withRls({ orgId: org.id }, async (tx) => {
@@ -102,13 +109,12 @@ export const submissionResponseReminderCron = inngest.createFunction(
             templateData: {
               orgName: org.name,
               editorName: editor.email,
-              agingSubmissions: agingSubmissions.map((s) => ({
-                title: s.title ?? '(Untitled)',
-                submitterEmail: s.submitterEmail ?? '[Anonymous]',
-                daysPending: s.daysPending,
-              })),
+              totalAging,
+              oldestDays,
+              topSubmissions,
+              hasMore,
             },
-            subject: `Response reminder: ${agingSubmissions.length} submission${agingSubmissions.length !== 1 ? 's' : ''} awaiting review`,
+            subject: `Response reminder: ${totalAging} submission${totalAging !== 1 ? 's' : ''} awaiting review (oldest: ${oldestDays}d)`,
           });
           emailsSent++;
         }

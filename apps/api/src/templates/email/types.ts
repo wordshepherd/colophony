@@ -66,11 +66,14 @@ export interface EmbedSubmissionConfirmationData {
 export interface ResponseReminderTemplateData {
   orgName: string;
   editorName: string;
-  agingSubmissions: Array<{
+  totalAging: number;
+  oldestDays: number;
+  topSubmissions: Array<{
     title: string;
     submitterEmail: string;
     daysPending: number;
   }>;
+  hasMore: boolean;
   queueUrl?: string;
 }
 

@@ -554,6 +554,14 @@ export async function registerEmbedRoutes(
         });
       }
 
+      if (result.expired) {
+        return reply.status(410).send({
+          error: 'token_expired',
+          message:
+            'This status link has expired. Please contact the publication for an update.',
+        });
+      }
+
       return {
         title: result.title,
         status: result.status,

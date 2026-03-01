@@ -167,6 +167,7 @@ builder.queryFields((t) => {
             {
               ...extractFilter(args),
               thresholdDays: args.thresholdDays ?? 14,
+              maxPerBracket: 25,
             },
           );
         } catch (e) {

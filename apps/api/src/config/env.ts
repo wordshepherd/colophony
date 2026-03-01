@@ -78,6 +78,13 @@ const envSchema = z.object({
     .positive()
     .default(60),
 
+  // Status token TTL
+  STATUS_TOKEN_TTL_DAYS: z.coerce.number().int().positive().default(90),
+
+  FEDERATION_RATE_LIMIT_FAIL_MODE: z
+    .enum(['open', 'closed', 'fallback'])
+    .default('open'),
+
   FEDERATION_DOMAIN: z.string().optional(),
   FEDERATION_ENABLED: z
     .enum(['true', 'false'])

@@ -1,13 +1,26 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-// Build a chainable mock for select().from().leftJoin().where().orderBy()
+// Build a chainable mock for select().from().leftJoin().where().orderBy().limit()
 let mockRows: Array<Record<string, unknown>> = [];
+let mockCountRows: Array<Record<string, unknown>> = [{ value: 0 }];
 
-const mockOrderBy = vi.fn().mockImplementation(() => mockRows);
+const mockLimit = vi.fn().mockImplementation(() => mockRows);
+const mockOrderBy = vi.fn().mockReturnValue({ limit: mockLimit });
 const mockWhere = vi.fn().mockReturnValue({ orderBy: mockOrderBy });
 const mockLeftJoin = vi.fn().mockReturnValue({ where: mockWhere });
 const mockFrom = vi.fn().mockReturnValue({ leftJoin: mockLeftJoin });
-const mockSelect = vi.fn().mockReturnValue({ from: mockFrom });
+
+// Count query chain: select().from().where() → [{ value: N }]
+const mockCountWhere = vi.fn().mockImplementation(() => mockCountRows);
+const mockCountFrom = vi.fn().mockReturnValue({ where: mockCountWhere });
+
+const mockSelect = vi.fn().mockImplementation((arg: unknown) => {
+  // Detect count query by checking the argument shape
+  if (arg && typeof arg === 'object' && 'value' in arg) {
+    return { from: mockCountFrom };
+  }
+  return { from: mockFrom };
+});
 
 vi.mock('@colophony/db', () => ({
   db: {},
@@ -33,6 +46,7 @@ vi.mock('drizzle-orm', async (importOriginal) => {
     lte: vi.fn(),
     notInArray: vi.fn(),
     isNotNull: vi.fn(),
+    count: vi.fn().mockReturnValue({ as: vi.fn() }),
   };
 });
 
@@ -69,6 +83,7 @@ import { submissionService } from '../submission.service.js';
 beforeEach(() => {
   vi.clearAllMocks();
   mockRows = [];
+  mockCountRows = [{ value: 0 }];
 });
 
 describe('submissionService.listAgingByOrg', () => {
@@ -80,6 +95,7 @@ describe('submissionService.listAgingByOrg', () => {
     const thirtyFiveDaysAgo = new Date();
     thirtyFiveDaysAgo.setDate(thirtyFiveDaysAgo.getDate() - 35);
 
+    mockCountRows = [{ value: 1 }];
     mockRows = [
       {
         id: 's-1',
@@ -89,22 +105,25 @@ describe('submissionService.listAgingByOrg', () => {
       },
     ];
 
-    const results = await submissionService.listAgingByOrg(fakeTx, 30);
-    expect(results).toHaveLength(1);
-    expect(results[0].daysPending).toBeGreaterThanOrEqual(35);
-    expect(results[0].title).toBe('Old Poem');
+    const result = await submissionService.listAgingByOrg(fakeTx, 30);
+    expect(result.submissions).toHaveLength(1);
+    expect(result.submissions[0].daysPending).toBeGreaterThanOrEqual(35);
+    expect(result.submissions[0].title).toBe('Old Poem');
   });
 
   it('returns empty for no matching rows', async () => {
     mockRows = [];
-    const results = await submissionService.listAgingByOrg(fakeTx, 30);
-    expect(results).toEqual([]);
+    mockCountRows = [{ value: 0 }];
+    const result = await submissionService.listAgingByOrg(fakeTx, 30);
+    expect(result.submissions).toEqual([]);
+    expect(result.totalCount).toBe(0);
   });
 
   it('computes daysPending correctly', async () => {
     const tenDaysAgo = new Date();
     tenDaysAgo.setDate(tenDaysAgo.getDate() - 10);
 
+    mockCountRows = [{ value: 1 }];
     mockRows = [
       {
         id: 's-2',
@@ -114,7 +133,23 @@ describe('submissionService.listAgingByOrg', () => {
       },
     ];
 
-    const results = await submissionService.listAgingByOrg(fakeTx, 5);
-    expect(results[0].daysPending).toBeGreaterThanOrEqual(10);
+    const result = await submissionService.listAgingByOrg(fakeTx, 5);
+    expect(result.submissions[0].daysPending).toBeGreaterThanOrEqual(10);
+  });
+
+  it('returns totalCount alongside submissions', async () => {
+    mockCountRows = [{ value: 42 }];
+    mockRows = [
+      {
+        id: 's-1',
+        title: 'Test',
+        submittedAt: new Date(),
+        submitterEmail: 'a@test.com',
+      },
+    ];
+
+    const result = await submissionService.listAgingByOrg(fakeTx, 7);
+    expect(result.totalCount).toBe(42);
+    expect(result.submissions).toHaveLength(1);
   });
 });
