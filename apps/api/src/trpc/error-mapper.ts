@@ -85,6 +85,10 @@ import {
   VoteOnTerminalSubmissionError,
   ScoreOutOfRangeError,
 } from '../services/submission-vote.service.js';
+import {
+  PresetLimitExceededError,
+  PresetNotFoundError,
+} from '../services/queue-preset.service.js';
 
 type TRPCErrorCode = ConstructorParameters<typeof TRPCError>[0]['code'];
 
@@ -163,6 +167,9 @@ const errorCodeMap: [new (...args: never[]) => Error, TRPCErrorCode][] = [
   [VotingDisabledError, 'BAD_REQUEST'],
   [VoteOnTerminalSubmissionError, 'BAD_REQUEST'],
   [ScoreOutOfRangeError, 'BAD_REQUEST'],
+  // Preset errors
+  [PresetLimitExceededError, 'BAD_REQUEST'],
+  [PresetNotFoundError, 'NOT_FOUND'],
   // Precondition
   [FileNotCleanError, 'PRECONDITION_FAILED'],
 ];
