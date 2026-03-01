@@ -649,6 +649,155 @@ describe('migrationBundleService', () => {
       });
     });
 
+    it('uses last terminal transition for decidedAt (not first)', async () => {
+      let selectCallCount = 0;
+      mockDb.select.mockImplementation(() => {
+        selectCallCount++;
+        return mockDb;
+      });
+
+      mockDb.where.mockImplementation(() => {
+        if (selectCallCount === 1) {
+          return [
+            {
+              id: validUuid,
+              title: 'Re-decided Sub',
+              coverLetter: null,
+              content: null,
+              status: 'WITHDRAWN',
+              formData: null,
+              submittedAt: new Date('2025-01-01'),
+              organizationId: validUuid2,
+              manuscriptVersionId: null,
+              submissionPeriodId: null,
+            },
+          ];
+        }
+        if (selectCallCount === 2) {
+          return [{ id: validUuid2, name: 'Test Mag' }];
+        }
+        // 3: history — multiple terminal transitions
+        if (selectCallCount === 3) {
+          return [
+            {
+              submissionId: validUuid,
+              fromStatus: null,
+              toStatus: 'SUBMITTED',
+              changedAt: new Date('2025-01-01T10:00:00Z'),
+              comment: null,
+            },
+            {
+              submissionId: validUuid,
+              fromStatus: 'SUBMITTED',
+              toStatus: 'REJECTED',
+              changedAt: new Date('2025-02-01T10:00:00Z'),
+              comment: 'Not a fit',
+            },
+            {
+              submissionId: validUuid,
+              fromStatus: 'REJECTED',
+              toStatus: 'WITHDRAWN',
+              changedAt: new Date('2025-03-01T10:00:00Z'),
+              comment: 'Withdrawing',
+            },
+          ];
+        }
+        return [];
+      });
+
+      const bundle = await migrationBundleService.assembleBundleForUser(
+        testEnv,
+        {
+          userId: validUuid,
+          userEmail: 'user@test.com',
+          userDid: 'did:web:local.example.com:users:user',
+          destinationDomain: 'remote.example.com',
+          destinationUserDid: null,
+          migrationId: validUuid2,
+        },
+      );
+
+      // Should use the LAST terminal transition (WITHDRAWN), not the first (REJECTED)
+      expect(bundle.submissionHistory[0].decidedAt).toBe(
+        '2025-03-01T10:00:00.000Z',
+      );
+    });
+
+    it('falls back to null for malformed genre JSONB', async () => {
+      let selectCallCount = 0;
+      mockDb.select.mockImplementation(() => {
+        selectCallCount++;
+        return mockDb;
+      });
+
+      const mvId = '00000000-0000-4000-a000-000000000010';
+
+      mockDb.where.mockImplementation(() => {
+        if (selectCallCount === 1) {
+          return [
+            {
+              id: validUuid,
+              title: 'Bad Genre Sub',
+              coverLetter: null,
+              content: null,
+              status: 'REJECTED',
+              formData: null,
+              submittedAt: new Date('2025-01-01'),
+              organizationId: validUuid2,
+              manuscriptVersionId: mvId,
+              submissionPeriodId: null,
+            },
+          ];
+        }
+        if (selectCallCount === 2) {
+          return [{ id: validUuid2, name: 'Test Mag' }];
+        }
+        // 3: genre JOIN — malformed JSONB (missing required fields)
+        if (selectCallCount === 3) {
+          return [
+            {
+              versionId: mvId,
+              genre: { invalid: 'data' },
+            },
+          ];
+        }
+        // 4: history
+        if (selectCallCount === 4) return [];
+        return [];
+      });
+
+      const bundle = await migrationBundleService.assembleBundleForUser(
+        testEnv,
+        {
+          userId: validUuid,
+          userEmail: 'user@test.com',
+          userDid: 'did:web:local.example.com:users:user',
+          destinationDomain: 'remote.example.com',
+          destinationUserDid: null,
+          migrationId: validUuid2,
+        },
+      );
+
+      // Malformed genre should fall back to null, not crash
+      expect(bundle.submissionHistory[0].genre).toBeNull();
+    });
+
+    it('applies submission query limit', async () => {
+      mockDb.where.mockReturnValue([]);
+
+      await migrationBundleService.assembleBundleForUser(testEnv, {
+        userId: validUuid,
+        userEmail: 'user@test.com',
+        userDid: 'did:web:local.example.com:users:user',
+        destinationDomain: 'remote.example.com',
+        destinationUserDid: null,
+        migrationId: validUuid2,
+      });
+
+      // Submissions query chain calls .limit(10000)
+      expect(mockDb.limit).toHaveBeenCalledWith(10_000);
+    });
+
     it('maps Hopper status to CSR status in bundle', async () => {
       let selectCallCount = 0;
       mockDb.select.mockImplementation(() => {
