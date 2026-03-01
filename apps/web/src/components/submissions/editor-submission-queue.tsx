@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { format } from "date-fns";
 import { trpc } from "@/lib/trpc";
+import { toast } from "sonner";
 import { useOrganization } from "@/hooks/use-organization";
 import { toCsv, downloadFile } from "@/lib/csv-export";
 import { StatusBadge } from "./status-badge";
@@ -192,6 +193,12 @@ export function EditorSubmissionQueue() {
             "application/json",
           );
         }
+
+        toast.success(
+          `Exported ${result.length}${result.length === 10000 ? "+ (results truncated at 10,000)" : ""} submissions`,
+        );
+      } catch {
+        toast.error("Failed to export submissions. Please try again.");
       } finally {
         setIsExporting(false);
       }
