@@ -349,8 +349,8 @@
 - [x] [P2] MigrationBundle: use last terminal transition for `decidedAt` — current impl uses first; REJECTED→ACCEPTED would reflect rejection date — (code review 2026-02-27; done 2026-02-28)
 - [x] [P2] MigrationBundle: Zod-validate genre JSONB from DB — currently cast `as Genre | null` without validation — (code review 2026-02-27; done 2026-02-28)
 - [x] [P2] MigrationBundle: add submission count LIMIT/batching for users with thousands of submissions — (code review 2026-02-27; done 2026-02-28)
-- [ ] [P1] CSR export endpoint — tRPC + REST endpoint for writers to download their full CSR as JSON; aggregates Colophony-native submissions (cross-org), external submissions, correspondence, and piece groupings — replaces GDPR export placeholder — (register-data-standard.md Section 2.1; 2026-02-27)
-- [ ] [P1] CSR import endpoint — ingest external submission records from JSON/CSV; flexible column mapping for CSV; piece grouping by normalized title; source tagging (`importedFrom` field) — (register-data-standard.md Section 3; 2026-02-27)
+- [x] [P1] CSR export endpoint — tRPC + REST endpoint for writers to download their full CSR as JSON; aggregates Colophony-native submissions (cross-org), external submissions, correspondence, writer profiles, and manuscripts — (register-data-standard.md Section 2.1; done 2026-03-01)
+- [x] [P1] CSR import endpoint — ingest external submission records from JSON with correspondence linking; CSV import with column mapping deferred to writer workspace UI track — (register-data-standard.md Section 3; done 2026-03-01)
 - [ ] [P2] CSR format documentation — human-readable spec with field descriptions, examples, status mapping table, and extension points; publishable as part of project docs — (register-data-standard.md; 2026-02-27)
 
 ### Correspondence Tracking
@@ -358,7 +358,7 @@
 - [x] [P0] `correspondence` DB table — new table for editor-writer messages linked to submissions; fields: direction (inbound/outbound), channel (email/portal/in_app), body, senderName, senderEmail, isPersonalized flag; RLS scoped to submission owner + org editors; XOR CHECK on submission_id/external_submission_id — (register-data-standard.md Section 2.8, 4.2; done 2026-02-27 PR pending)
 - [x] [P1] Auto-capture Colophony correspondence — auto-insert correspondence records on acceptance/rejection notifications + editor messages; captures status transition comments — (register-data-standard.md Section 2.8; done 2026-02-27 PR pending)
 - [ ] [P2] Manual correspondence logging — writers can paste/enter notable editor messages (personalized rejections, encouragement letters) for external submissions; lightweight form: paste text, mark as personalized, save — (register-data-standard.md Section 2.8; 2026-02-27)
-- [ ] [P2] Correspondence in CSR export — include all correspondence records in the writer's CSR download, linked to submission records — (register-data-standard.md Section 2.8; 2026-02-27)
+- [x] [P2] Correspondence in CSR export — include all correspondence records in the writer's CSR download, linked to submission records — (register-data-standard.md Section 2.8; done 2026-03-01)
 
 ### Writer as Top-Level Entity
 
