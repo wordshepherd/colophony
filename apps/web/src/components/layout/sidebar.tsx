@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import { useOrganization } from "@/hooks/use-organization";
 import { PluginSlot } from "@/components/plugins/plugin-slot";
 import {
+  BarChart3,
   BookCopy,
   BookMarked,
   BookOpen,
@@ -17,6 +18,7 @@ import {
   GitBranch,
   Globe,
   Inbox,
+  Layers,
   LayoutDashboard,
   Library,
   Mail,
@@ -35,6 +37,8 @@ const writerNavigation = [
     href: "/workspace/correspondence",
     icon: Mail,
   },
+  { name: "Portfolio", href: "/workspace/portfolio", icon: Layers },
+  { name: "Analytics", href: "/workspace/analytics", icon: BarChart3 },
 ];
 
 const submitterNavigation = [
