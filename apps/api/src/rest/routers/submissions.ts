@@ -634,6 +634,7 @@ const restTimeSeriesFilterSchema = restAnalyticsFilterSchema.extend({
 
 const restAgingFilterSchema = restAnalyticsFilterSchema.extend({
   thresholdDays: z.coerce.number().int().min(1).default(14),
+  maxPerBracket: z.coerce.number().int().min(1).max(100).default(25),
 });
 
 const analyticsOverview = orgProcedure

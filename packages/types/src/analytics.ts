@@ -18,6 +18,7 @@ export type TimeSeriesFilter = z.infer<typeof timeSeriesFilterSchema>;
 
 export const agingFilterSchema = analyticsFilterSchema.extend({
   thresholdDays: z.number().int().min(1).default(14),
+  maxPerBracket: z.number().int().min(1).max(100).default(25),
 });
 export type AgingFilter = z.infer<typeof agingFilterSchema>;
 

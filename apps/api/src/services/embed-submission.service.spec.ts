@@ -94,6 +94,12 @@ vi.mock('./outbox.js', () => ({
   enqueueOutboxEvent: mockEnqueueOutboxEvent,
 }));
 
+vi.mock('../config/env.js', () => ({
+  validateEnv: vi.fn(() => ({
+    STATUS_TOKEN_TTL_DAYS: 90,
+  })),
+}));
+
 import {
   embedSubmissionService,
   PeriodClosedError,

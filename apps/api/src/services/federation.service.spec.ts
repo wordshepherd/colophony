@@ -113,6 +113,8 @@ const baseEnv: Env = {
   SENTRY_ENVIRONMENT: 'test',
   SENTRY_TRACES_SAMPLE_RATE: 0,
   METRICS_ENABLED: false,
+  STATUS_TOKEN_TTL_DAYS: 90,
+  FEDERATION_RATE_LIMIT_FAIL_MODE: 'open' as const,
 };
 
 // Helper to build chained Drizzle mock
