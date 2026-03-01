@@ -9,6 +9,9 @@ When reviewing code in this project, enforce these rules:
 - **PCI compliance:** NEVER log card numbers or CVV. NEVER store card data. Stripe Checkout only.
 - **Audit logging:** Sensitive operations MUST be audit logged.
 - **Input validation:** Use Zod schemas from `@colophony/types` on all API surfaces.
+- **Defense-in-depth multi-tenancy:** Service methods querying tenant data MUST include explicit `organizationId` filter even when RLS is active. Unused `_orgId` parameters are a red flag.
+- **SSRF protection:** Outbound HTTP calls to user-controlled URLs MUST validate via `validateOutboundUrl()`. Direct `fetch()` to user URLs without SSRF checks is Critical.
+- **Unbounded queries:** List/query methods returning variable-size data MUST have a `LIMIT` or accept pagination parameters. Missing `LIMIT` is Important.
 
 ## Review Format
 

@@ -62,6 +62,9 @@ Key project rules to enforce:
 - PCI compliance: NEVER log card numbers or CVV. NEVER store card data. Stripe Checkout only.
 - Audit logging: sensitive operations MUST be audit logged.
 - Input validation: use Zod schemas from @colophony/types on all API surfaces.
+- Defense-in-depth for multi-tenancy: service methods querying tenant data MUST include explicit organizationId filter even when RLS is active. Unused parameters prefixed with _ in service methods are a red flag for missing filters.
+- SSRF protection: outbound HTTP calls to user-controlled URLs (webhooks, callbacks, federation) MUST validate via validateOutboundUrl(). Direct fetch() to user URLs without SSRF checks is Critical.
+- Unbounded queries: list/query methods returning variable-size data MUST have a LIMIT or pagination. Missing LIMIT in service methods is Important.
 
 Format your review as markdown:
 - Start with a one-line verdict: LGTM, Minor issues, or Issues found
