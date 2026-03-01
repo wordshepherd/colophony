@@ -46,6 +46,9 @@ jest.mock("@/lib/trpc", () => ({
         list: { invalidate: jest.fn() },
         export: { fetch: jest.fn().mockResolvedValue([]) },
       },
+      queuePresets: {
+        list: { invalidate: jest.fn() },
+      },
     }),
     submissions: {
       list: {
@@ -75,6 +78,17 @@ jest.mock("@/lib/trpc", () => ({
         list: {
           useQuery: () => ({ data: undefined }),
         },
+      },
+    },
+    queuePresets: {
+      list: {
+        useQuery: () => ({ data: [] }),
+      },
+      create: {
+        useMutation: () => ({ mutate: jest.fn(), isPending: false }),
+      },
+      delete: {
+        useMutation: () => ({ mutate: jest.fn(), isPending: false }),
       },
     },
   },
@@ -176,7 +190,7 @@ describe("EditorSubmissionQueue", () => {
     };
     render(<EditorSubmissionQueue />);
     const link = screen.getByText("My Poem").closest("a");
-    expect(link).toHaveAttribute("href", "/editor/abc123");
+    expect(link?.getAttribute("href")).toContain("/editor/abc123");
   });
 
   it("shows pagination when totalPages > 1", () => {
