@@ -73,10 +73,6 @@ export class TrustSignatureVerificationError extends Error {
   }
 }
 
-// ---------------------------------------------------------------------------
-// SSRF Protection — uses shared utility from ../lib/url-validation.ts
-// ---------------------------------------------------------------------------
-
 /** Maximum response body size for remote metadata fetches (1 MB). */
 const MAX_METADATA_RESPONSE_BYTES = 1_048_576;
 
@@ -98,7 +94,11 @@ async function fetchAndValidateMetadata(
       await resolveAndCheckPrivateIp(domain);
     } catch (err) {
       if (err instanceof SsrfValidationError) {
-        throw new RemoteMetadataFetchError(domain, err);
+        // Sanitize: don't leak internal IPs in the outward-facing error
+        throw new RemoteMetadataFetchError(
+          domain,
+          new Error('Domain resolves to a private or reserved IP address'),
+        );
       }
       throw err;
     }

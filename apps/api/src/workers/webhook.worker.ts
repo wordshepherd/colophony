@@ -9,10 +9,7 @@ import { getWebhookBackoffDelay } from '../queues/webhook.queue.js';
 import { webhookService } from '../services/webhook.service.js';
 import { auditService } from '../services/audit.service.js';
 import { createInstrumentedWorker } from '../config/instrumented-worker.js';
-import {
-  validateOutboundUrl,
-  SsrfValidationError,
-} from '../lib/url-validation.js';
+import { validateOutboundUrl } from '../lib/url-validation.js';
 
 const AUTO_DISABLE_THRESHOLD = 5;
 const DELIVERY_TIMEOUT_MS = 30_000;
@@ -37,25 +34,20 @@ export function startWebhookWorker(env: Env): Worker<WebhookJobData> {
         );
       });
 
-      // Phase 2: SSRF validation — reject private IPs (permanent failure, no retry)
+      // Phase 2: SSRF validation — all failures are permanent (no retry)
+      // Retrying URL validation could enable DNS rebinding amplification
       const devMode = env.NODE_ENV === 'development' || env.NODE_ENV === 'test';
       try {
         await validateOutboundUrl(endpointUrl, { devMode });
       } catch (err) {
-        if (err instanceof SsrfValidationError) {
-          await withRls({ orgId }, async (tx: DrizzleDb) => {
-            await webhookService.updateDeliveryStatus(
-              tx,
-              deliveryId,
-              'FAILED',
-              {
-                errorMessage: `SSRF blocked: ${err.message}`,
-              },
-            );
+        const errorMsg =
+          err instanceof Error ? err.message : 'URL validation failed';
+        await withRls({ orgId }, async (tx: DrizzleDb) => {
+          await webhookService.updateDeliveryStatus(tx, deliveryId, 'FAILED', {
+            errorMessage: `URL validation failed: ${errorMsg}`,
           });
-          return; // Permanent failure — do not retry
-        }
-        throw err;
+        });
+        return; // Permanent failure — do not retry
       }
 
       // Phase 3: Compute HMAC-SHA256 signature

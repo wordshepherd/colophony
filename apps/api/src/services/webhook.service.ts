@@ -67,7 +67,10 @@ export const webhookService = {
       await validateOutboundUrl(params.url, { devMode });
     } catch (err) {
       if (err instanceof SsrfValidationError) {
-        throw new WebhookUrlValidationError(err.message);
+        // Sanitize: don't expose internal network details to API consumers
+        throw new WebhookUrlValidationError(
+          'URL is not allowed: must be a public HTTPS endpoint',
+        );
       }
       throw err;
     }
@@ -100,7 +103,9 @@ export const webhookService = {
         await validateOutboundUrl(params.url, { devMode });
       } catch (err) {
         if (err instanceof SsrfValidationError) {
-          throw new WebhookUrlValidationError(err.message);
+          throw new WebhookUrlValidationError(
+            'URL is not allowed: must be a public HTTPS endpoint',
+          );
         }
         throw err;
       }

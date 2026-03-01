@@ -202,6 +202,14 @@ describe('url-validation', () => {
       expect(mockResolve4).not.toHaveBeenCalled();
     });
 
+    it('allows HTTPS + private IP in dev mode', async () => {
+      // HTTPS with private IP — should still pass in dev mode
+      await expect(
+        validateOutboundUrl('https://192.168.1.1/hook', { devMode: true }),
+      ).resolves.toBeUndefined();
+      expect(mockResolve4).not.toHaveBeenCalled();
+    });
+
     it('rejects invalid URLs', async () => {
       await expect(validateOutboundUrl('not-a-url')).rejects.toThrow(
         SsrfValidationError,
