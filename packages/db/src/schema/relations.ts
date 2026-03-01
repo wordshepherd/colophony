@@ -25,6 +25,7 @@ import {
   correspondence,
   writerProfiles,
 } from "./writer-workspace";
+import { savedQueuePresets } from "./saved-queue-presets";
 
 // --- organizations ---
 
@@ -45,6 +46,7 @@ export const organizationsRelations = relations(organizations, ({ many }) => ({
   issues: many(issues),
   cmsConnections: many(cmsConnections),
   trustedPeers: many(trustedPeers),
+  savedQueuePresets: many(savedQueuePresets),
 }));
 
 // --- users ---
@@ -61,6 +63,7 @@ export const usersRelations = relations(users, ({ many }) => ({
   externalSubmissions: many(externalSubmissions),
   correspondence: many(correspondence),
   writerProfiles: many(writerProfiles),
+  savedQueuePresets: many(savedQueuePresets),
 }));
 
 // --- organization_members ---

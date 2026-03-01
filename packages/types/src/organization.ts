@@ -142,3 +142,9 @@ export const updateMemberRoleSchema = z.object({
 });
 
 export type UpdateMemberRoleInput = z.infer<typeof updateMemberRoleSchema>;
+
+export const orgSettingsSchema = z.object({
+  responseReminderEnabled: z.boolean().default(false),
+  responseReminderDays: z.number().int().min(1).max(365).default(30),
+});
+export type OrgSettings = z.infer<typeof orgSettingsSchema>;

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import { format } from "date-fns";
+import { format, differenceInDays } from "date-fns";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 import { useOrganization } from "@/hooks/use-organization";
@@ -37,6 +37,15 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import {
   Inbox,
   MoreHorizontal,
   Eye,
@@ -45,11 +54,14 @@ import {
   ArrowDown,
   ArrowUpDown,
   Download,
+  Bookmark,
+  BookmarkPlus,
 } from "lucide-react";
 import type {
   SubmissionStatus,
   SubmissionSortBy,
   SortOrder,
+  PresetFilters,
 } from "@colophony/types";
 
 const STATUS_TABS: Array<{ value: SubmissionStatus | "ALL"; label: string }> = [
@@ -62,15 +74,52 @@ const STATUS_TABS: Array<{ value: SubmissionStatus | "ALL"; label: string }> = [
   { value: "WITHDRAWN", label: "Withdrawn" },
 ];
 
+const TERMINAL_STATUSES = new Set(["ACCEPTED", "REJECTED", "WITHDRAWN"]);
+
+function AgeBadge({
+  submittedAt,
+  status,
+}: {
+  submittedAt: string | null;
+  status: string;
+}) {
+  if (TERMINAL_STATUSES.has(status) || !submittedAt) {
+    return <span className="text-muted-foreground">{"\u2014"}</span>;
+  }
+  const days = differenceInDays(new Date(), new Date(submittedAt));
+  let colorClass =
+    "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300";
+  if (days > 30) {
+    colorClass = "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300";
+  } else if (days >= 14) {
+    colorClass =
+      "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300";
+  }
+  return (
+    <span
+      className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${colorClass}`}
+    >
+      {days}d
+    </span>
+  );
+}
+
 const SORTABLE_COLUMNS: Array<{
   key: SubmissionSortBy;
   label: string;
   className?: string;
+  id?: string;
 }> = [
   { key: "status", label: "Status", className: "w-[100px]" },
   { key: "title", label: "Title" },
   { key: "submitterEmail", label: "Submitter" },
   { key: "submittedAt", label: "Submitted", className: "w-[140px]" },
+  {
+    key: "submittedAt",
+    label: "Age",
+    className: "w-[80px]",
+    id: "age",
+  },
 ];
 
 const EXPORT_COLUMNS = [
@@ -82,6 +131,14 @@ const EXPORT_COLUMNS = [
   { key: "createdAt", label: "Created At" },
   { key: "periodName", label: "Submission Period" },
 ];
+
+function buildEditorHref(id: string, ids: string[], idx: number): string {
+  const params = new URLSearchParams({
+    queue: ids.join(","),
+    idx: String(idx),
+  });
+  return `/editor/${id}?${params.toString()}`;
+}
 
 function SortIcon({
   column,
@@ -113,6 +170,8 @@ export function EditorSubmissionQueue() {
   const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
   const [periodFilter, setPeriodFilter] = useState("");
   const [isExporting, setIsExporting] = useState(false);
+  const [showSavePresetDialog, setShowSavePresetDialog] = useState(false);
+  const [presetName, setPresetName] = useState("");
   const selection = useRowSelection<{ id: string }>();
   const { isAdmin } = useOrganization();
 
@@ -133,6 +192,23 @@ export function EditorSubmissionQueue() {
   const utils = trpc.useUtils();
 
   const { data: periods } = trpc.periods.list.useQuery({ limit: 100 });
+  const { data: presets } = trpc.queuePresets.list.useQuery();
+  const createPresetMutation = trpc.queuePresets.create.useMutation({
+    onSuccess: () => {
+      toast.success("Preset saved");
+      setShowSavePresetDialog(false);
+      setPresetName("");
+      utils.queuePresets.list.invalidate();
+    },
+    onError: (err) => toast.error(err.message),
+  });
+  const deletePresetMutation = trpc.queuePresets.delete.useMutation({
+    onSuccess: () => {
+      toast.success("Preset deleted");
+      utils.queuePresets.list.invalidate();
+    },
+    onError: (err) => toast.error(err.message),
+  });
 
   const { data, isPending, error } = trpc.submissions.list.useQuery({
     status: statusFilter === "ALL" ? undefined : statusFilter,
@@ -166,6 +242,34 @@ export function EditorSubmissionQueue() {
     setPeriodFilter(value === "all" ? "" : value);
     setPage(1);
   }, []);
+
+  const getCurrentFilters = useCallback((): PresetFilters => {
+    return {
+      status: statusFilter === "ALL" ? undefined : statusFilter,
+      sortBy,
+      sortOrder,
+      periodFilter: periodFilter || undefined,
+      search: debouncedSearch || undefined,
+    };
+  }, [statusFilter, sortBy, sortOrder, periodFilter, debouncedSearch]);
+
+  const applyPreset = useCallback((filters: PresetFilters) => {
+    setStatusFilter((filters.status as SubmissionStatus | "ALL") ?? "ALL");
+    setSortBy((filters.sortBy as SubmissionSortBy) ?? "createdAt");
+    setSortOrder((filters.sortOrder as SortOrder) ?? "desc");
+    setPeriodFilter(filters.periodFilter ?? "");
+    setSearch(filters.search ?? "");
+    setDebouncedSearch(filters.search ?? "");
+    setPage(1);
+  }, []);
+
+  const handleSavePreset = useCallback(() => {
+    if (!presetName.trim()) return;
+    createPresetMutation.mutate({
+      name: presetName.trim(),
+      filters: getCurrentFilters(),
+    });
+  }, [presetName, getCurrentFilters, createPresetMutation]);
 
   const handleExport = useCallback(
     async (exportFormat: "json" | "csv") => {
@@ -288,6 +392,47 @@ export function EditorSubmissionQueue() {
             ))}
           </SelectContent>
         </Select>
+
+        {/* Preset buttons */}
+        {presets && presets.length > 0 && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm">
+                <Bookmark className="mr-2 h-4 w-4" />
+                Presets
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              {presets.map((preset) => (
+                <DropdownMenuItem
+                  key={preset.id}
+                  className="flex items-center justify-between"
+                  onClick={() => applyPreset(preset.filters as PresetFilters)}
+                >
+                  <span className="truncate">{preset.name}</span>
+                  <button
+                    type="button"
+                    className="ml-2 text-muted-foreground hover:text-destructive"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      deletePresetMutation.mutate({ id: preset.id });
+                    }}
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setShowSavePresetDialog(true)}
+        >
+          <BookmarkPlus className="mr-2 h-4 w-4" />
+          Save Filter
+        </Button>
       </div>
 
       {/* Status tabs */}
@@ -321,7 +466,7 @@ export function EditorSubmissionQueue() {
                   />
                 </TableHead>
                 {SORTABLE_COLUMNS.map((col) => (
-                  <TableHead key={col.key} className={col.className}>
+                  <TableHead key={col.id ?? col.key} className={col.className}>
                     <button
                       type="button"
                       className="inline-flex items-center hover:text-foreground"
@@ -340,58 +485,69 @@ export function EditorSubmissionQueue() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {data.items.map((item) => (
-                <TableRow
-                  key={item.id}
-                  data-state={
-                    selection.isSelected(item.id) ? "selected" : undefined
-                  }
-                >
-                  <TableCell>
-                    <Checkbox
-                      checked={selection.isSelected(item.id)}
-                      onCheckedChange={() => selection.toggle(item.id)}
-                      aria-label={`Select ${item.title ?? "submission"}`}
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <StatusBadge status={item.status as SubmissionStatus} />
-                  </TableCell>
-                  <TableCell>
-                    <Link
-                      href={`/editor/${item.id}`}
-                      className="font-medium hover:underline"
-                    >
-                      {item.title ?? "(Untitled)"}
-                    </Link>
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {item.submitterEmail ?? "[Anonymous]"}
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {item.submittedAt
-                      ? format(new Date(item.submittedAt), "MMM d, yyyy")
-                      : "\u2014"}
-                  </TableCell>
-                  <TableCell>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem asChild>
-                          <Link href={`/editor/${item.id}`}>
-                            <Eye className="mr-2 h-4 w-4" />
-                            View
-                          </Link>
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
-                </TableRow>
-              ))}
+              {data.items.map((item, idx) => {
+                const ids = data.items.map((i) => i.id);
+                const href = buildEditorHref(item.id, ids, idx);
+                return (
+                  <TableRow
+                    key={item.id}
+                    data-state={
+                      selection.isSelected(item.id) ? "selected" : undefined
+                    }
+                  >
+                    <TableCell>
+                      <Checkbox
+                        checked={selection.isSelected(item.id)}
+                        onCheckedChange={() => selection.toggle(item.id)}
+                        aria-label={`Select ${item.title ?? "submission"}`}
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <StatusBadge status={item.status as SubmissionStatus} />
+                    </TableCell>
+                    <TableCell>
+                      <Link href={href} className="font-medium hover:underline">
+                        {item.title ?? "(Untitled)"}
+                      </Link>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {item.submitterEmail ?? "[Anonymous]"}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {item.submittedAt
+                        ? format(new Date(item.submittedAt), "MMM d, yyyy")
+                        : "\u2014"}
+                    </TableCell>
+                    <TableCell>
+                      <AgeBadge
+                        submittedAt={item.submittedAt as string | null}
+                        status={item.status as string}
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                          >
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem asChild>
+                            <Link href={href}>
+                              <Eye className="mr-2 h-4 w-4" />
+                              View
+                            </Link>
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
 
@@ -444,6 +600,50 @@ export function EditorSubmissionQueue() {
           utils.submissions.list.invalidate();
         }}
       />
+
+      {/* Save preset dialog */}
+      <Dialog
+        open={showSavePresetDialog}
+        onOpenChange={setShowSavePresetDialog}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Save Filter Preset</DialogTitle>
+            <DialogDescription>
+              Save the current filter settings for quick access later.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="preset-name">Preset name</Label>
+              <Input
+                id="preset-name"
+                placeholder="e.g. Pending reviews"
+                value={presetName}
+                onChange={(e) => setPresetName(e.target.value)}
+                maxLength={100}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowSavePresetDialog(false);
+                setPresetName("");
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSavePreset}
+              disabled={!presetName.trim() || createPresetMutation.isPending}
+            >
+              {createPresetMutation.isPending ? "Saving..." : "Save"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
