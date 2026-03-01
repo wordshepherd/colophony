@@ -258,6 +258,7 @@ export const submissionService = {
           updatedAt: submissions.updatedAt,
           searchVector: submissions.searchVector,
           statusTokenHash: submissions.statusTokenHash,
+          statusTokenExpiresAt: submissions.statusTokenExpiresAt,
           transferredFromDomain: submissions.transferredFromDomain,
           transferredFromTransferId: submissions.transferredFromTransferId,
           submitterEmail: users.email,
@@ -1252,18 +1253,38 @@ export const submissionService = {
   async listAgingByOrg(
     tx: DrizzleDb,
     thresholdDays: number,
-  ): Promise<
-    Array<{
+  ): Promise<{
+    submissions: Array<{
       id: string;
       title: string | null;
       submittedAt: Date | null;
       submitterEmail: string | null;
       daysPending: number;
-    }>
-  > {
+    }>;
+    totalCount: number;
+  }> {
     const cutoffDate = new Date();
     cutoffDate.setDate(cutoffDate.getDate() - thresholdDays);
 
+    const agingWhere = and(
+      notInArray(submissions.status, [
+        'ACCEPTED',
+        'REJECTED',
+        'WITHDRAWN',
+        'DRAFT',
+      ]),
+      isNotNull(submissions.submittedAt),
+      lte(submissions.submittedAt, cutoffDate),
+    );
+
+    // Count total aging submissions
+    const [countResult] = await tx
+      .select({ value: count() })
+      .from(submissions)
+      .where(agingWhere);
+    const totalCount = countResult?.value ?? 0;
+
+    // Fetch capped list
     const rows = await tx
       .select({
         id: submissions.id,
@@ -1273,32 +1294,25 @@ export const submissionService = {
       })
       .from(submissions)
       .leftJoin(users, eq(users.id, submissions.submitterId))
-      .where(
-        and(
-          notInArray(submissions.status, [
-            'ACCEPTED',
-            'REJECTED',
-            'WITHDRAWN',
-            'DRAFT',
-          ]),
-          isNotNull(submissions.submittedAt),
-          lte(submissions.submittedAt, cutoffDate),
-        ),
-      )
-      .orderBy(asc(submissions.submittedAt));
+      .where(agingWhere)
+      .orderBy(asc(submissions.submittedAt))
+      .limit(500);
 
     const now = new Date();
-    return rows.map((row) => ({
-      id: row.id,
-      title: row.title,
-      submittedAt: row.submittedAt,
-      submitterEmail: row.submitterEmail,
-      daysPending: row.submittedAt
-        ? Math.floor(
-            (now.getTime() - new Date(row.submittedAt).getTime()) /
-              (1000 * 60 * 60 * 24),
-          )
-        : 0,
-    }));
+    return {
+      submissions: rows.map((row) => ({
+        id: row.id,
+        title: row.title,
+        submittedAt: row.submittedAt,
+        submitterEmail: row.submitterEmail,
+        daysPending: row.submittedAt
+          ? Math.floor(
+              (now.getTime() - new Date(row.submittedAt).getTime()) /
+                (1000 * 60 * 60 * 24),
+            )
+          : 0,
+      })),
+      totalCount,
+    };
   },
 };

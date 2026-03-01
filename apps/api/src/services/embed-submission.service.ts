@@ -28,6 +28,7 @@ import { auditService } from './audit.service.js';
 import { submissionService } from './submission.service.js';
 import { fileService } from './file.service.js';
 import { statusTokenService } from './status-token.service.js';
+import { validateEnv } from '../config/env.js';
 import { enqueueOutboxEvent } from './outbox.js';
 
 // ---------------------------------------------------------------------------
@@ -331,9 +332,11 @@ export const embedSubmissionService = {
         });
 
         // Step 6: Generate status token for public status checking
+        const env = validateEnv();
         const statusToken = await statusTokenService.generateAndStore(
           tx,
           submission.id,
+          env.STATUS_TOKEN_TTL_DAYS,
         );
 
         // Step 7: Enqueue outbox event (triggers editor + embed confirmation notifications)

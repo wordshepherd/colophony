@@ -306,7 +306,8 @@ function submissionResponseReminder(
   data: Record<string, unknown>,
 ): TemplateResult {
   const d = data as unknown as ResponseReminderTemplateData;
-  const rows = d.agingSubmissions
+  const summaryLine = `Showing ${d.topSubmissions.length} of ${d.totalAging} aging submissions. Oldest: ${d.oldestDays} days.`;
+  const rows = d.topSubmissions
     .map(
       (s) =>
         `<tr>
@@ -317,7 +318,7 @@ function submissionResponseReminder(
     )
     .join('');
   return {
-    subject: `Response reminder: ${d.agingSubmissions.length} submission${d.agingSubmissions.length !== 1 ? 's' : ''} awaiting review`,
+    subject: `Response reminder: ${d.totalAging} submission${d.totalAging !== 1 ? 's' : ''} awaiting review (oldest: ${d.oldestDays}d)`,
     mjml: wrapInLayout(
       `<mj-text>
         <p>Hi ${escapeHtml(d.editorName)},</p>
@@ -331,7 +332,10 @@ function submissionResponseReminder(
         </tr>
         ${rows}
       </mj-table>
-      ${d.queueUrl ? `<mj-button href="${escapeHtml(d.queueUrl)}" background-color="#2563eb" color="#ffffff" font-size="14px" padding="16px 0">View Queue</mj-button>` : ''}`,
+      <mj-text font-size="13px" color="#6b7280">
+        <p>${escapeHtml(summaryLine)}</p>
+      </mj-text>
+      ${d.hasMore && d.queueUrl ? `<mj-button href="${escapeHtml(d.queueUrl)}" background-color="#2563eb" color="#ffffff" font-size="14px" padding="16px 0">View All in Queue</mj-button>` : d.queueUrl ? `<mj-button href="${escapeHtml(d.queueUrl)}" background-color="#2563eb" color="#ffffff" font-size="14px" padding="16px 0">View Queue</mj-button>` : ''}`,
       d.orgName,
     ),
     text: [
@@ -339,11 +343,17 @@ function submissionResponseReminder(
       ``,
       `The following submissions at ${d.orgName} have been waiting for a response:`,
       ``,
-      ...d.agingSubmissions.map(
+      ...d.topSubmissions.map(
         (s) => `- ${s.title} (${s.submitterEmail}) — ${s.daysPending} days`,
       ),
       ``,
-      d.queueUrl ? `View queue: ${d.queueUrl}` : '',
+      summaryLine,
+      ``,
+      d.hasMore && d.queueUrl
+        ? `View all in your queue: ${d.queueUrl}`
+        : d.queueUrl
+          ? `View queue: ${d.queueUrl}`
+          : '',
     ]
       .filter(Boolean)
       .join('\n'),

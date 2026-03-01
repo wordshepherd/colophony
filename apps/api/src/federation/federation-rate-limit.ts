@@ -10,6 +10,70 @@ export interface FederationRateLimitOptions {
   capability?: string;
 }
 
+// ---------------------------------------------------------------------------
+// In-process fixed-window rate limiter (fallback when Redis is unavailable)
+// ---------------------------------------------------------------------------
+
+interface WindowEntry {
+  count: number;
+  resetAt: number;
+}
+
+export class InProcessRateLimiter {
+  private windows = new Map<string, WindowEntry>();
+  private cleanupTimer: ReturnType<typeof setInterval>;
+
+  constructor(
+    private readonly limit: number = 10,
+    private readonly windowMs: number = 60_000,
+  ) {
+    this.cleanupTimer = setInterval(() => this.cleanup(), this.windowMs);
+    this.cleanupTimer.unref();
+  }
+
+  check(key: string): {
+    allowed: boolean;
+    count: number;
+    remaining: number;
+    resetMs: number;
+  } {
+    const now = Date.now();
+    let entry = this.windows.get(key);
+
+    if (!entry || now >= entry.resetAt) {
+      entry = { count: 0, resetAt: now + this.windowMs };
+      this.windows.set(key, entry);
+    }
+
+    entry.count++;
+
+    return {
+      allowed: entry.count <= this.limit,
+      count: entry.count,
+      remaining: Math.max(0, this.limit - entry.count),
+      resetMs: entry.resetAt,
+    };
+  }
+
+  cleanup(): void {
+    const now = Date.now();
+    for (const [key, entry] of this.windows) {
+      if (now >= entry.resetAt) {
+        this.windows.delete(key);
+      }
+    }
+  }
+
+  close(): void {
+    clearInterval(this.cleanupTimer);
+    this.windows.clear();
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Plugin
+// ---------------------------------------------------------------------------
+
 /**
  * Per-peer federation rate limiting.
  *
@@ -33,6 +97,21 @@ export default fp(
     const limit = env.FEDERATION_RATE_LIMIT_MAX;
     const windowMs = env.FEDERATION_RATE_LIMIT_WINDOW_SECONDS * 1000;
     const prefix = env.RATE_LIMIT_KEY_PREFIX;
+    const failMode = env.FEDERATION_RATE_LIMIT_FAIL_MODE;
+
+    // Fallback limiter: created lazily on first Redis failure in fallback mode
+    let fallbackLimiter: InProcessRateLimiter | null = null;
+
+    function getFallbackLimiter(): InProcessRateLimiter {
+      if (!fallbackLimiter) {
+        fallbackLimiter = new InProcessRateLimiter(10, 60_000);
+      }
+      return fallbackLimiter;
+    }
+
+    app.addHook('onClose', async () => {
+      fallbackLimiter?.close();
+    });
 
     app.addHook(
       'preHandler',
@@ -73,7 +152,46 @@ export default fp(
           count = result[0];
           oldestMs = result[1] ?? 0;
         } catch {
-          // Fail open: Redis unavailable → allow request
+          // Redis unavailable — branch on fail mode
+          if (failMode === 'closed') {
+            request.log.error(
+              'Federation rate limit Redis error — rejecting request (fail-closed)',
+            );
+            return reply.status(503).send({
+              error: 'service_unavailable',
+              message:
+                'Rate limiting service unavailable. Please try again later.',
+            });
+          }
+
+          if (failMode === 'fallback') {
+            request.log.warn(
+              'Federation rate limit Redis error — using in-process fallback',
+            );
+            const limiter = getFallbackLimiter();
+            const fallbackKey = capability ? `${capability}:${domain}` : domain;
+            const result = limiter.check(fallbackKey);
+
+            reply.header('X-RateLimit-Limit', limiter['limit']);
+            reply.header('X-RateLimit-Remaining', result.remaining);
+            reply.header('X-RateLimit-Reset', Math.ceil(result.resetMs / 1000));
+
+            if (!result.allowed) {
+              const retryAfterSeconds = Math.max(
+                1,
+                Math.ceil((result.resetMs - nowMs) / 1000),
+              );
+              reply.header('Retry-After', retryAfterSeconds);
+              reply.header('Cache-Control', 'no-store');
+              return reply.status(429).send({
+                error: 'rate_limit_exceeded',
+                message: 'Too many requests',
+              });
+            }
+            return;
+          }
+
+          // Default: fail-open
           request.log.warn(
             'Federation rate limit Redis error — allowing request without rate limiting',
           );

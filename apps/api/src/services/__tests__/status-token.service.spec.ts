@@ -45,6 +45,7 @@ describe('statusTokenService', () => {
       expect(mockUpdate).toHaveBeenCalled();
       expect(mockSet).toHaveBeenCalledWith({
         statusTokenHash: expect.stringMatching(/^[a-f0-9]{64}$/),
+        statusTokenExpiresAt: null, // No TTL passed
       });
 
       // Verify the stored hash is the SHA-256 of the returned token
@@ -54,6 +55,7 @@ describe('statusTokenService', () => {
         .digest('hex');
       expect(mockSet).toHaveBeenCalledWith({
         statusTokenHash: expectedHash,
+        statusTokenExpiresAt: null,
       });
     });
   });
@@ -83,6 +85,7 @@ describe('statusTokenService', () => {
             submitted_at: new Date('2026-01-15T00:00:00Z'),
             organization_name: 'Poetry Review',
             period_name: 'Spring 2026',
+            token_expired: false,
           },
         ],
       } as never);
@@ -98,6 +101,7 @@ describe('statusTokenService', () => {
         submittedAt: new Date('2026-01-15T00:00:00Z'),
         organizationName: 'Poetry Review',
         periodName: 'Spring 2026',
+        expired: false,
       });
     });
 
@@ -111,6 +115,7 @@ describe('statusTokenService', () => {
             submitted_at: null,
             organization_name: 'Lit Mag',
             period_name: null,
+            token_expired: false,
           },
         ],
       } as never);
@@ -130,6 +135,7 @@ describe('statusTokenService', () => {
             submitted_at: null,
             organization_name: 'Review',
             period_name: null,
+            token_expired: false,
           },
         ],
       } as never);

@@ -18,6 +18,7 @@ const baseEnv = {
   FEDERATION_RATE_LIMIT_MAX: 60,
   FEDERATION_RATE_LIMIT_WINDOW_SECONDS: 60,
   RATE_LIMIT_KEY_PREFIX: 'test:rl',
+  FEDERATION_RATE_LIMIT_FAIL_MODE: 'open',
 } as any;
 
 function createMockRedis(evalResult: [number, number] = [1, 0]) {
@@ -179,10 +180,11 @@ describe('federation-rate-limit', () => {
     await app.close();
   });
 
-  it('fails open on Redis error', async () => {
+  it('fails open on Redis error when fail mode is open', async () => {
     const redis = createMockRedis();
     redis.eval.mockRejectedValueOnce(new Error('Redis connection lost'));
-    const app = await buildApp(redis, baseEnv, {
+    const env = { ...baseEnv, FEDERATION_RATE_LIMIT_FAIL_MODE: 'open' };
+    const app = await buildApp(redis, env, {
       type: 'federation',
       domain: 'peer.example.com',
       keyId: 'peer.example.com#main',
@@ -192,6 +194,130 @@ describe('federation-rate-limit', () => {
 
     expect(res.statusCode).toBe(200);
     await app.close();
+  });
+
+  it('fails closed with 503 when Redis errors and fail mode is closed', async () => {
+    const redis = createMockRedis();
+    redis.eval.mockRejectedValueOnce(new Error('Redis connection lost'));
+    const env = { ...baseEnv, FEDERATION_RATE_LIMIT_FAIL_MODE: 'closed' };
+    const app = await buildApp(redis, env, {
+      type: 'federation',
+      domain: 'peer.example.com',
+      keyId: 'peer.example.com#main',
+    });
+
+    const res = await app.inject({ method: 'GET', url: '/test' });
+
+    expect(res.statusCode).toBe(503);
+    expect(JSON.parse(res.body)).toEqual({
+      error: 'service_unavailable',
+      message: 'Rate limiting service unavailable. Please try again later.',
+    });
+    await app.close();
+  });
+
+  it('uses in-process fallback when Redis errors and fail mode is fallback', async () => {
+    const redis = createMockRedis();
+    redis.eval.mockRejectedValue(new Error('Redis connection lost'));
+    const env = { ...baseEnv, FEDERATION_RATE_LIMIT_FAIL_MODE: 'fallback' };
+    const app = await buildApp(redis, env, {
+      type: 'federation',
+      domain: 'peer.example.com',
+      keyId: 'peer.example.com#main',
+    });
+
+    const res = await app.inject({ method: 'GET', url: '/test' });
+
+    expect(res.statusCode).toBe(200);
+    expect(res.headers['x-ratelimit-limit']).toBe('10');
+    expect(res.headers['x-ratelimit-remaining']).toBe('9');
+    await app.close();
+  });
+
+  it('in-process fallback resets after window expires', async () => {
+    vi.useFakeTimers();
+    const redis = createMockRedis();
+    redis.eval.mockRejectedValue(new Error('Redis connection lost'));
+    const env = { ...baseEnv, FEDERATION_RATE_LIMIT_FAIL_MODE: 'fallback' };
+    const app = await buildApp(redis, env, {
+      type: 'federation',
+      domain: 'peer.example.com',
+      keyId: 'peer.example.com#main',
+    });
+
+    // Make 10 requests to hit the limit
+    for (let i = 0; i < 10; i++) {
+      await app.inject({ method: 'GET', url: '/test' });
+    }
+
+    // 11th should be rejected
+    const rejectedRes = await app.inject({ method: 'GET', url: '/test' });
+    expect(rejectedRes.statusCode).toBe(429);
+
+    // Advance time past window
+    vi.advanceTimersByTime(61_000);
+
+    // Should be allowed again
+    const allowedRes = await app.inject({ method: 'GET', url: '/test' });
+    expect(allowedRes.statusCode).toBe(200);
+
+    vi.useRealTimers();
+    await app.close();
+  });
+
+  it('fallback uses tighter limit (10) than Redis limit (60)', async () => {
+    const redis = createMockRedis();
+    redis.eval.mockRejectedValue(new Error('Redis connection lost'));
+    const env = { ...baseEnv, FEDERATION_RATE_LIMIT_FAIL_MODE: 'fallback' };
+    const app = await buildApp(redis, env, {
+      type: 'federation',
+      domain: 'peer.example.com',
+      keyId: 'peer.example.com#main',
+    });
+
+    // Make 10 requests
+    for (let i = 0; i < 10; i++) {
+      const res = await app.inject({ method: 'GET', url: '/test' });
+      expect(res.statusCode).toBe(200);
+    }
+
+    // 11th should be rejected (limit is 10, not 60)
+    const res = await app.inject({ method: 'GET', url: '/test' });
+    expect(res.statusCode).toBe(429);
+
+    await app.close();
+  });
+
+  it('fallback tracks domains independently', async () => {
+    const redis = createMockRedis();
+    redis.eval.mockRejectedValue(new Error('Redis connection lost'));
+    const env = { ...baseEnv, FEDERATION_RATE_LIMIT_FAIL_MODE: 'fallback' };
+
+    // Build two apps with different peer domains
+    const app1 = await buildApp(redis, env, {
+      type: 'federation',
+      domain: 'peer-a.example.com',
+      keyId: 'peer-a.example.com#main',
+    });
+
+    // Exhaust peer-a's limit
+    for (let i = 0; i < 10; i++) {
+      await app1.inject({ method: 'GET', url: '/test' });
+    }
+    const res1 = await app1.inject({ method: 'GET', url: '/test' });
+    expect(res1.statusCode).toBe(429);
+
+    // peer-b on a separate app instance should have its own limiter
+    const app2 = await buildApp(redis, env, {
+      type: 'federation',
+      domain: 'peer-b.example.com',
+      keyId: 'peer-b.example.com#main',
+    });
+    const res2 = await app2.inject({ method: 'GET', url: '/test' });
+    expect(res2.statusCode).toBe(200);
+
+    await app1.close();
+    await app2.close();
   });
 
   it('sets X-RateLimit-* headers', async () => {

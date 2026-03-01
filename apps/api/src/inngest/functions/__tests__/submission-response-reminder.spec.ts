@@ -152,8 +152,11 @@ describe('submissionResponseReminderCron', () => {
       async (_ctx: unknown, fn: (tx: unknown) => Promise<unknown>) => {
         withRlsCallCount++;
         if (withRlsCallCount === 1) {
-          // listAgingByOrg
-          mocks.listAgingByOrg.mockResolvedValue(agingItems);
+          // listAgingByOrg — now returns { submissions, totalCount }
+          mocks.listAgingByOrg.mockResolvedValue({
+            submissions: agingItems,
+            totalCount: 2,
+          });
           return fn({});
         }
         // editors query
@@ -164,6 +167,107 @@ describe('submissionResponseReminderCron', () => {
     const result = await handler({ step: makeStep() });
     expect(result).toEqual({ processed: 1, totalEmails: 2 });
     expect(mocks.queueEmail).toHaveBeenCalledTimes(2);
+
+    // Verify email template data uses new shape
+    const emailCall = mocks.queueEmail.mock.calls[0][0];
+    expect(emailCall.templateData.totalAging).toBe(2);
+    expect(emailCall.templateData.topSubmissions).toHaveLength(2);
+    expect(emailCall.templateData.hasMore).toBe(false);
+    expect(emailCall.templateData.oldestDays).toBe(35);
+  });
+
+  it('sends summarized email with top 10 and totalAging count', async () => {
+    // Create 12 aging items
+    const agingItems = Array.from({ length: 12 }, (_, i) => ({
+      id: `s-${i}`,
+      title: `Poem ${i}`,
+      submittedAt: new Date(),
+      submitterEmail: `poet${i}@test.com`,
+      daysPending: 50 - i,
+    }));
+
+    const editors = [{ userId: 'u-1', email: 'ed@test.com' }];
+
+    mocks.dbFromResult = [
+      {
+        id: 'org-1',
+        name: 'Big Org',
+        settings: {
+          responseReminderEnabled: true,
+          responseReminderDays: 14,
+        },
+      },
+    ];
+
+    let withRlsCallCount = 0;
+    mocks.withRls.mockImplementation(
+      async (_ctx: unknown, fn: (tx: unknown) => Promise<unknown>) => {
+        withRlsCallCount++;
+        if (withRlsCallCount === 1) {
+          mocks.listAgingByOrg.mockResolvedValue({
+            submissions: agingItems,
+            totalCount: 12,
+          });
+          return fn({});
+        }
+        return editors;
+      },
+    );
+
+    await handler({ step: makeStep() });
+
+    const emailCall = mocks.queueEmail.mock.calls[0][0];
+    expect(emailCall.templateData.totalAging).toBe(12);
+    expect(emailCall.templateData.topSubmissions).toHaveLength(10); // capped
+    expect(emailCall.templateData.hasMore).toBe(true);
+    expect(emailCall.subject).toContain('12 submissions');
+    expect(emailCall.subject).toContain('oldest: 50d');
+  });
+
+  it('sets hasMore=false when fewer than 10 aging submissions', async () => {
+    const agingItems = [
+      {
+        id: 's-1',
+        title: 'Poem',
+        submittedAt: new Date(),
+        submitterEmail: 'a@test.com',
+        daysPending: 20,
+      },
+    ];
+
+    const editors = [{ userId: 'u-1', email: 'ed@test.com' }];
+
+    mocks.dbFromResult = [
+      {
+        id: 'org-1',
+        name: 'Small Org',
+        settings: {
+          responseReminderEnabled: true,
+          responseReminderDays: 14,
+        },
+      },
+    ];
+
+    let withRlsCallCount = 0;
+    mocks.withRls.mockImplementation(
+      async (_ctx: unknown, fn: (tx: unknown) => Promise<unknown>) => {
+        withRlsCallCount++;
+        if (withRlsCallCount === 1) {
+          mocks.listAgingByOrg.mockResolvedValue({
+            submissions: agingItems,
+            totalCount: 1,
+          });
+          return fn({});
+        }
+        return editors;
+      },
+    );
+
+    await handler({ step: makeStep() });
+
+    const emailCall = mocks.queueEmail.mock.calls[0][0];
+    expect(emailCall.templateData.hasMore).toBe(false);
+    expect(emailCall.templateData.totalAging).toBe(1);
   });
 
   it('skips org with no aging submissions', async () => {
@@ -180,7 +284,10 @@ describe('submissionResponseReminderCron', () => {
 
     mocks.withRls.mockImplementation(
       async (_ctx: unknown, fn: (tx: unknown) => Promise<unknown>) => {
-        mocks.listAgingByOrg.mockResolvedValue([]);
+        mocks.listAgingByOrg.mockResolvedValue({
+          submissions: [],
+          totalCount: 0,
+        });
         return fn({});
       },
     );

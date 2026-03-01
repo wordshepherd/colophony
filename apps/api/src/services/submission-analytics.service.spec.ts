@@ -278,5 +278,47 @@ describe('submissionAnalyticsService', () => {
       expect(result.brackets[0].label).toBe('7-14 days');
       expect(result.brackets[0].count).toBe(1);
     });
+
+    it('caps submissions per bracket to maxPerBracket', async () => {
+      // Create 5 submissions all in the first bracket (14-28 days)
+      const rows = Array.from({ length: 5 }, (_, i) => ({
+        id: `sub-${i}`,
+        title: `Story ${i}`,
+        status: 'SUBMITTED',
+        submittedAt: '2026-01-15T00:00:00Z',
+        daysPending: 20,
+      }));
+      const tx = mockTx(rows);
+
+      const result = await submissionAnalyticsService.getAgingSubmissions(tx, {
+        thresholdDays: 14,
+        maxPerBracket: 2,
+      });
+
+      // Count reflects all 5 submissions
+      expect(result.brackets[0].count).toBe(5);
+      // But only 2 are included in the submissions array
+      expect(result.brackets[0].submissions).toHaveLength(2);
+      expect(result.totalAging).toBe(5);
+    });
+
+    it('defaults maxPerBracket to 25', async () => {
+      // Create 30 submissions
+      const rows = Array.from({ length: 30 }, (_, i) => ({
+        id: `sub-${i}`,
+        title: `Story ${i}`,
+        status: 'SUBMITTED',
+        submittedAt: '2026-01-15T00:00:00Z',
+        daysPending: 20,
+      }));
+      const tx = mockTx(rows);
+
+      const result = await submissionAnalyticsService.getAgingSubmissions(tx, {
+        thresholdDays: 14,
+      });
+
+      expect(result.brackets[0].count).toBe(30);
+      expect(result.brackets[0].submissions).toHaveLength(25);
+    });
   });
 });

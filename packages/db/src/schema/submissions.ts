@@ -131,6 +131,9 @@ export const submissions = pgTable(
       length: 255,
     }),
     statusTokenHash: varchar("status_token_hash", { length: 128 }),
+    statusTokenExpiresAt: timestamp("status_token_expires_at", {
+      withTimezone: true,
+    }),
     searchVector: tsvector("search_vector"),
   },
   (table) => [
