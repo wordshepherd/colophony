@@ -1,9 +1,13 @@
 ALTER TABLE "submissions" ADD COLUMN "status_token_expires_at" timestamptz;
 --> statement-breakpoint
+-- DROP required: return type changed (added token_expired boolean).
+-- PostgreSQL does not allow CREATE OR REPLACE to change return type.
+DROP FUNCTION IF EXISTS verify_status_token(varchar);
+--> statement-breakpoint
 -- SECURITY DEFINER: intentional. Token-based lookup must bypass RLS because
 -- embed submitters have no session/org context. Access is gated by knowledge
 -- of the SHA-256 token hash. Rollback-safe: column is nullable with no default.
-CREATE OR REPLACE FUNCTION verify_status_token(p_token_hash varchar)
+CREATE FUNCTION verify_status_token(p_token_hash varchar)
 RETURNS TABLE(
   submission_id uuid, submission_title varchar,
   submission_status text, submitted_at timestamptz,
