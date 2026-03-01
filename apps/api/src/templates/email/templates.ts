@@ -7,6 +7,7 @@ import type {
   EditorMessageTemplateData,
   ReviewerAssignedTemplateData,
   DiscussionCommentTemplateData,
+  EmbedSubmissionConfirmationData,
 } from './types.js';
 import { wrapInLayout } from './layout.js';
 
@@ -270,6 +271,36 @@ function discussionComment(data: Record<string, unknown>): TemplateResult {
   };
 }
 
+function embedSubmissionConfirmation(
+  data: Record<string, unknown>,
+): TemplateResult {
+  const d = data as unknown as EmbedSubmissionConfirmationData;
+  return {
+    subject: `Submission received: ${d.submissionTitle}`,
+    mjml: wrapInLayout(
+      `<mj-text>
+        <p>Thank you for your submission!</p>
+        <p><strong>Title:</strong> ${escapeHtml(d.submissionTitle)}</p>
+        <p>Your submission to ${escapeHtml(d.orgName)} has been received and is under review.</p>
+      </mj-text>
+      <mj-button href="${escapeHtml(d.statusCheckUrl)}" background-color="#2563eb" color="#ffffff" font-size="14px" padding="16px 0">
+        Check Submission Status
+      </mj-button>
+      <mj-text font-size="12px" color="#6b7280">
+        <p>Or copy this link: ${escapeHtml(d.statusCheckUrl)}</p>
+      </mj-text>`,
+      d.orgName,
+    ),
+    text: [
+      `Thank you for your submission!`,
+      `Title: ${d.submissionTitle}`,
+      `Your submission to ${d.orgName} has been received and is under review.`,
+      ``,
+      `Check your submission status: ${d.statusCheckUrl}`,
+    ].join('\n'),
+  };
+}
+
 export const templates: Record<TemplateName, TemplateRenderer> = {
   'submission-received': submissionReceived,
   'submission-accepted': submissionAccepted,
@@ -281,6 +312,7 @@ export const templates: Record<TemplateName, TemplateRenderer> = {
   'editor-message': editorMessage,
   'reviewer-assigned': reviewerAssigned,
   'discussion-comment': discussionComment,
+  'embed-submission-confirmation': embedSubmissionConfirmation,
 };
 
 function stripHtml(html: string): string {

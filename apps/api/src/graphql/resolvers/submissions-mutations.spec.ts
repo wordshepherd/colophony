@@ -306,6 +306,7 @@ describe('Submission mutations — resolver wiring', () => {
       searchVector: null,
       transferredFromDomain: null,
       transferredFromTransferId: null,
+      statusTokenHash: null,
     };
     // eslint-disable-next-line @typescript-eslint/unbound-method
     vi.mocked(submissionService.createWithAudit).mockResolvedValue(submission);
@@ -409,6 +410,7 @@ describe('Submission mutations — resolver wiring', () => {
         searchVector: null,
         transferredFromDomain: null,
         transferredFromTransferId: null,
+        statusTokenHash: null,
       },
       historyEntry: {
         id: 'hist-1',
@@ -477,6 +479,7 @@ describe('Submission mutations — resolver wiring', () => {
       searchVector: null,
       transferredFromDomain: null,
       transferredFromTransferId: null,
+      statusTokenHash: null,
     };
     // eslint-disable-next-line @typescript-eslint/unbound-method
     vi.mocked(submissionService.createWithAudit).mockResolvedValue(submission);
@@ -554,6 +557,7 @@ describe('Submission mutations — resolver wiring', () => {
       searchVector: null,
       transferredFromDomain: null,
       transferredFromTransferId: null,
+      statusTokenHash: null,
     };
     // eslint-disable-next-line @typescript-eslint/unbound-method
     vi.mocked(submissionService.updateAsOwner).mockResolvedValue(submission);

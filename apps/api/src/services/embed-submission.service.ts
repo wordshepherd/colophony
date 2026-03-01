@@ -27,6 +27,8 @@ import type { VerifiedEmbedToken } from './embed-token.service.js';
 import { auditService } from './audit.service.js';
 import { submissionService } from './submission.service.js';
 import { fileService } from './file.service.js';
+import { statusTokenService } from './status-token.service.js';
+import { enqueueOutboxEvent } from './outbox.js';
 
 // ---------------------------------------------------------------------------
 // Error classes
@@ -257,7 +259,7 @@ export const embedSubmissionService = {
     input: EmbedSubmitInput,
     ipAddress: string,
     userAgent: string | undefined,
-  ): Promise<{ submissionId: string; userId: string }> {
+  ): Promise<{ submissionId: string; userId: string; statusToken: string }> {
     // Step 1: Find/create guest user (no RLS)
     const { id: userId, isNew } =
       await embedSubmissionService.findOrCreateGuestUser(
@@ -328,7 +330,23 @@ export const embedSubmissionService = {
           },
         });
 
-        return { submissionId: submission.id };
+        // Step 6: Generate status token for public status checking
+        const statusToken = await statusTokenService.generateAndStore(
+          tx,
+          submission.id,
+        );
+
+        // Step 7: Enqueue outbox event (triggers editor + embed confirmation notifications)
+        await enqueueOutboxEvent(tx, 'hopper/submission.submitted', {
+          orgId: token.organizationId,
+          submissionId: submission.id,
+          submitterId: userId,
+          isEmbed: true,
+          submitterEmail: input.email,
+          statusToken,
+        });
+
+        return { submissionId: submission.id, statusToken };
       },
     );
 

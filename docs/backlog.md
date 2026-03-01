@@ -310,8 +310,8 @@
 - [x] [P0] Editor-to-writer personalized correspondence — compose and send messages to individual submitters from the submission detail view; editor comments on status transitions included in notification emails — (persona gap analysis 2026-02-27; done 2026-02-27 PR pending)
 - [x] [P0] Customizable email templates — admin UI for editing MJML templates per org (acceptance, rejection, under review, custom); replace hardcoded boilerplate with org-branded voice — (persona gap analysis 2026-02-27; done 2026-02-27 PR pending)
 - [x] [P1] "Revise and resubmit" status — add R&R to SubmissionStatus enum + transition map; editor sends revision notes, writer resubmits against the same submission record — (persona gap analysis 2026-02-27; done 2026-02-27 PR pending)
-- [ ] [P2] Embed submitter confirmation email — send a receipt email to the address provided in the embed identity step; include submission title, journal name, and a status-check token/link — (persona gap analysis 2026-02-27)
-- [ ] [P2] Embed submitter status check — public page at `/embed/status/:token` where embed submitters (no account) can check their submission status — (persona gap analysis 2026-02-27)
+- [x] [P2] Embed submitter confirmation email — send a receipt email to the address provided in the embed identity step; include submission title, journal name, and a status-check token/link — (persona gap analysis 2026-02-27; done 2026-02-28)
+- [x] [P2] Embed submitter status check — public page at `/embed/status/:token` where embed submitters (no account) can check their submission status — (persona gap analysis 2026-02-27; done 2026-02-28)
 
 ### Editorial Workflow
 

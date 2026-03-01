@@ -6,6 +6,8 @@ const {
   mockAuditService,
   mockSubmissionService,
   mockFileService,
+  mockStatusTokenService,
+  mockEnqueueOutboxEvent,
 } = vi.hoisted(() => {
   const mockDb = {
     select: vi.fn(),
@@ -23,12 +25,18 @@ const {
   const mockFileService = {
     listByManuscriptVersion: vi.fn(),
   };
+  const mockStatusTokenService = {
+    generateAndStore: vi.fn().mockResolvedValue('col_sta_testtoken123'),
+  };
+  const mockEnqueueOutboxEvent = vi.fn();
   return {
     mockDb,
     mockWithRls,
     mockAuditService,
     mockSubmissionService,
     mockFileService,
+    mockStatusTokenService,
+    mockEnqueueOutboxEvent,
   };
 });
 
@@ -56,6 +64,8 @@ vi.mock('@colophony/db', () => ({
     formDefinitionId: 'form_definition_id',
     sortOrder: 'sort_order',
   },
+  submissions: { id: 'id', statusTokenHash: 'status_token_hash' },
+  pool: { query: vi.fn() },
   eq: vi.fn((_col: unknown, val: unknown) => val),
   sql: vi.fn(),
 }));
@@ -74,6 +84,14 @@ vi.mock('./submission.service.js', () => ({
 
 vi.mock('./file.service.js', () => ({
   fileService: mockFileService,
+}));
+
+vi.mock('./status-token.service.js', () => ({
+  statusTokenService: mockStatusTokenService,
+}));
+
+vi.mock('./outbox.js', () => ({
+  enqueueOutboxEvent: mockEnqueueOutboxEvent,
 }));
 
 import {
