@@ -4,7 +4,6 @@ import Link from "next/link";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { WorkspaceStatsCards } from "./workspace-stats-cards";
-import { CsrStatusBadge } from "./csr-status-badge";
 import { Plus, Send, Mail } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 
