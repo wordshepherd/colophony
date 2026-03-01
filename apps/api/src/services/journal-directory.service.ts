@@ -19,7 +19,7 @@ export const journalDirectoryService = {
       .where(
         ilike(
           journalDirectory.normalizedName,
-          `%${input.query.toLowerCase()}%`,
+          `%${input.query.replace(/[%_]/g, '\\$&')}%`,
         ),
       )
       .limit(input.limit);
