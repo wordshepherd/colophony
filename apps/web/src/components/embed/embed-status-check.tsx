@@ -11,7 +11,7 @@ import {
   AlertCircle,
 } from "lucide-react";
 
-type ViewState = "loading" | "loaded" | "not_found" | "error";
+type ViewState = "loading" | "loaded" | "not_found" | "token_expired" | "error";
 
 const STATUS_ICONS: Record<string, typeof CheckCircle> = {
   Accepted: CheckCircle,
@@ -52,7 +52,9 @@ export function EmbedStatusCheck({
       } catch (err) {
         if (cancelled) return;
         const apiErr = err as EmbedApiError;
-        if (apiErr.status === 404) {
+        if (apiErr.status === 410) {
+          setViewState("token_expired");
+        } else if (apiErr.status === 404) {
           setViewState("not_found");
         } else {
           setViewState("error");
@@ -81,6 +83,19 @@ export function EmbedStatusCheck({
         <h2 className="text-lg font-semibold">Submission Not Found</h2>
         <p className="text-sm text-muted-foreground mt-2">
           This status link is invalid or has expired.
+        </p>
+      </div>
+    );
+  }
+
+  if (viewState === "token_expired") {
+    return (
+      <div className="max-w-md mx-auto text-center py-16 px-4">
+        <Clock className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+        <h2 className="text-lg font-semibold">Status Link Expired</h2>
+        <p className="text-sm text-muted-foreground mt-2">
+          This status link has expired. Please contact the publication directly
+          for an update on your submission.
         </p>
       </div>
     );

@@ -316,7 +316,7 @@
 - [x] [P1] "Revise and resubmit" status — add R&R to SubmissionStatus enum + transition map; editor sends revision notes, writer resubmits against the same submission record — (persona gap analysis 2026-02-27; done 2026-02-27 PR pending)
 - [x] [P2] Embed submitter confirmation email — send a receipt email to the address provided in the embed identity step; include submission title, journal name, and a status-check token/link — (persona gap analysis 2026-02-27; done 2026-02-28)
 - [x] [P2] Embed submitter status check — public page at `/embed/status/:token` where embed submitters (no account) can check their submission status — (persona gap analysis 2026-02-27; done 2026-02-28)
-- [ ] [P3] Embed status check: handle 410 Gone for expired tokens — show user-friendly "token expired" message in `embed-status-check.tsx` — (audit remediation P2/P3, 2026-03-01)
+- [x] [P3] Embed status check: handle 410 Gone for expired tokens — show user-friendly "token expired" message in `embed-status-check.tsx` — (audit remediation P2/P3, 2026-03-01; done 2026-03-01)
 - [ ] [P3] Status token rotation on R&R resubmission — generate new token when embed submitter resubmits after revise-and-resubmit; no resubmit flow in embed service yet — (audit remediation P2/P3, 2026-03-01)
 
 ### Editorial Workflow
