@@ -30,7 +30,7 @@ export const externalSubmissionService = {
 
     const conditions = [eq(externalSubmissions.userId, userId)];
     if (search) {
-      const escaped = search.replace(/[%_]/g, '\\$&');
+      const escaped = search.replace(/[\\%_]/g, '\\$&');
       conditions.push(ilike(externalSubmissions.journalName, `%${escaped}%`));
     }
     if (status) {
