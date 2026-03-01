@@ -15,6 +15,7 @@ import {
   reviewerAssignedNotification,
   discussionCommentNotification,
   webhookDelivery,
+  embedSubmissionConfirmation,
 } from './functions/index.js';
 
 /**
@@ -43,6 +44,7 @@ export async function registerInngestRoutes(
       reviewerAssignedNotification,
       discussionCommentNotification,
       webhookDelivery,
+      embedSubmissionConfirmation,
     ],
   });
 

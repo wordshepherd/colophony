@@ -6,6 +6,7 @@ import { scanStatusSchema } from "./file";
 // ---------------------------------------------------------------------------
 
 export const EMBED_TOKEN_PREFIX = "col_emb_";
+export const STATUS_TOKEN_PREFIX = "col_sta_";
 
 // ---------------------------------------------------------------------------
 // Theme config
@@ -159,9 +160,28 @@ export const embedSubmitResponseSchema = z.object({
   success: z.literal(true),
   submissionId: z.string().uuid().describe("Created submission ID"),
   message: z.string().describe("Confirmation message"),
+  statusToken: z
+    .string()
+    .optional()
+    .describe("Status check token (col_sta_ prefixed)"),
 });
 
 export type EmbedSubmitResponse = z.infer<typeof embedSubmitResponseSchema>;
+
+export const embedStatusCheckResponseSchema = z.object({
+  title: z.string().nullable().describe("Submission title"),
+  status: z.string().describe("User-friendly submission status"),
+  submittedAt: z
+    .string()
+    .nullable()
+    .describe("Submission date (ISO-8601 string)"),
+  organizationName: z.string().describe("Organization name"),
+  periodName: z.string().nullable().describe("Submission period name"),
+});
+
+export type EmbedStatusCheckResponse = z.infer<
+  typeof embedStatusCheckResponseSchema
+>;
 
 // ---------------------------------------------------------------------------
 // Revoke schema

@@ -8,7 +8,8 @@ export type TemplateName =
   | 'copyeditor-assigned'
   | 'editor-message'
   | 'reviewer-assigned'
-  | 'discussion-comment';
+  | 'discussion-comment'
+  | 'embed-submission-confirmation';
 
 export interface SubmissionTemplateData {
   submissionTitle: string;
@@ -55,10 +56,17 @@ export interface DiscussionCommentTemplateData {
   submissionUrl?: string;
 }
 
+export interface EmbedSubmissionConfirmationData {
+  submissionTitle: string;
+  orgName: string;
+  statusCheckUrl: string;
+}
+
 export type TemplateData =
   | SubmissionTemplateData
   | ContractTemplateData
   | CopyeditorAssignedData
   | EditorMessageTemplateData
   | ReviewerAssignedTemplateData
-  | DiscussionCommentTemplateData;
+  | DiscussionCommentTemplateData
+  | EmbedSubmissionConfirmationData;

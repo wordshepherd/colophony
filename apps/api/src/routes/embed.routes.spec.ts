@@ -1,6 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-const { mockEmbedTokenService, mockEmbedSubmissionService } = vi.hoisted(() => {
+const {
+  mockEmbedTokenService,
+  mockEmbedSubmissionService,
+  mockStatusTokenService,
+} = vi.hoisted(() => {
   const mockEmbedTokenService = {
     verifyToken: vi.fn(),
   };
@@ -10,11 +14,22 @@ const { mockEmbedTokenService, mockEmbedSubmissionService } = vi.hoisted(() => {
     prepareUpload: vi.fn(),
     getUploadStatus: vi.fn(),
   };
-  return { mockEmbedTokenService, mockEmbedSubmissionService };
+  const mockStatusTokenService = {
+    verifyToken: vi.fn(),
+  };
+  return {
+    mockEmbedTokenService,
+    mockEmbedSubmissionService,
+    mockStatusTokenService,
+  };
 });
 
 vi.mock('../services/embed-token.service.js', () => ({
   embedTokenService: mockEmbedTokenService,
+}));
+
+vi.mock('../services/status-token.service.js', () => ({
+  statusTokenService: mockStatusTokenService,
 }));
 
 vi.mock('../services/embed-submission.service.js', () => ({
@@ -164,12 +179,13 @@ describe('embed routes', () => {
   });
 
   describe('POST /embed/:token/submit', () => {
-    it('creates guest user and submission', async () => {
+    it('creates guest user and submission with status token', async () => {
       const token = makeVerifiedToken();
       mockEmbedTokenService.verifyToken.mockResolvedValueOnce(token);
       mockEmbedSubmissionService.submitFromEmbed.mockResolvedValueOnce({
         submissionId: 'sub-1',
         userId: 'user-1',
+        statusToken: 'col_sta_abc123',
       });
 
       const app = await buildTestApp();
@@ -187,6 +203,7 @@ describe('embed routes', () => {
       const body = JSON.parse(res.body);
       expect(body.success).toBe(true);
       expect(body.submissionId).toBe('sub-1');
+      expect(body.statusToken).toBe('col_sta_abc123');
     });
 
     it('returns 400 for invalid email', async () => {
@@ -364,6 +381,83 @@ describe('embed routes', () => {
       expect(res.statusCode).toBe(400);
       const body = JSON.parse(res.body);
       expect(body.error).toBe('validation_error');
+    });
+  });
+
+  describe('GET /embed/status/:statusToken', () => {
+    it('returns 404 for malformed token (wrong prefix)', async () => {
+      const app = await buildTestApp();
+      const res = await app.inject({
+        method: 'GET',
+        url: '/embed/status/badprefix_abc123',
+      });
+
+      expect(res.statusCode).toBe(404);
+      expect(JSON.parse(res.body)).toMatchObject({ error: 'not_found' });
+      expect(mockStatusTokenService.verifyToken).not.toHaveBeenCalled();
+    });
+
+    it('returns 404 for unknown valid-format token', async () => {
+      mockStatusTokenService.verifyToken.mockResolvedValueOnce(null);
+
+      const app = await buildTestApp();
+      const res = await app.inject({
+        method: 'GET',
+        url: '/embed/status/col_sta_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa1',
+      });
+
+      expect(res.statusCode).toBe(404);
+      expect(JSON.parse(res.body)).toMatchObject({ error: 'not_found' });
+    });
+
+    it('returns submission data for valid token', async () => {
+      mockStatusTokenService.verifyToken.mockResolvedValueOnce({
+        submissionId: 'sub-1',
+        title: 'My Poem',
+        status: 'Under Review',
+        submittedAt: new Date('2026-02-15T12:00:00Z'),
+        organizationName: 'Poetry Review',
+        periodName: 'Spring 2026',
+      });
+
+      const app = await buildTestApp();
+      const res = await app.inject({
+        method: 'GET',
+        url: '/embed/status/col_sta_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa1',
+      });
+
+      expect(res.statusCode).toBe(200);
+      const body = JSON.parse(res.body);
+      expect(body).toEqual({
+        title: 'My Poem',
+        status: 'Under Review',
+        submittedAt: '2026-02-15T12:00:00.000Z',
+        organizationName: 'Poetry Review',
+        periodName: 'Spring 2026',
+      });
+    });
+
+    it('returns null fields gracefully', async () => {
+      mockStatusTokenService.verifyToken.mockResolvedValueOnce({
+        submissionId: 'sub-1',
+        title: null,
+        status: 'Under Review',
+        submittedAt: null,
+        organizationName: 'Lit Mag',
+        periodName: null,
+      });
+
+      const app = await buildTestApp();
+      const res = await app.inject({
+        method: 'GET',
+        url: '/embed/status/col_sta_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa1',
+      });
+
+      expect(res.statusCode).toBe(200);
+      const body = JSON.parse(res.body);
+      expect(body.title).toBeNull();
+      expect(body.submittedAt).toBeNull();
+      expect(body.periodName).toBeNull();
     });
   });
 });

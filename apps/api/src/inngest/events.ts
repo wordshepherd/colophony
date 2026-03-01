@@ -98,6 +98,9 @@ export interface HopperSubmissionSubmittedEvent {
     orgId: string;
     submissionId: string;
     submitterId: string;
+    isEmbed?: boolean;
+    submitterEmail?: string;
+    statusToken?: string;
   };
 }
 

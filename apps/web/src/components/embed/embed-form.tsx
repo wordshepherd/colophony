@@ -37,6 +37,7 @@ interface EmbedState {
     retryAfter?: number;
   } | null;
   submissionId: string | null;
+  statusToken: string | null;
 }
 
 function mapErrorType(
@@ -62,6 +63,7 @@ export function EmbedForm({ token, apiUrl }: EmbedFormProps) {
     uploadContext: null,
     error: null,
     submissionId: null,
+    statusToken: null,
   });
 
   const [identityLoading, setIdentityLoading] = useState(false);
@@ -173,6 +175,7 @@ export function EmbedForm({ token, apiUrl }: EmbedFormProps) {
           ...prev,
           step: "success",
           submissionId: result.submissionId,
+          statusToken: result.statusToken ?? null,
         }));
       } catch (err) {
         const apiErr = err as EmbedApiError;
@@ -236,6 +239,7 @@ export function EmbedForm({ token, apiUrl }: EmbedFormProps) {
           <EmbedSuccess
             submissionId={state.submissionId}
             periodName={state.formData.period.name}
+            statusToken={state.statusToken ?? undefined}
           />
         )}
 

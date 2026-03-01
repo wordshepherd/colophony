@@ -15,3 +15,4 @@ export {
 export { reviewerAssignedNotification } from './reviewer-notifications.js';
 export { discussionCommentNotification } from './discussion-notifications.js';
 export { webhookDelivery } from './webhook-delivery.js';
+export { embedSubmissionConfirmation } from './embed-submission-confirmation.js';

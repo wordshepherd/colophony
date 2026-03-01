@@ -4,6 +4,7 @@ import {
   embedSubmitSchema,
   embedPrepareUploadSchema,
   embedUploadStatusQuerySchema,
+  STATUS_TOKEN_PREFIX,
 } from '@colophony/types';
 import type { Env } from '../config/env.js';
 import {
@@ -14,6 +15,7 @@ import {
   embedSubmissionService,
   PeriodClosedError,
 } from '../services/embed-submission.service.js';
+import { statusTokenService } from '../services/status-token.service.js';
 
 /**
  * Atomic Lua script: INCR key, set PEXPIRE on first hit, return [count, pttl].
@@ -241,17 +243,19 @@ export async function registerEmbedRoutes(
       }
 
       try {
-        const { submissionId } = await embedSubmissionService.submitFromEmbed(
-          token,
-          parsed.data,
-          request.ip,
-          request.headers['user-agent'],
-        );
+        const { submissionId, statusToken } =
+          await embedSubmissionService.submitFromEmbed(
+            token,
+            parsed.data,
+            request.ip,
+            request.headers['user-agent'],
+          );
 
         return {
           success: true,
           submissionId,
           message: 'Submission received successfully',
+          statusToken,
         };
       } catch (err) {
         if (err instanceof PeriodClosedError) {
@@ -475,6 +479,88 @@ export async function registerEmbedRoutes(
         }
         throw err;
       }
+    },
+  );
+
+  // ---------------------------------------------------------------------------
+  // GET /embed/status/:statusToken — public submission status check
+  // ---------------------------------------------------------------------------
+  app.get<{ Params: { statusToken: string } }>(
+    '/embed/status/:statusToken',
+    {
+      /* eslint-disable @typescript-eslint/no-misused-promises */
+      preHandler: async function embedStatusCheckRateLimit(
+        request: FastifyRequest,
+        reply: FastifyReply,
+      ) {
+        const redisClient = getRedis();
+        if (!redisClient) return;
+
+        const windowMs = env.RATE_LIMIT_WINDOW_SECONDS * 1000;
+        const windowId = Math.floor(Date.now() / windowMs);
+        const key = `${env.RATE_LIMIT_KEY_PREFIX}:embed:status:${request.ip}:${windowId}`;
+
+        try {
+          const result = (await redisClient.eval(
+            RATE_LIMIT_LUA,
+            1,
+            key,
+            windowMs,
+          )) as [number, number];
+          const count = result[0];
+
+          const statusLimit = 30;
+          if (count > statusLimit) {
+            const remainingMs = windowMs - (Date.now() % windowMs);
+            const retryAfterSeconds = Math.ceil(remainingMs / 1000);
+            reply.header('Retry-After', retryAfterSeconds);
+            request.log.warn(
+              { ip: request.ip, count, limit: statusLimit },
+              'Embed status check rate limit exceeded',
+            );
+            return reply.status(429).send({
+              error: 'rate_limit_exceeded',
+              message: 'Too many requests. Please try again later.',
+            });
+          }
+        } catch {
+          request.log.warn(
+            'Embed status check rate limit Redis error — allowing request',
+          );
+        }
+      },
+      /* eslint-enable @typescript-eslint/no-misused-promises */
+    },
+    async (request, reply) => {
+      const { statusToken } = request.params;
+
+      // Format check
+      if (
+        !statusToken.startsWith(STATUS_TOKEN_PREFIX) ||
+        statusToken.length < 20
+      ) {
+        return reply.status(404).send({
+          error: 'not_found',
+          message: 'Submission not found',
+        });
+      }
+
+      const result = await statusTokenService.verifyToken(statusToken);
+
+      if (!result) {
+        return reply.status(404).send({
+          error: 'not_found',
+          message: 'Submission not found',
+        });
+      }
+
+      return {
+        title: result.title,
+        status: result.status,
+        submittedAt: result.submittedAt?.toISOString() ?? null,
+        organizationName: result.organizationName,
+        periodName: result.periodName,
+      };
     },
   );
 }
