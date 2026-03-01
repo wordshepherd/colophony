@@ -39,6 +39,7 @@ import {
   Edit,
   Trash2,
   ArrowLeft,
+  ArrowRight,
   File,
   Download,
   Clock,
@@ -60,6 +61,8 @@ import { ReadOnlyFormFields } from "./form-renderer/read-only-form-fields";
 interface SubmissionDetailProps {
   submissionId: string;
   backHref?: string;
+  queueIds?: string[];
+  queueIdx?: number;
 }
 
 const scanStatusIcons: Record<
@@ -73,6 +76,14 @@ const scanStatusIcons: Record<
   FAILED: AlertCircle,
 };
 
+function buildQueueHref(id: string, ids: string[], idx: number): string {
+  const params = new URLSearchParams({
+    queue: ids.join(","),
+    idx: String(idx),
+  });
+  return `/editor/${id}?${params.toString()}`;
+}
+
 function formatFileSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
@@ -82,12 +93,15 @@ function formatFileSize(bytes: number): string {
 export function SubmissionDetail({
   submissionId,
   backHref = "/submissions",
+  queueIds,
+  queueIdx,
 }: SubmissionDetailProps) {
   const router = useRouter();
   const { user, isEditor, isAdmin } = useOrganization();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showWithdrawDialog, setShowWithdrawDialog] = useState(false);
   const [showComposeDialog, setShowComposeDialog] = useState(false);
+  const [isReadingMode, setIsReadingMode] = useState(false);
   const utils = trpc.useUtils();
 
   const { data: submission, isPending: isLoading } =
@@ -209,6 +223,17 @@ export function SubmissionDetail({
         </div>
 
         <div className="flex gap-2">
+          {(isEditor || isAdmin) && (
+            <Button
+              variant={isReadingMode ? "default" : "outline"}
+              size="icon"
+              onClick={() => setIsReadingMode((prev) => !prev)}
+              aria-pressed={isReadingMode}
+              aria-label="Toggle reading mode"
+            >
+              <BookOpen className="h-4 w-4" />
+            </Button>
+          )}
           {canEdit && (
             <Link href={`/submissions/${submissionId}/edit`}>
               <Button variant="outline">
@@ -237,8 +262,42 @@ export function SubmissionDetail({
         </div>
       </div>
 
-      {/* Editor status transitions */}
-      {(isEditor || isAdmin) &&
+      {/* Queue navigation */}
+      {queueIds && queueIds.length > 0 && queueIdx != null && (
+        <div className="flex items-center justify-between rounded-lg border p-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            disabled={queueIdx <= 0}
+            onClick={() => {
+              const prevIdx = queueIdx - 1;
+              router.push(buildQueueHref(queueIds[prevIdx], queueIds, prevIdx));
+            }}
+          >
+            <ArrowLeft className="mr-1 h-4 w-4" />
+            Previous
+          </Button>
+          <span className="text-sm text-muted-foreground">
+            {queueIdx + 1} of {queueIds.length}
+          </span>
+          <Button
+            variant="ghost"
+            size="sm"
+            disabled={queueIdx >= queueIds.length - 1}
+            onClick={() => {
+              const nextIdx = queueIdx + 1;
+              router.push(buildQueueHref(queueIds[nextIdx], queueIds, nextIdx));
+            }}
+          >
+            Next
+            <ArrowRight className="ml-1 h-4 w-4" />
+          </Button>
+        </div>
+      )}
+
+      {/* Editor status transitions — hidden in reading mode */}
+      {!isReadingMode &&
+        (isEditor || isAdmin) &&
         EDITOR_ALLOWED_TRANSITIONS[submission.status as SubmissionStatus]
           ?.length > 0 && (
           <Card>
@@ -267,8 +326,9 @@ export function SubmissionDetail({
           </Card>
         )}
 
-      {/* Revise and Resubmit card — shown to owner when in R&R status */}
-      {isOwner &&
+      {/* Revise and Resubmit card — shown to owner when in R&R status, hidden in reading mode */}
+      {!isReadingMode &&
+        isOwner &&
         submission.status === "REVISE_AND_RESUBMIT" &&
         submission.manuscript && (
           <ReviseAndResubmitCard
@@ -282,8 +342,8 @@ export function SubmissionDetail({
           />
         )}
 
-      {/* Reviewers */}
-      {(isEditor || isAdmin || isOwner) && (
+      {/* Reviewers — hidden in reading mode */}
+      {!isReadingMode && (isEditor || isAdmin || isOwner) && (
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
@@ -309,10 +369,11 @@ export function SubmissionDetail({
         </Card>
       )}
 
-      {/* Internal Discussion — editors, admins, and assigned reviewers only */}
-      {(isEditor ||
-        isAdmin ||
-        (reviewers ?? []).some((r) => r.reviewerUserId === user?.id)) &&
+      {/* Internal Discussion — hidden in reading mode */}
+      {!isReadingMode &&
+        (isEditor ||
+          isAdmin ||
+          (reviewers ?? []).some((r) => r.reviewerUserId === user?.id)) &&
         !isOwner && (
           <Card>
             <CardHeader>
@@ -330,10 +391,11 @@ export function SubmissionDetail({
           </Card>
         )}
 
-      {/* Voting — editors, admins, and assigned reviewers (not submitter) */}
-      {(isEditor ||
-        isAdmin ||
-        (reviewers ?? []).some((r) => r.reviewerUserId === user?.id)) &&
+      {/* Voting — hidden in reading mode */}
+      {!isReadingMode &&
+        (isEditor ||
+          isAdmin ||
+          (reviewers ?? []).some((r) => r.reviewerUserId === user?.id)) &&
         !isOwner &&
         submission.status !== "DRAFT" && (
           <VotingPanel
@@ -346,8 +408,16 @@ export function SubmissionDetail({
         )}
 
       {/* Content */}
-      <div className="grid gap-6 md:grid-cols-3">
-        <div className="md:col-span-2 space-y-6">
+      <div
+        className={
+          isReadingMode
+            ? "max-w-3xl mx-auto space-y-6"
+            : "grid gap-6 md:grid-cols-3"
+        }
+      >
+        <div
+          className={isReadingMode ? "space-y-6" : "md:col-span-2 space-y-6"}
+        >
           {/* Main content */}
           <Card>
             <CardHeader>
@@ -355,7 +425,13 @@ export function SubmissionDetail({
             </CardHeader>
             <CardContent>
               {submission.content ? (
-                <div className="whitespace-pre-wrap text-sm">
+                <div
+                  className={
+                    isReadingMode
+                      ? "prose prose-sm max-w-none leading-relaxed text-base"
+                      : "whitespace-pre-wrap text-sm"
+                  }
+                >
                   {submission.content}
                 </div>
               ) : (
@@ -381,15 +457,21 @@ export function SubmissionDetail({
                 <CardTitle>Cover Letter</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="whitespace-pre-wrap text-sm">
+                <div
+                  className={
+                    isReadingMode
+                      ? "prose prose-sm max-w-none leading-relaxed text-base"
+                      : "whitespace-pre-wrap text-sm"
+                  }
+                >
                   {submission.coverLetter}
                 </div>
               </CardContent>
             </Card>
           )}
 
-          {/* Linked manuscript */}
-          {submission.manuscript && (
+          {/* Linked manuscript — hidden in reading mode */}
+          {!isReadingMode && submission.manuscript && (
             <Card>
               <CardHeader>
                 <CardTitle>Linked Manuscript</CardTitle>
@@ -476,75 +558,81 @@ export function SubmissionDetail({
             </Card>
           )}
 
-          <PluginSlot
-            point="submission.detail.section"
-            context={{ submissionId: submission.id }}
-            className="space-y-4"
-          />
-        </div>
-
-        {/* Sidebar */}
-        <div className="space-y-6">
-          {/* History */}
-          <Card>
-            <CardHeader>
-              <CardTitle>History</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {history && history.length > 0 ? (
-                <div className="space-y-4">
-                  {history.map((event, index) => (
-                    <div key={event.id} className="relative">
-                      {index < history.length - 1 && (
-                        <div className="absolute left-2 top-8 bottom-0 w-px bg-border" />
-                      )}
-                      <div className="flex gap-3">
-                        <div className="w-4 h-4 mt-1 rounded-full bg-primary flex-shrink-0" />
-                        <div className="space-y-1">
-                          <span className="text-sm">
-                            {event.fromStatus ? (
-                              <>
-                                Changed from{" "}
-                                <Badge variant="outline" className="text-xs">
-                                  {event.fromStatus}
-                                </Badge>{" "}
-                                to{" "}
-                                <Badge variant="outline" className="text-xs">
-                                  {event.toStatus}
-                                </Badge>
-                              </>
-                            ) : (
-                              <>
-                                Status set to{" "}
-                                <Badge variant="outline" className="text-xs">
-                                  {event.toStatus}
-                                </Badge>
-                              </>
-                            )}
-                          </span>
-                          {event.comment && (
-                            <p className="text-sm text-muted-foreground">
-                              &ldquo;{event.comment}&rdquo;
-                            </p>
-                          )}
-                          <p className="text-xs text-muted-foreground">
-                            {format(new Date(event.changedAt), "PPp")}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-sm text-muted-foreground">No history yet</p>
-              )}
-            </CardContent>
-          </Card>
-
-          {(isEditor || isAdmin) && (
-            <CorrespondenceHistory submissionId={submissionId} />
+          {!isReadingMode && (
+            <PluginSlot
+              point="submission.detail.section"
+              context={{ submissionId: submission.id }}
+              className="space-y-4"
+            />
           )}
         </div>
+
+        {/* Sidebar — hidden in reading mode */}
+        {!isReadingMode && (
+          <div className="space-y-6">
+            {/* History */}
+            <Card>
+              <CardHeader>
+                <CardTitle>History</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {history && history.length > 0 ? (
+                  <div className="space-y-4">
+                    {history.map((event, index) => (
+                      <div key={event.id} className="relative">
+                        {index < history.length - 1 && (
+                          <div className="absolute left-2 top-8 bottom-0 w-px bg-border" />
+                        )}
+                        <div className="flex gap-3">
+                          <div className="w-4 h-4 mt-1 rounded-full bg-primary flex-shrink-0" />
+                          <div className="space-y-1">
+                            <span className="text-sm">
+                              {event.fromStatus ? (
+                                <>
+                                  Changed from{" "}
+                                  <Badge variant="outline" className="text-xs">
+                                    {event.fromStatus}
+                                  </Badge>{" "}
+                                  to{" "}
+                                  <Badge variant="outline" className="text-xs">
+                                    {event.toStatus}
+                                  </Badge>
+                                </>
+                              ) : (
+                                <>
+                                  Status set to{" "}
+                                  <Badge variant="outline" className="text-xs">
+                                    {event.toStatus}
+                                  </Badge>
+                                </>
+                              )}
+                            </span>
+                            {event.comment && (
+                              <p className="text-sm text-muted-foreground">
+                                &ldquo;{event.comment}&rdquo;
+                              </p>
+                            )}
+                            <p className="text-xs text-muted-foreground">
+                              {format(new Date(event.changedAt), "PPp")}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    No history yet
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+
+            {(isEditor || isAdmin) && (
+              <CorrespondenceHistory submissionId={submissionId} />
+            )}
+          </div>
+        )}
       </div>
 
       {/* Compose message dialog */}
