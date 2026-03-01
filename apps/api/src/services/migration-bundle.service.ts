@@ -20,8 +20,8 @@ import type {
   MigrationStatusHistoryEntry,
   TransferFileManifestEntry,
 } from '@colophony/types';
+import { genreSchema, hopperToCsrStatus } from '@colophony/types';
 import type { Genre } from '@colophony/types';
-import { hopperToCsrStatus } from '@colophony/types';
 import type { Env } from '../config/env.js';
 import { federationService } from './federation.service.js';
 
@@ -39,6 +39,9 @@ export class MigrationBundleError extends Error {
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
+
+/** Safety cap on submissions per migration bundle to prevent OOM. */
+const MAX_SUBMISSIONS = 10_000;
 
 /** Statuses that indicate a closed/decided submission (metadata only). */
 const CLOSED_STATUSES = ['REJECTED', 'WITHDRAWN', 'ACCEPTED'] as const;
@@ -86,6 +89,7 @@ export const migrationBundleService = {
         submissionPeriodId: submissions.submissionPeriodId,
       })
       .from(submissions)
+      .limit(MAX_SUBMISSIONS)
       .where(eq(submissions.submitterId, params.userId));
 
     // Enrich with org/period names
@@ -138,7 +142,12 @@ export const migrationBundleService = {
         )
         .where(inArray(manuscriptVersions.id, allVersionIds));
       for (const row of genreRows) {
-        genreMap.set(row.versionId, (row.genre as Genre | null) ?? null);
+        if (row.genre == null) {
+          genreMap.set(row.versionId, null);
+        } else {
+          const parsed = genreSchema.safeParse(row.genre);
+          genreMap.set(row.versionId, parsed.success ? parsed.data : null);
+        }
       }
     }
 
@@ -187,12 +196,11 @@ export const migrationBundleService = {
           comment: r.comment,
         }));
 
-        // Derive decidedAt from first terminal transition
+        // Derive decidedAt from last terminal transition (handles re-decisions)
         let decidedAt: string | null = null;
         for (const r of rows) {
           if (terminalStatuses.has(r.toStatus)) {
             decidedAt = new Date(r.changedAt).toISOString();
-            break;
           }
         }
 
