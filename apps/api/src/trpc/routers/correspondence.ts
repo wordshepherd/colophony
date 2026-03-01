@@ -3,8 +3,14 @@ import { z } from 'zod';
 import {
   sendEditorMessageSchema,
   correspondenceListItemSchema,
+  listCorrespondenceByUserSchema,
 } from '@colophony/types';
-import { orgProcedure, createRouter, requireScopes } from '../init.js';
+import {
+  orgProcedure,
+  userProcedure,
+  createRouter,
+  requireScopes,
+} from '../init.js';
 import { toServiceContext } from '../../services/context.js';
 import { correspondenceService } from '../../services/correspondence.service.js';
 import { mapServiceError } from '../error-mapper.js';
@@ -56,6 +62,38 @@ export const correspondenceRouter = createRouter({
           isPersonalized: r.isPersonalized,
           source: r.source as 'colophony' | 'manual',
         }));
+      } catch (e) {
+        mapServiceError(e);
+      }
+    }),
+
+  listByUser: userProcedure
+    .use(requireScopes('correspondence:read'))
+    .input(listCorrespondenceByUserSchema)
+    .query(async ({ ctx, input }) => {
+      try {
+        const result = await correspondenceService.listByUser(
+          ctx.dbTx,
+          ctx.authContext.userId,
+          input,
+        );
+        return {
+          ...result,
+          items: result.items.map((r) => ({
+            id: r.id,
+            submissionId: r.submissionId,
+            externalSubmissionId: r.externalSubmissionId,
+            direction: r.direction,
+            channel: r.channel,
+            sentAt: r.sentAt.toISOString(),
+            subject: r.subject,
+            bodyPreview: stripHtmlAndTruncate(r.body, 200),
+            senderName: r.senderName,
+            isPersonalized: r.isPersonalized,
+            source: r.source as 'colophony' | 'manual',
+            journalName: r.journalName,
+          })),
+        };
       } catch (e) {
         mapServiceError(e);
       }

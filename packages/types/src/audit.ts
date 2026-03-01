@@ -228,6 +228,16 @@ export const AuditActions = {
   EMAIL_TEMPLATE_UPDATED: "EMAIL_TEMPLATE_UPDATED",
   EMAIL_TEMPLATE_DELETED: "EMAIL_TEMPLATE_DELETED",
 
+  // External submission lifecycle
+  EXTERNAL_SUBMISSION_CREATED: "EXTERNAL_SUBMISSION_CREATED",
+  EXTERNAL_SUBMISSION_UPDATED: "EXTERNAL_SUBMISSION_UPDATED",
+  EXTERNAL_SUBMISSION_DELETED: "EXTERNAL_SUBMISSION_DELETED",
+
+  // Writer profile lifecycle
+  WRITER_PROFILE_CREATED: "WRITER_PROFILE_CREATED",
+  WRITER_PROFILE_UPDATED: "WRITER_PROFILE_UPDATED",
+  WRITER_PROFILE_DELETED: "WRITER_PROFILE_DELETED",
+
   // CSR export/import
   CSR_EXPORTED: "CSR_EXPORTED",
   CSR_IMPORTED: "CSR_IMPORTED",
@@ -267,6 +277,8 @@ export const AuditResources = {
   NOTIFICATION_PREFERENCE: "notification_preference",
   WEBHOOK_ENDPOINT: "webhook_endpoint",
   WEBHOOK_DELIVERY: "webhook_delivery",
+  EXTERNAL_SUBMISSION: "external_submission",
+  WRITER_PROFILE: "writer_profile",
   CORRESPONDENCE: "correspondence",
   EMAIL_TEMPLATE: "email_template",
   CSR: "csr",
@@ -578,6 +590,22 @@ export interface WebhookDeliveryAuditParams extends BaseAuditParams {
     | typeof AuditActions.WEBHOOK_DELIVERY_RETRIED;
 }
 
+export interface ExternalSubmissionAuditParams extends BaseAuditParams {
+  resource: typeof AuditResources.EXTERNAL_SUBMISSION;
+  action:
+    | typeof AuditActions.EXTERNAL_SUBMISSION_CREATED
+    | typeof AuditActions.EXTERNAL_SUBMISSION_UPDATED
+    | typeof AuditActions.EXTERNAL_SUBMISSION_DELETED;
+}
+
+export interface WriterProfileAuditParams extends BaseAuditParams {
+  resource: typeof AuditResources.WRITER_PROFILE;
+  action:
+    | typeof AuditActions.WRITER_PROFILE_CREATED
+    | typeof AuditActions.WRITER_PROFILE_UPDATED
+    | typeof AuditActions.WRITER_PROFILE_DELETED;
+}
+
 export interface CorrespondenceAuditParams extends BaseAuditParams {
   resource: typeof AuditResources.CORRESPONDENCE;
   action:
@@ -639,6 +667,8 @@ export type AuditLogParams =
   | NotificationPreferenceAuditParams
   | WebhookEndpointAuditParams
   | WebhookDeliveryAuditParams
+  | ExternalSubmissionAuditParams
+  | WriterProfileAuditParams
   | CorrespondenceAuditParams
   | EmailTemplateAuditParams
   | CSRAuditParams
