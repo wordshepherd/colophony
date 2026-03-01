@@ -90,6 +90,11 @@ import {
   PresetNotFoundError,
 } from '../services/queue-preset.service.js';
 import { CSRImportError } from '../services/csr.service.js';
+import { ExternalSubmissionNotFoundError } from '../services/external-submission.service.js';
+import {
+  WriterProfileNotFoundError,
+  WriterProfileDuplicateError,
+} from '../services/writer-profile.service.js';
 
 type TRPCErrorCode = ConstructorParameters<typeof TRPCError>[0]['code'];
 
@@ -173,6 +178,10 @@ const errorCodeMap: [new (...args: never[]) => Error, TRPCErrorCode][] = [
   [PresetNotFoundError, 'NOT_FOUND'],
   // CSR errors
   [CSRImportError, 'BAD_REQUEST'],
+  // Writer workspace errors
+  [ExternalSubmissionNotFoundError, 'NOT_FOUND'],
+  [WriterProfileNotFoundError, 'NOT_FOUND'],
+  [WriterProfileDuplicateError, 'CONFLICT'],
   // Precondition
   [FileNotCleanError, 'PRECONDITION_FAILED'],
 ];

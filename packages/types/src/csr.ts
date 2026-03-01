@@ -179,6 +179,85 @@ export const createWriterProfileSchema = z.object({
   profileUrl: z.string().url().max(1000).optional(),
 });
 
+export const updateWriterProfileSchema = createWriterProfileSchema.partial();
+
+// --- List/Search schemas ---
+
+export const listExternalSubmissionsSchema = z.object({
+  search: z.string().optional(),
+  status: csrStatusSchema.optional(),
+  page: z.number().int().min(1).default(1),
+  limit: z.number().int().min(1).max(100).default(20),
+});
+
+export type ListExternalSubmissionsInput = z.infer<
+  typeof listExternalSubmissionsSchema
+>;
+
+export const listCorrespondenceByUserSchema = z.object({
+  page: z.number().int().min(1).default(1),
+  limit: z.number().int().min(1).max(100).default(20),
+});
+
+export type ListCorrespondenceByUserInput = z.infer<
+  typeof listCorrespondenceByUserSchema
+>;
+
+export const journalDirectorySearchSchema = z.object({
+  query: z.string().min(1).max(500),
+  limit: z.number().int().min(1).max(50).default(10),
+});
+
+export type JournalDirectorySearchInput = z.infer<
+  typeof journalDirectorySearchSchema
+>;
+
+export const journalDirectoryEntrySchema = z.object({
+  id: z.string().uuid(),
+  name: z.string(),
+  externalUrl: z.string().nullable(),
+  colophonyDomain: z.string().nullable(),
+});
+
+export type JournalDirectoryEntry = z.infer<typeof journalDirectoryEntrySchema>;
+
+export const correspondenceUserListItemSchema = z.object({
+  id: z.string().uuid(),
+  submissionId: z.string().uuid().nullable(),
+  externalSubmissionId: z.string().uuid().nullable(),
+  direction: correspondenceDirectionSchema,
+  channel: correspondenceChannelSchema,
+  sentAt: z.string().datetime(),
+  subject: z.string().nullable(),
+  bodyPreview: z.string(),
+  senderName: z.string().nullable(),
+  isPersonalized: z.boolean(),
+  source: z.enum(["colophony", "manual"]),
+  journalName: z.string().nullable(),
+});
+
+export type CorrespondenceUserListItem = z.infer<
+  typeof correspondenceUserListItemSchema
+>;
+
+export const workspaceStatsSchema = z.object({
+  manuscriptCount: z.number().int(),
+  pendingSubmissions: z.number().int(),
+  acceptedSubmissions: z.number().int(),
+  rejectedSubmissions: z.number().int(),
+  acceptanceRate: z.number().nullable(),
+  recentActivity: z.array(
+    z.object({
+      type: z.enum(["external_submission", "correspondence"]),
+      id: z.string().uuid(),
+      label: z.string(),
+      timestamp: z.string().datetime(),
+    }),
+  ),
+});
+
+export type WorkspaceStats = z.infer<typeof workspaceStatsSchema>;
+
 // ---------------------------------------------------------------------------
 // CSR Export/Import — personal data portability
 // ---------------------------------------------------------------------------
