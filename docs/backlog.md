@@ -373,8 +373,8 @@
 - [x] [P1] `writer_profiles` DB table — external platform links (Chill Subs ID, Submittable ID, etc.) per user; unique on (user_id, platform) — (register-data-standard.md Section 2.2, 4.2; done 2026-02-27 PR pending)
 - [x] [P1] Writer workspace UI — new top-level nav section ("My Writing"); dashboard with stats, correspondence archive, sidebar restructure — (register-data-standard.md Section 4.3; done 2026-03-01 PR pending)
 - [x] [P1] External submission tracking UI — CRUD with journal autocomplete, status filter, pagination, card grid — (register-data-standard.md Section 3; done 2026-03-01 PR pending)
-- [ ] [P2] Cross-org submission portfolio — aggregated view: Colophony-native submissions from all orgs + external tracked submissions, unified by piece grouping — (persona gap analysis 2026-02-27)
-- [ ] [P2] Writer-facing analytics — personal response time stats, submissions pending, acceptance rate, submissions per month; derived from both native and manually-tracked records — (persona gap analysis 2026-02-27)
+- [x] [P2] Cross-org submission portfolio — aggregated view: Colophony-native submissions from all orgs + external tracked submissions, unified by piece grouping — (persona gap analysis 2026-02-27; done 2026-03-01)
+- [x] [P2] Writer-facing analytics — personal response time stats, submissions pending, acceptance rate, submissions per month; derived from both native and manually-tracked records — (persona gap analysis 2026-02-27; done 2026-03-01)
 - [ ] [P2] Import flows — Submittable CSV import, Chill Subs import (via directoryIds mapping), generic CSV with column mapping UI — (register-data-standard.md Section 3; 2026-02-27)
 
 ### Design Decisions

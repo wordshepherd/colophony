@@ -240,6 +240,45 @@ export type CorrespondenceUserListItem = z.infer<
   typeof correspondenceUserListItemSchema
 >;
 
+// --- Portfolio (cross-org unified view) ---
+
+export const portfolioSourceSchema = z.enum(["native", "external"]);
+export type PortfolioSource = z.infer<typeof portfolioSourceSchema>;
+
+export const portfolioItemSchema = z.object({
+  id: z.string().uuid(),
+  source: portfolioSourceSchema,
+  title: z.string().nullable(),
+  journalName: z.string().nullable(),
+  status: csrStatusSchema,
+  sentAt: z.string().datetime().nullable(),
+  respondedAt: z.string().datetime().nullable(),
+  manuscriptId: z.string().uuid().nullable(),
+  manuscriptTitle: z.string().nullable(),
+  createdAt: z.string().datetime(),
+});
+export type PortfolioItem = z.infer<typeof portfolioItemSchema>;
+
+export const listPortfolioSchema = z.object({
+  search: z.string().optional(),
+  status: csrStatusSchema.optional(),
+  source: portfolioSourceSchema.optional(),
+  page: z.number().int().min(1).default(1),
+  limit: z.number().int().min(1).max(100).default(20),
+});
+export type ListPortfolioInput = z.infer<typeof listPortfolioSchema>;
+
+export const portfolioListResponseSchema = z.object({
+  items: z.array(portfolioItemSchema),
+  total: z.number().int(),
+  page: z.number().int(),
+  limit: z.number().int(),
+  totalPages: z.number().int(),
+});
+export type PortfolioListResponse = z.infer<typeof portfolioListResponseSchema>;
+
+// --- Workspace Stats ---
+
 export const workspaceStatsSchema = z.object({
   manuscriptCount: z.number().int(),
   pendingSubmissions: z.number().int(),

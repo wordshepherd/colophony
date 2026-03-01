@@ -4,7 +4,7 @@ import Link from "next/link";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { WorkspaceStatsCards } from "./workspace-stats-cards";
-import { Plus, Send, Mail } from "lucide-react";
+import { Plus, Send, Mail, Layers, BarChart3 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 
 export function WorkspaceDashboard() {
@@ -93,6 +93,18 @@ export function WorkspaceDashboard() {
           <Button variant="outline">
             <Mail className="mr-2 h-4 w-4" />
             View Correspondence
+          </Button>
+        </Link>
+        <Link href="/workspace/portfolio">
+          <Button variant="outline">
+            <Layers className="mr-2 h-4 w-4" />
+            View Portfolio
+          </Button>
+        </Link>
+        <Link href="/workspace/analytics">
+          <Button variant="outline">
+            <BarChart3 className="mr-2 h-4 w-4" />
+            Analytics
           </Button>
         </Link>
       </div>
