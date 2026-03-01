@@ -213,6 +213,20 @@ export const resubmitSchema = z.object({
 
 export type ResubmitInput = z.infer<typeof resubmitSchema>;
 
+export const submissionSortBySchema = z
+  .enum(["title", "submitterEmail", "submittedAt", "status", "createdAt"])
+  .default("createdAt")
+  .describe("Field to sort submissions by");
+
+export type SubmissionSortBy = z.infer<typeof submissionSortBySchema>;
+
+export const sortOrderSchema = z
+  .enum(["asc", "desc"])
+  .default("desc")
+  .describe("Sort direction");
+
+export type SortOrder = z.infer<typeof sortOrderSchema>;
+
 export const listSubmissionsSchema = z.object({
   status: submissionStatusSchema
     .optional()
@@ -228,6 +242,8 @@ export const listSubmissionsSchema = z.object({
     .max(200)
     .optional()
     .describe("Full-text search query (max 200 chars)"),
+  sortBy: submissionSortBySchema.optional().describe("Sort field"),
+  sortOrder: sortOrderSchema.optional().describe("Sort direction"),
   page: z.number().int().min(1).default(1).describe("Page number (1-based)"),
   limit: z
     .number()
@@ -541,3 +557,39 @@ export const batchAssignReviewersResponseSchema = z.object({
 export type BatchAssignReviewersResponse = z.infer<
   typeof batchAssignReviewersResponseSchema
 >;
+
+// ---------------------------------------------------------------------------
+// Export schemas
+// ---------------------------------------------------------------------------
+
+export const exportSubmissionsSchema = z.object({
+  status: submissionStatusSchema
+    .optional()
+    .describe("Filter by submission status"),
+  submissionPeriodId: z
+    .string()
+    .uuid()
+    .optional()
+    .describe("Filter by submission period"),
+  search: z
+    .string()
+    .trim()
+    .max(200)
+    .optional()
+    .describe("Full-text search query (max 200 chars)"),
+  format: z
+    .enum(["json", "csv"])
+    .default("json")
+    .describe("Export format (json or csv)"),
+});
+
+export type ExportSubmissionsInput = z.infer<typeof exportSubmissionsSchema>;
+
+export const submissionExportItemSchema = submissionListItemSchema.extend({
+  periodName: z
+    .string()
+    .nullable()
+    .describe("Name of the submission period, if any"),
+});
+
+export type SubmissionExportItem = z.infer<typeof submissionExportItemSchema>;

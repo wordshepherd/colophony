@@ -325,14 +325,14 @@
 ### Analytics & Reporting
 
 - [x] [P1] Submission analytics dashboard — acceptance rate, response time distribution, submissions per period, funnel (submitted → reviewed → accepted/rejected), aging submissions — (persona gap analysis 2026-02-27, implemented 2026-02-28)
-- [ ] [P2] Publication data export — CSV/JSON export of all org submissions, with filters (date range, status, period); admin-only — (persona gap analysis 2026-02-27)
+- [x] [P2] Publication data export — CSV/JSON export of all org submissions, with filters (date range, status, period); admin-only — (persona gap analysis 2026-02-27; done 2026-02-28)
 - [ ] [P3] Response time tracking and reminders — flag submissions pending over N days (configurable); optional email reminder to editors — (persona gap analysis 2026-02-27)
 
 ### UI Polish
 
 - [x] [P1] Mobile navigation — hamburger menu or bottom nav for `< md` breakpoints; sidebar is currently `hidden md:flex` with no mobile alternative — (persona gap analysis 2026-02-27; done 2026-02-28)
-- [ ] [P2] Column sorting in submission queue — sortable by title, submitter, date, status; currently hardcoded `DESC createdAt` — (persona gap analysis 2026-02-27)
-- [ ] [P2] Submission period filter in editor queue — the API supports `submissionPeriodId` filter but the UI doesn't expose a period dropdown — (persona gap analysis 2026-02-27)
+- [x] [P2] Column sorting in submission queue — sortable by title, submitter, date, status; currently hardcoded `DESC createdAt` — (persona gap analysis 2026-02-27; done 2026-02-28)
+- [x] [P2] Submission period filter in editor queue — the API supports `submissionPeriodId` filter but the UI doesn't expose a period dropdown — (persona gap analysis 2026-02-27; done 2026-02-28)
 - [ ] [P3] Saved filter presets / views — editors can save named filter+sort combos for their queue — (persona gap analysis 2026-02-27)
 
 ---
