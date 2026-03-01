@@ -24,6 +24,7 @@ import { webhooksRouter } from './routers/webhooks.js';
 import { correspondenceRouter } from './routers/correspondence.js';
 import { emailTemplatesRouter } from './routers/email-templates.js';
 import { queuePresetsRouter } from './routers/queue-presets.js';
+import { csrRouter } from './routers/csr.js';
 
 // Re-export procedure builders for convenience
 export {
@@ -69,6 +70,7 @@ export const appRouter = t.router({
   correspondence: correspondenceRouter,
   emailTemplates: emailTemplatesRouter,
   queuePresets: queuePresetsRouter,
+  csr: csrRouter,
   retention: t.router({}),
 });
 

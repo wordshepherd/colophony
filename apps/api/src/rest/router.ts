@@ -17,6 +17,7 @@ import { contractTemplatesRouter } from './routers/contract-templates.js';
 import { contractsRouter } from './routers/contracts.js';
 import { issuesRouter } from './routers/issues.js';
 import { cmsConnectionsRouter } from './routers/cms-connections.js';
+import { csrRouter } from './routers/csr.js';
 import type { RestContext } from './context.js';
 
 const restRouter = {
@@ -35,6 +36,7 @@ const restRouter = {
   contracts: contractsRouter,
   issues: issuesRouter,
   cmsConnections: cmsConnectionsRouter,
+  csr: csrRouter,
 };
 
 const openApiHandler = new OpenAPIHandler<RestContext>(restRouter, {
@@ -134,6 +136,11 @@ const openApiHandler = new OpenAPIHandler<RestContext>(restRouter, {
             name: 'CMS Connections',
             description:
               'Manage CMS connections for publishing issues to WordPress or Ghost (Slate).',
+          },
+          {
+            name: 'CSR',
+            description:
+              'Export and import Colophony Submission Records — personal data portability for writers.',
           },
           {
             name: 'Audit',

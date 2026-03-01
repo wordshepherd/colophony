@@ -178,3 +178,114 @@ export const createWriterProfileSchema = z.object({
   externalId: z.string().max(500).optional(),
   profileUrl: z.string().url().max(1000).optional(),
 });
+
+// ---------------------------------------------------------------------------
+// CSR Export/Import — personal data portability
+// ---------------------------------------------------------------------------
+
+// --- Native submission (Colophony-origin, mirrors migration history fields) ---
+
+export const csrNativeSubmissionSchema = z
+  .object({
+    originSubmissionId: z.string().uuid(),
+    title: z.string().nullable(),
+    genre: genreSchema.nullable(),
+    coverLetter: z.string().nullable(),
+    status: csrStatusSchema,
+    formData: z.record(z.string(), z.unknown()).nullable(),
+    submittedAt: z.string().datetime().nullable(),
+    decidedAt: z.string().datetime().nullable(),
+    publicationName: z.string().nullable(),
+    periodName: z.string().nullable(),
+    statusHistory: z.array(
+      z.object({
+        from: csrStatusSchema.nullable(),
+        to: csrStatusSchema,
+        changedAt: z.string().datetime(),
+        comment: z.string().nullable(),
+      }),
+    ),
+  })
+  .describe("Colophony-native submission record for CSR export");
+
+export type CSRNativeSubmission = z.infer<typeof csrNativeSubmissionSchema>;
+
+// --- Manuscript summary (lightweight reference for export) ---
+
+export const csrManuscriptSummarySchema = z.object({
+  id: z.string().uuid(),
+  title: z.string().nullable(),
+  genre: genreSchema.nullable(),
+  createdAt: z.string().datetime(),
+});
+
+export type CSRManuscriptSummary = z.infer<typeof csrManuscriptSummarySchema>;
+
+// --- Export envelope ---
+
+export const csrExportEnvelopeSchema = z
+  .object({
+    version: z.literal("1.0"),
+    exportedAt: z.string().datetime(),
+    identity: z.object({
+      userId: z.string().uuid(),
+      email: z.string().email(),
+      displayName: z.string().nullable(),
+    }),
+    nativeSubmissions: z.array(csrNativeSubmissionSchema),
+    externalSubmissions: z.array(externalSubmissionSchema),
+    correspondence: z.array(correspondenceSchema),
+    writerProfiles: z.array(writerProfileSchema),
+    manuscripts: z.array(csrManuscriptSummarySchema),
+  })
+  .describe("Full CSR export envelope — personal data portability");
+
+export type CSRExportEnvelope = z.infer<typeof csrExportEnvelopeSchema>;
+
+// --- Import schemas ---
+
+export const csrImportExternalSubmissionSchema = z.object({
+  journalName: z.string().min(1).max(500),
+  journalDirectoryId: z.string().uuid().optional(),
+  status: csrStatusSchema.default("sent"),
+  sentAt: z.string().datetime().optional(),
+  respondedAt: z.string().datetime().optional(),
+  method: z.string().max(100).optional(),
+  notes: z.string().optional(),
+  importedFrom: z.string().max(100).optional(),
+});
+
+export type CSRImportExternalSubmission = z.infer<
+  typeof csrImportExternalSubmissionSchema
+>;
+
+export const csrImportCorrespondenceSchema = z.object({
+  externalSubmissionIndex: z.number().int().min(0),
+  direction: correspondenceDirectionSchema,
+  channel: correspondenceChannelSchema.default("email"),
+  sentAt: z.string().datetime(),
+  subject: z.string().max(500).optional(),
+  body: z.string().min(1),
+  senderName: z.string().max(255).optional(),
+  senderEmail: z.string().email().max(255).optional(),
+  isPersonalized: z.boolean().default(false),
+});
+
+export type CSRImportCorrespondence = z.infer<
+  typeof csrImportCorrespondenceSchema
+>;
+
+export const csrImportInputSchema = z.object({
+  submissions: z.array(csrImportExternalSubmissionSchema).min(1).max(5000),
+  correspondence: z.array(csrImportCorrespondenceSchema).default([]),
+  importedFrom: z.string().max(100).default("csr_import"),
+});
+
+export type CSRImportInput = z.infer<typeof csrImportInputSchema>;
+
+export const csrImportResultSchema = z.object({
+  submissionsCreated: z.number().int(),
+  correspondenceCreated: z.number().int(),
+});
+
+export type CSRImportResult = z.infer<typeof csrImportResultSchema>;
