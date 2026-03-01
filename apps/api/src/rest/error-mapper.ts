@@ -81,6 +81,7 @@ import {
   VoteOnTerminalSubmissionError,
   ScoreOutOfRangeError,
 } from '../services/submission-vote.service.js';
+import { CSRImportError } from '../services/csr.service.js';
 
 type ORPCErrorCode = ConstructorParameters<typeof ORPCError>[0];
 
@@ -156,6 +157,8 @@ const errorCodeMap: [new (...args: never[]) => Error, ORPCErrorCode][] = [
   [VotingDisabledError, 'BAD_REQUEST'],
   [VoteOnTerminalSubmissionError, 'BAD_REQUEST'],
   [ScoreOutOfRangeError, 'BAD_REQUEST'],
+  // CSR errors
+  [CSRImportError, 'BAD_REQUEST'],
   // Precondition
   [FileNotCleanError, 'BAD_REQUEST'],
 ];

@@ -228,6 +228,10 @@ export const AuditActions = {
   EMAIL_TEMPLATE_UPDATED: "EMAIL_TEMPLATE_UPDATED",
   EMAIL_TEMPLATE_DELETED: "EMAIL_TEMPLATE_DELETED",
 
+  // CSR export/import
+  CSR_EXPORTED: "CSR_EXPORTED",
+  CSR_IMPORTED: "CSR_IMPORTED",
+
   // Audit access
   AUDIT_ACCESSED: "AUDIT_ACCESSED",
 } as const;
@@ -265,6 +269,7 @@ export const AuditResources = {
   WEBHOOK_DELIVERY: "webhook_delivery",
   CORRESPONDENCE: "correspondence",
   EMAIL_TEMPLATE: "email_template",
+  CSR: "csr",
   AUDIT: "audit",
 } as const;
 
@@ -588,6 +593,11 @@ export interface EmailTemplateAuditParams extends BaseAuditParams {
     | typeof AuditActions.EMAIL_TEMPLATE_DELETED;
 }
 
+export interface CSRAuditParams extends BaseAuditParams {
+  resource: typeof AuditResources.CSR;
+  action: typeof AuditActions.CSR_EXPORTED | typeof AuditActions.CSR_IMPORTED;
+}
+
 export interface AuditAccessAuditParams extends BaseAuditParams {
   resource: typeof AuditResources.AUDIT;
   action: typeof AuditActions.AUDIT_ACCESSED;
@@ -631,6 +641,7 @@ export type AuditLogParams =
   | WebhookDeliveryAuditParams
   | CorrespondenceAuditParams
   | EmailTemplateAuditParams
+  | CSRAuditParams
   | AuditAccessAuditParams
   | SystemAuditParams;
 
