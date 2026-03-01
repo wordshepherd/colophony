@@ -8,7 +8,6 @@ import {
 } from '@colophony/db';
 import * as jose from 'jose';
 import crypto from 'node:crypto';
-import dns from 'node:dns';
 import {
   AuditActions,
   AuditResources,
@@ -29,6 +28,10 @@ import {
   signFederationRequest,
   verifyFederationSignature,
 } from '../federation/http-signatures.js';
+import {
+  resolveAndCheckPrivateIp,
+  SsrfValidationError,
+} from '../lib/url-validation.js';
 
 // ---------------------------------------------------------------------------
 // Error classes
@@ -70,93 +73,8 @@ export class TrustSignatureVerificationError extends Error {
   }
 }
 
-// ---------------------------------------------------------------------------
-// SSRF Protection
-// ---------------------------------------------------------------------------
-
 /** Maximum response body size for remote metadata fetches (1 MB). */
 const MAX_METADATA_RESPONSE_BYTES = 1_048_576;
-
-/**
- * Check whether a hostname resolves to a private/reserved IP address.
- * Throws RemoteMetadataFetchError if any resolved address is private.
- * Skipped in development/test environments to allow localhost.
- */
-async function resolveAndCheckPrivateIp(hostname: string): Promise<void> {
-  // Strip port from hostname before DNS resolution
-  const bareHost = hostname.replace(/:\d+$/, '');
-
-  // Block IP literals directly — DNS resolution may fail for these,
-  // bypassing the private address check entirely
-  if (isPrivateIPv4(bareHost)) {
-    throw new RemoteMetadataFetchError(
-      hostname,
-      new Error(`IP literal resolves to private IPv4 address: ${bareHost}`),
-    );
-  }
-  if (isPrivateIPv6(bareHost) || bareHost === '::1') {
-    throw new RemoteMetadataFetchError(
-      hostname,
-      new Error(`IP literal resolves to private IPv6 address: ${bareHost}`),
-    );
-  }
-
-  // Resolve both IPv4 and IPv6
-  const [ipv4Addrs, ipv6Addrs] = await Promise.all([
-    dns.promises.resolve4(bareHost).catch(() => [] as string[]),
-    dns.promises.resolve6(bareHost).catch(() => [] as string[]),
-  ]);
-
-  for (const addr of ipv4Addrs) {
-    if (isPrivateIPv4(addr)) {
-      throw new RemoteMetadataFetchError(
-        hostname,
-        new Error(`Resolved to private IPv4 address: ${addr}`),
-      );
-    }
-  }
-
-  for (const addr of ipv6Addrs) {
-    if (isPrivateIPv6(addr)) {
-      throw new RemoteMetadataFetchError(
-        hostname,
-        new Error(`Resolved to private IPv6 address: ${addr}`),
-      );
-    }
-  }
-}
-
-function isPrivateIPv4(addr: string): boolean {
-  const parts = addr.split('.').map(Number);
-  if (parts.length !== 4) return false;
-  const [a, b] = parts;
-
-  return (
-    a === 10 || // 10.0.0.0/8
-    (a === 172 && b >= 16 && b <= 31) || // 172.16.0.0/12
-    (a === 192 && b === 168) || // 192.168.0.0/16
-    a === 127 || // 127.0.0.0/8
-    (a === 169 && b === 254) || // 169.254.0.0/16
-    a === 0 // 0.0.0.0/8
-  );
-}
-
-function isPrivateIPv6(addr: string): boolean {
-  const normalized = addr.toLowerCase();
-  if (normalized === '::1') return true; // loopback
-
-  // ULA fc00::/7 — fc00::–fdff::
-  if (normalized.startsWith('fc') || normalized.startsWith('fd')) return true;
-
-  // Link-local fe80::/10 — fe80::–febf::
-  // First 10 bits are 1111 1110 10, so second hex digit ranges 8–b
-  if (normalized.length >= 4 && normalized.startsWith('fe')) {
-    const thirdChar = normalized[2];
-    if (thirdChar >= '8' && thirdChar <= 'b') return true;
-  }
-
-  return false;
-}
 
 /**
  * Fetch and validate remote instance metadata with full hardening:
@@ -172,7 +90,18 @@ async function fetchAndValidateMetadata(
   // SSRF check — skip in development/test for localhost
   const nodeEnv = process.env.NODE_ENV;
   if (nodeEnv !== 'development' && nodeEnv !== 'test') {
-    await resolveAndCheckPrivateIp(domain);
+    try {
+      await resolveAndCheckPrivateIp(domain);
+    } catch (err) {
+      if (err instanceof SsrfValidationError) {
+        // Sanitize: don't leak internal IPs in the outward-facing error
+        throw new RemoteMetadataFetchError(
+          domain,
+          new Error('Domain resolves to a private or reserved IP address'),
+        );
+      }
+      throw err;
+    }
   }
 
   let response: Response;

@@ -187,6 +187,24 @@ Stripe Checkout only (zero PCI scope). Webhook handler built at `src/webhooks/st
 
 ---
 
+## SSRF Protection
+
+Outbound HTTP calls to user-controlled URLs must validate against private IP ranges.
+
+**Utility:** `src/lib/url-validation.ts` — `validateOutboundUrl(url, { devMode })`.
+
+**Enforced at:** webhook endpoint creation/update, webhook delivery, federation metadata fetch.
+
+**Dev mode:** `NODE_ENV === 'development' || 'test'` allows HTTP and private IPs.
+
+**NEVER:**
+
+- Call `fetch()` on a user-provided URL without SSRF validation
+- Skip HTTPS enforcement in production
+- Allow redirects to bypass SSRF checks
+
+---
+
 ## BullMQ Workers
 
 ### Queue/Worker Pattern

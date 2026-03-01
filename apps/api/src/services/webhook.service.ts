@@ -8,6 +8,17 @@ import {
   type DrizzleDb,
 } from '@colophony/db';
 import { desc, count } from 'drizzle-orm';
+import {
+  validateOutboundUrl,
+  SsrfValidationError,
+} from '../lib/url-validation.js';
+
+export class WebhookUrlValidationError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'WebhookUrlValidationError';
+  }
+}
 
 interface CreateEndpointParams {
   organizationId: string;
@@ -50,6 +61,20 @@ function redactSecret<T extends Record<string, unknown>>(
 
 export const webhookService = {
   async createEndpoint(tx: DrizzleDb, params: CreateEndpointParams) {
+    const devMode =
+      process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test';
+    try {
+      await validateOutboundUrl(params.url, { devMode });
+    } catch (err) {
+      if (err instanceof SsrfValidationError) {
+        // Sanitize: don't expose internal network details to API consumers
+        throw new WebhookUrlValidationError(
+          'URL is not allowed: must be a public HTTPS endpoint',
+        );
+      }
+      throw err;
+    }
+
     const secret = crypto.randomBytes(32).toString('hex');
     const [row] = await tx
       .insert(webhookEndpoints)
@@ -70,6 +95,22 @@ export const webhookService = {
     id: string,
     params: UpdateEndpointParams,
   ) {
+    if (params.url !== undefined) {
+      const devMode =
+        process.env.NODE_ENV === 'development' ||
+        process.env.NODE_ENV === 'test';
+      try {
+        await validateOutboundUrl(params.url, { devMode });
+      } catch (err) {
+        if (err instanceof SsrfValidationError) {
+          throw new WebhookUrlValidationError(
+            'URL is not allowed: must be a public HTTPS endpoint',
+          );
+        }
+        throw err;
+      }
+    }
+
     const update: Record<string, unknown> = { updatedAt: new Date() };
     if (params.url !== undefined) update.url = params.url;
     if (params.description !== undefined)
@@ -134,7 +175,7 @@ export const webhookService = {
 
   async getActiveEndpointsForEvent(
     tx: DrizzleDb,
-    _orgId: string,
+    orgId: string,
     eventType: string,
   ) {
     return tx
@@ -142,6 +183,7 @@ export const webhookService = {
       .from(webhookEndpoints)
       .where(
         and(
+          eq(webhookEndpoints.organizationId, orgId),
           eq(webhookEndpoints.status, 'ACTIVE'),
           sql`${webhookEndpoints.eventTypes}::jsonb @> ${JSON.stringify([eventType])}::jsonb`,
         ),

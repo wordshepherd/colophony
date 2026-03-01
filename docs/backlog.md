@@ -119,6 +119,8 @@
 - [x] [P2] Manual QA of embed form widget — test iframe embedding on third-party page, identity step, form filling (flat + wizard), file uploads with scan status, error states, theme inheritance — (backlog 2026-02-23; done 2026-02-23 — found + fixed CORS + dark mode bugs)
 - [x] [P3] Embed form genre validation: show human-readable labels instead of raw enum values — (manual QA 2026-02-23; done 2026-02-23)
 - [x] [P2] Migration 0015 production reliability — `db:verify` / `db:verify:repair` scripts check `information_schema` for FK constraint drift and auto-repair; integrated into `db:reset` — (GDPR manual QA 2026-02-23; done 2026-02-23)
+- [ ] [P2] Status token expiry: add `status_token_expires_at` column, enforce TTL in `verify_status_token()`, rotate on resubmission — (audit finding #2, 2026-03-01)
+- [ ] [P2] Unbounded aging/reminder queries: cap `getAgingSubmissions()` and `listAgingByOrg()` with LIMIT, paginate analytics, summarize reminder emails — (audit finding #3, 2026-03-01)
 
 ---
 
@@ -173,6 +175,8 @@
 - [x] [P3] Per-capability rate limiting — rate limit per federation capability (simsub, transfer, etc.) rather than global per-peer — (OpenCode review 2026-02-25, deferred to production hardening; done 2026-02-26)
 - [x] [P3] Migration rollback testing — enum casts can fail on dirty data; add rollback scenario tests before production deployment — (OpenCode review 2026-02-25, deferred pre-launch; done 2026-02-26)
 - [x] [P4] Consider splitting schema migrations (enum changes vs new tables) for safer production rollback — documented as pattern + pre-flight validator instead of splitting 0031 (already applied) — (OpenCode review 2026-02-25, deferred pre-launch; done 2026-02-26)
+- [ ] [P3] Federation rate limit fail mode: configurable fail-open/fail-closed + in-process fallback when Redis unavailable — (audit finding #4, 2026-03-01)
+- [ ] [P3] Federation test gaps: integration tests for trust handshake flow and hub-first discovery path — (audit finding #5, 2026-03-01)
 
 ### Design Decisions
 
