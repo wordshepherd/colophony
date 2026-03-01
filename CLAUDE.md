@@ -72,6 +72,9 @@ Per-directory CLAUDE.md files contain domain-specific details:
 | **Hub client service**   | `apps/api/src/services/hub-client.service.ts`                                    |
 | **Analytics service**    | `apps/api/src/services/submission-analytics.service.ts`                          |
 | **Analytics components** | `apps/web/src/components/analytics/` (charts, filters, dashboard page)           |
+| **Portfolio service**    | `apps/api/src/services/portfolio.service.ts` (cross-org UNION ALL, status maps)  |
+| **Writer analytics svc** | `apps/api/src/services/writer-analytics.service.ts` (personal stats/charts)      |
+| **Writer analytics UI**  | `apps/web/src/components/workspace/writer-*` (analytics page + chart components) |
 | **Next.js frontend**     | `apps/web/`                                                                      |
 | **tRPC client**          | `apps/web/src/lib/trpc.ts`                                                       |
 | **Plugin components**    | `apps/web/src/components/plugins/` (PluginSlot, extensions, error boundary)      |
