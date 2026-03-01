@@ -53,7 +53,7 @@ function buildNativeSubquery(
   conditions.push(sql.raw(`s.status != 'DRAFT'`));
 
   if (status) {
-    const nativeStatuses = CSR_TO_NATIVE[status]!;
+    const nativeStatuses = CSR_TO_NATIVE[status] ?? [];
     const statusList = nativeStatuses.map((s) => sql`${s}`);
     conditions.push(
       sql`s.status::text IN (${sql.join(statusList, sql.raw(', '))})`,
@@ -170,8 +170,11 @@ export const portfolioService = {
       return { items: [], total: 0, page, limit, totalPages: 0 };
     }
 
+    const first = parts[0];
     const unionQuery =
-      parts.length === 1 ? parts[0]! : sql.join(parts, sql.raw(' UNION ALL '));
+      parts.length === 1 && first
+        ? first
+        : sql.join(parts, sql.raw(' UNION ALL '));
 
     const result = await tx.execute(sql`
       WITH portfolio AS (${unionQuery})

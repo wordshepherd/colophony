@@ -209,6 +209,7 @@ describe('writerAnalyticsService', () => {
       });
 
       expect(result.totalSubmissions).toBe(1);
+      // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(tx.execute).toHaveBeenCalledTimes(4);
     });
   });
@@ -301,16 +302,9 @@ describe('writerAnalyticsService', () => {
       );
 
       expect(result.buckets).toHaveLength(5);
-      // < 7 days: 5
-      expect(result.buckets[0]!.count).toBe(1);
-      // 7-14 days: 10
-      expect(result.buckets[1]!.count).toBe(1);
-      // 14-28 days: 20
-      expect(result.buckets[2]!.count).toBe(1);
-      // 28-60 days: 45
-      expect(result.buckets[3]!.count).toBe(1);
-      // 60+ days: 90
-      expect(result.buckets[4]!.count).toBe(1);
+      const counts = result.buckets.map((b) => b.count);
+      // [<7d, 7-14d, 14-28d, 28-60d, 60+d] — one entry in each
+      expect(counts).toEqual([1, 1, 1, 1, 1]);
 
       // median of [5, 10, 20, 45, 90] = 20
       expect(result.medianDays).toBe(20);

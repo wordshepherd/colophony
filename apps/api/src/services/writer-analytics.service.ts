@@ -373,10 +373,12 @@ export const writerAnalyticsService = {
     let medianDays: number | null = null;
     if (allDays.length > 0) {
       const mid = Math.floor(allDays.length / 2);
+      const a = allDays[mid - 1] ?? 0;
+      const b = allDays[mid] ?? 0;
       medianDays =
         allDays.length % 2 === 0
-          ? Math.round(((allDays[mid - 1]! + allDays[mid]!) / 2) * 10) / 10
-          : Math.round(allDays[mid]! * 10) / 10;
+          ? Math.round(((a + b) / 2) * 10) / 10
+          : Math.round(b * 10) / 10;
     }
 
     return {

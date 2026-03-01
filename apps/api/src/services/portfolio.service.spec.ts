@@ -84,8 +84,8 @@ describe('portfolioService', () => {
       });
 
       expect(result.items).toHaveLength(2);
-      expect(result.items[0]!.source).toBe('external');
-      expect(result.items[1]!.source).toBe('native');
+      expect(result.items[0]?.source).toBe('external');
+      expect(result.items[1]?.source).toBe('native');
     });
 
     it('maps native SUBMITTED to CSR sent', () => {
@@ -105,8 +105,9 @@ describe('portfolioService', () => {
       });
 
       expect(result.items).toHaveLength(1);
-      expect(result.items[0]!.status).toBe('accepted');
+      expect(result.items[0]?.status).toBe('accepted');
       // Verify the query was called (includes both native + external for 'accepted')
+      // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(tx.execute).toHaveBeenCalled();
     });
 
@@ -119,7 +120,7 @@ describe('portfolioService', () => {
       });
 
       expect(result.items).toHaveLength(1);
-      expect(result.items[0]!.source).toBe('native');
+      expect(result.items[0]?.source).toBe('native');
     });
 
     it('filters by source=external excludes native', async () => {
@@ -131,7 +132,7 @@ describe('portfolioService', () => {
       });
 
       expect(result.items).toHaveLength(1);
-      expect(result.items[0]!.source).toBe('external');
+      expect(result.items[0]?.source).toBe('external');
     });
 
     it('search filters by title and journalName with ILIKE', async () => {
@@ -143,6 +144,7 @@ describe('portfolioService', () => {
       });
 
       // The service escapes ILIKE special chars — verify execute was called
+      // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(tx.execute).toHaveBeenCalled();
     });
 
@@ -154,6 +156,7 @@ describe('portfolioService', () => {
       });
 
       // Verify the query was called (pagination is in SQL)
+      // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(tx.execute).toHaveBeenCalled();
     });
 
@@ -170,10 +173,10 @@ describe('portfolioService', () => {
         limit: 20,
       });
 
-      expect(result.items[0]!.manuscriptId).toBe(
+      expect(result.items[0]?.manuscriptId).toBe(
         '00000000-0000-0000-0000-000000000099',
       );
-      expect(result.items[0]!.manuscriptTitle).toBe('My Book');
+      expect(result.items[0]?.manuscriptTitle).toBe('My Book');
     });
   });
 
