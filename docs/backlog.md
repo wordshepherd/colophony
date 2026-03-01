@@ -119,8 +119,8 @@
 - [x] [P2] Manual QA of embed form widget — test iframe embedding on third-party page, identity step, form filling (flat + wizard), file uploads with scan status, error states, theme inheritance — (backlog 2026-02-23; done 2026-02-23 — found + fixed CORS + dark mode bugs)
 - [x] [P3] Embed form genre validation: show human-readable labels instead of raw enum values — (manual QA 2026-02-23; done 2026-02-23)
 - [x] [P2] Migration 0015 production reliability — `db:verify` / `db:verify:repair` scripts check `information_schema` for FK constraint drift and auto-repair; integrated into `db:reset` — (GDPR manual QA 2026-02-23; done 2026-02-23)
-- [ ] [P2] Status token expiry: add `status_token_expires_at` column, enforce TTL in `verify_status_token()`, rotate on resubmission — (audit finding #2, 2026-03-01)
-- [ ] [P2] Unbounded aging/reminder queries: cap `getAgingSubmissions()` and `listAgingByOrg()` with LIMIT, paginate analytics, summarize reminder emails — (audit finding #3, 2026-03-01)
+- [x] [P2] Status token expiry: add `status_token_expires_at` column, enforce TTL in `verify_status_token()`, rotate on resubmission — (audit finding #2, 2026-03-01; done 2026-03-01 PR #225)
+- [x] [P2] Unbounded aging/reminder queries: cap `getAgingSubmissions()` and `listAgingByOrg()` with LIMIT, paginate analytics, summarize reminder emails — (audit finding #3, 2026-03-01; done 2026-03-01 PR #225)
 
 ---
 
@@ -175,8 +175,8 @@
 - [x] [P3] Per-capability rate limiting — rate limit per federation capability (simsub, transfer, etc.) rather than global per-peer — (OpenCode review 2026-02-25, deferred to production hardening; done 2026-02-26)
 - [x] [P3] Migration rollback testing — enum casts can fail on dirty data; add rollback scenario tests before production deployment — (OpenCode review 2026-02-25, deferred pre-launch; done 2026-02-26)
 - [x] [P4] Consider splitting schema migrations (enum changes vs new tables) for safer production rollback — documented as pattern + pre-flight validator instead of splitting 0031 (already applied) — (OpenCode review 2026-02-25, deferred pre-launch; done 2026-02-26)
-- [ ] [P3] Federation rate limit fail mode: configurable fail-open/fail-closed + in-process fallback when Redis unavailable — (audit finding #4, 2026-03-01)
-- [ ] [P3] Federation test gaps: integration tests for trust handshake flow and hub-first discovery path — (audit finding #5, 2026-03-01)
+- [x] [P3] Federation rate limit fail mode: configurable fail-open/fail-closed + in-process fallback when Redis unavailable — (audit finding #4, 2026-03-01; done 2026-03-01 PR #225)
+- [x] [P3] Federation test gaps: integration tests for trust handshake flow and hub-first discovery path — (audit finding #5, 2026-03-01; done 2026-03-01 PR #225)
 
 ### Design Decisions
 
@@ -316,6 +316,8 @@
 - [x] [P1] "Revise and resubmit" status — add R&R to SubmissionStatus enum + transition map; editor sends revision notes, writer resubmits against the same submission record — (persona gap analysis 2026-02-27; done 2026-02-27 PR pending)
 - [x] [P2] Embed submitter confirmation email — send a receipt email to the address provided in the embed identity step; include submission title, journal name, and a status-check token/link — (persona gap analysis 2026-02-27; done 2026-02-28)
 - [x] [P2] Embed submitter status check — public page at `/embed/status/:token` where embed submitters (no account) can check their submission status — (persona gap analysis 2026-02-27; done 2026-02-28)
+- [ ] [P3] Embed status check: handle 410 Gone for expired tokens — show user-friendly "token expired" message in `embed-status-check.tsx` — (audit remediation P2/P3, 2026-03-01)
+- [ ] [P3] Status token rotation on R&R resubmission — generate new token when embed submitter resubmits after revise-and-resubmit; no resubmit flow in embed service yet — (audit remediation P2/P3, 2026-03-01)
 
 ### Editorial Workflow
 
