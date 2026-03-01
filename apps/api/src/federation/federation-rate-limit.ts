@@ -62,6 +62,10 @@ export class InProcessRateLimiter {
         this.windows.delete(key);
       }
     }
+    // Emergency purge if too many unique keys accumulate between cleanups
+    if (this.windows.size > 10_000) {
+      this.windows.clear();
+    }
   }
 
   close(): void {
