@@ -386,7 +386,7 @@ describe('submissions tRPC router', () => {
       expect(mockService.listBySubmitter).toHaveBeenCalledWith(
         expect.anything(),
         USER_ID,
-        { page: 1, limit: 20 },
+        { page: 1, limit: 20, sortBy: 'createdAt', sortOrder: 'desc' },
       );
     });
   });
