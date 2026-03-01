@@ -82,6 +82,7 @@ Per-directory CLAUDE.md files contain domain-specific details:
 | **TypeScript SDK**       | `sdks/typescript/` (`@colophony/sdk` — openapi-fetch + generated types)          |
 | **Python SDK**           | `sdks/python/` (`colophony` — openapi-python-client generated)                   |
 | **SDK generation**       | `scripts/generate-sdks.ts` (regenerate both SDKs from committed spec)            |
+| **SSRF validation**      | `apps/api/src/lib/url-validation.ts` (validateOutboundUrl, isPrivateIPv4/v6)     |
 | **Sentry config**        | `apps/api/src/config/sentry.ts` (init, captureException, isSentryEnabled)        |
 | **Metrics registry**     | `apps/api/src/config/metrics.ts` (Prometheus counters, histograms, gauges)       |
 | **Metrics plugin**       | `apps/api/src/hooks/metrics.ts` (Fastify plugin — HTTP request instrumentation)  |

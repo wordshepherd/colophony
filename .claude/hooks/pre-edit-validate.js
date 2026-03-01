@@ -39,4 +39,25 @@ if (hasDbPrefix && hasDrizzleQuery) {
   }
 }
 
+// Warn about outbound fetch without SSRF validation
+const filePath = process.env.CLAUDE_TOOL_ARGS_file_path || '';
+const userUrlVars = ['endpointUrl', 'webhookUrl', 'callbackUrl', 'targetUrl'];
+const hasFetch = newContent.includes('fetch(');
+const hasUserUrl = userUrlVars.some(v => newContent.includes(v));
+const hasSsrfGuard =
+  newContent.includes('validateOutboundUrl') ||
+  newContent.includes('resolveAndCheckPrivateIp');
+
+if (hasFetch && hasUserUrl && !hasSsrfGuard) {
+  console.warn('⚠️  WARNING: fetch() with user-controlled URL detected without SSRF validation.');
+  console.warn('   Use validateOutboundUrl() from apps/api/src/lib/url-validation.ts');
+}
+
+// Warn about unused orgId in service/worker files
+const isServiceOrWorker = filePath.includes('/services/') || filePath.includes('/workers/');
+if (isServiceOrWorker && newContent.includes('_orgId')) {
+  console.warn('⚠️  WARNING: Unused _orgId parameter detected in service/worker file.');
+  console.warn('   Organization ID should be used for explicit filtering (defense-in-depth with RLS).');
+}
+
 process.exit(0);

@@ -67,8 +67,8 @@ Manuscripts use `owner_id = current_user_id()` instead of org-scoped isolation. 
 
 - Query tenant data without setting org context via `SET LOCAL`
 - Use session-level `SET` (always `SET LOCAL` inside transaction — critical with connection pooling)
-- Manually filter by `organizationId` (RLS does this)
 - Use `app.current_user` (reserved keyword — use `app.user_id`)
+- Rely solely on RLS for tenant isolation in service methods — always include explicit `WHERE organization_id = orgId` as defense-in-depth
 - Skip `FORCE ROW LEVEL SECURITY` on tenant tables
 - Make `app_user` a superuser (superusers bypass RLS)
 - Use `INSERT...RETURNING` when SELECT policy is stricter than INSERT (e.g., `audit_events`) — the RETURNING clause reads the row back via SELECT, so both policies must pass. Drop `.returning()` or widen the SELECT policy.
