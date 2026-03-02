@@ -143,6 +143,14 @@ export const fileService = {
     return updated ?? null;
   },
 
+  async updateContentHash(
+    tx: DrizzleDb,
+    fileId: string,
+    contentHash: string,
+  ): Promise<void> {
+    await tx.update(files).set({ contentHash }).where(eq(files.id, fileId));
+  },
+
   async delete(tx: DrizzleDb, fileId: string) {
     const [deleted] = await tx
       .delete(files)

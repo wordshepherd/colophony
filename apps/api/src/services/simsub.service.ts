@@ -28,6 +28,7 @@ import { federationService, domainToDid } from './federation.service.js';
 import { fingerprintService } from './fingerprint.service.js';
 import { signFederationRequest } from '../federation/http-signatures.js';
 import { hubClientService } from './hub-client.service.js';
+import { validateOutboundUrl } from '../lib/url-validation.js';
 
 // ---------------------------------------------------------------------------
 // Error classes
@@ -68,23 +69,29 @@ export const simsubService = {
    * 1. User-scoped RLS: find manuscript versions with matching fingerprint
    *    that the submitter owns. Confirms fingerprint ownership.
    * 2. Superuser: cross-org join from those versions → submissions → periods
-   *    to find active submissions at no-sim-sub publications. Justified:
-   *    ownership confirmed in phase 1; narrow read-only cross-org query.
-   *    Same pattern as trust.service.ts superuser queries.
+   *    to find active submissions. Policy filtering is caller's responsibility.
+   *
+   * @param column Which fingerprint column to match against (default: 'content')
    */
   async checkLocal(
     submitterUserId: string,
     fingerprint: string,
     excludeSubmissionId?: string,
+    column: 'content' | 'federation' = 'content',
   ): Promise<SimSubConflict[]> {
     // Phase 1: User-scoped RLS — find versions with matching fingerprint
+    const fingerprintColumn =
+      column === 'federation'
+        ? manuscriptVersions.federationFingerprint
+        : manuscriptVersions.contentFingerprint;
+
     const matchingVersionIds = await withRls(
       { userId: submitterUserId },
       async (tx) => {
         const rows = await tx
           .select({ id: manuscriptVersions.id })
           .from(manuscriptVersions)
-          .where(eq(manuscriptVersions.contentFingerprint, fingerprint));
+          .where(eq(fingerprintColumn, fingerprint));
         return rows.map((r) => r.id);
       },
     );
@@ -94,9 +101,8 @@ export const simsubService = {
     }
 
     // Phase 2: Superuser — cross-org join to find active submissions.
-    // Justified: fingerprint ownership confirmed via user-scoped RLS above.
-    // This is a narrow, read-only cross-org query. Same pattern as
-    // trust.service.ts handleInboundTrustRequest superuser queries.
+    // Returns ALL active submissions regardless of period policy.
+    // Policy filtering is the caller's responsibility (preSubmitCheck).
     const conflicts = await db
       .select({
         submissionId: submissions.id,
@@ -117,12 +123,12 @@ export const simsubService = {
         and(
           inArray(submissions.manuscriptVersionId, matchingVersionIds),
           inArray(submissions.status, [...ACTIVE_STATUSES]),
-          eq(submissionPeriods.simSubProhibited, true),
           ...(excludeSubmissionId
             ? [sql`${submissions.id} != ${excludeSubmissionId}`]
             : []),
         ),
-      );
+      )
+      .limit(100);
 
     return conflicts.map((c) => ({
       publicationName: c.publicationName ?? 'Unknown Publication',
@@ -134,7 +140,8 @@ export const simsubService = {
   /**
    * Handle an inbound S2S sim-sub check from a federated instance.
    *
-   * Resolves the submitter DID to a local user, then delegates to checkLocal.
+   * Resolves the submitter DID to a local user, then delegates to checkLocal
+   * using the federation fingerprint column.
    */
   async handleInboundCheck(
     _env: Env,
@@ -177,12 +184,19 @@ export const simsubService = {
       return { found: false, conflicts: [] };
     }
 
-    const conflicts = await this.checkLocal(user.id, fingerprint);
+    // Use federation fingerprint column for S2S checks
+    const conflicts = await this.checkLocal(
+      user.id,
+      fingerprint,
+      undefined,
+      'federation',
+    );
     return { found: conflicts.length > 0, conflicts };
   },
 
   /**
    * Fan out sim-sub checks to trusted federated peers.
+   * Validates outbound URLs against SSRF before making requests.
    */
   async checkRemote(
     env: Env,
@@ -200,6 +214,7 @@ export const simsubService = {
     }
 
     const domain = env.FEDERATION_DOMAIN ?? 'localhost';
+    const devMode = env.NODE_ENV !== 'production';
 
     // Hub-first path: if HUB_DOMAIN is set, query centralized index
     let hubResults: SimSubRemoteResult[] = [];
@@ -265,6 +280,9 @@ export const simsubService = {
       const start = Date.now();
 
       try {
+        // SSRF validation before outbound fetch
+        await validateOutboundUrl(url, { devMode });
+
         const { headers: signedHeaders } = signFederationRequest({
           method: 'POST',
           url,
@@ -347,8 +365,8 @@ export const simsubService = {
     submitterUserId: string,
     orgId: string,
   ): Promise<SimSubFullCheckResult> {
-    // Compute fingerprint (uses withRls internally via caller's tx or own)
-    const fingerprint = await withRls(
+    // Compute both fingerprints (uses withRls internally)
+    const { contentFingerprint, federationFingerprint } = await withRls(
       { userId: submitterUserId },
       async (tx) => {
         return fingerprintService.getOrCompute(tx, manuscriptVersionId);
@@ -368,9 +386,11 @@ export const simsubService = {
     const submitterDid = `did:web:${encodedDomain}:users:${emailLocal}`;
 
     // Run local + remote checks in parallel
+    // Local uses content fingerprint (higher accuracy)
+    // Remote uses federation fingerprint (cross-instance stable)
     const [localConflicts, remoteResults] = await Promise.all([
-      this.checkLocal(submitterUserId, fingerprint, submissionId),
-      this.checkRemote(env, fingerprint, submitterDid, orgId),
+      this.checkLocal(submitterUserId, contentFingerprint, submissionId),
+      this.checkRemote(env, federationFingerprint, submitterDid, orgId),
     ]);
 
     // Aggregate result
@@ -398,7 +418,8 @@ export const simsubService = {
     await withRls({ orgId }, async (tx) => {
       await tx.insert(simSubChecks).values({
         submissionId,
-        fingerprint,
+        fingerprint: contentFingerprint,
+        federationFingerprint,
         submitterDid,
         result,
         localConflicts,
@@ -424,15 +445,22 @@ export const simsubService = {
         resourceId: submissionId,
         organizationId: orgId,
         actorId: submitterUserId,
-        newValue: { result, fingerprint, localConflicts, remoteResults },
+        newValue: {
+          result,
+          fingerprint: contentFingerprint,
+          federationFingerprint,
+          localConflicts,
+          remoteResults,
+        },
       });
     });
 
     // Push fingerprint to hub (fire-and-forget, after local recording)
+    // Uses federation fingerprint for cross-instance compatibility
     if (env.HUB_DOMAIN) {
       hubClientService
         .pushFingerprint(env, {
-          fingerprint,
+          fingerprint: federationFingerprint,
           submitterDid,
           submittedAt: new Date().toISOString(),
         })
@@ -441,7 +469,13 @@ export const simsubService = {
         });
     }
 
-    return { result, fingerprint, localConflicts, remoteResults };
+    return {
+      result,
+      fingerprint: contentFingerprint,
+      federationFingerprint,
+      localConflicts,
+      remoteResults,
+    };
   },
 
   /**

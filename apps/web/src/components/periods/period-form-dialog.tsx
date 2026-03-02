@@ -31,6 +31,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 /**
@@ -46,6 +47,9 @@ interface PeriodData {
   maxSubmissions: number | null;
   formDefinitionId: string | null;
   blindReviewMode?: string;
+  isContest?: boolean;
+  contestPrize?: string | null;
+  contestWinnersAnnouncedAt?: Date | string | null;
 }
 
 /**
@@ -61,6 +65,9 @@ const formSchema = z.object({
   maxSubmissions: z.string().optional(),
   formDefinitionId: z.string().optional(),
   blindReviewMode: z.string().optional(),
+  isContest: z.boolean().optional(),
+  contestPrize: z.string().max(500).optional(),
+  contestWinnersAnnouncedAt: z.string().optional(),
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -96,6 +103,9 @@ export function PeriodFormDialog({
       maxSubmissions: "",
       formDefinitionId: "__none__",
       blindReviewMode: "none",
+      isContest: false,
+      contestPrize: "",
+      contestWinnersAnnouncedAt: "",
     },
   });
 
@@ -111,6 +121,11 @@ export function PeriodFormDialog({
           period.maxSubmissions != null ? String(period.maxSubmissions) : "",
         formDefinitionId: period.formDefinitionId ?? "__none__",
         blindReviewMode: period.blindReviewMode ?? "none",
+        isContest: period.isContest ?? false,
+        contestPrize: period.contestPrize ?? "",
+        contestWinnersAnnouncedAt: period.contestWinnersAnnouncedAt
+          ? toDatetimeLocal(new Date(period.contestWinnersAnnouncedAt))
+          : "",
       });
     } else if (open) {
       form.reset({
@@ -122,6 +137,9 @@ export function PeriodFormDialog({
         maxSubmissions: "",
         formDefinitionId: "__none__",
         blindReviewMode: "none",
+        isContest: false,
+        contestPrize: "",
+        contestWinnersAnnouncedAt: "",
       });
     }
   }, [open, period, form]);
@@ -168,6 +186,13 @@ export function PeriodFormDialog({
       blindReviewMode:
         data.blindReviewMode && data.blindReviewMode !== "none"
           ? (data.blindReviewMode as "single_blind" | "double_blind")
+          : undefined,
+      isContest: data.isContest || undefined,
+      contestPrize:
+        data.isContest && data.contestPrize ? data.contestPrize : undefined,
+      contestWinnersAnnouncedAt:
+        data.isContest && data.contestWinnersAnnouncedAt
+          ? new Date(data.contestWinnersAnnouncedAt)
           : undefined,
     };
 
@@ -346,6 +371,60 @@ export function PeriodFormDialog({
                 </FormItem>
               )}
             />
+
+            <FormField
+              control={form.control}
+              name="isContest"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                  <FormControl>
+                    <Checkbox
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
+                  </FormControl>
+                  <div className="space-y-1 leading-none">
+                    <FormLabel>This is a contest</FormLabel>
+                  </div>
+                </FormItem>
+              )}
+            />
+
+            {form.watch("isContest") && (
+              <div className="space-y-4 rounded-md border p-4">
+                <FormField
+                  control={form.control}
+                  name="contestPrize"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Prize</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="$500 and publication"
+                          maxLength={500}
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="contestWinnersAnnouncedAt"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Winners Announced</FormLabel>
+                      <FormControl>
+                        <Input type="datetime-local" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            )}
 
             <DialogFooter>
               <Button

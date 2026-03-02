@@ -33,6 +33,7 @@ import {
   Pencil,
   Plus,
   Trash2,
+  Trophy,
   X,
 } from "lucide-react";
 
@@ -180,6 +181,15 @@ export function PeriodList() {
                     </TableCell>
                     <TableCell className="font-medium">
                       {item.name}
+                      {item.isContest && (
+                        <Badge
+                          variant="outline"
+                          className="ml-2 text-xs text-amber-600 border-amber-300"
+                        >
+                          <Trophy className="mr-1 h-3 w-3" />
+                          Contest
+                        </Badge>
+                      )}
                       {item.blindReviewMode &&
                         item.blindReviewMode !== "none" && (
                           <Badge variant="secondary" className="ml-2 text-xs">

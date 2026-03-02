@@ -9,11 +9,13 @@ vi.mock('@colophony/db', () => ({
     id: 'id',
     manuscriptId: 'manuscript_id',
     contentFingerprint: 'content_fingerprint',
+    federationFingerprint: 'federation_fingerprint',
   },
   manuscripts: { id: 'id', title: 'title' },
   files: {
     filename: 'filename',
     size: 'size',
+    contentHash: 'content_hash',
     manuscriptVersionId: 'manuscript_version_id',
     scanStatus: 'scan_status',
   },
@@ -31,6 +33,8 @@ vi.mock('@colophony/db', () => ({
 
 import {
   normalizeText,
+  computeContentFingerprint,
+  computeFederationFingerprint,
   computeFingerprint,
   fingerprintService,
   FingerprintComputationError,
@@ -63,41 +67,88 @@ describe('normalizeText', () => {
 });
 
 // ---------------------------------------------------------------------------
-// computeFingerprint
+// computeContentFingerprint
 // ---------------------------------------------------------------------------
 
-describe('computeFingerprint', () => {
-  it('produces consistent SHA-256 hex (64 chars)', () => {
-    const fp = computeFingerprint('My Poem', 'some text', ['file1', 'file2']);
+describe('computeContentFingerprint', () => {
+  it('produces deterministic SHA-256 hex (64 chars)', () => {
+    const fp = computeContentFingerprint('My Poem', 'some text', [
+      'abc123',
+      'def456',
+    ]);
     expect(fp).toHaveLength(64);
     expect(fp).toMatch(/^[a-f0-9]{64}$/);
     // Deterministic
-    expect(computeFingerprint('My Poem', 'some text', ['file1', 'file2'])).toBe(
-      fp,
-    );
+    expect(
+      computeContentFingerprint('My Poem', 'some text', ['abc123', 'def456']),
+    ).toBe(fp);
   });
 
   it('same content with different whitespace produces same hash', () => {
-    const fp1 = computeFingerprint('My  Poem', '  some   text  ', []);
-    const fp2 = computeFingerprint('my poem', 'some text', []);
-    expect(fp1).toBe(fp2);
-  });
-
-  it('different titles produce different hashes', () => {
-    const fp1 = computeFingerprint('Poem A', null, []);
-    const fp2 = computeFingerprint('Poem B', null, []);
-    expect(fp1).not.toBe(fp2);
-  });
-
-  it('file hash order does not affect fingerprint (sorted)', () => {
-    const fp1 = computeFingerprint('title', null, ['b', 'a', 'c']);
-    const fp2 = computeFingerprint('title', null, ['c', 'a', 'b']);
+    const fp1 = computeContentFingerprint('My  Poem', '  some   text  ', []);
+    const fp2 = computeContentFingerprint('my poem', 'some text', []);
     expect(fp1).toBe(fp2);
   });
 
   it('null contentText handled correctly', () => {
-    const fp = computeFingerprint('title', null, []);
+    const fp = computeContentFingerprint('title', null, []);
     expect(fp).toHaveLength(64);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// computeFederationFingerprint
+// ---------------------------------------------------------------------------
+
+describe('computeFederationFingerprint', () => {
+  it('produces deterministic SHA-256 hex (64 chars)', () => {
+    const fp = computeFederationFingerprint('My Poem', 'some text', [
+      'poem.docx:1234',
+      'cover.pdf:5678',
+    ]);
+    expect(fp).toHaveLength(64);
+    expect(fp).toMatch(/^[a-f0-9]{64}$/);
+    // Deterministic
+    expect(
+      computeFederationFingerprint('My Poem', 'some text', [
+        'poem.docx:1234',
+        'cover.pdf:5678',
+      ]),
+    ).toBe(fp);
+  });
+
+  it('file identifier order does not affect fingerprint (sorted)', () => {
+    const fp1 = computeFederationFingerprint('title', null, ['b:1', 'a:2']);
+    const fp2 = computeFederationFingerprint('title', null, ['a:2', 'b:1']);
+    expect(fp1).toBe(fp2);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// content and federation fingerprints differ
+// ---------------------------------------------------------------------------
+
+describe('content vs federation fingerprints', () => {
+  it('differ given different file inputs', () => {
+    const content = computeContentFingerprint('Title', 'body', [
+      'abc123def456abc123def456abc123def456abc123def456abc123def456abcd',
+    ]);
+    const federation = computeFederationFingerprint('Title', 'body', [
+      'poem.docx:1234',
+    ]);
+    expect(content).not.toBe(federation);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// computeFingerprint (deprecated alias)
+// ---------------------------------------------------------------------------
+
+describe('computeFingerprint (deprecated alias)', () => {
+  it('is identical to computeFederationFingerprint', () => {
+    const fp1 = computeFingerprint('title', 'text', ['file1:100']);
+    const fp2 = computeFederationFingerprint('title', 'text', ['file1:100']);
+    expect(fp1).toBe(fp2);
   });
 });
 
@@ -106,36 +157,61 @@ describe('computeFingerprint', () => {
 // ---------------------------------------------------------------------------
 
 describe('fingerprintService.computeAndStore', () => {
-  it('computes and persists fingerprint on manuscript version', async () => {
-    const mockTx = {
+  function makeMockTx() {
+    return {
       select: vi.fn(),
       update: vi.fn(),
     } as any;
+  }
+
+  function setupComputeAndStoreMocks(
+    mockTx: any,
+    opts: {
+      version?: { id: string; manuscriptId: string } | null;
+      manuscript?: { title: string } | null;
+      files?: Array<{
+        filename: string;
+        size: number;
+        contentHash: string | null;
+      }>;
+      submission?: { content: string | null } | null;
+    } = {},
+  ) {
+    const {
+      version = { id: 'v1', manuscriptId: 'm1' },
+      manuscript = { title: 'My Poem' },
+      files: fileList = [
+        { filename: 'poem.pdf', size: 1024, contentHash: 'abc123' },
+      ],
+      submission = { content: 'poem content' },
+    } = opts;
 
     // version query
     mockTx.select.mockReturnValueOnce({
       from: vi.fn().mockReturnValue({
         where: vi.fn().mockReturnValue({
-          limit: vi.fn().mockResolvedValue([{ id: 'v1', manuscriptId: 'm1' }]),
+          limit: vi.fn().mockResolvedValue(version ? [version] : []),
         }),
       }),
     });
+
+    if (!version) return;
 
     // manuscript query
     mockTx.select.mockReturnValueOnce({
       from: vi.fn().mockReturnValue({
         where: vi.fn().mockReturnValue({
-          limit: vi.fn().mockResolvedValue([{ title: 'My Poem' }]),
+          limit: vi.fn().mockResolvedValue(manuscript ? [manuscript] : []),
         }),
       }),
     });
 
+    if (!manuscript) return;
+
     // files query
     mockTx.select.mockReturnValueOnce({
       from: vi.fn().mockReturnValue({
-        where: vi
-          .fn()
-          .mockResolvedValue([{ filename: 'poem.pdf', size: 1024 }]),
+        where: vi.fn().mockResolvedValue(fileList),
       }),
     });
 
@@ -143,7 +219,7 @@ describe('fingerprintService.computeAndStore', () => {
     mockTx.select.mockReturnValueOnce({
       from: vi.fn().mockReturnValue({
         where: vi.fn().mockReturnValue({
-          limit: vi.fn().mockResolvedValue([{ content: 'poem content' }]),
+          limit: vi.fn().mockResolvedValue(submission ? [submission] : []),
         }),
       }),
     });
@@ -154,76 +230,66 @@ describe('fingerprintService.computeAndStore', () => {
         where: vi.fn().mockResolvedValue(undefined),
       }),
     });
+  }
 
-    const fp = await fingerprintService.computeAndStore(mockTx, 'v1');
-    expect(fp).toHaveLength(64);
+  it('returns both fingerprints and stores both', async () => {
+    const mockTx = makeMockTx();
+    setupComputeAndStoreMocks(mockTx, {
+      files: [{ filename: 'poem.pdf', size: 1024, contentHash: 'abc123' }],
+    });
+
+    const result = await fingerprintService.computeAndStore(mockTx, 'v1');
+    expect(result.contentFingerprint).toHaveLength(64);
+    expect(result.federationFingerprint).toHaveLength(64);
     expect(mockTx.update).toHaveBeenCalled();
   });
 
+  it('content and federation fingerprints differ when contentHash present', async () => {
+    const mockTx = makeMockTx();
+    setupComputeAndStoreMocks(mockTx, {
+      files: [{ filename: 'poem.pdf', size: 1024, contentHash: 'abc123' }],
+    });
+
+    const result = await fingerprintService.computeAndStore(mockTx, 'v1');
+    // contentHash 'abc123' vs identifier 'poem.pdf:1024' → different fingerprints
+    expect(result.contentFingerprint).not.toBe(result.federationFingerprint);
+  });
+
+  it('falls back to filename:size when contentHash is null', async () => {
+    const mockTx = makeMockTx();
+    setupComputeAndStoreMocks(mockTx, {
+      files: [{ filename: 'poem.pdf', size: 1024, contentHash: null }],
+    });
+
+    const result = await fingerprintService.computeAndStore(mockTx, 'v1');
+    // Both use filename:size when contentHash is null, so they should be equal
+    expect(result.contentFingerprint).toBe(result.federationFingerprint);
+  });
+
   it('only includes CLEAN files', async () => {
-    const mockTx = {
-      select: vi.fn(),
-      update: vi.fn(),
-    } as any;
+    const mockTx = makeMockTx();
+    setupComputeAndStoreMocks(mockTx, { files: [] });
 
-    // version
-    mockTx.select.mockReturnValueOnce({
-      from: vi.fn().mockReturnValue({
-        where: vi.fn().mockReturnValue({
-          limit: vi.fn().mockResolvedValue([{ id: 'v1', manuscriptId: 'm1' }]),
-        }),
-      }),
-    });
-
-    // manuscript
-    mockTx.select.mockReturnValueOnce({
-      from: vi.fn().mockReturnValue({
-        where: vi.fn().mockReturnValue({
-          limit: vi.fn().mockResolvedValue([{ title: 'Test' }]),
-        }),
-      }),
-    });
-
-    // files — the WHERE clause in the service already filters by CLEAN
-    mockTx.select.mockReturnValueOnce({
-      from: vi.fn().mockReturnValue({
-        where: vi.fn().mockResolvedValue([]),
-      }),
-    });
-
-    // linked submission
-    mockTx.select.mockReturnValueOnce({
-      from: vi.fn().mockReturnValue({
-        where: vi.fn().mockReturnValue({
-          limit: vi.fn().mockResolvedValue([]),
-        }),
-      }),
-    });
-
-    // update
-    mockTx.update.mockReturnValue({
-      set: vi.fn().mockReturnValue({
-        where: vi.fn().mockResolvedValue(undefined),
-      }),
-    });
-
-    const fp = await fingerprintService.computeAndStore(mockTx, 'v1');
-    expect(fp).toHaveLength(64);
+    const result = await fingerprintService.computeAndStore(mockTx, 'v1');
+    expect(result.contentFingerprint).toHaveLength(64);
+    expect(result.federationFingerprint).toHaveLength(64);
   });
 
   it('throws FingerprintComputationError for missing version', async () => {
-    const mockTx = {
-      select: vi.fn().mockReturnValue({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            limit: vi.fn().mockResolvedValue([]),
-          }),
-        }),
-      }),
-    } as any;
+    const mockTx = makeMockTx();
+    setupComputeAndStoreMocks(mockTx, { version: null });
 
     await expect(
       fingerprintService.computeAndStore(mockTx, 'nonexistent'),
+    ).rejects.toThrow(FingerprintComputationError);
+  });
+
+  it('throws FingerprintComputationError for missing manuscript', async () => {
+    const mockTx = makeMockTx();
+    setupComputeAndStoreMocks(mockTx, { manuscript: null });
+
+    await expect(
+      fingerprintService.computeAndStore(mockTx, 'v1'),
     ).rejects.toThrow(FingerprintComputationError);
   });
 });
@@ -233,37 +299,47 @@ describe('fingerprintService.computeAndStore', () => {
 // ---------------------------------------------------------------------------
 
 describe('fingerprintService.getOrCompute', () => {
-  it('returns stored fingerprint without recomputing', async () => {
-    const existingFp = 'a'.repeat(64);
+  it('returns stored fingerprints without recomputing', async () => {
+    const existingContent = 'a'.repeat(64);
+    const existingFederation = 'b'.repeat(64);
     const mockTx = {
       select: vi.fn().mockReturnValue({
         from: vi.fn().mockReturnValue({
           where: vi.fn().mockReturnValue({
-            limit: vi
-              .fn()
-              .mockResolvedValue([{ contentFingerprint: existingFp }]),
+            limit: vi.fn().mockResolvedValue([
+              {
+                contentFingerprint: existingContent,
+                federationFingerprint: existingFederation,
+              },
+            ]),
           }),
         }),
       }),
     } as any;
 
     const result = await fingerprintService.getOrCompute(mockTx, 'v1');
-    expect(result).toBe(existingFp);
+    expect(result.contentFingerprint).toBe(existingContent);
+    expect(result.federationFingerprint).toBe(existingFederation);
     // Only one select call (no computeAndStore)
     expect(mockTx.select).toHaveBeenCalledTimes(1);
   });
 
-  it('computes and stores if not present', async () => {
+  it('recomputes when federationFingerprint is missing', async () => {
     const mockTx = {
       select: vi.fn(),
       update: vi.fn(),
     } as any;
 
-    // getOrCompute initial check — no fingerprint
+    // getOrCompute initial check — contentFingerprint present, federation missing
     mockTx.select.mockReturnValueOnce({
       from: vi.fn().mockReturnValue({
         where: vi.fn().mockReturnValue({
-          limit: vi.fn().mockResolvedValue([{ contentFingerprint: null }]),
+          limit: vi.fn().mockResolvedValue([
+            {
+              contentFingerprint: 'a'.repeat(64),
+              federationFingerprint: null,
+            },
+          ]),
         }),
       }),
     });
@@ -302,7 +378,65 @@ describe('fingerprintService.getOrCompute', () => {
     });
 
     const result = await fingerprintService.getOrCompute(mockTx, 'v1');
-    expect(result).toHaveLength(64);
+    expect(result.contentFingerprint).toHaveLength(64);
+    expect(result.federationFingerprint).toHaveLength(64);
     expect(mockTx.update).toHaveBeenCalled();
+  });
+
+  it('recomputes when both fingerprints are missing', async () => {
+    const mockTx = {
+      select: vi.fn(),
+      update: vi.fn(),
+    } as any;
+
+    // getOrCompute initial check — no fingerprints
+    mockTx.select.mockReturnValueOnce({
+      from: vi.fn().mockReturnValue({
+        where: vi.fn().mockReturnValue({
+          limit: vi
+            .fn()
+            .mockResolvedValue([
+              { contentFingerprint: null, federationFingerprint: null },
+            ]),
+        }),
+      }),
+    });
+
+    // computeAndStore calls
+    mockTx.select.mockReturnValueOnce({
+      from: vi.fn().mockReturnValue({
+        where: vi.fn().mockReturnValue({
+          limit: vi.fn().mockResolvedValue([{ id: 'v1', manuscriptId: 'm1' }]),
+        }),
+      }),
+    });
+    mockTx.select.mockReturnValueOnce({
+      from: vi.fn().mockReturnValue({
+        where: vi.fn().mockReturnValue({
+          limit: vi.fn().mockResolvedValue([{ title: 'Title' }]),
+        }),
+      }),
+    });
+    mockTx.select.mockReturnValueOnce({
+      from: vi.fn().mockReturnValue({
+        where: vi.fn().mockResolvedValue([]),
+      }),
+    });
+    mockTx.select.mockReturnValueOnce({
+      from: vi.fn().mockReturnValue({
+        where: vi.fn().mockReturnValue({
+          limit: vi.fn().mockResolvedValue([]),
+        }),
+      }),
+    });
+    mockTx.update.mockReturnValue({
+      set: vi.fn().mockReturnValue({
+        where: vi.fn().mockResolvedValue(undefined),
+      }),
+    });
+
+    const result = await fingerprintService.getOrCompute(mockTx, 'v1');
+    expect(result.contentFingerprint).toHaveLength(64);
+    expect(result.federationFingerprint).toHaveLength(64);
   });
 });

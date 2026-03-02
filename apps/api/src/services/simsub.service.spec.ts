@@ -25,7 +25,9 @@ vi.mock('@colophony/db', () => ({
           },
           innerJoin: () => ({
             leftJoin: () => ({
-              where: () => Promise.resolve(dbSelectResult),
+              where: () => ({
+                limit: () => Promise.resolve(dbSelectResult),
+              }),
             }),
           }),
           then: (resolve: (v: unknown[]) => void) =>
@@ -41,6 +43,7 @@ vi.mock('@colophony/db', () => ({
   manuscriptVersions: {
     id: 'id',
     contentFingerprint: 'content_fingerprint',
+    federationFingerprint: 'federation_fingerprint',
     manuscriptId: 'manuscript_id',
   },
   submissions: {
@@ -70,6 +73,7 @@ vi.mock('@colophony/db', () => ({
     id: 'id',
     submissionId: 'submission_id',
     fingerprint: 'fingerprint',
+    federationFingerprint: 'federation_fingerprint',
     submitterDid: 'submitter_did',
     result: 'result',
     localConflicts: 'local_conflicts',
@@ -124,6 +128,10 @@ vi.mock('./hub-client.service.js', () => ({
       mockQueryHubFingerprints(...args),
     pushFingerprint: (...args: unknown[]) => mockPushFingerprint(...args),
   },
+}));
+
+vi.mock('../lib/url-validation.js', () => ({
+  validateOutboundUrl: vi.fn().mockResolvedValue(undefined),
 }));
 
 const mockFetch = vi.fn();
@@ -465,10 +473,14 @@ describe('simsubService.checkRemote', () => {
 // ---------------------------------------------------------------------------
 
 describe('simsubService.performFullCheck', () => {
-  const fingerprint = 'f'.repeat(64);
+  const contentFingerprint = 'c'.repeat(64);
+  const federationFingerprint = 'f'.repeat(64);
 
   beforeEach(() => {
-    mockGetOrCompute.mockResolvedValue(fingerprint);
+    mockGetOrCompute.mockResolvedValue({
+      contentFingerprint,
+      federationFingerprint,
+    });
 
     // User email lookup
     dbSelectResult = [{ email: 'alice@test.example.com' }];
@@ -517,7 +529,8 @@ describe('simsubService.performFullCheck', () => {
     );
 
     expect(result.result).toBe('CLEAR');
-    expect(result.fingerprint).toBe(fingerprint);
+    expect(result.fingerprint).toBe(contentFingerprint);
+    expect(result.federationFingerprint).toBe(federationFingerprint);
     checkLocalSpy.mockRestore();
     checkRemoteSpy.mockRestore();
   });
@@ -739,10 +752,14 @@ describe('simsubService.checkRemote — hub integration', () => {
 });
 
 describe('simsubService.performFullCheck — hub push', () => {
-  const fingerprint = 'f'.repeat(64);
+  const contentFingerprint = 'c'.repeat(64);
+  const federationFingerprint = 'f'.repeat(64);
 
   beforeEach(() => {
-    mockGetOrCompute.mockResolvedValue(fingerprint);
+    mockGetOrCompute.mockResolvedValue({
+      contentFingerprint,
+      federationFingerprint,
+    });
     dbSelectResult = [{ email: 'alice@test.example.com' }];
     mockPushFingerprint.mockResolvedValue(undefined);
   });
@@ -785,7 +802,173 @@ describe('simsubService.performFullCheck — hub push', () => {
     );
 
     expect(mockPushFingerprint).toHaveBeenCalled();
+    // Verify hub push uses federation fingerprint (not content)
+    const pushCall = mockPushFingerprint.mock.calls[0];
+    expect(pushCall[1].fingerprint).toBe(federationFingerprint);
     checkLocalSpy.mockRestore();
     checkRemoteSpy.mockRestore();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// PR1: Fingerprint split — dual fingerprint tests
+// ---------------------------------------------------------------------------
+
+describe('simsubService.performFullCheck — dual fingerprints', () => {
+  const contentFingerprint = 'c'.repeat(64);
+  const federationFingerprint = 'f'.repeat(64);
+
+  beforeEach(() => {
+    mockGetOrCompute.mockResolvedValue({
+      contentFingerprint,
+      federationFingerprint,
+    });
+    dbSelectResult = [{ email: 'alice@test.example.com' }];
+  });
+
+  it('passes content fingerprint to checkLocal', async () => {
+    mockWithRls.mockImplementation(async (_ctx: any, fn: any) => {
+      const mockTx = {
+        select: () => ({
+          from: () => ({
+            where: () => ({ limit: () => Promise.resolve([]) }),
+          }),
+        }),
+        insert: () => ({ values: vi.fn().mockResolvedValue(undefined) }),
+        update: () => ({
+          set: () => ({ where: vi.fn().mockResolvedValue(undefined) }),
+        }),
+      };
+      return fn(mockTx);
+    });
+
+    const checkLocalSpy = vi
+      .spyOn(simsubService, 'checkLocal')
+      .mockResolvedValue([]);
+    const checkRemoteSpy = vi
+      .spyOn(simsubService, 'checkRemote')
+      .mockResolvedValue([]);
+
+    await simsubService.performFullCheck(
+      makeEnv(),
+      'sub1',
+      'v1',
+      'user1',
+      'org1',
+    );
+
+    // checkLocal should receive content fingerprint (2nd arg)
+    expect(checkLocalSpy).toHaveBeenCalledWith(
+      'user1',
+      contentFingerprint,
+      'sub1',
+    );
+    checkLocalSpy.mockRestore();
+    checkRemoteSpy.mockRestore();
+  });
+
+  it('passes federation fingerprint to checkRemote', async () => {
+    mockWithRls.mockImplementation(async (_ctx: any, fn: any) => {
+      const mockTx = {
+        select: () => ({
+          from: () => ({
+            where: () => ({ limit: () => Promise.resolve([]) }),
+          }),
+        }),
+        insert: () => ({ values: vi.fn().mockResolvedValue(undefined) }),
+        update: () => ({
+          set: () => ({ where: vi.fn().mockResolvedValue(undefined) }),
+        }),
+      };
+      return fn(mockTx);
+    });
+
+    const checkLocalSpy = vi
+      .spyOn(simsubService, 'checkLocal')
+      .mockResolvedValue([]);
+    const checkRemoteSpy = vi
+      .spyOn(simsubService, 'checkRemote')
+      .mockResolvedValue([]);
+
+    await simsubService.performFullCheck(
+      makeEnv(),
+      'sub1',
+      'v1',
+      'user1',
+      'org1',
+    );
+
+    // checkRemote should receive federation fingerprint (2nd arg)
+    expect(checkRemoteSpy).toHaveBeenCalledWith(
+      expect.anything(),
+      federationFingerprint,
+      expect.stringContaining('did:web:'),
+      'org1',
+    );
+    checkLocalSpy.mockRestore();
+    checkRemoteSpy.mockRestore();
+  });
+
+  it('stores both fingerprints in sim_sub_checks', async () => {
+    mockWithRls.mockImplementation(async (_ctx: any, fn: any) => {
+      const insertValues = vi.fn().mockResolvedValue(undefined);
+      const mockTx = {
+        select: () => ({
+          from: () => ({
+            where: () => ({ limit: () => Promise.resolve([]) }),
+          }),
+        }),
+        insert: () => ({ values: insertValues }),
+        update: () => ({
+          set: () => ({ where: vi.fn().mockResolvedValue(undefined) }),
+        }),
+      };
+      return fn(mockTx);
+    });
+
+    const checkLocalSpy = vi
+      .spyOn(simsubService, 'checkLocal')
+      .mockResolvedValue([]);
+    const checkRemoteSpy = vi
+      .spyOn(simsubService, 'checkRemote')
+      .mockResolvedValue([]);
+
+    const result = await simsubService.performFullCheck(
+      makeEnv(),
+      'sub1',
+      'v1',
+      'user1',
+      'org1',
+    );
+
+    expect(result.fingerprint).toBe(contentFingerprint);
+    expect(result.federationFingerprint).toBe(federationFingerprint);
+    checkLocalSpy.mockRestore();
+    checkRemoteSpy.mockRestore();
+  });
+});
+
+describe('simsubService.handleInboundCheck — uses federation fingerprint', () => {
+  it('passes federation column to checkLocal', async () => {
+    dbSelectResult = [{ id: 'user1' }];
+
+    const checkLocalSpy = vi
+      .spyOn(simsubService, 'checkLocal')
+      .mockResolvedValueOnce([]);
+
+    await simsubService.handleInboundCheck(
+      makeEnv(),
+      'did:web:test.example.com:users:alice',
+      'fingerprint123',
+    );
+
+    // handleInboundCheck should pass 'federation' as the column parameter
+    expect(checkLocalSpy).toHaveBeenCalledWith(
+      'user1',
+      'fingerprint123',
+      undefined,
+      'federation',
+    );
+    checkLocalSpy.mockRestore();
   });
 });

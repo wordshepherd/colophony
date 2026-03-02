@@ -63,6 +63,11 @@ export const submissionPeriods = pgTable(
     blindReviewMode: blindReviewModeEnum("blind_review_mode")
       .notNull()
       .default("none"),
+    isContest: boolean("is_contest").notNull().default(false),
+    contestPrize: varchar("contest_prize", { length: 500 }),
+    contestWinnersAnnouncedAt: timestamp("contest_winners_announced_at", {
+      withTimezone: true,
+    }),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
@@ -207,6 +212,7 @@ export const simSubChecks = pgTable(
       .notNull()
       .references(() => submissions.id, { onDelete: "cascade" }),
     fingerprint: varchar("fingerprint", { length: 64 }).notNull(),
+    federationFingerprint: varchar("federation_fingerprint", { length: 64 }),
     submitterDid: varchar("submitter_did", { length: 512 }).notNull(),
     result: simSubCheckResultEnum("result").notNull(),
     localConflicts: jsonb("local_conflicts")

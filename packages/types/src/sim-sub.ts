@@ -70,7 +70,10 @@ export type SimSubRemoteResult = z.infer<typeof simSubRemoteResultSchema>;
 /** Full result of a sim-sub check (local + remote). */
 export const simSubFullCheckResultSchema = z.object({
   result: simSubCheckResultSchema.describe("Aggregated check result"),
-  fingerprint: z.string().describe("The fingerprint that was checked"),
+  fingerprint: z.string().describe("The content fingerprint that was checked"),
+  federationFingerprint: z
+    .string()
+    .describe("The federation fingerprint (filename:size based)"),
   localConflicts: z.array(simSubConflictSchema),
   remoteResults: z.array(simSubRemoteResultSchema),
 });

@@ -286,6 +286,15 @@ export const submissionPeriodSchema = z.object({
     .boolean()
     .describe("Whether simultaneous submissions are prohibited"),
   blindReviewMode: blindReviewModeSchema,
+  isContest: z.boolean().describe("Whether this period is a contest"),
+  contestPrize: z
+    .string()
+    .nullable()
+    .describe("Prize description for contests"),
+  contestWinnersAnnouncedAt: z
+    .date()
+    .nullable()
+    .describe("When contest winners will be announced"),
   createdAt: z.date().describe("When the period was created"),
   updatedAt: z.date().describe("When the period was last updated"),
 });
@@ -332,6 +341,19 @@ export const createSubmissionPeriodSchema = z.object({
     .describe(
       "Blind review mode: none, single_blind, or double_blind (default: none)",
     ),
+  isContest: z
+    .boolean()
+    .optional()
+    .describe("Whether this period is a contest (default: false)"),
+  contestPrize: z
+    .string()
+    .max(500)
+    .optional()
+    .describe("Prize description for contests (max 500 chars)"),
+  contestWinnersAnnouncedAt: z.coerce
+    .date()
+    .optional()
+    .describe("When contest winners will be announced (ISO-8601)"),
 });
 
 export type CreateSubmissionPeriodInput = z.infer<
