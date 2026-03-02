@@ -375,7 +375,8 @@
 - [x] [P1] External submission tracking UI — CRUD with journal autocomplete, status filter, pagination, card grid — (register-data-standard.md Section 3; done 2026-03-01 PR pending)
 - [x] [P2] Cross-org submission portfolio — aggregated view: Colophony-native submissions from all orgs + external tracked submissions, unified by piece grouping — (persona gap analysis 2026-02-27; done 2026-03-01)
 - [x] [P2] Writer-facing analytics — personal response time stats, submissions pending, acceptance rate, submissions per month; derived from both native and manually-tracked records — (persona gap analysis 2026-02-27; done 2026-03-01)
-- [ ] [P2] Import flows — Submittable CSV import, Chill Subs import (via directoryIds mapping), generic CSV with column mapping UI — (register-data-standard.md Section 3; 2026-02-27)
+- [x] [P2] Import flows — Submittable CSV import, Chill Subs import (via directoryIds mapping), generic CSV with column mapping UI — (register-data-standard.md Section 3; done 2026-03-01)
+- [ ] [P3] Import duplicate detection — opt-in "Check for duplicates" button compares (journalName + sentAt ± 1 day) against existing subs — (DEVLOG 2026-03-01, deferred from import flows PR)
 
 ### Design Decisions
 

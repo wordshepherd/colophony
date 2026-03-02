@@ -25,6 +25,7 @@ import {
   Puzzle,
   Send,
   Settings,
+  Upload,
   Webhook,
 } from "lucide-react";
 
@@ -39,6 +40,7 @@ const writerNavigation = [
   },
   { name: "Portfolio", href: "/workspace/portfolio", icon: Layers },
   { name: "Analytics", href: "/workspace/analytics", icon: BarChart3 },
+  { name: "Import", href: "/workspace/import", icon: Upload },
 ];
 
 const submitterNavigation = [

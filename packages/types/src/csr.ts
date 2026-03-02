@@ -208,6 +208,26 @@ export const journalDirectorySearchSchema = z.object({
   limit: z.number().int().min(1).max(50).default(10),
 });
 
+export const journalDirectoryBatchMatchSchema = z.object({
+  names: z.array(z.string().min(1).max(500)).min(1).max(200),
+});
+
+export type JournalDirectoryBatchMatchInput = z.infer<
+  typeof journalDirectoryBatchMatchSchema
+>;
+
+export const journalDirectoryBatchMatchResultSchema = z.array(
+  z.object({
+    normalizedName: z.string(),
+    id: z.string().uuid(),
+    name: z.string(),
+  }),
+);
+
+export type JournalDirectoryBatchMatchResult = z.infer<
+  typeof journalDirectoryBatchMatchResultSchema
+>;
+
 export type JournalDirectorySearchInput = z.infer<
   typeof journalDirectorySearchSchema
 >;
