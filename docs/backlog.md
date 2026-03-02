@@ -405,10 +405,10 @@
 
 ## Track 10 — Federation Admin UI (Pre-Launch)
 
-> **Status:** Not started. All federation management is currently API-only. Required before any instance other than Write or Die joins the network.
+> **Status:** In progress. P1 shipped (PR1: trust dashboard + overview). P2/P3 pending.
 
-- [ ] [P1] Trust management dashboard — list trusted peers with status, capabilities, last-verified; initiate/accept/reject/revoke trust relationships; preview remote instance metadata before trusting — (persona gap analysis 2026-02-27)
-- [ ] [P1] Federation status overview — current instance mode (allowlist/open/managed_hub), capabilities enabled, instance public key, DID document link — (persona gap analysis 2026-02-27)
+- [x] [P1] Trust management dashboard — list trusted peers with status, capabilities, last-verified; initiate/accept/reject/revoke trust relationships; preview remote instance metadata before trusting — (persona gap analysis 2026-02-27)
+- [x] [P1] Federation status overview — current instance mode (allowlist/open/managed_hub), capabilities enabled, instance public key, DID document link — (persona gap analysis 2026-02-27)
 - [ ] [P2] Sim-sub admin UI — view sim-sub check history per submission, grant overrides, see conflict details — (persona gap analysis 2026-02-27)
 - [ ] [P2] Transfer management UI — list inbound/outbound transfers, view status, cancel pending — (persona gap analysis 2026-02-27)
 - [ ] [P2] Migration management UI — list pending migrations, approve/reject outbound, view history — (persona gap analysis 2026-02-27)

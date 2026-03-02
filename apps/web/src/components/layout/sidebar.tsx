@@ -22,6 +22,7 @@ import {
   LayoutDashboard,
   Library,
   Mail,
+  Network,
   Puzzle,
   Send,
   Settings,
@@ -80,6 +81,11 @@ const adminNavigation = [
     name: "Plugins",
     href: "/plugins",
     icon: Puzzle,
+  },
+  {
+    name: "Federation",
+    href: "/federation",
+    icon: Network,
   },
 ];
 
