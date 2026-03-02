@@ -173,6 +173,22 @@ export const createCorrespondenceSchema = z
     },
   );
 
+export const createManualCorrespondenceSchema = z.object({
+  externalSubmissionId: z.string().uuid(),
+  direction: correspondenceDirectionSchema,
+  channel: correspondenceChannelSchema.default("email"),
+  sentAt: z.string().datetime(),
+  subject: z.string().max(500).optional(),
+  body: z.string().min(1).max(10000),
+  senderName: z.string().max(255).optional(),
+  senderEmail: z.string().email().max(255).optional(),
+  isPersonalized: z.boolean().default(false),
+});
+
+export type CreateManualCorrespondenceInput = z.infer<
+  typeof createManualCorrespondenceSchema
+>;
+
 export const createWriterProfileSchema = z.object({
   platform: z.string().min(1).max(100),
   externalId: z.string().max(500).optional(),
