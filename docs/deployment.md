@@ -169,8 +169,8 @@ curl http://localhost/health
 - **minio** — S3-compatible file storage
 - **clamav** — Virus scanning (optional, `--profile full`)
 - **migrate** — One-shot: runs Drizzle migrations + RLS policies
-- **zitadel** — Zitadel auth service (OIDC provider)
-- **inngest** — Inngest dev server (workflow engine, dev only)
+- **zitadel** — Zitadel auth service (OIDC provider, dev compose only — production uses external Zitadel)
+- **inngest** — Inngest dev server (dev compose only — production uses Inngest Cloud or self-hosted)
 
 ## SSL/TLS with Let's Encrypt
 

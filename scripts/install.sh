@@ -71,7 +71,6 @@ echo -e "${BOLD}Generating secrets...${NC}"
 
 POSTGRES_PASSWORD=$(openssl rand -base64 48 | tr -d '=/+' | head -c 48)
 APP_USER_PASSWORD=$(openssl rand -base64 48 | tr -d '=/+' | head -c 48)
-JWT_SECRET=$(openssl rand -base64 64 | tr -d '=/+' | head -c 64)
 REDIS_PASSWORD=$(openssl rand -base64 48 | tr -d '=/+' | head -c 48)
 MINIO_ROOT_USER=$(openssl rand -hex 16)
 MINIO_ROOT_PASSWORD=$(openssl rand -base64 48 | tr -d '=/+' | head -c 48)
@@ -99,8 +98,8 @@ if [ -n "$SMTP_HOST" ]; then
   read -p "SMTP port [587]: " SMTP_PORT
   SMTP_PORT=${SMTP_PORT:-587}
   read -p "SMTP user: " SMTP_USER
-  read -p "SMTP password: " SMTP_PASSWORD
-  read -p "From email address: " EMAIL_FROM
+  read -p "SMTP password: " SMTP_PASS
+  read -p "From email address: " SMTP_FROM
 fi
 
 # Step 5: Write .env.prod
@@ -122,11 +121,6 @@ POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
 POSTGRES_DB=colophony
 APP_USER_PASSWORD=${APP_USER_PASSWORD}
 
-# Authentication
-JWT_SECRET=${JWT_SECRET}
-JWT_EXPIRES_IN=15m
-REFRESH_TOKEN_EXPIRES_IN=7d
-
 # Redis
 REDIS_PASSWORD=${REDIS_PASSWORD}
 
@@ -143,11 +137,12 @@ STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET}
 STRIPE_PUBLISHABLE_KEY=${STRIPE_PUBLISHABLE_KEY}
 
 # Email
+EMAIL_PROVIDER=${SMTP_HOST:+smtp}
 SMTP_HOST=${SMTP_HOST}
 SMTP_PORT=${SMTP_PORT:-587}
 SMTP_USER=${SMTP_USER}
-SMTP_PASSWORD=${SMTP_PASSWORD}
-EMAIL_FROM=${EMAIL_FROM:-noreply@${DOMAIN}}
+SMTP_PASS=${SMTP_PASS}
+SMTP_FROM=${SMTP_FROM:-noreply@${DOMAIN}}
 
 # Rate Limiting
 RATE_LIMIT_DEFAULT_MAX=100

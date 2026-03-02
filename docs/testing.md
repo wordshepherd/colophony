@@ -8,16 +8,13 @@ For architecture details, see [docs/architecture.md](./architecture.md).
 ## Running Tests
 
 ```bash
-# Unit tests — API + packages (~537 tests, 40 suites)
+# Unit tests — API + packages (~1522 tests, 149 suites)
 pnpm test
-
-# Watch mode
-pnpm test:watch
 
 # Coverage report
 pnpm test:cov
 
-# Web unit tests — Jest (108 tests, 11 suites)
+# Web unit tests — Jest (~543 tests, 74 suites)
 pnpm --filter @colophony/web test
 
 # RLS integration tests (~93 tests, requires postgres-test container)

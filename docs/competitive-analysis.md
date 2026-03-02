@@ -38,6 +38,8 @@
 
 ## 1. Colophony Current State
 
+> **Note:** This section describes the **v1 MVP** state as of 2026-02-10 (NestJS, Prisma, JWT auth). The v2 rewrite replaced this stack entirely — see [docs/architecture.md](architecture.md) for the current architecture (Fastify, Drizzle, Zitadel OIDC).
+
 ### Summary
 
 Colophony is a **production-ready MVP** multi-tenant submissions management platform for creative arts magazines. Built with NestJS + Next.js + PostgreSQL RLS. 308 unit tests + 65 E2E tests. Docker Compose deployment.
