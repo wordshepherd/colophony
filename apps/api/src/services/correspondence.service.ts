@@ -13,8 +13,9 @@ import { AuditActions, AuditResources } from '@colophony/types';
 import type {
   SendEditorMessageInput,
   ListCorrespondenceByUserInput,
+  CreateManualCorrespondenceInput,
 } from '@colophony/types';
-import type { ServiceContext } from './types.js';
+import type { ServiceContext, UserServiceContext } from './types.js';
 import { assertEditorOrAdmin, NotFoundError } from './errors.js';
 import { submissionService } from './submission.service.js';
 import { emailService } from './email.service.js';
@@ -27,7 +28,8 @@ import { validateEnv } from '../config/env.js';
 
 export interface CreateCorrespondenceParams {
   userId: string;
-  submissionId: string;
+  submissionId?: string;
+  externalSubmissionId?: string;
   direction: 'inbound' | 'outbound';
   channel: 'email' | 'portal' | 'in_app' | 'other';
   sentAt: Date;
@@ -49,7 +51,8 @@ export const correspondenceService = {
       .insert(correspondence)
       .values({
         userId: params.userId,
-        submissionId: params.submissionId,
+        submissionId: params.submissionId ?? null,
+        externalSubmissionId: params.externalSubmissionId ?? null,
         direction: params.direction,
         channel: params.channel,
         sentAt: params.sentAt,
@@ -244,5 +247,45 @@ export const correspondenceService = {
     }
 
     return { correspondenceId: record.id };
+  },
+
+  async createManualWithAudit(
+    ctx: UserServiceContext,
+    input: CreateManualCorrespondenceInput,
+  ): Promise<{ id: string }> {
+    // Verify external submission exists (RLS-scoped)
+    const [extSub] = await ctx.tx
+      .select({ id: externalSubmissions.id })
+      .from(externalSubmissions)
+      .where(eq(externalSubmissions.id, input.externalSubmissionId))
+      .limit(1);
+
+    if (!extSub) throw new NotFoundError('External submission not found');
+
+    const record = await correspondenceService.create(ctx.tx, {
+      userId: ctx.userId,
+      externalSubmissionId: input.externalSubmissionId,
+      direction: input.direction,
+      channel: input.channel,
+      sentAt: new Date(input.sentAt),
+      subject: input.subject ?? null,
+      body: input.body,
+      senderName: input.senderName ?? null,
+      senderEmail: input.senderEmail ?? null,
+      isPersonalized: input.isPersonalized,
+      source: 'manual',
+    });
+
+    await ctx.audit({
+      action: AuditActions.CORRESPONDENCE_MANUAL_LOGGED,
+      resource: AuditResources.CORRESPONDENCE,
+      resourceId: record.id,
+      newValue: {
+        externalSubmissionId: input.externalSubmissionId,
+        direction: input.direction,
+      },
+    });
+
+    return { id: record.id };
   },
 };

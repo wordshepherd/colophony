@@ -23,6 +23,7 @@ vi.mock('@colophony/db', () => ({
     id: 'id',
     userId: 'user_id',
     journalName: 'journal_name',
+    sentAt: 'sent_at',
     status: 'status',
     updatedAt: 'updated_at',
   },
@@ -30,6 +31,17 @@ vi.mock('@colophony/db', () => ({
   and: vi.fn((...args: unknown[]) => ['and', ...args]),
   sql: vi.fn(),
 }));
+
+vi.mock('drizzle-orm', async (importOriginal) => {
+  const actual = await importOriginal<Record<string, unknown>>();
+  const sqlTagFn = (_strings: TemplateStringsArray, ..._values: unknown[]) =>
+    'sql_expr';
+  return {
+    ...actual,
+    inArray: vi.fn((_col: unknown, vals: unknown) => ['inArray', vals]),
+    sql: sqlTagFn,
+  };
+});
 
 import {
   externalSubmissionService,
@@ -317,6 +329,127 @@ describe('externalSubmissionService', () => {
       await expect(
         externalSubmissionService.deleteWithAudit(ctx, 'missing'),
       ).rejects.toThrow(ExternalSubmissionNotFoundError);
+    });
+  });
+
+  describe('checkDuplicates', () => {
+    function makeDupTx(
+      existingRows: Array<{
+        id: string;
+        journalName: string;
+        sentAt: Date | null;
+      }>,
+    ) {
+      const tx = {
+        select: vi.fn().mockReturnValue({
+          from: vi.fn().mockReturnValue({
+            where: vi.fn().mockReturnValue(existingRows),
+          }),
+        }),
+      } as unknown as Parameters<
+        typeof externalSubmissionService.checkDuplicates
+      >[0];
+      return tx;
+    }
+
+    it('returns matches within +/- 1 day', async () => {
+      const tx = makeDupTx([
+        {
+          id: 'ext-1',
+          journalName: 'The Paris Review',
+          sentAt: new Date('2026-01-15T00:00:00Z'),
+        },
+      ]);
+
+      const result = await externalSubmissionService.checkDuplicates(
+        tx,
+        'user-1',
+        [
+          {
+            journalName: 'The Paris Review',
+            sentAt: '2026-01-15T12:00:00Z',
+          },
+        ],
+      );
+
+      expect(result).toHaveLength(1);
+      expect(result[0]).toMatchObject({
+        candidateIndex: 0,
+        existingId: 'ext-1',
+        existingJournalName: 'The Paris Review',
+      });
+    });
+
+    it('returns no matches when sentAt differs by >1 day', async () => {
+      const tx = makeDupTx([
+        {
+          id: 'ext-1',
+          journalName: 'The Paris Review',
+          sentAt: new Date('2026-01-10T00:00:00Z'),
+        },
+      ]);
+
+      const result = await externalSubmissionService.checkDuplicates(
+        tx,
+        'user-1',
+        [
+          {
+            journalName: 'The Paris Review',
+            sentAt: '2026-01-15T00:00:00Z',
+          },
+        ],
+      );
+
+      expect(result).toHaveLength(0);
+    });
+
+    it('matches by name only when neither has sentAt', async () => {
+      const tx = makeDupTx([
+        { id: 'ext-1', journalName: 'Ploughshares', sentAt: null },
+      ]);
+
+      const result = await externalSubmissionService.checkDuplicates(
+        tx,
+        'user-1',
+        [{ journalName: 'Ploughshares' }],
+      );
+
+      expect(result).toHaveLength(1);
+      expect(result[0]).toMatchObject({
+        candidateIndex: 0,
+        existingId: 'ext-1',
+        existingSentAt: null,
+      });
+    });
+
+    it('returns empty for empty candidates', async () => {
+      const tx = makeDupTx([]);
+
+      const result = await externalSubmissionService.checkDuplicates(
+        tx,
+        'user-1',
+        [],
+      );
+
+      expect(result).toHaveLength(0);
+    });
+
+    it('is case-insensitive on journal name', async () => {
+      const tx = makeDupTx([
+        { id: 'ext-1', journalName: 'the paris review', sentAt: null },
+      ]);
+
+      const result = await externalSubmissionService.checkDuplicates(
+        tx,
+        'user-1',
+        [{ journalName: 'The Paris Review' }],
+      );
+
+      expect(result).toHaveLength(1);
+      expect(result[0]).toMatchObject({
+        candidateIndex: 0,
+        existingId: 'ext-1',
+      });
     });
   });
 });

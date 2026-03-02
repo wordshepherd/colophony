@@ -43,6 +43,7 @@ export const apiKeyScopeSchema = z
     "writer-profiles:write",
     "journal-directory:read",
     "correspondence:read",
+    "correspondence:write",
     "audit:read",
   ])
   .describe("Permission scope for the API key");

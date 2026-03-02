@@ -214,6 +214,7 @@ export const AuditActions = {
   // Correspondence lifecycle
   CORRESPONDENCE_SENT: "CORRESPONDENCE_SENT",
   CORRESPONDENCE_AUTO_CAPTURED: "CORRESPONDENCE_AUTO_CAPTURED",
+  CORRESPONDENCE_MANUAL_LOGGED: "CORRESPONDENCE_MANUAL_LOGGED",
 
   // Voting lifecycle
   SUBMISSION_VOTE_CAST: "SUBMISSION_VOTE_CAST",
@@ -610,7 +611,8 @@ export interface CorrespondenceAuditParams extends BaseAuditParams {
   resource: typeof AuditResources.CORRESPONDENCE;
   action:
     | typeof AuditActions.CORRESPONDENCE_SENT
-    | typeof AuditActions.CORRESPONDENCE_AUTO_CAPTURED;
+    | typeof AuditActions.CORRESPONDENCE_AUTO_CAPTURED
+    | typeof AuditActions.CORRESPONDENCE_MANUAL_LOGGED;
 }
 
 export interface EmailTemplateAuditParams extends BaseAuditParams {

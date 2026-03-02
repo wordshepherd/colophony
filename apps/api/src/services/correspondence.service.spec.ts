@@ -16,6 +16,7 @@ const mockOrderBy = vi.fn();
 
 vi.mock('@colophony/db', () => ({
   correspondence: { submissionId: 'submission_id', sentAt: 'sent_at' },
+  externalSubmissions: { id: 'id' },
   submissions: { id: 'id' },
   users: { id: 'id', email: 'email', displayName: 'display_name' },
   organizations: { id: 'id', name: 'name' },
@@ -265,6 +266,97 @@ describe('correspondenceService', () => {
           body: 'Test',
         }),
       ).rejects.toThrow(ForbiddenError);
+    });
+  });
+
+  describe('createManualWithAudit', () => {
+    function makeUserCtx() {
+      const tx = makeTx();
+      // Override select chain for external submission lookup
+      const localLimit = vi.fn().mockReturnValue([{ id: 'ext-sub-1' }]);
+      const localWhere = vi.fn().mockReturnValue({ limit: localLimit });
+      const localFrom = vi.fn().mockReturnValue({ where: localWhere });
+      const localSelect = vi.fn().mockReturnValue({ from: localFrom });
+      (tx as unknown as Record<string, unknown>).select = localSelect;
+
+      return {
+        tx,
+        userId: 'user-1',
+        audit: vi.fn(),
+        _localLimit: localLimit,
+      };
+    }
+
+    it('inserts with externalSubmissionId and audits CORRESPONDENCE_MANUAL_LOGGED', async () => {
+      const ctx = makeUserCtx();
+
+      const result = await correspondenceService.createManualWithAudit(ctx, {
+        externalSubmissionId: 'ext-sub-1',
+        direction: 'inbound',
+        channel: 'email',
+        sentAt: '2026-02-01T12:00:00.000Z',
+        body: 'Thank you for your submission.',
+        isPersonalized: false,
+      });
+
+      expect(result).toMatchObject({ id: 'corr-1' });
+      expect(mockValues).toHaveBeenCalledWith(
+        expect.objectContaining({
+          source: 'manual',
+          externalSubmissionId: 'ext-sub-1',
+          submissionId: null,
+        }),
+      );
+      expect(ctx.audit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          action: AuditActions.CORRESPONDENCE_MANUAL_LOGGED,
+          resource: AuditResources.CORRESPONDENCE,
+          resourceId: 'corr-1',
+        }),
+      );
+    });
+
+    it('throws NotFoundError for missing external submission', async () => {
+      const ctx = makeUserCtx();
+      // Return empty from external submission lookup
+      ctx._localLimit.mockReturnValue([]);
+
+      await expect(
+        correspondenceService.createManualWithAudit(ctx, {
+          externalSubmissionId: 'missing-id',
+          direction: 'inbound',
+          channel: 'email',
+          sentAt: '2026-02-01T12:00:00.000Z',
+          body: 'Test',
+          isPersonalized: false,
+        }),
+      ).rejects.toThrow(NotFoundError);
+    });
+  });
+
+  describe('create', () => {
+    it('supports externalSubmissionId without submissionId', async () => {
+      const tx = makeTx();
+      await correspondenceService.create(tx, {
+        userId: 'user-1',
+        externalSubmissionId: 'ext-sub-1',
+        direction: 'inbound',
+        channel: 'email',
+        sentAt: new Date(),
+        subject: null,
+        body: 'Hello',
+        senderName: null,
+        senderEmail: null,
+        isPersonalized: false,
+        source: 'manual',
+      });
+
+      expect(mockValues).toHaveBeenCalledWith(
+        expect.objectContaining({
+          submissionId: null,
+          externalSubmissionId: 'ext-sub-1',
+        }),
+      );
     });
   });
 });

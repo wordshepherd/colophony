@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import Link from "next/link";
-import { ArrowLeft, ArrowRight } from "lucide-react";
+import { ArrowLeft, ArrowRight, Loader2, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -58,6 +58,7 @@ export function ImportPage() {
     null,
   );
   const [importError, setImportError] = useState<string | null>(null);
+  const [duplicateCheckEnabled, setDuplicateCheckEnabled] = useState(false);
 
   const presetDef = IMPORT_PRESETS[preset];
 
@@ -101,6 +102,44 @@ export function ImportPage() {
     { names: journalNames },
     { enabled: step === 3 && journalNames.length > 0 },
   );
+
+  // --- Duplicate check ---
+  const duplicateCandidates = useMemo(() => {
+    if (!parsed || !hasJournalNameMapping) return [];
+    const journalCol = columnMappings.find((m) => m.target === "journalName");
+    const sentAtCol = columnMappings.find((m) => m.target === "sentAt");
+    if (!journalCol) return [];
+    return parsed.rows
+      .map((row) => ({
+        journalName: row[journalCol.csvHeader]?.trim() ?? "",
+        sentAt: sentAtCol
+          ? (row[sentAtCol.csvHeader]?.trim() ?? undefined)
+          : undefined,
+      }))
+      .filter((c) => c.journalName.length > 0);
+  }, [parsed, hasJournalNameMapping, columnMappings]);
+
+  const duplicateCheckQuery = trpc.externalSubmissions.checkDuplicates.useQuery(
+    { candidates: duplicateCandidates },
+    {
+      enabled: duplicateCheckEnabled && duplicateCandidates.length > 0,
+    },
+  );
+
+  useEffect(() => {
+    if (duplicateCheckQuery.data && validation) {
+      setValidation({
+        ...validation,
+        duplicateWarnings: duplicateCheckQuery.data.map((d) => ({
+          rowIndex: d.candidateIndex,
+          existingJournalName: d.existingJournalName,
+          existingSentAt: d.existingSentAt,
+        })),
+      });
+    }
+    // Only run when duplicate check data arrives
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [duplicateCheckQuery.data]);
 
   // --- Import mutation ---
   const utils = trpc.useUtils();
@@ -281,6 +320,7 @@ export function ImportPage() {
     setValidation(null);
     setImportResult(null);
     setImportError(null);
+    setDuplicateCheckEnabled(false);
   }, []);
 
   // --- Render ---
@@ -425,6 +465,29 @@ export function ImportPage() {
       {/* Step 3: Review & Import */}
       {step === 3 && (
         <div className="space-y-4">
+          {!importResult && validation && (
+            <div className="flex justify-end">
+              <Button
+                variant="outline"
+                onClick={() => setDuplicateCheckEnabled(true)}
+                disabled={
+                  duplicateCheckQuery.isFetching || duplicateCheckEnabled
+                }
+              >
+                {duplicateCheckQuery.isFetching ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Search className="mr-2 h-4 w-4" />
+                )}
+                {duplicateCheckQuery.data
+                  ? `${duplicateCheckQuery.data.length} Duplicate${duplicateCheckQuery.data.length !== 1 ? "s" : ""} Found`
+                  : duplicateCheckQuery.isFetching
+                    ? "Checking..."
+                    : "Check for Duplicates"}
+              </Button>
+            </div>
+          )}
+
           {importResult ? (
             <div className="space-y-4">
               <ImportReview
