@@ -392,8 +392,8 @@
 
 > **Status:** Not started. Non-code deliverables required for community publisher evaluation and open-source credibility.
 
-- [ ] [P0] AGPL license boundary documentation — clearly document what is AGPL (Zitadel), what license Colophony uses, obligations for self-hosters, and how the boundary works — (CLAUDE.md security checklist + persona gap analysis 2026-02-27)
-- [ ] [P0] Choose and document Colophony's own license — (persona gap analysis 2026-02-27)
+- [x] [P0] AGPL license boundary documentation — clearly document what is AGPL (Zitadel), what license Colophony uses, obligations for self-hosters, and how the boundary works — (CLAUDE.md security checklist + persona gap analysis 2026-02-27; done 2026-03-02 `docs/licensing.md`)
+- [x] [P0] Choose and document Colophony's own license — AGPL-3.0-or-later for core, MIT for SDKs/plugin tooling — (persona gap analysis 2026-02-27; done 2026-03-02 `LICENSE` + `docs/licensing.md`)
 - [ ] [P1] CONTRIBUTING.md — how to contribute, development setup, PR process, code of conduct reference — (persona gap analysis 2026-02-27)
 - [ ] [P1] CODE_OF_CONDUCT.md — (persona gap analysis 2026-02-27)
 - [ ] [P1] README.md rewrite — project description in brand voice, architecture overview, quick start, screenshots, link to docs — (persona gap analysis 2026-02-27)
@@ -472,7 +472,7 @@
 ### Security & Compliance
 
 - [ ] Rotate credentials quarterly — (CLAUDE.md)
-- [ ] AGPL license boundary documented (Zitadel is AGPL) — (CLAUDE.md)
+- [x] AGPL license boundary documented (Zitadel is AGPL) — done 2026-03-02 `docs/licensing.md` — (CLAUDE.md)
 
 ### Monitoring
 

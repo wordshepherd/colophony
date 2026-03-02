@@ -208,7 +208,7 @@ All eight research areas have been investigated and decisions finalized. Each su
 - Two-step webhook idempotency (INSERT event, check `processed` status)
 - `@colophony/auth-client` package wraps REST-only methods
 - Dual auth: Zitadel OIDC tokens (interactive) + API keys (programmatic)
-- AGPL applies only to Zitadel modifications; Colophony code unaffected
+- AGPL applies only to Zitadel modifications; Colophony code unaffected — see [`docs/licensing.md`](licensing.md) for full boundary documentation
   **Archived:** Full evaluation (440 lines, 6 candidates with weighted scoring) — see git history
 
 ### 5.4 Managed Hosting Orchestration
