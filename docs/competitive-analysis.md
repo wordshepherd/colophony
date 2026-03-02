@@ -1118,7 +1118,7 @@ The scope of the vision that emerged from this interview is fundamentally differ
 - Business rules encoded as test specifications
 - All competitive research and product decisions from this document
 
-**Full architecture planning:** See `docs/architecture-v2-planning.md`
+**Full architecture planning:** See `docs/architecture.md`
 
 ---
 

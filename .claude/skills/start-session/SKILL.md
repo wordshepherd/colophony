@@ -217,7 +217,7 @@ Do NOT auto-start services — just report status so the user can decide.
 
 ### Step 6: Determine track status and priorities
 
-The development tracks in `docs/architecture-v2-planning.md` Section 6.2 define the project's priority order. The DEVLOG "Next" items are session-level continuity notes, NOT the strategic priority. **Tracks take precedence over DEVLOG "Next" when suggesting focus.**
+The development tracks in `docs/architecture.md` Section 6.2 define the project's priority order. The DEVLOG "Next" items are session-level continuity notes, NOT the strategic priority. **Tracks take precedence over DEVLOG "Next" when suggesting focus.**
 
 **Primary source: `docs/backlog.md`** — Read the backlog file and identify:
 

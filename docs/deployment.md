@@ -52,9 +52,6 @@ Replace each `CHANGE_ME_*` placeholder:
 openssl rand -base64 48 | tr -d '=/+'  # POSTGRES_PASSWORD
 openssl rand -base64 48 | tr -d '=/+'  # APP_USER_PASSWORD
 
-# JWT secret (64+ characters)
-openssl rand -base64 64 | tr -d '=/+'  # JWT_SECRET
-
 # Redis password
 openssl rand -base64 48 | tr -d '=/+'  # REDIS_PASSWORD
 
@@ -110,7 +107,6 @@ curl http://localhost/health
 | `DOMAIN`              | Your domain name                           | `submissions.example.com` |
 | `POSTGRES_PASSWORD`   | PostgreSQL superuser password              | (generated)               |
 | `APP_USER_PASSWORD`   | App database user password (non-superuser) | (generated)               |
-| `JWT_SECRET`          | JWT signing secret (64+ chars)             | (generated)               |
 | `REDIS_PASSWORD`      | Redis password                             | (generated)               |
 | `MINIO_ROOT_USER`     | MinIO access key                           | (generated)               |
 | `MINIO_ROOT_PASSWORD` | MinIO secret key                           | (generated)               |
@@ -118,23 +114,26 @@ curl http://localhost/health
 
 ### Optional
 
-| Variable                   | Description                  | Default            |
-| -------------------------- | ---------------------------- | ------------------ |
-| `POSTGRES_USER`            | PostgreSQL superuser name    | `colophony`        |
-| `POSTGRES_DB`              | Database name                | `colophony`        |
-| `HTTP_PORT`                | Nginx listen port            | `80`               |
-| `JWT_EXPIRES_IN`           | Access token TTL             | `15m`              |
-| `REFRESH_TOKEN_EXPIRES_IN` | Refresh token TTL            | `7d`               |
-| `RATE_LIMIT_DEFAULT_MAX`   | General rate limit (req/min) | `100`              |
-| `RATE_LIMIT_AUTH_MAX`      | Auth rate limit (req/min)    | `20`               |
-| `STRIPE_SECRET_KEY`        | Stripe API key               | (empty)            |
-| `STRIPE_WEBHOOK_SECRET`    | Stripe webhook secret        | (empty)            |
-| `STRIPE_PUBLISHABLE_KEY`   | Stripe publishable key       | (empty)            |
-| `SMTP_HOST`                | SMTP server hostname         | (empty)            |
-| `SMTP_PORT`                | SMTP server port             | `587`              |
-| `SMTP_USER`                | SMTP username                | (empty)            |
-| `SMTP_PASSWORD`            | SMTP password                | (empty)            |
-| `EMAIL_FROM`               | Sender email address         | `noreply@{DOMAIN}` |
+| Variable                 | Description                                 | Default     |
+| ------------------------ | ------------------------------------------- | ----------- |
+| `POSTGRES_USER`          | PostgreSQL superuser name                   | `colophony` |
+| `POSTGRES_DB`            | Database name                               | `colophony` |
+| `HTTP_PORT`              | Nginx listen port                           | `80`        |
+| `RATE_LIMIT_DEFAULT_MAX` | General rate limit (req/min)                | `60`        |
+| `RATE_LIMIT_AUTH_MAX`    | Auth rate limit (req/min)                   | `200`       |
+| `ZITADEL_AUTHORITY`      | Zitadel issuer URL                          | (empty)     |
+| `ZITADEL_CLIENT_ID`      | Zitadel OIDC client ID                      | (empty)     |
+| `STRIPE_SECRET_KEY`      | Stripe API key                              | (empty)     |
+| `STRIPE_WEBHOOK_SECRET`  | Stripe webhook secret                       | (empty)     |
+| `EMAIL_PROVIDER`         | Email provider (`smtp`, `sendgrid`, `none`) | `none`      |
+| `SMTP_HOST`              | SMTP server hostname                        | (empty)     |
+| `SMTP_PORT`              | SMTP server port                            | `587`       |
+| `SMTP_USER`              | SMTP username                               | (empty)     |
+| `SMTP_PASS`              | SMTP password                               | (empty)     |
+| `SMTP_FROM`              | SMTP sender address                         | (empty)     |
+| `FEDERATION_ENABLED`     | Enable federation features                  | `false`     |
+| `SENTRY_DSN`             | Sentry error tracking DSN                   | (empty)     |
+| `METRICS_ENABLED`        | Enable Prometheus `/metrics`                | `false`     |
 
 ## Architecture
 
@@ -147,7 +146,7 @@ curl http://localhost/health
           │             │             │
     ┌─────▼─────┐ ┌─────▼─────┐ ┌────▼────┐
     │    web    │ │    api    │ │  tusd   │
-    │  (Next.js)│ │ (NestJS)  │ │(uploads)│
+    │  (Next.js)│ │ (Fastify) │ │(uploads)│
     │   :3000   │ │   :4000   │ │  :1080  │
     └───────────┘ └──┬──┬──┬──┘ └────┬────┘
                      │  │  │         │
@@ -163,13 +162,15 @@ curl http://localhost/health
 
 - **nginx** — Reverse proxy, TLS termination, rate limiting
 - **web** — Next.js frontend (standalone output)
-- **api** — NestJS API with tRPC, background jobs
+- **api** — Fastify API with tRPC + REST + GraphQL, background jobs (BullMQ)
 - **tusd** — Resumable file upload server (tus protocol)
 - **postgres** — PostgreSQL 16 with Row-Level Security
 - **redis** — Sessions, cache, BullMQ job queue
 - **minio** — S3-compatible file storage
 - **clamav** — Virus scanning (optional, `--profile full`)
-- **migrate** — One-shot: runs Prisma migrations + RLS policies
+- **migrate** — One-shot: runs Drizzle migrations + RLS policies
+- **zitadel** — Zitadel auth service (OIDC provider)
+- **inngest** — Inngest dev server (workflow engine, dev only)
 
 ## SSL/TLS with Let's Encrypt
 

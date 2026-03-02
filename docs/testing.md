@@ -1,7 +1,7 @@
 # Testing Guide
 
 Comprehensive testing reference for the Colophony platform.
-For architecture details, see [docs/architecture-v2-planning.md](./architecture-v2-planning.md).
+For architecture details, see [docs/architecture.md](./architecture.md).
 
 ---
 
@@ -441,7 +441,7 @@ Web unit tests (`apps/web`) use Jest + ts-jest + jsdom. The rest of the codebase
 
 ### `pnpm test` excludes web tests
 
-The root `pnpm test` only runs API and package Vitest tests. Web tests run separately via `pnpm --filter @colophony/web test` because they use a different runner (Jest). In CI, web tests are currently commented out during the Vitest migration.
+The root `pnpm test` only runs API and package Vitest tests. Web tests run separately via `pnpm --filter @colophony/web test` because they use a different runner (Jest). In CI, web tests run as part of the `unit-tests` job.
 
 ### RLS tests call `globalSetup()` manually in `beforeAll`
 

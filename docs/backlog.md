@@ -345,7 +345,7 @@
 
 ## Track 8 — Register Data Standard & Writer Tools (Pre-Launch)
 
-> **Status:** Spec drafted (`docs/research/register-data-standard.md`). Defines the Colophony Submission Record (CSR) format, writer-as-top-level-entity architecture, correspondence tracking, and import pipeline. Prerequisite for Chill Subs integration (Track 11) and writer-side demand generation.
+> **Status:** Complete. All items shipped.
 
 ### Data Standard
 
