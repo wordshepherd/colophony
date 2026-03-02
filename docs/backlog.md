@@ -357,13 +357,13 @@
 - [x] [P2] MigrationBundle: add submission count LIMIT/batching for users with thousands of submissions — (code review 2026-02-27; done 2026-02-28)
 - [x] [P1] CSR export endpoint — tRPC + REST endpoint for writers to download their full CSR as JSON; aggregates Colophony-native submissions (cross-org), external submissions, correspondence, writer profiles, and manuscripts — (register-data-standard.md Section 2.1; done 2026-03-01)
 - [x] [P1] CSR import endpoint — ingest external submission records from JSON with correspondence linking; CSV import with column mapping deferred to writer workspace UI track — (register-data-standard.md Section 3; done 2026-03-01)
-- [ ] [P2] CSR format documentation — human-readable spec with field descriptions, examples, status mapping table, and extension points; publishable as part of project docs — (register-data-standard.md; 2026-02-27)
+- [x] [P2] CSR format documentation — human-readable spec with field descriptions, examples, status mapping table, and extension points; publishable as part of project docs — (register-data-standard.md; 2026-02-27; done 2026-03-01)
 
 ### Correspondence Tracking
 
 - [x] [P0] `correspondence` DB table — new table for editor-writer messages linked to submissions; fields: direction (inbound/outbound), channel (email/portal/in_app), body, senderName, senderEmail, isPersonalized flag; RLS scoped to submission owner + org editors; XOR CHECK on submission_id/external_submission_id — (register-data-standard.md Section 2.8, 4.2; done 2026-02-27 PR pending)
 - [x] [P1] Auto-capture Colophony correspondence — auto-insert correspondence records on acceptance/rejection notifications + editor messages; captures status transition comments — (register-data-standard.md Section 2.8; done 2026-02-27 PR pending)
-- [ ] [P2] Manual correspondence logging — writers can paste/enter notable editor messages (personalized rejections, encouragement letters) for external submissions; lightweight form: paste text, mark as personalized, save — (register-data-standard.md Section 2.8; 2026-02-27)
+- [x] [P2] Manual correspondence logging — writers can paste/enter notable editor messages (personalized rejections, encouragement letters) for external submissions; lightweight form: paste text, mark as personalized, save — (register-data-standard.md Section 2.8; 2026-02-27; done 2026-03-01)
 - [x] [P2] Correspondence in CSR export — include all correspondence records in the writer's CSR download, linked to submission records — (register-data-standard.md Section 2.8; done 2026-03-01)
 
 ### Writer as Top-Level Entity
@@ -376,7 +376,7 @@
 - [x] [P2] Cross-org submission portfolio — aggregated view: Colophony-native submissions from all orgs + external tracked submissions, unified by piece grouping — (persona gap analysis 2026-02-27; done 2026-03-01)
 - [x] [P2] Writer-facing analytics — personal response time stats, submissions pending, acceptance rate, submissions per month; derived from both native and manually-tracked records — (persona gap analysis 2026-02-27; done 2026-03-01)
 - [x] [P2] Import flows — Submittable CSV import, Chill Subs import (via directoryIds mapping), generic CSV with column mapping UI — (register-data-standard.md Section 3; done 2026-03-01)
-- [ ] [P3] Import duplicate detection — opt-in "Check for duplicates" button compares (journalName + sentAt ± 1 day) against existing subs — (DEVLOG 2026-03-01, deferred from import flows PR)
+- [x] [P3] Import duplicate detection — opt-in "Check for duplicates" button compares (journalName + sentAt ± 1 day) against existing subs — (DEVLOG 2026-03-01, deferred from import flows PR; done 2026-03-01)
 
 ### Design Decisions
 

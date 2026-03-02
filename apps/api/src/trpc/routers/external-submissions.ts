@@ -3,6 +3,8 @@ import {
   createExternalSubmissionSchema,
   updateExternalSubmissionSchema,
   listExternalSubmissionsSchema,
+  duplicateCheckInputSchema,
+  duplicateCheckResultSchema,
 } from '@colophony/types';
 import { createRouter, userProcedure, requireScopes } from '../init.js';
 import { toUserServiceContext } from '../../services/context.js';
@@ -36,6 +38,22 @@ export const externalSubmissionsRouter = createRouter({
         const row = await externalSubmissionService.getById(ctx.dbTx, input.id);
         if (!row) throw new ExternalSubmissionNotFoundError(input.id);
         return row;
+      } catch (e) {
+        mapServiceError(e);
+      }
+    }),
+
+  checkDuplicates: userProcedure
+    .use(requireScopes('external-submissions:read'))
+    .input(duplicateCheckInputSchema)
+    .output(duplicateCheckResultSchema)
+    .query(async ({ ctx, input }) => {
+      try {
+        return await externalSubmissionService.checkDuplicates(
+          ctx.dbTx,
+          ctx.authContext.userId,
+          input.candidates,
+        );
       } catch (e) {
         mapServiceError(e);
       }

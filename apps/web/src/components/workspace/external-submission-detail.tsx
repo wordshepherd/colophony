@@ -20,7 +20,8 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { CsrStatusBadge } from "./csr-status-badge";
 import { ExternalSubmissionForm } from "./external-submission-form";
-import { ArrowLeft, Pencil, Trash2 } from "lucide-react";
+import { ArrowLeft, Mail, Pencil, Trash2 } from "lucide-react";
+import { LogCorrespondenceDialog } from "./log-correspondence-dialog";
 import { format } from "date-fns";
 
 interface ExternalSubmissionDetailProps {
@@ -33,6 +34,7 @@ export function ExternalSubmissionDetail({
   const router = useRouter();
   const utils = trpc.useUtils();
   const [isEditing, setIsEditing] = useState(false);
+  const [logDialogOpen, setLogDialogOpen] = useState(false);
 
   const {
     data: submission,
@@ -95,6 +97,10 @@ export function ExternalSubmissionDetail({
           </div>
         </div>
         <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setLogDialogOpen(true)}>
+            <Mail className="mr-2 h-4 w-4" />
+            Log Message
+          </Button>
           <Button variant="outline" onClick={() => setIsEditing(true)}>
             <Pencil className="mr-2 h-4 w-4" />
             Edit
@@ -174,6 +180,13 @@ export function ExternalSubmissionDetail({
           )}
         </CardContent>
       </Card>
+
+      <LogCorrespondenceDialog
+        externalSubmissionId={id}
+        journalName={submission.journalName}
+        open={logDialogOpen}
+        onOpenChange={setLogDialogOpen}
+      />
     </div>
   );
 }

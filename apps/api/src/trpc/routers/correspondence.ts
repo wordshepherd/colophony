@@ -4,6 +4,7 @@ import {
   sendEditorMessageSchema,
   correspondenceListItemSchema,
   listCorrespondenceByUserSchema,
+  createManualCorrespondenceSchema,
 } from '@colophony/types';
 import {
   orgProcedure,
@@ -11,7 +12,10 @@ import {
   createRouter,
   requireScopes,
 } from '../init.js';
-import { toServiceContext } from '../../services/context.js';
+import {
+  toServiceContext,
+  toUserServiceContext,
+} from '../../services/context.js';
 import { correspondenceService } from '../../services/correspondence.service.js';
 import { mapServiceError } from '../error-mapper.js';
 
@@ -62,6 +66,21 @@ export const correspondenceRouter = createRouter({
           isPersonalized: r.isPersonalized,
           source: r.source as 'colophony' | 'manual',
         }));
+      } catch (e) {
+        mapServiceError(e);
+      }
+    }),
+
+  logManual: userProcedure
+    .use(requireScopes('correspondence:write'))
+    .input(createManualCorrespondenceSchema)
+    .output(z.object({ id: z.string().uuid() }))
+    .mutation(async ({ ctx, input }) => {
+      try {
+        return await correspondenceService.createManualWithAudit(
+          toUserServiceContext(ctx),
+          input,
+        );
       } catch (e) {
         mapServiceError(e);
       }

@@ -1,6 +1,10 @@
 import { externalSubmissions, eq, and, type DrizzleDb } from '@colophony/db';
-import { desc, ilike, count } from 'drizzle-orm';
-import type { ListExternalSubmissionsInput, CSRStatus } from '@colophony/types';
+import { desc, ilike, count, inArray, sql } from 'drizzle-orm';
+import type {
+  ListExternalSubmissionsInput,
+  CSRStatus,
+  DuplicateCheckResult,
+} from '@colophony/types';
 import { AuditActions, AuditResources } from '@colophony/types';
 import type { UserServiceContext } from './types.js';
 
@@ -139,6 +143,81 @@ export const externalSubmissionService = {
       .where(eq(externalSubmissions.id, id))
       .returning();
     return deleted ?? null;
+  },
+
+  async checkDuplicates(
+    tx: DrizzleDb,
+    userId: string,
+    candidates: Array<{ journalName: string; sentAt?: string }>,
+  ): Promise<DuplicateCheckResult> {
+    if (candidates.length === 0) return [];
+
+    // Collect unique lowercase journal names
+    const uniqueNames = [
+      ...new Set(candidates.map((c) => c.journalName.toLowerCase())),
+    ];
+
+    // Query existing submissions with matching journal names
+    const existing = await tx
+      .select({
+        id: externalSubmissions.id,
+        journalName: externalSubmissions.journalName,
+        sentAt: externalSubmissions.sentAt,
+      })
+      .from(externalSubmissions)
+      .where(
+        and(
+          eq(externalSubmissions.userId, userId),
+          inArray(sql`lower(${externalSubmissions.journalName})`, uniqueNames),
+        ),
+      );
+
+    const DAY_MS = 86_400_000;
+    const results: DuplicateCheckResult = [];
+
+    for (let i = 0; i < candidates.length; i++) {
+      const candidate = candidates[i];
+      const candidateNameLower = candidate.journalName.toLowerCase();
+
+      for (const row of existing) {
+        if (row.journalName.toLowerCase() !== candidateNameLower) continue;
+
+        const candidateSentAt = candidate.sentAt
+          ? new Date(candidate.sentAt).getTime()
+          : null;
+        const existingSentAt = row.sentAt ? row.sentAt.getTime() : null;
+
+        // If neither has sentAt, match by name only
+        if (candidateSentAt === null && existingSentAt === null) {
+          results.push({
+            candidateIndex: i,
+            existingId: row.id,
+            existingJournalName: row.journalName,
+            existingSentAt: null,
+          });
+          break;
+        }
+
+        // If both have sentAt, check within ±1 day
+        if (
+          candidateSentAt !== null &&
+          existingSentAt !== null &&
+          Math.abs(candidateSentAt - existingSentAt) <= DAY_MS
+        ) {
+          results.push({
+            candidateIndex: i,
+            existingId: row.id,
+            existingJournalName: row.journalName,
+            existingSentAt: row.sentAt!.toISOString(),
+          });
+          break;
+        }
+
+        // One has sentAt and other doesn't — no match
+      }
+    }
+
+    return results;
   },
 
   // -------------------------------------------------------------------------
