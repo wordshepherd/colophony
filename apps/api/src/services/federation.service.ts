@@ -14,6 +14,7 @@ import {
   type FederationMetadata,
   type WebFingerResponse,
   type DidDocument,
+  type UpdateFederationConfigInput,
 } from '@colophony/types';
 import type { Env } from '../config/env.js';
 import { auditService } from './audit.service.js';
@@ -231,6 +232,44 @@ export const federationService = {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { privateKey, ...publicConfig } = full;
     return publicConfig;
+  },
+
+  /**
+   * Update mutable federation config fields (mode, contactEmail, capabilities).
+   * Uses superuser `db` pool — federation_config has no RLS.
+   * Audit logs the change via logDirect (no org scope).
+   */
+  async updateConfig(
+    env: Env,
+    input: UpdateFederationConfigInput,
+    actorId?: string,
+  ): Promise<FederationPublicConfig> {
+    const current = await this.getOrInitConfig(env);
+
+    const updateFields: Record<string, unknown> = {};
+    if (input.mode !== undefined) updateFields.mode = input.mode;
+    if (input.contactEmail !== undefined)
+      updateFields.contactEmail = input.contactEmail;
+    if (input.capabilities !== undefined)
+      updateFields.capabilities = input.capabilities;
+
+    if (Object.keys(updateFields).length > 0) {
+      await db
+        .update(federationConfig)
+        .set(updateFields)
+        .where(eq(federationConfig.id, current.id));
+    }
+
+    await auditService.logDirect({
+      resource: AuditResources.FEDERATION,
+      action: AuditActions.FEDERATION_CONFIG_UPDATED,
+      actorId,
+      newValue: input,
+    });
+
+    // Return updated public config
+    const updated = await this.getPublicConfig(env);
+    return updated;
   },
 
   /**

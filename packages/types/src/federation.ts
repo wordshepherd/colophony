@@ -186,6 +186,28 @@ export const remoteMetadataPreviewSchema = z.object({
 
 export type RemoteMetadataPreview = z.infer<typeof remoteMetadataPreviewSchema>;
 
+export const updateFederationConfigSchema = z.object({
+  mode: z.enum(["allowlist", "open", "managed_hub"]).optional(),
+  contactEmail: z.string().email().nullable().optional(),
+  capabilities: z.array(z.string()).optional(),
+});
+export type UpdateFederationConfigInput = z.infer<
+  typeof updateFederationConfigSchema
+>;
+
+export const federationPublicConfigSchema = z.object({
+  id: z.string(),
+  publicKey: z.string(),
+  keyId: z.string(),
+  mode: z.enum(["allowlist", "open", "managed_hub"]),
+  contactEmail: z.string().nullable(),
+  capabilities: z.array(z.string()),
+  enabled: z.boolean(),
+});
+export type FederationPublicConfig = z.infer<
+  typeof federationPublicConfigSchema
+>;
+
 export const domainParamSchema = z.object({
   domain: z
     .string()

@@ -29,6 +29,7 @@ import { externalSubmissionsRouter } from './routers/external-submissions.js';
 import { writerProfilesRouter } from './routers/writer-profiles.js';
 import { journalDirectoryRouter } from './routers/journal-directory.js';
 import { workspaceRouter } from './routers/workspace.js';
+import { federationRouter } from './routers/federation.js';
 
 // Re-export procedure builders for convenience
 export {
@@ -79,6 +80,7 @@ export const appRouter = t.router({
   writerProfiles: writerProfilesRouter,
   journalDirectory: journalDirectoryRouter,
   workspace: workspaceRouter,
+  federation: federationRouter,
   retention: t.router({}),
 });
 

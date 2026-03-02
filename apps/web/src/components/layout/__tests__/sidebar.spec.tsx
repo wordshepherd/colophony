@@ -154,6 +154,14 @@ describe("Sidebar", () => {
     expect(dashboardLink?.className).toMatch(/(?:^|\s)bg-accent(?:\s|$)/);
   });
 
+  it("should show Federation link in admin section when isAdmin", () => {
+    mockIsAdmin = true;
+    render(<Sidebar />);
+    const link = screen.getByText("Federation");
+    expect(link).toBeInTheDocument();
+    expect(link.closest("a")).toHaveAttribute("href", "/federation");
+  });
+
   it("should highlight Forms on sub-routes like /editor/forms/new", () => {
     mockIsEditor = true;
     mockPathname = "/editor/forms/new";
