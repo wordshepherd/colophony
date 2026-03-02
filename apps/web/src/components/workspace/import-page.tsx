@@ -127,18 +127,19 @@ export function ImportPage() {
   );
 
   useEffect(() => {
-    if (duplicateCheckQuery.data && validation) {
-      setValidation({
-        ...validation,
-        duplicateWarnings: duplicateCheckQuery.data.map((d) => ({
-          rowIndex: d.candidateIndex,
-          existingJournalName: d.existingJournalName,
-          existingSentAt: d.existingSentAt,
-        })),
+    if (duplicateCheckQuery.data) {
+      setValidation((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          duplicateWarnings: duplicateCheckQuery.data.map((d) => ({
+            rowIndex: d.candidateIndex,
+            existingJournalName: d.existingJournalName,
+            existingSentAt: d.existingSentAt,
+          })),
+        };
       });
     }
-    // Only run when duplicate check data arrives
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [duplicateCheckQuery.data]);
 
   // --- Import mutation ---
