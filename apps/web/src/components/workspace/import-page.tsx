@@ -155,8 +155,10 @@ export function ImportPage() {
             setStatusMappings(autoMappings);
           }
         }
-      } catch {
-        setParseError("Failed to parse CSV file");
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "Unknown error";
+        console.error("CSV parse error:", err);
+        setParseError(`Failed to parse CSV file: ${message}`);
       }
     },
     [presetDef],
