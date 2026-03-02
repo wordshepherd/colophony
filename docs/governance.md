@@ -32,11 +32,11 @@ There are no formal contributor tiers or committees. Contributors who demonstrat
 
 **Major changes** — new components, architectural shifts, federation protocol changes, or anything that would affect multiple tracks — should be proposed as a GitHub Issue with the `proposal` label. A good proposal includes:
 
-- **Problem statement** — what is the current limitation or need
+- **Problem statement** — the current limitation or need
 - **Proposed approach** — what you want to build or change
 - **Alternatives considered** — what else was evaluated and why it was set aside
 
-The maintainer will respond within a reasonable timeframe. There will be a discussion period before implementation begins to surface concerns and refine the approach. There is no formal RFC numbering system or accept/reject ceremony — this is a conversation, not a bureaucracy.
+The maintainer will typically respond within a week. There will be a discussion period before implementation begins to surface concerns and refine the approach. There is no formal RFC numbering system or accept/reject ceremony — this is a conversation, not a bureaucracy.
 
 ## Roadmap
 
@@ -72,6 +72,8 @@ This governance model will evolve as the project grows. Possible future changes 
 - Formal contributor roles (e.g., component maintainers, triagers)
 - A decision-making process that includes more voices on architectural questions
 - A steering group if the project reaches a scale that warrants one
+
+Colophony is licensed under AGPL-3.0-or-later, which ensures the codebase remains forkable regardless of project status or maintainer availability.
 
 Community input on governance changes is welcome via [GitHub Issues](https://github.com/colophony-project/colophony/issues). This document will be updated to reflect reality as it changes — not to describe aspirations.
 
