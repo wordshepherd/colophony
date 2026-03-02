@@ -394,9 +394,9 @@
 
 - [x] [P0] AGPL license boundary documentation — clearly document what is AGPL (Zitadel), what license Colophony uses, obligations for self-hosters, and how the boundary works — (CLAUDE.md security checklist + persona gap analysis 2026-02-27; done 2026-03-02 `docs/licensing.md`)
 - [x] [P0] Choose and document Colophony's own license — AGPL-3.0-or-later for core, MIT for SDKs/plugin tooling — (persona gap analysis 2026-02-27; done 2026-03-02 `LICENSE` + `docs/licensing.md`)
-- [ ] [P1] CONTRIBUTING.md — how to contribute, development setup, PR process, code of conduct reference — (persona gap analysis 2026-02-27)
-- [ ] [P1] CODE_OF_CONDUCT.md — (persona gap analysis 2026-02-27)
-- [ ] [P1] README.md rewrite — project description in brand voice, architecture overview, quick start, screenshots, link to docs — (persona gap analysis 2026-02-27)
+- [x] [P1] CONTRIBUTING.md — how to contribute, development setup, PR process, code of conduct reference — (persona gap analysis 2026-02-27; done 2026-03-02)
+- [x] [P1] CODE_OF_CONDUCT.md — (persona gap analysis 2026-02-27; done 2026-03-02 Contributor Covenant v3.0)
+- [x] [P1] README.md rewrite — project description in brand voice, architecture overview, quick start, screenshots, link to docs — (persona gap analysis 2026-02-27; done 2026-03-02)
 - [ ] [P2] Governance model documentation — who makes decisions, how contributions are evaluated, roadmap transparency — (persona gap analysis 2026-02-27)
 - [x] [P2] Fix deployment docs NestJS reference — deployment guide references NestJS but the system is Fastify — (persona gap analysis 2026-02-27; done 2026-03-02 docs audit)
 - [ ] [P3] Public instance identity page — human-readable page showing federation status, trust relationships, and governance commitments (the `.well-known/colophony` endpoint is machine-only) — (persona gap analysis 2026-02-27)
