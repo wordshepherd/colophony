@@ -304,6 +304,10 @@ git checkout -b <prefix>/<branch-name>
 
 If the user is already on a feature branch, skip this step entirely.
 
+### Step 9: Auto-enter plan mode
+
+After creating the branch (or if already on a feature branch), **immediately enter plan mode** using EnterPlanMode — do not ask the user for confirmation. The session focus was just selected; planning is the obvious next step. Waiting for the user to confirm wastes time when they may have stepped away from the terminal.
+
 ## Important notes
 
 - This is a READ-ONLY operation — do not modify any files or start any services (exception: if the user opts for catch-up housekeeping in Step 1, perform end-session steps before continuing)

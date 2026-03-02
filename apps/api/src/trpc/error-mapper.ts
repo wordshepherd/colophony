@@ -101,6 +101,11 @@ import {
   TrustPeerInvalidStateError,
   RemoteMetadataFetchError,
 } from '../services/trust.service.js';
+import {
+  HubNotEnabledError,
+  HubInstanceNotFoundError,
+  HubInstanceSuspendedError,
+} from '../services/hub.service.js';
 
 type TRPCErrorCode = ConstructorParameters<typeof TRPCError>[0]['code'];
 
@@ -193,6 +198,10 @@ const errorCodeMap: [new (...args: never[]) => Error, TRPCErrorCode][] = [
   [TrustPeerAlreadyExistsError, 'CONFLICT'],
   [TrustPeerInvalidStateError, 'CONFLICT'],
   [RemoteMetadataFetchError, 'BAD_REQUEST'],
+  // Hub errors
+  [HubNotEnabledError, 'NOT_FOUND'],
+  [HubInstanceNotFoundError, 'NOT_FOUND'],
+  [HubInstanceSuspendedError, 'FORBIDDEN'],
   // Precondition
   [FileNotCleanError, 'PRECONDITION_FAILED'],
 ];

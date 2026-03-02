@@ -405,15 +405,15 @@
 
 ## Track 10 — Federation Admin UI (Pre-Launch)
 
-> **Status:** In progress. P1 shipped (PR1: trust dashboard + overview). P2/P3 pending.
+> **Status:** Complete. P1 shipped (PR1: trust dashboard + overview). P2/P3 shipped (PR2: remaining 5 sub-pages).
 
 - [x] [P1] Trust management dashboard — list trusted peers with status, capabilities, last-verified; initiate/accept/reject/revoke trust relationships; preview remote instance metadata before trusting — (persona gap analysis 2026-02-27)
 - [x] [P1] Federation status overview — current instance mode (allowlist/open/managed_hub), capabilities enabled, instance public key, DID document link — (persona gap analysis 2026-02-27)
-- [ ] [P2] Sim-sub admin UI — view sim-sub check history per submission, grant overrides, see conflict details — (persona gap analysis 2026-02-27)
-- [ ] [P2] Transfer management UI — list inbound/outbound transfers, view status, cancel pending — (persona gap analysis 2026-02-27)
-- [ ] [P2] Migration management UI — list pending migrations, approve/reject outbound, view history — (persona gap analysis 2026-02-27)
-- [ ] [P3] Hub admin UI (managed hosting only) — list registered instances, suspend/revoke, view attestation status — (persona gap analysis 2026-02-27)
-- [ ] [P3] Audit log viewer — browse audit events with filters (actor, action, resource, date range) — (persona gap analysis 2026-02-27)
+- [x] [P2] Sim-sub admin UI — view sim-sub check history per submission, grant overrides, see conflict details — (persona gap analysis 2026-02-27)
+- [x] [P2] Transfer management UI — list inbound/outbound transfers, view status, cancel pending — (persona gap analysis 2026-02-27)
+- [x] [P2] Migration management UI — list pending migrations, approve/reject outbound, view history — (persona gap analysis 2026-02-27)
+- [x] [P3] Hub admin UI (managed hosting only) — list registered instances, suspend/revoke, view attestation status — (persona gap analysis 2026-02-27)
+- [x] [P3] Audit log viewer — browse audit events with filters (actor, action, resource, date range) — (persona gap analysis 2026-02-27)
 
 ---
 

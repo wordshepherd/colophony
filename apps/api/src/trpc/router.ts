@@ -30,6 +30,10 @@ import { writerProfilesRouter } from './routers/writer-profiles.js';
 import { journalDirectoryRouter } from './routers/journal-directory.js';
 import { workspaceRouter } from './routers/workspace.js';
 import { federationRouter } from './routers/federation.js';
+import { simsubRouter } from './routers/simsub.js';
+import { transferRouter } from './routers/transfer.js';
+import { migrationRouter } from './routers/migration.js';
+import { hubRouter } from './routers/hub.js';
 
 // Re-export procedure builders for convenience
 export {
@@ -81,6 +85,10 @@ export const appRouter = t.router({
   journalDirectory: journalDirectoryRouter,
   workspace: workspaceRouter,
   federation: federationRouter,
+  simsub: simsubRouter,
+  transfers: transferRouter,
+  migrations: migrationRouter,
+  hub: hubRouter,
   retention: t.router({}),
 });
 
