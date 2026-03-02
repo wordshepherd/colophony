@@ -1,3 +1,5 @@
+import crypto from 'node:crypto';
+import { PassThrough } from 'node:stream';
 import NodeClam from 'clamscan';
 import { withRls } from '@colophony/db';
 import type { DrizzleDb } from '@colophony/db';
@@ -59,18 +61,38 @@ export function startFileScanWorker(
         await fileService.updateScanStatus(tx, fileId, 'SCANNING');
       });
 
-      // Phase 2: Stream from S3 and scan (no DB operations)
+      // Phase 2: Stream from S3, compute SHA-256 content hash, and scan
       let isInfected: boolean;
       let viruses: string[];
+      let contentHash: string;
       try {
         const stream = await storage.downloadFromBucket(
           storage.quarantineBucket,
           storageKey,
         );
         const clam = await getClamClient(env);
-        const result = await clam.scanStream(stream);
-        isInfected = result.isInfected;
-        viruses = result.viruses;
+
+        // Tee the stream: one path to ClamAV, one to SHA-256 hasher
+        const passthrough = new PassThrough();
+        const hashTransform = crypto.createHash('sha256');
+
+        stream.pipe(passthrough);
+        stream.pipe(hashTransform);
+
+        const [scanResult, hashHex] = await Promise.all([
+          clam.scanStream(passthrough),
+          new Promise<string>((resolve, reject) => {
+            hashTransform.on('finish', () =>
+              resolve(hashTransform.digest('hex')),
+            );
+            hashTransform.on('error', reject);
+            passthrough.on('error', reject);
+          }),
+        ]);
+
+        isInfected = scanResult.isInfected;
+        viruses = scanResult.viruses;
+        contentHash = hashHex;
       } catch (err) {
         // Phase 2 error: mark FAILED, audit, re-throw for retry
         await withRls(rlsCtx, async (tx: DrizzleDb) => {
@@ -101,6 +123,7 @@ export function startFileScanWorker(
 
           await withRls(rlsCtx, async (tx: DrizzleDb) => {
             await fileService.updateScanStatus(tx, fileId, 'CLEAN');
+            await fileService.updateContentHash(tx, fileId, contentHash);
             await auditService.log(tx, {
               resource: AuditResources.FILE,
               action: AuditActions.FILE_SCAN_CLEAN,

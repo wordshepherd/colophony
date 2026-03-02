@@ -59,10 +59,23 @@ export const submissionPeriods = pgTable(
     publicationId: uuid("publication_id").references(() => publications.id, {
       onDelete: "set null",
     }),
-    simSubProhibited: boolean("sim_sub_prohibited").notNull().default(false),
+    simSubPolicy: jsonb("sim_sub_policy")
+      .$type<{
+        type: "prohibited" | "allowed" | "allowed_notify" | "allowed_withdraw";
+        notifyWindowHours?: number;
+        genreOverrides?: Array<{ genre: string; type: string }>;
+        notes?: string;
+      }>()
+      .notNull()
+      .default(sql`'{"type": "allowed"}'::jsonb`),
     blindReviewMode: blindReviewModeEnum("blind_review_mode")
       .notNull()
       .default("none"),
+    isContest: boolean("is_contest").notNull().default(false),
+    contestPrize: varchar("contest_prize", { length: 500 }),
+    contestWinnersAnnouncedAt: timestamp("contest_winners_announced_at", {
+      withTimezone: true,
+    }),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
@@ -130,6 +143,12 @@ export const submissions = pgTable(
     transferredFromTransferId: varchar("transferred_from_transfer_id", {
       length: 255,
     }),
+    simSubPolicyRequirement: jsonb("sim_sub_policy_requirement").$type<{
+      type: "notify" | "withdraw";
+      windowHours?: number;
+      acknowledgedAt?: string;
+      dueAt?: string;
+    } | null>(),
     statusTokenHash: varchar("status_token_hash", { length: 128 }),
     statusTokenExpiresAt: timestamp("status_token_expires_at", {
       withTimezone: true,
@@ -207,6 +226,7 @@ export const simSubChecks = pgTable(
       .notNull()
       .references(() => submissions.id, { onDelete: "cascade" }),
     fingerprint: varchar("fingerprint", { length: 64 }).notNull(),
+    federationFingerprint: varchar("federation_fingerprint", { length: 64 }),
     submitterDid: varchar("submitter_did", { length: 512 }).notNull(),
     result: simSubCheckResultEnum("result").notNull(),
     localConflicts: jsonb("local_conflicts")

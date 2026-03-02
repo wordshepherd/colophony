@@ -64,6 +64,7 @@ export const manuscriptVersions = pgTable(
     versionNumber: integer("version_number").notNull(),
     label: varchar("label", { length: 255 }),
     contentFingerprint: varchar("content_fingerprint", { length: 64 }),
+    federationFingerprint: varchar("federation_fingerprint", { length: 64 }),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
@@ -71,6 +72,9 @@ export const manuscriptVersions = pgTable(
   (table) => [
     index("manuscript_versions_manuscript_id_idx").on(table.manuscriptId),
     index("manuscript_versions_fingerprint_idx").on(table.contentFingerprint),
+    index("manuscript_versions_federation_fingerprint_idx").on(
+      table.federationFingerprint,
+    ),
     unique("manuscript_versions_manuscript_version_unique").on(
       table.manuscriptId,
       table.versionNumber,
@@ -97,6 +101,7 @@ export const files = pgTable(
     mimeType: varchar("mime_type", { length: 255 }).notNull(),
     size: bigint("size", { mode: "number" }).notNull(),
     storageKey: varchar("storage_key", { length: 1000 }).notNull(),
+    contentHash: varchar("content_hash", { length: 64 }),
     scanStatus: scanStatusEnum("scan_status").notNull().default("PENDING"),
     scannedAt: timestamp("scanned_at", { withTimezone: true }),
     uploadedAt: timestamp("uploaded_at", { withTimezone: true })
@@ -104,6 +109,7 @@ export const files = pgTable(
       .notNull(),
   },
   (table) => [
+    index("files_content_hash_idx").on(table.contentHash),
     index("files_manuscript_version_id_idx").on(table.manuscriptVersionId),
     index("files_version_scan_status_idx").on(
       table.manuscriptVersionId,

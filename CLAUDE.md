@@ -303,14 +303,14 @@ Wait for user confirmation or redirection on each decision before proceeding to 
 - All decisions were already made in the requirements (backlog item specifies the approach)
 - The user explicitly says "just do it" or "use your judgment"
 
-### Plan Review: OpenCode Integration
+### Plan Review: Codex Integration
 
-<!-- To switch back to Codex: replace /opencode-review with /codex-review below -->
+<!-- To switch to OpenCode: replace /codex-review with /opencode-review below -->
 
 Every non-trivial plan **must be reviewed before presenting to the user for approval**. The workflow is:
 
 1. **Write the plan** (after decision surfacing, per above)
-2. **Run `/opencode-review plan`** automatically — do not ask the user, just run it
+2. **Run `/codex-review plan`** automatically — do not ask the user, just run it
 3. **Evaluate review findings** — adjust the plan for any critical or important issues; for dismissed suggestions, add a brief note (e.g., "Review suggested X; dismissed because Y")
 4. **Present the reviewed plan** to the user for approval
 

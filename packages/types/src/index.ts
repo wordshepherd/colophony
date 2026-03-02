@@ -18,6 +18,7 @@ export * from "./issue";
 export * from "./cms";
 export * from "./federation";
 export * from "./sim-sub";
+export * from "./sim-sub-policy";
 export * from "./transfer";
 export * from "./migration";
 export * from "./hub";

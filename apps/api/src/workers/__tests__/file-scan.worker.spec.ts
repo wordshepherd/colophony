@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { Readable } from 'node:stream';
 
 // ---------------------------------------------------------------------------
 // Mocks — must be set up before imports
@@ -19,9 +20,11 @@ vi.mock('@colophony/db', () => ({
 }));
 
 const mockUpdateScanStatus = vi.fn();
+const mockUpdateContentHash = vi.fn();
 vi.mock('../../services/file.service.js', () => ({
   fileService: {
     updateScanStatus: (...args: unknown[]) => mockUpdateScanStatus(...args),
+    updateContentHash: (...args: unknown[]) => mockUpdateContentHash(...args),
   },
 }));
 
@@ -45,18 +48,12 @@ vi.mock('clamscan', () => ({
   }),
 }));
 
-// Mock BullMQ Worker — capture the processor function
+// Mock instrumented worker — capture the processor function directly
 let capturedProcessor: ((job: unknown) => Promise<void>) | null = null;
-vi.mock('bullmq', () => ({
-  Worker: vi.fn().mockImplementation(function (
-    _name: string,
-    processor: (job: unknown) => Promise<void>,
-  ) {
-    capturedProcessor = processor;
-    return {
-      on: vi.fn(),
-      close: vi.fn(),
-    };
+vi.mock('../../config/instrumented-worker.js', () => ({
+  createInstrumentedWorker: vi.fn().mockImplementation((opts: any) => {
+    capturedProcessor = opts.processor;
+    return { on: vi.fn(), close: vi.fn() };
   }),
 }));
 
@@ -97,12 +94,21 @@ const TEST_JOB = {
   data: {
     fileId: 'file-1',
     storageKey: 'quarantine/upload-abc',
+    userId: 'user-1',
     organizationId: 'org-1',
   },
   id: 'file-1',
   attemptsMade: 1,
   opts: { attempts: 3 },
 };
+
+/**
+ * Create a mock Readable stream that emits the given data.
+ * Supports .pipe() for the dual-pipe pattern (ClamAV + SHA-256).
+ */
+function createMockStream(data = 'test file content'): Readable {
+  return Readable.from(Buffer.from(data));
+}
 
 describe('file-scan worker', () => {
   beforeEach(() => {
@@ -127,13 +133,14 @@ describe('file-scan worker', () => {
   it('marks file CLEAN, moves from quarantine to submissions bucket', async () => {
     const processor = getProcessor();
 
-    mockDownloadFromBucket.mockResolvedValueOnce({ pipe: vi.fn() }); // mock Readable
+    mockDownloadFromBucket.mockResolvedValueOnce(createMockStream());
     mockScanStream.mockResolvedValueOnce({
       isInfected: false,
       viruses: [],
     });
     mockMoveBetweenBuckets.mockResolvedValueOnce(undefined);
     mockUpdateScanStatus.mockResolvedValue(null);
+    mockUpdateContentHash.mockResolvedValue(undefined);
     mockAuditLog.mockResolvedValue(undefined);
 
     await processor(TEST_JOB);
@@ -172,13 +179,41 @@ describe('file-scan worker', () => {
   });
 
   // -------------------------------------------------------------------------
+  // Content hash on CLEAN
+  // -------------------------------------------------------------------------
+
+  it('stores content hash on CLEAN scan', async () => {
+    const processor = getProcessor();
+    const fileContent = 'deterministic test content';
+
+    mockDownloadFromBucket.mockResolvedValueOnce(createMockStream(fileContent));
+    mockScanStream.mockResolvedValueOnce({
+      isInfected: false,
+      viruses: [],
+    });
+    mockMoveBetweenBuckets.mockResolvedValueOnce(undefined);
+    mockUpdateScanStatus.mockResolvedValue(null);
+    mockUpdateContentHash.mockResolvedValue(undefined);
+    mockAuditLog.mockResolvedValue(undefined);
+
+    await processor(TEST_JOB);
+
+    // updateContentHash should be called with a 64-char hex SHA-256
+    expect(mockUpdateContentHash).toHaveBeenCalledWith(
+      expect.anything(),
+      'file-1',
+      expect.stringMatching(/^[a-f0-9]{64}$/),
+    );
+  });
+
+  // -------------------------------------------------------------------------
   // INFECTED path
   // -------------------------------------------------------------------------
 
   it('marks file INFECTED, deletes from quarantine, does NOT move', async () => {
     const processor = getProcessor();
 
-    mockDownloadFromBucket.mockResolvedValueOnce({ pipe: vi.fn() });
+    mockDownloadFromBucket.mockResolvedValueOnce(createMockStream());
     mockScanStream.mockResolvedValueOnce({
       isInfected: true,
       viruses: ['Eicar-Test-Signature'],
@@ -214,6 +249,23 @@ describe('file-scan worker', () => {
         newValue: { viruses: ['Eicar-Test-Signature'] },
       }),
     );
+  });
+
+  it('does not store content hash on INFECTED scan', async () => {
+    const processor = getProcessor();
+
+    mockDownloadFromBucket.mockResolvedValueOnce(createMockStream());
+    mockScanStream.mockResolvedValueOnce({
+      isInfected: true,
+      viruses: ['Eicar-Test-Signature'],
+    });
+    mockDeleteFromBucket.mockResolvedValueOnce(undefined);
+    mockUpdateScanStatus.mockResolvedValue(null);
+    mockAuditLog.mockResolvedValue(undefined);
+
+    await processor(TEST_JOB);
+
+    expect(mockUpdateContentHash).not.toHaveBeenCalled();
   });
 
   // -------------------------------------------------------------------------
@@ -263,7 +315,7 @@ describe('file-scan worker', () => {
   it('marks file FAILED when S3 move fails after clean scan', async () => {
     const processor = getProcessor();
 
-    mockDownloadFromBucket.mockResolvedValueOnce({ pipe: vi.fn() });
+    mockDownloadFromBucket.mockResolvedValueOnce(createMockStream());
     mockScanStream.mockResolvedValueOnce({
       isInfected: false,
       viruses: [],
@@ -308,24 +360,25 @@ describe('file-scan worker', () => {
   // RLS wrapping
   // -------------------------------------------------------------------------
 
-  it('wraps all DB operations in withRls with correct orgId', async () => {
+  it('wraps all DB operations in withRls with correct userId', async () => {
     const processor = getProcessor();
 
-    mockDownloadFromBucket.mockResolvedValueOnce({ pipe: vi.fn() });
+    mockDownloadFromBucket.mockResolvedValueOnce(createMockStream());
     mockScanStream.mockResolvedValueOnce({
       isInfected: false,
       viruses: [],
     });
     mockMoveBetweenBuckets.mockResolvedValueOnce(undefined);
     mockUpdateScanStatus.mockResolvedValue(null);
+    mockUpdateContentHash.mockResolvedValue(undefined);
     mockAuditLog.mockResolvedValue(undefined);
 
     await processor(TEST_JOB);
 
-    // withRls called with orgId for each DB phase
+    // withRls called with userId + orgId for each DB phase
     const rlsCalls = mockWithRls.mock.calls;
     for (const call of rlsCalls) {
-      expect(call[0]).toEqual({ orgId: 'org-1' });
+      expect(call[0]).toEqual({ userId: 'user-1', orgId: 'org-1' });
     }
     // At least 2 calls: SCANNING + CLEAN status updates
     expect(rlsCalls.length).toBeGreaterThanOrEqual(2);
