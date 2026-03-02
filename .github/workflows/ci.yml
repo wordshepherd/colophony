@@ -323,7 +323,7 @@ jobs:
           DATABASE_URL: postgresql://colophony:password@localhost:5432/colophony
       - name: Upload Playwright report
         if: ${{ !cancelled() }}
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: playwright-report
           path: apps/web/playwright-report/
@@ -408,7 +408,7 @@ jobs:
           DATABASE_URL: postgresql://colophony:password@localhost:5432/colophony
       - name: Upload Playwright report
         if: ${{ !cancelled() }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: playwright-embed-report
           path: apps/web/playwright-report/
@@ -493,7 +493,7 @@ jobs:
           DATABASE_URL: postgresql://colophony:password@localhost:5432/colophony
       - name: Upload Playwright report
         if: ${{ !cancelled() }}
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: playwright-slate-report
           path: apps/web/playwright-report/
@@ -614,7 +614,7 @@ jobs:
           echo "=== tusd logs ===" && docker logs tusd 2>&1 | tail -100 || true
       - name: Upload Playwright report
         if: ${{ !cancelled() }}
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: playwright-uploads-report
           path: apps/web/playwright-report/
@@ -743,7 +743,7 @@ jobs:
         run: docker logs zitadel 2>&1 | tail -100 || true
       - name: Upload Playwright report
         if: ${{ !cancelled() }}
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: playwright-oidc-report
           path: apps/web/playwright-report/
