@@ -129,6 +129,13 @@ export const peerTrustStatusEnum = pgEnum("PeerTrustStatus", [
   "revoked",
 ]);
 
+export const simSubPolicyTypeEnum = pgEnum("SimSubPolicyType", [
+  "prohibited",
+  "allowed",
+  "allowed_notify",
+  "allowed_withdraw",
+]);
+
 export const simSubCheckResultEnum = pgEnum("SimSubCheckResult", [
   "CLEAR",
   "CONFLICT",

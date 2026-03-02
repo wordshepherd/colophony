@@ -1,4 +1,9 @@
 import { z } from "zod";
+import {
+  simSubPolicySchema,
+  siblingVersionConflictSchema,
+  writerDisclosedConflictSchema,
+} from "./sim-sub-policy";
 
 // ---------------------------------------------------------------------------
 // Sim-sub check result enum
@@ -67,7 +72,7 @@ export const simSubRemoteResultSchema = z.object({
 });
 export type SimSubRemoteResult = z.infer<typeof simSubRemoteResultSchema>;
 
-/** Full result of a sim-sub check (local + remote). */
+/** Full result of a sim-sub check (local + remote + version-aware). */
 export const simSubFullCheckResultSchema = z.object({
   result: simSubCheckResultSchema.describe("Aggregated check result"),
   fingerprint: z.string().describe("The content fingerprint that was checked"),
@@ -76,5 +81,16 @@ export const simSubFullCheckResultSchema = z.object({
     .describe("The federation fingerprint (filename:size based)"),
   localConflicts: z.array(simSubConflictSchema),
   remoteResults: z.array(simSubRemoteResultSchema),
+  siblingVersionConflicts: z
+    .array(siblingVersionConflictSchema)
+    .optional()
+    .describe("Active submissions on other versions of the same manuscript"),
+  writerDisclosedConflicts: z
+    .array(writerDisclosedConflictSchema)
+    .optional()
+    .describe("Active external submissions disclosed by the writer"),
+  effectivePolicy: simSubPolicySchema
+    .optional()
+    .describe("The policy that was applied for this check"),
 });
 export type SimSubFullCheckResult = z.infer<typeof simSubFullCheckResultSchema>;

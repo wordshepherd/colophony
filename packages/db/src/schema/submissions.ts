@@ -59,7 +59,15 @@ export const submissionPeriods = pgTable(
     publicationId: uuid("publication_id").references(() => publications.id, {
       onDelete: "set null",
     }),
-    simSubProhibited: boolean("sim_sub_prohibited").notNull().default(false),
+    simSubPolicy: jsonb("sim_sub_policy")
+      .$type<{
+        type: "prohibited" | "allowed" | "allowed_notify" | "allowed_withdraw";
+        notifyWindowHours?: number;
+        genreOverrides?: Array<{ genre: string; type: string }>;
+        notes?: string;
+      }>()
+      .notNull()
+      .default(sql`'{"type": "allowed"}'::jsonb`),
     blindReviewMode: blindReviewModeEnum("blind_review_mode")
       .notNull()
       .default("none"),
@@ -135,6 +143,12 @@ export const submissions = pgTable(
     transferredFromTransferId: varchar("transferred_from_transfer_id", {
       length: 255,
     }),
+    simSubPolicyRequirement: jsonb("sim_sub_policy_requirement").$type<{
+      type: "notify" | "withdraw";
+      windowHours?: number;
+      acknowledgedAt?: string;
+      dueAt?: string;
+    } | null>(),
     statusTokenHash: varchar("status_token_hash", { length: 128 }),
     statusTokenExpiresAt: timestamp("status_token_expires_at", {
       withTimezone: true,

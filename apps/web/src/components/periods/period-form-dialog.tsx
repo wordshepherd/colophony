@@ -33,10 +33,30 @@ import {
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
+import { Loader2, Plus, X } from "lucide-react";
 /**
  * Period data as received from tRPC (dates may be string or Date after serialization).
  */
+const SIM_SUB_POLICY_TYPES = [
+  { value: "allowed", label: "Allowed" },
+  { value: "prohibited", label: "Prohibited" },
+  { value: "allowed_notify", label: "Allowed (Notify)" },
+  { value: "allowed_withdraw", label: "Allowed (Withdraw)" },
+] as const;
+
+const GENRES = [
+  { value: "poetry", label: "Poetry" },
+  { value: "fiction", label: "Fiction" },
+  { value: "creative_nonfiction", label: "Creative Nonfiction" },
+  { value: "nonfiction", label: "Nonfiction" },
+  { value: "drama", label: "Drama" },
+  { value: "translation", label: "Translation" },
+  { value: "visual_art", label: "Visual Art" },
+  { value: "comics", label: "Comics" },
+  { value: "audio", label: "Audio" },
+  { value: "other", label: "Other" },
+] as const;
+
 interface PeriodData {
   id: string;
   name: string;
@@ -50,12 +70,23 @@ interface PeriodData {
   isContest?: boolean;
   contestPrize?: string | null;
   contestWinnersAnnouncedAt?: Date | string | null;
+  simSubPolicy?: {
+    type: string;
+    notifyWindowHours?: number;
+    genreOverrides?: Array<{ genre: string; type: string }>;
+    notes?: string;
+  };
 }
 
 /**
  * Local form schema using string dates for datetime-local inputs.
  * Converted to Date objects before submission.
  */
+const genreOverrideSchema = z.object({
+  genre: z.string().min(1),
+  type: z.string().min(1),
+});
+
 const formSchema = z.object({
   name: z.string().min(1, "Name is required").max(255),
   description: z.string().max(2000).optional(),
@@ -68,6 +99,10 @@ const formSchema = z.object({
   isContest: z.boolean().optional(),
   contestPrize: z.string().max(500).optional(),
   contestWinnersAnnouncedAt: z.string().optional(),
+  simSubPolicyType: z.string().optional(),
+  simSubNotifyWindowHours: z.string().optional(),
+  simSubGenreOverrides: z.array(genreOverrideSchema).optional(),
+  simSubNotes: z.string().max(1000).optional(),
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -106,6 +141,10 @@ export function PeriodFormDialog({
       isContest: false,
       contestPrize: "",
       contestWinnersAnnouncedAt: "",
+      simSubPolicyType: "allowed",
+      simSubNotifyWindowHours: "",
+      simSubGenreOverrides: [],
+      simSubNotes: "",
     },
   });
 
@@ -126,6 +165,13 @@ export function PeriodFormDialog({
         contestWinnersAnnouncedAt: period.contestWinnersAnnouncedAt
           ? toDatetimeLocal(new Date(period.contestWinnersAnnouncedAt))
           : "",
+        simSubPolicyType: period.simSubPolicy?.type ?? "allowed",
+        simSubNotifyWindowHours:
+          period.simSubPolicy?.notifyWindowHours != null
+            ? String(period.simSubPolicy.notifyWindowHours)
+            : "",
+        simSubGenreOverrides: period.simSubPolicy?.genreOverrides ?? [],
+        simSubNotes: period.simSubPolicy?.notes ?? "",
       });
     } else if (open) {
       form.reset({
@@ -140,6 +186,10 @@ export function PeriodFormDialog({
         isContest: false,
         contestPrize: "",
         contestWinnersAnnouncedAt: "",
+        simSubPolicyType: "allowed",
+        simSubNotifyWindowHours: "",
+        simSubGenreOverrides: [],
+        simSubNotes: "",
       });
     }
   }, [open, period, form]);
@@ -170,6 +220,26 @@ export function PeriodFormDialog({
   const isPending = createMutation.isPending || updateMutation.isPending;
 
   const onSubmit = (data: FormData) => {
+    // Build sim-sub policy object — Zod validates on tRPC boundary
+    const policyType = data.simSubPolicyType ?? "allowed";
+    const simSubPolicy = {
+      type: policyType,
+      ...((policyType === "allowed_notify" ||
+        policyType === "allowed_withdraw") &&
+        data.simSubNotifyWindowHours && {
+          notifyWindowHours: Number(data.simSubNotifyWindowHours),
+        }),
+      ...((data.simSubGenreOverrides?.length ?? 0) > 0 && {
+        genreOverrides: data.simSubGenreOverrides,
+      }),
+      ...(data.simSubNotes && { notes: data.simSubNotes }),
+    } as {
+      type: "prohibited" | "allowed" | "allowed_notify" | "allowed_withdraw";
+      notifyWindowHours?: number;
+      genreOverrides?: Array<{ genre: string; type: string }>;
+      notes?: string;
+    };
+
     const payload = {
       name: data.name,
       description: data.description || undefined,
@@ -194,12 +264,15 @@ export function PeriodFormDialog({
         data.isContest && data.contestWinnersAnnouncedAt
           ? new Date(data.contestWinnersAnnouncedAt)
           : undefined,
+      simSubPolicy,
     };
 
     if (isEdit) {
-      updateMutation.mutate({ id: period.id, ...payload });
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      updateMutation.mutate({ id: period.id, ...payload } as any);
     } else {
-      createMutation.mutate(payload);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      createMutation.mutate(payload as any);
     }
   };
 
@@ -367,6 +440,151 @@ export function PeriodFormDialog({
                       <SelectItem value="double_blind">Double Blind</SelectItem>
                     </SelectContent>
                   </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {/* Sim-Sub Policy */}
+            <FormField
+              control={form.control}
+              name="simSubPolicyType"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Simultaneous Submission Policy</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Allowed" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {SIM_SUB_POLICY_TYPES.map((t) => (
+                        <SelectItem key={t.value} value={t.value}>
+                          {t.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {(form.watch("simSubPolicyType") === "allowed_notify" ||
+              form.watch("simSubPolicyType") === "allowed_withdraw") && (
+              <FormField
+                control={form.control}
+                name="simSubNotifyWindowHours"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Notification Window (hours)</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        min="1"
+                        step="1"
+                        placeholder="e.g. 48"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
+
+            {form.watch("simSubPolicyType") !== "allowed" && (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <FormLabel>Genre Overrides</FormLabel>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      const current =
+                        form.getValues("simSubGenreOverrides") ?? [];
+                      form.setValue("simSubGenreOverrides", [
+                        ...current,
+                        { genre: "", type: "allowed" },
+                      ]);
+                    }}
+                  >
+                    <Plus className="mr-1 h-3 w-3" />
+                    Add Override
+                  </Button>
+                </div>
+                {(form.watch("simSubGenreOverrides") ?? []).map((_, idx) => (
+                  <div key={idx} className="flex items-center gap-2">
+                    <Select
+                      value={form.watch(`simSubGenreOverrides.${idx}.genre`)}
+                      onValueChange={(v) =>
+                        form.setValue(`simSubGenreOverrides.${idx}.genre`, v)
+                      }
+                    >
+                      <SelectTrigger className="flex-1">
+                        <SelectValue placeholder="Genre" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {GENRES.map((g) => (
+                          <SelectItem key={g.value} value={g.value}>
+                            {g.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Select
+                      value={form.watch(`simSubGenreOverrides.${idx}.type`)}
+                      onValueChange={(v) =>
+                        form.setValue(`simSubGenreOverrides.${idx}.type`, v)
+                      }
+                    >
+                      <SelectTrigger className="flex-1">
+                        <SelectValue placeholder="Policy" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {SIM_SUB_POLICY_TYPES.map((t) => (
+                          <SelectItem key={t.value} value={t.value}>
+                            {t.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => {
+                        const current =
+                          form.getValues("simSubGenreOverrides") ?? [];
+                        form.setValue(
+                          "simSubGenreOverrides",
+                          current.filter((_, i) => i !== idx),
+                        );
+                      }}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <FormField
+              control={form.control}
+              name="simSubNotes"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Sim-Sub Policy Notes</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      placeholder="Optional notes about your sim-sub policy..."
+                      rows={2}
+                      maxLength={1000}
+                      {...field}
+                    />
+                  </FormControl>
                   <FormMessage />
                 </FormItem>
               )}

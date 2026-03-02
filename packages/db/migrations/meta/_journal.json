@@ -344,6 +344,13 @@
       "when": 1778800000000,
       "tag": "0048_fingerprint_split_contest",
       "breakpoints": true
+    },
+    {
+      "idx": 49,
+      "version": "7",
+      "when": 1779000000000,
+      "tag": "0049_simsub_policy_model",
+      "breakpoints": true
     }
   ]
 }
