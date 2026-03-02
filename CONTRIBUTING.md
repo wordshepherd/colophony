@@ -11,7 +11,7 @@ Please read our [Code of Conduct](CODE_OF_CONDUCT.md) before participating.
 - Node.js >= 22
 - pnpm 9.15+
 - Docker and Docker Compose
-- tmux + [Overmind](https://github.com/DarthSim/overmind) (process manager for dev servers)
+- tmux + [Overmind](https://github.com/DarthSim/overmind) — process supervisor for running the API and web dev servers concurrently with log multiplexing
 
 ### Setup
 
@@ -88,4 +88,5 @@ By contributing to Colophony, you agree that your contributions will be licensed
 ## Reporting Issues
 
 - **Bugs and feature requests:** [GitHub Issues](https://github.com/colophony-project/colophony/issues)
-- **Security vulnerabilities or conduct concerns:** hi@colophony.pub
+- **Security vulnerabilities:** See [SECURITY.md](SECURITY.md) for our disclosure policy. Email security@colophony.pub.
+- **Code of conduct concerns:** conduct@colophony.pub

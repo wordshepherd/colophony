@@ -1,43 +1,43 @@
 # Security Policy
 
-## Supported Versions
-
-| Version | Supported |
-| ------- | --------- |
-| latest  | Yes       |
-
 ## Reporting a Vulnerability
 
-If you discover a security vulnerability, please report it responsibly:
+If you discover a security vulnerability in Colophony, please report it responsibly. **Do not open a public GitHub issue.**
 
-1. **Do NOT** open a public GitHub issue.
-2. Email **security@colophony.dev** (or create a [GitHub Security Advisory](https://github.com/wordshepherd/colophony/security/advisories/new)) with:
-   - Description of the vulnerability
-   - Steps to reproduce
-   - Potential impact
-   - Suggested fix (if any)
-3. You will receive an acknowledgment within **48 hours**.
-4. We aim to provide a fix within **7 days** for critical issues.
+Email **security@colophony.pub** with:
 
-## Security Measures
+- A description of the vulnerability
+- Steps to reproduce (or a proof of concept)
+- The affected component(s), if known (Hopper, Slate, Relay, Register, or infrastructure)
 
-This project implements:
+We will acknowledge your report within 48 hours and aim to provide an initial assessment within 5 business days.
 
-- **Row-Level Security (RLS)** — PostgreSQL FORCE RLS on all tenant tables
-- **Non-superuser application role** — app_user cannot bypass RLS
-- **JWT + refresh token rotation** — 15-min access tokens, single-use refresh tokens
-- **Rate limiting** — 100 req/min default, 20 req/min auth endpoints
-- **Security headers** — CSP, HSTS, X-Content-Type-Options
-- **Pre-commit secret scanning** — blocks live API keys, private keys, .env files
-- **Input validation** — Zod schemas on all tRPC procedure inputs
-- **File virus scanning** — ClamAV via BullMQ before files reach production storage
-- **Audit logging** — all sensitive operations logged with actor, IP, user-agent
-- **GDPR compliance** — data export, erasure, consent management, retention policies
+## What Qualifies
 
-## Responsible Disclosure
+We are interested in vulnerabilities including but not limited to:
 
-We appreciate security researchers who follow responsible disclosure. We will:
+- Authentication or authorization bypass
+- Row-level security (RLS) policy violations or tenant data leakage
+- SQL injection, XSS, SSRF, or other OWASP Top 10 issues
+- Webhook signature bypass or replay attacks
+- Federation protocol vulnerabilities (trust handshake, BSAP, HTTP signatures)
+- Sensitive data exposure (PII, credentials, audit logs)
 
-- Acknowledge your report promptly
-- Keep you informed of our progress
-- Credit you in the advisory (unless you prefer anonymity)
+## What Does Not Qualify
+
+- Vulnerabilities in dependencies that do not have a demonstrated exploit path in Colophony
+- Issues requiring physical access to the server
+- Social engineering attacks
+- Denial of service via volume (rate limiting is in place)
+
+## Disclosure
+
+We follow coordinated disclosure. Once a fix is available, we will:
+
+1. Release a patched version
+2. Credit the reporter (unless anonymity is requested)
+3. Publish a security advisory via GitHub
+
+## Scope
+
+This policy covers the Colophony core (AGPL-licensed packages). For vulnerabilities in third-party dependencies (Zitadel, PostgreSQL, Redis, etc.), please report to the respective projects directly.

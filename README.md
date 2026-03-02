@@ -8,7 +8,7 @@ Colophony is a self-hosted platform covering the full publication lifecycle for 
 
 The platform is built around four components that work together as an integrated suite, or independently as your workflow requires. Federation support lets magazines collaborate on simultaneous submission detection, piece transfers, and writer identity portability across instances.
 
-Colophony is designed for small-to-mid-size literary publications that want full control over their infrastructure and data.
+Colophony is designed for independent literary publications that want full control over their infrastructure and data.
 
 ## Components
 
@@ -27,7 +27,7 @@ Colophony is designed for small-to-mid-size literary publications that want full
 - **CMS publishing** with adapter support for static site generators
 - **Notifications** — email (SMTP/SendGrid), webhooks, and in-app messaging
 - **Cross-instance federation** — discover and trust other Colophony instances
-- **Simultaneous submission detection** using the Blind Simultaneous Attestation Protocol (BSAP)
+- **Simultaneous submission detection** via the Blind Simultaneous Attestation Protocol (BSAP) — federated instances can detect overlapping submissions without revealing manuscript content or author identity to each other
 - **Writer workspace** — personal portfolio, submission tracking, and analytics across magazines
 - **Data portability** — export/import via the Common Submission Record (CSR) format
 - **Plugin system** — extend functionality with SDK-based plugins and UI extensions
@@ -63,7 +63,9 @@ Prerequisites: Node.js >= 22, pnpm 9.15+, Docker, tmux + Overmind. See [CONTRIBU
 - [Architecture](docs/architecture.md) — system design, component breakdown, development tracks
 - [Licensing](docs/licensing.md) — AGPL/MIT boundary, obligations, FAQ
 - [Testing](docs/testing.md) — test strategy, running tests, CI pipeline
+- [Deployment](docs/deployment.md) — Docker Compose setup, managed hosting
 - [Contributing](CONTRIBUTING.md) — development setup, workflow, PR process
+- [Security Policy](SECURITY.md) — vulnerability reporting
 
 ## API
 
@@ -80,7 +82,7 @@ Client SDKs are available for [TypeScript](sdks/typescript/) and [Python](sdks/p
 Colophony supports two deployment models:
 
 - **Self-hosted** — Docker Compose with PostgreSQL, Redis, MinIO, and Zitadel
-- **Managed hosting** — Coolify on Hetzner (details in deployment docs)
+- **Managed hosting** — Coolify on Hetzner (see [docs/deployment.md](docs/deployment.md))
 
 ## License
 
