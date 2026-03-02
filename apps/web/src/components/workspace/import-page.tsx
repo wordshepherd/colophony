@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useCallback, useEffect } from "react";
+import { useState, useMemo, useCallback } from "react";
 import Link from "next/link";
 import { ArrowLeft, ArrowRight, Loader2, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -126,21 +126,19 @@ export function ImportPage() {
     },
   );
 
-  useEffect(() => {
-    if (duplicateCheckQuery.data) {
-      setValidation((prev) => {
-        if (!prev) return prev;
-        return {
-          ...prev,
-          duplicateWarnings: duplicateCheckQuery.data.map((d) => ({
-            rowIndex: d.candidateIndex,
-            existingJournalName: d.existingJournalName,
-            existingSentAt: d.existingSentAt,
-          })),
-        };
-      });
-    }
-  }, [duplicateCheckQuery.data]);
+  // Merge duplicate warnings into validation at render time (no effect needed)
+  const validationWithDuplicates = useMemo(() => {
+    if (!validation) return null;
+    if (!duplicateCheckQuery.data) return validation;
+    return {
+      ...validation,
+      duplicateWarnings: duplicateCheckQuery.data.map((d) => ({
+        rowIndex: d.candidateIndex,
+        existingJournalName: d.existingJournalName,
+        existingSentAt: d.existingSentAt,
+      })),
+    };
+  }, [validation, duplicateCheckQuery.data]);
 
   // --- Import mutation ---
   const utils = trpc.useUtils();
@@ -492,7 +490,7 @@ export function ImportPage() {
           {importResult ? (
             <div className="space-y-4">
               <ImportReview
-                validation={validation!}
+                validation={validationWithDuplicates!}
                 onImport={handleImport}
                 onBack={handleBack}
                 isPending={false}
@@ -508,9 +506,9 @@ export function ImportPage() {
               </div>
             </div>
           ) : (
-            validation && (
+            validationWithDuplicates && (
               <ImportReview
-                validation={validation}
+                validation={validationWithDuplicates}
                 onImport={handleImport}
                 onBack={handleBack}
                 isPending={importMutation.isPending}
