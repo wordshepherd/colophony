@@ -5,7 +5,7 @@ Open-source suite covering the full publication lifecycle: submission intake, pu
 **Status:** v2 rewrite in progress. v1 MVP (originally named Prospector) tagged as `v1.0.0-mvp`.
 **Team:** David (primary dev), Senior Developer (PR reviews), CEO (priorities)
 **Session log:** `docs/devlog/YYYY-MM.md` (monthly rotation) — append entries after each session
-**Architecture:** [docs/architecture-v2-planning.md](docs/architecture-v2-planning.md)
+**Architecture:** [docs/architecture.md](docs/architecture.md)
 
 ### Suite Components
 
@@ -96,7 +96,7 @@ Per-directory CLAUDE.md files contain domain-specific details:
 | **CSR format spec**      | `docs/csr-format.md`                                                             |
 | **Backlog**              | `docs/backlog.md` (track-organized, drives session focus)                        |
 
-Full project structure: [docs/architecture-v2-planning.md](docs/architecture-v2-planning.md)
+Full project structure: [docs/architecture.md](docs/architecture.md)
 
 ---
 
@@ -106,7 +106,7 @@ Full project structure: [docs/architecture-v2-planning.md](docs/architecture-v2-
 
 **Backend:** Fastify 5, TypeScript (strict), Drizzle ORM, BullMQ 5, Zitadel (auth), Stripe, nodemailer
 
-**API surfaces:** tRPC (built), oRPC REST + OpenAPI 3.1 (PR 1 done), GraphQL via Pothos + Yoga (PR 1 done — queries)
+**API surfaces:** tRPC (built), oRPC REST + OpenAPI 3.1 (built), GraphQL via Pothos + Yoga (built — queries + mutations)
 
 **Data:** PostgreSQL 16+ (RLS via Drizzle `pgPolicy`), Redis 7+, MinIO (S3-compatible)
 
@@ -134,11 +134,11 @@ Client → tusd sidecar (chunked, resumable) → pre-create hook validates → p
 
 Unchanged from v1. Uses tus-js-client on frontend, tusd sidecar in Docker Compose.
 
-### 4. Payments (Stripe Checkout) — planned
+### 4. Payments (Stripe Checkout)
 
 **See `apps/api/CLAUDE.md`** for PCI NEVER list and webhook idempotency patterns.
 
-Summary: Stripe Checkout only (zero PCI scope). No Stripe handler exists yet. PCI guardrails apply when built: never log card numbers or store card data.
+Summary: Stripe Checkout only (zero PCI scope). Webhook handler built with two-step idempotency (INSERT event, check `processed` status). PCI guardrails enforced: never log card numbers or store card data.
 
 ### 5. Frontend
 
@@ -181,7 +181,7 @@ All other version pins are in their respective per-directory CLAUDE.md files.
 - [x] Pre-commit hook blocks secrets (husky + `scripts/check-secrets.sh`)
 - [x] Zitadel OIDC token validation on all protected routes (default-deny auth hook)
 - [x] API key authentication with scopes (enforced via `requireScopes` middleware on REST + tRPC)
-- [ ] Audit log for all sensitive actions
+- [x] Audit log for all sensitive actions (audit hook, `insert_audit_event()` SECURITY DEFINER function, pre-router-audit hook)
 - [x] File virus scanning before production bucket (ClamAV via BullMQ)
 - [x] RLS policies on all tenant tables via Drizzle `pgPolicy` with FORCE — see `packages/db/CLAUDE.md`
 - [x] Application database role is NOT superuser — see `packages/db/CLAUDE.md`
@@ -214,10 +214,10 @@ All other version pins are in their respective per-directory CLAUDE.md files.
 
 ### Git Hooks (husky)
 
-| Hook           | Checks                                                                                             |
-| -------------- | -------------------------------------------------------------------------------------------------- |
-| **Pre-commit** | Secret scanning (`scripts/check-secrets.sh`), lint-staged (Prettier on `.ts`/`.tsx`/`.json`/`.md`) |
-| **Pre-push**   | `pnpm type-check` (tsc --noEmit), `pnpm lint` (ESLint)                                             |
+| Hook           | Checks                                                                                                                         |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| **Pre-commit** | Secret scanning (`scripts/check-secrets.sh`), lint-staged (Prettier on `.ts`/`.tsx`/`.json`/`.md`)                             |
+| **Pre-push**   | `pnpm type-check` (tsc --noEmit, scoped to `db` + `api` packages), `pnpm lint` (ESLint). Full workspace type-check runs in CI. |
 
 ### CI Pipeline (GitHub Actions)
 
@@ -423,46 +423,153 @@ pnpm sdk:generate             # Regenerate TypeScript + Python SDKs from committ
 
 ### Environment Variables
 
-Canonical env definition with Zod validation: `apps/api/src/config/env.ts`
+Canonical env definition with Zod validation: `apps/api/src/config/env.ts` (55 variables)
 
-| Variable                                                          | Required | Default                      | Used by        |
-| ----------------------------------------------------------------- | -------- | ---------------------------- | -------------- |
-| `DATABASE_URL`                                                    | Yes      | —                            | API            |
-| `DATABASE_APP_URL`                                                | No       | Falls back to `DATABASE_URL` | API (RLS)      |
-| `PORT` / `HOST`                                                   | No       | `4000` / `0.0.0.0`           | API            |
-| `NODE_ENV`                                                        | No       | `development`                | API            |
-| `REDIS_HOST` / `REDIS_PORT` / `REDIS_PASSWORD`                    | No       | `localhost` / `6379` / `""`  | API            |
-| `CORS_ORIGIN`                                                     | No       | `http://localhost:3000`      | API            |
-| `ZITADEL_AUTHORITY` / `ZITADEL_CLIENT_ID`                         | Optional | —                            | API            |
-| `ZITADEL_WEBHOOK_SECRET`                                          | Optional | —                            | API            |
-| `CLAMAV_HOST` / `CLAMAV_PORT`                                     | No       | `localhost` / `3310`         | API            |
-| `VIRUS_SCAN_ENABLED`                                              | No       | `true`                       | API            |
-| `STRIPE_SECRET_KEY` / `STRIPE_WEBHOOK_SECRET`                     | Optional | —                            | API            |
-| `NEXT_PUBLIC_API_URL`                                             | No       | `http://localhost:4000`      | Web            |
-| `NEXT_PUBLIC_ZITADEL_AUTHORITY` / `NEXT_PUBLIC_ZITADEL_CLIENT_ID` | —        | —                            | Web            |
-| `API_URL`                                                         | —        | —                            | Web (SSR only) |
-| `PLUGIN_REGISTRY_URL`                                             | No       | —                            | API            |
-| `SENTRY_DSN`                                                      | No       | —                            | API            |
-| `SENTRY_ENVIRONMENT`                                              | No       | `development`                | API            |
-| `SENTRY_TRACES_SAMPLE_RATE`                                       | No       | `0`                          | API            |
-| `SENTRY_RELEASE`                                                  | No       | —                            | API            |
-| `METRICS_ENABLED`                                                 | No       | `false`                      | API            |
+<!-- Core -->
+
+| Variable        | Required | Default                 | Used by |
+| --------------- | -------- | ----------------------- | ------- |
+| `DATABASE_URL`  | Yes      | —                       | API     |
+| `PORT` / `HOST` | No       | `4000` / `0.0.0.0`      | API     |
+| `NODE_ENV`      | No       | `development`           | API     |
+| `LOG_LEVEL`     | No       | `info`                  | API     |
+| `CORS_ORIGIN`   | No       | `http://localhost:3000` | API     |
+
+<!-- Redis -->
+
+| Variable                                       | Required | Default                     | Used by |
+| ---------------------------------------------- | -------- | --------------------------- | ------- |
+| `REDIS_HOST` / `REDIS_PORT` / `REDIS_PASSWORD` | No       | `localhost` / `6379` / `""` | API     |
+
+<!-- Rate Limiting -->
+
+| Variable                               | Required | Default        | Used by |
+| -------------------------------------- | -------- | -------------- | ------- |
+| `RATE_LIMIT_DEFAULT_MAX`               | No       | `60`           | API     |
+| `RATE_LIMIT_AUTH_MAX`                  | No       | `200`          | API     |
+| `RATE_LIMIT_WINDOW_SECONDS`            | No       | `60`           | API     |
+| `RATE_LIMIT_KEY_PREFIX`                | No       | `colophony:rl` | API     |
+| `AUTH_FAILURE_THROTTLE_MAX`            | No       | `10`           | API     |
+| `AUTH_FAILURE_THROTTLE_WINDOW_SECONDS` | No       | `300`          | API     |
+
+<!-- Webhook Hardening -->
+
+| Variable                            | Required | Default | Used by |
+| ----------------------------------- | -------- | ------- | ------- |
+| `WEBHOOK_TIMESTAMP_MAX_AGE_SECONDS` | No       | `300`   | API     |
+| `WEBHOOK_RATE_LIMIT_MAX`            | No       | `100`   | API     |
+
+<!-- S3 / MinIO -->
+
+| Variable                             | Required | Default                        | Used by |
+| ------------------------------------ | -------- | ------------------------------ | ------- |
+| `S3_ENDPOINT`                        | No       | `http://localhost:9000`        | API     |
+| `S3_BUCKET` / `S3_QUARANTINE_BUCKET` | No       | `submissions` / `quarantine`   | API     |
+| `S3_ACCESS_KEY` / `S3_SECRET_KEY`    | No       | `minioadmin`                   | API     |
+| `S3_REGION`                          | No       | `us-east-1`                    | API     |
+| `TUS_ENDPOINT`                       | No       | `http://localhost:1080/files/` | API     |
+
+<!-- ClamAV -->
+
+| Variable                      | Required | Default              | Used by |
+| ----------------------------- | -------- | -------------------- | ------- |
+| `CLAMAV_HOST` / `CLAMAV_PORT` | No       | `localhost` / `3310` | API     |
+| `VIRUS_SCAN_ENABLED`          | No       | `true`               | API     |
+
+<!-- Auth (Zitadel) -->
+
+| Variable                                  | Required | Default | Used by |
+| ----------------------------------------- | -------- | ------- | ------- |
+| `ZITADEL_AUTHORITY` / `ZITADEL_CLIENT_ID` | Optional | —       | API     |
+| `ZITADEL_WEBHOOK_SECRET`                  | Optional | —       | API     |
+| `DEV_AUTH_BYPASS`                         | No       | `false` | API     |
+
+<!-- Payments (Stripe) -->
+
+| Variable                                      | Required | Default | Used by |
+| --------------------------------------------- | -------- | ------- | ------- |
+| `STRIPE_SECRET_KEY` / `STRIPE_WEBHOOK_SECRET` | Optional | —       | API     |
+
+<!-- Federation -->
+
+| Variable                                           | Required | Default | Used by |
+| -------------------------------------------------- | -------- | ------- | ------- |
+| `FEDERATION_ENABLED`                               | No       | `false` | API     |
+| `FEDERATION_DOMAIN`                                | Optional | —       | API     |
+| `FEDERATION_CONTACT`                               | Optional | —       | API     |
+| `FEDERATION_PRIVATE_KEY` / `FEDERATION_PUBLIC_KEY` | Optional | —       | API     |
+| `FEDERATION_RATE_LIMIT_MAX`                        | No       | `60`    | API     |
+| `FEDERATION_RATE_LIMIT_WINDOW_SECONDS`             | No       | `60`    | API     |
+| `FEDERATION_RATE_LIMIT_FAIL_MODE`                  | No       | `open`  | API     |
+| `STATUS_TOKEN_TTL_DAYS`                            | No       | `90`    | API     |
+| `HUB_DOMAIN` / `HUB_REGISTRATION_TOKEN`            | Optional | —       | API     |
+
+<!-- Email / Relay -->
+
+| Variable                                              | Required | Default     | Used by |
+| ----------------------------------------------------- | -------- | ----------- | ------- |
+| `EMAIL_PROVIDER`                                      | No       | `none`      | API     |
+| `SMTP_HOST` / `SMTP_PORT` / `SMTP_USER` / `SMTP_PASS` | Optional | —           | API     |
+| `SMTP_FROM` / `SMTP_SECURE`                           | Optional | — / `false` | API     |
+| `SENDGRID_API_KEY` / `SENDGRID_FROM`                  | Optional | —           | API     |
+
+<!-- Inngest -->
+
+| Variable                                    | Required | Default | Used by |
+| ------------------------------------------- | -------- | ------- | ------- |
+| `INNGEST_EVENT_KEY` / `INNGEST_SIGNING_KEY` | Optional | —       | API     |
+| `INNGEST_DEV`                               | No       | `false` | API     |
+
+<!-- Documenso -->
+
+| Variable                                  | Required | Default | Used by |
+| ----------------------------------------- | -------- | ------- | ------- |
+| `DOCUMENSO_API_URL` / `DOCUMENSO_API_KEY` | Optional | —       | API     |
+| `DOCUMENSO_WEBHOOK_SECRET`                | Optional | —       | API     |
+
+<!-- Plugins -->
+
+| Variable              | Required | Default | Used by |
+| --------------------- | -------- | ------- | ------- |
+| `PLUGIN_REGISTRY_URL` | No       | —       | API     |
+
+<!-- Monitoring -->
+
+| Variable                    | Required | Default       | Used by |
+| --------------------------- | -------- | ------------- | ------- |
+| `SENTRY_DSN`                | No       | —             | API     |
+| `SENTRY_ENVIRONMENT`        | No       | `development` | API     |
+| `SENTRY_TRACES_SAMPLE_RATE` | No       | `0`           | API     |
+| `SENTRY_RELEASE`            | No       | —             | API     |
+| `METRICS_ENABLED`           | No       | `false`       | API     |
+
+<!-- Web -->
+
+| Variable                                                          | Required | Default                 | Used by        |
+| ----------------------------------------------------------------- | -------- | ----------------------- | -------------- |
+| `NEXT_PUBLIC_API_URL`                                             | No       | `http://localhost:4000` | Web            |
+| `NEXT_PUBLIC_ZITADEL_AUTHORITY` / `NEXT_PUBLIC_ZITADEL_CLIENT_ID` | —        | —                       | Web            |
+| `API_URL`                                                         | —        | —                       | Web (SSR only) |
 
 ---
 
 ## Development Tracks
 
-See [docs/architecture-v2-planning.md Section 6](docs/architecture-v2-planning.md) for full details.
+See [docs/architecture.md Section 6](docs/architecture.md) for full details.
 
-| Track | Component                                                | Months | Status          |
-| ----- | -------------------------------------------------------- | ------ | --------------- |
-| 1     | Core Infrastructure (Fastify, Drizzle, Zitadel, Coolify) | 1-4    | **In progress** |
-| 2     | Colophony API (REST, GraphQL, tRPC, SDKs)                | 3-8    | Pending         |
-| 3     | Hopper — Submission Management                           | 5-12   | Pending         |
-| 4     | Slate — Publication Pipeline                             | 8-15   | Pending         |
-| 5     | Register — Identity & Federation                         | 10-18  | **In progress** |
-| 6     | Colophony Plugins                                        | 14-20  | **In progress** |
-| —     | Relay — Notifications (cross-cutting)                    | 1-20   | Pending         |
+| Track | Component                                                | Status       |
+| ----- | -------------------------------------------------------- | ------------ |
+| 1     | Core Infrastructure (Fastify, Drizzle, Zitadel, Coolify) | **Complete** |
+| 2     | Colophony API (REST, GraphQL, tRPC, SDKs)                | **Complete** |
+| 3     | Hopper — Submission Management                           | **Complete** |
+| 4     | Slate — Publication Pipeline                             | **Complete** |
+| 5     | Register — Identity & Federation                         | **Complete** |
+| 6     | Colophony Plugins                                        | **Complete** |
+| 7     | Monitoring & Observability (Sentry, Prometheus, metrics) | **Complete** |
+| 8     | Register Data Standard & Writer Tools (CSR, workspace)   | **Complete** |
+| 9     | Governance & Public Docs                                 | Not started  |
+| 10    | Analytics & Reporting (submission + writer analytics)    | **Complete** |
+| —     | Relay — Notifications (cross-cutting)                    | **Complete** |
 
 ---
 

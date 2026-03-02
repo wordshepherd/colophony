@@ -2,7 +2,7 @@
 
 > **Research date:** 2026-02-11
 > **Status:** Complete -- recommendation ready for review
-> **Parent document:** [docs/architecture-v2-planning.md](../architecture-v2-planning.md) (Section 5.8)
+> **Parent document:** [docs/architecture.md](../architecture.md) (Section 5.8)
 > **Context:** Colophony v2 needs an extensible architecture for adapters, integrations, and community contributions. The platform's philosophy is "integration hub with curated open-source defaults."
 > **Note:** This document was originally written under the project name "Prospector" (v1). All references have been updated to use the current name "Colophony".
 
