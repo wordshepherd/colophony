@@ -2,7 +2,17 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { Network, Pencil, Copy, Check } from "lucide-react";
+import {
+  Network,
+  Pencil,
+  Copy,
+  Check,
+  Search,
+  ArrowRightLeft,
+  UserRoundCog,
+  Server,
+  ScrollText,
+} from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -178,6 +188,90 @@ export function FederationOverview() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Navigation cards */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <Card className="transition-colors hover:bg-accent">
+          <Link href="/federation/sim-sub" className="block">
+            <CardHeader className="pb-2">
+              <div className="flex items-center gap-2">
+                <Search className="h-5 w-5 text-muted-foreground" />
+                <CardTitle className="text-base">Sim-Sub Checks</CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground">
+                Look up simultaneous submission check history and manage
+                overrides.
+              </p>
+            </CardContent>
+          </Link>
+        </Card>
+
+        <Card className="transition-colors hover:bg-accent">
+          <Link href="/federation/transfers" className="block">
+            <CardHeader className="pb-2">
+              <div className="flex items-center gap-2">
+                <ArrowRightLeft className="h-5 w-5 text-muted-foreground" />
+                <CardTitle className="text-base">Piece Transfers</CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground">
+                View and manage submission transfers between instances.
+              </p>
+            </CardContent>
+          </Link>
+        </Card>
+
+        <Card className="transition-colors hover:bg-accent">
+          <Link href="/federation/migrations" className="block">
+            <CardHeader className="pb-2">
+              <div className="flex items-center gap-2">
+                <UserRoundCog className="h-5 w-5 text-muted-foreground" />
+                <CardTitle className="text-base">Identity Migrations</CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground">
+                Manage writer identity migration requests and approvals.
+              </p>
+            </CardContent>
+          </Link>
+        </Card>
+
+        <Card className="transition-colors hover:bg-accent">
+          <Link href="/federation/hub" className="block">
+            <CardHeader className="pb-2">
+              <div className="flex items-center gap-2">
+                <Server className="h-5 w-5 text-muted-foreground" />
+                <CardTitle className="text-base">Hub Administration</CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground">
+                Manage hub-registered instances (requires managed hub mode).
+              </p>
+            </CardContent>
+          </Link>
+        </Card>
+
+        <Card className="transition-colors hover:bg-accent">
+          <Link href="/federation/audit" className="block">
+            <CardHeader className="pb-2">
+              <div className="flex items-center gap-2">
+                <ScrollText className="h-5 w-5 text-muted-foreground" />
+                <CardTitle className="text-base">Audit Log</CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground">
+                View the audit trail for all federation and system events.
+              </p>
+            </CardContent>
+          </Link>
+        </Card>
+      </div>
 
       {/* Peer summary card */}
       <Card>
