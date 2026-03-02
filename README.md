@@ -62,6 +62,7 @@ Prerequisites: Node.js >= 22, pnpm 9.15+, Docker, tmux + Overmind. See [CONTRIBU
 
 - [Architecture](docs/architecture.md) — system design, component breakdown, development tracks
 - [Licensing](docs/licensing.md) — AGPL/MIT boundary, obligations, FAQ
+- [Governance](docs/governance.md) — decision-making, proposing changes, project direction
 - [Testing](docs/testing.md) — test strategy, running tests, CI pipeline
 - [Deployment](docs/deployment.md) — Docker Compose setup, managed hosting
 - [Contributing](CONTRIBUTING.md) — development setup, workflow, PR process
