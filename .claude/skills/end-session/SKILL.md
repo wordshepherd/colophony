@@ -52,12 +52,12 @@ Scan the conversation to identify:
 
 ### Step 3: Note code review status
 
-<!-- Active review tool: /opencode-review. To switch back: replace /opencode-review with /codex-review -->
+<!-- Active review tool: /codex-review. To switch back: replace /codex-review with /opencode-review -->
 
-Check the conversation history for any `/opencode-review` or `/codex-review` invocations during this session. **Distinguish between review types** — they are not interchangeable:
+Check the conversation history for any `/codex-review` or `/opencode-review` invocations during this session. **Distinguish between review types** — they are not interchangeable:
 
-- **Plan review** (`/opencode-review plan`): Reviews the _plan file_ for soundness before implementation. Does NOT review actual code written.
-- **Branch review** (`/opencode-review branch`): Reviews the _actual code diff_ against `origin/main`. This is the implementation review.
+- **Plan review** (`/codex-review plan`): Reviews the _plan file_ for soundness before implementation. Does NOT review actual code written.
+- **Branch review** (`/codex-review branch`): Reviews the _actual code diff_ against `origin/main`. This is the implementation review.
 
 Record which types were run:
 
@@ -189,13 +189,13 @@ git commit -m "docs: update devlog and docs for [session date] session"
 
 ### Step 6.5: Run branch review
 
-<!-- Active review tool: /opencode-review. To switch back: replace /opencode-review with /codex-review -->
+<!-- Active review tool: /codex-review. To switch back: replace /codex-review with /opencode-review -->
 
 After all commits (code + docs) are complete but before pushing, run a branch review:
 
 1. **Check prerequisites:** Verify all code changes are committed (no uncommitted changes except `session-handoff.md` which is gitignored).
 
-2. **Run the review:** Execute `/opencode-review branch` (which includes plan drift detection if a plan file exists).
+2. **Run the review:** Execute `/codex-review branch` (which includes plan drift detection if a plan file exists).
 
 3. **Present findings to the user:** Show the review results and ask which findings (if any) to address before the PR.
 
@@ -207,9 +207,9 @@ After all commits (code + docs) are complete but before pushing, run a branch re
 
 - The session had no code changes (doc-only update)
 - The user explicitly says to skip review (e.g., "just push it")
-- An `/opencode-review branch` (or `/codex-review branch`) was already run during this session and no code changes were made after it
+- A `/codex-review branch` (or `/opencode-review branch`) was already run during this session and no code changes were made after it
 
-**IMPORTANT: A plan review (`/opencode-review plan`) does NOT substitute for a branch review.** Plan reviews check the plan's assumptions against the codebase; branch reviews check the actual implementation. Even if a plan review ran earlier in the session, a branch review is still required here unless explicitly skipped by the user.
+**IMPORTANT: A plan review (`/codex-review plan`) does NOT substitute for a branch review.** Plan reviews check the plan's assumptions against the codebase; branch reviews check the actual implementation. Even if a plan review ran earlier in the session, a branch review is still required here unless explicitly skipped by the user.
 
 Update the session summary (Step 9) to include the review outcome under "Code Review", distinguishing between plan and branch reviews.
 

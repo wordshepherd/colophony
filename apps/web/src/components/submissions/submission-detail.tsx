@@ -57,6 +57,7 @@ import {
   type SubmissionStatus,
 } from "@colophony/types";
 import { ReadOnlyFormFields } from "./form-renderer/read-only-form-fields";
+import { SimSubConflictDisplay } from "./sim-sub-conflict-display";
 
 interface SubmissionDetailProps {
   submissionId: string;
@@ -261,6 +262,20 @@ export function SubmissionDetail({
           )}
         </div>
       </div>
+
+      {/* Sim-sub policy requirement notice */}
+      {submission.simSubPolicyRequirement && (
+        <SimSubConflictDisplay
+          policyRequirement={
+            submission.simSubPolicyRequirement as {
+              type: "notify" | "withdraw";
+              windowHours?: number;
+              acknowledgedAt?: string;
+              dueAt?: string;
+            }
+          }
+        />
+      )}
 
       {/* Queue navigation */}
       {queueIds && queueIds.length > 0 && queueIdx != null && (

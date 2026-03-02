@@ -25,7 +25,9 @@ vi.mock('@colophony/db', () => ({
           },
           innerJoin: () => ({
             leftJoin: () => ({
-              where: () => Promise.resolve(dbSelectResult),
+              where: () => ({
+                limit: () => Promise.resolve(dbSelectResult),
+              }),
             }),
           }),
           then: (resolve: (v: unknown[]) => void) =>
@@ -41,7 +43,9 @@ vi.mock('@colophony/db', () => ({
   manuscriptVersions: {
     id: 'id',
     contentFingerprint: 'content_fingerprint',
+    federationFingerprint: 'federation_fingerprint',
     manuscriptId: 'manuscript_id',
+    versionNumber: 'version_number',
   },
   submissions: {
     id: 'id',
@@ -51,13 +55,25 @@ vi.mock('@colophony/db', () => ({
     simSubCheckResult: 'sim_sub_check_result',
     simSubCheckedAt: 'sim_sub_checked_at',
     simSubOverride: 'sim_sub_override',
+    simSubPolicyRequirement: 'sim_sub_policy_requirement',
     submittedAt: 'submitted_at',
   },
   submissionPeriods: {
     id: 'id',
-    simSubProhibited: 'sim_sub_prohibited',
+    simSubPolicy: 'sim_sub_policy',
     publicationId: 'publication_id',
     name: 'name',
+  },
+  manuscripts: {
+    id: 'id',
+    genre: 'genre',
+  },
+  externalSubmissions: {
+    id: 'id',
+    manuscriptId: 'manuscript_id',
+    journalName: 'journal_name',
+    status: 'status',
+    sentAt: 'sent_at',
   },
   publications: { id: 'id', name: 'name' },
   users: {
@@ -70,6 +86,7 @@ vi.mock('@colophony/db', () => ({
     id: 'id',
     submissionId: 'submission_id',
     fingerprint: 'fingerprint',
+    federationFingerprint: 'federation_fingerprint',
     submitterDid: 'submitter_did',
     result: 'result',
     localConflicts: 'local_conflicts',
@@ -126,6 +143,10 @@ vi.mock('./hub-client.service.js', () => ({
   },
 }));
 
+vi.mock('../lib/url-validation.js', () => ({
+  validateOutboundUrl: vi.fn().mockResolvedValue(undefined),
+}));
+
 const mockFetch = vi.fn();
 vi.stubGlobal('fetch', mockFetch);
 
@@ -145,7 +166,11 @@ function makeEnv(overrides: Record<string, unknown> = {}) {
 // Import after mocks
 // ---------------------------------------------------------------------------
 
-import { simsubService } from './simsub.service.js';
+import {
+  simsubService,
+  resolveEffectivePolicy,
+  SimSubConflictError,
+} from './simsub.service.js';
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -465,10 +490,14 @@ describe('simsubService.checkRemote', () => {
 // ---------------------------------------------------------------------------
 
 describe('simsubService.performFullCheck', () => {
-  const fingerprint = 'f'.repeat(64);
+  const contentFingerprint = 'c'.repeat(64);
+  const federationFingerprint = 'f'.repeat(64);
 
   beforeEach(() => {
-    mockGetOrCompute.mockResolvedValue(fingerprint);
+    mockGetOrCompute.mockResolvedValue({
+      contentFingerprint,
+      federationFingerprint,
+    });
 
     // User email lookup
     dbSelectResult = [{ email: 'alice@test.example.com' }];
@@ -517,7 +546,8 @@ describe('simsubService.performFullCheck', () => {
     );
 
     expect(result.result).toBe('CLEAR');
-    expect(result.fingerprint).toBe(fingerprint);
+    expect(result.fingerprint).toBe(contentFingerprint);
+    expect(result.federationFingerprint).toBe(federationFingerprint);
     checkLocalSpy.mockRestore();
     checkRemoteSpy.mockRestore();
   });
@@ -739,10 +769,14 @@ describe('simsubService.checkRemote — hub integration', () => {
 });
 
 describe('simsubService.performFullCheck — hub push', () => {
-  const fingerprint = 'f'.repeat(64);
+  const contentFingerprint = 'c'.repeat(64);
+  const federationFingerprint = 'f'.repeat(64);
 
   beforeEach(() => {
-    mockGetOrCompute.mockResolvedValue(fingerprint);
+    mockGetOrCompute.mockResolvedValue({
+      contentFingerprint,
+      federationFingerprint,
+    });
     dbSelectResult = [{ email: 'alice@test.example.com' }];
     mockPushFingerprint.mockResolvedValue(undefined);
   });
@@ -785,7 +819,832 @@ describe('simsubService.performFullCheck — hub push', () => {
     );
 
     expect(mockPushFingerprint).toHaveBeenCalled();
+    // Verify hub push uses federation fingerprint (not content)
+    const pushCall = mockPushFingerprint.mock.calls[0];
+    expect(pushCall[1].fingerprint).toBe(federationFingerprint);
     checkLocalSpy.mockRestore();
     checkRemoteSpy.mockRestore();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// PR1: Fingerprint split — dual fingerprint tests
+// ---------------------------------------------------------------------------
+
+describe('simsubService.performFullCheck — dual fingerprints', () => {
+  const contentFingerprint = 'c'.repeat(64);
+  const federationFingerprint = 'f'.repeat(64);
+
+  beforeEach(() => {
+    mockGetOrCompute.mockResolvedValue({
+      contentFingerprint,
+      federationFingerprint,
+    });
+    dbSelectResult = [{ email: 'alice@test.example.com' }];
+  });
+
+  it('passes content fingerprint to checkLocal', async () => {
+    mockWithRls.mockImplementation(async (_ctx: any, fn: any) => {
+      const mockTx = {
+        select: () => ({
+          from: () => ({
+            where: () => ({ limit: () => Promise.resolve([]) }),
+          }),
+        }),
+        insert: () => ({ values: vi.fn().mockResolvedValue(undefined) }),
+        update: () => ({
+          set: () => ({ where: vi.fn().mockResolvedValue(undefined) }),
+        }),
+      };
+      return fn(mockTx);
+    });
+
+    const checkLocalSpy = vi
+      .spyOn(simsubService, 'checkLocal')
+      .mockResolvedValue([]);
+    const checkRemoteSpy = vi
+      .spyOn(simsubService, 'checkRemote')
+      .mockResolvedValue([]);
+
+    await simsubService.performFullCheck(
+      makeEnv(),
+      'sub1',
+      'v1',
+      'user1',
+      'org1',
+    );
+
+    // checkLocal should receive content fingerprint (2nd arg)
+    expect(checkLocalSpy).toHaveBeenCalledWith(
+      'user1',
+      contentFingerprint,
+      'sub1',
+    );
+    checkLocalSpy.mockRestore();
+    checkRemoteSpy.mockRestore();
+  });
+
+  it('passes federation fingerprint to checkRemote', async () => {
+    mockWithRls.mockImplementation(async (_ctx: any, fn: any) => {
+      const mockTx = {
+        select: () => ({
+          from: () => ({
+            where: () => ({ limit: () => Promise.resolve([]) }),
+          }),
+        }),
+        insert: () => ({ values: vi.fn().mockResolvedValue(undefined) }),
+        update: () => ({
+          set: () => ({ where: vi.fn().mockResolvedValue(undefined) }),
+        }),
+      };
+      return fn(mockTx);
+    });
+
+    const checkLocalSpy = vi
+      .spyOn(simsubService, 'checkLocal')
+      .mockResolvedValue([]);
+    const checkRemoteSpy = vi
+      .spyOn(simsubService, 'checkRemote')
+      .mockResolvedValue([]);
+
+    await simsubService.performFullCheck(
+      makeEnv(),
+      'sub1',
+      'v1',
+      'user1',
+      'org1',
+    );
+
+    // checkRemote should receive federation fingerprint (2nd arg)
+    expect(checkRemoteSpy).toHaveBeenCalledWith(
+      expect.anything(),
+      federationFingerprint,
+      expect.stringContaining('did:web:'),
+      'org1',
+    );
+    checkLocalSpy.mockRestore();
+    checkRemoteSpy.mockRestore();
+  });
+
+  it('stores both fingerprints in sim_sub_checks', async () => {
+    mockWithRls.mockImplementation(async (_ctx: any, fn: any) => {
+      const insertValues = vi.fn().mockResolvedValue(undefined);
+      const mockTx = {
+        select: () => ({
+          from: () => ({
+            where: () => ({ limit: () => Promise.resolve([]) }),
+          }),
+        }),
+        insert: () => ({ values: insertValues }),
+        update: () => ({
+          set: () => ({ where: vi.fn().mockResolvedValue(undefined) }),
+        }),
+      };
+      return fn(mockTx);
+    });
+
+    const checkLocalSpy = vi
+      .spyOn(simsubService, 'checkLocal')
+      .mockResolvedValue([]);
+    const checkRemoteSpy = vi
+      .spyOn(simsubService, 'checkRemote')
+      .mockResolvedValue([]);
+
+    const result = await simsubService.performFullCheck(
+      makeEnv(),
+      'sub1',
+      'v1',
+      'user1',
+      'org1',
+    );
+
+    expect(result.fingerprint).toBe(contentFingerprint);
+    expect(result.federationFingerprint).toBe(federationFingerprint);
+    checkLocalSpy.mockRestore();
+    checkRemoteSpy.mockRestore();
+  });
+});
+
+describe('simsubService.handleInboundCheck — uses federation fingerprint', () => {
+  it('passes federation column to checkLocal', async () => {
+    dbSelectResult = [{ id: 'user1' }];
+
+    const checkLocalSpy = vi
+      .spyOn(simsubService, 'checkLocal')
+      .mockResolvedValueOnce([]);
+
+    await simsubService.handleInboundCheck(
+      makeEnv(),
+      'did:web:test.example.com:users:alice',
+      'fingerprint123',
+    );
+
+    // handleInboundCheck should pass 'federation' as the column parameter
+    expect(checkLocalSpy).toHaveBeenCalledWith(
+      'user1',
+      'fingerprint123',
+      undefined,
+      'federation',
+    );
+    checkLocalSpy.mockRestore();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// PR3: resolveEffectivePolicy
+// ---------------------------------------------------------------------------
+
+describe('resolveEffectivePolicy', () => {
+  it('returns base type when no overrides', () => {
+    const result = resolveEffectivePolicy({ type: 'prohibited' }, 'poetry');
+    expect(result).toBe('prohibited');
+  });
+
+  it('returns base type when genre does not match overrides', () => {
+    const result = resolveEffectivePolicy(
+      {
+        type: 'allowed',
+        genreOverrides: [{ genre: 'fiction', type: 'prohibited' }],
+      },
+      'poetry',
+    );
+    expect(result).toBe('allowed');
+  });
+
+  it('applies genre override when genre matches', () => {
+    const result = resolveEffectivePolicy(
+      {
+        type: 'allowed',
+        genreOverrides: [{ genre: 'poetry', type: 'prohibited' }],
+      },
+      'poetry',
+    );
+    expect(result).toBe('prohibited');
+  });
+
+  it('returns base type when genre is null', () => {
+    const result = resolveEffectivePolicy(
+      {
+        type: 'prohibited',
+        genreOverrides: [{ genre: 'poetry', type: 'allowed' }],
+      },
+      null,
+    );
+    expect(result).toBe('prohibited');
+  });
+
+  it('returns base type when genre is undefined', () => {
+    const result = resolveEffectivePolicy(
+      {
+        type: 'allowed_notify',
+        genreOverrides: [{ genre: 'fiction', type: 'prohibited' }],
+      },
+      undefined,
+    );
+    expect(result).toBe('allowed_notify');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// PR3: checkSiblingVersions
+// ---------------------------------------------------------------------------
+
+describe('simsubService.checkSiblingVersions', () => {
+  it('returns empty when version not found', async () => {
+    mockWithRls.mockImplementationOnce(async (_ctx: any, fn: any) => {
+      return fn({
+        select: () => ({
+          from: () => ({
+            where: () => ({
+              limit: () => Promise.resolve([]),
+            }),
+          }),
+        }),
+      });
+    });
+
+    const result = await simsubService.checkSiblingVersions('user1', 'v1');
+    expect(result).toEqual([]);
+  });
+
+  it('returns empty when no sibling versions exist', async () => {
+    mockWithRls.mockImplementationOnce(async (_ctx: any, fn: any) => {
+      return fn({
+        select: () => ({
+          from: () => ({
+            where: (..._args: any[]) => {
+              // First call: find version → return manuscriptId
+              // Second call: find siblings → return empty
+              return {
+                limit: () => Promise.resolve([{ manuscriptId: 'm1' }]),
+              };
+            },
+          }),
+        }),
+      });
+    });
+
+    // The mock above returns manuscriptId but no siblings
+    // We need the second select to return empty
+    let callCount = 0;
+    mockWithRls.mockReset();
+    mockWithRls.mockImplementationOnce(async (_ctx: any, fn: any) => {
+      return fn({
+        select: () => ({
+          from: () => ({
+            where: () => {
+              callCount++;
+              if (callCount === 1) {
+                return {
+                  limit: () => Promise.resolve([{ manuscriptId: 'm1' }]),
+                };
+              }
+              return { limit: () => Promise.resolve([]) };
+            },
+          }),
+        }),
+      });
+    });
+
+    const result = await simsubService.checkSiblingVersions('user1', 'v1');
+    expect(result).toEqual([]);
+  });
+
+  it('returns conflicts for active sibling submissions', async () => {
+    // Phase 1: user-scoped — find manuscriptId and sibling versions
+    let phase1Call = 0;
+    mockWithRls.mockImplementationOnce(async (_ctx: any, fn: any) => {
+      return fn({
+        select: () => ({
+          from: () => ({
+            where: () => {
+              phase1Call++;
+              if (phase1Call === 1) {
+                return {
+                  limit: () => Promise.resolve([{ manuscriptId: 'm1' }]),
+                };
+              }
+              return {
+                limit: () => Promise.resolve([{ id: 'v2', versionNumber: 2 }]),
+              };
+            },
+          }),
+        }),
+      });
+    });
+
+    // Phase 2: superuser — find active submissions on sibling versions
+    dbSelectResult = [
+      {
+        submissionId: 's2',
+        manuscriptVersionId: 'v2',
+        publicationName: 'Lit Mag X',
+        status: 'SUBMITTED',
+        submittedAt: new Date('2026-02-01'),
+      },
+    ];
+
+    const result = await simsubService.checkSiblingVersions(
+      'user1',
+      'v1',
+      's1',
+    );
+    expect(result).toHaveLength(1);
+    expect(result[0].publicationName).toBe('Lit Mag X');
+    expect(result[0].versionNumber).toBe(2);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// PR3: checkWriterDisclosed
+// ---------------------------------------------------------------------------
+
+describe('simsubService.checkWriterDisclosed', () => {
+  it('returns active external submissions for manuscript', async () => {
+    mockWithRls.mockImplementationOnce(async (_ctx: any, fn: any) => {
+      return fn({
+        select: () => ({
+          from: () => ({
+            where: () => ({
+              limit: () =>
+                Promise.resolve([
+                  {
+                    id: 'ext1',
+                    journalName: 'Poetry Journal',
+                    status: 'sent',
+                    sentAt: new Date('2026-01-15'),
+                  },
+                  {
+                    id: 'ext2',
+                    journalName: 'Fiction Review',
+                    status: 'in_review',
+                    sentAt: new Date('2026-02-01'),
+                  },
+                ]),
+            }),
+          }),
+        }),
+      });
+    });
+
+    const result = await simsubService.checkWriterDisclosed('user1', 'm1');
+    expect(result).toHaveLength(2);
+    expect(result[0].journalName).toBe('Poetry Journal');
+    expect(result[1].journalName).toBe('Fiction Review');
+  });
+
+  it('returns empty when no active external submissions', async () => {
+    mockWithRls.mockImplementationOnce(async (_ctx: any, fn: any) => {
+      return fn({
+        select: () => ({
+          from: () => ({
+            where: () => ({
+              limit: () => Promise.resolve([]),
+            }),
+          }),
+        }),
+      });
+    });
+
+    const result = await simsubService.checkWriterDisclosed('user1', 'm1');
+    expect(result).toEqual([]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// PR3: preSubmitCheck — policy model
+// ---------------------------------------------------------------------------
+
+describe('simsubService.preSubmitCheck', () => {
+  function makeMockTx(overrides: Record<string, unknown> = {}) {
+    const selectResults =
+      (overrides.selectResults as Record<number, unknown[]>) ?? {};
+    let selectCallCount = 0;
+
+    return {
+      select: () => ({
+        from: () => ({
+          where: () => {
+            selectCallCount++;
+            const result = selectResults[selectCallCount] ?? [];
+            return { limit: () => Promise.resolve(result) };
+          },
+        }),
+      }),
+      update: () => ({
+        set: vi.fn().mockReturnValue({
+          where: vi.fn().mockResolvedValue(undefined),
+        }),
+      }),
+      insert: () => ({
+        values: vi.fn().mockResolvedValue(undefined),
+      }),
+    };
+  }
+
+  it('skips check when policy is allowed', async () => {
+    const performFullCheckSpy = vi.spyOn(simsubService, 'performFullCheck');
+
+    const tx = makeMockTx({
+      selectResults: {
+        // 1st select: submission
+        1: [
+          {
+            manuscriptVersionId: 'v1',
+            submissionPeriodId: 'p1',
+            simSubOverride: false,
+          },
+        ],
+        // 2nd select: period policy
+        2: [{ simSubPolicy: { type: 'allowed' } }],
+      },
+    });
+
+    await simsubService.preSubmitCheck(
+      makeEnv(),
+      tx as any,
+      'sub1',
+      'user1',
+      'org1',
+    );
+
+    expect(performFullCheckSpy).not.toHaveBeenCalled();
+    performFullCheckSpy.mockRestore();
+  });
+
+  it('skips check when simSubOverride is true', async () => {
+    const performFullCheckSpy = vi.spyOn(simsubService, 'performFullCheck');
+
+    const tx = makeMockTx({
+      selectResults: {
+        1: [
+          {
+            manuscriptVersionId: 'v1',
+            submissionPeriodId: 'p1',
+            simSubOverride: true,
+          },
+        ],
+      },
+    });
+
+    await simsubService.preSubmitCheck(
+      makeEnv(),
+      tx as any,
+      'sub1',
+      'user1',
+      'org1',
+    );
+
+    expect(performFullCheckSpy).not.toHaveBeenCalled();
+    performFullCheckSpy.mockRestore();
+  });
+
+  it('throws SimSubConflictError for prohibited + CONFLICT', async () => {
+    const tx = makeMockTx({
+      selectResults: {
+        1: [
+          {
+            manuscriptVersionId: 'v1',
+            submissionPeriodId: 'p1',
+            simSubOverride: false,
+          },
+        ],
+        2: [{ simSubPolicy: { type: 'prohibited' } }],
+        3: [{ manuscriptId: 'm1' }], // version lookup
+        4: [{ genre: { primary: 'poetry' } }], // manuscript genre
+      },
+    });
+
+    const performFullCheckSpy = vi
+      .spyOn(simsubService, 'performFullCheck')
+      .mockResolvedValue({
+        result: 'CONFLICT',
+        fingerprint: 'fp',
+        federationFingerprint: 'ffp',
+        localConflicts: [
+          { publicationName: 'Test Mag', submittedAt: '2026-01-01' },
+        ],
+        remoteResults: [],
+      });
+
+    await expect(
+      simsubService.preSubmitCheck(
+        makeEnv(),
+        tx as any,
+        'sub1',
+        'user1',
+        'org1',
+      ),
+    ).rejects.toThrow(SimSubConflictError);
+
+    performFullCheckSpy.mockRestore();
+  });
+
+  it('records notify requirement for allowed_notify + CONFLICT', async () => {
+    const mockSet = vi.fn().mockReturnValue({
+      where: vi.fn().mockResolvedValue(undefined),
+    });
+    let selectCallCount = 0;
+    const tx = {
+      select: () => ({
+        from: () => ({
+          where: () => {
+            selectCallCount++;
+            if (selectCallCount === 1) {
+              return {
+                limit: () =>
+                  Promise.resolve([
+                    {
+                      manuscriptVersionId: 'v1',
+                      submissionPeriodId: 'p1',
+                      simSubOverride: false,
+                    },
+                  ]),
+              };
+            }
+            if (selectCallCount === 2) {
+              return {
+                limit: () =>
+                  Promise.resolve([
+                    {
+                      simSubPolicy: {
+                        type: 'allowed_notify',
+                        notifyWindowHours: 48,
+                      },
+                    },
+                  ]),
+              };
+            }
+            if (selectCallCount === 3) {
+              return { limit: () => Promise.resolve([{ manuscriptId: 'm1' }]) };
+            }
+            if (selectCallCount === 4) {
+              return {
+                limit: () =>
+                  Promise.resolve([{ genre: { primary: 'poetry' } }]),
+              };
+            }
+            return { limit: () => Promise.resolve([]) };
+          },
+        }),
+      }),
+      update: () => ({ set: mockSet }),
+      insert: () => ({ values: vi.fn().mockResolvedValue(undefined) }),
+    };
+
+    const performFullCheckSpy = vi
+      .spyOn(simsubService, 'performFullCheck')
+      .mockResolvedValue({
+        result: 'CONFLICT',
+        fingerprint: 'fp',
+        federationFingerprint: 'ffp',
+        localConflicts: [
+          { publicationName: 'Test Mag', submittedAt: '2026-01-01' },
+        ],
+        remoteResults: [],
+      });
+
+    await simsubService.preSubmitCheck(
+      makeEnv(),
+      tx as any,
+      'sub1',
+      'user1',
+      'org1',
+    );
+
+    // Should have called update to set the policy requirement
+    expect(mockSet).toHaveBeenCalledWith(
+      expect.objectContaining({
+        simSubPolicyRequirement: expect.objectContaining({
+          type: 'notify',
+          windowHours: 48,
+        }),
+      }),
+    );
+
+    performFullCheckSpy.mockRestore();
+  });
+
+  it('applies genre override: base allowed, fiction override prohibited', async () => {
+    const tx = makeMockTx({
+      selectResults: {
+        1: [
+          {
+            manuscriptVersionId: 'v1',
+            submissionPeriodId: 'p1',
+            simSubOverride: false,
+          },
+        ],
+        2: [
+          {
+            simSubPolicy: {
+              type: 'allowed',
+              genreOverrides: [{ genre: 'fiction', type: 'prohibited' }],
+            },
+          },
+        ],
+        3: [{ manuscriptId: 'm1' }],
+        4: [{ genre: { primary: 'fiction' } }],
+      },
+    });
+
+    const performFullCheckSpy = vi
+      .spyOn(simsubService, 'performFullCheck')
+      .mockResolvedValue({
+        result: 'CONFLICT',
+        fingerprint: 'fp',
+        federationFingerprint: 'ffp',
+        localConflicts: [
+          { publicationName: 'Test Mag', submittedAt: '2026-01-01' },
+        ],
+        remoteResults: [],
+      });
+
+    await expect(
+      simsubService.preSubmitCheck(
+        makeEnv(),
+        tx as any,
+        'sub1',
+        'user1',
+        'org1',
+      ),
+    ).rejects.toThrow(SimSubConflictError);
+
+    performFullCheckSpy.mockRestore();
+  });
+
+  it('genre override allows: base prohibited, poetry override allowed', async () => {
+    const performFullCheckSpy = vi.spyOn(simsubService, 'performFullCheck');
+
+    const tx = makeMockTx({
+      selectResults: {
+        1: [
+          {
+            manuscriptVersionId: 'v1',
+            submissionPeriodId: 'p1',
+            simSubOverride: false,
+          },
+        ],
+        2: [
+          {
+            simSubPolicy: {
+              type: 'prohibited',
+              genreOverrides: [{ genre: 'poetry', type: 'allowed' }],
+            },
+          },
+        ],
+        3: [{ manuscriptId: 'm1' }],
+        4: [{ genre: { primary: 'poetry' } }],
+      },
+    });
+
+    await simsubService.preSubmitCheck(
+      makeEnv(),
+      tx as any,
+      'sub1',
+      'user1',
+      'org1',
+    );
+
+    // Should NOT call performFullCheck because effective type is 'allowed'
+    expect(performFullCheckSpy).not.toHaveBeenCalled();
+    performFullCheckSpy.mockRestore();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// PR3: performFullCheck — includes sibling + writer-disclosed
+// ---------------------------------------------------------------------------
+
+describe('simsubService.performFullCheck — version-aware checks', () => {
+  const contentFingerprint = 'c'.repeat(64);
+  const federationFingerprint = 'f'.repeat(64);
+
+  beforeEach(() => {
+    mockGetOrCompute.mockResolvedValue({
+      contentFingerprint,
+      federationFingerprint,
+    });
+    dbSelectResult = [{ email: 'alice@test.example.com' }];
+  });
+
+  it('includes sibling and writer-disclosed conflicts in result', async () => {
+    mockWithRls.mockImplementation(async (_ctx: any, fn: any) => {
+      const mockTx = {
+        select: () => ({
+          from: () => ({
+            where: () => ({
+              limit: () => Promise.resolve([{ manuscriptId: 'm1' }]),
+            }),
+          }),
+        }),
+        insert: () => ({ values: vi.fn().mockResolvedValue(undefined) }),
+        update: () => ({
+          set: () => ({ where: vi.fn().mockResolvedValue(undefined) }),
+        }),
+      };
+      return fn(mockTx);
+    });
+
+    const checkLocalSpy = vi
+      .spyOn(simsubService, 'checkLocal')
+      .mockResolvedValue([]);
+    const checkRemoteSpy = vi
+      .spyOn(simsubService, 'checkRemote')
+      .mockResolvedValue([]);
+    const checkSiblingSpy = vi
+      .spyOn(simsubService, 'checkSiblingVersions')
+      .mockResolvedValue([
+        {
+          versionId: 'v2',
+          versionNumber: 2,
+          submissionId: 's2',
+          publicationName: 'Sibling Mag',
+          status: 'SUBMITTED',
+          submittedAt: '2026-02-01T00:00:00Z',
+        },
+      ]);
+    const checkWriterSpy = vi
+      .spyOn(simsubService, 'checkWriterDisclosed')
+      .mockResolvedValue([
+        {
+          externalSubmissionId: 'ext1',
+          journalName: 'External Journal',
+          status: 'sent',
+          sentAt: '2026-01-15T00:00:00Z',
+        },
+      ]);
+
+    const result = await simsubService.performFullCheck(
+      makeEnv(),
+      'sub1',
+      'v1',
+      'user1',
+      'org1',
+    );
+
+    expect(result.result).toBe('CONFLICT');
+    expect(result.siblingVersionConflicts).toHaveLength(1);
+    expect(result.writerDisclosedConflicts).toHaveLength(1);
+    expect(result.siblingVersionConflicts![0].publicationName).toBe(
+      'Sibling Mag',
+    );
+    expect(result.writerDisclosedConflicts![0].journalName).toBe(
+      'External Journal',
+    );
+
+    checkLocalSpy.mockRestore();
+    checkRemoteSpy.mockRestore();
+    checkSiblingSpy.mockRestore();
+    checkWriterSpy.mockRestore();
+  });
+
+  it('returns CLEAR when no conflicts of any kind', async () => {
+    mockWithRls.mockImplementation(async (_ctx: any, fn: any) => {
+      const mockTx = {
+        select: () => ({
+          from: () => ({
+            where: () => ({
+              limit: () => Promise.resolve([{ manuscriptId: 'm1' }]),
+            }),
+          }),
+        }),
+        insert: () => ({ values: vi.fn().mockResolvedValue(undefined) }),
+        update: () => ({
+          set: () => ({ where: vi.fn().mockResolvedValue(undefined) }),
+        }),
+      };
+      return fn(mockTx);
+    });
+
+    const checkLocalSpy = vi
+      .spyOn(simsubService, 'checkLocal')
+      .mockResolvedValue([]);
+    const checkRemoteSpy = vi
+      .spyOn(simsubService, 'checkRemote')
+      .mockResolvedValue([]);
+    const checkSiblingSpy = vi
+      .spyOn(simsubService, 'checkSiblingVersions')
+      .mockResolvedValue([]);
+    const checkWriterSpy = vi
+      .spyOn(simsubService, 'checkWriterDisclosed')
+      .mockResolvedValue([]);
+
+    const result = await simsubService.performFullCheck(
+      makeEnv(),
+      'sub1',
+      'v1',
+      'user1',
+      'org1',
+    );
+
+    expect(result.result).toBe('CLEAR');
+    expect(result.siblingVersionConflicts).toHaveLength(0);
+    expect(result.writerDisclosedConflicts).toHaveLength(0);
+
+    checkLocalSpy.mockRestore();
+    checkRemoteSpy.mockRestore();
+    checkSiblingSpy.mockRestore();
+    checkWriterSpy.mockRestore();
   });
 });

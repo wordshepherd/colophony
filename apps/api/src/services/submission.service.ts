@@ -259,6 +259,7 @@ export const submissionService = {
           searchVector: submissions.searchVector,
           statusTokenHash: submissions.statusTokenHash,
           statusTokenExpiresAt: submissions.statusTokenExpiresAt,
+          simSubPolicyRequirement: submissions.simSubPolicyRequirement,
           transferredFromDomain: submissions.transferredFromDomain,
           transferredFromTransferId: submissions.transferredFromTransferId,
           submitterEmail: users.email,

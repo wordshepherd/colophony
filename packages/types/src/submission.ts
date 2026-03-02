@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { scanStatusSchema, fileSchema } from "./file";
+import { simSubPolicySchema } from "./sim-sub-policy";
 
 export const submissionStatusSchema = z
   .enum([
@@ -60,6 +61,18 @@ export const submissionSchema = z.object({
     .describe("When the submission was formally submitted"),
   createdAt: z.date().describe("When the submission was created"),
   updatedAt: z.date().describe("When the submission was last updated"),
+  simSubPolicyRequirement: z
+    .object({
+      type: z.enum(["notify", "withdraw"]),
+      windowHours: z.number().int().optional(),
+      acknowledgedAt: z.string().datetime().optional(),
+      dueAt: z.string().datetime().optional(),
+    })
+    .nullable()
+    .optional()
+    .describe(
+      "Policy requirement recorded when sim-sub conflict detected under allowed_notify/allowed_withdraw",
+    ),
 });
 
 export type Submission = z.infer<typeof submissionSchema>;
@@ -282,10 +295,17 @@ export const submissionPeriodSchema = z.object({
     .uuid()
     .nullable()
     .describe("ID of the form definition linked to this period"),
-  simSubProhibited: z
-    .boolean()
-    .describe("Whether simultaneous submissions are prohibited"),
+  simSubPolicy: simSubPolicySchema.describe("Sim-sub policy for this period"),
   blindReviewMode: blindReviewModeSchema,
+  isContest: z.boolean().describe("Whether this period is a contest"),
+  contestPrize: z
+    .string()
+    .nullable()
+    .describe("Prize description for contests"),
+  contestWinnersAnnouncedAt: z
+    .date()
+    .nullable()
+    .describe("When contest winners will be announced"),
   createdAt: z.date().describe("When the period was created"),
   updatedAt: z.date().describe("When the period was last updated"),
 });
@@ -321,17 +341,27 @@ export const createSubmissionPeriodSchema = z.object({
     .uuid()
     .optional()
     .describe("Form definition to link to this period"),
-  simSubProhibited: z
-    .boolean()
+  simSubPolicy: simSubPolicySchema
     .optional()
-    .describe(
-      "Whether simultaneous submissions are prohibited (default: false)",
-    ),
+    .describe("Sim-sub policy (default: allowed)"),
   blindReviewMode: blindReviewModeSchema
     .optional()
     .describe(
       "Blind review mode: none, single_blind, or double_blind (default: none)",
     ),
+  isContest: z
+    .boolean()
+    .optional()
+    .describe("Whether this period is a contest (default: false)"),
+  contestPrize: z
+    .string()
+    .max(500)
+    .optional()
+    .describe("Prize description for contests (max 500 chars)"),
+  contestWinnersAnnouncedAt: z.coerce
+    .date()
+    .optional()
+    .describe("When contest winners will be announced (ISO-8601)"),
 });
 
 export type CreateSubmissionPeriodInput = z.infer<

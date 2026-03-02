@@ -32,15 +32,15 @@ export function normalizeText(text: string): string {
 }
 
 /**
- * Compute a SHA-256 hex fingerprint from title, optional content text,
- * and file hashes (sorted for determinism).
+ * Compute a content fingerprint using SHA-256 content hashes of actual file bytes.
+ * Used for local sim-sub detection (higher accuracy than filename:size).
  */
-export function computeFingerprint(
+export function computeContentFingerprint(
   title: string,
   contentText: string | null,
-  fileHashes: string[],
+  fileContentHashes: string[],
 ): string {
-  const sorted = [...fileHashes].sort();
+  const sorted = [...fileContentHashes].sort();
   const input =
     normalizeText(title) +
     '\0' +
@@ -50,21 +50,57 @@ export function computeFingerprint(
   return crypto.createHash('sha256').update(input).digest('hex');
 }
 
+/**
+ * Compute a federation fingerprint using filename:size identifiers.
+ * Used for cross-instance sim-sub detection (no file content shared).
+ */
+export function computeFederationFingerprint(
+  title: string,
+  contentText: string | null,
+  fileIdentifiers: string[],
+): string {
+  const sorted = [...fileIdentifiers].sort();
+  const input =
+    normalizeText(title) +
+    '\0' +
+    normalizeText(contentText ?? '') +
+    '\0' +
+    sorted.join(',');
+  return crypto.createHash('sha256').update(input).digest('hex');
+}
+
+/**
+ * @deprecated Use computeFederationFingerprint instead.
+ * Kept temporarily for backwards compatibility during migration.
+ */
+export const computeFingerprint = computeFederationFingerprint;
+
+// ---------------------------------------------------------------------------
+// Return type for dual fingerprints
+// ---------------------------------------------------------------------------
+
+export interface DualFingerprint {
+  contentFingerprint: string;
+  federationFingerprint: string;
+}
+
 // ---------------------------------------------------------------------------
 // Service (DB-dependent)
 // ---------------------------------------------------------------------------
 
 export const fingerprintService = {
   /**
-   * Compute fingerprint from manuscript version data and store it.
+   * Compute both fingerprints from manuscript version data and store them.
    *
-   * Uses the manuscript title, submission content (if linked), and
-   * storage keys of CLEAN files as the fingerprint inputs.
+   * Content fingerprint uses SHA-256 file content hashes (from ClamAV scan).
+   * Federation fingerprint uses filename:size identifiers (cross-instance stable).
+   * When contentHash is null (files scanned before this change), falls back
+   * to filename:size for the content fingerprint too.
    */
   async computeAndStore(
     tx: DrizzleDb,
     manuscriptVersionId: string,
-  ): Promise<string> {
+  ): Promise<DualFingerprint> {
     // Load version + manuscript title
     const [version] = await tx
       .select({
@@ -93,14 +129,12 @@ export const fingerprintService = {
       );
     }
 
-    // Get CLEAN file identifiers for fingerprinting.
-    // Uses filename + size (not storageKey) for cross-instance stability:
-    // the same file uploaded to different instances has the same name/size
-    // but different storage keys.
+    // Get CLEAN files with content hash + file identifiers
     const cleanFiles = await tx
       .select({
         filename: files.filename,
         size: files.size,
+        contentHash: files.contentHash,
       })
       .from(files)
       .where(
@@ -110,7 +144,12 @@ export const fingerprintService = {
         ),
       );
 
-    const fileHashes = cleanFiles.map((f) => `${f.filename}:${f.size}`);
+    // Content fingerprint: prefer contentHash, fall back to filename:size
+    const contentHashes = cleanFiles.map(
+      (f) => f.contentHash ?? `${f.filename}:${f.size}`,
+    );
+    // Federation fingerprint: always filename:size (cross-instance stable)
+    const fileIdentifiers = cleanFiles.map((f) => `${f.filename}:${f.size}`);
 
     // Check if there's a linked submission with content text
     const [linkedSubmission] = await tx
@@ -121,30 +160,39 @@ export const fingerprintService = {
 
     const contentText = linkedSubmission?.content ?? null;
 
-    const fingerprint = computeFingerprint(
+    const contentFingerprint = computeContentFingerprint(
       manuscript.title,
       contentText,
-      fileHashes,
+      contentHashes,
+    );
+    const federationFingerprint = computeFederationFingerprint(
+      manuscript.title,
+      contentText,
+      fileIdentifiers,
     );
 
-    // Store on the version
+    // Store both on the version
     await tx
       .update(manuscriptVersions)
-      .set({ contentFingerprint: fingerprint })
+      .set({ contentFingerprint, federationFingerprint })
       .where(eq(manuscriptVersions.id, manuscriptVersionId));
 
-    return fingerprint;
+    return { contentFingerprint, federationFingerprint };
   },
 
   /**
-   * Return the stored fingerprint, or compute and store it if absent.
+   * Return stored fingerprints, or compute and store if absent.
+   * Recomputes if either fingerprint is missing.
    */
   async getOrCompute(
     tx: DrizzleDb,
     manuscriptVersionId: string,
-  ): Promise<string> {
+  ): Promise<DualFingerprint> {
     const [version] = await tx
-      .select({ contentFingerprint: manuscriptVersions.contentFingerprint })
+      .select({
+        contentFingerprint: manuscriptVersions.contentFingerprint,
+        federationFingerprint: manuscriptVersions.federationFingerprint,
+      })
       .from(manuscriptVersions)
       .where(eq(manuscriptVersions.id, manuscriptVersionId))
       .limit(1);
@@ -155,8 +203,11 @@ export const fingerprintService = {
       );
     }
 
-    if (version.contentFingerprint) {
-      return version.contentFingerprint;
+    if (version.contentFingerprint && version.federationFingerprint) {
+      return {
+        contentFingerprint: version.contentFingerprint,
+        federationFingerprint: version.federationFingerprint,
+      };
     }
 
     return this.computeAndStore(tx, manuscriptVersionId);

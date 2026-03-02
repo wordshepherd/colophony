@@ -449,7 +449,7 @@
 - [ ] [P2] File drop zones: add keyboard focus handling, `role="button"`, `tabIndex` — (persona gap analysis 2026-02-27)
 - [ ] [P2] Scan status: add `aria-live` region for screen reader announcements during file scanning — (persona gap analysis 2026-02-27)
 - [ ] [P2] Sidebar: add `aria-label` to `<nav>` element — (persona gap analysis 2026-02-27)
-- [ ] [P3] Sim-sub error message: show human-readable explanation ("This manuscript appears to be under consideration at another publication that prohibits simultaneous submissions") instead of generic tRPC error — (persona gap analysis 2026-02-27)
+- [x] [P3] Sim-sub error message: show human-readable explanation ("This manuscript appears to be under consideration at another publication that prohibits simultaneous submissions") instead of generic tRPC error — (persona gap analysis 2026-02-27; done 2026-03-02 via SimSubConflictDisplay graduated confidence component)
 
 ---
 
