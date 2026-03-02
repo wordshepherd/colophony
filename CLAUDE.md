@@ -196,7 +196,7 @@ All other version pins are in their respective per-directory CLAUDE.md files.
 - [ ] PostgreSQL SSL/TLS (`sslmode=require`), connection pooling (PgBouncer), backups (WAL-G to S3)
 - [ ] `pg_stat_statements` for query monitoring
 - [ ] Rotate credentials quarterly
-- [ ] AGPL license boundary documented (Zitadel is AGPL; Colophony code is unaffected)
+- [x] AGPL license boundary documented — see `docs/licensing.md`
 - [x] Monitoring: Prometheus + Grafana (Sentry error tracking, `/metrics` endpoint, `--profile monitoring`)
 - [ ] Verify RLS in production — see `packages/db/CLAUDE.md` for verification queries
 
