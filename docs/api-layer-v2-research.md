@@ -5,7 +5,7 @@ Research document covering the design of a multi-surface API layer (REST + Graph
 **Last updated:** 2026-02-11
 **Status:** Research / RFC — Updated for Fastify + Drizzle decisions
 
-> **Revision Note (2026-02-11):** This document was originally researched assuming NestJS and Prisma. Following architecture decisions in `docs/architecture-v2-planning.md`, the chosen stack is **Fastify 5** (replacing NestJS) and **Drizzle ORM** (replacing Prisma). All code examples, diagrams, and recommendations have been updated accordingly. Evaluation tables retain the original comparisons for reference but "NestJS Compat" and "Prisma Integration" columns are no longer selection criteria.
+> **Revision Note (2026-02-11):** This document was originally researched assuming NestJS and Prisma. Following architecture decisions in `docs/architecture.md`, the chosen stack is **Fastify 5** (replacing NestJS) and **Drizzle ORM** (replacing Prisma). All code examples, diagrams, and recommendations have been updated accordingly. Evaluation tables retain the original comparisons for reference but "NestJS Compat" and "Prisma Integration" columns are no longer selection criteria.
 
 ---
 
@@ -50,7 +50,7 @@ Colophony v2 needs three API surfaces:
 
 ## Current Architecture (v1 — Being Replaced)
 
-The MVP has a single API surface (tRPC) serving the Next.js frontend. v2 replaces NestJS with Fastify and Prisma with Drizzle (see `docs/architecture-v2-planning.md` sections 5.1 and 5.2).
+The MVP has a single API surface (tRPC) serving the Next.js frontend. v2 replaces NestJS with Fastify and Prisma with Drizzle (see `docs/architecture.md` sections 5.1 and 5.2).
 
 ```
                      ┌──────────────┐
@@ -175,7 +175,7 @@ The critical architectural insight: **all three API surfaces share the same serv
 
 4. **Works with GraphQL Yoga.** GraphQL Yoga (from The Guild) is lightweight, spec-compliant, and integrates directly with Fastify via `handleNodeRequest`.
 
-> **Drizzle Note:** The original evaluation scored Pothos 39/50 partly due to the `@pothos/plugin-prisma` (auto-mapping Prisma models to GraphQL types, auto-resolving relations, solving N+1 via dataloader). With the Drizzle decision, **no equivalent plugin exists.** Revised score: ~29/50. Pothos is still recommended because the Zod single-source-of-truth validation is more valuable than the ORM integration. However, this means **manual type definitions, manual dataloader setup, and manual cursor pagination** for every model. See `docs/architecture-v2-planning.md` section 5.5 for detailed code patterns and the Month 3 evaluation checkpoint.
+> **Drizzle Note:** The original evaluation scored Pothos 39/50 partly due to the `@pothos/plugin-prisma` (auto-mapping Prisma models to GraphQL types, auto-resolving relations, solving N+1 via dataloader). With the Drizzle decision, **no equivalent plugin exists.** Revised score: ~29/50. Pothos is still recommended because the Zod single-source-of-truth validation is more valuable than the ORM integration. However, this means **manual type definitions, manual dataloader setup, and manual cursor pagination** for every model. See `docs/architecture.md` section 5.5 for detailed code patterns and the Month 3 evaluation checkpoint.
 
 **Why not schema-first:**
 
@@ -1141,7 +1141,7 @@ Note: Auth and GDPR operations are REST/tRPC only. GraphQL is for data querying 
 
 ## Migration Path from v1
 
-> **Note:** This section describes the API layer build-out within the broader Colophony implementation strategy (see `docs/architecture-v2-planning.md` Section 6). The API layer corresponds to **Track 2 (Months 3-8)** and depends on Track 1 (Core Infrastructure) completing the Fastify and Drizzle migrations first.
+> **Note:** This section describes the API layer build-out within the broader Colophony implementation strategy (see `docs/architecture.md` Section 6). The API layer corresponds to **Track 2 (Months 3-8)** and depends on Track 1 (Core Infrastructure) completing the Fastify and Drizzle migrations first.
 
 ### Phase 1: Extract Service Layer (Weeks 1-3)
 

@@ -345,7 +345,7 @@
 
 ## Track 8 — Register Data Standard & Writer Tools (Pre-Launch)
 
-> **Status:** Spec drafted (`docs/research/register-data-standard.md`). Defines the Colophony Submission Record (CSR) format, writer-as-top-level-entity architecture, correspondence tracking, and import pipeline. Prerequisite for Chill Subs integration (Track 11) and writer-side demand generation.
+> **Status:** Complete. All items shipped.
 
 ### Data Standard
 
@@ -398,7 +398,7 @@
 - [ ] [P1] CODE_OF_CONDUCT.md — (persona gap analysis 2026-02-27)
 - [ ] [P1] README.md rewrite — project description in brand voice, architecture overview, quick start, screenshots, link to docs — (persona gap analysis 2026-02-27)
 - [ ] [P2] Governance model documentation — who makes decisions, how contributions are evaluated, roadmap transparency — (persona gap analysis 2026-02-27)
-- [ ] [P2] Fix deployment docs NestJS reference — deployment guide references NestJS but the system is Fastify — (persona gap analysis 2026-02-27)
+- [x] [P2] Fix deployment docs NestJS reference — deployment guide references NestJS but the system is Fastify — (persona gap analysis 2026-02-27; done 2026-03-02 docs audit)
 - [ ] [P3] Public instance identity page — human-readable page showing federation status, trust relationships, and governance commitments (the `.well-known/colophony` endpoint is machine-only) — (persona gap analysis 2026-02-27)
 
 ---

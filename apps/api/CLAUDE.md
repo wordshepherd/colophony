@@ -51,6 +51,7 @@
 | Outbox poller     | `src/workers/outbox-poller.worker.ts`                          |
 | Federation trust  | `src/federation/trust.routes.ts` (S2S)                         |
 | Trust admin       | `src/federation/trust-admin.routes.ts`                         |
+| Key admin         | `src/federation/key-admin.routes.ts`                           |
 | Trust service     | `src/services/trust.service.ts`                                |
 | HTTP signatures   | `src/federation/http-signatures.ts`                            |
 | Federation auth   | `src/federation/federation-auth.ts`                            |

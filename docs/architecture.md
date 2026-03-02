@@ -1,721 +1,532 @@
-# Architecture Reference
+# Colophony — Architecture Planning
 
-Detailed architecture documentation for the Colophony submissions platform.
-For day-to-day development guidance, see [CLAUDE.md](../CLAUDE.md).
-
----
-
-## System Overview
-
-Multi-tenant submissions management platform for creative arts magazines.
-
-**Deployment model:**
-
-- **Phase 1 (MVP)**: Self-hosted via Docker Compose (WordPress-like)
-- **Phase 2 (SaaS)**: Unified platform with optional self-hosted instances
-
-```
-                   ┌─────────┐
-  Internet ──────> │  nginx  │ :80
-                   └────┬────┘
-                        │
-          ┌─────────────┼─────────────┐
-          │             │             │
-    ┌─────▼─────┐ ┌─────▼─────┐ ┌────▼────┐
-    │    web    │ │    api    │ │  tusd   │
-    │  (Next.js)│ │ (NestJS)  │ │(uploads)│
-    │   :3000   │ │   :4000   │ │  :1080  │
-    └───────────┘ └──┬──┬──┬──┘ └────┬────┘
-                     │  │  │         │
-              ┌──────┘  │  └──────┐  │
-              │         │         │  │
-        ┌─────▼──┐ ┌────▼───┐ ┌──▼──▼──┐
-        │postgres│ │ redis  │ │ minio  │
-        │ :5432  │ │ :6379  │ │ :9000  │
-        └────────┘ └────────┘ └────────┘
-```
-
-**Services:**
-
-- **nginx** — Reverse proxy, TLS termination, rate limiting
-- **web** — Next.js 15 frontend (standalone output)
-- **api** — NestJS API with tRPC, BullMQ background jobs
-- **tusd** — Resumable file upload server (tus protocol)
-- **postgres** — PostgreSQL 16 with Row-Level Security
-- **redis** — Sessions, cache, BullMQ job queue
-- **minio** — S3-compatible file storage
-- **clamav** — Virus scanning (optional, `--profile full`)
-- **migrate** — One-shot: runs Prisma migrations + RLS policies
-
-For deployment details, see [docs/deployment.md](./deployment.md).
+> **Status:** All architectural decisions finalized and implemented. This document updated to reflect the built system.
+> **Created:** 2026-02-10
+> **Updated:** 2026-03-02
+> **Context:** Product vision defined in `docs/competitive-analysis.md` (Section 9). The MVP prototype ("Prospector") proved the concept; Colophony is a full reconceive as open-source infrastructure for literary magazines.
+>
+> **Note:** Sections 4 and 5 originally contained detailed research evaluations for each architectural decision. These have been collapsed to decision summaries now that all decisions are finalized and implemented. Full evaluation text is preserved in git history (see commits before 2026-03-02).
+>
+> **Naming:** **Colophony** is the suite (infrastructure for literary magazines). Components:
+>
+> | Component    | Scope                          | Tagline                                                                                       |
+> | ------------ | ------------------------------ | --------------------------------------------------------------------------------------------- |
+> | **Hopper**   | Submission Management          | "Feed the hopper, process the queue" — Forms, intake, review pipeline, decision-making        |
+> | **Slate**    | Publication Pipeline           | "Build your slate, publish your issue" — Copyedit, contracts, issue assembly, CMS integration |
+> | **Relay**    | Notifications & Communications | "Relay the acceptance" — Email, webhooks, in-app messaging                                    |
+> | **Register** | Identity & Federation          | "Register with the network" — Cross-instance identity, sim-sub enforcement, piece transfers   |
+>
+> Internal/developer-facing concerns (API layer, plugin system) use the Colophony name directly.
+>
+> **Decision log:** All product decisions from the interview are in `docs/competitive-analysis.md` Section 9. This document focuses on architectural research and technical decisions.
 
 ---
 
-## Technology Stack
+## Table of Contents
 
-### Frontend
-
-| Library        | Version        | Purpose                 |
-| -------------- | -------------- | ----------------------- |
-| Next.js        | 15             | App Router, SSR         |
-| TypeScript     | strict mode    | Type safety             |
-| Tailwind CSS   | 3.4            | Utility-first CSS       |
-| shadcn/ui      | New York style | Component library       |
-| tRPC client    | 10.45          | End-to-end type safety  |
-| TanStack Query | 4.36           | Server state management |
-| tus-js-client  | 4.3.1          | Resumable file uploads  |
-| date-fns       | —              | Date formatting         |
-
-### Backend
-
-| Library           | Version | Purpose               |
-| ----------------- | ------- | --------------------- |
-| NestJS            | 10.4    | Application framework |
-| tRPC server       | 10.45   | API layer (NOT REST)  |
-| Prisma            | 5.22    | ORM + migrations      |
-| BullMQ            | 5       | Background job queue  |
-| Passport.js + JWT | —       | Authentication        |
-| Stripe            | 20.3    | Payment processing    |
-| nodemailer        | —       | Email sending         |
-
-### Data & Infrastructure
-
-| Technology     | Version | Purpose                                 |
-| -------------- | ------- | --------------------------------------- |
-| PostgreSQL     | 16+     | Primary database with RLS               |
-| Redis          | 7+      | Sessions, jobs, cache                   |
-| MinIO          | —       | S3-compatible storage (dev/self-hosted) |
-| Docker Compose | v2      | Container orchestration                 |
+1. [Vision Summary](#1-vision-summary)
+2. [What Carries Forward from MVP](#2-what-carries-forward-from-mvp)
+3. [Service Architecture](#3-service-architecture)
+4. [Research Areas](#4-research-areas)
+5. [Research Results](#5-research-results)
+6. [Implementation Strategy](#6-implementation-strategy)
+7. [Open Questions](#7-open-questions)
 
 ---
 
-## Project Structure
+## 1. Vision Summary
 
-**Package naming convention:** `@colophony/*` (e.g., `@colophony/db`, `@colophony/api`)
+Colophony is **open-source infrastructure for literary magazines** — a decomposed, federated platform covering the full publication lifecycle from submission through publication.
+
+### Core Principles
+
+| Principle                         | Detail                                                                                                                      |
+| --------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| **Open source**                   | Fully open source. Monetize via managed hosting, not feature gating.                                                        |
+| **Federated**                     | Cross-instance identity, simultaneous submission enforcement, cross-journal transfers.                                      |
+| **Integration hub**               | Adapter pattern for all ancillary services. Curated open-source defaults for magazines without existing infrastructure.     |
+| **Infrastructure, not app**       | The platform literary magazines run on. Submissions, editorial workflow, publication pipeline, CRM, newsletters, marketing. |
+| **Maximum editorial flexibility** | Configurable scoring, assignment, stages, views, and workflows per org.                                                     |
+| **No feature gating**             | All features on all plans. Managed hosting pricing is flat rate + cost-only volume add-ons.                                 |
+
+### Target Market
+
+Literary magazines in a modern web context — including multimedia content (audio/video of readings). Tiny to mid-sized magazines. Two-sided marketplace potential via Chill Subs partnership and federated submitter identity.
+
+### Organization Hierarchy
 
 ```
-colophony/
-├── CLAUDE.md                        # AI assistant context (concise)
-├── package.json                     # Root pnpm workspace (husky + lint-staged)
-├── pnpm-workspace.yaml
-├── turbo.json                       # Turborepo config
-├── docker-compose.yml               # Dev stack
-├── docker-compose.prod.yml          # Production stack
-├── .env.example                     # Dev env template
-├── .env.prod.example                # Production env template
-├── .dockerignore
-├── .gitignore
-├── .husky/
-│   └── pre-commit                   # Secret scanning + lint-staged
-├── .github/
-│   ├── workflows/
-│   │   └── ci.yml                   # CI: lint, type-check, tests, build
-│   └── pull_request_template.md
-│
-├── apps/
-│   ├── web/                         # Next.js + tRPC client
-│   │   ├── src/
-│   │   │   ├── app/
-│   │   │   │   ├── layout.tsx
-│   │   │   │   ├── page.tsx                    # Landing page
-│   │   │   │   ├── (auth)/                     # Auth pages (no sidebar)
-│   │   │   │   │   ├── layout.tsx
-│   │   │   │   │   ├── login/page.tsx
-│   │   │   │   │   ├── register/page.tsx
-│   │   │   │   │   └── verify-email/page.tsx
-│   │   │   │   └── (dashboard)/                # Protected pages (with sidebar)
-│   │   │   │       ├── layout.tsx
-│   │   │   │       ├── page.tsx                # Dashboard home
-│   │   │   │       ├── submissions/page.tsx
-│   │   │   │       ├── submissions/new/page.tsx
-│   │   │   │       ├── submissions/[id]/page.tsx
-│   │   │   │       ├── submissions/[id]/edit/page.tsx
-│   │   │   │       ├── editor/page.tsx
-│   │   │   │       ├── editor/[id]/page.tsx
-│   │   │   │       ├── settings/page.tsx       # Account + GDPR controls
-│   │   │   │       ├── payment/success/page.tsx
-│   │   │   │       └── payment/cancel/page.tsx
-│   │   │   ├── components/
-│   │   │   │   ├── providers.tsx               # tRPC + QueryClient providers
-│   │   │   │   ├── ui/                         # 21 shadcn/ui components
-│   │   │   │   ├── auth/                       # login-form, register-form, verify-email-form, protected-route
-│   │   │   │   ├── submissions/                # list, card, form, detail, file-upload, status-badge
-│   │   │   │   ├── editor/                     # dashboard, status-transition, submission-review
-│   │   │   │   └── layout/                     # header, sidebar, org-switcher, user-menu
-│   │   │   ├── hooks/
-│   │   │   │   ├── use-auth.ts                 # Auth state, login/logout/register
-│   │   │   │   ├── use-organization.ts         # Org context, role checks
-│   │   │   │   └── use-file-upload.ts          # tus-js-client wrapper
-│   │   │   └── lib/
-│   │   │       ├── trpc.ts                     # tRPC client with org header
-│   │   │       ├── auth.ts                     # Token storage utilities
-│   │   │       └── utils.ts                    # shadcn cn() utility
-│   │   ├── e2e/                                # Playwright browser E2E tests
-│   │   │   ├── auth.spec.ts                    # 7 tests
-│   │   │   ├── submissions.spec.ts             # 7 tests
-│   │   │   ├── editor.spec.ts                  # 5 tests
-│   │   │   └── helpers/
-│   │   │       ├── auth.ts                     # setupTestUser, loginAsBrowser, loginViaForm
-│   │   │       ├── api-client.ts               # Direct tRPC fetch with 429 retry
-│   │   │       └── db.ts                       # PrismaClient for test data (superuser)
-│   │   ├── playwright.config.ts
-│   │   └── package.json
-│   │
-│   └── api/                         # NestJS + tRPC server + Workers
-│       ├── src/
-│       │   ├── main.ts
-│       │   ├── app.module.ts
-│       │   ├── app.controller.ts
-│       │   ├── app.service.ts
-│       │   ├── trpc/
-│       │   │   ├── trpc.service.ts
-│       │   │   ├── trpc.module.ts
-│       │   │   ├── trpc.controller.ts          # HTTP handler (strips /trpc prefix)
-│       │   │   ├── trpc.context.ts             # Auth + org context creation
-│       │   │   ├── trpc.registry.ts            # Procedure registry
-│       │   │   ├── trpc.router.ts              # Root router (combines all)
-│       │   │   └── routers/
-│       │   │       ├── auth.router.ts           # login, register, refresh, logout, me
-│       │   │       ├── submissions.router.ts    # CRUD + workflow transitions
-│       │   │       ├── files.router.ts          # Upload initiation, signing
-│       │   │       ├── payments.router.ts       # Stripe checkout sessions
-│       │   │       ├── gdpr.router.ts           # DSAR, export, erasure
-│       │   │       ├── consent.router.ts        # Grant/revoke consent
-│       │   │       ├── audit.router.ts          # Audit event queries (admin)
-│       │   │       └── retention.router.ts      # Retention policy CRUD (admin)
-│       │   └── modules/
-│       │       ├── auth/                        # AuthService (JWT + refresh tokens)
-│       │       ├── email/                       # EmailService + EmailTemplateService
-│       │       ├── storage/                     # StorageService + TusdWebhookController
-│       │       ├── payments/                    # PaymentsService + StripeService + webhook
-│       │       ├── gdpr/                        # GdprService (export, erasure, DSAR)
-│       │       ├── audit/                       # AuditService (15+ action types, CSV)
-│       │       ├── redis/                       # RedisService
-│       │       ├── security/                    # RateLimitService + RateLimitGuard
-│       │       └── jobs/                        # BullMQ processors + services
-│       │           ├── constants.ts             # Queue names
-│       │           ├── jobs.module.ts
-│       │           ├── processors/
-│       │           │   ├── virus-scan.processor.ts
-│       │           │   ├── email.processor.ts
-│       │           │   └── retention.processor.ts
-│       │           └── services/
-│       │               ├── virus-scan.service.ts
-│       │               ├── retention.service.ts
-│       │               └── outbox.service.ts
-│       ├── test/                                # API test suite
-│       │   ├── unit/                            # 10 unit test files (191 tests)
-│       │   ├── integration/
-│       │   │   └── rls.spec.ts                  # RLS isolation tests
-│       │   ├── e2e/                             # 4 E2E test files (65 tests)
-│       │   │   ├── auth.e2e-spec.ts
-│       │   │   ├── submissions.e2e-spec.ts
-│       │   │   ├── gdpr.e2e-spec.ts
-│       │   │   └── payments.e2e-spec.ts
-│       │   ├── app.e2e-spec.ts                  # Health check test
-│       │   ├── e2e-app.module.ts                # Test AppModule (no BullMQ)
-│       │   ├── e2e-helpers.ts                   # createTestApp, registerUser, etc.
-│       │   ├── e2e-setup.ts                     # Env config (test DB, Redis, rate limits)
-│       │   ├── jest-e2e.json
-│       │   └── utils/
-│       │       ├── test-context.ts              # cleanDatabase (DB + Redis flush)
-│       │       ├── mock-redis.ts
-│       │       └── factories/                   # createOrg, createUser, createSubmission
-│       └── package.json
-│
-├── packages/
-│   ├── db/                          # Prisma + RLS context helpers
-│   │   ├── prisma/
-│   │   │   ├── schema.prisma        # Complete schema (17+ tables)
-│   │   │   ├── rls-policies.sql     # RLS policies SQL
-│   │   │   └── migrations/
-│   │   ├── src/
-│   │   │   ├── index.ts
-│   │   │   ├── client.ts            # Prisma singleton
-│   │   │   └── context.ts           # withOrgContext, createContextHelpers
-│   │   └── package.json
-│   │
-│   ├── types/                       # Shared Zod schemas (8 files)
-│   │   ├── src/
-│   │   │   ├── index.ts             # Re-exports
-│   │   │   ├── auth.ts              # LoginInput, RegisterInput, etc.
-│   │   │   ├── common.ts            # Pagination, responses
-│   │   │   ├── submission.ts        # Submission schemas + status enums
-│   │   │   ├── file.ts              # File upload schemas
-│   │   │   ├── payment.ts           # Payment schemas
-│   │   │   ├── organization.ts      # Organization schemas
-│   │   │   └── user.ts              # User schemas
-│   │   └── package.json
-│   │
-│   ├── typescript-config/           # Shared TS configs
-│   │   ├── base.json
-│   │   ├── nextjs.json
-│   │   ├── nestjs.json
-│   │   └── library.json
-│   │
-│   └── eslint-config/              # Shared ESLint configs
-│       ├── base.js
-│       ├── nextjs.js
-│       └── nestjs.js
-│
-├── .claude/
-│   ├── hooks/
-│   │   ├── hooks.json               # Hook configuration
-│   │   ├── pre-edit-validate.js     # Blocks secrets, warns missing RLS
-│   │   ├── pre-frontend-validate.js # Validates frontend patterns
-│   │   ├── pre-payment-validate.js  # Warns missing idempotency
-│   │   ├── pre-router-audit.js      # Warns missing audit logging in routers
-│   │   ├── post-schema.js           # Auto-regenerates Prisma client
-│   │   ├── post-email-template.js   # Reminds text version for emails
-│   │   ├── post-migration-validate.js # Reminds RLS for new tables
-│   │   └── post-commit-devlog.js    # Reminds to update DEVLOG.md
-│   ├── skills/
-│   │   ├── db-reset.md              # /db-reset
-│   │   ├── new-router.md            # /new-router <name>
-│   │   ├── new-module.md            # /new-module <name>
-│   │   ├── new-processor.md         # /new-processor <name>
-│   │   ├── new-migration.md         # /new-migration <name>
-│   │   ├── new-page.md              # /new-page <name>
-│   │   ├── new-component.md         # /new-component <name>
-│   │   ├── new-hook.md              # /new-hook <name>
-│   │   ├── new-e2e.md               # /new-e2e <feature>
-│   │   ├── stripe-webhook.md        # /stripe-webhook <event>
-│   │   └── test-rls.md              # /test-rls
-│   └── mcp-servers.example.json     # MCP server config template
-│
-├── scripts/
-│   ├── init-db.sh                   # Dev PostgreSQL init (creates app_user)
-│   ├── install.sh                   # Production install script
-│   ├── init-prod.sh                 # Production migration + RLS setup
-│   └── check-secrets.sh             # Pre-commit secret scanner
-│
-├── nginx/
-│   └── nginx.conf                   # Reverse proxy config
-│
-└── docs/
-    ├── architecture.md              # This file
-    ├── testing.md                   # Testing guide
-    ├── deployment.md                # Deployment guide
-    └── DEVLOG.md                    # Session log
+Organization
+└── Publication(s)
+    └── Call Type(s)
+        └── Call(s) (with reading periods, forms, rules)
+            └── Submission(s)
+                └── Review pipeline → Accept/Reject
+                    └── Publication pipeline (copyedit, contract, issue assembly)
 ```
 
 ---
 
-## Database Schema
+## 2. What Carries Forward from MVP
 
-### Core Tables
+### Preserve (business logic and patterns)
 
-| Table                     | Purpose                | Key Fields                                                                   |
-| ------------------------- | ---------------------- | ---------------------------------------------------------------------------- |
-| **organizations**         | Multi-tenant root      | `id`, `name`, `slug`, `settings` (JSONB)                                     |
-| **users**                 | Global user pool       | `id`, `email`, `passwordHash`, `emailVerifiedAt`, `deletedAt` (soft delete)  |
-| **user_identities**       | Federated identity     | `provider` (email/google/github), `providerUserId`, `userId`                 |
-| **organization_members**  | M:N users ↔ orgs       | `userId`, `organizationId`, `role` (admin/editor/reader)                     |
-| **submissions**           | RLS-enforced content   | `organizationId`, `submitterId`, `status`, `searchVector` (tsvector)         |
-| **submission_files**      | Attached files         | `submissionId`, `storageKey`, `scanStatus` (pending/scanning/clean/infected) |
-| **submission_history**    | Immutable status log   | `submissionId`, `fromStatus`, `toStatus`, `changedBy`, `comment`             |
-| **payments**              | Idempotent tracking    | `submissionId`, `stripePaymentIntentId`, `status`, `amount`                  |
-| **stripe_webhook_events** | Deduplication          | `eventId`, `eventType`, `processed` (boolean)                                |
-| **audit_events**          | GDPR Article 30        | `actorId`, `action`, `resource`, `resourceId`, `ipAddress`, `userAgent`      |
-| **dsar_requests**         | Data Subject Access    | `userId`, `type`, `status`, `dueAt` (30 days)                                |
-| **retention_policies**    | Data lifecycle         | `resource`, `retentionDays`, `active`                                        |
-| **user_consents**         | GDPR consent           | `userId`, `organizationId`, `consentType`, `grantedAt`, `revokedAt`          |
-| **outbox_events**         | Reliable notifications | `eventType`, `recipientEmail`, `templateName`, `processedAt`, `retryCount`   |
+| Asset                    | How It Transfers                                                               |
+| ------------------------ | ------------------------------------------------------------------------------ |
+| **PostgreSQL + RLS**     | Same multi-tenancy pattern, expanded data model                                |
+| **GDPR compliance**      | Export, erasure, consent, retention, audit logging — business rules carry over |
+| **Security patterns**    | Rate limiting, headers, virus scanning, secret prevention                      |
+| **Submission lifecycle** | DRAFT → SUBMITTED → UNDER_REVIEW → ACCEPTED/REJECTED/HOLD/WITHDRAWN            |
+| **Payment idempotency**  | Stripe webhook deduplication pattern                                           |
+| **File upload flow**     | tus resumable upload → virus scan → clean/quarantine                           |
+| **Test specifications**  | 373 tests encode business rules as specifications for v2                       |
+| **Competitive research** | Full market analysis in `docs/competitive-analysis.md`                         |
+| **Product decisions**    | All interview decisions in `docs/competitive-analysis.md` Section 9            |
 
-### Indexes
+### Does Not Transfer (implementation-specific)
 
-```sql
--- Hot query paths
-CREATE INDEX idx_submissions_org_status_date
-  ON submissions(organization_id, status, submitted_at DESC);
-
-CREATE INDEX idx_submissions_submitter_date
-  ON submissions(submitter_id, submitted_at DESC);
-
-CREATE INDEX idx_files_submission
-  ON submission_files(submission_id);
-
-CREATE INDEX idx_files_scan_pending
-  ON submission_files(scan_status, uploaded_at)
-  WHERE scan_status = 'pending';
-
-CREATE INDEX idx_members_user_org
-  ON organization_members(user_id, organization_id);
-
-CREATE INDEX idx_history_submission_date
-  ON submission_history(submission_id, changed_at DESC);
-
-CREATE INDEX idx_audit_actor
-  ON audit_events(actor_id, created_at DESC);
-
-CREATE INDEX idx_webhook_unprocessed
-  ON stripe_webhook_events(processed, received_at)
-  WHERE processed = false;
-
--- Full-text search
-CREATE INDEX idx_submissions_search
-  ON submissions USING GIN(search_vector);
-```
-
-### RLS Policies
-
-**MUST BE APPLIED** to prevent cross-tenant data leakage.
-
-```sql
--- Helper functions
-CREATE OR REPLACE FUNCTION current_org_id() RETURNS uuid AS $$
-  SELECT NULLIF(current_setting('app.current_org', true), '')::uuid;
-$$ LANGUAGE sql STABLE;
-
-CREATE OR REPLACE FUNCTION current_user_id() RETURNS uuid AS $$
-  SELECT NULLIF(current_setting('app.user_id', true), '')::uuid;
-$$ LANGUAGE sql STABLE;
-
--- CRITICAL: Use FORCE to apply RLS even for table owners/superusers
-ALTER TABLE submissions ENABLE ROW LEVEL SECURITY;
-ALTER TABLE submissions FORCE ROW LEVEL SECURITY;
-
-ALTER TABLE submission_files ENABLE ROW LEVEL SECURITY;
-ALTER TABLE submission_files FORCE ROW LEVEL SECURITY;
-
-ALTER TABLE payments ENABLE ROW LEVEL SECURITY;
-ALTER TABLE payments FORCE ROW LEVEL SECURITY;
-
-ALTER TABLE audit_events ENABLE ROW LEVEL SECURITY;
-ALTER TABLE audit_events FORCE ROW LEVEL SECURITY;
-
--- Policy example
-CREATE POLICY org_isolation ON submissions
-  FOR ALL
-  USING (organization_id = current_org_id())
-  WITH CHECK (organization_id = current_org_id());
-
--- Repeat for other tenant tables
-```
-
-**Non-superuser role (required — superusers bypass RLS):**
-
-```sql
-CREATE ROLE app_user WITH LOGIN PASSWORD 'password' NOSUPERUSER NOBYPASSRLS;
-GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO app_user;
-GRANT EXECUTE ON FUNCTION current_org_id() TO app_user;
-GRANT EXECUTE ON FUNCTION current_user_id() TO app_user;
-```
+| Asset                        | Why                                                           |
+| ---------------------------- | ------------------------------------------------------------- |
+| NestJS modules               | Framework under evaluation                                    |
+| tRPC router structure        | Keeping for internal use, adding REST + GraphQL               |
+| Prisma schema                | ORM under evaluation; data model changing significantly       |
+| Current auth implementation  | Replacing with external auth service                          |
+| Frontend component structure | Will be redesigned for new features                           |
+| Docker Compose configs       | Self-hosted keeps Compose; managed hosting needs orchestrator |
 
 ---
 
-## Multi-Tenancy with RLS
+## 3. Service Architecture
 
-**All organization-scoped queries MUST use the `withOrgContext` pattern:**
+### Actual Architecture (as built)
 
-```typescript
-// packages/db/src/context.ts
-async function withOrgContext<T>(
-  orgId: string,
-  userId: string,
-  fn: (tx: PrismaTransaction) => Promise<T>,
-  prismaClient: PrismaClient = defaultPrisma,
-): Promise<T> {
-  // Validate UUIDs to prevent SQL injection
-  const uuidRegex =
-    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-  if (!uuidRegex.test(orgId) || !uuidRegex.test(userId)) {
-    throw new Error("Invalid UUID format");
-  }
+The original plan proposed 6 separate services. In practice, all backend logic runs in a single Fastify API (`apps/api/`) with internal module boundaries. Workers run in-process via BullMQ.
 
-  return prismaClient.$transaction(async (tx) => {
-    // CRITICAL: Use SET LOCAL (not SET) - transaction-scoped
-    // Note: app.user_id not app.current_user (reserved keyword)
-    await tx.$executeRawUnsafe(`SET LOCAL app.current_org = '${orgId}'`);
-    await tx.$executeRawUnsafe(`SET LOCAL app.user_id = '${userId}'`);
-    return fn(tx);
-  });
-}
+| Service          | Responsibility                                                                                                                                                 | Communication                                   |
+| ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------- |
+| **Core API**     | All backend logic: submissions, editorial workflow, organizations, publications, forms, payments, GDPR, audit, federation, notifications, publication pipeline | REST + GraphQL (public), tRPC (internal to web) |
+| **Web Frontend** | Editor UI, submitter UI, admin UI                                                                                                                              | Consumes Core API via tRPC                      |
+| **Workers**      | Background jobs: virus scan, email, webhook delivery, S3 cleanup, outbox polling                                                                               | BullMQ queues via Redis (in-process)            |
+| **Auth**         | Authentication, OAuth, SSO                                                                                                                                     | Zitadel (external service, Docker sidecar)      |
 
-// Usage in tRPC routers — ctx.prisma is already wrapped
-export const submissionsRouter = router({
-  list: orgProcedure
-    .input(z.object({ status: z.string().optional() }))
-    .query(({ ctx, input }) => {
-      return ctx.prisma.submission.findMany({
-        where: { status: input.status },
-      });
-    }),
-});
+### Deployment Models
+
+| Environment         | Orchestration             | Target User                                     |
+| ------------------- | ------------------------- | ----------------------------------------------- |
+| **Self-hosted**     | Docker Compose            | Small magazine with a VPS                       |
+| **Managed hosting** | Coolify + Hetzner         | Magazines that don't want to run infrastructure |
+| **Development**     | Docker Compose + Overmind | Contributors                                    |
+
+### Monorepo Structure (Actual)
+
+```
+apps/
+  api/                  Fastify API server (all backend logic, workers, federation)
+  web/                  Next.js frontend
+packages/
+  db/                   Drizzle schema + RLS policies + migrations
+  types/                Shared Zod schemas
+  auth-client/          Zitadel OIDC/webhook utilities
+  api-client/           TypeScript API client (openapi-fetch)
+  plugin-sdk/           Adapter interfaces + plugin contracts + testing utilities
+sdks/
+  typescript/           Generated TypeScript SDK (@colophony/sdk)
+  python/               Generated Python SDK (colophony)
+  openapi.json          Exported OpenAPI 3.1 spec
+  schema.graphql        Exported GraphQL schema
 ```
 
-**NEVER:**
-
-- Query without org context
-- Use session-level `SET` (always `SET LOCAL`)
-- Manually filter by `organizationId` (RLS does this)
-- Use `app.current_user` (reserved keyword — use `app.user_id`)
-- Use `$executeRaw` template literals for SET LOCAL (doesn't work with Prisma)
+All adapters (email, storage, payment, CMS) are built into `apps/api/src/adapters/` rather than separate packages. The plugin SDK defines adapter interfaces for third-party implementations.
 
 ---
 
-## Authentication Flow
+## 4. Research Areas — Resolved
 
-**Hybrid JWT + Refresh Token:**
+All eight research areas have been investigated and decisions finalized. Each subsection below links to the detailed evaluation in Section 5.
 
-| Token   | TTL    | Storage                    | Rotation                       |
-| ------- | ------ | -------------------------- | ------------------------------ |
-| Access  | 15 min | Client memory/localStorage | Stateless (JWT)                |
-| Refresh | 7 days | Redis                      | Single-use, rotated on refresh |
+**4.1 Backend Framework** — Resolved: **Fastify 5**. Best balance of contributor friendliness, ecosystem, and performance. See [Section 5.1](#51-backend-framework).
 
-```typescript
-// Login returns both tokens
-{ accessToken: string, refreshToken: string }
+**4.2 ORM / Data Access** — Resolved: **Drizzle ORM**. Best-in-class RLS support via `pgPolicy`, smallest runtime footprint, SQL-first philosophy. See [Section 5.2](#52-orm--data-access).
 
-// Refresh endpoint revokes old token, issues new pair
-POST /auth/refresh { refreshToken } → new { accessToken, refreshToken }
+**4.3 Auth Service** — Resolved: **Zitadel**. Native multi-tenancy, API-first design for federation, ~512 MB RAM fits VPS. AGPL compatible with Colophony's open-source model. See [Section 5.3](#53-auth-service).
 
-// Logout deletes all user's refresh tokens
-DELETE /auth/logout → redis.del(`refresh:${userId}:*`)
-```
+**4.4 Managed Hosting Orchestration** — Resolved: **Coolify + Hetzner** (Phase 1, 0-100 tenants). Cheapest cost-to-feature ratio, REST API for tenant automation, open-source aligned. See [Section 5.4](#54-managed-hosting-orchestration).
 
-**Implementation:** `apps/api/src/modules/auth/auth.service.ts`
+**4.5 API Layer Architecture** — Resolved: **tRPC (internal) + oRPC REST + OpenAPI 3.1 (public) + Pothos + GraphQL Yoga (power users)**. All three surfaces share the service layer and Zod schemas. See [Section 5.5](#55-api-layer-architecture).
+
+**4.6 Form Builder Architecture** — Resolved: **Custom build** with dnd-kit + shadcn/ui. JSON-based form definitions stored in PostgreSQL JSONB. 15 field types, conditional logic, embeddable via iframe. See [Section 5.6](#56-form-builder-architecture).
+
+**4.7 Federation Protocol** — Resolved: **WebFinger + did:web + HTTP Message Signatures (RFC 9421) + custom REST operations**. Purpose-built for literary magazine federation. Includes Blind Submission Attestation Protocol (BSAP) for sim-sub enforcement. See [Section 5.7](#57-federation-protocol).
+
+**4.8 Plugin / Extension System** — Resolved: **Five-tier extensibility model** (Webhooks → Adapters → Workflow Hooks → UI Extensions → Full Plugins). TypeScript-only, npm distribution. See [Section 5.8](#58-plugin--extension-system).
 
 ---
 
-## File Upload Flow
+## 5. Research Results
 
-```
-1. Client → tusd sidecar (chunked, resumable via tus protocol)
-2. tusd pre-create hook → API validates (auth, quota, file type)
-3. tusd post-finish hook → API creates SubmissionFile record (quarantine)
-4. BullMQ job → ClamAV virus scan
-5. If clean → update scanStatus, move to production bucket
-6. If infected → quarantine, notify user
-```
+> All research areas investigated 2026-02-11. Full evaluation text archived in git history.
 
-**Key files:**
+### 5.1 Backend Framework
 
-- `apps/api/src/modules/storage/tusd-webhook.controller.ts` — tusd hooks
-- `apps/api/src/modules/jobs/processors/virus-scan.processor.ts` — scan job
-- `apps/web/src/hooks/use-file-upload.ts` — tus-js-client wrapper
+**Decision:** Fastify 5
+**Decided:** 2026-02-11
+**Candidates evaluated:** NestJS 11, Fastify 5, Hono 4, Elysia 1.4, Express 5
+**Rationale:** Best balance of contributor friendliness (Express-like API, no decorators/DI), ecosystem completeness (GraphQL Yoga, tRPC adapter, OpenAPI), performance (~70-80k req/s), and maturity (OpenJS Foundation). Workers run in-process via BullMQ rather than separate worker apps.
+**Key implementation details:**
+
+- Plugin encapsulation model maps to shared packages in monorepo
+- `@fastify/helmet` for security headers, `@fastify/websocket` for real-time
+- oRPC for REST + OpenAPI 3.1 generation (replaced ts-rest from original plan)
+- Tests use `app.inject()` (Fastify built-in), not supertest
+  **Archived:** Full evaluation (88 lines) — see git history
+
+### 5.2 ORM / Data Access
+
+**Decision:** Drizzle ORM
+**Decided:** 2026-02-11
+**Candidates evaluated:** Prisma 5/7, Drizzle ORM, Kysely, TypeORM, raw pg + pgtyped
+**Rationale:** Best-in-class RLS support — `pgPolicy` definitions in TypeScript schema files (version-controlled alongside tables), `sql` template tag for parameterized `set_config()` calls (no `$executeRawUnsafe` hack needed). Smallest runtime (~57 KB), fastest ORM benchmarks, SQL-first philosophy lowers contributor onboarding.
+**Key implementation details:**
+
+- RLS policies defined via `pgPolicy` in Drizzle schema — included in generated migrations
+- `withRls()` wrapper in `packages/db/src/context.ts` sets `app.current_org` and `app.user_id` via `set_config()` inside transactions
+- Forward-only migrations (no automatic rollbacks); rollback = write a new forward migration
+- Relational query API covers most Prisma `include` patterns
+- JSONB queries use `sql` template tag for PostgreSQL operators
+- Nested transactions use savepoints internally
+  **Archived:** Full evaluation (499 lines, 5 candidates) — see git history
+
+### 5.3 Auth Service
+
+**Decision:** Zitadel
+**Decided:** 2026-02-11
+**Candidates evaluated:** Keycloak, Zitadel, Ory (Kratos + Hydra), Logto, Authentik, SuperTokens
+**Rationale:** Native multi-tenancy maps to Colophony's org model. API-first design (gRPC + REST) enables federation service integration. ~512 MB RAM fits VPS targets. Event-sourced architecture provides audit logging. AGPL license compatible with open-source distribution.
+**Key implementation details:**
+
+- User lifecycle synced via Zitadel webhooks → local `users` table
+- Two-step webhook idempotency (INSERT event, check `processed` status)
+- `@colophony/auth-client` package wraps REST-only methods
+- Dual auth: Zitadel OIDC tokens (interactive) + API keys (programmatic)
+- AGPL applies only to Zitadel modifications; Colophony code unaffected
+  **Archived:** Full evaluation (440 lines, 6 candidates with weighted scoring) — see git history
+
+### 5.4 Managed Hosting Orchestration
+
+**Decision:** Coolify + Hetzner (Phase 1, 0-100 tenants)
+**Decided:** 2026-02-11
+**Candidates evaluated:** Kubernetes (managed), Fly.io, Railway, Coolify, Docker Swarm, HashiCorp Nomad, Kamal
+**Rationale:** Best cost-to-feature ratio ($200-400/mo for 100 tenants on Hetzner). Open-source aligned (AGPL). REST API enables tenant provisioning automation. Built-in Let's Encrypt SSL, custom domains, Docker Compose support, database deployment with S3 backups. Manageable ops burden for 1-2 person team.
+**Key implementation details:**
+
+- Hetzner CX32 servers (~$7/mo each, 4 vCPU, 8GB), ~10-15 tenants per server
+- Shared infrastructure (PostgreSQL with RLS, Redis, MinIO, Zitadel) on dedicated servers
+- Monitoring via Prometheus + Grafana (deployed alongside via Coolify)
+- Phase 2 (100-500 tenants): evaluate Fly.io or Kamal
+- Phase 3 (500+ tenants): Kubernetes with dedicated platform hire
+  **Archived:** Full evaluation (495 lines, 7 candidates with cost modeling) — see git history
+
+### 5.5 API Layer Architecture
+
+**Decision:** tRPC (internal) + oRPC REST + OpenAPI 3.1 (public) + Pothos + GraphQL Yoga (power users)
+**Decided:** 2026-02-11
+**Full research:** [docs/api-layer-v2-research.md](api-layer-v2-research.md)
+**Rationale:** Three API surfaces share the same service layer and Zod schemas from `@colophony/types`. tRPC for type-safe internal frontend communication, oRPC for OpenAPI 3.1 REST at `/v1/docs`, Pothos + Yoga for flexible GraphQL queries and mutations.
+**Key implementation details:**
+
+- Pothos chosen over TypeGraphQL for Zod single-source-of-truth validation (StandardSchema)
+- Manual Drizzle type definitions and dataloader setup (no `@pothos/plugin-prisma` equivalent)
+- oRPC replaced ts-rest (from original plan) for better OpenAPI 3.1 and Zod 4 support
+- SDK generation: TypeScript (openapi-fetch) + Python (openapi-python-client)
+- REST versioning: URL path (`/v1/`); GraphQL versioning: schema evolution
+- Cost-based GraphQL rate limiting (1000 pts/min)
+  **Archived:** Full evaluation (175 lines) — see git history. Full API research: `docs/api-layer-v2-research.md`
+
+### 5.6 Form Builder Architecture
+
+**Decision:** Custom build with dnd-kit + shadcn/ui
+**Decided:** 2026-02-11
+**Full research:** [docs/form-builder-research.md](form-builder-research.md)
+**Candidates evaluated:** SurveyJS, Formbricks, Form.io, Typebot, HeyForm, Tripetto
+**Rationale:** Submission forms are product-differentiating (tus/ClamAV integration, submission periods, blind submission toggles). Custom build gives full control with no license dependencies, consistent with existing shadcn/ui.
+**Key implementation details:**
+
+- JSON-based form definitions stored in PostgreSQL JSONB (`FormDefinition` table)
+- 15 field types: text, textarea, rich_text, number, email, url, date, select, multi_select, radio, checkbox, checkbox_group, file_upload, section_header, info_text
+- dnd-kit (`@dnd-kit/core` + `@dnd-kit/sortable`) for drag-and-drop
+- Conditional logic engine (JSON Logic-inspired): SHOW/HIDE/ENABLE/DISABLE/REQUIRE
+- Embeddable forms via iframe with postMessage auto-resize
+- Zod schemas generated from form definitions at runtime
+  **Archived:** Full evaluation (94 lines) — see git history. Full research: `docs/form-builder-research.md`
+
+### 5.7 Federation Protocol
+
+**Decision:** WebFinger + did:web + HTTP Message Signatures (RFC 9421) + custom REST operations
+**Decided:** 2026-02-11
+**Candidates evaluated:** ActivityPub, custom REST, OAuth2 federation, Matrix, WebFinger + custom (hybrid), OpenID Connect Federation
+**Rationale:** Colophony's federation needs are fundamentally different from social networking. ActivityPub brings complexity for features not needed (follows, boosts, timelines). A purpose-built protocol using WebFinger for discovery and did:web for identity gives exactly what's needed with minimal complexity while remaining standards-based.
+**Key implementation details:**
+
+- Discovery: WebFinger (RFC 7033) at `/.well-known/webfinger`
+- Identity: did:web (W3C DID) documents at `/.well-known/did.json`
+- Server-to-server auth: HTTP Message Signatures (RFC 9421) with Ed25519
+- Sim-sub enforcement: Blind Submission Attestation Protocol (BSAP) — content fingerprints (SHA-256) shared without revealing submission content
+- Piece transfer: JWT-based transfer tokens (72h TTL), signed by origin instance
+- Trust: Admin-controlled per-instance (allowlist, open, managed_hub modes)
+- Identity migration: DID document transfer + cross-instance notification
+- Hub mode: Managed hosting instances auto-trust via `HUB_REGISTRATION_TOKEN`
+- Feature-flagged: `FEDERATION_ENABLED=false` by default
+- Libraries: `jose` for JWT/JWK, Node.js `crypto` for Ed25519, custom HTTP signature implementation
+  **Key design decisions:**
+- SHA-256 exact match for fingerprinting (not fuzzy — privacy-preserving)
+- Per-instance rate limiting for federation requests (configurable per trusted peer)
+- Two-layer identity: Zitadel = authentication authority, Federation service = identity publisher
+- Federation GDPR: each instance is an independent data controller
+  **Archived:** Full evaluation (1010 lines, 6 candidates + full protocol design) — see git history
+
+### 5.8 Plugin / Extension System
+
+**Decision:** Five-tier extensibility model
+**Decided:** 2026-02-11
+**Full research:** [docs/research/plugin-extension-system.md](./research/plugin-extension-system.md)
+**Rationale:** Studied 7 plugin/extension systems (WordPress, Strapi, Ghost, OJS, Grafana, VS Code, Backstage). Combined patterns into a five-tier model matching different integration depths.
+**Key implementation details:**
+
+- **Tier 0: Webhooks** (Ghost-inspired) — zero-code external HTTP notifications
+- **Tier 1: Adapters** (Backstage extension points) — typed interface implementations for email, payment, storage, auth, search
+- **Tier 2: Workflow Hooks** (WordPress-inspired, fully typed) — action hooks (fire-and-forget) and filter hooks (data transformation chain)
+- **Tier 3: UI Extensions** (VS Code contribution points) — declarative manifest-based admin panel extensions
+- **Tier 4: Full Plugins** (Strapi + Backstage lifecycle) — register/bootstrap/destroy lifecycle with full service access
+- TypeScript-only, npm distribution, Zod config schemas, permission-scoped security
+- Plugin SDK: `packages/plugin-sdk/src/` (adapters, hooks, config, plugin-base, testing)
+- Remote plugin registry with fetch + cache via `plugin-registry.service.ts`
+  **Archived:** Full research: `docs/research/plugin-extension-system.md`
+
+### 5.9 Decision Interaction Matrix
+
+Four interaction effects between independently-evaluated research areas were identified and resolved:
+
+| Interaction                          | Problem                                                                            | Resolution                                                                                                                                                                                       |
+| ------------------------------------ | ---------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Fastify + API Layer** (5.1 + 5.5)  | API layer research assumed NestJS adapters                                         | `@ts-rest/fastify` exists; GraphQL Yoga integrates via `handleNodeRequest`. Later replaced ts-rest with oRPC.                                                                                    |
+| **Drizzle + Pothos** (5.2 + 5.5)     | Pothos scored 39/50 with Prisma plugin; no Drizzle plugin exists (revised: ~29/50) | Keep Pothos for Zod single-source-of-truth. Accept manual type definitions and dataloader setup. Works well in practice.                                                                         |
+| **Drizzle + Zitadel** (5.2 + 5.3)    | User identity lives in Zitadel; `users` table in Drizzle DB                        | Webhook-based sync via Zitadel Actions. Two-step idempotency. Local DB is canonical read source.                                                                                                 |
+| **Zitadel + Federation** (5.3 + 5.7) | did:web identity resolution vs Zitadel OIDC                                        | Two-layer architecture: Zitadel = authentication authority, Federation service = identity publisher. Share `users` table, different responsibilities. Federation feature-flagged off by default. |
+
+**Archived:** Full interaction analysis (374 lines with code examples) — see git history
 
 ---
 
-## Payment Flow (Stripe)
+## 6. Implementation Strategy
+
+> **Added:** 2026-02-11, post senior dev review
+> **Key insight:** The MVP was never publicly released. There are no existing users, no backwards compatibility constraints, and no time pressure. This enables building a complete, polished platform for a single v2.0 release rather than shipping incremental public versions.
+
+### 6.1 Development Philosophy
+
+**Not a "minimum viable product" — a complete platform that competes with Submittable on day one.**
+
+| Assumption           | Old (Wrong)               | Revised (Correct)                                 |
+| -------------------- | ------------------------- | ------------------------------------------------- |
+| **Timeline**         | 6-9 months to v2.0 MVP    | 18-24 months to single complete release           |
+| **Federation**       | Defer to v2.1 (too risky) | Build alongside core features (Months 10-15)      |
+| **GraphQL**          | Defer to v2.1             | Build alongside REST (Months 5-9)                 |
+| **Form builder**     | Ship basic, iterate later | Build complete (all 15 types + conditional logic) |
+| **Plugin system**    | Ship webhooks only        | Build Tier 0-4 before launch                      |
+| **Beta testing**     | None (ship to real users) | 4 private cohorts over 18 months                  |
+| **Release strategy** | v2.0 → v2.1 → v2.2        | Single v2.0 with complete feature set             |
+
+**Why this is architecturally superior:**
+
+- Identity model baked in from day one (`did:web`, federated accounts)
+- Submission data model includes federation fields (content fingerprint, cross-instance references) from the start
+- No painful migration from "single-instance" to "federated" mode
+- Beta testing with 5-10 magazines covers the full stack including federation
+
+### 6.2 Development Tracks (Parallel)
+
+Ten tracks covering the full platform build. Tracks 1-8 and 10 are complete; Track 9 (governance docs) is not yet started.
 
 ```
-1. User clicks "Submit & Pay"
-2. Backend creates Stripe Checkout session
-3. User redirected to Stripe (card data never touches our servers)
-4. Stripe webhook → checkout.session.completed
-5. Webhook handler (idempotent):
-   a. Check StripeWebhookEvent.processed
-   b. Create Payment record
-   c. Update Submission.status → 'submitted'
-   d. Send confirmation email
+Track 1: Core Infrastructure                    ✅ Complete
+├─ Framework migration (NestJS → Fastify)
+├─ ORM migration (Prisma → Drizzle)
+├─ Auth integration (Zitadel)
+├─ Managed hosting setup (Coolify + Hetzner)
+├─ Monitoring/observability (Prometheus + Grafana + Sentry)
+└─ CI/CD pipeline
+
+Track 2: Colophony API                          ✅ Complete
+├─ Service layer extraction from tRPC routers
+├─ REST + GraphQL + tRPC (parallel, shared service layer)
+├─ Pothos + Drizzle manual integration patterns
+├─ SDK generation (TypeScript, Python)
+└─ API documentation (OpenAPI 3.1, GraphQL schema)
+
+Track 3: Hopper — Submission Management         ✅ Complete
+├─ Form builder (all 15 field types + conditional logic)
+├─ File upload + virus scanning (tus pipeline)
+├─ Embeddable forms (iframe)
+├─ Submission review pipeline
+├─ Writer workspace (portfolio, manuscript library, analytics)
+└─ GDPR tools
+
+Track 4: Slate — Publication Pipeline           ✅ Complete
+├─ Post-acceptance workflow
+├─ Copyedit/proofread stages
+├─ Contract generation + e-signature (Documenso adapter)
+├─ Workflow orchestration (Inngest)
+├─ Issue assembly
+├─ CMS integration (WordPress, Ghost adapters)
+└─ Editorial calendar
+
+Track 5: Register — Identity & Federation       ✅ Complete
+├─ Discovery (WebFinger, .well-known)
+├─ Identity (did:web documents)
+├─ Trust establishment (allowlist/open/managed_hub)
+├─ Sim-sub enforcement (BSAP)
+├─ Piece transfer
+├─ Identity migration
+└─ Hub for managed hosting
+
+Track 6: Colophony Plugins                      ✅ Complete
+├─ Webhooks (Tier 0)
+├─ Adapters (Tier 1)
+├─ Workflow hooks (Tier 2)
+├─ UI extensions (Tier 3)
+├─ Full plugins (Tier 4)
+└─ Plugin SDK + registry
+
+Track 7: Writer Experience                      ✅ Complete
+├─ Writer workspace (cross-org portfolio)
+├─ Manuscript library
+├─ CSV import flows
+├─ Writer analytics (personal stats/charts)
+└─ CSR data portability (export/import)
+
+Track 8: Data Portability & Standards           ✅ Complete
+├─ Colophony Submission Record (CSR) format spec
+├─ Manual correspondence tracking
+├─ Duplicate detection (fingerprinting)
+└─ CSR documentation
+
+Track 9: Governance & Public Docs               🔲 Not started
+├─ AGPL compliance documentation
+├─ Contributor guidelines
+├─ Code of conduct
+└─ Public-facing architecture docs
+
+Track 10: Observability & Hardening             ✅ Complete
+├─ Sentry error tracking
+├─ Prometheus metrics (/metrics endpoint)
+├─ Instrumented BullMQ workers
+├─ SSRF validation for outbound URLs
+└─ Webhook hardening (signatures, timestamps, rate limiting)
+
+Cross-cutting: Relay — Notifications            ✅ Complete
+├─ Email templates + provider integration (SMTP, SendGrid)
+├─ Webhook delivery system
+├─ In-app notification center
+└─ Integrated across Hopper, Slate, Register
 ```
 
-**Key files:**
+**Dependency graph:**
 
-- `apps/api/src/modules/payments/stripe-webhook.controller.ts` — webhook handler
-- `apps/api/src/modules/payments/payments.service.ts` — checkout session creation
-- `apps/api/src/trpc/routers/payments.router.ts` — tRPC endpoints
+```
+Track 1 (Infrastructure)     → Blocked everything
+Track 2 (Colophony API)      → Depended on Track 1
+Track 3 (Hopper)             → Depended on Track 1 + 2
+Track 4 (Slate)              → Depended on Track 1 + 2
+Track 5 (Register)           → Depended on Track 1 + 2
+Track 6 (Colophony Plugins)  → Depended on Track 2
+Track 7 (Writer Experience)  → Depended on Track 3
+Track 8 (Data Portability)   → Depended on Track 3 + 5
+Track 9 (Governance Docs)    → Depends on Track 1-8
+Track 10 (Observability)     → Depended on Track 1
+Relay (cross-cutting)        → Started in Track 1, evolved with each track
+```
+
+### 6.3 Timeline
+
+**Original estimate:** 18-24 months across 5 phases with 4 beta cohorts.
+
+**Actual:** Tracks 1-8 and 10 completed in ~3 weeks (2026-02-10 to 2026-03-02). The original timeline assumed a single developer working part-time with manual coding. AI-assisted development (Claude Code) dramatically compressed the schedule. All architectural decisions, implementation, testing, and CI/CD were completed in this period.
+
+**Remaining:** Track 9 (governance docs) and public launch preparation are not yet started.
+
+### 6.4 Beta Testing Strategy
+
+> **Note:** This section was pre-launch planning written 2026-02-11. The 4-cohort beta strategy was designed for an 18-24 month timeline. Actual testing has been done via CI (unit, RLS integration, Playwright E2E) and manual QA. Real-world beta testing with external magazines has not yet begun.
+
+### 6.5 Risk Assessment — Post-Implementation Review
+
+**Risks that were resolved during development:**
+
+- ~~Federation complexity~~ — Built and tested across Tracks 5 and 8. did:web + HTTP signatures + BSAP all working.
+- ~~Pothos + Drizzle gap~~ — Manual integration patterns work well. No switch to TypeGraphQL needed.
+- ~~Form builder scope~~ — All 15 field types + conditional logic shipped.
+- ~~Plugin system maturity~~ — Tier 0-4 complete with SDK and registry.
+
+**Risks that remain open:**
+
+- **Coolify single-maintainer** — Still a concern. Monitoring in place (Prometheus, Sentry), AGPL fork remains viable fallback.
+- **Sim-sub enforcement novelty** — Built but untested with real magazines. Needs beta validation.
+- **Federation GDPR compliance** — Requires legal review before public launch.
+
+**Risks that did NOT materialize:**
+
+- Scope creep — Compressed timeline eliminated this concern.
+- Technology churn — 3-week build avoided dependency drift entirely.
+- Motivation/burnout — AI-assisted development kept momentum high.
+
+### 6.6 Pothos + Drizzle Decision Point — Resolved
+
+**Decision:** Pothos chosen and working well. Manual integration patterns (type definitions, dataloader, pagination) are acceptable. Zod single-source-of-truth advantage confirmed. No switch to TypeGraphQL needed.
 
 ---
 
-## GDPR Compliance
+## 7. Open Questions
 
-### Right to Access (Article 15)
+Questions that emerged during the interview that need further discussion:
 
-```typescript
-// Export user data as structured JSON
-const data = await gdprService.exportUserData(userId);
-// Returns: { profile, submissions, payments, consents, auditLog, organizations }
+1. ~~**Submitter role architecture:** How does the Submitter role work when someone is a submitter at one publication and an editor at another? Is this per-org role assignment, or a global identity with per-org role bindings?~~ **RESOLVED:** Submitter is **not an org role** — it is a global user capability. `organization_members` stays `ADMIN | EDITOR | READER` (staff only). A user's submitter identity is expressed through their **manuscript library** (user-owned, cross-org) and **submissions** (the junction between a manuscript and an org's submission period). No org membership is required to submit. Org-to-writer broadcast (calls for submissions, announcements) is handled through a **follow/subscribe** model (Relay), not membership. Post-acceptance contributor relationships are a Slate (Track 4) concern. A person can simultaneously be a submitter (global) and an editor/admin at different orgs — these are independent relationships.
 
-// Export as ZIP file for download
-const zipBuffer = await gdprService.exportUserDataAsZip(userId);
-// ZIP contains: profile.json, submissions.json, payments.json,
-//               audit-log.json, consents.json, organizations.json, metadata.json
-```
+2. ~~**Self-serve org creation:** For managed hosting, can anyone create an org, or is it provisioned? For self-hosted, the deployer is presumably the admin.~~ **PARTIALLY RESOLVED:** Org creation is **self-serve** in both contexts — no approval gates. **Self-hosted:** deployer creates the first org, becomes ADMIN; additional orgs at deployer's discretion (most deployments are single-org). **Managed hosting:** self-serve with a **free tier** (hard quota limits on submissions, storage, etc.) and paid upgrade to remove limits. All features available on all tiers (no feature gating). Managed hosting infrastructure (Coolify provisioning, Stripe subscription billing, quota enforcement, free-tier limits) **deferred** — not in scope until post-Track 3. Implementation details to be decided when managed hosting work begins.
 
-### Right to Erasure (Article 17)
+3. ~~**Data model for federation:** What data crosses instance boundaries? Just identity? Submission metadata? Full submissions? How is this governed?~~ **RESOLVED:** Identity (DID-based user keys), content fingerprints (SHA-256 for sim-sub), submission metadata (title, cover letter), and files (via signed JWT transfer tokens) cross boundaries. Governed per-instance: admin-controlled trust (allowlist/open/managed_hub modes), per-peer capability grants, hub attestation for managed hosting. See Track 5 PRs #180-#184.
 
-```typescript
-await gdprService.deleteUserData(userId);
-// 1. Delete files from storage
-// 2. Anonymize submission content
-// 3. Delete organization memberships
-// 4. Delete user identities (OAuth)
-// 5. Delete user consents
-// 6. Soft-delete user with anonymized email
-// 7. Anonymize audit events (remove actor association)
-// 8. Create audit log of the erasure
-```
+4. ~~**CMS "starter home" scope:** How basic is the built-in publishing layer? Static pages? Blog-like? Magazine-format with issue structure?~~ **RESOLVED:** Integration-only for v2.0. CMS adapters (WordPress, Ghost) push content to external CMS platforms. No built-in publishing layer — magazines use their existing CMS.
 
-### Data Subject Access Requests (DSAR)
+5. **Subscription/membership research:** Need to evaluate Ghost memberships, Memberful, Steady, and open-source alternatives for the magazine subscription feature.
 
-```typescript
-// Create a DSAR request (30-day deadline per GDPR)
-const { id, dueAt } = await gdprService.createDsarRequest({
-  userId: "user-123",
-  type: "ACCESS" | "ERASURE" | "RECTIFICATION" | "PORTABILITY",
-  notes: "Optional notes",
-});
+6. **Billing for managed hosting:** How does the flat-rate + volume add-on pricing actually work? What's the volume threshold? How are overages calculated?
 
-// Admin can monitor approaching deadlines
-const pending = await gdprService.getPendingDsarRequests(7); // Due within 7 days
-```
+7. ~~**Migration path from MVP:** For any existing MVP deployments (if any), how do they migrate to v2?~~ **RESOLVED:** MVP was never publicly released — no external users to migrate. Clean break: v2 is a full rewrite with no data migration path from v1. Internal dev data was discarded.
 
-### Consent Management (Article 7)
-
-```typescript
-// tRPC endpoints for user consent
-await trpc.consent.grant({ consentType: "marketing_emails", organizationId });
-await trpc.consent.revoke({ consentType: "analytics" });
-const hasConsent = await trpc.consent.check({
-  consentType: "terms_of_service",
-});
-```
-
-### Retention Policies (Article 5(1)(e))
-
-- Daily BullMQ job runs at 3 AM UTC
-- Configurable per-resource retention periods
-- Default policies:
-  - Rejected submissions: 12 months
-  - Withdrawn submissions: 24 months
-  - Audit events: 24 months (GDPR Article 30 minimum)
-  - Processed outbox events: 30 days
-  - Stripe webhook events: 90 days
-  - Completed DSAR requests: 12 months
-- Payments are NOT auto-deleted (legal/accounting requirements)
-
-### Audit Logging (Article 30)
-
-```typescript
-await auditService.log({
-  organizationId: "org-123",
-  actorId: "user-456",
-  action: AuditActions.SUBMISSION_CREATED, // 15+ predefined actions
-  resource: AuditResources.SUBMISSION,
-  resourceId: "sub-789",
-  oldValue: { status: "DRAFT" },
-  newValue: { status: "SUBMITTED" },
-  ipAddress: "192.168.1.1",
-  userAgent: "Mozilla/5.0...",
-});
-
-// Export audit logs as CSV
-const csv = await auditService.exportAsCsv({
-  organizationId,
-  dateFrom,
-  dateTo,
-});
-```
-
-### Transactional Outbox Pattern
-
-```typescript
-// Ensures notifications are sent even if system crashes
-await outboxService.createEvent({
-  eventType: 'submission.accepted',
-  recipientEmail: 'user@example.com',
-  templateName: 'submissionStatusChange',
-  templateData: { userName: 'John', submissionTitle: 'My Story', ... }
-}, tx); // Created in same transaction as main action
-
-// Background processor polls every 30 seconds
-// Exponential backoff: 10s, 30s, 90s, 270s, 810s (max 5 retries)
-```
+8. ~~**Brand and naming:** Is "Colophony" the final name? Does the reconceive warrant a rebrand?~~ **RESOLVED:** Suite is **Colophony**. Components: **Hopper** (submissions), **Slate** (publication), **Relay** (notifications), **Register** (federation). API layer and plugin system use the Colophony name directly.
 
 ---
 
-## Frontend Architecture
+## Appendix: Decision Trail
 
-### tRPC Client Configuration
+All product decisions are documented in `docs/competitive-analysis.md` Section 9. Key architectural decisions made during the planning conversation:
 
-```typescript
-// apps/web/src/lib/trpc.ts
-// Sends Authorization header + x-organization-id header
-export function getTrpcClient() {
-  return trpc.createClient({
-    links: [
-      httpBatchLink({
-        url: `${getBaseUrl()}/trpc`,
-        headers() {
-          const token = getAccessToken();
-          const orgId = getCurrentOrgId();
-          return {
-            ...(token ? { Authorization: `Bearer ${token}` } : {}),
-            ...(orgId ? { "x-organization-id": orgId } : {}),
-          };
-        },
-      }),
-    ],
-  });
-}
-```
-
-### Auth Token Management
-
-```typescript
-// Store tokens on login
-setAuthTokens(accessToken, refreshToken, expiresIn);
-
-// Auto-refresh before expiry (scheduled 1 min before)
-if (isTokenExpiringSoon()) {
-  await refreshMutation.mutateAsync({ refreshToken });
-}
-
-// Clear on logout
-clearAuthData();
-```
-
-### Protected Route Pattern
-
-```typescript
-<ProtectedRoute requireEmailVerified requireEditor>
-  <EditorDashboard />
-</ProtectedRoute>
-```
-
-### Organization Context
-
-```typescript
-// useOrganization hook provides role-based access
-const { currentOrg, isEditor, isAdmin, switchOrganization } = useOrganization();
-```
-
-### File Upload with tus-js-client
-
-```typescript
-// 1. Initiate upload to get URL
-const { fileId, uploadUrl } = await trpc.files.initiateUpload.mutateAsync({...});
-
-// 2. Upload via tus
-const upload = new tus.Upload(file, {
-  endpoint: uploadUrl,
-  chunkSize: 5 * 1024 * 1024,
-  onProgress: (bytesUploaded, bytesTotal) => {...},
-  onSuccess: () => {...},
-});
-upload.start();
-```
-
-### API Response Patterns
-
-- Paginated lists return `{ items, total, page, limit, totalPages }`
-- Update mutations expect `{ id, data: {...} }` format
-- Status transitions use `EDITOR_ALLOWED_TRANSITIONS` from `@colophony/types`
-
-### Available tRPC Routers
-
-```typescript
-// apps/api/src/trpc/trpc.router.ts
-export const appRouter = router({
-  auth: authRouter, // login, register, refresh, verify, logout, resetPassword, me
-  submissions: submissionsRouter, // list, getById, create, update, submit, withdraw
-  files: filesRouter, // getUploadUrl, confirmUpload, delete
-  payments: paymentsRouter, // createCheckoutSession, getForSubmission
-  gdpr: gdprRouter, // createDsarRequest, exportData, downloadExport, requestDeletion
-  consent: consentRouter, // list, grant, revoke, check, bulkGrant
-  audit: auditRouter, // list, getById, getResourceHistory, exportCsv, getStats
-  retention: retentionRouter, // list, create, update, delete, toggleActive, getDefaults
-});
-```
+| Date       | Decision                                                                                                                 | Rationale                                                                                                                                                                                                                                                                              |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-02-10 | Full reconceive (not incremental evolution)                                                                              | Vision is fundamentally different from MVP scope                                                                                                                                                                                                                                       |
+| 2026-02-10 | Decomposed service architecture                                                                                          | 6+ services with distinct scaling/lifecycle needs                                                                                                                                                                                                                                      |
+| 2026-02-10 | Monorepo for core + separate repos for ecosystem                                                                         | Atomic commits for core; independent lifecycle for integrations                                                                                                                                                                                                                        |
+| 2026-02-10 | Docker Compose for self-hosted, TBD orchestrator for managed                                                             | Small magazines shouldn't need K8s; managed hosting needs more                                                                                                                                                                                                                         |
+| 2026-02-10 | Research before committing to framework, ORM, auth, orchestration                                                        | Too consequential to decide without evaluation                                                                                                                                                                                                                                         |
+| 2026-02-11 | Suite naming: Colophony (suite), Hopper (submissions), Slate (publication), Relay (notifications), Register (federation) | Clear identity per component; literary metaphors; API + plugins use Colophony name                                                                                                                                                                                                     |
+| 2026-02-11 | Single complete release, not phased public rollout                                                                       | No existing users, no time pressure; build it right over 18-24 months                                                                                                                                                                                                                  |
+| 2026-02-11 | Federation in v2.0 (built alongside core, not deferred)                                                                  | No time constraints; architecturally superior to bolt-on later                                                                                                                                                                                                                         |
+| 2026-02-11 | 6 parallel development tracks with 4 beta cohorts                                                                        | Maximize parallelism; validate with real magazines throughout                                                                                                                                                                                                                          |
+| 2026-02-15 | Documenso as default e-sign integration for Slate contracts (via Tier 1 adapter)                                         | TypeScript, self-hostable, active releases, embedding support. Adapter pattern allows swap to OpenSign/LibreSign later                                                                                                                                                                 |
+| 2026-02-15 | Evaluate Inngest (preferred) vs Temporal for Slate workflow orchestration at Track 4 design time                         | BullMQ stays for simple async jobs; durable multi-step workflows (contract signing, copyedit chains) need a workflow engine. Inngest: TS-native, self-hostable, lower ops overhead. Temporal: max durability, higher complexity. No action until Track 4 design starts (~month 5-6)    |
+| 2026-02-15 | npm trusted publishing + Sigstore Cosign + OPA for plugin distribution/governance                                        | De-scopes custom marketplace and signing infrastructure. See plugin-extension-system.md Section 6-7                                                                                                                                                                                    |
+| 2026-02-15 | Keep custom form builder for submissions; consider JSON Forms/RJSF for generic admin forms only                          | Submission forms are product-differentiating (tus/ClamAV integration, submission periods, blind submission toggles). Generic admin/settings forms could use JSON Forms to reduce maintenance if we build many of them                                                                  |
+| 2026-02-15 | Federation uses openid-client + jose + did:web (specific library choices for Track 5)                                    | Standard libraries for OIDC/JWT/JWK crypto; custom logic only for domain-specific operations (sim-sub, piece transfer, blind submission attestation)                                                                                                                                   |
+| 2026-02-15 | External automation (n8n/Activepieces) as Tier 0 webhook consumer, not embedded                                          | Evaluate as recommended external target in plugin Phase 3-4 (v2.2+). Security concern: n8n has had multiple CVEs; must be network-isolated with strict allow-listing if integrated                                                                                                     |
+| 2026-02-19 | Submitter is a global user capability, not an org role                                                                   | Submitters need cross-org agency (manuscript library, sim-sub). Org membership (`ADMIN/EDITOR/READER`) is staff-only. Submission is the junction between user-owned manuscripts and org submission periods. Follow/subscribe model (Relay) for org-to-writer broadcast, not membership |
+| 2026-02-19 | Self-serve org creation with free tier for managed hosting                                                               | Self-serve in both contexts (no approval gates). Managed hosting: free tier with hard quotas, paid upgrade removes limits, all features on all tiers. Self-hosted: no billing. Managed hosting infra deferred to post-Track 3                                                          |
