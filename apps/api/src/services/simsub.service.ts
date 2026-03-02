@@ -80,7 +80,7 @@ export function resolveEffectivePolicy(
       (o) => o.genre === primaryGenre,
     );
     if (override) {
-      return override.type as SimSubPolicyType;
+      return override.type;
     }
   }
   return policy.type;
@@ -748,7 +748,9 @@ export const simsubService = {
       effectiveType === 'allowed_notify' ? 'notify' : 'withdraw';
     const windowHours = policy.notifyWindowHours;
     const dueAt = windowHours
-      ? new Date(Date.now() + windowHours * 60 * 60 * 1000).toISOString()
+      ? new Date(
+          new Date().getTime() + windowHours * 60 * 60 * 1000,
+        ).toISOString()
       : undefined;
 
     await tx

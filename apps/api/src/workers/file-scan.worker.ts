@@ -81,10 +81,12 @@ export function startFileScanWorker(
 
         const [scanResult, hashHex] = await Promise.all([
           clam.scanStream(passthrough),
-          new Promise<string>((resolve) => {
+          new Promise<string>((resolve, reject) => {
             hashTransform.on('finish', () =>
               resolve(hashTransform.digest('hex')),
             );
+            hashTransform.on('error', reject);
+            passthrough.on('error', reject);
           }),
         ]);
 
