@@ -95,6 +95,12 @@ import {
   WriterProfileNotFoundError,
   WriterProfileDuplicateError,
 } from '../services/writer-profile.service.js';
+import {
+  TrustPeerNotFoundError,
+  TrustPeerAlreadyExistsError,
+  TrustPeerInvalidStateError,
+  RemoteMetadataFetchError,
+} from '../services/trust.service.js';
 
 type TRPCErrorCode = ConstructorParameters<typeof TRPCError>[0]['code'];
 
@@ -182,6 +188,11 @@ const errorCodeMap: [new (...args: never[]) => Error, TRPCErrorCode][] = [
   [ExternalSubmissionNotFoundError, 'NOT_FOUND'],
   [WriterProfileNotFoundError, 'NOT_FOUND'],
   [WriterProfileDuplicateError, 'CONFLICT'],
+  // Federation trust errors
+  [TrustPeerNotFoundError, 'NOT_FOUND'],
+  [TrustPeerAlreadyExistsError, 'CONFLICT'],
+  [TrustPeerInvalidStateError, 'CONFLICT'],
+  [RemoteMetadataFetchError, 'BAD_REQUEST'],
   // Precondition
   [FileNotCleanError, 'PRECONDITION_FAILED'],
 ];
