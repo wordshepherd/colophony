@@ -9,7 +9,7 @@ import { vi } from 'vitest';
 const TEST_REDIS_DB = 1;
 
 vi.mock('bullmq', async (importActual) => {
-  const actual = (await importActual()) as Record<string, unknown>;
+  const actual = await importActual<Record<string, unknown>>();
   const OriginalWorker = actual.Worker as new (...args: unknown[]) => unknown;
 
   class TestWorker extends (OriginalWorker as any) {
