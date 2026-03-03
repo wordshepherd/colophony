@@ -289,7 +289,7 @@
 - [x] [P0] Security invariant tests — SSRF validation, defense-in-depth, pagination bounds (20 tests) — (DEVLOG 2026-03-02; done 2026-03-02)
 - [x] [P0] Service integration tests — submission, form-validation, org, portfolio, CSR, contract (63 tests) — (DEVLOG 2026-03-02; done 2026-03-02)
 - [x] [P0] Documenso webhook integration tests (10 tests) — (DEVLOG 2026-03-02; done 2026-03-02)
-- [ ] [P0] Writer Workspace E2E — dashboard, external submissions, portfolio, CSR import (~21 Playwright tests) — (test coverage plan 2026-03-02)
+- [x] [P0] Writer Workspace E2E — dashboard, external submissions, portfolio, CSR import (21 Playwright tests) — (DEVLOG 2026-03-02; done 2026-03-02)
 - [ ] [P1] Queue/worker integration tests — email, webhook, file-scan workers with real Redis (~19 tests) — (test coverage plan 2026-03-02)
 - [ ] [P1] Form builder E2E — create form, add fields, configure, submit through it (~16 Playwright tests) — (test coverage plan 2026-03-02)
 - [ ] [P1] Organization & settings E2E — org management, member management, API keys (~15 Playwright tests) — (test coverage plan 2026-03-02)
