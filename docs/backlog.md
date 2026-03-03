@@ -274,6 +274,16 @@
 - [x] Add soft 500-line guideline to CLAUDE.md — flag files over 500 lines for review during `/codex-review`; not a hard gate, just a review trigger — (dev workflow session 2026-02-20; done 2026-02-20)
 - [x] Extract `validateFormData` and per-type validators from `form.service.ts` (912 lines) into `form-validation.service.ts` — natural seam between CRUD operations and validation logic — (dev workflow session 2026-02-20; done 2026-02-20)
 
+### Defense-in-Depth (Codex Review Findings 2026-03-03)
+
+- [ ] [Critical] `submission_discussions` missing `FORCE ROW LEVEL SECURITY` — `packages/db/migrations/0041_submission_discussions.sql` enables RLS but does not force it — (Codex review 2026-03-03)
+- [ ] [P2] Defense-in-depth: transfer service org-scoped methods missing explicit `organizationId` predicate — `apps/api/src/services/transfer.service.ts:347,361,382,423` — (Codex review 2026-03-03)
+- [ ] [P2] Unbounded query: transfer listing by submission has no pagination/limit — `apps/api/src/services/transfer.service.ts:339` — (Codex review 2026-03-03)
+- [ ] [P2] Migration token verification unused `_submissionId` parameter (missing binding check) — `apps/api/src/services/migration.service.ts:958` — (Codex review 2026-03-03)
+- [ ] [P2] Unbounded query: migration pending approvals — `apps/api/src/services/migration.service.ts:1119` — (Codex review 2026-03-03)
+- [ ] [P2] Defense-in-depth: sim-sub peer query lacks explicit `organizationId` filter — `apps/api/src/services/simsub.service.ts:403` — (Codex review 2026-03-03)
+- [ ] [P3] Notification preferences list has no `LIMIT` — `apps/api/src/services/notification-preference.service.ts:71` — (Codex review 2026-03-03)
+
 ### Dev Workflow
 
 - [x] Structured session handoff doc (`session-handoff.md`, gitignored) — `/end-session` writes machine-readable state (branch, status, files touched, decisions made, open questions, next action) alongside DEVLOG narrative; `/start-session` reads handoff first for instant context restoration, falls back to DEVLOG if missing. DEVLOG becomes purely archival/human-readable — (dev workflow session 2026-02-20; done 2026-02-20)
@@ -295,9 +305,9 @@
 - [x] [P1] Organization & settings E2E — org management, member management (~14 Playwright tests) — (test coverage plan 2026-03-02; done 2026-03-03)
 - [x] [P1] Submission analytics E2E — dashboard, charts, date range filter (~6 Playwright tests) — (test coverage plan 2026-03-02; done 2026-03-03)
 - [x] [P2] Federation admin E2E — peer management, sim-sub, transfers, audit log (~16 Playwright tests) — (test coverage plan 2026-03-02; done 2026-03-03)
-- [ ] [P2] Federation S2S integration tests — two-instance HTTP signatures, trust handshake (~15 tests) — (test coverage plan 2026-03-02)
-- [ ] [P2] Notification prefs + writer analytics E2E (~9 tests) — (test coverage plan 2026-03-02)
-- [ ] CI: Add service-integration-tests, security-tests, and new Playwright jobs — (test coverage plan 2026-03-02)
+- [x] [P2] Federation S2S integration tests — simsub, transfer, migration (15 tests) — (test coverage plan 2026-03-02; done 2026-03-03)
+- [x] [P2] Notification prefs + writer analytics E2E (7 tests) — (test coverage plan 2026-03-02; done 2026-03-03)
+- [x] CI: Add service-integration-tests, security-tests jobs — (test coverage plan 2026-03-02; done 2026-03-03)
 - [ ] [P2] Fix flaky workspace analytics E2E — `workspace-analytics-correspondence.spec.ts` "Total Submissions" card times out intermittently (10s timeout); reproduces on both `main` and feature branches; likely slow tRPC query or rendering delay in CI — (CI flake 2026-03-03)
 
 ### CI
