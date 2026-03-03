@@ -46,6 +46,7 @@ const FEDERATION_SCOPES = [
   "audit:read",
   "submissions:read",
   "organizations:read",
+  "users:read",
 ];
 
 interface SeedOrg {
