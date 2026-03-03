@@ -110,13 +110,13 @@ test.describe("Submission Analytics Dashboard", () => {
     });
 
     await expect(page.getByText("Response Time Distribution")).toBeVisible();
-    await expect(page.getByText("Aging Submissions")).toBeVisible();
+    await expect(page.getByText("Aging Submissions").first()).toBeVisible();
 
     // Aging table shows either data rows or empty message
     const agingCard = page
       .locator("text=Aging Submissions")
-      .locator("..")
-      .locator("..");
+      .first()
+      .locator("../..");
     const hasData = agingCard.locator("table");
     const hasEmpty = agingCard.getByText("No aging submissions found.");
     await expect(hasData.or(hasEmpty).first()).toBeVisible({ timeout: 10_000 });
