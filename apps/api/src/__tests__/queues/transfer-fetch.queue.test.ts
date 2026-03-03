@@ -115,7 +115,7 @@ describe('transfer-fetch queue integration', () => {
     const submission = await createSubmission(org.id, user.id, {
       submissionPeriodId: period.id,
     });
-    const peer = await createTrustedPeer(org.id, {
+    await createTrustedPeer(org.id, {
       domain: 'origin.example.com',
       instanceUrl: 'http://localhost:4001',
     });
