@@ -6,6 +6,7 @@ import {
   organizations,
   users,
   userKeys,
+  trustedPeers,
 } from '@colophony/db';
 import { eq, and, isNull, count } from 'drizzle-orm';
 import {
@@ -359,6 +360,22 @@ export const federationService = {
         ),
       );
 
+    // Query distinct active peer domains from non-opted-out orgs via superuser pool
+    const activePeerDomains = await db
+      .selectDistinct({ domain: trustedPeers.domain })
+      .from(trustedPeers)
+      .innerJoin(
+        organizations,
+        eq(trustedPeers.organizationId, organizations.id),
+      )
+      .where(
+        and(
+          eq(trustedPeers.status, 'active'),
+          eq(organizations.federationOptedOut, false),
+        ),
+      )
+      .limit(1000);
+
     return {
       software: 'colophony',
       version: '2.0.0-dev',
@@ -371,6 +388,7 @@ export const federationService = {
       mode: config.mode,
       contactEmail: config.contactEmail,
       publications: pubs,
+      trustedPeers: activePeerDomains.map((r) => r.domain),
     };
   },
 

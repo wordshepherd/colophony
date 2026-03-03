@@ -96,6 +96,7 @@ describe('Federation Discovery Routes', () => {
         mode: 'allowlist',
         contactEmail: null,
         publications: [],
+        trustedPeers: [],
       });
 
       const response = await app.inject({
@@ -136,6 +137,7 @@ describe('Federation Discovery Routes', () => {
         mode: 'allowlist',
         contactEmail: null,
         publications: [],
+        trustedPeers: [],
       });
 
       const response = await app.inject({
@@ -144,6 +146,30 @@ describe('Federation Discovery Routes', () => {
       });
 
       expect(response.headers['cache-control']).toBe('public, max-age=3600');
+    });
+
+    it('returns trustedPeers in response', async () => {
+      mockGetInstanceMetadata.mockResolvedValueOnce({
+        software: 'colophony',
+        version: '2.0.0-dev',
+        domain: 'magazine.example',
+        publicKey: 'pub-key',
+        keyId: 'magazine.example#main',
+        capabilities: ['identity'],
+        mode: 'allowlist',
+        contactEmail: null,
+        publications: [],
+        trustedPeers: ['peer.example'],
+      });
+
+      const response = await app.inject({
+        method: 'GET',
+        url: '/.well-known/colophony',
+      });
+
+      expect(response.statusCode).toBe(200);
+      const body = response.json();
+      expect(body.trustedPeers).toEqual(['peer.example']);
     });
   });
 

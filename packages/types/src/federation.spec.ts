@@ -61,6 +61,19 @@ describe("federationMetadataSchema", () => {
     expect(result.success).toBe(false);
   });
 
+  it("accepts metadata with trustedPeers", () => {
+    const result = federationMetadataSchema.safeParse({
+      ...validMetadata,
+      trustedPeers: ["peer.example"],
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts metadata without trustedPeers", () => {
+    const result = federationMetadataSchema.safeParse(validMetadata);
+    expect(result.success).toBe(true);
+  });
+
   it("rejects empty version", () => {
     const result = federationMetadataSchema.safeParse({
       ...validMetadata,

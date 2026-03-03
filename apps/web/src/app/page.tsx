@@ -74,8 +74,15 @@ export default function Home() {
 
       {/* Footer */}
       <footer className="border-t py-6">
-        <div className="container text-center text-sm text-muted-foreground">
-          &copy; {new Date().getFullYear()} Colophony. All rights reserved.
+        <div className="container text-center text-sm text-muted-foreground space-y-2">
+          <div>
+            &copy; {new Date().getFullYear()} Colophony. All rights reserved.
+          </div>
+          <div>
+            <a href="/identity" className="underline hover:text-foreground">
+              Instance Identity
+            </a>
+          </div>
         </div>
       </footer>
     </div>
