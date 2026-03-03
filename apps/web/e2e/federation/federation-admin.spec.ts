@@ -172,8 +172,8 @@ test.describe("Peer Management", () => {
       timeout: 10_000,
     });
 
-    // Verify status badge changes to revoked
-    await expect(page.getByText("revoked")).toBeVisible();
+    // Verify status badge changes to revoked (exact: avoid toast "Trust revoked" + description text)
+    await expect(page.getByText("revoked", { exact: true })).toBeVisible();
   });
 
   test("accepts a pending inbound peer", async ({
@@ -254,8 +254,8 @@ test.describe("Sim-Sub Admin", () => {
       .fill(federationData.submissionId);
     await page.getByRole("button", { name: "Look Up" }).click();
 
-    // Check history table appears (CardTitle, not semantic heading)
-    await expect(page.getByText("Check History")).toBeVisible({
+    // Check history table appears (exact: CardDescription contains "check history" substring)
+    await expect(page.getByText("Check History", { exact: true })).toBeVisible({
       timeout: 10_000,
     });
 
@@ -381,7 +381,10 @@ test.describe("Migration Management", () => {
     await expect(page.getByText("outbound")).toBeVisible();
     await expect(page.getByText("User DID", { exact: true })).toBeVisible();
     await expect(page.getByText("Peer Domain")).toBeVisible();
-    await expect(page.getByText("migration-peer.example.com")).toBeVisible();
+    // exact: "Peer Instance URL" field contains "https://migration-peer.example.com"
+    await expect(
+      page.getByText("migration-peer.example.com", { exact: true }),
+    ).toBeVisible();
 
     // Action buttons visible for PENDING status (Cancel Migration)
     await expect(
@@ -422,10 +425,10 @@ test.describe("Audit Log", () => {
       page.getByRole("columnheader", { name: "Timestamp" }),
     ).toBeVisible();
     await expect(
-      page.getByRole("columnheader", { name: "Action" }),
+      page.getByRole("columnheader", { name: "Action", exact: true }),
     ).toBeVisible();
     await expect(
-      page.getByRole("columnheader", { name: "Resource" }),
+      page.getByRole("columnheader", { name: "Resource", exact: true }),
     ).toBeVisible();
   });
 
@@ -466,8 +469,11 @@ test.describe("Audit Log", () => {
       timeout: 10_000,
     });
 
-    // Wait for events table to load
+    // Wait for loading to finish — either table rows or empty state appears
     const firstRow = page.locator("table tbody tr").first();
+    const emptyState = page.getByText("No audit events found.");
+    await expect(firstRow.or(emptyState)).toBeVisible({ timeout: 10_000 });
+
     const hasEvents = await firstRow.isVisible().catch(() => false);
 
     if (hasEvents) {
@@ -484,8 +490,8 @@ test.describe("Audit Log", () => {
       await expect(eventDialog.getByText("Action")).toBeVisible();
       await expect(eventDialog.getByText("Resource")).toBeVisible();
     } else {
-      // No events — verify empty state message (includes trailing period)
-      await expect(page.getByText("No audit events found.")).toBeVisible();
+      // No events — verify empty state message
+      await expect(emptyState).toBeVisible();
     }
   });
 });
