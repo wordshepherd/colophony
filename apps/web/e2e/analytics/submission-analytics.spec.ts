@@ -4,47 +4,11 @@ test.describe("Submission Analytics Dashboard", () => {
   test("displays Submission Analytics heading and overview stat cards", async ({
     authedPage: page,
   }) => {
-    // Capture tRPC responses for debugging CI failures
-    const trpcResponses: { url: string; status: number; body: string }[] = [];
-    page.on("response", async (response) => {
-      const url = response.url();
-      if (url.includes("/trpc/")) {
-        const status = response.status();
-        let body = "";
-        try {
-          body = await response.text();
-        } catch {
-          body = "(failed to read body)";
-        }
-        trpcResponses.push({ url, status, body });
-        // Log immediately so it appears in CI output even on test failure
-        console.log(
-          `[tRPC] ${status} ${url.split("/trpc/")[1]?.substring(0, 80)}`,
-        );
-        if (status !== 200) {
-          console.log(`[tRPC] Error body: ${body.substring(0, 500)}`);
-        }
-      }
-    });
-
     await page.goto("/editor/analytics");
 
     await expect(
       page.getByRole("heading", { name: "Submission Analytics" }),
     ).toBeVisible();
-
-    // Give tRPC batch time to complete so we capture responses
-    await page.waitForTimeout(3_000);
-
-    // Log all captured responses for CI debugging
-    for (const r of trpcResponses) {
-      console.log(
-        `[tRPC debug] ${r.status} ${r.url.split("/trpc/")[1]?.substring(0, 120)}`,
-      );
-      if (r.status !== 200 || r.body.includes('"error"')) {
-        console.log(`[tRPC debug] Body: ${r.body.substring(0, 1000)}`);
-      }
-    }
 
     // Wait for stat cards to load (data fetched via tRPC)
     const cardLabels = [
