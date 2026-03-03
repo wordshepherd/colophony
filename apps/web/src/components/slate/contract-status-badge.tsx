@@ -13,8 +13,13 @@ export function ContractStatusBadge({
   className,
 }: ContractStatusBadgeProps) {
   const config = contractStatusConfig[status];
+  const Icon = config.icon;
   return (
-    <Badge variant={config.variant} className={cn(config.color, className)}>
+    <Badge
+      variant={config.variant}
+      className={cn("gap-1", config.color, className)}
+    >
+      <Icon className="h-3 w-3" />
       {config.label}
     </Badge>
   );

@@ -2,24 +2,37 @@
 
 import { Badge } from "@/components/ui/badge";
 import type { CSRStatus } from "@colophony/types";
+import {
+  Ban,
+  CheckCircle,
+  Clock,
+  Eye,
+  FileEdit,
+  HelpCircle,
+  Pause,
+  RotateCcw,
+  Send,
+  XCircle,
+} from "lucide-react";
 
 const statusConfig: Record<
   CSRStatus,
   {
     label: string;
     variant: "default" | "secondary" | "destructive" | "outline";
+    icon: React.ComponentType<{ className?: string }>;
   }
 > = {
-  draft: { label: "Draft", variant: "secondary" },
-  sent: { label: "Sent", variant: "default" },
-  in_review: { label: "In Review", variant: "default" },
-  hold: { label: "On Hold", variant: "outline" },
-  accepted: { label: "Accepted", variant: "default" },
-  rejected: { label: "Rejected", variant: "destructive" },
-  withdrawn: { label: "Withdrawn", variant: "secondary" },
-  no_response: { label: "No Response", variant: "outline" },
-  revise: { label: "Revise", variant: "default" },
-  unknown: { label: "Unknown", variant: "outline" },
+  draft: { label: "Draft", variant: "secondary", icon: FileEdit },
+  sent: { label: "Sent", variant: "default", icon: Send },
+  in_review: { label: "In Review", variant: "default", icon: Eye },
+  hold: { label: "On Hold", variant: "outline", icon: Pause },
+  accepted: { label: "Accepted", variant: "default", icon: CheckCircle },
+  rejected: { label: "Rejected", variant: "destructive", icon: XCircle },
+  withdrawn: { label: "Withdrawn", variant: "secondary", icon: Ban },
+  no_response: { label: "No Response", variant: "outline", icon: Clock },
+  revise: { label: "Revise", variant: "default", icon: RotateCcw },
+  unknown: { label: "Unknown", variant: "outline", icon: HelpCircle },
 };
 
 const statusColors: Record<CSRStatus, string> = {
@@ -42,9 +55,11 @@ interface CsrStatusBadgeProps {
 export function CsrStatusBadge({ status }: CsrStatusBadgeProps) {
   const config = statusConfig[status] ?? statusConfig.unknown;
   const colorClass = statusColors[status] ?? statusColors.unknown;
+  const Icon = config.icon;
 
   return (
-    <Badge variant="outline" className={colorClass}>
+    <Badge variant="outline" className={`gap-1 ${colorClass}`}>
+      <Icon className="h-3 w-3" />
       {config.label}
     </Badge>
   );
