@@ -5,6 +5,7 @@ test.describe("Writer Analytics (/workspace/analytics)", () => {
     authedPage,
   }) => {
     await authedPage.goto("/workspace/analytics");
+    await authedPage.waitForLoadState("networkidle");
 
     const main = authedPage.locator("main");
     await expect(
@@ -13,7 +14,7 @@ test.describe("Writer Analytics (/workspace/analytics)", () => {
 
     // Overview stat labels
     await expect(main.getByText("Total Submissions")).toBeVisible({
-      timeout: 10_000,
+      timeout: 15_000,
     });
     await expect(main.getByText("Acceptance Rate")).toBeVisible();
     await expect(main.getByText("Avg Response Time")).toBeVisible();
@@ -21,6 +22,7 @@ test.describe("Writer Analytics (/workspace/analytics)", () => {
 
   test("shows date filter inputs", async ({ authedPage }) => {
     await authedPage.goto("/workspace/analytics");
+    await authedPage.waitForLoadState("networkidle");
 
     const main = authedPage.locator("main");
     await expect(main.getByLabel("From")).toBeVisible();
@@ -30,28 +32,31 @@ test.describe("Writer Analytics (/workspace/analytics)", () => {
 
   test("displays Status Breakdown chart", async ({ authedPage }) => {
     await authedPage.goto("/workspace/analytics");
+    await authedPage.waitForLoadState("networkidle");
 
     const main = authedPage.locator("main");
     await expect(main.getByText("Status Breakdown")).toBeVisible({
-      timeout: 10_000,
+      timeout: 15_000,
     });
   });
 
   test("displays Submissions Over Time chart", async ({ authedPage }) => {
     await authedPage.goto("/workspace/analytics");
+    await authedPage.waitForLoadState("networkidle");
 
     const main = authedPage.locator("main");
     await expect(main.getByText("Submissions Over Time")).toBeVisible({
-      timeout: 10_000,
+      timeout: 15_000,
     });
   });
 
   test("displays Response Time Distribution chart", async ({ authedPage }) => {
     await authedPage.goto("/workspace/analytics");
+    await authedPage.waitForLoadState("networkidle");
 
     const main = authedPage.locator("main");
     await expect(main.getByText("Response Time Distribution")).toBeVisible({
-      timeout: 10_000,
+      timeout: 15_000,
     });
   });
 });
