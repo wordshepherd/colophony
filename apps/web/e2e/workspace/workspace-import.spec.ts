@@ -95,8 +95,8 @@ test.describe("Import Submissions (/workspace/import)", () => {
       // Click Import
       await importBtn.click();
 
-      // Wait for success
-      await expect(main.getByText(/success|imported|complete/i)).toBeVisible({
+      // Wait for success — target the exact heading to avoid strict mode (2 elements match)
+      await expect(main.getByText("Import Complete")).toBeVisible({
         timeout: 10_000,
       });
 
