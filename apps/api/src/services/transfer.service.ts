@@ -15,7 +15,7 @@ import {
   and,
   sql,
 } from '@colophony/db';
-import { count } from 'drizzle-orm';
+import { count, getTableColumns } from 'drizzle-orm';
 import {
   AuditActions,
   AuditResources,
@@ -339,13 +339,22 @@ export const transferService = {
   async getTransfersBySubmission(
     orgId: string,
     submissionId: string,
+    params?: { limit?: number },
   ): Promise<PieceTransfer[]> {
+    const queryLimit = params?.limit ?? 100;
     return withRls({ orgId }, async (tx) => {
       return tx
-        .select()
+        .select(getTableColumns(pieceTransfers))
         .from(pieceTransfers)
-        .where(eq(pieceTransfers.submissionId, submissionId))
-        .orderBy(sql`created_at DESC`);
+        .innerJoin(submissions, eq(pieceTransfers.submissionId, submissions.id))
+        .where(
+          and(
+            eq(pieceTransfers.submissionId, submissionId),
+            eq(submissions.organizationId, orgId),
+          ),
+        )
+        .orderBy(sql`${pieceTransfers.createdAt} DESC`)
+        .limit(queryLimit);
     });
   },
 
@@ -356,9 +365,15 @@ export const transferService = {
   ): Promise<PieceTransfer> {
     const [row] = await withRls({ orgId }, async (tx) => {
       return tx
-        .select()
+        .select(getTableColumns(pieceTransfers))
         .from(pieceTransfers)
-        .where(eq(pieceTransfers.id, transferId))
+        .innerJoin(submissions, eq(pieceTransfers.submissionId, submissions.id))
+        .where(
+          and(
+            eq(pieceTransfers.id, transferId),
+            eq(submissions.organizationId, orgId),
+          ),
+        )
         .limit(1);
     });
 
@@ -379,7 +394,13 @@ export const transferService = {
       const [existing] = await tx
         .select({ status: pieceTransfers.status })
         .from(pieceTransfers)
-        .where(eq(pieceTransfers.id, transferId))
+        .innerJoin(submissions, eq(pieceTransfers.submissionId, submissions.id))
+        .where(
+          and(
+            eq(pieceTransfers.id, transferId),
+            eq(submissions.organizationId, orgId),
+          ),
+        )
         .limit(1);
 
       if (!existing) {
@@ -422,12 +443,16 @@ export const transferService = {
     return withRls({ orgId }, async (tx) => {
       const [totalRow] = await tx
         .select({ count: count() })
-        .from(pieceTransfers);
+        .from(pieceTransfers)
+        .innerJoin(submissions, eq(pieceTransfers.submissionId, submissions.id))
+        .where(eq(submissions.organizationId, orgId));
 
       const rows = await tx
-        .select()
+        .select(getTableColumns(pieceTransfers))
         .from(pieceTransfers)
-        .orderBy(sql`created_at DESC`)
+        .innerJoin(submissions, eq(pieceTransfers.submissionId, submissions.id))
+        .where(eq(submissions.organizationId, orgId))
+        .orderBy(sql`${pieceTransfers.createdAt} DESC`)
         .limit(limit)
         .offset(offset);
 

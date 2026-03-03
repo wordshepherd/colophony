@@ -42,6 +42,7 @@ vi.mock('@colophony/db', () => ({
   submissions: {
     id: 'submissions.id',
     organizationId: 'submissions.organizationId',
+    submitterId: 'submissions.submitterId',
     title: 'submissions.title',
     coverLetter: 'submissions.coverLetter',
     content: 'submissions.content',
@@ -83,6 +84,7 @@ vi.mock('@colophony/db', () => ({
 
 vi.mock('drizzle-orm', () => ({
   count: vi.fn(),
+  getTableColumns: vi.fn().mockReturnValue({}),
 }));
 
 const { mockSignJWT } = vi.hoisted(() => ({
@@ -701,6 +703,9 @@ describe('migrationService', () => {
         },
       });
 
+      // Submission ownership check
+      mockDb.limit.mockResolvedValueOnce([{ id: validUuid3 }]);
+
       const result = await migrationService.verifyMigrationToken(
         testEnv,
         'valid.jwt.token',
@@ -727,6 +732,38 @@ describe('migrationService', () => {
         migrationService.verifyMigrationToken(
           testEnv,
           'expired.jwt.token',
+          validUuid,
+          validUuid3,
+          'file-1',
+        ),
+      ).rejects.toThrow(MigrationTokenError);
+    });
+
+    it('rejects when submissionId does not belong to migration user', async () => {
+      // Migration lookup
+      mockDb.limit.mockResolvedValueOnce([
+        {
+          id: validUuid,
+          userId: validUuid2,
+          status: 'BUNDLE_SENT',
+        },
+      ]);
+
+      // JWT verify — valid token with fileId in allowlist
+      (jose.jwtVerify as any).mockResolvedValueOnce({
+        payload: {
+          jti: validUuid,
+          fileIds: ['file-1', 'file-2'],
+        },
+      });
+
+      // Submission ownership check — no match
+      mockDb.limit.mockResolvedValueOnce([]);
+
+      await expect(
+        migrationService.verifyMigrationToken(
+          testEnv,
+          'valid.jwt.token',
           validUuid,
           validUuid3,
           'file-1',
