@@ -27,6 +27,33 @@ test.describe("Writer Analytics (/workspace/analytics)", () => {
     // Use the specific input ID to avoid matching other "To" text on page
     await expect(main.locator("#end-date")).toBeVisible();
   });
+
+  test("displays Status Breakdown chart", async ({ authedPage }) => {
+    await authedPage.goto("/workspace/analytics");
+
+    const main = authedPage.locator("main");
+    await expect(main.getByText("Status Breakdown")).toBeVisible({
+      timeout: 10_000,
+    });
+  });
+
+  test("displays Submissions Over Time chart", async ({ authedPage }) => {
+    await authedPage.goto("/workspace/analytics");
+
+    const main = authedPage.locator("main");
+    await expect(main.getByText("Submissions Over Time")).toBeVisible({
+      timeout: 10_000,
+    });
+  });
+
+  test("displays Response Time Distribution chart", async ({ authedPage }) => {
+    await authedPage.goto("/workspace/analytics");
+
+    const main = authedPage.locator("main");
+    await expect(main.getByText("Response Time Distribution")).toBeVisible({
+      timeout: 10_000,
+    });
+  });
 });
 
 test.describe("Correspondence (/workspace/correspondence)", () => {

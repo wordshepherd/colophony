@@ -221,25 +221,27 @@ All other version pins are in their respective per-directory CLAUDE.md files.
 
 ### CI Pipeline (GitHub Actions)
 
-| Job                         | Checks                                                      |
-| --------------------------- | ----------------------------------------------------------- |
-| **quality**                 | `format:check`, `lint`, `type-check`, `pnpm audit`          |
-| **unit-tests**              | `pnpm test`                                                 |
-| **rls-tests**               | RLS tenant isolation integration tests                      |
-| **queue-tests**             | Queue/worker integration tests (19 tests, Redis + Postgres) |
-| **playwright-tests**        | Playwright E2E submissions project (20 tests)               |
-| **playwright-uploads**      | Playwright E2E uploads project (6 tests)                    |
-| **playwright-oidc**         | Playwright E2E OIDC project (6 tests)                       |
-| **playwright-embed**        | Playwright E2E embed project (10 tests)                     |
-| **playwright-slate**        | Playwright E2E Slate pipeline project (30 tests)            |
-| **playwright-workspace**    | Playwright E2E Writer Workspace project (21 tests)          |
-| **playwright-forms**        | Playwright E2E Form Builder project (16 tests)              |
-| **playwright-organization** | Playwright E2E Organization & Settings project (14 tests)   |
-| **playwright-analytics**    | Playwright E2E Submission Analytics project (6 tests)       |
-| **playwright-federation**   | Playwright E2E Federation Admin project (16 tests)          |
-| **build**                   | `pnpm build` (API + Web production build)                   |
+| Job                           | Checks                                                      |
+| ----------------------------- | ----------------------------------------------------------- |
+| **quality**                   | `format:check`, `lint`, `type-check`, `pnpm audit`          |
+| **unit-tests**                | `pnpm test`                                                 |
+| **rls-tests**                 | RLS tenant isolation integration tests                      |
+| **queue-tests**               | Queue/worker integration tests (19 tests, Redis + Postgres) |
+| **service-integration-tests** | Service integration tests (Postgres)                        |
+| **security-tests**            | Security tests (Postgres)                                   |
+| **playwright-tests**          | Playwright E2E submissions project (20 tests)               |
+| **playwright-uploads**        | Playwright E2E uploads project (6 tests)                    |
+| **playwright-oidc**           | Playwright E2E OIDC project (6 tests)                       |
+| **playwright-embed**          | Playwright E2E embed project (10 tests)                     |
+| **playwright-slate**          | Playwright E2E Slate pipeline project (30 tests)            |
+| **playwright-workspace**      | Playwright E2E Writer Workspace project (21 tests)          |
+| **playwright-forms**          | Playwright E2E Form Builder project (16 tests)              |
+| **playwright-organization**   | Playwright E2E Organization & Settings project (14 tests)   |
+| **playwright-analytics**      | Playwright E2E Submission Analytics project (6 tests)       |
+| **playwright-federation**     | Playwright E2E Federation Admin project (16 tests)          |
+| **build**                     | `pnpm build` (API + Web production build)                   |
 
-**Path filtering:** Playwright suites run selectively on PRs based on changed files (`.github/scripts/detect-changes.sh`). Shared paths (packages, API, shared hooks/lib/ui) trigger all suites. Suite-specific paths (e.g., `apps/web/e2e/slate/`, `apps/web/src/components/slate/`) trigger only that suite. Unknown paths fail-open (all suites run). Push to `main` always runs everything. Fast jobs (quality, unit-tests, rls-tests, queue-tests, build) are unaffected — they always run on non-docs PRs.
+**Path filtering:** Playwright suites run selectively on PRs based on changed files (`.github/scripts/detect-changes.sh`). Shared paths (packages, API, shared hooks/lib/ui) trigger all suites. Suite-specific paths (e.g., `apps/web/e2e/slate/`, `apps/web/src/components/slate/`) trigger only that suite. Unknown paths fail-open (all suites run). Push to `main` always runs everything. Fast jobs (quality, unit-tests, rls-tests, queue-tests, service-integration-tests, security-tests, build) are unaffected — they always run on non-docs PRs.
 
 ---
 

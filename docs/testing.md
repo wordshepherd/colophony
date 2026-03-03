@@ -8,7 +8,7 @@ For architecture details, see [docs/architecture.md](./architecture.md).
 ## Running Tests
 
 ```bash
-# Unit tests — API + packages (~1555 tests, 149 suites)
+# Unit tests — API + packages (~1570 tests, 152 suites)
 pnpm test
 
 # Coverage report
@@ -80,11 +80,11 @@ pnpm --filter @colophony/web test:e2e:ui
 
 ## Current Test Status
 
-**~1929 tests passing** across 8 tiers:
+**~1944 tests passing** across 8 tiers:
 
 | Tier                      | Files | Tests | Runner          | Location                           |
 | ------------------------- | ----- | ----- | --------------- | ---------------------------------- |
-| API unit tests            | 149   | ~1555 | Vitest          | `apps/api/src/**/*.spec.ts`        |
+| API unit tests            | 152   | ~1570 | Vitest          | `apps/api/src/**/*.spec.ts`        |
 | Package unit tests        | 4     | ~38   | Vitest          | `packages/*/src/**/*.spec.ts`      |
 | Web unit tests            | 11    | ~108  | Jest + jsdom    | `apps/web/src/**/*.spec.*`         |
 | RLS integration tests     | 11    | ~122  | Vitest (custom) | `apps/api/src/__tests__/rls/`      |
@@ -92,7 +92,7 @@ pnpm --filter @colophony/web test:e2e:ui
 | Service integration tests | 6     | ~63   | Vitest (custom) | `apps/api/src/__tests__/services/` |
 | Webhook integration tests | 4     | ~38   | Vitest (custom) | `apps/api/src/__tests__/webhooks/` |
 | Queue integration tests   | 6     | ~19   | Vitest (custom) | `apps/api/src/__tests__/queues/`   |
-| Playwright browser E2E    | 25    | ~135  | Playwright      | `apps/web/e2e/`                    |
+| Playwright browser E2E    | 26    | ~142  | Playwright      | `apps/web/e2e/`                    |
 
 > Counts use `~` prefix because they shift as tests are added. Run `pnpm test` to get exact numbers.
 
