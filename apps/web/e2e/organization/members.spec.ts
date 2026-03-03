@@ -21,10 +21,9 @@ test.describe("Member Management (Members tab)", () => {
       authedPage.getByRole("columnheader", { name: "Actions" }),
     ).toBeVisible();
 
-    // At least one member row visible (the admin user)
-    await expect(authedPage.getByRole("row")).toHaveCount(
-      await authedPage.getByRole("row").count(),
-    );
+    // At least one member row visible (header + data rows, minimum 2)
+    const rowCount = await authedPage.getByRole("row").count();
+    expect(rowCount).toBeGreaterThanOrEqual(2);
     await expect(
       authedPage.getByRole("cell", { name: "editor@quarterlyreview.org" }),
     ).toBeVisible();
