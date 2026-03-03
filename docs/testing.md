@@ -59,6 +59,9 @@ pnpm --filter @colophony/web test:e2e:organization
 # Playwright — Submission Analytics (6 tests, requires dev servers)
 pnpm --filter @colophony/web test:e2e:analytics
 
+# Playwright — Federation Admin (16 tests, requires dev servers)
+pnpm --filter @colophony/web test:e2e:federation
+
 # Playwright — all projects
 pnpm --filter @colophony/web test:e2e:all
 
@@ -132,6 +135,7 @@ pnpm --filter @colophony/web test:e2e:ui
 - `slate/contracts.spec.ts` — 5 tests (heading, list, templates, create template, template detail)
 - `slate/cms-connections.spec.ts` — 4 tests (heading, list, filter, create)
 - `analytics/submission-analytics.spec.ts` — 6 tests (overview cards, filters, status/funnel charts, time series, response time/aging, date filter update)
+- `federation/federation-admin.spec.ts` — 16 tests (overview, peer management, sim-sub, transfers, migrations, audit log, hub admin)
 
 ---
 
