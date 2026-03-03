@@ -9,6 +9,7 @@ export default defineConfig({
       'src/__tests__/webhooks/**',
       'src/__tests__/security/**',
       'src/__tests__/services/**',
+      'src/__tests__/queues/**',
     ],
     globals: false,
     testTimeout: 30_000,

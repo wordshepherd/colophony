@@ -28,6 +28,7 @@
     "test:security": "vitest run --config vitest.config.security.ts",
     "test:services": "vitest run --config vitest.config.services.ts",
     "test:webhooks": "vitest run --config vitest.config.webhooks.ts",
+    "test:queues": "vitest run --config vitest.config.queues.ts",
     "type-check": "tsc --noEmit",
     "clean": "rm -rf dist"
   },
