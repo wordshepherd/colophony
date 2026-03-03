@@ -102,6 +102,11 @@ export async function buildApp(env: Env): Promise<FastifyInstance> {
     keepAliveTimeout: 65_000,
     requestTimeout: 60_000,
     connectionTimeout: 5_000,
+    // tRPC httpBatchLink encodes comma-separated procedure names in the URL
+    // path (e.g. /trpc/a.b,c.d,e.f). Fastify's default maxParamLength of 100
+    // silently returns 404 for batches with many long procedure names (such as
+    // the analytics dashboard which batches ~8 queries at once).
+    maxParamLength: 500,
   });
 
   // Security headers
