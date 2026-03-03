@@ -44,6 +44,7 @@ function getRequestedProjects(): Set<string> {
     projects.add("slate");
     projects.add("workspace");
     projects.add("forms");
+    projects.add("organization");
   }
 
   return projects;
