@@ -28,6 +28,7 @@ import type { Env } from '../config/env.js';
 import { auditService } from './audit.service.js';
 import { federationService, domainToDid } from './federation.service.js';
 import { signFederationRequest } from '../federation/http-signatures.js';
+import { validateOutboundUrl } from '../lib/url-validation.js';
 import { getGlobalRegistry } from '../adapters/registry-accessor.js';
 import type { S3StorageAdapter } from '../adapters/storage/index.js';
 import { enqueueTransferFetch } from '../queues/transfer-fetch.queue.js';
@@ -248,6 +249,10 @@ export const transferService = {
 
     // Step 4: POST to remote instance
     const url = `${peer.instanceUrl}/federation/v1/transfers/initiate`;
+    const devMode =
+      process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test';
+    await validateOutboundUrl(url, { devMode });
+
     const body = JSON.stringify({
       transferToken: jwt,
       submitterDid,
@@ -635,6 +640,11 @@ export const transferService = {
       .limit(1);
 
     if (!peer) return;
+
+    // SSRF check on peer URL before any file fetches
+    const devMode =
+      process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test';
+    await validateOutboundUrl(peer.instanceUrl, { devMode });
 
     const storage = getGlobalRegistry().resolve<S3StorageAdapter>('storage');
     const storedFiles: Array<{ fileId: string; storageKey: string }> = [];

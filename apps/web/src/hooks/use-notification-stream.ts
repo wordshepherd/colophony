@@ -93,5 +93,5 @@ export function useNotificationStream(): void {
       abortRef.current?.abort();
       abortRef.current = null;
     };
-  }, [currentOrg?.id, utils]);
+  }, [currentOrg, utils]);
 }

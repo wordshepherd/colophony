@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import "../../../../test/setup";
 
 let mockCurrentOrg: { id: string; name: string; slug: string } | null;
@@ -32,7 +32,6 @@ jest.mock("@/components/ui/popover", () => ({
   Popover: ({
     children,
     open,
-    onOpenChange,
   }: {
     children: React.ReactNode;
     open: boolean;
@@ -40,7 +39,6 @@ jest.mock("@/components/ui/popover", () => ({
   }) => <div data-open={open}>{children}</div>,
   PopoverTrigger: ({
     children,
-    asChild,
   }: {
     children: React.ReactNode;
     asChild?: boolean;
@@ -51,7 +49,7 @@ jest.mock("@/components/ui/popover", () => ({
 }));
 
 jest.mock("../notification-list", () => ({
-  NotificationList: ({ onClose }: { onClose?: () => void }) => (
+  NotificationList: (_props: { onClose?: () => void }) => (
     <div data-testid="notification-list">NotificationList</div>
   ),
 }));

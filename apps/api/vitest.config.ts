@@ -4,7 +4,12 @@ export default defineConfig({
   test: {
     environment: 'node',
     include: ['src/**/*.{test,spec}.ts'],
-    exclude: ['src/__tests__/rls/**', 'src/__tests__/webhooks/**'],
+    exclude: [
+      'src/__tests__/rls/**',
+      'src/__tests__/webhooks/**',
+      'src/__tests__/security/**',
+      'src/__tests__/services/**',
+    ],
     globals: false,
     testTimeout: 30_000,
     coverage: {

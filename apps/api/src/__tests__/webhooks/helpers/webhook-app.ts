@@ -4,6 +4,7 @@ import type { Env } from '../../../config/env.js';
 import { registerStripeWebhooks } from '../../../webhooks/stripe.webhook.js';
 import { registerZitadelWebhooks } from '../../../webhooks/zitadel.webhook.js';
 import { registerTusdWebhooks } from '../../../webhooks/tusd.webhook.js';
+import { registerDocumensoWebhooks } from '../../../webhooks/documenso.webhook.js';
 
 /**
  * Build a full Env object suitable for webhook integration tests.
@@ -59,6 +60,9 @@ export function createTestEnv(overrides?: Partial<Env>): Env {
     METRICS_ENABLED: false,
     STATUS_TOKEN_TTL_DAYS: 90,
     FEDERATION_RATE_LIMIT_FAIL_MODE: 'open' as const,
+    DOCUMENSO_API_URL: 'http://localhost:9999',
+    DOCUMENSO_API_KEY: 'test-documenso-api-key',
+    DOCUMENSO_WEBHOOK_SECRET: 'test-documenso-webhook-secret-32chars!',
     ...overrides,
   };
 }
@@ -85,6 +89,9 @@ export async function buildWebhookApp(
   });
   await app.register(async (scope) => {
     await registerStripeWebhooks(scope, { env });
+  });
+  await app.register(async (scope) => {
+    await registerDocumensoWebhooks(scope, { env });
   });
 
   await app.ready();

@@ -31,20 +31,48 @@ import {
   createInvalidMetadataEvent,
 } from './helpers/stripe-fixtures';
 
-// Mock Stripe — constructEvent returns the fixture event we pass in the mock setup.
-// vi.hoisted runs before vi.mock's hoist, so the ref is available inside the factory.
-const { mockConstructEvent } = vi.hoisted(() => ({
-  mockConstructEvent: vi.fn(),
+// Mock the payment adapter via the registry accessor.
+// The Stripe webhook handler calls getGlobalRegistry().tryResolve('payment')
+// which returns a StripePaymentAdapter whose verifyWebhook() is called.
+const { mockVerifyWebhook } = vi.hoisted(() => ({
+  mockVerifyWebhook: vi.fn(),
 }));
 
-vi.mock('stripe', () => ({
-  default: class StripeMock {
-    webhooks = { constructEvent: mockConstructEvent };
-  },
+vi.mock('../../adapters/registry-accessor.js', () => ({
+  getGlobalRegistry: () => ({
+    tryResolve: (type: string) => {
+      if (type === 'payment') {
+        return { verifyWebhook: mockVerifyWebhook };
+      }
+      return null;
+    },
+    resolve: (type: string) => {
+      if (type === 'payment') {
+        return { verifyWebhook: mockVerifyWebhook };
+      }
+      throw new Error(`No adapter for ${type}`);
+    },
+  }),
 }));
 
 function adminDb() {
   return drizzle(getAdminPool());
+}
+
+/**
+ * Convert a Stripe.Event fixture into the PaymentWebhookEvent format
+ * that verifyWebhook() returns.
+ */
+function toWebhookEvent(event: {
+  id: string;
+  type: string;
+  data: { object: unknown };
+}) {
+  return {
+    id: event.id,
+    type: event.type,
+    data: event.data.object as Record<string, unknown>,
+  };
 }
 
 describe('Stripe webhook integration', () => {
@@ -80,7 +108,7 @@ describe('Stripe webhook integration', () => {
   it('checkout.session.completed → payment SUCCEEDED + audit', async () => {
     const org = await createOrganization();
     const event = createCheckoutCompletedEvent({ organizationId: org.id });
-    mockConstructEvent.mockReturnValue(event);
+    mockVerifyWebhook.mockResolvedValue(toWebhookEvent(event));
 
     const res = await postStripe(JSON.stringify(event));
     expect(res.statusCode).toBe(200);
@@ -130,7 +158,7 @@ describe('Stripe webhook integration', () => {
       organizationId: org.id,
       submissionId: submission.id,
     });
-    mockConstructEvent.mockReturnValue(event);
+    mockVerifyWebhook.mockResolvedValue(toWebhookEvent(event));
 
     const res = await postStripe(JSON.stringify(event));
     expect(res.statusCode).toBe(200);
@@ -147,7 +175,7 @@ describe('Stripe webhook integration', () => {
   it('checkout.session.expired → payment FAILED + PAYMENT_EXPIRED audit', async () => {
     const org = await createOrganization();
     const event = createCheckoutExpiredEvent({ organizationId: org.id });
-    mockConstructEvent.mockReturnValue(event);
+    mockVerifyWebhook.mockResolvedValue(toWebhookEvent(event));
 
     const res = await postStripe(JSON.stringify(event));
     expect(res.statusCode).toBe(200);
@@ -177,7 +205,7 @@ describe('Stripe webhook integration', () => {
   it('idempotency: same event twice → second returns already_processed, 1 payment row', async () => {
     const org = await createOrganization();
     const event = createCheckoutCompletedEvent({ organizationId: org.id });
-    mockConstructEvent.mockReturnValue(event);
+    mockVerifyWebhook.mockResolvedValue(toWebhookEvent(event));
 
     const res1 = await postStripe(JSON.stringify(event));
     expect(res1.statusCode).toBe(200);
@@ -199,7 +227,7 @@ describe('Stripe webhook integration', () => {
   it('crash recovery: unprocessed event row → reprocesses', async () => {
     const org = await createOrganization();
     const event = createCheckoutCompletedEvent({ organizationId: org.id });
-    mockConstructEvent.mockReturnValue(event);
+    mockVerifyWebhook.mockResolvedValue(toWebhookEvent(event));
 
     // Pre-insert webhook event with processed=false (simulates crash recovery)
     const admin = getAdminPool();
@@ -231,7 +259,7 @@ describe('Stripe webhook integration', () => {
 
   it('invalid metadata → error recorded, event marked processed', async () => {
     const event = createInvalidMetadataEvent();
-    mockConstructEvent.mockReturnValue(event);
+    mockVerifyWebhook.mockResolvedValue(toWebhookEvent(event));
 
     const res = await postStripe(JSON.stringify(event));
     expect(res.statusCode).toBe(200);
@@ -247,9 +275,9 @@ describe('Stripe webhook integration', () => {
   });
 
   it('invalid signature → 401', async () => {
-    mockConstructEvent.mockImplementation(() => {
-      throw new Error('Webhook signature verification failed');
-    });
+    mockVerifyWebhook.mockRejectedValue(
+      new Error('Webhook signature verification failed'),
+    );
 
     const res = await postStripe('{}', 'bad_signature');
     expect(res.statusCode).toBe(401);
@@ -257,6 +285,10 @@ describe('Stripe webhook integration', () => {
   });
 
   it('missing stripe-signature header → 401', async () => {
+    mockVerifyWebhook.mockRejectedValue(
+      new Error('Missing stripe-signature header'),
+    );
+
     const res = await app.inject({
       method: 'POST',
       url: '/webhooks/stripe',

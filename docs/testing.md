@@ -8,7 +8,7 @@ For architecture details, see [docs/architecture.md](./architecture.md).
 ## Running Tests
 
 ```bash
-# Unit tests — API + packages (~1522 tests, 149 suites)
+# Unit tests — API + packages (~1555 tests, 149 suites)
 pnpm test
 
 # Coverage report
@@ -17,10 +17,16 @@ pnpm test:cov
 # Web unit tests — Jest (~543 tests, 74 suites)
 pnpm --filter @colophony/web test
 
-# RLS integration tests (~93 tests, requires postgres-test container)
+# RLS integration tests (~122 tests, requires postgres-test container)
 pnpm --filter @colophony/api test:rls
 
-# Webhook integration tests (~28 tests, requires postgres-test container)
+# Security invariant tests (~20 tests, requires postgres-test container)
+pnpm --filter @colophony/api test:security
+
+# Service integration tests (~63 tests, requires postgres-test container)
+pnpm --filter @colophony/api test:services
+
+# Webhook integration tests (~38 tests, requires postgres-test container)
 pnpm --filter @colophony/api test:webhooks
 
 # Playwright browser E2E — submissions only (20 tests, requires dev servers)
@@ -56,16 +62,18 @@ pnpm --filter @colophony/web test:e2e:ui
 
 ## Current Test Status
 
-**~751 tests passing** across 6 tiers:
+**~1893 tests passing** across 8 tiers:
 
 | Tier                      | Files | Tests | Runner          | Location                           |
 | ------------------------- | ----- | ----- | --------------- | ---------------------------------- |
-| API unit tests            | 38    | ~513  | Vitest          | `apps/api/src/**/*.spec.ts`        |
+| API unit tests            | 149   | ~1555 | Vitest          | `apps/api/src/**/*.spec.ts`        |
 | Package unit tests        | 4     | ~38   | Vitest          | `packages/*/src/**/*.spec.ts`      |
 | Web unit tests            | 11    | ~108  | Jest + jsdom    | `apps/web/src/**/*.spec.*`         |
-| RLS integration tests     | 8     | ~93   | Vitest (custom) | `apps/api/src/__tests__/rls/`      |
-| Webhook integration tests | 3     | ~28   | Vitest (custom) | `apps/api/src/__tests__/webhooks/` |
-| Playwright browser E2E    | 13    | ~72   | Playwright      | `apps/web/e2e/`                    |
+| RLS integration tests     | 11    | ~122  | Vitest (custom) | `apps/api/src/__tests__/rls/`      |
+| Security invariant tests  | 3     | ~20   | Vitest (custom) | `apps/api/src/__tests__/security/` |
+| Service integration tests | 6     | ~63   | Vitest (custom) | `apps/api/src/__tests__/services/` |
+| Webhook integration tests | 4     | ~38   | Vitest (custom) | `apps/api/src/__tests__/webhooks/` |
+| Playwright browser E2E    | 14    | ~72   | Playwright      | `apps/web/e2e/`                    |
 
 > Counts use `~` prefix because they shift as tests are added. Run `pnpm test` to get exact numbers.
 

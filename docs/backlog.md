@@ -284,6 +284,21 @@
 - [x] Plan override log for drift detection — during implementation, when discoveries require deliberate divergence from the plan, log overrides with rationale (file, what changed, why) in a structured format (e.g., task list metadata or a plan-overrides section in the PR). Drift detection reads the override log and excludes acknowledged divergences, only flagging unlogged drift — (dev workflow session 2026-02-20; done 2026-02-20)
 - [x] Automatic Codex branch review before PR — run `/codex-review branch` automatically after implementation is complete (all tasks done, tests passing) but before creating the PR; incorporate findings before presenting the PR for user review. Mirrors the plan review integration: user sees a Codex-vetted PR, not a raw first draft — (dev workflow session 2026-02-20; done 2026-02-20)
 
+### Test Coverage Improvement
+
+- [x] [P0] Security invariant tests — SSRF validation, defense-in-depth, pagination bounds (20 tests) — (DEVLOG 2026-03-02; done 2026-03-02)
+- [x] [P0] Service integration tests — submission, form-validation, org, portfolio, CSR, contract (63 tests) — (DEVLOG 2026-03-02; done 2026-03-02)
+- [x] [P0] Documenso webhook integration tests (10 tests) — (DEVLOG 2026-03-02; done 2026-03-02)
+- [ ] [P0] Writer Workspace E2E — dashboard, external submissions, portfolio, CSR import (~21 Playwright tests) — (test coverage plan 2026-03-02)
+- [ ] [P1] Queue/worker integration tests — email, webhook, file-scan workers with real Redis (~19 tests) — (test coverage plan 2026-03-02)
+- [ ] [P1] Form builder E2E — create form, add fields, configure, submit through it (~16 Playwright tests) — (test coverage plan 2026-03-02)
+- [ ] [P1] Organization & settings E2E — org management, member management, API keys (~15 Playwright tests) — (test coverage plan 2026-03-02)
+- [ ] [P1] Submission analytics E2E — dashboard, charts, date range filter (~6 Playwright tests) — (test coverage plan 2026-03-02)
+- [ ] [P2] Federation admin E2E — peer management, sim-sub, transfers, audit log (~16 Playwright tests) — (test coverage plan 2026-03-02)
+- [ ] [P2] Federation S2S integration tests — two-instance HTTP signatures, trust handshake (~15 tests) — (test coverage plan 2026-03-02)
+- [ ] [P2] Notification prefs + writer analytics E2E (~9 tests) — (test coverage plan 2026-03-02)
+- [ ] CI: Add service-integration-tests, security-tests, and new Playwright jobs — (test coverage plan 2026-03-02)
+
 ### CI
 
 - [x] [P2] CI path filtering for Playwright suites — skip irrelevant E2E suites on PRs based on changed files; `.github/scripts/detect-changes.sh` with fail-open strategy — (DEVLOG 2026-02-24; done 2026-02-24)

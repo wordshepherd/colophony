@@ -34,6 +34,7 @@ import { auditService } from './audit.service.js';
 import { federationService, domainToDid } from './federation.service.js';
 import { migrationBundleService } from './migration-bundle.service.js';
 import { signFederationRequest } from '../federation/http-signatures.js';
+import { validateOutboundUrl } from '../lib/url-validation.js';
 import { getGlobalRegistry } from '../adapters/registry-accessor.js';
 import type { S3StorageAdapter } from '../adapters/storage/index.js';
 
@@ -162,6 +163,10 @@ export const migrationService = {
     // Send S2S request to origin
     const config = await federationService.getOrInitConfig(env);
     const url = `${peer.instanceUrl}/federation/v1/migrations/request`;
+    const devMode =
+      process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test';
+    await validateOutboundUrl(url, { devMode });
+
     const body = JSON.stringify({
       userEmail: originEmail,
       destinationDomain: domain,
@@ -414,6 +419,10 @@ export const migrationService = {
   ): Promise<void> {
     if (!migration.peerInstanceUrl) return;
 
+    const devMode =
+      process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test';
+    await validateOutboundUrl(migration.peerInstanceUrl, { devMode });
+
     const config = await federationService.getOrInitConfig(env);
     const domain = env.FEDERATION_DOMAIN ?? 'localhost';
     const url = `${migration.peerInstanceUrl}/federation/v1/migrations/complete`;
@@ -628,6 +637,11 @@ export const migrationService = {
     });
 
     // POST bundle to callback URL with HTTP signature
+    // SSRF check — callbackUrl is remote-controlled, must validate before fetch
+    const devMode =
+      process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test';
+    await validateOutboundUrl(migration.callbackUrl, { devMode });
+
     const config = await federationService.getOrInitConfig(env);
     const domain = env.FEDERATION_DOMAIN ?? 'localhost';
     const url = migration.callbackUrl;
@@ -883,6 +897,8 @@ export const migrationService = {
     };
 
     // Fire-and-forget POST to each peer
+    const devMode =
+      process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test';
     for (const [peerDomain, instanceUrl] of uniquePeers) {
       // Skip the destination — they already know
       if (peerDomain === params.migratedToDomain) continue;
@@ -899,15 +915,22 @@ export const migrationService = {
         keyId: `${domain}#main`,
       });
 
-      // Fire-and-forget
-      void fetch(url, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json', ...signedHeaders },
-        body,
-        signal: AbortSignal.timeout(10_000),
-      }).catch(() => {
-        // Best-effort broadcast
-      });
+      // Fire-and-forget — SSRF validated before fetch
+      void validateOutboundUrl(url, { devMode })
+        .then(() =>
+          fetch(url, {
+            method: 'POST',
+            headers: {
+              'content-type': 'application/json',
+              ...signedHeaders,
+            },
+            body,
+            signal: AbortSignal.timeout(10_000),
+          }),
+        )
+        .catch(() => {
+          // Best-effort broadcast
+        });
     }
 
     await auditService.logDirect({

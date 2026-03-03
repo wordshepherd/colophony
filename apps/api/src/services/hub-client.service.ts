@@ -11,6 +11,7 @@ import type { Env } from '../config/env.js';
 import { federationService } from './federation.service.js';
 import { auditService } from './audit.service.js';
 import { signFederationRequest } from '../federation/http-signatures.js';
+import { validateOutboundUrl } from '../lib/url-validation.js';
 
 // ---------------------------------------------------------------------------
 // Service
@@ -193,6 +194,10 @@ export const hubClientService = {
     });
 
     const url = `https://${targetDomain}/federation/trust/hub-attested`;
+    const devMode =
+      process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test';
+    await validateOutboundUrl(url, { devMode });
+
     const { headers } = signFederationRequest({
       method: 'POST',
       url,
