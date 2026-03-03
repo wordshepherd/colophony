@@ -1,7 +1,7 @@
 import { faker } from '@faker-js/faker';
 
 interface TusdPreCreateOptions {
-  submissionId?: string;
+  manuscriptVersionId?: string;
   userId?: string;
   orgId?: string;
   filename?: string;
@@ -10,7 +10,7 @@ interface TusdPreCreateOptions {
 }
 
 interface TusdPostFinishOptions {
-  submissionId?: string;
+  manuscriptVersionId?: string;
   userId?: string;
   orgId?: string;
   filename?: string;
@@ -27,7 +27,7 @@ interface TusdPostFinishOptions {
 export function createPreCreatePayload(opts: TusdPreCreateOptions = {}) {
   const userId = opts.userId ?? faker.string.uuid();
   const orgId = opts.orgId ?? faker.string.uuid();
-  const submissionId = opts.submissionId ?? faker.string.uuid();
+  const manuscriptVersionId = opts.manuscriptVersionId ?? faker.string.uuid();
 
   return {
     Type: 'pre-create',
@@ -35,7 +35,7 @@ export function createPreCreatePayload(opts: TusdPreCreateOptions = {}) {
       Upload: {
         Size: opts.size ?? 1024,
         MetaData: {
-          'submission-id': submissionId,
+          'manuscript-version-id': manuscriptVersionId,
           filename: opts.filename ?? 'test-file.pdf',
           filetype: opts.mimeType ?? 'application/pdf',
         },
@@ -60,7 +60,7 @@ export function createPreCreatePayload(opts: TusdPreCreateOptions = {}) {
 export function createPostFinishPayload(opts: TusdPostFinishOptions = {}) {
   const userId = opts.userId ?? faker.string.uuid();
   const orgId = opts.orgId ?? faker.string.uuid();
-  const submissionId = opts.submissionId ?? faker.string.uuid();
+  const manuscriptVersionId = opts.manuscriptVersionId ?? faker.string.uuid();
   const uploadId = opts.uploadId ?? faker.string.uuid();
   const storageKey =
     opts.storageKey ??
@@ -74,7 +74,7 @@ export function createPostFinishPayload(opts: TusdPostFinishOptions = {}) {
         Size: opts.size ?? 1024,
         Offset: opts.size ?? 1024,
         MetaData: {
-          'submission-id': submissionId,
+          'manuscript-version-id': manuscriptVersionId,
           filename: opts.filename ?? 'test-file.pdf',
           filetype: opts.mimeType ?? 'application/pdf',
         },
