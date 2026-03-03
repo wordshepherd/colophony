@@ -5,11 +5,12 @@ test.describe("External Submissions (/workspace/external)", () => {
   test("shows heading and Track Submission button", async ({ authedPage }) => {
     await authedPage.goto("/workspace/external");
 
+    const main = authedPage.locator("main");
     await expect(
-      authedPage.getByRole("heading", { name: "External Submissions" }),
+      main.getByRole("heading", { name: "External Submissions" }),
     ).toBeVisible();
     await expect(
-      authedPage.getByRole("link", { name: /Track Submission/ }),
+      main.getByRole("link", { name: /Track Submission/ }),
     ).toBeVisible();
   });
 
@@ -19,8 +20,9 @@ test.describe("External Submissions (/workspace/external)", () => {
   }) => {
     await authedPage.goto("/workspace/external");
 
+    const main = authedPage.locator("main");
     await expect(
-      authedPage.getByText(workspaceData.externalSubmission.journalName),
+      main.getByText(workspaceData.externalSubmission.journalName),
     ).toBeVisible({ timeout: 10_000 });
   });
 
@@ -32,32 +34,31 @@ test.describe("External Submissions (/workspace/external)", () => {
     try {
       await authedPage.goto("/workspace/external/new");
 
+      const main = authedPage.locator("main");
       await expect(
-        authedPage.getByRole("heading", {
-          name: /Track External Submission/,
-        }),
+        main.getByRole("heading", { name: /Track External Submission/ }),
       ).toBeVisible();
 
-      // Fill journal name
-      await authedPage.getByLabel("Journal Name").fill(journalName);
+      // Fill journal name — use the form input, not the label
+      await main.getByLabel("Journal Name").fill(journalName);
 
       // Submit
-      await authedPage
-        .getByRole("button", { name: "Track Submission" })
-        .click();
+      await main.getByRole("button", { name: "Track Submission" }).click();
 
-      // Should redirect to external submissions list
+      // Should redirect to external submissions list or detail
       await expect(authedPage).toHaveURL(/\/workspace\/external/, {
         timeout: 10_000,
       });
 
-      // Extract created ID from the list for cleanup — navigate to find it
-      await expect(authedPage.getByText(journalName)).toBeVisible({
+      // Wait for the new entry to appear
+      await expect(
+        authedPage.locator("main").getByText(journalName),
+      ).toBeVisible({
         timeout: 10_000,
       });
 
       // Click to get to detail page for the ID
-      await authedPage.getByText(journalName).click();
+      await authedPage.locator("main").getByText(journalName).click();
       const url = authedPage.url();
       const match = url.match(/\/workspace\/external\/([0-9a-f-]+)/);
       createdId = match?.[1];
@@ -71,11 +72,16 @@ test.describe("External Submissions (/workspace/external)", () => {
   test("requires journal name", async ({ authedPage }) => {
     await authedPage.goto("/workspace/external/new");
 
-    // Click submit without filling anything
-    await authedPage.getByRole("button", { name: "Track Submission" }).click();
+    const main = authedPage.locator("main");
 
-    // Should show validation error
-    await expect(authedPage.getByText(/journal name|required/i)).toBeVisible();
+    // Click submit without filling anything
+    await main.getByRole("button", { name: "Track Submission" }).click();
+
+    // Should show validation error — use .first() since the error message
+    // text "Journal name is required" also partial-matches the "Journal Name" label
+    await expect(
+      main.getByText("Journal name is required").first(),
+    ).toBeVisible();
   });
 
   test("detail page shows info and action buttons", async ({
@@ -86,22 +92,20 @@ test.describe("External Submissions (/workspace/external)", () => {
       `/workspace/external/${workspaceData.externalSubmission.id}`,
     );
 
+    const main = authedPage.locator("main");
+
     // Heading shows journal name
     await expect(
-      authedPage.getByRole("heading", {
+      main.getByRole("heading", {
         name: workspaceData.externalSubmission.journalName,
       }),
     ).toBeVisible({ timeout: 10_000 });
 
     // Action buttons
+    await expect(main.getByRole("button", { name: /Edit/ })).toBeVisible();
+    await expect(main.getByRole("button", { name: /Delete/ })).toBeVisible();
     await expect(
-      authedPage.getByRole("button", { name: /Edit/ }),
-    ).toBeVisible();
-    await expect(
-      authedPage.getByRole("button", { name: /Delete/ }),
-    ).toBeVisible();
-    await expect(
-      authedPage.getByRole("button", { name: /Log Message/ }),
+      main.getByRole("button", { name: /Log Message/ }),
     ).toBeVisible();
   });
 
@@ -110,17 +114,19 @@ test.describe("External Submissions (/workspace/external)", () => {
       `/workspace/external/${workspaceData.externalSubmission.id}`,
     );
 
+    const main = authedPage.locator("main");
+
     // Wait for page to load
     await expect(
-      authedPage.getByRole("heading", {
+      main.getByRole("heading", {
         name: workspaceData.externalSubmission.journalName,
       }),
     ).toBeVisible({ timeout: 10_000 });
 
     // Click Delete
-    await authedPage.getByRole("button", { name: /Delete/ }).click();
+    await main.getByRole("button", { name: /Delete/ }).click();
 
-    // Confirm in dialog
+    // Confirm in dialog — dialog is outside main, use page-level
     await expect(authedPage.getByText("Delete submission?")).toBeVisible();
     await authedPage
       .getByRole("button", { name: "Delete", exact: true })
@@ -131,9 +137,11 @@ test.describe("External Submissions (/workspace/external)", () => {
       timeout: 10_000,
     });
 
-    // Journal name should no longer be visible
+    // Journal name should no longer be visible in main content
     await expect(
-      authedPage.getByText(workspaceData.externalSubmission.journalName),
+      authedPage
+        .locator("main")
+        .getByText(workspaceData.externalSubmission.journalName),
     ).not.toBeVisible();
   });
 });

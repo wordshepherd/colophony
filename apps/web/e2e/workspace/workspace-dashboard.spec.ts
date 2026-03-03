@@ -12,7 +12,9 @@ test.describe("Writer Workspace Dashboard (/workspace)", () => {
   test("shows Track Submission link", async ({ authedPage }) => {
     await authedPage.goto("/workspace");
 
-    const link = authedPage.getByRole("link", { name: /Track Submission/ });
+    // Scope to main content to avoid sidebar matches
+    const main = authedPage.locator("main");
+    const link = main.getByRole("link", { name: /Track Submission/ });
     await expect(link).toBeVisible();
     await expect(link).toHaveAttribute("href", /\/workspace\/external\/new/);
   });
@@ -20,28 +22,31 @@ test.describe("Writer Workspace Dashboard (/workspace)", () => {
   test("renders quick action buttons", async ({ authedPage }) => {
     await authedPage.goto("/workspace");
 
+    // Scope to main content to avoid sidebar link duplicates
+    const main = authedPage.locator("main");
     await expect(
-      authedPage.getByRole("link", { name: /View External Submissions/ }),
+      main.getByRole("link", { name: /View External Submissions/ }),
     ).toBeVisible();
     await expect(
-      authedPage.getByRole("link", { name: /View Correspondence/ }),
+      main.getByRole("link", { name: /View Correspondence/ }),
     ).toBeVisible();
     await expect(
-      authedPage.getByRole("link", { name: /View Portfolio/ }),
+      main.getByRole("link", { name: /View Portfolio/ }),
     ).toBeVisible();
-    await expect(
-      authedPage.getByRole("link", { name: /Analytics/ }),
-    ).toBeVisible();
+    await expect(main.getByRole("link", { name: /Analytics/ })).toBeVisible();
   });
 
   test("renders stat cards", async ({ authedPage }) => {
     await authedPage.goto("/workspace");
 
+    // Scope to main content to avoid sidebar "Manuscripts" link
+    const main = authedPage.locator("main");
+
     // At least one stat card text should be visible
     const statLabels = ["Manuscripts", "Pending", "Accepted", "Rejected"];
     let found = false;
     for (const label of statLabels) {
-      const count = await authedPage.getByText(label, { exact: true }).count();
+      const count = await main.getByText(label, { exact: true }).count();
       if (count > 0) {
         found = true;
         break;

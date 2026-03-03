@@ -9,29 +9,32 @@ test.describe("Import Submissions (/workspace/import)", () => {
   test("displays heading and stepper steps", async ({ authedPage }) => {
     await authedPage.goto("/workspace/import");
 
+    const main = authedPage.locator("main");
     await expect(
-      authedPage.getByRole("heading", { name: "Import Submissions" }),
+      main.getByRole("heading", { name: "Import Submissions" }),
     ).toBeVisible();
 
-    // Stepper step labels
-    await expect(authedPage.getByText("Select File")).toBeVisible();
-    await expect(authedPage.getByText("Map Columns")).toBeVisible();
-    await expect(authedPage.getByText("Map Statuses")).toBeVisible();
-    await expect(authedPage.getByText("Review")).toBeVisible();
+    // Stepper step labels — scope to main and use exact match for "Review"
+    await expect(main.getByText("Select File")).toBeVisible();
+    await expect(main.getByText("Map Columns")).toBeVisible();
+    await expect(main.getByText("Map Statuses")).toBeVisible();
+    await expect(main.getByText("Review", { exact: true })).toBeVisible();
   });
 
   test("rejects empty CSV", async ({ authedPage }) => {
     await authedPage.goto("/workspace/import");
 
+    const main = authedPage.locator("main");
+
     // Upload empty CSV
-    await authedPage.locator('input[type="file"]').setInputFiles({
+    await main.locator('input[type="file"]').setInputFiles({
       name: "test.csv",
       mimeType: "text/csv",
       buffer: Buffer.from(EMPTY_CSV),
     });
 
     // Should show error about no data rows
-    await expect(authedPage.getByText(/no data|empty|no rows/i)).toBeVisible({
+    await expect(main.getByText(/no data|empty|no rows/i)).toBeVisible({
       timeout: 5_000,
     });
   });
@@ -42,57 +45,60 @@ test.describe("Import Submissions (/workspace/import)", () => {
     try {
       await authedPage.goto("/workspace/import");
 
+      const main = authedPage.locator("main");
+
       // Upload valid CSV
-      await authedPage.locator('input[type="file"]').setInputFiles({
+      await main.locator('input[type="file"]').setInputFiles({
         name: "test.csv",
         mimeType: "text/csv",
         buffer: Buffer.from(VALID_CSV),
       });
 
       // Wait for preview to show
-      await expect(authedPage.getByText(/preview/i)).toBeVisible({
+      await expect(main.getByText(/preview/i)).toBeVisible({
         timeout: 5_000,
       });
 
-      // Click Next to move to Map Columns
-      await authedPage.getByRole("button", { name: /Next/ }).click();
+      // Click Next to move to Map Columns — use first() for potential duplicates
+      await main.getByRole("button", { name: /Next/ }).first().click();
 
       // Wait for Map Columns step
-      await expect(authedPage.getByText("Column Mapping")).toBeVisible({
+      await expect(main.getByText("Column Mapping")).toBeVisible({
         timeout: 5_000,
       });
 
       // Click Next to Map Statuses
-      await authedPage.getByRole("button", { name: /Next/ }).click();
+      await main.getByRole("button", { name: /Next/ }).first().click();
 
       // Wait for Map Statuses step
-      await expect(authedPage.getByText("Status Mapping")).toBeVisible({
+      await expect(main.getByText("Status Mapping")).toBeVisible({
         timeout: 5_000,
       });
 
       // Click Next to Review
-      await authedPage.getByRole("button", { name: /Next/ }).click();
+      await main.getByRole("button", { name: /Next/ }).first().click();
 
-      // Wait for Review step
-      await expect(
-        authedPage.getByRole("button", { name: /Import/ }),
-      ).toBeVisible({ timeout: 5_000 });
+      // Wait for Review step — look for the Import button
+      await expect(main.getByRole("button", { name: /^Import$/ })).toBeVisible({
+        timeout: 5_000,
+      });
 
       // Click Import
-      await authedPage.getByRole("button", { name: /Import/ }).click();
+      await main.getByRole("button", { name: /^Import$/ }).click();
 
       // Wait for success
-      await expect(
-        authedPage.getByText(/success|imported|complete/i),
-      ).toBeVisible({ timeout: 10_000 });
+      await expect(main.getByText(/success|imported|complete/i)).toBeVisible({
+        timeout: 10_000,
+      });
 
       // Navigate to external submissions list to find created entries
       await authedPage.goto("/workspace/external");
       await authedPage.waitForTimeout(2_000);
 
       // Look for our imported entries and capture IDs for cleanup
+      const listMain = authedPage.locator("main");
       for (const name of ["The Paris Review", "Ploughshares"]) {
-        const link = authedPage.getByText(name).first();
+        const link = listMain.getByText(name).first();
         if ((await link.count()) > 0) {
           await link.click();
           const url = authedPage.url();
