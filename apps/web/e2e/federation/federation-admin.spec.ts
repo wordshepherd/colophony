@@ -29,10 +29,8 @@ test.describe("Federation Overview", () => {
     // Instance Configuration card
     await expect(page.getByText("Instance Configuration")).toBeVisible();
 
-    // Trusted Peers summary card
-    await expect(
-      page.getByRole("heading", { name: "Trusted Peers" }),
-    ).toBeVisible();
+    // Trusted Peers summary card (CardTitle, not semantic heading)
+    await expect(page.getByText("Trusted Peers")).toBeVisible();
 
     // Navigation cards
     await expect(page.getByText("Sim-Sub Checks")).toBeVisible();
@@ -58,8 +56,8 @@ test.describe("Federation Overview", () => {
       page.getByText("Enabled").or(page.getByText("Disabled")),
     ).toBeVisible();
 
-    // Mode value
-    await expect(page.getByText("Mode")).toBeVisible();
+    // Mode value (appears in config card + edit dialog; use .first())
+    await expect(page.getByText("Mode").first()).toBeVisible();
     await expect(page.getByText("allowlist")).toBeVisible();
 
     // Capabilities list
@@ -142,10 +140,8 @@ test.describe("Peer Management", () => {
     await expect(page.getByText("Peer Information")).toBeVisible();
     await expect(page.getByText("Public Key")).toBeVisible();
 
-    // Capabilities card
-    await expect(
-      page.getByRole("heading", { name: "Granted Capabilities" }),
-    ).toBeVisible();
+    // Capabilities card (CardTitle, not semantic heading)
+    await expect(page.getByText("Granted Capabilities")).toBeVisible();
     await expect(page.getByText("identity.verify")).toBeVisible();
     await expect(page.getByText("simsub.check")).toBeVisible();
   });
@@ -165,9 +161,7 @@ test.describe("Peer Management", () => {
     await page.getByRole("button", { name: "Revoke Trust" }).click();
 
     // Confirm in AlertDialog
-    await expect(
-      page.getByText("Revoke Trust", { exact: false }),
-    ).toBeVisible();
+    await expect(page.getByRole("alertdialog")).toBeVisible();
     await page
       .getByRole("alertdialog")
       .getByRole("button", { name: "Revoke" })
@@ -197,15 +191,18 @@ test.describe("Peer Management", () => {
     await page.getByRole("button", { name: "Accept" }).click();
 
     // Verify AcceptPeerDialog opens
-    await expect(page.getByText("Accept Trust Request")).toBeVisible();
-    await expect(page.getByText("Grant Capabilities")).toBeVisible();
+    const dialog = page.getByRole("dialog");
+    await expect(dialog.getByText("Accept Trust Request")).toBeVisible();
+    await expect(
+      dialog.getByText("Grant Capabilities", { exact: true }),
+    ).toBeVisible();
 
     // Capability checkboxes should be visible
-    await expect(page.getByText("Identity Verification")).toBeVisible();
-    await expect(page.getByText("Sim-Sub Check")).toBeVisible();
+    await expect(dialog.getByText("Identity Verification")).toBeVisible();
+    await expect(dialog.getByText("Sim-Sub Check")).toBeVisible();
 
     // Click accept button in dialog
-    await page
+    await dialog
       .getByRole("button", { name: /Accept.*Grant Capabilities/ })
       .click();
 
@@ -257,10 +254,10 @@ test.describe("Sim-Sub Admin", () => {
       .fill(federationData.submissionId);
     await page.getByRole("button", { name: "Look Up" }).click();
 
-    // Check history table appears
-    await expect(
-      page.getByRole("heading", { name: "Check History" }),
-    ).toBeVisible({ timeout: 10_000 });
+    // Check history table appears (CardTitle, not semantic heading)
+    await expect(page.getByText("Check History")).toBeVisible({
+      timeout: 10_000,
+    });
 
     // Result badges
     await expect(page.getByText("CLEAR")).toBeVisible();
@@ -294,9 +291,11 @@ test.describe("Transfer Management", () => {
     await expect(page.getByRole("tab", { name: "Completed" })).toBeVisible();
     await expect(page.getByRole("tab", { name: "Failed" })).toBeVisible();
 
-    // Seeded transfer visible
+    // Seeded transfer visible (scope to table — "Pending" tab matches case-insensitively)
     await expect(page.getByText("target-instance.example.com")).toBeVisible();
-    await expect(page.getByText("PENDING")).toBeVisible();
+    await expect(
+      page.locator("table").getByText("PENDING").first(),
+    ).toBeVisible();
   });
 
   test("navigates to transfer detail and cancels", async ({
@@ -314,15 +313,13 @@ test.describe("Transfer Management", () => {
     await expect(page.getByText("Submission ID")).toBeVisible();
     await expect(page.getByText("Target Domain")).toBeVisible();
     await expect(page.getByText("target-instance.example.com")).toBeVisible();
-    await expect(page.getByText("PENDING")).toBeVisible();
+    await expect(page.getByText("PENDING").first()).toBeVisible();
 
     // Cancel transfer
     await page.getByRole("button", { name: "Cancel Transfer" }).click();
 
-    // Confirm in dialog
-    await expect(
-      page.getByText("Are you sure you want to cancel this transfer"),
-    ).toBeVisible();
+    // Confirm in AlertDialog
+    await expect(page.getByRole("alertdialog")).toBeVisible();
     await page
       .getByRole("alertdialog")
       .getByRole("button", { name: "Cancel Transfer" })
@@ -333,8 +330,8 @@ test.describe("Transfer Management", () => {
       timeout: 10_000,
     });
 
-    // Status should change
-    await expect(page.getByText("CANCELLED")).toBeVisible();
+    // Status should change (use .first() — toast "cancelled" matches case-insensitively)
+    await expect(page.getByText("CANCELLED").first()).toBeVisible();
   });
 });
 
@@ -382,7 +379,7 @@ test.describe("Migration Management", () => {
     // Verify key fields
     await expect(page.getByText("Direction")).toBeVisible();
     await expect(page.getByText("outbound")).toBeVisible();
-    await expect(page.getByText("User DID")).toBeVisible();
+    await expect(page.getByText("User DID", { exact: true })).toBeVisible();
     await expect(page.getByText("Peer Domain")).toBeVisible();
     await expect(page.getByText("migration-peer.example.com")).toBeVisible();
 
@@ -415,12 +412,12 @@ test.describe("Audit Log", () => {
     // Open filters
     await page.getByText("Filters").click();
 
-    // Filter fields
-    await expect(page.getByLabel("Action")).toBeVisible();
-    await expect(page.getByLabel("Resource")).toBeVisible();
+    // Filter fields (shadcn Select lacks htmlFor→id, so use select trigger text)
+    await expect(page.getByText("All Actions")).toBeVisible();
+    await expect(page.getByText("All Resources")).toBeVisible();
 
-    // Events table
-    await expect(page.getByRole("heading", { name: "Events" })).toBeVisible();
+    // Events table (CardTitle, not semantic heading)
+    await expect(page.getByText("Events", { exact: true })).toBeVisible();
     await expect(
       page.getByRole("columnheader", { name: "Timestamp" }),
     ).toBeVisible();
@@ -445,18 +442,17 @@ test.describe("Audit Log", () => {
     // Open filters
     await page.getByText("Filters").click();
 
-    // Open resource dropdown
-    const resourceTrigger = page.getByLabel("Resource");
-    await resourceTrigger.click();
+    // Open resource dropdown via its trigger text
+    await page.getByText("All Resources").click();
 
     // Select "federation"
     await page.getByRole("option", { name: "federation" }).click();
 
-    // Table should update (may show events or "No audit events found")
+    // Table should update (may show events or empty state with period)
     await expect(
       page
-        .getByRole("heading", { name: "Events" })
-        .or(page.getByText("No audit events found")),
+        .getByText("Events", { exact: true })
+        .or(page.getByText("No audit events found.")),
     ).toBeVisible({ timeout: 10_000 });
   });
 
@@ -479,16 +475,17 @@ test.describe("Audit Log", () => {
       await firstRow.click();
 
       // Verify modal opens
-      await expect(page.getByText("Audit Event Detail")).toBeVisible({
+      const eventDialog = page.getByRole("dialog");
+      await expect(eventDialog.getByText("Audit Event Detail")).toBeVisible({
         timeout: 5_000,
       });
 
-      // Modal should contain key fields
-      await expect(page.getByText("Action")).toBeVisible();
-      await expect(page.getByText("Resource")).toBeVisible();
+      // Modal should contain key fields (scope to dialog to avoid table header matches)
+      await expect(eventDialog.getByText("Action")).toBeVisible();
+      await expect(eventDialog.getByText("Resource")).toBeVisible();
     } else {
-      // No events — verify "No audit events found" message
-      await expect(page.getByText("No audit events found")).toBeVisible();
+      // No events — verify empty state message (includes trailing period)
+      await expect(page.getByText("No audit events found.")).toBeVisible();
     }
   });
 });
