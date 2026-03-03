@@ -6,7 +6,12 @@
  * of all user data across orgs; import creates external submissions.
  */
 import { describe, it, expect, beforeAll, afterEach } from 'vitest';
-import { externalSubmissions, correspondence } from '@colophony/db';
+import { eq } from 'drizzle-orm';
+import {
+  externalSubmissions,
+  correspondence,
+  submissions,
+} from '@colophony/db';
 import { globalSetup } from '../rls/helpers/db-setup.js';
 import { truncateAllTables } from '../rls/helpers/cleanup.js';
 import { withTestRls } from '../rls/helpers/rls-context.js';
@@ -47,8 +52,6 @@ describe('CSR service — integration', () => {
 
       // Verify data exists in each org's RLS context
       const orgASubs = await withTestRls({ orgId: orgA.id }, async (tx) => {
-        const { eq } = await import('drizzle-orm');
-        const { submissions } = await import('@colophony/db');
         return tx
           .select()
           .from(submissions)
@@ -57,8 +60,6 @@ describe('CSR service — integration', () => {
       expect(orgASubs).toHaveLength(1);
 
       const orgBSubs = await withTestRls({ orgId: orgB.id }, async (tx) => {
-        const { eq } = await import('drizzle-orm');
-        const { submissions } = await import('@colophony/db');
         return tx
           .select()
           .from(submissions)

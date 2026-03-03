@@ -5,7 +5,7 @@
  * with a real PostgreSQL instance and RLS enforcement.
  */
 import { describe, it, expect, beforeAll, afterEach } from 'vitest';
-import { organizations, organizationMembers, users } from '@colophony/db';
+import { organizations, organizationMembers } from '@colophony/db';
 import { eq, and } from 'drizzle-orm';
 import { globalSetup } from '../rls/helpers/db-setup.js';
 import { truncateAllTables } from '../rls/helpers/cleanup.js';

@@ -15,7 +15,6 @@ import { globalSetup } from '../rls/helpers/db-setup.js';
 import { truncateAllTables } from '../rls/helpers/cleanup.js';
 import { withTestRls } from '../rls/helpers/rls-context.js';
 import { createOrganization } from '../rls/helpers/factories.js';
-import { faker } from '@faker-js/faker';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { getAdminPool } from '../rls/helpers/db-setup.js';
 
