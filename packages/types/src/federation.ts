@@ -28,6 +28,7 @@ export const federationMetadataSchema = z.object({
   mode: z.enum(["allowlist", "open", "managed_hub"]),
   contactEmail: z.string().nullable(),
   publications: z.array(federationPublicationSchema),
+  trustedPeers: z.array(z.string()).optional(),
 });
 
 export type FederationMetadata = z.infer<typeof federationMetadataSchema>;

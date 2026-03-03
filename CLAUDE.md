@@ -567,7 +567,7 @@ See [docs/architecture.md Section 6](docs/architecture.md) for full details.
 | 6     | Colophony Plugins                                        | **Complete** |
 | 7     | Monitoring & Observability (Sentry, Prometheus, metrics) | **Complete** |
 | 8     | Register Data Standard & Writer Tools (CSR, workspace)   | **Complete** |
-| 9     | Governance & Public Docs                                 | Not started  |
+| 9     | Governance & Public Docs                                 | **Complete** |
 | 10    | Analytics & Reporting (submission + writer analytics)    | **Complete** |
 | —     | Relay — Notifications (cross-cutting)                    | **Complete** |
 

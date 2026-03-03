@@ -16,6 +16,7 @@ const { testKeypairHoisted } = vi.hoisted(() => {
 vi.mock('@colophony/db', () => ({
   db: {
     select: vi.fn(),
+    selectDistinct: vi.fn(),
     insert: vi.fn(),
     update: vi.fn(),
     transaction: vi.fn(),
@@ -32,6 +33,11 @@ vi.mock('@colophony/db', () => ({
     id: 'id',
     slug: 'slug',
     federationOptedOut: 'federation_opted_out',
+  },
+  trustedPeers: {
+    domain: 'domain',
+    organizationId: 'organization_id',
+    status: 'status',
   },
   users: {
     id: 'id',
@@ -141,6 +147,19 @@ function mockSelectChainNoLimit(rows: unknown[]) {
   };
 }
 
+// Helper to build chained Drizzle selectDistinct mock (.from().innerJoin().where().limit())
+function mockSelectDistinctChain(rows: unknown[]) {
+  return {
+    from: vi.fn().mockReturnValue({
+      innerJoin: vi.fn().mockReturnValue({
+        where: vi.fn().mockReturnValue({
+          limit: vi.fn().mockResolvedValue(rows),
+        }),
+      }),
+    }),
+  };
+}
+
 // Alias for readability in test data
 const testKeypair = testKeypairHoisted;
 
@@ -148,6 +167,7 @@ describe('federationService', () => {
   let dbModule: {
     db: {
       select: ReturnType<typeof vi.fn>;
+      selectDistinct: ReturnType<typeof vi.fn>;
       insert: ReturnType<typeof vi.fn>;
       update: ReturnType<typeof vi.fn>;
       transaction: ReturnType<typeof vi.fn>;
@@ -437,6 +457,10 @@ describe('federationService', () => {
         .mockReturnValueOnce(mockSelectChain([configRow]))
         // getInstanceMetadata -> select publications
         .mockReturnValueOnce(mockSelectChain(pubRows));
+      // getInstanceMetadata -> selectDistinct trusted peers
+      dbModule.db.selectDistinct.mockReturnValueOnce(
+        mockSelectDistinctChain([]),
+      );
 
       const metadata = await federationService.getInstanceMetadata(baseEnv);
 
@@ -465,6 +489,9 @@ describe('federationService', () => {
       dbModule.db.select
         .mockReturnValueOnce(mockSelectChain([configRow]))
         .mockReturnValueOnce(mockSelectChain([]));
+      dbModule.db.selectDistinct.mockReturnValueOnce(
+        mockSelectDistinctChain([]),
+      );
 
       const metadata = await federationService.getInstanceMetadata(baseEnv);
 
@@ -518,11 +545,69 @@ describe('federationService', () => {
       dbModule.db.select
         .mockReturnValueOnce(mockSelectChain([configRow]))
         .mockReturnValueOnce(mockSelectChain([activePub]));
+      dbModule.db.selectDistinct.mockReturnValueOnce(
+        mockSelectDistinctChain([]),
+      );
 
       const metadata = await federationService.getInstanceMetadata(baseEnv);
 
       expect(metadata.publications).toHaveLength(1);
       expect(metadata.publications[0].name).toBe('Active Pub');
+    });
+
+    it('includes trustedPeers in metadata', async () => {
+      const { federationService } = await import('./federation.service.js');
+
+      const configRow = {
+        id: 'cfg-id',
+        publicKey: 'pub-key',
+        privateKey: 'priv-key',
+        keyId: 'magazine.example#main',
+        mode: 'allowlist' as const,
+        contactEmail: null,
+        capabilities: ['identity'],
+        enabled: true,
+      };
+
+      dbModule.db.select
+        .mockReturnValueOnce(mockSelectChain([configRow]))
+        .mockReturnValueOnce(mockSelectChain([]));
+      dbModule.db.selectDistinct.mockReturnValueOnce(
+        mockSelectDistinctChain([
+          { domain: 'peer1.example' },
+          { domain: 'peer2.example' },
+        ]),
+      );
+
+      const metadata = await federationService.getInstanceMetadata(baseEnv);
+
+      expect(metadata.trustedPeers).toEqual(['peer1.example', 'peer2.example']);
+    });
+
+    it('returns empty trustedPeers when no active peers', async () => {
+      const { federationService } = await import('./federation.service.js');
+
+      const configRow = {
+        id: 'cfg-id',
+        publicKey: 'pub-key',
+        privateKey: 'priv-key',
+        keyId: 'magazine.example#main',
+        mode: 'allowlist' as const,
+        contactEmail: null,
+        capabilities: ['identity'],
+        enabled: true,
+      };
+
+      dbModule.db.select
+        .mockReturnValueOnce(mockSelectChain([configRow]))
+        .mockReturnValueOnce(mockSelectChain([]));
+      dbModule.db.selectDistinct.mockReturnValueOnce(
+        mockSelectDistinctChain([]),
+      );
+
+      const metadata = await federationService.getInstanceMetadata(baseEnv);
+
+      expect(metadata.trustedPeers).toEqual([]);
     });
   });
 
