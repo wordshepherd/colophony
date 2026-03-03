@@ -17,7 +17,7 @@ import { test, expect } from "./fixtures";
 test.describe("Federation Overview", () => {
   test("renders federation overview with navigation cards", async ({
     authedPage: page,
-    federationData,
+    federationData: _federationData,
   }) => {
     await page.goto("/federation");
 
@@ -44,7 +44,7 @@ test.describe("Federation Overview", () => {
 
   test("shows instance configuration details", async ({
     authedPage: page,
-    federationData,
+    federationData: _federationData,
   }) => {
     await page.goto("/federation");
 
@@ -77,7 +77,7 @@ test.describe("Federation Overview", () => {
 test.describe("Peer Management", () => {
   test("renders peer list with tab filtering", async ({
     authedPage: page,
-    federationData,
+    federationData: _federationData,
   }) => {
     await page.goto("/federation/peers");
 
@@ -122,7 +122,7 @@ test.describe("Peer Management", () => {
 
   test("navigates to peer detail page", async ({
     authedPage: page,
-    federationData,
+    federationData: _federationData,
   }) => {
     await page.goto("/federation/peers");
 
@@ -226,7 +226,7 @@ test.describe("Peer Management", () => {
 test.describe("Sim-Sub Admin", () => {
   test("renders sim-sub admin with lookup form", async ({
     authedPage: page,
-    federationData,
+    federationData: _federationData,
   }) => {
     await page.goto("/federation/sim-sub");
 
@@ -279,7 +279,7 @@ test.describe("Sim-Sub Admin", () => {
 test.describe("Transfer Management", () => {
   test("renders transfer list with tab filtering", async ({
     authedPage: page,
-    federationData,
+    federationData: _federationData,
   }) => {
     await page.goto("/federation/transfers");
 
@@ -345,7 +345,7 @@ test.describe("Transfer Management", () => {
 test.describe("Migration Management", () => {
   test("renders migration list with direction filter", async ({
     authedPage: page,
-    federationData,
+    federationData: _federationData,
   }) => {
     await page.goto("/federation/migrations");
 
@@ -400,7 +400,7 @@ test.describe("Migration Management", () => {
 test.describe("Audit Log", () => {
   test("renders audit log with filter panel", async ({
     authedPage: page,
-    federationData,
+    federationData: _federationData,
   }) => {
     await page.goto("/federation/audit");
 
@@ -434,7 +434,7 @@ test.describe("Audit Log", () => {
 
   test("filters audit events by resource type", async ({
     authedPage: page,
-    federationData,
+    federationData: _federationData,
   }) => {
     await page.goto("/federation/audit");
 
@@ -462,7 +462,7 @@ test.describe("Audit Log", () => {
 
   test("shows event detail in modal", async ({
     authedPage: page,
-    federationData,
+    federationData: _federationData,
   }) => {
     await page.goto("/federation/audit");
 
@@ -500,7 +500,7 @@ test.describe("Audit Log", () => {
 test.describe("Hub Admin", () => {
   test("shows hub mode not enabled message", async ({
     authedPage: page,
-    federationData,
+    federationData: _federationData,
   }) => {
     await page.goto("/federation/hub");
 
