@@ -29,6 +29,7 @@ const ANALYTICS_SCOPES = [
   "submissions:read",
   "organizations:read",
   "periods:read",
+  "users:read",
 ];
 
 interface SeedOrg {
