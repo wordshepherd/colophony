@@ -137,7 +137,8 @@ test.describe("Submission Analytics Dashboard", () => {
     await expect(totalValue).not.toHaveText("0");
 
     // Set start date to far future — should yield 0 submissions
-    await page.locator("#startDate").fill("2030-01-01");
+    const futureYear = new Date().getFullYear() + 10;
+    await page.locator("#startDate").fill(`${futureYear}-01-01`);
 
     // Wait for data to reload and show 0
     await expect(totalValue).toHaveText("0", { timeout: 10_000 });
