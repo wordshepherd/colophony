@@ -291,7 +291,7 @@
 - [x] [P0] Documenso webhook integration tests (10 tests) — (DEVLOG 2026-03-02; done 2026-03-02)
 - [x] [P0] Writer Workspace E2E — dashboard, external submissions, portfolio, CSR import (21 Playwright tests) — (DEVLOG 2026-03-02; done 2026-03-02)
 - [ ] [P1] Queue/worker integration tests — email, webhook, file-scan workers with real Redis (~19 tests) — (test coverage plan 2026-03-02)
-- [ ] [P1] Form builder E2E — create form, add fields, configure, submit through it (~16 Playwright tests) — (test coverage plan 2026-03-02)
+- [x] [P1] Form builder E2E — create form, add fields, configure, submit through it (~16 Playwright tests) — (test coverage plan 2026-03-02; done 2026-03-03)
 - [ ] [P1] Organization & settings E2E — org management, member management, API keys (~15 Playwright tests) — (test coverage plan 2026-03-02)
 - [ ] [P1] Submission analytics E2E — dashboard, charts, date range filter (~6 Playwright tests) — (test coverage plan 2026-03-02)
 - [ ] [P2] Federation admin E2E — peer management, sim-sub, transfers, audit log (~16 Playwright tests) — (test coverage plan 2026-03-02)

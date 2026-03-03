@@ -43,6 +43,7 @@ function getRequestedProjects(): Set<string> {
     projects.add("embed");
     projects.add("slate");
     projects.add("workspace");
+    projects.add("forms");
   }
 
   return projects;
