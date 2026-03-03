@@ -290,7 +290,7 @@
 - [x] [P0] Service integration tests — submission, form-validation, org, portfolio, CSR, contract (63 tests) — (DEVLOG 2026-03-02; done 2026-03-02)
 - [x] [P0] Documenso webhook integration tests (10 tests) — (DEVLOG 2026-03-02; done 2026-03-02)
 - [x] [P0] Writer Workspace E2E — dashboard, external submissions, portfolio, CSR import (21 Playwright tests) — (DEVLOG 2026-03-02; done 2026-03-02)
-- [ ] [P1] Queue/worker integration tests — email, webhook, file-scan workers with real Redis (~19 tests) — (test coverage plan 2026-03-02)
+- [x] [P1] Queue/worker integration tests — email, webhook, file-scan workers with real Redis (~19 tests) — (test coverage plan 2026-03-02; done 2026-03-03)
 - [x] [P1] Form builder E2E — create form, add fields, configure, submit through it (~16 Playwright tests) — (test coverage plan 2026-03-02; done 2026-03-03)
 - [x] [P1] Organization & settings E2E — org management, member management (~14 Playwright tests) — (test coverage plan 2026-03-02; done 2026-03-03)
 - [ ] [P1] Submission analytics E2E — dashboard, charts, date range filter (~6 Playwright tests) — (test coverage plan 2026-03-02)
@@ -298,6 +298,7 @@
 - [ ] [P2] Federation S2S integration tests — two-instance HTTP signatures, trust handshake (~15 tests) — (test coverage plan 2026-03-02)
 - [ ] [P2] Notification prefs + writer analytics E2E (~9 tests) — (test coverage plan 2026-03-02)
 - [ ] CI: Add service-integration-tests, security-tests, and new Playwright jobs — (test coverage plan 2026-03-02)
+- [ ] [P2] Fix flaky workspace analytics E2E — `workspace-analytics-correspondence.spec.ts` "Total Submissions" card times out intermittently (10s timeout); reproduces on both `main` and feature branches; likely slow tRPC query or rendering delay in CI — (CI flake 2026-03-03)
 
 ### CI
 
