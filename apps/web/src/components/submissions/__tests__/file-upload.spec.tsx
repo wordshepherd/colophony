@@ -110,6 +110,26 @@ describe("FileUpload", () => {
 
       expect(screen.getByText("Upload limit reached")).toBeInTheDocument();
     });
+
+    it("has role='button' and tabIndex for keyboard accessibility", () => {
+      render(<FileUpload manuscriptVersionId="mv-1" disabled={false} />);
+
+      const dropZone = screen.getByRole("button", {
+        name: "Drop files here or click to upload",
+      });
+      expect(dropZone).toHaveAttribute("tabindex", "0");
+      expect(dropZone).toHaveAttribute("aria-disabled", "false");
+    });
+
+    it("sets tabIndex=-1 when disabled", () => {
+      render(<FileUpload manuscriptVersionId="mv-1" disabled />);
+
+      const dropZone = screen.getByRole("button", {
+        name: "Upload limit reached",
+      });
+      expect(dropZone).toHaveAttribute("tabindex", "-1");
+      expect(dropZone).toHaveAttribute("aria-disabled", "true");
+    });
   });
 
   // --- Existing files ---
@@ -212,6 +232,18 @@ describe("FileUpload", () => {
       render(<FileUpload manuscriptVersionId="mv-1" disabled={false} />);
 
       expect(screen.getByText(/flagged as infected/)).toBeInTheDocument();
+    });
+
+    it("wraps scan warnings in aria-live region", () => {
+      mockExistingFiles = [makeFileRecord({ scanStatus: "PENDING" })];
+
+      const { container } = render(
+        <FileUpload manuscriptVersionId="mv-1" disabled={false} />,
+      );
+
+      const liveRegion = container.querySelector('[aria-live="polite"]');
+      expect(liveRegion).toBeInTheDocument();
+      expect(liveRegion).toHaveTextContent(/still being scanned/);
     });
   });
 });

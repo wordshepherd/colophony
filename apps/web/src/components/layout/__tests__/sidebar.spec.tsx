@@ -117,6 +117,12 @@ describe("Sidebar", () => {
     expect(brandLink).toHaveAttribute("href", "/");
   });
 
+  it("should have aria-label on nav element", () => {
+    render(<Sidebar />);
+    const nav = screen.getByRole("navigation");
+    expect(nav).toHaveAttribute("aria-label", "Main navigation");
+  });
+
   it("should show Editor section header text", () => {
     mockIsEditor = true;
     render(<Sidebar />);

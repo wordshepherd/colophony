@@ -185,9 +185,23 @@ export function EmbedUploadSection({
             ? "border-muted-foreground/25 hover:border-primary/50 cursor-pointer"
             : "border-muted opacity-50 cursor-not-allowed",
         )}
+        role="button"
+        tabIndex={canUpload ? 0 : -1}
+        aria-label={
+          canUpload
+            ? "Drop files here or click to upload"
+            : "Upload limit reached"
+        }
+        aria-disabled={!canUpload}
         onDrop={canUpload ? handleDrop : undefined}
         onDragOver={canUpload ? handleDragOver : undefined}
         onClick={() => canUpload && inputRef.current?.click()}
+        onKeyDown={(e) => {
+          if ((e.key === "Enter" || e.key === " ") && canUpload) {
+            e.preventDefault();
+            inputRef.current?.click();
+          }
+        }}
       >
         <Upload className="mx-auto h-10 w-10 text-muted-foreground" />
         <p className="mt-2 text-sm font-medium">
@@ -283,21 +297,24 @@ export function EmbedUploadSection({
         </div>
       )}
 
-      {/* Scanning warning */}
-      {scannedFiles.some(
-        (f) => f.scanStatus === "PENDING" || f.scanStatus === "SCANNING",
-      ) && (
-        <p className="text-sm text-yellow-600 dark:text-yellow-400">
-          Files are being scanned. You can submit after all scans complete.
-        </p>
-      )}
+      {/* Scan status announcements for screen readers */}
+      <div aria-live="polite">
+        {/* Scanning warning */}
+        {scannedFiles.some(
+          (f) => f.scanStatus === "PENDING" || f.scanStatus === "SCANNING",
+        ) && (
+          <p className="text-sm text-yellow-600 dark:text-yellow-400">
+            Files are being scanned. You can submit after all scans complete.
+          </p>
+        )}
 
-      {/* Infected warning */}
-      {hasInfected && (
-        <p className="text-sm text-destructive">
-          Some files were flagged as infected and cannot be submitted.
-        </p>
-      )}
+        {/* Infected warning */}
+        {hasInfected && (
+          <p className="text-sm text-destructive">
+            Some files were flagged as infected and cannot be submitted.
+          </p>
+        )}
+      </div>
     </div>
   );
 }
