@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/unbound-method */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import crypto from 'node:crypto';
 import * as jose from 'jose';
@@ -153,10 +154,10 @@ describe('transfer flow integration', () => {
 
   it('handleInboundTransfer: valid initiation creates record', async () => {
     const { publicKey, privateKey } = await generateKeypair();
-    const publicKeyPem = (await jose.exportSPKI(publicKey as CryptoKey)).trim();
+    const publicKeyPem = (await jose.exportSPKI(publicKey)).trim();
     const transferId = crypto.randomUUID();
 
-    const jwt = await signTransferToken(privateKey as CryptoKey, {
+    const jwt = await signTransferToken(privateKey, {
       iss: 'origin.example.com',
       aud: 'local.example.com',
       jti: transferId,
@@ -254,12 +255,12 @@ describe('transfer flow integration', () => {
 
   it('handleInboundTransfer: rejects expired JWT', async () => {
     const { publicKey, privateKey } = await generateKeypair();
-    const publicKeyPem = (await jose.exportSPKI(publicKey as CryptoKey)).trim();
+    const publicKeyPem = (await jose.exportSPKI(publicKey)).trim();
     const transferId = crypto.randomUUID();
 
     // JWT expired 1 hour ago
     const expiredTime = Math.floor(Date.now() / 1000) - 3600;
-    const jwt = await signTransferToken(privateKey as CryptoKey, {
+    const jwt = await signTransferToken(privateKey, {
       iss: 'origin.example.com',
       aud: 'local.example.com',
       jti: transferId,
@@ -297,11 +298,11 @@ describe('transfer flow integration', () => {
 
   it('handleInboundTransfer: rejects wrong audience JWT', async () => {
     const { publicKey, privateKey } = await generateKeypair();
-    const publicKeyPem = (await jose.exportSPKI(publicKey as CryptoKey)).trim();
+    const publicKeyPem = (await jose.exportSPKI(publicKey)).trim();
     const transferId = crypto.randomUUID();
 
     // JWT audience is wrong-domain.com, not local.example.com
-    const jwt = await signTransferToken(privateKey as CryptoKey, {
+    const jwt = await signTransferToken(privateKey, {
       iss: 'origin.example.com',
       aud: 'wrong-domain.com',
       jti: transferId,
@@ -342,14 +343,12 @@ describe('transfer flow integration', () => {
 
   it('verifyTransferToken: validates correct token', async () => {
     const { publicKey, privateKey } = await generateKeypair();
-    const publicKeyPem = (await jose.exportSPKI(publicKey as CryptoKey)).trim();
-    const privateKeyPem = (
-      await jose.exportPKCS8(privateKey as CryptoKey)
-    ).trim();
+    const publicKeyPem = (await jose.exportSPKI(publicKey)).trim();
+    const privateKeyPem = (await jose.exportPKCS8(privateKey)).trim();
     const transferId = crypto.randomUUID();
     const fileId = 'file-1';
 
-    const jwt = await signTransferToken(privateKey as CryptoKey, {
+    const jwt = await signTransferToken(privateKey, {
       iss: 'local.example.com',
       aud: 'remote.example.com',
       jti: transferId,
