@@ -49,6 +49,14 @@ export async function waitForJobFailure<T>(
 
   const finalJob = await queue.getJob(jobId);
   if (!finalJob) throw new Error(`Job ${jobId} disappeared after failure`);
+
+  const state = await finalJob.getState();
+  if (state !== 'failed') {
+    throw new Error(
+      `Expected job ${jobId} to be in 'failed' state but got '${state}'`,
+    );
+  }
+
   return finalJob as Job<T>;
 }
 
