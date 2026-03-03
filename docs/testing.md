@@ -29,6 +29,9 @@ pnpm --filter @colophony/api test:services
 # Webhook integration tests (~38 tests, requires postgres-test container)
 pnpm --filter @colophony/api test:webhooks
 
+# Queue/worker integration tests (~19 tests, requires postgres-test + redis)
+pnpm --filter @colophony/api test:queues
+
 # Playwright browser E2E — submissions only (20 tests, requires dev servers)
 pnpm --filter @colophony/web test:e2e
 
@@ -82,6 +85,7 @@ pnpm --filter @colophony/web test:e2e:ui
 | Security invariant tests  | 3     | ~20   | Vitest (custom) | `apps/api/src/__tests__/security/` |
 | Service integration tests | 6     | ~63   | Vitest (custom) | `apps/api/src/__tests__/services/` |
 | Webhook integration tests | 4     | ~38   | Vitest (custom) | `apps/api/src/__tests__/webhooks/` |
+| Queue integration tests   | 6     | ~19   | Vitest (custom) | `apps/api/src/__tests__/queues/`   |
 | Playwright browser E2E    | 23    | ~123  | Playwright      | `apps/web/e2e/`                    |
 
 > Counts use `~` prefix because they shift as tests are added. Run `pnpm test` to get exact numbers.
@@ -283,6 +287,34 @@ pnpm --filter @colophony/api test:webhooks
 - `buildWebhookApp()` creates a Fastify instance with all 3 webhook scopes (same registration as `main.ts`)
 - DB assertions use admin pool (bypasses RLS) to verify state changes
 - tusd tests exercise RLS via `withRls()` on submissions/submission_files tables
+
+### Queue/Worker Integration Tests
+
+**Location:** `apps/api/src/__tests__/queues/` (6 test files, ~19 tests)
+
+Tests verify the full enqueue → BullMQ picks up → processor runs → DB state changes pipeline for all queue workers: file-scan, email, webhook, s3-cleanup, outbox-poller, and transfer-fetch.
+
+**Real:** PostgreSQL (test DB, `app_user` connection via `withRls()`), Redis (BullMQ queues + workers), Drizzle ORM, audit logging.
+
+**Mocked:** S3 storage adapter, ClamAV (`clamscan`), email adapter, `globalThis.fetch`, Inngest client, SSRF validation, Prometheus metrics, Sentry, logger.
+
+**Config:** `apps/api/vitest.config.queues.ts` — `singleFork: true`, `fileParallelism: false`, `DATABASE_URL` + `REDIS_HOST`/`REDIS_PORT` pointed at test infra.
+
+**Running:**
+
+```bash
+# Requires postgres-test + redis containers
+docker compose up -d postgres-test redis
+pnpm --filter @colophony/api test:queues
+```
+
+**Key design:**
+
+- Each file starts its own worker in `beforeAll` and stops it in `afterAll`
+- `QueueEvents` + `job.waitUntilFinished()` for idiomatic wait (no polling)
+- Retry tests override default backoff with `{ type: 'fixed', delay: 100 }` to avoid 30s+ delays
+- Reuses RLS test helpers (db-setup, factories, cleanup) + adds queue-specific factories
+- Redis is flushed between test files via `flushRedis()` (FLUSHDB)
 
 ### Playwright Browser E2E Tests
 

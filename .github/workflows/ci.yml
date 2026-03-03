@@ -249,6 +249,60 @@ jobs:
           DATABASE_APP_URL: postgresql://app_user:app_password@localhost:5433/colophony_test
 
   # ──────────────────────────────────────────────────
+  # Queue/Worker integration tests: needs Postgres + Redis
+  # ──────────────────────────────────────────────────
+  queue-tests:
+    name: Queue Integration Tests
+    needs: changes
+    if: needs.changes.outputs.docs_only != 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: colophony_test
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd "pg_isready -U test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v6
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+      - uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "pnpm"
+      - run: pnpm install --frozen-lockfile
+      - name: Build workspace dependencies
+        run: pnpm turbo run build --filter=@colophony/db --filter=@colophony/types --filter=@colophony/api-contracts --filter=@colophony/plugin-sdk
+      - name: Run queue integration tests
+        run: pnpm --filter @colophony/api test:queues
+        env:
+          DATABASE_TEST_URL: postgresql://test:test@localhost:5433/colophony_test
+          DATABASE_APP_URL: postgresql://app_user:app_password@localhost:5433/colophony_test
+          REDIS_HOST: localhost
+          REDIS_PORT: "6379"
+          REDIS_PASSWORD: ""
+
+  # ──────────────────────────────────────────────────
   # Playwright E2E tests (~5 min): submissions project
   # ──────────────────────────────────────────────────
   playwright-tests:
