@@ -30,6 +30,7 @@ import {
 } from '../federation/http-signatures.js';
 import {
   resolveAndCheckPrivateIp,
+  validateOutboundUrl,
   SsrfValidationError,
 } from '../lib/url-validation.js';
 
@@ -304,6 +305,12 @@ export const trustService = {
 
     // POST trust request to remote (best-effort — peer stays pending if this fails)
     try {
+      const trustUrl = `https://${input.domain}/federation/trust`;
+      const devMode =
+        process.env.NODE_ENV === 'development' ||
+        process.env.NODE_ENV === 'test';
+      await validateOutboundUrl(trustUrl, { devMode });
+
       const body = JSON.stringify({
         instanceUrl: `https://${localDomain}`,
         domain: localDomain,
@@ -315,14 +322,14 @@ export const trustService = {
 
       const { headers } = signFederationRequest({
         method: 'POST',
-        url: `https://${input.domain}/federation/trust`,
+        url: trustUrl,
         headers: { 'content-type': 'application/json' },
         body,
         privateKey: config.privateKey,
         keyId: config.keyId,
       });
 
-      await fetch(`https://${input.domain}/federation/trust`, {
+      await fetch(trustUrl, {
         method: 'POST',
         headers,
         body,
@@ -540,6 +547,12 @@ export const trustService = {
 
     // POST accept to remote (best-effort)
     try {
+      const acceptUrl = `https://${peer.domain}/federation/trust/accept`;
+      const devMode =
+        process.env.NODE_ENV === 'development' ||
+        process.env.NODE_ENV === 'test';
+      await validateOutboundUrl(acceptUrl, { devMode });
+
       const body = JSON.stringify({
         instanceUrl: `https://${localDomain}`,
         domain: localDomain,
@@ -549,14 +562,14 @@ export const trustService = {
 
       const { headers } = signFederationRequest({
         method: 'POST',
-        url: `https://${peer.domain}/federation/trust/accept`,
+        url: acceptUrl,
         headers: { 'content-type': 'application/json' },
         body,
         privateKey: config.privateKey,
         keyId: config.keyId,
       });
 
-      await fetch(`https://${peer.domain}/federation/trust/accept`, {
+      await fetch(acceptUrl, {
         method: 'POST',
         headers,
         body,
@@ -741,9 +754,13 @@ export const trustService = {
   /**
    * List all trusted peers for an organization. RLS scopes to org.
    */
-  async listPeers(orgId: string): Promise<TrustedPeer[]> {
+  async listPeers(
+    orgId: string,
+    opts?: { limit?: number },
+  ): Promise<TrustedPeer[]> {
+    const maxRows = opts?.limit ?? 500;
     return withRls({ orgId }, async (tx) => {
-      const rows = await tx.select().from(trustedPeers);
+      const rows = await tx.select().from(trustedPeers).limit(maxRows);
       return rows.map(mapPeerRow);
     });
   },
