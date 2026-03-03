@@ -18,6 +18,7 @@ const { mockWithRls, mockDb } = vi.hoisted(() => {
     returning: vi.fn().mockReturnThis(),
     orderBy: vi.fn().mockReturnThis(),
     offset: vi.fn().mockReturnThis(),
+    innerJoin: vi.fn().mockReturnThis(),
   };
   return { mockWithRls, mockDb };
 });
@@ -80,6 +81,7 @@ vi.mock('@colophony/db', () => ({
 
 vi.mock('drizzle-orm', () => ({
   count: vi.fn(),
+  getTableColumns: vi.fn().mockReturnValue({}),
 }));
 
 const { mockSignJWT } = vi.hoisted(() => ({
@@ -741,6 +743,7 @@ describe('transferService', () => {
           select: vi.fn().mockReturnThis(),
           from: vi.fn().mockReturnThis(),
           where: vi.fn().mockReturnThis(),
+          innerJoin: vi.fn().mockReturnThis(),
           limit: vi.fn().mockResolvedValue([{ status: 'PENDING' }]),
           update: vi.fn().mockReturnThis(),
           set: vi.fn().mockReturnThis(),
@@ -763,6 +766,7 @@ describe('transferService', () => {
           select: vi.fn().mockReturnThis(),
           from: vi.fn().mockReturnThis(),
           where: vi.fn().mockReturnThis(),
+          innerJoin: vi.fn().mockReturnThis(),
           limit: vi.fn().mockResolvedValue([{ status: 'COMPLETED' }]),
         };
         return fn(mockTx);

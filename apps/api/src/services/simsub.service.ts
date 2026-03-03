@@ -397,8 +397,8 @@ export const simsubService = {
 
     // Query active trusted peers with simsub.respond capability.
     const peerFilter = hubResponded
-      ? sql`status = 'active' AND granted_capabilities @> '{"simsub.respond": true}'::jsonb AND hub_attested = false`
-      : sql`status = 'active' AND granted_capabilities @> '{"simsub.respond": true}'::jsonb`;
+      ? sql`status = 'active' AND granted_capabilities @> '{"simsub.respond": true}'::jsonb AND hub_attested = false AND organization_id = current_org_id()`
+      : sql`status = 'active' AND granted_capabilities @> '{"simsub.respond": true}'::jsonb AND organization_id = current_org_id()`;
 
     const peers = await withRls({ orgId }, async (tx) => {
       return tx

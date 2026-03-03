@@ -276,13 +276,13 @@
 
 ### Defense-in-Depth (Codex Review Findings 2026-03-03)
 
-- [ ] [Critical] `submission_discussions` missing `FORCE ROW LEVEL SECURITY` — `packages/db/migrations/0041_submission_discussions.sql` enables RLS but does not force it — (Codex review 2026-03-03)
-- [ ] [P2] Defense-in-depth: transfer service org-scoped methods missing explicit `organizationId` predicate — `apps/api/src/services/transfer.service.ts:347,361,382,423` — (Codex review 2026-03-03)
-- [ ] [P2] Unbounded query: transfer listing by submission has no pagination/limit — `apps/api/src/services/transfer.service.ts:339` — (Codex review 2026-03-03)
-- [ ] [P2] Migration token verification unused `_submissionId` parameter (missing binding check) — `apps/api/src/services/migration.service.ts:958` — (Codex review 2026-03-03)
-- [ ] [P2] Unbounded query: migration pending approvals — `apps/api/src/services/migration.service.ts:1119` — (Codex review 2026-03-03)
-- [ ] [P2] Defense-in-depth: sim-sub peer query lacks explicit `organizationId` filter — `apps/api/src/services/simsub.service.ts:403` — (Codex review 2026-03-03)
-- [ ] [P3] Notification preferences list has no `LIMIT` — `apps/api/src/services/notification-preference.service.ts:71` — (Codex review 2026-03-03)
+- [x] [Critical] `submission_discussions` missing `FORCE ROW LEVEL SECURITY` — `packages/db/migrations/0041_submission_discussions.sql` enables RLS but does not force it — (Codex review 2026-03-03; done 2026-03-03 migration 0050)
+- [x] [P2] Defense-in-depth: transfer service org-scoped methods missing explicit `organizationId` predicate — `apps/api/src/services/transfer.service.ts:347,361,382,423` — (Codex review 2026-03-03; done 2026-03-03)
+- [x] [P2] Unbounded query: transfer listing by submission has no pagination/limit — `apps/api/src/services/transfer.service.ts:339` — (Codex review 2026-03-03; done 2026-03-03)
+- [x] [P2] Migration token verification unused `_submissionId` parameter (missing binding check) — `apps/api/src/services/migration.service.ts:958` — (Codex review 2026-03-03; done 2026-03-03)
+- [x] [P2] Unbounded query: migration pending approvals — `apps/api/src/services/migration.service.ts:1119` — (Codex review 2026-03-03; done 2026-03-03)
+- [x] [P2] Defense-in-depth: sim-sub peer query lacks explicit `organizationId` filter — `apps/api/src/services/simsub.service.ts:403` — (Codex review 2026-03-03; done 2026-03-03)
+- [x] [P3] Notification preferences list has no `LIMIT` — `apps/api/src/services/notification-preference.service.ts:71` — (Codex review 2026-03-03; done 2026-03-03)
 
 ### Dev Workflow
 

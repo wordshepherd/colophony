@@ -15,6 +15,7 @@ export const notificationPreferencesRouter = createRouter({
     .query(async ({ ctx }) => {
       return notificationPreferenceService.listForUser(
         ctx.dbTx,
+        ctx.authContext.orgId,
         ctx.authContext.userId,
       );
     }),

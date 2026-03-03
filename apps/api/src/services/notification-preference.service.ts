@@ -68,11 +68,17 @@ export const notificationPreferenceService = {
     return pref?.enabled ?? true;
   },
 
-  async listForUser(tx: DrizzleDb, userId: string) {
+  async listForUser(tx: DrizzleDb, orgId: string, userId: string) {
     return tx
       .select()
       .from(notificationPreferences)
-      .where(eq(notificationPreferences.userId, userId));
+      .where(
+        and(
+          eq(notificationPreferences.organizationId, orgId),
+          eq(notificationPreferences.userId, userId),
+        ),
+      )
+      .limit(200);
   },
 
   async upsert(tx: DrizzleDb, params: UpsertParams) {
