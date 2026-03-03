@@ -293,7 +293,7 @@
 - [x] [P1] Queue/worker integration tests — email, webhook, file-scan workers with real Redis (~19 tests) — (test coverage plan 2026-03-02; done 2026-03-03)
 - [x] [P1] Form builder E2E — create form, add fields, configure, submit through it (~16 Playwright tests) — (test coverage plan 2026-03-02; done 2026-03-03)
 - [x] [P1] Organization & settings E2E — org management, member management (~14 Playwright tests) — (test coverage plan 2026-03-02; done 2026-03-03)
-- [ ] [P1] Submission analytics E2E — dashboard, charts, date range filter (~6 Playwright tests) — (test coverage plan 2026-03-02)
+- [x] [P1] Submission analytics E2E — dashboard, charts, date range filter (~6 Playwright tests) — (test coverage plan 2026-03-02; done 2026-03-03)
 - [ ] [P2] Federation admin E2E — peer management, sim-sub, transfers, audit log (~16 Playwright tests) — (test coverage plan 2026-03-02)
 - [ ] [P2] Federation S2S integration tests — two-instance HTTP signatures, trust handshake (~15 tests) — (test coverage plan 2026-03-02)
 - [ ] [P2] Notification prefs + writer analytics E2E (~9 tests) — (test coverage plan 2026-03-02)

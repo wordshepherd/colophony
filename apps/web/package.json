@@ -20,6 +20,7 @@
     "test:e2e:workspace": "playwright test --project workspace",
     "test:e2e:forms": "playwright test --project forms",
     "test:e2e:organization": "playwright test --project organization",
+    "test:e2e:analytics": "playwright test --project analytics",
     "test:e2e:all": "OIDC_E2E=true playwright test",
     "test:e2e:ui": "playwright test --ui",
     "e2e:setup-oidc": "tsx ../../scripts/setup-zitadel-e2e.ts",
