@@ -25,6 +25,7 @@ run_uploads=false
 run_oidc=false
 run_forms=false
 run_organization=false
+run_analytics=false
 run_all=false
 
 # --- Push to main always runs everything ---
@@ -122,6 +123,12 @@ organization_prefixes=(
   "apps/web/src/app/(dashboard)/settings/"
 )
 
+analytics_prefixes=(
+  "apps/web/e2e/analytics/"
+  "apps/web/src/components/analytics/"
+  "apps/web/src/app/(dashboard)/editor/analytics/"
+)
+
 # --- Known non-suite prefixes (docs, configs, etc. that don't need E2E) ---
 known_nonsuite_prefixes=(
   "docs/"
@@ -211,6 +218,10 @@ if [[ "$run_all" == "false" ]]; then
       run_organization=true
       matched=true
     fi
+    if matches_any_prefix "$file" "${analytics_prefixes[@]}"; then
+      run_analytics=true
+      matched=true
+    fi
 
     # Known non-suite paths (docs, configs) — skip without triggering fail-open
     if [[ "$matched" == "false" ]]; then
@@ -243,6 +254,7 @@ if [[ "$run_all" == "true" ]]; then
   run_oidc=true
   run_forms=true
   run_organization=true
+  run_analytics=true
 fi
 
 # --- Output ---
@@ -254,6 +266,7 @@ echo "run_uploads=$run_uploads"
 echo "run_oidc=$run_oidc"
 echo "run_forms=$run_forms"
 echo "run_organization=$run_organization"
+echo "run_analytics=$run_analytics"
 
 # Write to GITHUB_OUTPUT if available
 if [[ -n "${GITHUB_OUTPUT:-}" ]]; then
@@ -266,5 +279,6 @@ if [[ -n "${GITHUB_OUTPUT:-}" ]]; then
     echo "run_oidc=$run_oidc"
     echo "run_forms=$run_forms"
     echo "run_organization=$run_organization"
+    echo "run_analytics=$run_analytics"
   } >> "$GITHUB_OUTPUT"
 fi

@@ -114,6 +114,11 @@ export default defineConfig({
       testDir: "./e2e/organization",
       use: { ...devices["Desktop Chrome"] },
     },
+    {
+      name: "analytics",
+      testDir: "./e2e/analytics",
+      use: { ...devices["Desktop Chrome"] },
+    },
   ],
 
   webServer: [
