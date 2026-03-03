@@ -44,6 +44,9 @@ pnpm --filter @colophony/web test:e2e:oidc
 # Playwright — Slate pipeline (30 tests, requires dev servers)
 pnpm --filter @colophony/web test:e2e:slate
 
+# Playwright — Writer Workspace (21 tests, requires dev servers)
+pnpm --filter @colophony/web test:e2e:workspace
+
 # Playwright — all projects
 pnpm --filter @colophony/web test:e2e:all
 
@@ -73,7 +76,7 @@ pnpm --filter @colophony/web test:e2e:ui
 | Security invariant tests  | 3     | ~20   | Vitest (custom) | `apps/api/src/__tests__/security/` |
 | Service integration tests | 6     | ~63   | Vitest (custom) | `apps/api/src/__tests__/services/` |
 | Webhook integration tests | 4     | ~38   | Vitest (custom) | `apps/api/src/__tests__/webhooks/` |
-| Playwright browser E2E    | 14    | ~72   | Playwright      | `apps/web/e2e/`                    |
+| Playwright browser E2E    | 15    | ~93   | Playwright      | `apps/web/e2e/`                    |
 
 > Counts use `~` prefix because they shift as tests are added. Run `pnpm test` to get exact numbers.
 
