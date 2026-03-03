@@ -77,7 +77,7 @@ pnpm --filter @colophony/web test:e2e:ui
 
 ## Current Test Status
 
-**~1923 tests passing** across 8 tiers:
+**~1929 tests passing** across 8 tiers:
 
 | Tier                      | Files | Tests | Runner          | Location                           |
 | ------------------------- | ----- | ----- | --------------- | ---------------------------------- |
@@ -89,7 +89,7 @@ pnpm --filter @colophony/web test:e2e:ui
 | Service integration tests | 6     | ~63   | Vitest (custom) | `apps/api/src/__tests__/services/` |
 | Webhook integration tests | 4     | ~38   | Vitest (custom) | `apps/api/src/__tests__/webhooks/` |
 | Queue integration tests   | 6     | ~19   | Vitest (custom) | `apps/api/src/__tests__/queues/`   |
-| Playwright browser E2E    | 24    | ~129  | Playwright      | `apps/web/e2e/`                    |
+| Playwright browser E2E    | 25    | ~135  | Playwright      | `apps/web/e2e/`                    |
 
 > Counts use `~` prefix because they shift as tests are added. Run `pnpm test` to get exact numbers.
 
