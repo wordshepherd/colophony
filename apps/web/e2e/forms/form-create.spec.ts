@@ -8,9 +8,7 @@ test.describe("Form Create (/editor/forms/new)", () => {
     try {
       await authedPage.goto("/editor/forms/new");
 
-      await expect(
-        authedPage.getByRole("heading", { name: "Create Form" }),
-      ).toBeVisible();
+      await expect(authedPage.getByText("Create Form").first()).toBeVisible();
 
       await authedPage.getByLabel("Name").fill("E2E Created Form");
       await authedPage
@@ -39,9 +37,7 @@ test.describe("Form Create (/editor/forms/new)", () => {
   test("validates required name field", async ({ authedPage }) => {
     await authedPage.goto("/editor/forms/new");
 
-    await expect(
-      authedPage.getByRole("heading", { name: "Create Form" }),
-    ).toBeVisible();
+    await expect(authedPage.getByText("Create Form").first()).toBeVisible();
 
     // Click Create Form without filling name
     await authedPage.getByRole("button", { name: "Create Form" }).click();

@@ -31,8 +31,10 @@ test.describe("Form Lifecycle", () => {
         timeout: 10_000,
       });
 
-      // Click Publish
-      await authedPage.getByRole("button", { name: "Publish" }).click();
+      // Click Publish (exact match avoids form name button "E2E Publish Form")
+      await authedPage
+        .getByRole("button", { name: "Publish", exact: true })
+        .click();
 
       // Status badge should show Published
       await expect(authedPage.getByText("Published")).toBeVisible({
@@ -41,7 +43,7 @@ test.describe("Form Lifecycle", () => {
 
       // Publish button should be gone (only shows for DRAFT)
       await expect(
-        authedPage.getByRole("button", { name: "Publish" }),
+        authedPage.getByRole("button", { name: "Publish", exact: true }),
       ).not.toBeVisible();
     } finally {
       await deleteFormDefinition(form.id);
@@ -67,8 +69,10 @@ test.describe("Form Lifecycle", () => {
         timeout: 10_000,
       });
 
-      // Click Archive
-      await authedPage.getByRole("button", { name: "Archive" }).click();
+      // Click Archive (exact match avoids form name button "E2E Archive Form")
+      await authedPage
+        .getByRole("button", { name: "Archive", exact: true })
+        .click();
 
       // Status badge should show Archived
       await expect(authedPage.getByText("Archived")).toBeVisible({
@@ -128,8 +132,10 @@ test.describe("Form Lifecycle", () => {
       timeout: 10_000,
     });
 
-    // Click Delete
-    await authedPage.getByRole("button", { name: "Delete" }).click();
+    // Click Delete (exact match avoids form name button "E2E Delete Form")
+    await authedPage
+      .getByRole("button", { name: "Delete", exact: true })
+      .click();
 
     // Should redirect to form list
     await expect(authedPage).toHaveURL(/\/editor\/forms$/, {

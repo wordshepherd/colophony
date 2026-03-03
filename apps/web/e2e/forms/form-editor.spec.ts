@@ -157,7 +157,7 @@ test.describe("Form Editor (/editor/forms/[formId])", () => {
   }) => {
     const form = await createFormDefinition({
       orgId: seedOrg.id,
-      name: "E2E Remove Field Form",
+      name: "E2E Canvas Cleanup Form",
       createdBy: seedAdmin.id,
     });
 
