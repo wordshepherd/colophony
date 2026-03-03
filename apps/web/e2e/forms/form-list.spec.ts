@@ -34,7 +34,9 @@ test.describe("Form List (/editor/forms)", () => {
 
     // Click Published tab — draft form should not appear
     await authedPage.getByRole("tab", { name: "Published" }).click();
-    await authedPage.waitForTimeout(400);
-    await expect(authedPage.getByText(formData.form.name)).not.toBeVisible();
+    // Wait for the tab content to update (state-based, not fixed sleep)
+    await expect(authedPage.getByText(formData.form.name)).not.toBeVisible({
+      timeout: 10_000,
+    });
   });
 });
