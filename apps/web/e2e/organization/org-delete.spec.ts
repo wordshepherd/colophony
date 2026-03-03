@@ -8,7 +8,7 @@
  * Each test creates its own disposable org + API key + authedPage.
  */
 
-import { test as base, expect, type Page, devices } from "@playwright/test";
+import { test as base, expect, devices, type Browser } from "@playwright/test";
 import { buildStorageState, setupPageAuth } from "../helpers/auth";
 import {
   createOrg,
@@ -36,7 +36,7 @@ const ORG_E2E_SCOPES = [
  * Create a disposable org with admin membership and API key,
  * returning an authedPage bound to that org.
  */
-async function createDisposableOrgContext(browser: any, baseURL: string) {
+async function createDisposableOrgContext(browser: Browser, baseURL: string) {
   const suffix =
     Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
   const orgName = `Delete Test Org ${suffix}`;

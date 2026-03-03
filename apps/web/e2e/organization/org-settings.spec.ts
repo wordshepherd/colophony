@@ -33,7 +33,7 @@ test.describe("Organization Settings (/organizations/settings)", () => {
     await expect(authedPage.getByText("Slug")).toBeVisible();
   });
 
-  test("updates org name", async ({ authedPage, seedOrg }) => {
+  test("updates org name", async ({ authedPage }) => {
     await authedPage.goto("/organizations/settings");
 
     const nameInput = authedPage.getByLabel("Organization Name");
