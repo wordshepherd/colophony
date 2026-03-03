@@ -15,6 +15,7 @@ import { AuditActions, AuditResources } from '@colophony/types';
 import type { Env } from '../config/env.js';
 import type { TransferFetchJobData } from '../queues/transfer-fetch.queue.js';
 import { auditService } from '../services/audit.service.js';
+import { validateOutboundUrl } from '../lib/url-validation.js';
 import type { S3StorageAdapter } from '../adapters/storage/index.js';
 import { createInstrumentedWorker } from '../config/instrumented-worker.js';
 
@@ -100,6 +101,12 @@ export function startTransferFetchWorker(
           `No active peer found for domain: ${originDomain}`,
         );
       }
+
+      // SSRF check on peer URL before fetching files
+      const devMode =
+        process.env.NODE_ENV === 'development' ||
+        process.env.NODE_ENV === 'test';
+      await validateOutboundUrl(peer.instanceUrl, { devMode });
 
       // Phase 2: fetch files (concurrent with limit of 5)
       const storedFiles: Array<{ fileId: string; storageKey: string }> = [];

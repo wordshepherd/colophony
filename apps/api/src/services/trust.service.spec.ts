@@ -122,6 +122,7 @@ function makeMockTx(opts: {
       from: () => {
         const arr = opts.selectResult ?? [];
         return Object.assign(Promise.resolve(arr), {
+          limit: () => Promise.resolve(arr),
           where: () =>
             Object.assign(Promise.resolve(arr), {
               limit: () => Promise.resolve(arr),

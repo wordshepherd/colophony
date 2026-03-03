@@ -25,6 +25,8 @@
     "test:watch": "vitest",
     "test:cov": "vitest run --coverage",
     "test:rls": "vitest run --config vitest.config.rls.ts",
+    "test:security": "vitest run --config vitest.config.security.ts",
+    "test:services": "vitest run --config vitest.config.services.ts",
     "test:webhooks": "vitest run --config vitest.config.webhooks.ts",
     "type-check": "tsc --noEmit",
     "clean": "rm -rf dist"

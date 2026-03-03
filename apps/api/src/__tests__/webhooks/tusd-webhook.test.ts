@@ -21,8 +21,8 @@ import {
   createOrganization,
   createUser,
   createOrgMember,
-  createSubmissionPeriod,
-  createSubmission,
+  createManuscript,
+  createManuscriptVersion,
 } from '../rls/helpers/factories';
 import { buildWebhookApp } from './helpers/webhook-app';
 import {
@@ -30,16 +30,10 @@ import {
   createPostFinishPayload,
 } from './helpers/tusd-fixtures';
 
-// Mock external dependencies (BullMQ, S3, API key service)
+// Mock external dependencies (BullMQ, S3, API key service, embed token service)
 // Paths are relative to test file → source module location
 vi.mock('../../queues/file-scan.queue.js', () => ({
   enqueueFileScan: vi.fn().mockResolvedValue(undefined),
-}));
-
-vi.mock('../../services/s3.js', () => ({
-  createS3Client: vi.fn().mockReturnValue({}),
-  copyObject: vi.fn().mockResolvedValue(undefined),
-  deleteS3Object: vi.fn().mockResolvedValue(undefined),
 }));
 
 vi.mock('../../services/api-key.service.js', () => ({
@@ -47,6 +41,28 @@ vi.mock('../../services/api-key.service.js', () => ({
     verifyKey: vi.fn().mockResolvedValue(null),
     touchLastUsed: vi.fn(),
   },
+}));
+
+vi.mock('../../services/embed-token.service.js', () => ({
+  embedTokenService: {
+    verifyToken: vi.fn().mockResolvedValue(null),
+  },
+}));
+
+// Mock the adapter registry for S3 storage operations (move between buckets)
+const { mockMoveBetweenBuckets } = vi.hoisted(() => ({
+  mockMoveBetweenBuckets: vi.fn().mockResolvedValue(undefined),
+}));
+
+vi.mock('../../adapters/registry-accessor.js', () => ({
+  getGlobalRegistry: () => ({
+    resolve: () => ({
+      moveBetweenBuckets: mockMoveBetweenBuckets,
+      quarantineBucket: 'quarantine',
+      defaultBucket: 'submissions',
+    }),
+    tryResolve: () => null,
+  }),
 }));
 
 import { enqueueFileScan } from '../../queues/file-scan.queue.js';
@@ -83,26 +99,23 @@ describe('tusd webhook integration', () => {
     });
   }
 
-  /** Helper: create org + user + member + period + submission (DRAFT) */
-  async function createDraftSubmissionScenario() {
+  /** Helper: create user + manuscript + manuscript version */
+  async function createManuscriptScenario() {
     const org = await createOrganization();
     const user = await createUser();
     await createOrgMember(org.id, user.id);
-    const period = await createSubmissionPeriod(org.id);
-    const submission = await createSubmission(org.id, user.id, {
-      submissionPeriodId: period.id,
-      status: 'DRAFT',
-    });
-    return { org, user, submission };
+    const manuscript = await createManuscript(user.id);
+    const version = await createManuscriptVersion(manuscript.id);
+    return { org, user, manuscript, version };
   }
 
   // ──────────────────── Pre-create tests ────────────────────
 
   describe('pre-create', () => {
-    it('valid DRAFT submission owner → 200 {} (allowed)', async () => {
-      const { org, user, submission } = await createDraftSubmissionScenario();
+    it('valid manuscript version owner → 200 {} (allowed)', async () => {
+      const { org, user, version } = await createManuscriptScenario();
       const payload = createPreCreatePayload({
-        submissionId: submission.id,
+        manuscriptVersionId: version.id,
         userId: user.id,
         orgId: org.id,
       });
@@ -112,36 +125,14 @@ describe('tusd webhook integration', () => {
       expect(res.json()).toEqual({});
     });
 
-    it('non-DRAFT submission → RejectUpload 409', async () => {
-      const { org, user, submission } = await createDraftSubmissionScenario();
-      // Update submission to SUBMITTED via admin pool
-      const admin = getAdminPool();
-      await admin.query(
-        `UPDATE submissions SET status = 'SUBMITTED' WHERE id = $1`,
-        [submission.id],
-      );
-
-      const payload = createPreCreatePayload({
-        submissionId: submission.id,
-        userId: user.id,
-        orgId: org.id,
-      });
-
-      const res = await postTusd(payload);
-      expect(res.statusCode).toBe(200);
-      const body = res.json();
-      expect(body.RejectUpload).toBe(true);
-      expect(body.HTTPResponse.StatusCode).toBe(409);
-    });
-
-    it('wrong owner → RejectUpload 422', async () => {
-      const { org, submission } = await createDraftSubmissionScenario();
+    it('wrong owner → RejectUpload (version not found via RLS)', async () => {
+      const { org, version } = await createManuscriptScenario();
       // Create a different user in the same org
       const otherUser = await createUser();
       await createOrgMember(org.id, otherUser.id);
 
       const payload = createPreCreatePayload({
-        submissionId: submission.id,
+        manuscriptVersionId: version.id,
         userId: otherUser.id,
         orgId: org.id,
       });
@@ -150,13 +141,14 @@ describe('tusd webhook integration', () => {
       expect(res.statusCode).toBe(200);
       const body = res.json();
       expect(body.RejectUpload).toBe(true);
-      expect(body.HTTPResponse.StatusCode).toBe(422);
+      // User-scoped RLS hides versions not owned by the user → 404
+      expect(body.HTTPResponse.StatusCode).toBe(404);
     });
 
     it('file too large → RejectUpload 413', async () => {
-      const { org, user, submission } = await createDraftSubmissionScenario();
+      const { org, user, version } = await createManuscriptScenario();
       const payload = createPreCreatePayload({
-        submissionId: submission.id,
+        manuscriptVersionId: version.id,
         userId: user.id,
         orgId: org.id,
         size: 500 * 1024 * 1024, // 500MB — exceeds limit
@@ -170,9 +162,9 @@ describe('tusd webhook integration', () => {
     });
 
     it('invalid MIME type → RejectUpload 415', async () => {
-      const { org, user, submission } = await createDraftSubmissionScenario();
+      const { org, user, version } = await createManuscriptScenario();
       const payload = createPreCreatePayload({
-        submissionId: submission.id,
+        manuscriptVersionId: version.id,
         userId: user.id,
         orgId: org.id,
         mimeType: 'application/x-executable',
@@ -202,15 +194,33 @@ describe('tusd webhook integration', () => {
       expect(body.RejectUpload).toBe(true);
       expect(body.HTTPResponse.StatusCode).toBe(401);
     });
+
+    it('missing manuscript-version-id → RejectUpload 400', async () => {
+      const { org, user } = await createManuscriptScenario();
+      const payload = createPreCreatePayload({
+        userId: user.id,
+        orgId: org.id,
+      });
+      // Remove the manuscript-version-id from metadata
+      delete (payload.Event.Upload.MetaData as Record<string, string>)[
+        'manuscript-version-id'
+      ];
+
+      const res = await postTusd(payload);
+      expect(res.statusCode).toBe(200);
+      const body = res.json();
+      expect(body.RejectUpload).toBe(true);
+      expect(body.HTTPResponse.StatusCode).toBe(400);
+    });
   });
 
   // ──────────────────── Post-finish tests ────────────────────
 
   describe('post-finish', () => {
     it('file record created + FILE_UPLOADED audit', async () => {
-      const { org, user, submission } = await createDraftSubmissionScenario();
+      const { org, user, version } = await createManuscriptScenario();
       const payload = createPostFinishPayload({
-        submissionId: submission.id,
+        manuscriptVersionId: version.id,
         userId: user.id,
         orgId: org.id,
       });
@@ -226,7 +236,7 @@ describe('tusd webhook integration', () => {
         .from(files)
         .where(eq(files.storageKey, storageKey));
       expect(file).toBeDefined();
-      expect(file.manuscriptVersionId).toBeDefined();
+      expect(file.manuscriptVersionId).toBe(version.id);
       expect(file.mimeType).toBe('application/pdf');
       expect(file.scanStatus).toBe('CLEAN'); // VIRUS_SCAN_ENABLED=false
 
@@ -239,9 +249,9 @@ describe('tusd webhook integration', () => {
     });
 
     it('idempotent: same storageKey twice → exactly 1 file row', async () => {
-      const { org, user, submission } = await createDraftSubmissionScenario();
+      const { org, user, version } = await createManuscriptScenario();
       const payload = createPostFinishPayload({
-        submissionId: submission.id,
+        manuscriptVersionId: version.id,
         userId: user.id,
         orgId: org.id,
       });
@@ -265,9 +275,9 @@ describe('tusd webhook integration', () => {
       // Build a separate app with scan enabled
       const scanApp = await buildWebhookApp({ VIRUS_SCAN_ENABLED: true });
 
-      const { org, user, submission } = await createDraftSubmissionScenario();
+      const { org, user, version } = await createManuscriptScenario();
       const payload = createPostFinishPayload({
-        submissionId: submission.id,
+        manuscriptVersionId: version.id,
         userId: user.id,
         orgId: org.id,
       });
@@ -284,16 +294,15 @@ describe('tusd webhook integration', () => {
       const callArgs = mockEnqueueFileScan.mock.calls[0];
       expect(callArgs[1]).toMatchObject({
         storageKey: payload.Event.Upload.Storage.Key,
-        organizationId: org.id,
       });
 
       await scanApp.close();
     });
 
     it('scanStatus=CLEAN immediately when VIRUS_SCAN_ENABLED=false', async () => {
-      const { org, user, submission } = await createDraftSubmissionScenario();
+      const { org, user, version } = await createManuscriptScenario();
       const payload = createPostFinishPayload({
-        submissionId: submission.id,
+        manuscriptVersionId: version.id,
         userId: user.id,
         orgId: org.id,
       });
