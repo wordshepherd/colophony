@@ -13,7 +13,12 @@ test.describe("Create Organization (/organizations/new)", () => {
     ).toBeVisible();
 
     await expect(authedPage.getByLabel("Organization Name")).toBeVisible();
-    await expect(authedPage.getByLabel("URL Slug")).toBeVisible();
+    // Slug input is inside a wrapper <div> within FormControl, so Radix Slot
+    // assigns the id to the div rather than the input — getByLabel fails.
+    // Use placeholder instead.
+    await expect(
+      authedPage.getByPlaceholder("my-literary-magazine"),
+    ).toBeVisible();
     await expect(
       authedPage.getByRole("button", { name: "Create Organization" }),
     ).toBeVisible();
@@ -24,7 +29,8 @@ test.describe("Create Organization (/organizations/new)", () => {
     await authedPage.waitForLoadState("networkidle");
 
     const nameInput = authedPage.getByLabel("Organization Name");
-    const slugInput = authedPage.getByLabel("URL Slug");
+    // Slug input uses placeholder locator (see test above for rationale)
+    const slugInput = authedPage.getByPlaceholder("my-literary-magazine");
 
     await nameInput.fill("Test Literary Magazine");
 
@@ -52,13 +58,16 @@ test.describe("Create Organization (/organizations/new)", () => {
     // Create the org
     await createButton.click();
 
+    // Assert success toast (check before waitForURL — toast may auto-dismiss
+    // during navigation to the settings page)
+    await expect(authedPage.getByText("Organization created")).toBeVisible({
+      timeout: 10000,
+    });
+
     // Assert redirected to settings
     await authedPage.waitForURL("**/organizations/settings", {
       timeout: 10000,
     });
-
-    // Assert success toast
-    await expect(authedPage.getByText("Organization created")).toBeVisible();
 
     // Cleanup: delete the org via DB
     const org = await getOrgBySlug(expectedSlug);
