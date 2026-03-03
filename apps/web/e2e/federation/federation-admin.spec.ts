@@ -261,7 +261,7 @@ test.describe("Sim-Sub Admin", () => {
 
     // Result badges
     await expect(page.getByText("CLEAR")).toBeVisible();
-    await expect(page.getByText("CONFLICT")).toBeVisible();
+    await expect(page.getByText("CONFLICT", { exact: true })).toBeVisible();
 
     // CONFLICT row should show local conflicts
     await expect(page.getByText("Local conflicts:")).toBeVisible();
@@ -488,7 +488,9 @@ test.describe("Audit Log", () => {
 
       // Modal should contain key fields (scope to dialog to avoid table header matches)
       await expect(eventDialog.getByText("Action")).toBeVisible();
-      await expect(eventDialog.getByText("Resource")).toBeVisible();
+      await expect(
+        eventDialog.getByText("Resource", { exact: true }),
+      ).toBeVisible();
     } else {
       // No events — verify empty state message
       await expect(emptyState).toBeVisible();
