@@ -23,6 +23,7 @@ run_slate=false
 run_workspace=false
 run_uploads=false
 run_oidc=false
+run_forms=false
 run_all=false
 
 # --- Push to main always runs everything ---
@@ -74,8 +75,13 @@ submissions_prefixes=(
   "apps/web/e2e/submissions/"
   "apps/web/src/components/submissions/"
   "apps/web/src/app/(dashboard)/submissions/"
-  "apps/web/src/components/form-builder/"
   "apps/web/src/components/form-renderer/"
+)
+
+forms_prefixes=(
+  "apps/web/e2e/forms/"
+  "apps/web/src/components/form-builder/"
+  "apps/web/src/app/(dashboard)/editor/forms/"
 )
 
 embed_prefixes=(
@@ -190,6 +196,10 @@ if [[ "$run_all" == "false" ]]; then
       run_oidc=true
       matched=true
     fi
+    if matches_any_prefix "$file" "${forms_prefixes[@]}"; then
+      run_forms=true
+      matched=true
+    fi
 
     # Known non-suite paths (docs, configs) — skip without triggering fail-open
     if [[ "$matched" == "false" ]]; then
@@ -220,6 +230,7 @@ if [[ "$run_all" == "true" ]]; then
   run_workspace=true
   run_uploads=true
   run_oidc=true
+  run_forms=true
 fi
 
 # --- Output ---
@@ -229,6 +240,7 @@ echo "run_slate=$run_slate"
 echo "run_workspace=$run_workspace"
 echo "run_uploads=$run_uploads"
 echo "run_oidc=$run_oidc"
+echo "run_forms=$run_forms"
 
 # Write to GITHUB_OUTPUT if available
 if [[ -n "${GITHUB_OUTPUT:-}" ]]; then
@@ -239,5 +251,6 @@ if [[ -n "${GITHUB_OUTPUT:-}" ]]; then
     echo "run_workspace=$run_workspace"
     echo "run_uploads=$run_uploads"
     echo "run_oidc=$run_oidc"
+    echo "run_forms=$run_forms"
   } >> "$GITHUB_OUTPUT"
 fi

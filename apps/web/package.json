@@ -18,6 +18,7 @@
     "test:e2e:embed": "playwright test --project embed",
     "test:e2e:slate": "playwright test --project slate",
     "test:e2e:workspace": "playwright test --project workspace",
+    "test:e2e:forms": "playwright test --project forms",
     "test:e2e:all": "OIDC_E2E=true playwright test",
     "test:e2e:ui": "playwright test --ui",
     "e2e:setup-oidc": "tsx ../../scripts/setup-zitadel-e2e.ts",

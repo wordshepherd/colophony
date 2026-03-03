@@ -232,6 +232,7 @@ All other version pins are in their respective per-directory CLAUDE.md files.
 | **playwright-embed**     | Playwright E2E embed project (10 tests)            |
 | **playwright-slate**     | Playwright E2E Slate pipeline project (30 tests)   |
 | **playwright-workspace** | Playwright E2E Writer Workspace project (21 tests) |
+| **playwright-forms**     | Playwright E2E Form Builder project (16 tests)     |
 | **build**                | `pnpm build` (API + Web production build)          |
 
 **Path filtering:** Playwright suites run selectively on PRs based on changed files (`.github/scripts/detect-changes.sh`). Shared paths (packages, API, shared hooks/lib/ui) trigger all suites. Suite-specific paths (e.g., `apps/web/e2e/slate/`, `apps/web/src/components/slate/`) trigger only that suite. Unknown paths fail-open (all suites run). Push to `main` always runs everything. Fast jobs (quality, unit-tests, rls-tests, build) are unaffected — they always run on non-docs PRs.
