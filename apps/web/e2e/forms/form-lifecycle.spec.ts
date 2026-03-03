@@ -36,8 +36,10 @@ test.describe("Form Lifecycle", () => {
         .getByRole("button", { name: "Publish", exact: true })
         .click();
 
-      // Status badge should show Published
-      await expect(authedPage.getByText("Published")).toBeVisible({
+      // Status badge should show Published (exact to avoid matching toast/notice)
+      await expect(
+        authedPage.getByText("Published", { exact: true }),
+      ).toBeVisible({
         timeout: 10_000,
       });
 
@@ -74,8 +76,10 @@ test.describe("Form Lifecycle", () => {
         .getByRole("button", { name: "Archive", exact: true })
         .click();
 
-      // Status badge should show Archived
-      await expect(authedPage.getByText("Archived")).toBeVisible({
+      // Status badge should show Archived (exact to avoid matching toast)
+      await expect(
+        authedPage.getByText("Archived", { exact: true }),
+      ).toBeVisible({
         timeout: 10_000,
       });
     } finally {
