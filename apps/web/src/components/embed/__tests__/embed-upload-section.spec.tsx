@@ -49,11 +49,14 @@ describe("EmbedUploadSection", () => {
     });
   });
 
-  it("renders drop zone", () => {
+  it("renders drop zone with keyboard accessibility", () => {
     render(<EmbedUploadSection {...defaultProps} />);
-    expect(
-      screen.getByText(/drop files here or click to upload/i),
-    ).toBeInTheDocument();
+    const dropZone = screen.getByRole("button", {
+      name: "Drop files here or click to upload",
+    });
+    expect(dropZone).toBeInTheDocument();
+    expect(dropZone).toHaveAttribute("tabindex", "0");
+    expect(dropZone).toHaveAttribute("aria-disabled", "false");
   });
 
   it("disables when maxFiles reached", () => {
@@ -102,7 +105,7 @@ describe("EmbedUploadSection", () => {
     expect(screen.getByText("Pending scan")).toBeInTheDocument();
   });
 
-  it("shows scanning warning", () => {
+  it("shows scanning warning in aria-live region", () => {
     mockUseEmbedUploadStatus.mockReturnValue({
       files: [
         {
@@ -118,7 +121,10 @@ describe("EmbedUploadSection", () => {
       error: null,
     });
 
-    render(<EmbedUploadSection {...defaultProps} />);
+    const { container } = render(<EmbedUploadSection {...defaultProps} />);
     expect(screen.getByText(/files are being scanned/i)).toBeInTheDocument();
+    const liveRegion = container.querySelector('[aria-live="polite"]');
+    expect(liveRegion).toBeInTheDocument();
+    expect(liveRegion).toHaveTextContent(/files are being scanned/i);
   });
 });

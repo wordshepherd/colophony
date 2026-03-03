@@ -110,7 +110,7 @@ export function Sidebar() {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 space-y-1 p-2">
+      <nav className="flex-1 space-y-1 p-2" aria-label="Main navigation">
         {/* My Writing */}
         <p className="px-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
           My Writing
