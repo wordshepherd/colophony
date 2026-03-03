@@ -6,7 +6,7 @@
 #     GITHUB_EVENT_NAME=pull_request GITHUB_OUTPUT=/dev/stdout bash .github/scripts/detect-changes.sh
 #
 # Outputs boolean flags to $GITHUB_OUTPUT:
-#   run_submissions, run_embed, run_slate, run_uploads, run_oidc
+#   run_submissions, run_embed, run_slate, run_workspace, run_uploads, run_oidc
 #
 # Behavior:
 #   - push events → all suites run (main branch always runs everything)
@@ -20,6 +20,7 @@ set -euo pipefail
 run_submissions=false
 run_embed=false
 run_slate=false
+run_workspace=false
 run_uploads=false
 run_oidc=false
 run_all=false
@@ -93,6 +94,12 @@ uploads_prefixes=(
   "apps/web/e2e/uploads/"
   "apps/web/src/components/submissions/file-upload"
   "apps/web/src/components/manuscripts/manuscript-version-files"
+)
+
+workspace_prefixes=(
+  "apps/web/e2e/workspace/"
+  "apps/web/src/components/workspace/"
+  "apps/web/src/app/(dashboard)/workspace/"
 )
 
 oidc_prefixes=(
@@ -171,6 +178,10 @@ if [[ "$run_all" == "false" ]]; then
       run_slate=true
       matched=true
     fi
+    if matches_any_prefix "$file" "${workspace_prefixes[@]}"; then
+      run_workspace=true
+      matched=true
+    fi
     if matches_any_prefix "$file" "${uploads_prefixes[@]}"; then
       run_uploads=true
       matched=true
@@ -206,6 +217,7 @@ if [[ "$run_all" == "true" ]]; then
   run_submissions=true
   run_embed=true
   run_slate=true
+  run_workspace=true
   run_uploads=true
   run_oidc=true
 fi
@@ -214,6 +226,7 @@ fi
 echo "run_submissions=$run_submissions"
 echo "run_embed=$run_embed"
 echo "run_slate=$run_slate"
+echo "run_workspace=$run_workspace"
 echo "run_uploads=$run_uploads"
 echo "run_oidc=$run_oidc"
 
@@ -223,6 +236,7 @@ if [[ -n "${GITHUB_OUTPUT:-}" ]]; then
     echo "run_submissions=$run_submissions"
     echo "run_embed=$run_embed"
     echo "run_slate=$run_slate"
+    echo "run_workspace=$run_workspace"
     echo "run_uploads=$run_uploads"
     echo "run_oidc=$run_oidc"
   } >> "$GITHUB_OUTPUT"
