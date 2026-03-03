@@ -86,13 +86,14 @@ test.describe("Import Submissions (/workspace/import)", () => {
       await expect(nextBtn3).toBeEnabled({ timeout: 5_000 });
       await nextBtn3.click();
 
-      // Wait for Review step — look for the Import button
-      await expect(main.getByRole("button", { name: /^Import$/ })).toBeVisible({
-        timeout: 5_000,
+      // Wait for Review step — Import button text includes row count: "Import 2 Submissions"
+      const importBtn = main.getByRole("button", {
+        name: /Import \d+ Submission/,
       });
+      await expect(importBtn).toBeVisible({ timeout: 5_000 });
 
       // Click Import
-      await main.getByRole("button", { name: /^Import$/ }).click();
+      await importBtn.click();
 
       // Wait for success
       await expect(main.getByText(/success|imported|complete/i)).toBeVisible({

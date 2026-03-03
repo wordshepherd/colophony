@@ -41,7 +41,8 @@ test.describe("External Submissions (/workspace/external)", () => {
 
       // JournalAutocomplete is a combobox (popover + search), not a plain input.
       // Click the trigger, type the name, then pick the "Use as journal name" option.
-      await main.getByRole("combobox").click();
+      // Target by placeholder text to avoid strict mode (multiple comboboxes on form).
+      await main.getByText("Select or type journal name...").click();
       await authedPage.getByPlaceholder("Search journals...").fill(journalName);
       // Wait for the "Use '<name>' as journal name" option and click it
       await authedPage
