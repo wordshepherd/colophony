@@ -20,7 +20,7 @@
   },
   "dependencies": {
     "@colophony/api-contracts": "workspace:*",
-    "@orpc/client": "^1.13.5",
+    "@orpc/client": "^1.13.6",
     "@orpc/contract": "^1.13.5",
     "@orpc/openapi-client": "^1.13.5"
   },
