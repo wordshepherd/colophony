@@ -955,7 +955,7 @@ export const migrationService = {
     env: Env,
     token: string,
     migrationId: string,
-    _submissionId: string,
+    submissionId: string,
     fileId: string,
   ): Promise<{ userId: string }> {
     // Look up migration
@@ -1007,6 +1007,24 @@ export const migrationService = {
       | undefined;
     if (!allowedFileIds || !allowedFileIds.includes(fileId)) {
       throw new MigrationTokenError('File ID not in migration allowlist');
+    }
+
+    // Defense-in-depth: verify submissionId belongs to migration user
+    const [sub] = await db
+      .select({ id: submissions.id })
+      .from(submissions)
+      .where(
+        and(
+          eq(submissions.id, submissionId),
+          eq(submissions.submitterId, migration.userId),
+        ),
+      )
+      .limit(1);
+
+    if (!sub) {
+      throw new MigrationTokenError(
+        'Submission does not belong to migration user',
+      );
     }
 
     return { userId: migration.userId };
@@ -1126,7 +1144,8 @@ export const migrationService = {
             eq(identityMigrations.status, 'PENDING_APPROVAL'),
             eq(identityMigrations.direction, 'outbound'),
           ),
-        );
+        )
+        .limit(100);
       return rows as IdentityMigration[];
     });
   },
