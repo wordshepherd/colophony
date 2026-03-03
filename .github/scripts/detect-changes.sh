@@ -24,6 +24,7 @@ run_workspace=false
 run_uploads=false
 run_oidc=false
 run_forms=false
+run_organization=false
 run_all=false
 
 # --- Push to main always runs everything ---
@@ -113,6 +114,14 @@ oidc_prefixes=(
   "apps/web/src/app/auth/"
 )
 
+organization_prefixes=(
+  "apps/web/e2e/organization/"
+  "apps/web/src/components/organizations/"
+  "apps/web/src/app/(dashboard)/organizations/"
+  "apps/web/src/app/(onboarding)/organizations/"
+  "apps/web/src/app/(dashboard)/settings/"
+)
+
 # --- Known non-suite prefixes (docs, configs, etc. that don't need E2E) ---
 known_nonsuite_prefixes=(
   "docs/"
@@ -121,9 +130,7 @@ known_nonsuite_prefixes=(
   ".vscode/"
   ".claude/"
   "apps/web/src/components/layout/"
-  "apps/web/src/components/organizations/"
   "apps/web/src/components/periods/"
-  "apps/web/src/app/(onboarding)/"
   "apps/web/src/app/page.tsx"
   "apps/web/src/app/favicon.ico"
   "apps/web/public/"
@@ -200,6 +207,10 @@ if [[ "$run_all" == "false" ]]; then
       run_forms=true
       matched=true
     fi
+    if matches_any_prefix "$file" "${organization_prefixes[@]}"; then
+      run_organization=true
+      matched=true
+    fi
 
     # Known non-suite paths (docs, configs) — skip without triggering fail-open
     if [[ "$matched" == "false" ]]; then
@@ -231,6 +242,7 @@ if [[ "$run_all" == "true" ]]; then
   run_uploads=true
   run_oidc=true
   run_forms=true
+  run_organization=true
 fi
 
 # --- Output ---
@@ -241,6 +253,7 @@ echo "run_workspace=$run_workspace"
 echo "run_uploads=$run_uploads"
 echo "run_oidc=$run_oidc"
 echo "run_forms=$run_forms"
+echo "run_organization=$run_organization"
 
 # Write to GITHUB_OUTPUT if available
 if [[ -n "${GITHUB_OUTPUT:-}" ]]; then
@@ -252,5 +265,6 @@ if [[ -n "${GITHUB_OUTPUT:-}" ]]; then
     echo "run_uploads=$run_uploads"
     echo "run_oidc=$run_oidc"
     echo "run_forms=$run_forms"
+    echo "run_organization=$run_organization"
   } >> "$GITHUB_OUTPUT"
 fi

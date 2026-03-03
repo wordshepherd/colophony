@@ -33,6 +33,7 @@ jobs:
       run_uploads: ${{ steps.suites.outputs.run_uploads }}
       run_oidc: ${{ steps.suites.outputs.run_oidc }}
       run_forms: ${{ steps.suites.outputs.run_forms }}
+      run_organization: ${{ steps.suites.outputs.run_organization }}
     steps:
       - uses: actions/checkout@v6
         with:
@@ -668,6 +669,91 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: playwright-forms-report
+          path: apps/web/playwright-report/
+          retention-days: 30
+
+  # ──────────────────────────────────────────────────
+  # Playwright E2E tests (~5 min): organization project
+  # Requires PostgreSQL + Redis
+  # ──────────────────────────────────────────────────
+  playwright-organization:
+    name: Playwright Organization E2E
+    needs: changes
+    if: needs.changes.outputs.docs_only != 'true' && needs.changes.outputs.run_organization == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: colophony
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: colophony
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U colophony"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v6
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+      - uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "pnpm"
+      - run: pnpm install --frozen-lockfile
+      - name: Build workspace dependencies
+        run: pnpm turbo run build --filter=@colophony/db --filter=@colophony/auth-client --filter=@colophony/types --filter=@colophony/api-contracts --filter=@colophony/plugin-sdk
+      - name: Create app_user role
+        run: |
+          PGPASSWORD=password psql -h localhost -p 5432 -U colophony -d colophony -c "
+            DO \$\$
+            BEGIN
+              IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'app_user') THEN
+                CREATE ROLE app_user WITH LOGIN PASSWORD 'app_password' NOSUPERUSER NOBYPASSRLS;
+              END IF;
+            END
+            \$\$;
+            GRANT CONNECT ON DATABASE colophony TO app_user;
+            GRANT USAGE ON SCHEMA public TO app_user;
+            GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO app_user;
+            GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO app_user;
+            ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO app_user;
+            ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT USAGE, SELECT ON SEQUENCES TO app_user;
+          "
+      - name: Run Drizzle migrations
+        run: pnpm db:migrate
+        env:
+          DATABASE_URL: postgresql://colophony:password@localhost:5432/colophony
+      - name: Seed test data
+        run: |
+          echo 'DATABASE_URL="postgresql://colophony:password@localhost:5432/colophony"' > packages/db/.env
+          pnpm db:seed
+      - name: Install Playwright browsers
+        run: pnpm --filter @colophony/web exec playwright install --with-deps chromium
+      - name: Run Playwright Organization E2E tests
+        run: pnpm --filter @colophony/web test:e2e:organization
+        env:
+          DATABASE_URL: postgresql://colophony:password@localhost:5432/colophony
+      - name: Upload Playwright report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-organization-report
           path: apps/web/playwright-report/
           retention-days: 30
 
