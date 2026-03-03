@@ -66,12 +66,10 @@ test.describe("Organization Settings (/organizations/settings)", () => {
   }) => {
     await authedPage.goto("/organizations/settings");
 
-    // Scroll down to Danger Zone
-    const dangerZoneHeading = authedPage.getByRole("heading", {
-      name: "Danger Zone",
-    });
-    await dangerZoneHeading.scrollIntoViewIfNeeded();
-    await expect(dangerZoneHeading).toBeVisible();
+    // Scroll down to Danger Zone (CardTitle renders as <div>, not heading)
+    const dangerZoneText = authedPage.getByText("Danger Zone");
+    await dangerZoneText.scrollIntoViewIfNeeded();
+    await expect(dangerZoneText).toBeVisible();
 
     // Delete Organization button should be visible
     await expect(

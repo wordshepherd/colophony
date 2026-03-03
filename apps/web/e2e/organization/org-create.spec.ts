@@ -4,9 +4,12 @@ import { deleteOrg, getOrgBySlug } from "../helpers/db";
 test.describe("Create Organization (/organizations/new)", () => {
   test("displays create org form", async ({ authedPage }) => {
     await authedPage.goto("/organizations/new");
+    await authedPage.waitForLoadState("networkidle");
 
+    // CardTitle renders as <div>, not a heading — check the card title text
+    // (also matches button, so use first() for the card title)
     await expect(
-      authedPage.getByRole("heading", { name: "Create Organization" }),
+      authedPage.getByText("Create Organization").first(),
     ).toBeVisible();
 
     await expect(authedPage.getByLabel("Organization Name")).toBeVisible();
@@ -18,6 +21,7 @@ test.describe("Create Organization (/organizations/new)", () => {
 
   test("auto-generates slug from name", async ({ authedPage }) => {
     await authedPage.goto("/organizations/new");
+    await authedPage.waitForLoadState("networkidle");
 
     const nameInput = authedPage.getByLabel("Organization Name");
     const slugInput = authedPage.getByLabel("URL Slug");
@@ -34,6 +38,7 @@ test.describe("Create Organization (/organizations/new)", () => {
     const expectedSlug = `e2e-test-org-${suffix}`;
 
     await authedPage.goto("/organizations/new");
+    await authedPage.waitForLoadState("networkidle");
 
     // Fill name (slug auto-generates)
     await authedPage.getByLabel("Organization Name").fill(orgName);

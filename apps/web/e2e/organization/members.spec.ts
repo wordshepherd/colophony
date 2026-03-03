@@ -45,9 +45,11 @@ test.describe("Member Management (Members tab)", () => {
       authedPage.getByRole("heading", { name: "Invite Member" }),
     ).toBeVisible();
 
-    // Assert Email input and Role select visible
-    await expect(authedPage.getByLabel("Email")).toBeVisible();
-    await expect(authedPage.getByLabel("Role")).toBeVisible();
+    // Assert Email input and Role select visible (scope to dialog to avoid
+    // "Email Templates" tab panel matching getByLabel('Email'))
+    const dialog = authedPage.getByRole("dialog");
+    await expect(dialog.getByLabel("Email")).toBeVisible();
+    await expect(dialog.getByLabel("Role")).toBeVisible();
 
     // Assert action buttons
     await expect(
@@ -68,8 +70,9 @@ test.describe("Member Management (Members tab)", () => {
 
     await authedPage.getByRole("button", { name: "Invite Member" }).click();
 
-    // Fill email
-    await authedPage.getByLabel("Email").fill(inviteTarget.email);
+    // Fill email (scope to dialog to avoid "Email Templates" tab panel match)
+    const dialog = authedPage.getByRole("dialog");
+    await dialog.getByLabel("Email").fill(inviteTarget.email);
 
     // Role defaults to READER — leave as-is
     // Click Add Member
