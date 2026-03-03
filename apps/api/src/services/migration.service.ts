@@ -1145,6 +1145,7 @@ export const migrationService = {
             eq(identityMigrations.direction, 'outbound'),
           ),
         )
+        .orderBy(sql`${identityMigrations.createdAt} DESC`)
         .limit(100);
       return rows as IdentityMigration[];
     });
