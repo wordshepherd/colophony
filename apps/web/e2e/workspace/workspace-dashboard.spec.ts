@@ -42,16 +42,10 @@ test.describe("Writer Workspace Dashboard (/workspace)", () => {
     // Scope to main content to avoid sidebar "Manuscripts" link
     const main = authedPage.locator("main");
 
-    // At least one stat card text should be visible
-    const statLabels = ["Manuscripts", "Pending", "Accepted", "Rejected"];
-    let found = false;
-    for (const label of statLabels) {
-      const count = await main.getByText(label, { exact: true }).count();
-      if (count > 0) {
-        found = true;
-        break;
-      }
-    }
-    expect(found).toBe(true);
+    // Stat card titles are rendered even while loading (skeleton for values).
+    // Wait for at least one stat card title to appear with a timeout.
+    await expect(
+      main.getByText("Manuscripts", { exact: true }).first(),
+    ).toBeVisible({ timeout: 10_000 });
   });
 });

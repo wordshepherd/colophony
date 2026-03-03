@@ -1,9 +1,11 @@
 import { test, expect } from "../helpers/workspace-fixtures";
 import { deleteExternalSubmission } from "../helpers/workspace-db";
 
+// Headers must match Submittable preset patterns: /publication|category/i → journalName,
+// /^status$/i → status, /date\s*submitted/i → sentAt
 const VALID_CSV =
-  "Title,Status,Date Submitted\nThe Paris Review,New,2025-01-15\nPloughshares,Accepted,2025-02-01\n";
-const EMPTY_CSV = "Title,Status,Date Submitted\n";
+  "Publication,Status,Date Submitted\nThe Paris Review,New,2025-01-15\nPloughshares,Accepted,2025-02-01\n";
+const EMPTY_CSV = "Publication,Status,Date Submitted\n";
 
 test.describe("Import Submissions (/workspace/import)", () => {
   test("displays heading and stepper steps", async ({ authedPage }) => {
@@ -59,16 +61,20 @@ test.describe("Import Submissions (/workspace/import)", () => {
         timeout: 5_000,
       });
 
-      // Click Next to move to Map Columns — use first() for potential duplicates
-      await main.getByRole("button", { name: /Next/ }).first().click();
+      // Click Next to move to Map Columns — wait for enabled first
+      const nextBtn = main.getByRole("button", { name: /Next/ }).first();
+      await expect(nextBtn).toBeEnabled({ timeout: 5_000 });
+      await nextBtn.click();
 
       // Wait for Map Columns step
       await expect(main.getByText("Column Mapping")).toBeVisible({
         timeout: 5_000,
       });
 
-      // Click Next to Map Statuses
-      await main.getByRole("button", { name: /Next/ }).first().click();
+      // Next is enabled only when journalName is mapped (auto-mapped via preset)
+      const nextBtn2 = main.getByRole("button", { name: /Next/ }).first();
+      await expect(nextBtn2).toBeEnabled({ timeout: 5_000 });
+      await nextBtn2.click();
 
       // Wait for Map Statuses step
       await expect(main.getByText("Status Mapping")).toBeVisible({
@@ -76,7 +82,9 @@ test.describe("Import Submissions (/workspace/import)", () => {
       });
 
       // Click Next to Review
-      await main.getByRole("button", { name: /Next/ }).first().click();
+      const nextBtn3 = main.getByRole("button", { name: /Next/ }).first();
+      await expect(nextBtn3).toBeEnabled({ timeout: 5_000 });
+      await nextBtn3.click();
 
       // Wait for Review step — look for the Import button
       await expect(main.getByRole("button", { name: /^Import$/ })).toBeVisible({

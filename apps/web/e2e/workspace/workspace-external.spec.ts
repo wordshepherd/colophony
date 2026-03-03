@@ -39,8 +39,14 @@ test.describe("External Submissions (/workspace/external)", () => {
         main.getByRole("heading", { name: /Track External Submission/ }),
       ).toBeVisible();
 
-      // Fill journal name — use the form input, not the label
-      await main.getByLabel("Journal Name").fill(journalName);
+      // JournalAutocomplete is a combobox (popover + search), not a plain input.
+      // Click the trigger, type the name, then pick the "Use as journal name" option.
+      await main.getByRole("combobox").click();
+      await authedPage.getByPlaceholder("Search journals...").fill(journalName);
+      // Wait for the "Use '<name>' as journal name" option and click it
+      await authedPage
+        .getByText(new RegExp(`Use.*${suffix}.*as journal name`, "i"))
+        .click();
 
       // Submit
       await main.getByRole("button", { name: "Track Submission" }).click();
