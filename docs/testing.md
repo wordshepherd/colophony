@@ -56,6 +56,9 @@ pnpm --filter @colophony/web test:e2e:forms
 # Playwright — Organization & Settings (14 tests, requires dev servers)
 pnpm --filter @colophony/web test:e2e:organization
 
+# Playwright — Submission Analytics (6 tests, requires dev servers)
+pnpm --filter @colophony/web test:e2e:analytics
+
 # Playwright — all projects
 pnpm --filter @colophony/web test:e2e:all
 
@@ -86,7 +89,7 @@ pnpm --filter @colophony/web test:e2e:ui
 | Service integration tests | 6     | ~63   | Vitest (custom) | `apps/api/src/__tests__/services/` |
 | Webhook integration tests | 4     | ~38   | Vitest (custom) | `apps/api/src/__tests__/webhooks/` |
 | Queue integration tests   | 6     | ~19   | Vitest (custom) | `apps/api/src/__tests__/queues/`   |
-| Playwright browser E2E    | 23    | ~123  | Playwright      | `apps/web/e2e/`                    |
+| Playwright browser E2E    | 24    | ~129  | Playwright      | `apps/web/e2e/`                    |
 
 > Counts use `~` prefix because they shift as tests are added. Run `pnpm test` to get exact numbers.
 
@@ -128,6 +131,7 @@ pnpm --filter @colophony/web test:e2e:ui
 - `slate/issues.spec.ts` — 7 tests (heading, list, create, detail, assembly tab, add item, remove item)
 - `slate/contracts.spec.ts` — 5 tests (heading, list, templates, create template, template detail)
 - `slate/cms-connections.spec.ts` — 4 tests (heading, list, filter, create)
+- `analytics/submission-analytics.spec.ts` — 6 tests (overview cards, filters, status/funnel charts, time series, response time/aging, date filter update)
 
 ---
 
