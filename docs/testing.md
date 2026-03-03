@@ -47,6 +47,9 @@ pnpm --filter @colophony/web test:e2e:slate
 # Playwright — Writer Workspace (21 tests, requires dev servers)
 pnpm --filter @colophony/web test:e2e:workspace
 
+# Playwright — Form Builder (16 tests, requires dev servers)
+pnpm --filter @colophony/web test:e2e:forms
+
 # Playwright — all projects
 pnpm --filter @colophony/web test:e2e:all
 
@@ -65,7 +68,7 @@ pnpm --filter @colophony/web test:e2e:ui
 
 ## Current Test Status
 
-**~1893 tests passing** across 8 tiers:
+**~1909 tests passing** across 8 tiers:
 
 | Tier                      | Files | Tests | Runner          | Location                           |
 | ------------------------- | ----- | ----- | --------------- | ---------------------------------- |
@@ -76,7 +79,7 @@ pnpm --filter @colophony/web test:e2e:ui
 | Security invariant tests  | 3     | ~20   | Vitest (custom) | `apps/api/src/__tests__/security/` |
 | Service integration tests | 6     | ~63   | Vitest (custom) | `apps/api/src/__tests__/services/` |
 | Webhook integration tests | 4     | ~38   | Vitest (custom) | `apps/api/src/__tests__/webhooks/` |
-| Playwright browser E2E    | 15    | ~93   | Playwright      | `apps/web/e2e/`                    |
+| Playwright browser E2E    | 19    | ~109  | Playwright      | `apps/web/e2e/`                    |
 
 > Counts use `~` prefix because they shift as tests are added. Run `pnpm test` to get exact numbers.
 
