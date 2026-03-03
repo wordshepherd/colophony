@@ -99,6 +99,11 @@ export default defineConfig({
       testDir: "./e2e/slate",
       use: { ...devices["Desktop Chrome"] },
     },
+    {
+      name: "workspace",
+      testDir: "./e2e/workspace",
+      use: { ...devices["Desktop Chrome"] },
+    },
   ],
 
   webServer: [
