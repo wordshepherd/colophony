@@ -62,11 +62,18 @@ export const cmsConnectionService = {
     };
   },
 
-  async getById(tx: DrizzleDb, id: string) {
+  async getById(tx: DrizzleDb, id: string, orgId?: string) {
     const [row] = await tx
       .select()
       .from(cmsConnections)
-      .where(eq(cmsConnections.id, id))
+      .where(
+        orgId
+          ? and(
+              eq(cmsConnections.id, id),
+              eq(cmsConnections.organizationId, orgId),
+            )
+          : eq(cmsConnections.id, id),
+      )
       .limit(1);
 
     return row ?? null;
@@ -212,7 +219,8 @@ export const cmsConnectionService = {
           eq(cmsConnections.publicationId, publicationId),
           eq(cmsConnections.isActive, true),
         ),
-      );
+      )
+      .limit(50);
   },
 
   async updateLastSync(tx: DrizzleDb, id: string) {

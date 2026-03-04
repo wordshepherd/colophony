@@ -66,11 +66,15 @@ export const contractService = {
     };
   },
 
-  async getById(tx: DrizzleDb, id: string) {
+  async getById(tx: DrizzleDb, id: string, orgId?: string) {
     const [row] = await tx
       .select()
       .from(contracts)
-      .where(eq(contracts.id, id))
+      .where(
+        orgId
+          ? and(eq(contracts.id, id), eq(contracts.organizationId, orgId))
+          : eq(contracts.id, id),
+      )
       .limit(1);
 
     return row ?? null;

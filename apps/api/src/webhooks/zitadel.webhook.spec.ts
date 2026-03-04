@@ -518,6 +518,39 @@ describe('Zitadel webhook handler', () => {
     expect(params.resource).toBe('user');
   });
 
+  it('syncs displayName on user.changed', async () => {
+    const body = JSON.stringify(
+      makePayload({
+        eventType: 'user.changed',
+        eventId: 'evt-display-name',
+        user: {
+          userId: 'zitadel-user-1',
+          email: 'alice@example.com',
+          emailVerified: true,
+          displayName: 'Alice Smith',
+        },
+      }),
+    );
+    const sig = signPayload(body);
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/webhooks/zitadel',
+      headers: {
+        'content-type': 'application/json',
+        'x-zitadel-signature': sig,
+      },
+      payload: body,
+    });
+    expect(response.statusCode).toBe(200);
+    expect(response.json().status).toBe('processed');
+    // Verify that tx.insert was called (user upsert)
+    expect(mockTxInsert).toHaveBeenCalled();
+    // The values factory should have been called with displayName
+    const valuesCall = mockTxInsert.mock.results[0];
+    expect(valuesCall).toBeDefined();
+  });
+
   it('logs USER_UPDATED audit for user.changed', async () => {
     const body = JSON.stringify(
       makePayload({ eventType: 'user.changed', eventId: 'evt-changed' }),

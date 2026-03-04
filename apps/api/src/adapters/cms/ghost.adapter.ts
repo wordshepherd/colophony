@@ -6,6 +6,7 @@ import type {
   CmsIssuePayload,
   CmsPiecePayload,
 } from './cms-adapter.interface.js';
+import { validateOutboundUrl } from '../../lib/url-validation.js';
 
 /**
  * Ghost CMS adapter — publishes via the Ghost Admin API.
@@ -28,8 +29,10 @@ export const ghostAdapter: CmsAdapter = {
     config: Record<string, unknown>,
   ): Promise<CmsTestResult> {
     const { apiUrl, token } = parseConfigAndSign(config);
+    const devMode = process.env.NODE_ENV !== 'production';
 
     try {
+      await validateOutboundUrl(apiUrl, { devMode });
       const res = await fetch(`${apiUrl}/ghost/api/admin/site/`, {
         headers: { Authorization: `Ghost ${token}` },
       });
@@ -53,6 +56,8 @@ export const ghostAdapter: CmsAdapter = {
     issue: CmsIssuePayload,
   ): Promise<CmsPublishResult> {
     const { apiUrl, token } = parseConfigAndSign(config);
+    const devMode = process.env.NODE_ENV !== 'production';
+    await validateOutboundUrl(apiUrl, { devMode });
 
     const html = buildIssueHtml(issue);
 
@@ -90,6 +95,8 @@ export const ghostAdapter: CmsAdapter = {
     externalId: string,
   ): Promise<void> {
     const { apiUrl, token } = parseConfigAndSign(config);
+    const devMode = process.env.NODE_ENV !== 'production';
+    await validateOutboundUrl(apiUrl, { devMode });
 
     const res = await fetch(`${apiUrl}/ghost/api/admin/posts/${externalId}/`, {
       method: 'DELETE',
@@ -110,6 +117,8 @@ export const ghostAdapter: CmsAdapter = {
     externalId?: string,
   ): Promise<CmsPublishResult> {
     const { apiUrl, token } = parseConfigAndSign(config);
+    const devMode = process.env.NODE_ENV !== 'production';
+    await validateOutboundUrl(apiUrl, { devMode });
 
     const method = externalId ? 'PUT' : 'POST';
     const url = externalId
