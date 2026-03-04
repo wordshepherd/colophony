@@ -311,6 +311,17 @@
 - [x] CI: Add service-integration-tests, security-tests jobs — (test coverage plan 2026-03-02; done 2026-03-03)
 - [ ] [P2] Fix flaky workspace analytics E2E — `workspace-analytics-correspondence.spec.ts` "Total Submissions" card times out intermittently (10s timeout); reproduces on both `main` and feature branches; likely slow tRPC query or rendering delay in CI — (CI flake 2026-03-03)
 
+### Testing Infrastructure Hardening
+
+- [ ] [P1] Console error/warn as test failures — add `vi.spyOn(console, 'error')` / `jest.spyOn(console, 'error')` in global setup files with `afterEach` assertions; allowlist intentional warnings; fix `act(...)` warnings in web tests and Vitest mock warnings — (Codex feedback 2026-03-03)
+- [ ] [P2] Add `test:cov` scripts to all packages — add `--coverage` with lcov.info + JSON output to api, web, api-client, auth-client, create-plugin, plugin-sdk, types; collect coverage artifacts in CI — (Codex feedback 2026-03-03)
+- [ ] [P2] Per-package coverage gates — add `coverageThreshold` in `apps/web/jest.config.ts` and Vitest thresholds in `apps/api/vitest.config.ts`; measure current coverage first, set floors at current minus 5% buffer, ratchet up monthly — (Codex feedback 2026-03-03; depends on test:cov scripts)
+- [ ] [P2] Changed-code coverage guardrails — enforce minimum coverage on changed files/lines in PRs (e.g., `diff-cover` or Codecov PR checks); prevents new low-coverage hotspots while legacy gaps burn down gradually — (Codex feedback 2026-03-03; depends on test:cov scripts)
+- [ ] [P3] Flakiness and determinism CI checks — run unit tests with retries disabled and `--sequence.shuffle` on at least one CI lane; add quarantine convention (`.flaky.test.ts` suffix or skip marker) and fail PRs that introduce new flaky markers — (Codex feedback 2026-03-03)
+- [ ] [P3] Risk-based test matrix — audit coverage per domain (pipeline, federation, workspace, forms) and document minimum test layers per domain (unit + service integration + API route + E2E happy path) in `docs/testing.md`; identify high-risk low-coverage hotspots — (Codex feedback 2026-03-03)
+- [ ] [P4] Ephemeral DB/queue per test worker — standardize `TestContext` factory for isolated schemas per worker; replace ad-hoc Redis db 1 patching in `vitest-setup.ts`; add explicit contract tests around external boundaries (webhooks, auth, adapters) with fixture replay — (Codex feedback 2026-03-03)
+- [x] [P4] Manual QA tracking — establish lightweight QA log (structured markdown or checklist) for pre-release smoke tests, exploratory testing sessions, and regression checks; track what was tested, time spent, and issues found — (Codex feedback 2026-03-03; done 2026-03-03)
+
 ### CI
 
 - [x] [P2] CI path filtering for Playwright suites — skip irrelevant E2E suites on PRs based on changed files; `.github/scripts/detect-changes.sh` with fail-open strategy — (DEVLOG 2026-02-24; done 2026-02-24)
