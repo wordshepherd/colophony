@@ -43,7 +43,8 @@ const mockWithRls = vi.fn((_ctx: unknown, fn: (tx: unknown) => unknown) =>
   fn('mock-tx'),
 );
 vi.mock('@colophony/db', () => ({
-  withRls: (...args: unknown[]) => mockWithRls(...args),
+  withRls: (...args: [unknown, (tx: unknown) => unknown]) =>
+    mockWithRls(...args),
   webhookDeliveries: {
     id: 'id',
     webhookEndpointId: 'webhook_endpoint_id',
