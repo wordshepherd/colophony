@@ -30,6 +30,7 @@ function createTestHarness() {
     REDIS_HOST: 'localhost',
     REDIS_PORT: 6379,
     REDIS_PASSWORD: '',
+    CORS_ORIGIN: 'http://localhost:3000',
   } as any;
   return { mockGet, mockApp, mockEnv };
 }
@@ -84,6 +85,7 @@ describe('registerNotificationStreamRoute', () => {
     for (let i = 0; i < 5; i++) {
       const req = {
         authContext: { userId: 'user-flood', orgId: 'org-1' },
+        headers: { origin: 'http://localhost:3000' },
         raw: { on: vi.fn() },
       };
       const rep = {
@@ -118,6 +120,7 @@ describe('registerNotificationStreamRoute', () => {
     const rawEnd = vi.fn();
     const mockRequest = {
       authContext: { userId: 'user-redis-fail', orgId: 'org-1' },
+      headers: { origin: 'http://localhost:3000' },
       raw: { on: vi.fn() },
     };
     const mockReply = {
@@ -132,5 +135,57 @@ describe('registerNotificationStreamRoute', () => {
 
     // Reset for other tests
     mockConnectShouldFail = false;
+  });
+
+  it('includes CORS headers in hijacked SSE response', async () => {
+    const { mockGet, mockApp, mockEnv } = createTestHarness();
+    await registerNotificationStreamRoute(mockApp, { env: mockEnv });
+
+    const handler = mockGet.mock.calls[0][1];
+    const writeHead = vi.fn();
+    const mockRequest = {
+      authContext: { userId: 'user-cors', orgId: 'org-1' },
+      headers: { origin: 'http://localhost:3000' },
+      raw: { on: vi.fn() },
+    };
+    const mockReply = {
+      hijack: vi.fn(),
+      raw: { writeHead, write: vi.fn(), end: vi.fn() },
+      status: vi.fn().mockReturnThis(),
+      send: vi.fn().mockReturnThis(),
+    };
+
+    await handler(mockRequest, mockReply);
+    expect(writeHead).toHaveBeenCalledWith(
+      200,
+      expect.objectContaining({
+        'Access-Control-Allow-Origin': 'http://localhost:3000',
+        'Access-Control-Allow-Credentials': 'true',
+        Vary: 'Origin',
+      }),
+    );
+  });
+
+  it('omits CORS headers when origin is not allowed', async () => {
+    const { mockGet, mockApp, mockEnv } = createTestHarness();
+    await registerNotificationStreamRoute(mockApp, { env: mockEnv });
+
+    const handler = mockGet.mock.calls[0][1];
+    const writeHead = vi.fn();
+    const mockRequest = {
+      authContext: { userId: 'user-cors-bad', orgId: 'org-1' },
+      headers: { origin: 'http://evil.example.com' },
+      raw: { on: vi.fn() },
+    };
+    const mockReply = {
+      hijack: vi.fn(),
+      raw: { writeHead, write: vi.fn(), end: vi.fn() },
+      status: vi.fn().mockReturnThis(),
+      send: vi.fn().mockReturnThis(),
+    };
+
+    await handler(mockRequest, mockReply);
+    const headers = writeHead.mock.calls[0][1];
+    expect(headers).not.toHaveProperty('Access-Control-Allow-Origin');
   });
 });

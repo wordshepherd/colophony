@@ -7,6 +7,24 @@ import {
   untrackConnection,
 } from './redis-pubsub.js';
 
+/**
+ * Build CORS headers for hijacked SSE response.
+ * reply.hijack() bypasses @fastify/cors, so we must set these manually.
+ */
+function buildCorsHeaders(
+  requestOrigin: string | undefined,
+  allowedOrigins: string[],
+): Record<string, string> {
+  if (!requestOrigin) return {};
+  const hasWildcard = allowedOrigins.includes('*');
+  if (!hasWildcard && !allowedOrigins.includes(requestOrigin)) return {};
+  return {
+    'Access-Control-Allow-Origin': hasWildcard ? '*' : requestOrigin,
+    ...(hasWildcard ? {} : { 'Access-Control-Allow-Credentials': 'true' }),
+    Vary: 'Origin',
+  };
+}
+
 // Per-user SSE connection limit to prevent connection exhaustion
 const MAX_CONNECTIONS_PER_USER = 5;
 const userConnectionCounts = new Map<string, number>();
@@ -50,7 +68,13 @@ export async function registerNotificationStreamRoute(
 
     const channel = channelKey(orgId, userId);
 
-    // SSE response headers
+    // SSE response headers — reply.hijack() bypasses @fastify/cors,
+    // so CORS headers must be included in the manual writeHead() call.
+    const corsHeaders = buildCorsHeaders(
+      request.headers.origin,
+      env.CORS_ORIGIN.split(',').map((o) => o.trim()),
+    );
+
     void reply.hijack();
     const raw = reply.raw;
     raw.writeHead(200, {
@@ -58,6 +82,7 @@ export async function registerNotificationStreamRoute(
       'Cache-Control': 'no-cache, no-transform',
       Connection: 'keep-alive',
       'X-Accel-Buffering': 'no',
+      ...corsHeaders,
     });
 
     // Send connected event
