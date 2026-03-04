@@ -8,7 +8,7 @@ For architecture details, see [docs/architecture.md](./architecture.md).
 ## Running Tests
 
 ```bash
-# Unit tests — API + packages (~1581 tests, 155 suites)
+# Unit tests — API + packages (~1584 tests, 156 suites)
 pnpm test
 
 # Coverage report
@@ -84,7 +84,7 @@ pnpm --filter @colophony/web test:e2e:ui
 
 | Tier                      | Files | Tests | Runner          | Location                           |
 | ------------------------- | ----- | ----- | --------------- | ---------------------------------- |
-| API unit tests            | 155   | ~1581 | Vitest          | `apps/api/src/**/*.spec.ts`        |
+| API unit tests            | 156   | ~1584 | Vitest          | `apps/api/src/**/*.spec.ts`        |
 | Package unit tests        | 4     | ~38   | Vitest          | `packages/*/src/**/*.spec.ts`      |
 | Web unit tests            | 11    | ~108  | Jest + jsdom    | `apps/web/src/**/*.spec.*`         |
 | RLS integration tests     | 11    | ~122  | Vitest (custom) | `apps/api/src/__tests__/rls/`      |

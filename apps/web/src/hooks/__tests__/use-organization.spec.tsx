@@ -146,7 +146,8 @@ describe("useOrganization", () => {
       const { result } = renderHook(() => useOrganization());
       expect(result.current.isAdmin).toBe(true);
       expect(result.current.isEditor).toBe(true); // Admin implies editor
-      expect(result.current.isReader).toBe(true);
+      expect(result.current.isReader).toBe(false);
+      expect(result.current.canWrite).toBe(true);
     });
 
     it("should detect EDITOR role", () => {
@@ -154,7 +155,8 @@ describe("useOrganization", () => {
       const { result } = renderHook(() => useOrganization());
       expect(result.current.isAdmin).toBe(false);
       expect(result.current.isEditor).toBe(true);
-      expect(result.current.isReader).toBe(true);
+      expect(result.current.isReader).toBe(false);
+      expect(result.current.canWrite).toBe(true);
     });
 
     it("should detect READER role", () => {
@@ -163,6 +165,7 @@ describe("useOrganization", () => {
       expect(result.current.isAdmin).toBe(false);
       expect(result.current.isEditor).toBe(false);
       expect(result.current.isReader).toBe(true);
+      expect(result.current.canWrite).toBe(false);
     });
 
     it("should recover to first org roles when stored org is stale", () => {
@@ -171,7 +174,8 @@ describe("useOrganization", () => {
       // Stale recovery switches to org-1 (ADMIN), so all role checks are true
       expect(result.current.isAdmin).toBe(true);
       expect(result.current.isEditor).toBe(true);
-      expect(result.current.isReader).toBe(true);
+      expect(result.current.isReader).toBe(false);
+      expect(result.current.canWrite).toBe(true);
     });
   });
 

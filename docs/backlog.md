@@ -283,6 +283,7 @@
 - [x] [P2] Unbounded query: migration pending approvals — `apps/api/src/services/migration.service.ts:1119` — (Codex review 2026-03-03; done 2026-03-03)
 - [x] [P2] Defense-in-depth: sim-sub peer query lacks explicit `organizationId` filter — `apps/api/src/services/simsub.service.ts:403` — (Codex review 2026-03-03; done 2026-03-03)
 - [x] [P3] Notification preferences list has no `LIMIT` — `apps/api/src/services/notification-preference.service.ts:71` — (Codex review 2026-03-03; done 2026-03-03)
+- [ ] [P3] Defense-in-depth: pipeline service query methods missing explicit `organizationId` filter — `apps/api/src/services/pipeline.service.ts:113,196,500,512` — (Codex plan review 2026-03-03, deferred from READER role PR)
 
 ### Dev Workflow
 
@@ -463,7 +464,7 @@
 - [x] [P2] CMS external ID tracking — store `externalId`/`externalUrl` returned from CMS publish back on the issue/items — (codebase audit 2026-02-27; done 2026-03-03)
 - [ ] [P3] Additional CMS adapters — Substack, Contentful, or other targets based on early adopter needs — (codebase audit 2026-02-27)
 - [ ] [P3] In-browser copyediting or diff view between manuscript versions — (persona gap analysis 2026-02-27)
-- [ ] [P3] READER role enforcement — define what READER can and cannot do distinct from EDITOR; currently decorative — (persona gap analysis 2026-02-27)
+- [x] [P3] READER role enforcement — define what READER can and cannot do distinct from EDITOR; currently decorative — (persona gap analysis 2026-02-27; done 2026-03-03)
 - [ ] [P3] Email invitation workflow — invite by email link/token instead of requiring pre-existing Zitadel account — (persona gap analysis 2026-02-27)
 - [ ] [P3] Custom org roles beyond ADMIN/EDITOR/READER — named roles with configurable permission scopes — (persona gap analysis 2026-02-27)
 
