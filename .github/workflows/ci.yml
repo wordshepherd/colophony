@@ -134,6 +134,48 @@ jobs:
         run: pnpm --filter @colophony/db test && pnpm --filter @colophony/auth-client test && pnpm --filter @colophony/api test && pnpm --filter @colophony/web test
 
   # ──────────────────────────────────────────────────
+  # Coverage report: runs test:cov across all packages
+  # ──────────────────────────────────────────────────
+  coverage:
+    name: Coverage Report
+    needs: changes
+    if: needs.changes.outputs.docs_only != 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v6
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+      - uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "pnpm"
+      - run: pnpm install --frozen-lockfile
+      - name: Build workspace dependencies
+        run: pnpm turbo run build --filter=@colophony/db --filter=@colophony/auth-client --filter=@colophony/types --filter=@colophony/api-contracts --filter=@colophony/plugin-sdk
+      - name: Run coverage (API)
+        run: pnpm --filter @colophony/api test:cov
+      - name: Run coverage (Web)
+        run: pnpm --filter @colophony/web test:cov
+      - name: Run coverage (packages)
+        run: pnpm --filter @colophony/types test:cov && pnpm --filter @colophony/auth-client test:cov && pnpm --filter @colophony/api-client test:cov && pnpm --filter @colophony/plugin-sdk test:cov && pnpm --filter @colophony/create-plugin test:cov
+      - name: Upload coverage artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-reports
+          path: |
+            apps/api/coverage/
+            apps/web/coverage/
+            packages/types/coverage/
+            packages/api-client/coverage/
+            packages/auth-client/coverage/
+            packages/plugin-sdk/coverage/
+            packages/create-plugin/coverage/
+          retention-days: 14
+
+  # ──────────────────────────────────────────────────
   # API E2E tests (~5 min): needs Postgres + Redis
   # TODO: Re-enable after API rewrite (API still uses Prisma-based code)
   # ──────────────────────────────────────────────────
