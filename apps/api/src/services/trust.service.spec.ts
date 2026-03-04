@@ -77,12 +77,14 @@ vi.mock('../federation/http-signatures.js', () => ({
 const mockFetch = vi.fn();
 vi.stubGlobal('fetch', mockFetch);
 
-// Mock dns.promises — SSRF checks are skipped in test but we still mock for explicitness
+// Mock dns.promises — trampoline pattern so clearAllMocks doesn't wipe defaults
+const mockDnsResolve4 = vi.fn().mockResolvedValue(['93.184.216.34']);
+const mockDnsResolve6 = vi.fn().mockResolvedValue([] as string[]);
 vi.mock('node:dns', () => ({
   default: {
     promises: {
-      resolve4: vi.fn().mockResolvedValue(['93.184.216.34']),
-      resolve6: vi.fn().mockResolvedValue([]),
+      resolve4: (...args: unknown[]) => mockDnsResolve4(...args),
+      resolve6: (...args: unknown[]) => mockDnsResolve6(...args),
     },
   },
 }));
@@ -210,6 +212,9 @@ describe('trust.service', () => {
   beforeEach(async () => {
     vi.clearAllMocks();
     mockAuditLog.mockResolvedValue(undefined);
+    // Restore DNS defaults cleared by clearAllMocks
+    mockDnsResolve4.mockResolvedValue(['93.184.216.34']);
+    mockDnsResolve6.mockResolvedValue([] as string[]);
     dbSelectResult = [];
     const mod = await import('./trust.service.js');
     trustService = mod.trustService;
@@ -804,22 +809,8 @@ describe('trust.service', () => {
   });
 
   describe('SSRF protection', () => {
-    let dnsResolve4: ReturnType<typeof vi.fn>;
-    let dnsResolve6: ReturnType<typeof vi.fn>;
-
-    beforeEach(async () => {
-      const dnsModule = await import('node:dns');
-      dnsResolve4 = dnsModule.default.promises
-        .resolve4 as unknown as ReturnType<typeof vi.fn>;
-      dnsResolve6 = dnsModule.default.promises
-        .resolve6 as unknown as ReturnType<typeof vi.fn>;
-      // Restore defaults — parent beforeEach's clearAllMocks wipes them
-      dnsResolve4.mockResolvedValue(['93.184.216.34']);
-      dnsResolve6.mockResolvedValue([]);
-    });
-
     it('rejects private IPv4 in production', async () => {
-      dnsResolve4.mockResolvedValueOnce(['192.168.1.1']);
+      mockDnsResolve4.mockResolvedValueOnce(['192.168.1.1']);
 
       // Temporarily set NODE_ENV to production for this test
       const original = process.env.NODE_ENV;
@@ -834,8 +825,8 @@ describe('trust.service', () => {
     });
 
     it('rejects private IPv6 in production', async () => {
-      dnsResolve4.mockResolvedValueOnce([]);
-      dnsResolve6.mockResolvedValueOnce(['::1']);
+      mockDnsResolve4.mockResolvedValueOnce([]);
+      mockDnsResolve6.mockResolvedValueOnce(['::1']);
 
       const original = process.env.NODE_ENV;
       process.env.NODE_ENV = 'production';
@@ -849,7 +840,7 @@ describe('trust.service', () => {
     });
 
     it('rejects localhost (127.0.0.1) in production', async () => {
-      dnsResolve4.mockResolvedValueOnce(['127.0.0.1']);
+      mockDnsResolve4.mockResolvedValueOnce(['127.0.0.1']);
 
       const original = process.env.NODE_ENV;
       process.env.NODE_ENV = 'production';
@@ -863,7 +854,7 @@ describe('trust.service', () => {
     });
 
     it('skips SSRF check in development', async () => {
-      dnsResolve4.mockResolvedValueOnce(['192.168.1.1']);
+      mockDnsResolve4.mockResolvedValueOnce(['192.168.1.1']);
 
       const original = process.env.NODE_ENV;
       process.env.NODE_ENV = 'development';
