@@ -22,16 +22,17 @@ Automated visual QA walkthrough using Chrome DevTools MCP. Captures screenshots 
 /manual-qa [section]
 ```
 
-| Argument | Scope                                                    | Est. Screenshots |
-| -------- | -------------------------------------------------------- | ---------------- |
-| `all`    | All sections in order                                    | ~300             |
-| `public` | Landing, identity, embed                                 | ~15              |
-| `writer` | Submissions, manuscripts, workspace, settings            | ~70              |
-| `editor` | Editor dashboard, forms, periods, analytics              | ~40              |
-| `slate`  | Publications, pipeline, issues, contracts, CMS, calendar | ~80              |
-| `admin`  | Org settings, webhooks, plugins, federation              | ~60              |
-| `states` | Error boundaries, 404s, empty states across sections     | ~30              |
-| (no arg) | Prompt user to choose section                            | —                |
+| Argument  | Scope                                                    | Est. Screenshots |
+| --------- | -------------------------------------------------------- | ---------------- |
+| `all`     | All sections in order                                    | ~310             |
+| `public`  | Landing, identity, embed                                 | ~15              |
+| `writer`  | Submissions, manuscripts, workspace, settings            | ~70              |
+| `editor`  | Editor dashboard, forms, periods, analytics              | ~40              |
+| `slate`   | Publications, pipeline, issues, contracts, CMS, calendar | ~80              |
+| `admin`   | Org settings, webhooks, plugins, federation              | ~60              |
+| `payment` | Stripe Checkout callback pages (success, cancel)         | ~6               |
+| `states`  | Error boundaries, 404s, empty states across sections     | ~30              |
+| (no arg)  | Prompt user to choose section                            | —                |
 
 ## Instructions for Claude
 
@@ -84,7 +85,7 @@ mkdir -p .qa/screenshots/$(date +%Y-%m-%d)/
 
 **1e. Parse argument:**
 
-If no argument provided, ask the user which section to run using AskUserQuestion with options: `all`, `public`, `writer`, `editor`, `slate`, `admin`, `states`.
+If no argument provided, ask the user which section to run using AskUserQuestion with options: `all`, `public`, `writer`, `editor`, `slate`, `admin`, `payment`, `states`.
 
 ### Step 2: Session setup — discover IDs
 
@@ -406,6 +407,17 @@ User must be logged in. Navigate to `http://localhost:3000` first to verify auth
 | 13  | Migration Detail | `/federation/migrations/{migrationId}` | `main h1`       | loaded        | Skip if no migrations exist    |
 | 14  | Hub List         | `/federation/hub`                      | `main h1`       | loaded, empty | Empty: switch to inkwell-press |
 | 15  | Hub Detail       | `/federation/hub/{hubId}`              | `main h1`       | loaded        | Skip if no hub entries exist   |
+
+---
+
+#### PAYMENT section (2 pages)
+
+Stripe Checkout callback pages. These are placeholder pages for the submission fee flow.
+
+| #   | Page            | URL                | Wait Selector | States | Notes                                 |
+| --- | --------------- | ------------------ | ------------- | ------ | ------------------------------------- |
+| 01  | Payment Success | `/payment/success` | `main h1`     | loaded | Stripe Checkout success redirect      |
+| 02  | Payment Cancel  | `/payment/cancel`  | `main h1`     | loaded | Stripe Checkout cancellation redirect |
 
 ---
 

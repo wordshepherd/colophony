@@ -131,6 +131,15 @@ Screenshots land in `.qa/screenshots/YYYY-MM-DD/{section}/`.
 | Hub List         | `/federation/hub`             | Hub connections                  | Table with hub domains, status         | loaded, empty |
 | Hub Detail       | `/federation/hub/{id}`        | Hub detail                       | Connection info, sync status           | loaded        |
 
+### Payment (2 pages)
+
+| Page            | URL                | Expected Behavior                    | Key Elements                | States |
+| --------------- | ------------------ | ------------------------------------ | --------------------------- | ------ |
+| Payment Success | `/payment/success` | Stripe Checkout success confirmation | Success heading, next steps | loaded |
+| Payment Cancel  | `/payment/cancel`  | Stripe Checkout cancellation message | Cancel heading, retry link  | loaded |
+
+Note: These are callback pages for the submission fee flow (configured via submission periods with a fee amount). Currently placeholder pages.
+
 ---
 
 ## Cross-Cutting Checks
