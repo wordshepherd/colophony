@@ -399,6 +399,47 @@ pnpm --filter @colophony/web test:e2e:embed
 
 ---
 
+## MCP-Assisted QA
+
+### Available MCP Tools
+
+| Server            | Use Case                                                                                   |
+| ----------------- | ------------------------------------------------------------------------------------------ |
+| `chrome-devtools` | Navigate flows, click/fill forms, inspect network requests, take screenshots, read console |
+| `playwright`      | Browser automation for repeatable test generation                                          |
+| `postgres`        | Direct DB queries for data integrity checks                                                |
+| `redis`           | BullMQ job inspection, queue state verification                                            |
+| `docker`          | Container health checks, log inspection                                                    |
+
+### When to Use MCP vs Playwright
+
+| Scenario                                 | Use                                                    |
+| ---------------------------------------- | ------------------------------------------------------ |
+| Exploratory testing, investigating a bug | Chrome DevTools MCP                                    |
+| Verifying a fix once                     | Chrome DevTools MCP                                    |
+| Pre-release smoke test (first time)      | Chrome DevTools MCP                                    |
+| Same smoke test repeated 3+ times        | Promote to Playwright E2E                              |
+| Visual/layout verification               | Chrome DevTools MCP (screenshot)                       |
+| Regression test for a fixed bug          | Playwright E2E                                         |
+| Complex multi-step flow verification     | Chrome DevTools MCP first, then Playwright if repeated |
+
+### Automation Promotion Pipeline
+
+1. **Manual/MCP check** — log in `docs/qa-log.md` with `[AUTOMATE]` tag when repeated
+2. **Backlog item** — create backlog entry: `[P3] Automate: [check description] — (qa-log YYYY-MM-DD)`
+3. **Playwright test** — scaffold with `/new-e2e`, add to appropriate project
+4. **Remove from release checklist** — move from "Gaps" to "CI Pipeline" section
+
+### QA Session Workflow
+
+1. Launch Chrome: `google-chrome --remote-debugging-port=9222`
+2. Navigate to dev server: `http://localhost:3000`
+3. Use Chrome DevTools MCP tools to interact with the application
+4. Log findings in `docs/qa-log.md`
+5. Tag repeated checks with `[AUTOMATE]` for future Playwright promotion
+
+---
+
 ## Critical Test Cases
 
 ### 1. Multi-Tenancy Isolation

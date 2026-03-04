@@ -95,6 +95,8 @@ Per-directory CLAUDE.md files contain domain-specific details:
 | **CSR service**          | `apps/api/src/services/csr.service.ts` (export/import for data portability)      |
 | **CSR format spec**      | `docs/csr-format.md`                                                             |
 | **Backlog**              | `docs/backlog.md` (track-organized, drives session focus)                        |
+| **QA log**               | `docs/qa-log.md`                                                                 |
+| **Release checklist**    | `docs/release-checklist.md`                                                      |
 
 Full project structure: [docs/architecture.md](docs/architecture.md)
 
