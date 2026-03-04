@@ -15,7 +15,8 @@
     "build": "tsc",
     "clean": "rm -rf dist",
     "type-check": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:cov": "vitest run --coverage"
   },
   "dependencies": {
     "zod": "^4.3.6"
@@ -23,6 +24,7 @@
   "devDependencies": {
     "@colophony/typescript-config": "workspace:*",
     "typescript": "^5.7.2",
+    "@vitest/coverage-v8": "^4.0.18",
     "vitest": "^4.0.18"
   }
 }

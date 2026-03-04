@@ -23,8 +23,14 @@ export default defineConfig({
         'src/config/env.ts',
         'src/main.ts',
       ],
-      reporter: ['text', 'text-summary', 'json-summary'],
+      reporter: ['text', 'text-summary', 'json-summary', 'lcov'],
       reportsDirectory: './coverage',
+      thresholds: {
+        statements: 50,
+        branches: 44,
+        functions: 45,
+        lines: 51,
+      },
     },
   },
 });

@@ -19,6 +19,7 @@
     "clean": "rm -rf dist",
     "type-check": "tsc --noEmit",
     "test": "vitest run",
+    "test:cov": "vitest run --coverage",
     "test:watch": "vitest"
   },
   "dependencies": {
@@ -28,6 +29,7 @@
     "@colophony/typescript-config": "workspace:*",
     "@types/prompts": "^2.4.9",
     "typescript": "^5.7.2",
+    "@vitest/coverage-v8": "^4.0.18",
     "vitest": "^4.0.18"
   },
   "files": [
