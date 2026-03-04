@@ -152,7 +152,7 @@ vi.mock('../../federation/http-signatures.js', () => ({
 }));
 
 vi.mock('../../lib/url-validation.js', () => ({
-  resolveAndCheckPrivateIp: vi.fn(),
+  validateOutboundUrl: vi.fn(),
   SsrfValidationError: class extends Error {},
 }));
 
