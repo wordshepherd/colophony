@@ -10,8 +10,12 @@ export default defineConfig({
       'src/__tests__/security/**',
       'src/__tests__/services/**',
       'src/__tests__/queues/**',
+      'src/**/*.flaky.test.ts',
     ],
     globals: false,
+    sequence: {
+      shuffle: true,
+    },
     setupFiles: ['../../test/vitest-console-setup.ts'],
     testTimeout: 30_000,
     coverage: {

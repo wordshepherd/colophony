@@ -9,7 +9,7 @@
     "start": "next start",
     "lint": "eslint --max-warnings 0 .",
     "type-check": "tsc --noEmit && tsc --noEmit -p tsconfig.e2e.json",
-    "test": "jest",
+    "test": "jest --randomize",
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
     "test:e2e": "playwright test --project submissions",
