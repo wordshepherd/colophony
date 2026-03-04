@@ -36,6 +36,7 @@ describe('validateEnv', () => {
   it('accepts overridden values', () => {
     const env = validateEnv({
       ...validBase,
+      DATABASE_APP_URL: 'postgresql://app_user:pass@localhost:5432/colophony',
       PORT: '3000',
       NODE_ENV: 'production',
       LOG_LEVEL: 'error',
@@ -45,6 +46,23 @@ describe('validateEnv', () => {
     expect(env.NODE_ENV).toBe('production');
     expect(env.LOG_LEVEL).toBe('error');
     expect(env.CORS_ORIGIN).toBe('https://example.com');
+  });
+
+  it('requires DATABASE_APP_URL in production', () => {
+    expect(() => validateEnv({ ...validBase, NODE_ENV: 'production' })).toThrow(
+      'DATABASE_APP_URL is required in production',
+    );
+  });
+
+  it('allows missing DATABASE_APP_URL in development', () => {
+    const env = validateEnv({ ...validBase, NODE_ENV: 'development' });
+    expect(env.DATABASE_APP_URL).toBeUndefined();
+  });
+
+  it('validates DATABASE_APP_URL format', () => {
+    expect(() =>
+      validateEnv({ ...validBase, DATABASE_APP_URL: 'mysql://bad' }),
+    ).toThrow('postgresql://');
   });
 
   it('coerces PORT from string to number', () => {

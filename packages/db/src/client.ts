@@ -18,6 +18,13 @@ const pool = new Pool({
  * Uses DATABASE_APP_URL (app_user role, NOSUPERUSER NOBYPASSRLS).
  * Falls back to DATABASE_URL for backwards compatibility in dev.
  */
+if (!process.env.DATABASE_APP_URL && process.env.NODE_ENV !== "test") {
+  console.warn(
+    "[SECURITY WARNING] DATABASE_APP_URL is not set — appPool is using DATABASE_URL (superuser). " +
+      "RLS policies will be bypassed. Set DATABASE_APP_URL to a non-superuser connection string.",
+  );
+}
+
 const appPool = new Pool({
   connectionString: process.env.DATABASE_APP_URL || process.env.DATABASE_URL,
   max: parseInt(process.env.DB_POOL_MAX || "10", 10),
