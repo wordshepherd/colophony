@@ -31,7 +31,7 @@ export const pipelineRouter = createRouter({
     .input(listPipelineItemsSchema)
     .output(paginatedResponseSchema(pipelineItemSchema))
     .query(async ({ ctx, input }) => {
-      return pipelineService.list(ctx.dbTx, input);
+      return pipelineService.list(ctx.dbTx, input, ctx.authContext.orgId);
     }),
 
   /** Get pipeline item by ID. */
@@ -41,7 +41,11 @@ export const pipelineRouter = createRouter({
     .output(pipelineItemSchema)
     .query(async ({ ctx, input }) => {
       try {
-        const item = await pipelineService.getById(ctx.dbTx, input.id);
+        const item = await pipelineService.getById(
+          ctx.dbTx,
+          input.id,
+          ctx.authContext.orgId,
+        );
         if (!item) throw new PipelineItemNotFoundError(input.id);
         return item;
       } catch (e) {
@@ -143,7 +147,11 @@ export const pipelineRouter = createRouter({
     .input(idParamSchema)
     .output(z.array(pipelineCommentSchema))
     .query(async ({ ctx, input }) => {
-      return pipelineService.listComments(ctx.dbTx, input.id);
+      return pipelineService.listComments(
+        ctx.dbTx,
+        input.id,
+        ctx.authContext.orgId,
+      );
     }),
 
   /** Get stage transition history for a pipeline item. */
@@ -152,6 +160,10 @@ export const pipelineRouter = createRouter({
     .input(idParamSchema)
     .output(z.array(pipelineHistoryEntrySchema))
     .query(async ({ ctx, input }) => {
-      return pipelineService.getHistory(ctx.dbTx, input.id);
+      return pipelineService.getHistory(
+        ctx.dbTx,
+        input.id,
+        ctx.authContext.orgId,
+      );
     }),
 });

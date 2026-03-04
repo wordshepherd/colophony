@@ -46,4 +46,63 @@ describe('pipeline.service', () => {
       ).rejects.not.toThrow(ForbiddenError);
     });
   });
+
+  // ---------------------------------------------------------------------------
+  // Defense-in-depth: explicit organizationId filters
+  // ---------------------------------------------------------------------------
+
+  describe('defense-in-depth: organizationId filters', () => {
+    it('list() requires orgId parameter', () => {
+      // TypeScript enforces the orgId parameter at compile time.
+      // Verify the function signature accepts 3 arguments (tx, input, orgId).
+      expect(pipelineService.list.length).toBe(3);
+    });
+
+    it('getById() requires orgId parameter', () => {
+      expect(pipelineService.getById.length).toBe(3);
+    });
+
+    it('listComments() requires orgId parameter', () => {
+      expect(pipelineService.listComments.length).toBe(3);
+    });
+
+    it('getHistory() requires orgId parameter', () => {
+      expect(pipelineService.getHistory.length).toBe(3);
+    });
+
+    it('updateStage() requires orgId parameter', () => {
+      // updateStage(tx, id, input, orgId, changedBy?)
+      expect(pipelineService.updateStage.length).toBeGreaterThanOrEqual(4);
+    });
+
+    it('addCommentWithAudit passes actor orgId to getById', async () => {
+      const ctx = makeCtx('EDITOR');
+      // getById will call tx.select().from().leftJoin()...where(and(eq(id), eq(orgId)))
+      // It will fail on the mock tx, but we can verify the call pattern
+      const getByIdSpy = vi.spyOn(pipelineService, 'getById');
+      try {
+        await pipelineService.addCommentWithAudit(ctx, 'item-1', {
+          content: 'test',
+        });
+      } catch {
+        // Expected: mock tx throws
+      }
+      expect(getByIdSpy).toHaveBeenCalledWith(ctx.tx, 'item-1', 'org-1');
+      getByIdSpy.mockRestore();
+    });
+
+    it('updateStageWithAudit passes actor orgId to getById and updateStage', async () => {
+      const ctx = makeCtx('EDITOR');
+      const getByIdSpy = vi.spyOn(pipelineService, 'getById');
+      try {
+        await pipelineService.updateStageWithAudit(ctx, 'item-1', {
+          stage: 'PROOFREAD',
+        });
+      } catch {
+        // Expected: mock tx throws
+      }
+      expect(getByIdSpy).toHaveBeenCalledWith(ctx.tx, 'item-1', 'org-1');
+      getByIdSpy.mockRestore();
+    });
+  });
 });

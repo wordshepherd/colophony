@@ -99,7 +99,7 @@ builder.queryFields((t) => ({
         page: args.page,
         limit: args.limit,
       });
-      return pipelineService.list(orgCtx.dbTx, input);
+      return pipelineService.list(orgCtx.dbTx, input, orgCtx.authContext.orgId);
     },
   }),
 
@@ -116,7 +116,11 @@ builder.queryFields((t) => ({
       await requireScopes(ctx, 'pipeline:read');
       const { id } = idParamSchema.parse({ id: args.id });
       try {
-        const item = await pipelineService.getById(orgCtx.dbTx, id);
+        const item = await pipelineService.getById(
+          orgCtx.dbTx,
+          id,
+          orgCtx.authContext.orgId,
+        );
         if (!item) throw new PipelineItemNotFoundError(id);
         return item;
       } catch (e) {
@@ -136,7 +140,11 @@ builder.queryFields((t) => ({
       const orgCtx = requireOrgContext(ctx);
       await requireScopes(ctx, 'pipeline:read');
       const { id } = idParamSchema.parse({ id: args.id });
-      return pipelineService.getHistory(orgCtx.dbTx, id);
+      return pipelineService.getHistory(
+        orgCtx.dbTx,
+        id,
+        orgCtx.authContext.orgId,
+      );
     },
   }),
 
@@ -151,7 +159,11 @@ builder.queryFields((t) => ({
       const orgCtx = requireOrgContext(ctx);
       await requireScopes(ctx, 'pipeline:read');
       const { id } = idParamSchema.parse({ id: args.id });
-      return pipelineService.listComments(orgCtx.dbTx, id);
+      return pipelineService.listComments(
+        orgCtx.dbTx,
+        id,
+        orgCtx.authContext.orgId,
+      );
     },
   }),
 }));
