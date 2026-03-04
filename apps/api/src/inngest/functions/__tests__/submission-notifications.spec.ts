@@ -98,13 +98,11 @@ describe('submission notification functions', () => {
   });
 
   it('submissionReceivedNotification skips when submission not found', async () => {
-    mockWithRls.mockResolvedValueOnce({
-      submission: null,
-      orgName: 'Test Org',
-    });
-
     const mockStep = {
-      run: vi.fn(async (_name: string, fn: () => Promise<unknown>) => fn()),
+      run: vi.fn().mockResolvedValueOnce({
+        submission: null,
+        orgName: 'Test Org',
+      }),
     };
 
     const result = await (submissionReceivedNotification as any)({

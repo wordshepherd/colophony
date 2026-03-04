@@ -4,7 +4,11 @@ export default defineConfig({
   test: {
     environment: "node",
     include: ["src/**/*.{test,spec}.ts"],
+    exclude: ["src/**/*.flaky.test.ts"],
     globals: false,
+    sequence: {
+      shuffle: true,
+    },
     setupFiles: ["../../test/vitest-console-setup.ts"],
     coverage: {
       provider: "v8",

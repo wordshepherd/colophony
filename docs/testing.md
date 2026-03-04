@@ -570,7 +570,86 @@ describe("idempotency", () => {
 
 ---
 
-## Known Test Quirks
+## Flakiness Detection & Quarantine
+
+### Shuffle Ordering
+
+All unit test suites run with randomized test ordering to detect order-dependent tests:
+
+- **Vitest** (API + packages): `sequence: { shuffle: true }` in each `vitest.config.ts`
+- **Jest** (web): `--randomize` flag in the `test` script
+
+Vitest prints the shuffle seed in output — use `--sequence.seed=<N>` to reproduce a specific ordering.
+
+Integration test configs (`vitest.config.rls.ts`, `vitest.config.services.ts`, `vitest.config.webhooks.ts`, `vitest.config.queues.ts`, `vitest.config.security.ts`) are **excluded from shuffle** because they use `singleFork: true` + `fileParallelism: false` with shared database state where test ordering matters.
+
+### No Retries
+
+Vitest defaults to 0 retries and we keep it that way. No `retry` config is set in any config file. Tests must pass deterministically on the first attempt.
+
+### Quarantine Convention
+
+Flaky tests that cannot be immediately fixed should be renamed with a `.flaky.test.ts` suffix (e.g., `my-feature.flaky.test.ts`). Quarantined tests are:
+
+- **Excluded from test runs** — Vitest configs exclude `src/**/*.flaky.test.ts`; Jest config excludes `\.flaky\.test\.` via `testPathIgnorePatterns`
+- **Blocked by CI** — the `quality` job detects newly added `.flaky.test.` files via `git diff` and fails the PR. This prevents accumulation of quarantined tests — fix flaky tests instead of quarantining new ones
+- **Visible in code review** — the `.flaky.test.ts` suffix makes quarantined tests obvious in file listings and PRs
+
+The intent is that quarantine is a temporary state for pre-existing tests. New tests must not be quarantined — fix the flakiness before merging.
+
+---
+
+## Risk-Based Test Matrix
+
+### Domain × Test Layer Coverage
+
+Each cell indicates whether tests exist for that domain at that layer. Key: filled = covered, dash = not applicable or not needed.
+
+| Domain                    | Unit (service)                                       | Unit (route/router) | Unit (web)                | Service integration         | RLS                         | Queue/worker           | E2E                         |
+| ------------------------- | ---------------------------------------------------- | ------------------- | ------------------------- | --------------------------- | --------------------------- | ---------------------- | --------------------------- |
+| **Hopper** (submissions)  | forms, submissions, embed                            | REST + tRPC routers | hooks, components         | submission, form-validation | submissions, files, history | file-scan              | submissions, uploads, embed |
+| **Slate** (pipeline)      | pipeline, publications, issues, contracts, CMS       | REST + tRPC routers | —                         | —                           | pipeline items              | —                      | slate (30 tests)            |
+| **Federation**            | trust, simsub, fingerprint, transfer, migration, hub | federation routes   | —                         | federation S2S (15 tests)   | —                           | —                      | federation admin (16 tests) |
+| **Workspace**             | portfolio, writer-analytics, CSR                     | tRPC routers        | writer components         | portfolio, CSR              | —                           | —                      | workspace (21 tests)        |
+| **Forms**                 | form-builder, form-validation                        | tRPC routers        | —                         | form-validation             | —                           | —                      | forms (16 tests)            |
+| **Organization**          | org service, members                                 | REST + tRPC routers | org-switcher, create-org  | org service                 | org_members                 | —                      | organization (14 tests)     |
+| **Uploads**               | file service                                         | tusd webhook        | file-upload hook          | —                           | submission_files            | file-scan worker       | uploads (6 tests)           |
+| **Embed**                 | embed-token, embed-submission                        | embed routes        | —                         | —                           | submissions                 | —                      | embed (10 tests)            |
+| **Analytics**             | submission-analytics                                 | tRPC routers        | analytics components      | —                           | —                           | —                      | analytics (6 tests)         |
+| **Relay** (notifications) | email, webhook, notification-pref                    | tRPC routers        | —                         | —                           | —                           | email, webhook workers | —                           |
+| **Auth**                  | auth hook, API keys                                  | —                   | use-auth, protected-route | —                           | api_keys                    | —                      | OIDC (6 tests)              |
+| **Payments**              | —                                                    | stripe webhook      | —                         | stripe webhook integration  | payments                    | —                      | —                           |
+| **Plugins**               | plugin-sdk, create-plugin                            | plugin routes       | plugin-slot, extensions   | —                           | —                           | —                      | —                           |
+
+### High-Risk Low-Coverage Hotspots
+
+Domains with significant code complexity but thinner test coverage relative to their risk:
+
+1. **Relay (notifications)** — Email and webhook workers have queue integration tests, but no E2E tests exercise the full notification flow (event → Inngest → queue → delivery). Email template rendering is untested beyond worker-level.
+
+2. **Slate pipeline transitions** — E2E covers happy-path transitions, but the service layer's transition validation logic (status machine, permission checks per transition) has unit tests only via route-level specs. A dedicated service integration test would catch RLS interaction issues.
+
+3. **Federation S2S trust chain** — Trust establishment, HTTP signature verification, and peer discovery have service integration tests, but the full multi-instance flow (instance A → hub → instance B) is only tested at the unit level with mocked HTTP.
+
+4. **Plugin system** — Plugin SDK has unit tests for adapters and hooks, but plugin lifecycle (install → configure → activate → deactivate) is only tested at the unit level. No integration test exercises a real plugin with the API.
+
+5. **GDPR data deletion** — `gdprService.deleteUser()` touches many tables across domains. Unit test coverage exists, but the full cascade (user data → files → S3 cleanup worker → audit) has no end-to-end verification.
+
+### Minimum Test Layers by Domain Type
+
+Reference standard for what test layers each domain type should have:
+
+| Domain type                                       | Unit (service) | Unit (route) | Service integration | RLS                         | E2E         |
+| ------------------------------------------------- | -------------- | ------------ | ------------------- | --------------------------- | ----------- |
+| **Data-mutation** (CRUD + state machine)          | Required       | Required     | Recommended         | Required (if tenant-scoped) | Recommended |
+| **Integration** (webhooks, queues, external APIs) | Required       | Required     | Required            | —                           | Optional    |
+| **Read-heavy** (analytics, reporting, search)     | Required       | Required     | Optional            | Required (if tenant-scoped) | Recommended |
+| **Auth/security** (auth, permissions, SSRF)       | Required       | Required     | Required            | Required                    | Required    |
+| **UI-heavy** (forms, wizards, dashboards)         | Optional       | —            | —                   | —                           | Required    |
+
+This matrix is documentation only — no automated gates enforce it. Use it during code review and when planning new features to ensure adequate coverage.
+
+---
 
 ### Web uses Jest, not Vitest
 

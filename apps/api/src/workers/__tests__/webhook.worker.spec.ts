@@ -39,8 +39,12 @@ vi.mock('../../services/audit.service.js', () => ({
   },
 }));
 
+const mockWithRls = vi.fn((_ctx: unknown, fn: (tx: unknown) => unknown) =>
+  fn('mock-tx'),
+);
 vi.mock('@colophony/db', () => ({
-  withRls: vi.fn((_ctx, fn) => fn('mock-tx')),
+  withRls: (...args: [unknown, (tx: unknown) => unknown]) =>
+    mockWithRls(...args),
   webhookDeliveries: {
     id: 'id',
     webhookEndpointId: 'webhook_endpoint_id',
@@ -107,6 +111,9 @@ const makeJob = (overrides = {}) => ({
 describe('webhook worker', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockWithRls.mockImplementation(
+      (_ctx: unknown, fn: (tx: unknown) => unknown) => fn('mock-tx'),
+    );
     startWebhookWorker(testEnv);
   });
 
@@ -207,19 +214,22 @@ describe('webhook worker', () => {
     const err = new Error('HTTP 500');
 
     // Mock the delivery lookup for auto-disable check
-    const { withRls } = await import('@colophony/db');
-    (withRls as ReturnType<typeof vi.fn>).mockImplementation((_ctx, fn) => {
-      const mockTx = {
-        select: vi.fn().mockReturnValue({
-          from: vi.fn().mockReturnValue({
-            where: vi.fn().mockReturnValue({
-              limit: vi.fn().mockResolvedValue([{ webhookEndpointId: 'ep-1' }]),
+    mockWithRls.mockImplementation(
+      (_ctx: unknown, fn: (tx: unknown) => unknown) => {
+        const mockTx = {
+          select: vi.fn().mockReturnValue({
+            from: vi.fn().mockReturnValue({
+              where: vi.fn().mockReturnValue({
+                limit: vi
+                  .fn()
+                  .mockResolvedValue([{ webhookEndpointId: 'ep-1' }]),
+              }),
             }),
           }),
-        }),
-      };
-      return fn(mockTx);
-    });
+        };
+        return fn(mockTx);
+      },
+    );
 
     mockCountRecentFailures.mockResolvedValueOnce(3); // Not yet at threshold
 
