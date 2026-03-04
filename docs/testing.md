@@ -11,8 +11,17 @@ For architecture details, see [docs/architecture.md](./architecture.md).
 # Unit tests — API + packages (~1584 tests, 156 suites)
 pnpm test
 
-# Coverage report
+# Coverage report (all packages)
 pnpm test:cov
+
+# Coverage — per-package
+pnpm --filter @colophony/api test:cov
+pnpm --filter @colophony/web test:cov
+pnpm --filter @colophony/types test:cov
+pnpm --filter @colophony/auth-client test:cov
+pnpm --filter @colophony/api-client test:cov
+pnpm --filter @colophony/plugin-sdk test:cov
+pnpm --filter @colophony/create-plugin test:cov
 
 # Web unit tests — Jest (~543 tests, 74 suites)
 pnpm --filter @colophony/web test
@@ -141,12 +150,19 @@ pnpm --filter @colophony/web test:e2e:ui
 
 ## Coverage Targets
 
-| Scope                        | Target |
-| ---------------------------- | ------ |
-| Overall                      | 85%+   |
-| Business logic (services)    | 90%+   |
-| API endpoints (tRPC routers) | 80%+   |
-| Integration tests            | 70%+   |
+Thresholds are set at **measured baseline minus 5%** (buffer for normal code churn). Thresholds are ratcheted up monthly as coverage improves. CI enforces thresholds via the `coverage` job; coverage reports are uploaded as artifacts (`coverage-reports`, 14-day retention).
+
+| Package                    | Stmts | Branches | Functions | Lines | Baseline date |
+| -------------------------- | ----- | -------- | --------- | ----- | ------------- |
+| `@colophony/api`           | 50%   | 44%      | 45%       | 51%   | 2026-03       |
+| `@colophony/web`           | 42%   | 65%      | 31%       | 42%   | 2026-03       |
+| `@colophony/types`         | 36%   | 41%      | 48%       | 36%   | 2026-03       |
+| `@colophony/auth-client`   | 95%   | 95%      | 95%       | 95%   | 2026-03       |
+| `@colophony/api-client`    | 95%   | 85%      | 95%       | 95%   | 2026-03       |
+| `@colophony/plugin-sdk`    | 55%   | 50%      | 36%       | 55%   | 2026-03       |
+| `@colophony/create-plugin` | 71%   | 63%      | 70%       | 71%   | 2026-03       |
+
+**Threshold policy:** `max(0, measured - 5)`. Prevents CI from breaking on normal churn while catching large regressions. To update: run `pnpm test:cov` locally, update thresholds in the relevant `vitest.config.ts` or `jest.config.ts`, and update this table.
 
 ---
 
