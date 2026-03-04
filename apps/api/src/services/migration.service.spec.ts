@@ -447,12 +447,11 @@ describe('migrationService', () => {
       // The implementation makes these db calls in order:
       // 1. db.select().from().where().limit() — find migration
       // 2. db.update(users).set({...}).where(...) — soft deactivate
-      // 3. db.select().from().where() — broadcast peers query (no .limit())
+      // 3. db.select().from().where().limit() — broadcast peers query
       // 4. db.update(identityMigrations).set({...}).where(...) — update migration status
       //
-      // We use mockResolvedValueOnce on .limit() for query #1, and
+      // We use mockResolvedValueOnce on .limit() for queries #1 and #3, and
       // mockReturnValueOnce on .set() for the two update chains.
-      // For the broadcast peers query (#3), .where() returns [] (no peers).
 
       // Query #1: find migration — terminates at .limit()
       mockDb.limit.mockResolvedValueOnce([
@@ -471,15 +470,15 @@ describe('migrationService', () => {
         where: vi.fn().mockResolvedValue(undefined),
       });
 
-      // Query #3: broadcast peers — db.select().from().where()
-      // .where() is the terminal call here (no .limit()).
-      // mockDb.where is called twice on mockDb:
-      //   1st for find migration (needs to return this for .limit() chain)
-      //   2nd for broadcast peers (needs to resolve to [])
-      // Queue: first returns mockDb (to preserve chain), second resolves to []
+      // Query #3: broadcast peers — db.select().from().where().limit()
+      // Both .where() calls chain to mockDb (for .limit()), .limit() resolves.
+      // Queue: 1st .where() chains for find migration, 2nd chains for peers
       mockDb.where
         .mockReturnValueOnce(mockDb) // 1st .where() — chain to .limit()
-        .mockResolvedValueOnce([]); // 2nd .where() — broadcast peers terminal
+        .mockReturnValueOnce(mockDb); // 2nd .where() — chain to .limit()
+
+      // Query #3: broadcast peers — terminates at .limit()
+      mockDb.limit.mockResolvedValueOnce([]); // no peers
 
       // Query #4: update migration status — db.update().set().where()
       mockDb.set.mockReturnValueOnce({

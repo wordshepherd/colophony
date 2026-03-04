@@ -29,7 +29,6 @@ import {
   verifyFederationSignature,
 } from '../federation/http-signatures.js';
 import {
-  resolveAndCheckPrivateIp,
   validateOutboundUrl,
   SsrfValidationError,
 } from '../lib/url-validation.js';
@@ -88,26 +87,25 @@ const MAX_METADATA_RESPONSE_BYTES = 1_048_576;
 async function fetchAndValidateMetadata(
   domain: string,
 ): Promise<FederationMetadata> {
-  // SSRF check — skip in development/test for localhost
-  const nodeEnv = process.env.NODE_ENV;
-  if (nodeEnv !== 'development' && nodeEnv !== 'test') {
-    try {
-      await resolveAndCheckPrivateIp(domain);
-    } catch (err) {
-      if (err instanceof SsrfValidationError) {
-        // Sanitize: don't leak internal IPs in the outward-facing error
-        throw new RemoteMetadataFetchError(
-          domain,
-          new Error('Domain resolves to a private or reserved IP address'),
-        );
-      }
-      throw err;
+  // SSRF check — validateOutboundUrl handles dev/test bypass internally
+  const metadataUrl = `https://${domain}/.well-known/colophony`;
+  const devMode =
+    process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test';
+  try {
+    await validateOutboundUrl(metadataUrl, { devMode });
+  } catch (err) {
+    if (err instanceof SsrfValidationError) {
+      throw new RemoteMetadataFetchError(
+        domain,
+        new Error('Domain resolves to a private or reserved IP address'),
+      );
     }
+    throw err;
   }
 
   let response: Response;
   try {
-    response = await fetch(`https://${domain}/.well-known/colophony`, {
+    response = await fetch(metadataUrl, {
       signal: AbortSignal.timeout(10_000),
       headers: { accept: 'application/json' },
       redirect: 'error', // Prevent redirect-based SSRF

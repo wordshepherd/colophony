@@ -868,6 +868,7 @@ export const migrationService = {
     const domain = env.FEDERATION_DOMAIN ?? 'localhost';
 
     // Query all active trusted peers with identity.migrate capability
+    const peerLimit = 500;
     const peers = await db
       .select({
         instanceUrl: trustedPeers.instanceUrl,
@@ -879,7 +880,15 @@ export const migrationService = {
           eq(trustedPeers.status, 'active'),
           sql`granted_capabilities @> '{"identity.migrate": true}'::jsonb`,
         ),
+      )
+      .limit(peerLimit);
+
+    if (peers.length >= peerLimit) {
+      console.warn(
+        'Migration broadcast peer limit reached (%d); some peers may not be notified',
+        peerLimit,
       );
+    }
 
     // Deduplicate by domain (may be trusted by multiple orgs)
     const uniquePeers = new Map<string, string>();

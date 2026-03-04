@@ -80,7 +80,7 @@ vi.stubGlobal('fetch', mockFetch);
 // Mock url-validation — trampoline pattern so clearAllMocks doesn't wipe the
 // module-level mock binding. SSRF tests control this directly instead of going
 // through the fragile node:dns mock chain.
-const mockResolveAndCheckPrivateIp = vi.fn().mockResolvedValue(undefined);
+const mockValidateOutboundUrl = vi.fn().mockResolvedValue(undefined);
 vi.mock('../lib/url-validation.js', () => ({
   SsrfValidationError: class SsrfValidationError extends Error {
     override name = 'SsrfValidationError' as const;
@@ -90,9 +90,7 @@ vi.mock('../lib/url-validation.js', () => ({
   },
   isPrivateIPv4: vi.fn(),
   isPrivateIPv6: vi.fn(),
-  validateOutboundUrl: vi.fn(),
-  resolveAndCheckPrivateIp: (...args: unknown[]) =>
-    mockResolveAndCheckPrivateIp(...args),
+  validateOutboundUrl: (...args: unknown[]) => mockValidateOutboundUrl(...args),
 }));
 
 // Import mocked SsrfValidationError for use in SSRF test assertions
@@ -222,7 +220,7 @@ describe('trust.service', () => {
     vi.clearAllMocks();
     mockAuditLog.mockResolvedValue(undefined);
     // Restore url-validation default (allow all) cleared by clearAllMocks
-    mockResolveAndCheckPrivateIp.mockResolvedValue(undefined);
+    mockValidateOutboundUrl.mockResolvedValue(undefined);
     dbSelectResult = [];
     const mod = await import('./trust.service.js');
     trustService = mod.trustService;
@@ -818,9 +816,9 @@ describe('trust.service', () => {
 
   describe('SSRF protection', () => {
     it('rejects private IPv4 in production', async () => {
-      mockResolveAndCheckPrivateIp.mockRejectedValueOnce(
+      mockValidateOutboundUrl.mockRejectedValueOnce(
         new SsrfValidationError(
-          'Resolved to private IPv4 address: 192.168.1.1',
+          'URL resolves to private IP address: 192.168.1.1',
         ),
       );
 
@@ -836,8 +834,8 @@ describe('trust.service', () => {
     });
 
     it('rejects private IPv6 in production', async () => {
-      mockResolveAndCheckPrivateIp.mockRejectedValueOnce(
-        new SsrfValidationError('Resolved to private IPv6 address: ::1'),
+      mockValidateOutboundUrl.mockRejectedValueOnce(
+        new SsrfValidationError('URL resolves to private IP address: ::1'),
       );
 
       const original = process.env.NODE_ENV;
@@ -852,8 +850,10 @@ describe('trust.service', () => {
     });
 
     it('rejects localhost (127.0.0.1) in production', async () => {
-      mockResolveAndCheckPrivateIp.mockRejectedValueOnce(
-        new SsrfValidationError('Resolved to private IPv4 address: 127.0.0.1'),
+      mockValidateOutboundUrl.mockRejectedValueOnce(
+        new SsrfValidationError(
+          'URL resolves to private IP address: 127.0.0.1',
+        ),
       );
 
       const original = process.env.NODE_ENV;
@@ -878,8 +878,11 @@ describe('trust.service', () => {
         const result =
           await trustService.fetchRemoteMetadata('remote.example.com');
         expect(result.domain).toBe('remote.example.com');
-        // resolveAndCheckPrivateIp should NOT have been called in dev mode
-        expect(mockResolveAndCheckPrivateIp).not.toHaveBeenCalled();
+        // validateOutboundUrl called with devMode: true (returns early)
+        expect(mockValidateOutboundUrl).toHaveBeenCalledWith(
+          'https://remote.example.com/.well-known/colophony',
+          { devMode: true },
+        );
       } finally {
         process.env.NODE_ENV = original;
       }
