@@ -3,6 +3,7 @@ import {
   withRls,
   pipelineItems,
   submissions,
+  users,
   eq,
   inArray,
   type DrizzleDb,
@@ -51,12 +52,15 @@ export const cmsPublishWorkflow = inngest.createFunction(
                   pipelineItemId: pipelineItems.id,
                   title: submissions.title,
                   content: submissions.content,
+                  submitterDisplayName: users.displayName,
+                  submitterEmail: users.email,
                 })
                 .from(pipelineItems)
                 .innerJoin(
                   submissions,
                   eq(pipelineItems.submissionId, submissions.id),
                 )
+                .leftJoin(users, eq(submissions.submitterId, users.id))
                 .where(inArray(pipelineItems.id, pipelineItemIds))
             : [];
 
@@ -84,6 +88,7 @@ export const cmsPublishWorkflow = inngest.createFunction(
         {
           title: p.title ?? 'Untitled',
           content: p.content ?? '',
+          author: p.submitterDisplayName ?? p.submitterEmail ?? null,
         },
       ]),
     );
@@ -101,11 +106,12 @@ export const cmsPublishWorkflow = inngest.createFunction(
         const piece = pieceMap.get(item.pipelineItemId) ?? {
           title: 'Untitled',
           content: '',
+          author: null,
         };
         return {
           title: piece.title,
           content: piece.content,
-          author: null,
+          author: piece.author,
           sortOrder: item.sortOrder,
           sectionTitle: item.issueSectionId
             ? (sectionMap.get(item.issueSectionId) ?? null)
@@ -126,9 +132,14 @@ export const cmsPublishWorkflow = inngest.createFunction(
             payload,
           );
 
-          // Update last sync timestamp
+          // Update last sync timestamp and persist publish result
           await withRls({ orgId }, async (tx: DrizzleDb) => {
             await cmsConnectionService.updateLastSync(tx, conn.id);
+            await issueService.saveCmsPublishResult(tx, issueId, conn.id, {
+              externalId: publishResult.externalId,
+              externalUrl: publishResult.externalUrl,
+              adapterType: conn.adapterType,
+            });
           });
 
           return {

@@ -15,6 +15,7 @@ export const users = pgTable(
     id: uuid("id").defaultRandom().primaryKey(),
     email: varchar("email", { length: 255 }).notNull().unique(),
     zitadelUserId: varchar("zitadel_user_id", { length: 255 }),
+    displayName: varchar("display_name", { length: 255 }),
     emailVerified: boolean("email_verified").default(false).notNull(),
     emailVerifiedAt: timestamp("email_verified_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true })
