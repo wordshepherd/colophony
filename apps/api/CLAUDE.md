@@ -49,6 +49,8 @@
 | CMS adapters      | `src/adapters/cms/`                                            |
 | Documenso adapter | `src/adapters/documenso.adapter.ts`                            |
 | Outbox poller     | `src/workers/outbox-poller.worker.ts`                          |
+| SSE notif stream  | `src/sse/notification-stream.ts` (hijacked, manual CORS)       |
+| Redis pub/sub     | `src/sse/redis-pubsub.ts`                                      |
 | Federation trust  | `src/federation/trust.routes.ts` (S2S)                         |
 | Trust admin       | `src/federation/trust-admin.routes.ts`                         |
 | Key admin         | `src/federation/key-admin.routes.ts`                           |
@@ -309,6 +311,7 @@ Workers and queues are started in `main.ts` and closed during graceful shutdown.
 | **`validateEnv()` must be lazy**                 | Call `validateEnv()` inside handler functions, NOT at module level. Module-level calls execute at import time, breaking any test that imports the router tree (9 test files failed when GDPR router used module-level `validateEnv()`). See `files.ts` for correct pattern.                                                                                                                                     |
 | **tusd `-cors-allow-headers` replaces defaults** | When passing custom headers to tusd's `-cors-allow-headers` flag, you MUST include all standard tus protocol headers (`Authorization`, `Origin`, `Content-Type`, `Upload-Length`, `Upload-Offset`, `Tus-Resumable`, `Upload-Metadata`, `Upload-Defer-Length`) because the flag **replaces** the built-in defaults rather than appending. Missing tus headers causes CORS preflight failures for the tus client. |
 | **Fastify `maxParamLength` and tRPC batching**   | Fastify defaults `maxParamLength` to 100 characters. tRPC's `httpBatchLink` encodes comma-separated procedure names in the URL path (e.g., `/trpc/a.b,c.d,e.f`). Pages that batch many queries (like the analytics dashboard with ~8 procedures) produce paths exceeding 100 chars, causing Fastify to silently return 404. Set `maxParamLength: 500` in the Fastify constructor to accommodate large batches.  |
+| **`reply.hijack()` bypasses `@fastify/cors`**    | `reply.hijack()` takes ownership of the raw Node.js response, preventing all Fastify hooks (including `@fastify/cors` `onSend` hook) from running. Any hijacked route (e.g., SSE streams) must manually include CORS headers in its `writeHead()` call. See `src/sse/notification-stream.ts` for the `buildCorsHeaders()` pattern.                                                                              |
 
 ## Version Pins
 
