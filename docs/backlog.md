@@ -233,7 +233,7 @@
 - [x] Notification preferences frontend — UI for users to manage email opt-in/opt-out per event type — (DEVLOG 2026-02-26; done 2026-02-26)
 - [x] Webhook delivery system (outbound) — (architecture doc, Relay; done 2026-02-26)
 - [x] In-app notification center — SSE + Redis pub/sub + bell UI + dual-channel preferences — (architecture doc, Relay; done 2026-02-26)
-- [ ] [P2] Defense-in-depth org filtering missing in webhook.service.ts — getEndpoint, listEndpoints, rotateSecret query by ID only (RLS-only, no explicit organizationId filter) — (Codex review 2026-03-03)
+- [x] [P2] Defense-in-depth org filtering missing in webhook.service.ts — getEndpoint, listEndpoints, rotateSecret query by ID only (RLS-only, no explicit organizationId filter) — (Codex review 2026-03-03; done 2026-03-04)
 
 ---
 
