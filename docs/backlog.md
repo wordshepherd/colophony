@@ -178,8 +178,8 @@
 - [x] [P4] Consider splitting schema migrations (enum changes vs new tables) for safer production rollback — documented as pattern + pre-flight validator instead of splitting 0031 (already applied) — (OpenCode review 2026-02-25, deferred pre-launch; done 2026-02-26)
 - [x] [P3] Federation rate limit fail mode: configurable fail-open/fail-closed + in-process fallback when Redis unavailable — (audit finding #4, 2026-03-01; done 2026-03-01 PR #225)
 - [x] [P3] Federation test gaps: integration tests for trust handshake flow and hub-first discovery path — (audit finding #5, 2026-03-01; done 2026-03-01 PR #225)
-- [ ] [P3] Unbounded peer query in migration broadcast — migration.service.ts:870 fetches all trusted peers with no LIMIT; small dataset in practice but violates pagination rule — (Codex review 2026-03-03)
-- [ ] [P3] Trust metadata SSRF uses custom resolveAndCheckPrivateIp instead of validateOutboundUrl — trust.service.ts:88; functionally equivalent but inconsistent with the standard pattern — (Codex review 2026-03-03)
+- [x] [P3] Unbounded peer query in migration broadcast — migration.service.ts:870 fetches all trusted peers with no LIMIT; small dataset in practice but violates pagination rule — (Codex review 2026-03-03; done 2026-03-04)
+- [x] [P3] Trust metadata SSRF uses custom resolveAndCheckPrivateIp instead of validateOutboundUrl — trust.service.ts:88; functionally equivalent but inconsistent with the standard pattern — (Codex review 2026-03-03; done 2026-03-04)
 
 ### Design Decisions
 
