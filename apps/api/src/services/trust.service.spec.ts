@@ -81,16 +81,21 @@ vi.stubGlobal('fetch', mockFetch);
 // module-level mock binding. SSRF tests control this directly instead of going
 // through the fragile node:dns mock chain.
 const mockResolveAndCheckPrivateIp = vi.fn().mockResolvedValue(undefined);
-vi.mock('../lib/url-validation.js', async (importOriginal) => {
-  const mod = await importOriginal();
-  return {
-    ...mod,
-    resolveAndCheckPrivateIp: (...args: unknown[]) =>
-      mockResolveAndCheckPrivateIp(...args),
-  };
-});
+vi.mock('../lib/url-validation.js', () => ({
+  SsrfValidationError: class SsrfValidationError extends Error {
+    override name = 'SsrfValidationError' as const;
+    constructor(message: string) {
+      super(message);
+    }
+  },
+  isPrivateIPv4: vi.fn(),
+  isPrivateIPv6: vi.fn(),
+  validateOutboundUrl: vi.fn(),
+  resolveAndCheckPrivateIp: (...args: unknown[]) =>
+    mockResolveAndCheckPrivateIp(...args),
+}));
 
-// Import SsrfValidationError for SSRF tests (passes through from ...actual)
+// Import mocked SsrfValidationError for use in SSRF test assertions
 import { SsrfValidationError } from '../lib/url-validation.js';
 
 /**
