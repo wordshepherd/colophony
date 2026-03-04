@@ -1,8 +1,16 @@
-import { withRls } from '@colophony/db';
+import {
+  withRls,
+  pipelineItems,
+  submissions,
+  users,
+  eq,
+  type DrizzleDb,
+} from '@colophony/db';
 import { inngest } from '../client.js';
 import type { ContractGeneratedEvent } from '../events.js';
 import { contractService } from '../../services/contract.service.js';
 import { createDocumensoAdapter } from '../../adapters/documenso.adapter.js';
+import type { DocumensoSigner } from '../../adapters/documenso.adapter.js';
 import { validateEnv } from '../../config/env.js';
 
 /**
@@ -36,19 +44,54 @@ export const contractWorkflow = inngest.createFunction(
           );
         }
 
-        const contract = await withRls({ orgId }, async (tx) => {
-          return contractService.getById(tx, contractId);
-        });
+        const { contract, signers } = await withRls(
+          { orgId },
+          async (tx: DrizzleDb) => {
+            const c = await contractService.getById(tx, contractId, orgId);
+            if (!c) {
+              throw new Error(`Contract "${contractId}" not found`);
+            }
 
-        if (!contract) {
-          throw new Error(`Contract "${contractId}" not found`);
-        }
+            // Load submitter via pipeline_items → submissions → users
+            const submitterRows = await tx
+              .select({
+                email: users.email,
+                displayName: users.displayName,
+              })
+              .from(pipelineItems)
+              .innerJoin(
+                submissions,
+                eq(pipelineItems.submissionId, submissions.id),
+              )
+              .innerJoin(users, eq(submissions.submitterId, users.id))
+              .where(eq(pipelineItems.id, pipelineItemId))
+              .limit(1);
+
+            const submitter = submitterRows[0];
+            if (!submitter) {
+              console.warn(
+                `contract-workflow: no submitter found for pipelineItem "${pipelineItemId}" — signers will be empty`,
+              );
+            }
+            const s: DocumensoSigner[] = submitter
+              ? [
+                  {
+                    email: submitter.email,
+                    name: submitter.displayName ?? submitter.email,
+                    role: 'SIGNER',
+                  },
+                ]
+              : [];
+
+            return { contract: c, signers: s };
+          },
+        );
 
         // Create document in Documenso
         const docId = await adapter.createDocument({
           title: `Contract — ${contractId}`,
           body: contract.renderedBody,
-          signers: [], // Signers will be configured via Documenso UI or API
+          signers,
           metadata: {
             colophonyContractId: contractId,
             colophonyPipelineItemId: pipelineItemId,

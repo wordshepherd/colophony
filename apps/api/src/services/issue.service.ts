@@ -98,11 +98,15 @@ export const issueService = {
     };
   },
 
-  async getById(tx: DrizzleDb, id: string) {
+  async getById(tx: DrizzleDb, id: string, orgId?: string) {
     const [row] = await tx
       .select()
       .from(issues)
-      .where(eq(issues.id, id))
+      .where(
+        orgId
+          ? and(eq(issues.id, id), eq(issues.organizationId, orgId))
+          : eq(issues.id, id),
+      )
       .limit(1);
 
     return row ?? null;
@@ -118,7 +122,8 @@ export const issueService = {
       .leftJoin(pipelineItems, eq(issueItems.pipelineItemId, pipelineItems.id))
       .leftJoin(submissions, eq(pipelineItems.submissionId, submissions.id))
       .where(eq(issueItems.issueId, issueId))
-      .orderBy(issueItems.sortOrder);
+      .orderBy(issueItems.sortOrder)
+      .limit(10000);
   },
 
   async getSections(tx: DrizzleDb, issueId: string) {
@@ -126,7 +131,8 @@ export const issueService = {
       .select()
       .from(issueSections)
       .where(eq(issueSections.issueId, issueId))
-      .orderBy(issueSections.sortOrder);
+      .orderBy(issueSections.sortOrder)
+      .limit(10000);
   },
 
   // -------------------------------------------------------------------------
@@ -254,6 +260,41 @@ export const issueService = {
       newValue: { status: 'ARCHIVED' },
     });
     return updated;
+  },
+
+  // -------------------------------------------------------------------------
+  // CMS Publish Result Storage
+  // -------------------------------------------------------------------------
+
+  async saveCmsPublishResult(
+    tx: DrizzleDb,
+    issueId: string,
+    connectionId: string,
+    result: {
+      externalId: string;
+      externalUrl?: string;
+      adapterType: string;
+    },
+  ) {
+    const issue = await issueService.getById(tx, issueId);
+    if (!issue) return null;
+
+    const metadata = issue.metadata ?? {};
+    const cmsPublish = (metadata.cmsPublish ?? {}) as Record<string, unknown>;
+    cmsPublish[connectionId] = {
+      externalId: result.externalId,
+      externalUrl: result.externalUrl,
+      publishedAt: new Date().toISOString(),
+      adapterType: result.adapterType,
+    };
+
+    const [row] = await tx
+      .update(issues)
+      .set({ metadata: { ...metadata, cmsPublish }, updatedAt: new Date() })
+      .where(eq(issues.id, issueId))
+      .returning();
+
+    return row ?? null;
   },
 
   // -------------------------------------------------------------------------

@@ -267,6 +267,9 @@ async function processEvent(
         .values({
           email: userData.email ?? `${userData.userId}@placeholder.local`,
           zitadelUserId: userData.userId,
+          ...(userData.displayName !== undefined
+            ? { displayName: userData.displayName }
+            : {}),
           emailVerified: userData.emailVerified ?? false,
           emailVerifiedAt: userData.emailVerified ? new Date() : undefined,
           lastEventAt: hasValidTimestamp ? eventTime : undefined,
@@ -276,6 +279,9 @@ async function processEvent(
           targetWhere: sql`${users.zitadelUserId} IS NOT NULL`,
           set: {
             ...(userData.email ? { email: userData.email } : {}),
+            ...(userData.displayName !== undefined
+              ? { displayName: userData.displayName }
+              : {}),
             ...(userData.emailVerified !== undefined
               ? {
                   emailVerified: userData.emailVerified,

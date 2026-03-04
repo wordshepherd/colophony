@@ -5,6 +5,7 @@ import type {
   CmsIssuePayload,
   CmsPiecePayload,
 } from './cms-adapter.interface.js';
+import { validateOutboundUrl } from '../../lib/url-validation.js';
 
 /**
  * WordPress CMS adapter — publishes via the WP REST API v2.
@@ -25,8 +26,10 @@ export const wordpressAdapter: CmsAdapter = {
     config: Record<string, unknown>,
   ): Promise<CmsTestResult> {
     const { siteUrl, username, applicationPassword } = parseConfig(config);
+    const devMode = process.env.NODE_ENV !== 'production';
 
     try {
+      await validateOutboundUrl(siteUrl, { devMode });
       const res = await fetch(`${siteUrl}/wp-json/wp/v2/users/me`, {
         headers: { Authorization: basicAuth(username, applicationPassword) },
       });
@@ -50,6 +53,8 @@ export const wordpressAdapter: CmsAdapter = {
     issue: CmsIssuePayload,
   ): Promise<CmsPublishResult> {
     const { siteUrl, username, applicationPassword } = parseConfig(config);
+    const devMode = process.env.NODE_ENV !== 'production';
+    await validateOutboundUrl(siteUrl, { devMode });
 
     // Build combined HTML content from issue items
     const html = buildIssueHtml(issue);
@@ -81,6 +86,8 @@ export const wordpressAdapter: CmsAdapter = {
     externalId: string,
   ): Promise<void> {
     const { siteUrl, username, applicationPassword } = parseConfig(config);
+    const devMode = process.env.NODE_ENV !== 'production';
+    await validateOutboundUrl(siteUrl, { devMode });
 
     const res = await fetch(`${siteUrl}/wp-json/wp/v2/posts/${externalId}`, {
       method: 'DELETE',
@@ -103,6 +110,8 @@ export const wordpressAdapter: CmsAdapter = {
     externalId?: string,
   ): Promise<CmsPublishResult> {
     const { siteUrl, username, applicationPassword } = parseConfig(config);
+    const devMode = process.env.NODE_ENV !== 'production';
+    await validateOutboundUrl(siteUrl, { devMode });
 
     const method = externalId ? 'PUT' : 'POST';
     const url = externalId
