@@ -437,13 +437,14 @@ Canonical env definition with Zod validation: `apps/api/src/config/env.ts` (55 v
 
 <!-- Core -->
 
-| Variable        | Required | Default                 | Used by |
-| --------------- | -------- | ----------------------- | ------- |
-| `DATABASE_URL`  | Yes      | —                       | API     |
-| `PORT` / `HOST` | No       | `4000` / `0.0.0.0`      | API     |
-| `NODE_ENV`      | No       | `development`           | API     |
-| `LOG_LEVEL`     | No       | `info`                  | API     |
-| `CORS_ORIGIN`   | No       | `http://localhost:3000` | API     |
+| Variable           | Required | Default                      | Used by |
+| ------------------ | -------- | ---------------------------- | ------- |
+| `DATABASE_URL`     | Yes      | —                            | API     |
+| `DATABASE_APP_URL` | Prod     | falls back to `DATABASE_URL` | API, DB |
+| `PORT` / `HOST`    | No       | `4000` / `0.0.0.0`           | API     |
+| `NODE_ENV`         | No       | `development`                | API     |
+| `LOG_LEVEL`        | No       | `info`                       | API     |
+| `CORS_ORIGIN`      | No       | `http://localhost:3000`      | API     |
 
 <!-- Redis -->
 

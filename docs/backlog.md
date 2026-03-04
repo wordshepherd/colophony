@@ -31,7 +31,7 @@
 - [x] Audit query/list endpoints — wait for API surfaces — (DEVLOG 2026-02-13; done 2026-02-18 PR #101)
 - [x] Seed data (`packages/db/src/seed.ts` has TODO) — wait for API layer — (code TODO; done 2026-02-18 PR #104)
 - [x] [P2] Sliding window rate limiting — replaced fixed-window Lua script with sliding-window-log algorithm using Redis sorted sets; fixes burst-at-boundary 2x rate vulnerability; kept custom two-tier design (IP pre-auth + user post-auth) — (dev feedback 2026-02-25; done 2026-02-25)
-- [ ] [P2] RLS app connection fallback to superuser — packages/db/src/client.ts appPool falls back to DATABASE_URL when DATABASE_APP_URL is unset; production could silently use superuser credentials — (Codex review 2026-03-03)
+- [x] [P2] RLS app connection fallback to superuser — packages/db/src/client.ts appPool falls back to DATABASE_URL when DATABASE_APP_URL is unset; production could silently use superuser credentials — (Codex review 2026-03-03; done 2026-03-04)
 
 ### QA / Testing
 
@@ -313,7 +313,7 @@
 - [x] [P2] Federation S2S integration tests — simsub, transfer, migration (15 tests) — (test coverage plan 2026-03-02; done 2026-03-03)
 - [x] [P2] Notification prefs + writer analytics E2E (7 tests) — (test coverage plan 2026-03-02; done 2026-03-03)
 - [x] CI: Add service-integration-tests, security-tests jobs — (test coverage plan 2026-03-02; done 2026-03-03)
-- [ ] [P2] Fix flaky workspace analytics E2E — `workspace-analytics-correspondence.spec.ts` "Total Submissions" card times out intermittently (10s timeout); reproduces on both `main` and feature branches; likely slow tRPC query or rendering delay in CI — (CI flake 2026-03-03)
+- [x] [P2] Fix flaky workspace analytics E2E — `workspace-analytics-correspondence.spec.ts` "Total Submissions" card times out intermittently (10s timeout); reproduces on both `main` and feature branches; likely slow tRPC query or rendering delay in CI — (CI flake 2026-03-03; resolved 2026-03-04)
 
 ### Testing Infrastructure Hardening
 
