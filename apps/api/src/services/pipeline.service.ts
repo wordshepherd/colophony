@@ -494,6 +494,7 @@ export const pipelineService = {
     return comment;
   },
 
+  // TODO: Replace hard limit with proper pagination if usage grows beyond 1000 per item
   async listComments(tx: DrizzleDb, pipelineItemId: string) {
     return tx
       .select()
@@ -507,6 +508,7 @@ export const pipelineService = {
   // History
   // -------------------------------------------------------------------------
 
+  // TODO: Replace hard limit with proper pagination if usage grows beyond 1000 per item
   async getHistory(tx: DrizzleDb, pipelineItemId: string) {
     return tx
       .select()
