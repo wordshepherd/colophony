@@ -48,7 +48,7 @@ const list = orgProcedure
   .input(restListPipelineQuery)
   .output(paginatedPipelineSchema)
   .handler(async ({ input, context }) => {
-    return pipelineService.list(context.dbTx, input);
+    return pipelineService.list(context.dbTx, input, context.authContext.orgId);
   });
 
 const create = orgProcedure
@@ -89,7 +89,11 @@ const get = orgProcedure
   .output(pipelineItemSchema)
   .handler(async ({ input, context }) => {
     try {
-      const item = await pipelineService.getById(context.dbTx, input.id);
+      const item = await pipelineService.getById(
+        context.dbTx,
+        input.id,
+        context.authContext.orgId,
+      );
       if (!item) throw new PipelineItemNotFoundError(input.id);
       return item;
     } catch (e) {
@@ -211,7 +215,11 @@ const listComments = orgProcedure
   .input(idParamSchema)
   .output(z.array(pipelineCommentSchema))
   .handler(async ({ input, context }) => {
-    return pipelineService.listComments(context.dbTx, input.id);
+    return pipelineService.listComments(
+      context.dbTx,
+      input.id,
+      context.authContext.orgId,
+    );
   });
 
 const getHistory = orgProcedure
@@ -227,7 +235,11 @@ const getHistory = orgProcedure
   .input(idParamSchema)
   .output(z.array(pipelineHistoryEntrySchema))
   .handler(async ({ input, context }) => {
-    return pipelineService.getHistory(context.dbTx, input.id);
+    return pipelineService.getHistory(
+      context.dbTx,
+      input.id,
+      context.authContext.orgId,
+    );
   });
 
 // ---------------------------------------------------------------------------

@@ -283,7 +283,7 @@
 - [x] [P2] Unbounded query: migration pending approvals — `apps/api/src/services/migration.service.ts:1119` — (Codex review 2026-03-03; done 2026-03-03)
 - [x] [P2] Defense-in-depth: sim-sub peer query lacks explicit `organizationId` filter — `apps/api/src/services/simsub.service.ts:403` — (Codex review 2026-03-03; done 2026-03-03)
 - [x] [P3] Notification preferences list has no `LIMIT` — `apps/api/src/services/notification-preference.service.ts:71` — (Codex review 2026-03-03; done 2026-03-03)
-- [ ] [P3] Defense-in-depth: pipeline service query methods missing explicit `organizationId` filter — `apps/api/src/services/pipeline.service.ts:113,196,500,512` — (Codex plan review 2026-03-03, deferred from READER role PR)
+- [x] [P3] Defense-in-depth: pipeline service query methods missing explicit `organizationId` filter — `apps/api/src/services/pipeline.service.ts:113,196,500,512` — (Codex plan review 2026-03-03, deferred from READER role PR)
 
 ### Dev Workflow
 

@@ -72,7 +72,7 @@ export const pipelineService = {
   // List / Get
   // -------------------------------------------------------------------------
 
-  async list(tx: DrizzleDb, input: ListPipelineItemsInput) {
+  async list(tx: DrizzleDb, input: ListPipelineItemsInput, orgId: string) {
     const {
       stage,
       publicationId,
@@ -85,6 +85,7 @@ export const pipelineService = {
     const offset = (page - 1) * limit;
 
     const conditions = [];
+    conditions.push(eq(pipelineItems.organizationId, orgId));
     if (stage) conditions.push(eq(pipelineItems.stage, stage));
     if (publicationId)
       conditions.push(eq(pipelineItems.publicationId, publicationId));
@@ -170,7 +171,7 @@ export const pipelineService = {
     };
   },
 
-  async getById(tx: DrizzleDb, id: string) {
+  async getById(tx: DrizzleDb, id: string, orgId: string) {
     const copyeditors = alias(users, 'copyeditors');
     const proofreaders = alias(users, 'proofreaders');
 
@@ -193,7 +194,9 @@ export const pipelineService = {
         proofreaders,
         eq(pipelineItems.assignedProofreaderId, proofreaders.id),
       )
-      .where(eq(pipelineItems.id, id))
+      .where(
+        and(eq(pipelineItems.id, id), eq(pipelineItems.organizationId, orgId)),
+      )
       .limit(1);
 
     if (!row) return null;
@@ -294,9 +297,10 @@ export const pipelineService = {
     tx: DrizzleDb,
     id: string,
     input: UpdatePipelineStageInput,
+    orgId: string,
     changedBy?: string,
   ) {
-    const item = await pipelineService.getById(tx, id);
+    const item = await pipelineService.getById(tx, id, orgId);
     if (!item) throw new PipelineItemNotFoundError(id);
 
     if (!isValidPipelineTransition(item.stage, input.stage)) {
@@ -328,13 +332,14 @@ export const pipelineService = {
   ) {
     assertEditorOrAdmin(ctx.actor.role);
     // Capture the previous stage before the update for the audit trail
-    const current = await pipelineService.getById(ctx.tx, id);
+    const current = await pipelineService.getById(ctx.tx, id, ctx.actor.orgId);
     if (!current) throw new PipelineItemNotFoundError(id);
     const previousStage = current.stage;
     const updated = await pipelineService.updateStage(
       ctx.tx,
       id,
       input,
+      ctx.actor.orgId,
       ctx.actor.userId,
     );
     await ctx.audit({
@@ -475,7 +480,11 @@ export const pipelineService = {
     input: AddPipelineCommentInput,
   ) {
     assertEditorOrAdmin(ctx.actor.role);
-    const item = await pipelineService.getById(ctx.tx, pipelineItemId);
+    const item = await pipelineService.getById(
+      ctx.tx,
+      pipelineItemId,
+      ctx.actor.orgId,
+    );
     if (!item) throw new PipelineItemNotFoundError(pipelineItemId);
 
     const comment = await pipelineService.addComment(
@@ -495,11 +504,20 @@ export const pipelineService = {
   },
 
   // TODO: Replace hard limit with proper pagination if usage grows beyond 1000 per item
-  async listComments(tx: DrizzleDb, pipelineItemId: string) {
+  async listComments(tx: DrizzleDb, pipelineItemId: string, orgId: string) {
     return tx
-      .select()
+      .select(getTableColumns(pipelineComments))
       .from(pipelineComments)
-      .where(eq(pipelineComments.pipelineItemId, pipelineItemId))
+      .innerJoin(
+        pipelineItems,
+        eq(pipelineComments.pipelineItemId, pipelineItems.id),
+      )
+      .where(
+        and(
+          eq(pipelineComments.pipelineItemId, pipelineItemId),
+          eq(pipelineItems.organizationId, orgId),
+        ),
+      )
       .orderBy(desc(pipelineComments.createdAt))
       .limit(1000);
   },
@@ -509,11 +527,20 @@ export const pipelineService = {
   // -------------------------------------------------------------------------
 
   // TODO: Replace hard limit with proper pagination if usage grows beyond 1000 per item
-  async getHistory(tx: DrizzleDb, pipelineItemId: string) {
+  async getHistory(tx: DrizzleDb, pipelineItemId: string, orgId: string) {
     return tx
-      .select()
+      .select(getTableColumns(pipelineHistory))
       .from(pipelineHistory)
-      .where(eq(pipelineHistory.pipelineItemId, pipelineItemId))
+      .innerJoin(
+        pipelineItems,
+        eq(pipelineHistory.pipelineItemId, pipelineItems.id),
+      )
+      .where(
+        and(
+          eq(pipelineHistory.pipelineItemId, pipelineItemId),
+          eq(pipelineItems.organizationId, orgId),
+        ),
+      )
       .orderBy(desc(pipelineHistory.changedAt))
       .limit(1000);
   },
