@@ -243,6 +243,40 @@ describe('webhook worker', () => {
     );
   });
 
+  it('auto-disables endpoint with orgId filter when failure threshold met', async () => {
+    const job = makeJob({ attemptsMade: 8 });
+    const err = new Error('HTTP 500');
+
+    mockWithRls.mockImplementation(
+      (_ctx: unknown, fn: (tx: unknown) => unknown) => {
+        const mockTx = {
+          select: vi.fn().mockReturnValue({
+            from: vi.fn().mockReturnValue({
+              where: vi.fn().mockReturnValue({
+                limit: vi
+                  .fn()
+                  .mockResolvedValue([{ webhookEndpointId: 'ep-1' }]),
+              }),
+            }),
+          }),
+        };
+        return fn(mockTx);
+      },
+    );
+
+    mockCountRecentFailures.mockResolvedValueOnce(5); // At threshold
+
+    await failedCallback(job, err);
+
+    // updateEndpoint should be called with orgId as 3rd arg
+    expect(mockUpdateEndpoint).toHaveBeenCalledWith(
+      expect.anything(),
+      'ep-1',
+      'org-1',
+      { status: 'DISABLED' },
+    );
+  });
+
   it('stops worker cleanly', async () => {
     await stopWebhookWorker();
     expect(mockClose).toHaveBeenCalled();

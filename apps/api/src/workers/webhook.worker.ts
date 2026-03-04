@@ -188,7 +188,7 @@ export function startWebhookWorker(env: Env): Worker<WebhookJobData> {
               endpointId,
             );
             if (failCount >= AUTO_DISABLE_THRESHOLD) {
-              await webhookService.updateEndpoint(tx, endpointId, {
+              await webhookService.updateEndpoint(tx, endpointId, orgId, {
                 status: 'DISABLED',
               });
               await auditService.log(tx, {

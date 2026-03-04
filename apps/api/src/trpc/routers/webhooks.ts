@@ -6,7 +6,7 @@ import {
   AuditActions,
   AuditResources,
 } from '@colophony/types';
-import { webhookEndpoints, eq } from '@colophony/db';
+import { webhookEndpoints, eq, and } from '@colophony/db';
 import { adminProcedure, orgProcedure, createRouter } from '../init.js';
 import { webhookService } from '../../services/webhook.service.js';
 import { enqueueWebhook } from '../../queues/webhook.queue.js';
@@ -37,7 +37,12 @@ export const webhooksRouter = createRouter({
     )
     .mutation(async ({ ctx, input }) => {
       const { id, ...params } = input;
-      const row = await webhookService.updateEndpoint(ctx.dbTx, id, params);
+      const row = await webhookService.updateEndpoint(
+        ctx.dbTx,
+        id,
+        ctx.authContext.orgId,
+        params,
+      );
       await ctx.audit({
         action: AuditActions.WEBHOOK_ENDPOINT_UPDATED,
         resource: AuditResources.WEBHOOK_ENDPOINT,
@@ -50,7 +55,11 @@ export const webhooksRouter = createRouter({
   delete: adminProcedure
     .input(z.object({ id: z.string().uuid() }))
     .mutation(async ({ ctx, input }) => {
-      await webhookService.deleteEndpoint(ctx.dbTx, input.id);
+      await webhookService.deleteEndpoint(
+        ctx.dbTx,
+        input.id,
+        ctx.authContext.orgId,
+      );
       await ctx.audit({
         action: AuditActions.WEBHOOK_ENDPOINT_DELETED,
         resource: AuditResources.WEBHOOK_ENDPOINT,
@@ -62,7 +71,11 @@ export const webhooksRouter = createRouter({
   getById: orgProcedure
     .input(z.object({ id: z.string().uuid() }))
     .query(async ({ ctx, input }) => {
-      return webhookService.getEndpoint(ctx.dbTx, input.id);
+      return webhookService.getEndpoint(
+        ctx.dbTx,
+        input.id,
+        ctx.authContext.orgId,
+      );
     }),
 
   list: orgProcedure
@@ -73,13 +86,20 @@ export const webhooksRouter = createRouter({
       }),
     )
     .query(async ({ ctx, input }) => {
-      return webhookService.listEndpoints(ctx.dbTx, input);
+      return webhookService.listEndpoints(ctx.dbTx, {
+        ...input,
+        organizationId: ctx.authContext.orgId,
+      });
     }),
 
   rotateSecret: adminProcedure
     .input(z.object({ id: z.string().uuid() }))
     .mutation(async ({ ctx, input }) => {
-      const row = await webhookService.rotateSecret(ctx.dbTx, input.id);
+      const row = await webhookService.rotateSecret(
+        ctx.dbTx,
+        input.id,
+        ctx.authContext.orgId,
+      );
       await ctx.audit({
         action: AuditActions.WEBHOOK_ENDPOINT_SECRET_ROTATED,
         resource: AuditResources.WEBHOOK_ENDPOINT,
@@ -98,7 +118,12 @@ export const webhooksRouter = createRouter({
       const [endpoint] = await ctx.dbTx
         .select()
         .from(webhookEndpoints)
-        .where(eq(webhookEndpoints.id, input.id))
+        .where(
+          and(
+            eq(webhookEndpoints.id, input.id),
+            eq(webhookEndpoints.organizationId, orgId),
+          ),
+        )
         .limit(1);
 
       if (!endpoint) {
@@ -170,7 +195,12 @@ export const webhooksRouter = createRouter({
       const [endpoint] = await ctx.dbTx
         .select()
         .from(webhookEndpoints)
-        .where(eq(webhookEndpoints.id, delivery.webhookEndpointId))
+        .where(
+          and(
+            eq(webhookEndpoints.id, delivery.webhookEndpointId),
+            eq(webhookEndpoints.organizationId, orgId),
+          ),
+        )
         .limit(1);
 
       if (!endpoint) {

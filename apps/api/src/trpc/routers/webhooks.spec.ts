@@ -41,8 +41,9 @@ vi.mock('../../config/env.js', () => ({
 }));
 
 vi.mock('@colophony/db', () => ({
-  webhookEndpoints: { id: 'id' },
+  webhookEndpoints: { id: 'id', organizationId: 'organization_id' },
   eq: vi.fn(),
+  and: vi.fn(),
 }));
 
 // Mock tRPC init with a passthrough stub
