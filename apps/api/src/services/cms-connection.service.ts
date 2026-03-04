@@ -220,7 +220,7 @@ export const cmsConnectionService = {
           eq(cmsConnections.isActive, true),
         ),
       )
-      .limit(50);
+      .limit(10000);
   },
 
   async updateLastSync(tx: DrizzleDb, id: string) {

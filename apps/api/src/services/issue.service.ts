@@ -98,11 +98,15 @@ export const issueService = {
     };
   },
 
-  async getById(tx: DrizzleDb, id: string) {
+  async getById(tx: DrizzleDb, id: string, orgId?: string) {
     const [row] = await tx
       .select()
       .from(issues)
-      .where(eq(issues.id, id))
+      .where(
+        orgId
+          ? and(eq(issues.id, id), eq(issues.organizationId, orgId))
+          : eq(issues.id, id),
+      )
       .limit(1);
 
     return row ?? null;
@@ -119,7 +123,7 @@ export const issueService = {
       .leftJoin(submissions, eq(pipelineItems.submissionId, submissions.id))
       .where(eq(issueItems.issueId, issueId))
       .orderBy(issueItems.sortOrder)
-      .limit(500);
+      .limit(10000);
   },
 
   async getSections(tx: DrizzleDb, issueId: string) {
@@ -128,7 +132,7 @@ export const issueService = {
       .from(issueSections)
       .where(eq(issueSections.issueId, issueId))
       .orderBy(issueSections.sortOrder)
-      .limit(200);
+      .limit(10000);
   },
 
   // -------------------------------------------------------------------------

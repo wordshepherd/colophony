@@ -68,6 +68,11 @@ export const contractWorkflow = inngest.createFunction(
               .limit(1);
 
             const submitter = submitterRows[0];
+            if (!submitter) {
+              console.warn(
+                `contract-workflow: no submitter found for pipelineItem "${pipelineItemId}" — signers will be empty`,
+              );
+            }
             const s: DocumensoSigner[] = submitter
               ? [
                   {
