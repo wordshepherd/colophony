@@ -211,6 +211,12 @@ describe('trust.service', () => {
     vi.clearAllMocks();
     mockAuditLog.mockResolvedValue(undefined);
     dbSelectResult = [];
+    // Restore DNS mock defaults cleared by clearAllMocks
+    const dnsModule = await import('node:dns');
+    vi.spyOn(dnsModule.default.promises, 'resolve4').mockResolvedValue([
+      '93.184.216.34',
+    ]);
+    vi.spyOn(dnsModule.default.promises, 'resolve6').mockResolvedValue([]);
     const mod = await import('./trust.service.js');
     trustService = mod.trustService;
   });
