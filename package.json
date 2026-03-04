@@ -39,8 +39,12 @@
     "prepare": "husky"
   },
   "lint-staged": {
-    "*.{ts,tsx,json,md}": [
+    "*.{json,md}": [
       "prettier --write"
+    ],
+    "*.{ts,tsx}": [
+      "prettier --write",
+      "bash scripts/lint-staged-eslint.sh"
     ]
   },
   "devDependencies": {

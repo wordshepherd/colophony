@@ -42,14 +42,16 @@ vi.mock('../services/embed-submission.service.js', () => ({
   },
 }));
 
-// Mock ioredis
+// Mock ioredis — must use `function` keyword for class-like constructors
 vi.mock('ioredis', () => {
   return {
-    default: vi.fn().mockImplementation(() => ({
-      connect: vi.fn().mockResolvedValue(undefined),
-      eval: vi.fn().mockResolvedValue([1, 60000]),
-      quit: vi.fn().mockResolvedValue(undefined),
-    })),
+    default: vi.fn().mockImplementation(function () {
+      return {
+        connect: vi.fn().mockResolvedValue(undefined),
+        eval: vi.fn().mockResolvedValue([1, 60000]),
+        quit: vi.fn().mockResolvedValue(undefined),
+      };
+    }),
   };
 });
 

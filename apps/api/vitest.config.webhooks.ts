@@ -5,6 +5,7 @@ export default defineConfig({
     environment: 'node',
     include: ['src/__tests__/webhooks/**/*.test.ts'],
     globals: false,
+    setupFiles: ['../../test/vitest-console-setup.ts'],
     testTimeout: 30_000,
     fileParallelism: false,
     pool: 'forks',

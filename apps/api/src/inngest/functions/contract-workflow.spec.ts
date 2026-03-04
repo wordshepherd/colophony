@@ -196,6 +196,8 @@ describe('contractWorkflow Inngest function', () => {
   });
 
   it('uses empty signers when no submitter found', async () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
     const mockCreateDocument = vi.fn().mockResolvedValue('doc-789');
     mockCreateDocumensoAdapter.mockReturnValue({
       createDocument: mockCreateDocument,
@@ -241,6 +243,11 @@ describe('contractWorkflow Inngest function', () => {
       },
       step: mockStep,
     });
+
+    expect(warnSpy).toHaveBeenCalledWith(
+      expect.stringContaining('no submitter found'),
+    );
+    warnSpy.mockRestore();
 
     const createDocArgs = mockCreateDocument.mock.calls[0][0];
     expect(createDocArgs.signers).toEqual([]);

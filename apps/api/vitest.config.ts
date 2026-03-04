@@ -12,6 +12,7 @@ export default defineConfig({
       'src/__tests__/queues/**',
     ],
     globals: false,
+    setupFiles: ['../../test/vitest-console-setup.ts'],
     testTimeout: 30_000,
     coverage: {
       provider: 'v8',
