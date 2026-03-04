@@ -82,9 +82,9 @@ vi.stubGlobal('fetch', mockFetch);
 // through the fragile node:dns mock chain.
 const mockResolveAndCheckPrivateIp = vi.fn().mockResolvedValue(undefined);
 vi.mock('../lib/url-validation.js', async (importOriginal) => {
-  const actual = await importOriginal();
+  const mod = await importOriginal();
   return {
-    ...actual,
+    ...mod,
     resolveAndCheckPrivateIp: (...args: unknown[]) =>
       mockResolveAndCheckPrivateIp(...args),
   };
