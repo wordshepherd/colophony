@@ -42,6 +42,15 @@ const config: Config = {
     "!src/app/**/*",
     "!src/components/ui/**/*",
   ],
+  coverageReporters: ["text", "text-summary", "json-summary", "lcov"],
+  coverageThreshold: {
+    global: {
+      statements: 42,
+      branches: 65,
+      functions: 31,
+      lines: 42,
+    },
+  },
   coverageDirectory: "./coverage",
   testPathIgnorePatterns: ["/.next/", "/node_modules/", "/e2e/", "/_v1/"],
 };
