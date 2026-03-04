@@ -93,6 +93,7 @@ export const webhookService = {
   async updateEndpoint(
     tx: DrizzleDb,
     id: string,
+    organizationId: string,
     params: UpdateEndpointParams,
   ) {
     if (params.url !== undefined) {
@@ -121,36 +122,59 @@ export const webhookService = {
     const [row] = await tx
       .update(webhookEndpoints)
       .set(update)
-      .where(eq(webhookEndpoints.id, id))
+      .where(
+        and(
+          eq(webhookEndpoints.id, id),
+          eq(webhookEndpoints.organizationId, organizationId),
+        ),
+      )
       .returning();
     return row ? redactSecret(row) : null;
   },
 
-  async deleteEndpoint(tx: DrizzleDb, id: string) {
-    await tx.delete(webhookEndpoints).where(eq(webhookEndpoints.id, id));
+  async deleteEndpoint(tx: DrizzleDb, id: string, organizationId: string) {
+    await tx
+      .delete(webhookEndpoints)
+      .where(
+        and(
+          eq(webhookEndpoints.id, id),
+          eq(webhookEndpoints.organizationId, organizationId),
+        ),
+      );
   },
 
-  async getEndpoint(tx: DrizzleDb, id: string) {
+  async getEndpoint(tx: DrizzleDb, id: string, organizationId: string) {
     const [row] = await tx
       .select()
       .from(webhookEndpoints)
-      .where(eq(webhookEndpoints.id, id))
+      .where(
+        and(
+          eq(webhookEndpoints.id, id),
+          eq(webhookEndpoints.organizationId, organizationId),
+        ),
+      )
       .limit(1);
     return row ? redactSecret(row) : null;
   },
 
-  async listEndpoints(tx: DrizzleDb, params: { page: number; limit: number }) {
-    const { page, limit } = params;
+  async listEndpoints(
+    tx: DrizzleDb,
+    params: { organizationId: string; page: number; limit: number },
+  ) {
+    const { organizationId, page, limit } = params;
     const offset = (page - 1) * limit;
+
+    const orgFilter = eq(webhookEndpoints.organizationId, organizationId);
 
     const [items, countResult] = await Promise.all([
       tx
         .select()
         .from(webhookEndpoints)
+        .where(orgFilter)
         .orderBy(desc(webhookEndpoints.createdAt))
         .limit(limit)
         .offset(offset),
-      tx.select({ count: count() }).from(webhookEndpoints),
+      tx.select({ count: count() }).from(webhookEndpoints).where(orgFilter),
     ]);
 
     const total = countResult[0]?.count ?? 0;
@@ -163,12 +187,17 @@ export const webhookService = {
     };
   },
 
-  async rotateSecret(tx: DrizzleDb, id: string) {
+  async rotateSecret(tx: DrizzleDb, id: string, organizationId: string) {
     const secret = crypto.randomBytes(32).toString('hex');
     const [row] = await tx
       .update(webhookEndpoints)
       .set({ secret, updatedAt: new Date() })
-      .where(eq(webhookEndpoints.id, id))
+      .where(
+        and(
+          eq(webhookEndpoints.id, id),
+          eq(webhookEndpoints.organizationId, organizationId),
+        ),
+      )
       .returning();
     return row;
   },

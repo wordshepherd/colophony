@@ -70,6 +70,114 @@ describe('webhookService', () => {
     /* eslint-enable @typescript-eslint/unbound-method */
   });
 
+  it('filters by organizationId in getEndpoint', async () => {
+    const mockLimit = vi
+      .fn()
+      .mockResolvedValue([{ id: 'ep-1', organization_id: 'org-1' }]);
+    const mockWhere = vi.fn().mockReturnValue({ limit: mockLimit });
+    const mockFrom = vi.fn().mockReturnValue({ where: mockWhere });
+    const mockSelect = vi.fn().mockReturnValue({ from: mockFrom });
+    const mockTx = { select: mockSelect } as never;
+
+    await webhookService.getEndpoint(mockTx, 'ep-1', 'org-1');
+
+    expect(andFn).toHaveBeenCalled();
+    const andArgs = andFn.mock.calls[0];
+    expect(andArgs[0]).toEqual({ type: 'eq', args: ['id', 'ep-1'] });
+    expect(andArgs[1]).toEqual({
+      type: 'eq',
+      args: ['organization_id', 'org-1'],
+    });
+  });
+
+  it('filters by organizationId in listEndpoints', async () => {
+    const mockOffset = vi.fn().mockResolvedValue([]);
+    const mockItemsLimit = vi.fn().mockReturnValue({ offset: mockOffset });
+    const mockOrderBy = vi.fn().mockReturnValue({ limit: mockItemsLimit });
+    const mockItemsWhere = vi.fn().mockReturnValue({ orderBy: mockOrderBy });
+    const mockFrom = vi.fn().mockReturnValue({ where: mockItemsWhere });
+    const mockSelect = vi.fn().mockReturnValue({ from: mockFrom });
+
+    const mockCountWhere = vi.fn().mockResolvedValue([{ count: 0 }]);
+    const mockCountFrom = vi.fn().mockReturnValue({ where: mockCountWhere });
+    const mockCountSelect = vi.fn().mockReturnValue({ from: mockCountFrom });
+
+    let selectCallCount = 0;
+    const mockTx = {
+      select: vi.fn((...args: unknown[]) => {
+        selectCallCount++;
+        if (selectCallCount === 1) return mockSelect(...args);
+        return mockCountSelect(...args);
+      }),
+    } as never;
+
+    await webhookService.listEndpoints(mockTx, {
+      organizationId: 'org-1',
+      page: 1,
+      limit: 10,
+    });
+
+    expect(eqFn).toHaveBeenCalledWith('organization_id', 'org-1');
+  });
+
+  it('filters by organizationId in updateEndpoint', async () => {
+    const mockReturning = vi
+      .fn()
+      .mockResolvedValue([{ id: 'ep-1', organization_id: 'org-1' }]);
+    const mockWhere = vi.fn().mockReturnValue({ returning: mockReturning });
+    const mockSet = vi.fn().mockReturnValue({ where: mockWhere });
+    const mockUpdate = vi.fn().mockReturnValue({ set: mockSet });
+    const mockTx = { update: mockUpdate } as never;
+
+    await webhookService.updateEndpoint(mockTx, 'ep-1', 'org-1', {
+      status: 'DISABLED',
+    });
+
+    expect(andFn).toHaveBeenCalled();
+    const andArgs = andFn.mock.calls[0];
+    expect(andArgs[0]).toEqual({ type: 'eq', args: ['id', 'ep-1'] });
+    expect(andArgs[1]).toEqual({
+      type: 'eq',
+      args: ['organization_id', 'org-1'],
+    });
+  });
+
+  it('filters by organizationId in deleteEndpoint', async () => {
+    const mockWhere = vi.fn().mockResolvedValue(undefined);
+    const mockDeleteFrom = vi.fn().mockReturnValue({ where: mockWhere });
+    const mockTx = { delete: mockDeleteFrom } as never;
+
+    await webhookService.deleteEndpoint(mockTx, 'ep-1', 'org-1');
+
+    expect(andFn).toHaveBeenCalled();
+    const andArgs = andFn.mock.calls[0];
+    expect(andArgs[0]).toEqual({ type: 'eq', args: ['id', 'ep-1'] });
+    expect(andArgs[1]).toEqual({
+      type: 'eq',
+      args: ['organization_id', 'org-1'],
+    });
+  });
+
+  it('filters by organizationId in rotateSecret', async () => {
+    const mockReturning = vi
+      .fn()
+      .mockResolvedValue([{ id: 'ep-1', secret: 'new-secret' }]);
+    const mockWhere = vi.fn().mockReturnValue({ returning: mockReturning });
+    const mockSet = vi.fn().mockReturnValue({ where: mockWhere });
+    const mockUpdate = vi.fn().mockReturnValue({ set: mockSet });
+    const mockTx = { update: mockUpdate } as never;
+
+    await webhookService.rotateSecret(mockTx, 'ep-1', 'org-1');
+
+    expect(andFn).toHaveBeenCalled();
+    const andArgs = andFn.mock.calls[0];
+    expect(andArgs[0]).toEqual({ type: 'eq', args: ['id', 'ep-1'] });
+    expect(andArgs[1]).toEqual({
+      type: 'eq',
+      args: ['organization_id', 'org-1'],
+    });
+  });
+
   it('filters by organizationId in getActiveEndpointsForEvent', async () => {
     const mockWhere = vi.fn().mockResolvedValue([]);
     const mockFrom = vi.fn().mockReturnValue({ where: mockWhere });
