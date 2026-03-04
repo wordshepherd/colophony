@@ -132,7 +132,7 @@ describe('cmsPublishWorkflow Inngest function', () => {
 
     // First call: load-issue-and-connections
     let callCount = 0;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     withRlsFn.mockImplementation(
       async (_ctx: any, fn: (tx: any) => Promise<unknown>) => {
         callCount++;
@@ -189,7 +189,7 @@ describe('cmsPublishWorkflow Inngest function', () => {
     const withRlsFn = vi.mocked(mockWithRls);
 
     let callCount = 0;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     withRlsFn.mockImplementation(
       async (_ctx: any, fn: (tx: any) => Promise<unknown>) => {
         callCount++;
@@ -243,7 +243,6 @@ describe('cmsPublishWorkflow Inngest function', () => {
 
     let callCount = 0;
     withRlsFn.mockImplementation(
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       async (_ctx: any, fn: (tx: any) => Promise<unknown>) => {
         callCount++;
         if (callCount === 1) {

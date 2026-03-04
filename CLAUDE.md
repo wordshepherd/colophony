@@ -216,10 +216,10 @@ All other version pins are in their respective per-directory CLAUDE.md files.
 
 ### Git Hooks (husky)
 
-| Hook           | Checks                                                                                                                         |
-| -------------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| **Pre-commit** | Secret scanning (`scripts/check-secrets.sh`), lint-staged (Prettier on `.ts`/`.tsx`/`.json`/`.md`)                             |
-| **Pre-push**   | `pnpm type-check` (tsc --noEmit, scoped to `db` + `api` packages), `pnpm lint` (ESLint). Full workspace type-check runs in CI. |
+| Hook           | Checks                                                                                                                                                                            |
+| -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Pre-commit** | Secret scanning (`scripts/check-secrets.sh`), lint-staged (Prettier on `.ts`/`.tsx`/`.json`/`.md`, ESLint `--max-warnings 0` on `.ts`/`.tsx` via `scripts/lint-staged-eslint.sh`) |
+| **Pre-push**   | `pnpm type-check` (tsc --noEmit, scoped to `db` + `api` packages), `pnpm lint` (ESLint). Full workspace type-check runs in CI.                                                    |
 
 ### CI Pipeline (GitHub Actions)
 

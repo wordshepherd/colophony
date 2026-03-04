@@ -313,7 +313,7 @@
 
 ### Testing Infrastructure Hardening
 
-- [ ] [P1] Console error/warn as test failures — add `vi.spyOn(console, 'error')` / `jest.spyOn(console, 'error')` in global setup files with `afterEach` assertions; allowlist intentional warnings; fix `act(...)` warnings in web tests and Vitest mock warnings — (Codex feedback 2026-03-03)
+- [x] [P1] Console error/warn as test failures — add `vi.spyOn(console, 'error')` / `jest.spyOn(console, 'error')` in global setup files with `afterEach` assertions; allowlist intentional warnings; fix `act(...)` warnings in web tests and Vitest mock warnings — (Codex feedback 2026-03-03; done 2026-03-03)
 - [ ] [P2] Add `test:cov` scripts to all packages — add `--coverage` with lcov.info + JSON output to api, web, api-client, auth-client, create-plugin, plugin-sdk, types; collect coverage artifacts in CI — (Codex feedback 2026-03-03)
 - [ ] [P2] Per-package coverage gates — add `coverageThreshold` in `apps/web/jest.config.ts` and Vitest thresholds in `apps/api/vitest.config.ts`; measure current coverage first, set floors at current minus 5% buffer, ratchet up monthly — (Codex feedback 2026-03-03; depends on test:cov scripts)
 - [ ] [P2] Changed-code coverage guardrails — enforce minimum coverage on changed files/lines in PRs (e.g., `diff-cover` or Codecov PR checks); prevents new low-coverage hotspots while legacy gaps burn down gradually — (Codex feedback 2026-03-03; depends on test:cov scripts)

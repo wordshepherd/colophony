@@ -7,7 +7,7 @@
     "dev": "next dev --turbo",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint .",
+    "lint": "eslint --max-warnings 0 .",
     "type-check": "tsc --noEmit && tsc --noEmit -p tsconfig.e2e.json",
     "test": "jest",
     "test:watch": "jest --watch",

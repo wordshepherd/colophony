@@ -11,7 +11,7 @@ Start-of-session orientation: load context, check environment, surface open work
 
 1. Detects incomplete previous sessions (missed /end-session) and offers catch-up
 2. Cleans up stale local branches from merged PRs
-3. Reads the latest DEVLOG entry for session context (what was done, open issues)
+3. Loads session context from handoff file (DEVLOG only as fallback for incomplete sessions)
 4. Checks git state (branch, uncommitted changes, open PRs)
 5. Checks CI health and open PR status
 6. Verifies infrastructure is running (Docker, DB)
@@ -51,8 +51,6 @@ git fetch --prune
 git branch -vv
 ```
 
-For the DEVLOG date, determine the current month's devlog file (`docs/devlog/YYYY-MM.md`, e.g., `docs/devlog/2026-02.md`). Use the Grep tool (not bash) to find the first `## YYYY-MM-DD` heading in that file and extract the date.
-
 For the `git branch -vv` output, Claude parses it directly:
 
 - Lines containing `[gone]` indicate branches whose remote tracking branch was deleted (PR merged/closed)
@@ -62,11 +60,11 @@ For the `git branch -vv` output, Claude parses it directly:
 - Branches with `[gone]` upstream (excluding main) are stale branches
 - If the `*` (current) branch has `[gone]` upstream, the current branch is a merged feature branch
 
-Flag an **incomplete session** if ANY of these are true:
+**Note on stale branches:** Finding branches with `[gone]` upstream is the **normal expected case**, not an error. The `/end-session` workflow updates docs before merging, so the branch cleanup naturally happens at `/start-session` time. Do NOT flag stale branches as an incomplete session indicator.
 
-1. **DEVLOG is stale**: The most recent commit date on `origin/main` is newer than the latest DEVLOG entry date. This means work was merged without a DEVLOG update.
-2. **Stale branches exist**: Local branches whose remote tracking branch is `[gone]` (squash-merged PRs not cleaned up — indicates session ended without housekeeping).
-3. **On a merged branch**: The current branch is a feature branch whose upstream is `[gone]`.
+Flag an **incomplete session** only if:
+
+1. **No handoff file AND no recent merged PRs**: `session-handoff.md` is missing and there are no recently merged PRs from the current user. This suggests the previous session ended without any cleanup at all (no PR, no handoff).
 
 If an incomplete session is detected, alert the user prominently:
 
@@ -85,9 +83,9 @@ Wait for the user to decide before continuing. If they say to catch up, perform 
 
 If no incomplete session is detected, proceed normally.
 
-### Step 1b: Clean up stale branches
+### Step 1b: Clean up stale branches (normal housekeeping)
 
-After the incomplete session check (regardless of outcome), clean up any local branches whose remote tracking branch has been deleted (i.e., squash-merged PRs from previous sessions):
+Clean up local branches whose remote tracking branch has been deleted (i.e., merged PRs from previous sessions). This is expected — `/end-session` merges PRs but defers branch cleanup to `/start-session`:
 
 ```bash
 git fetch --prune
@@ -135,16 +133,16 @@ After reading, delete the handoff file so it doesn't persist across sessions:
 rm session-handoff.md
 ```
 
-**Fallback: DEVLOG** — If `session-handoff.md` does not exist (previous session ended without `/end-session`, or first session), fall back to the DEVLOG.
+**Fallback: DEVLOG** — Only read the DEVLOG if BOTH conditions are true:
 
-Determine the current month's devlog file: `docs/devlog/YYYY-MM.md` (e.g., `docs/devlog/2026-02.md`). If the file for the current month doesn't exist yet, check the previous month's file instead.
+1. `session-handoff.md` does not exist, AND
+2. An incomplete session was detected in Step 1 (stale branches or on a merged branch)
 
-Read the most recent entry (the first entry after the header). Extract:
+If the fallback is needed, determine the current month's devlog file: `docs/devlog/YYYY-MM.md` (e.g., `docs/devlog/2026-02.md`). If the file for the current month doesn't exist yet, check the previous month's file instead. Read the most recent entry (first entry after the header) and extract the "Done" and "Issues Found" sections.
 
-- **What was done last** — the "Done" section
-- **Open issues** — the "Issues Found" or "Bugs Found" section (if any)
+**If neither source is available** (no handoff, no incomplete session), skip this step — the backlog (Step 6) provides all the context needed for orientation.
 
-Report which source was used in the briefing (handoff file or DEVLOG fallback). Note: Track status (Step 6) determines the suggested focus, not the handoff or DEVLOG.
+Report which source was used in the briefing (handoff file, DEVLOG fallback, or backlog-only). Note: Track status (Step 6) determines the suggested focus, not the handoff or DEVLOG.
 
 ### Step 3: Check git state
 
@@ -237,8 +235,9 @@ Format everything as a concise briefing:
 ## Session Briefing
 
 ### Last Session
+[Only if handoff file or DEVLOG fallback was read — otherwise omit this section entirely]
 [Date] — [Focus]
-[Brief summary of what was done — from DEVLOG "Done" section]
+[Brief summary from handoff file or DEVLOG "Done" section]
 
 ### Git State
 - Branch: <current branch>

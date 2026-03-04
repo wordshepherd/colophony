@@ -561,3 +561,14 @@ Vitest resolves workspace packages via `exports` field pointing to `dist/`. CI m
 ### RLS `singleFork: true` requirement
 
 RLS tests use `singleFork: true` + `fileParallelism: false` because test files share database pools and rely on sequential `set_config` + `COMMIT`/`ROLLBACK` within transactions. Parallel execution would cause GUC context bleed between tests.
+
+### Console error/warn enforcement
+
+Global setup files spy on `console.error` and `console.warn` in `beforeEach`/`afterEach`. Any unexpected calls fail the test with an actionable message. Setup files:
+
+- **Vitest:** `test/vitest-console-setup.ts` — wired into all `vitest.config.*.ts` files via `setupFiles`
+- **Jest:** `apps/web/test/console-setup.ts` — imported from `apps/web/test/setup.ts`
+
+**Allowlists** for known patterns (e.g., Radix UI accessibility warnings) are defined in each setup file. To allowlist a new pattern, add a regex to `ALLOWED_ERROR_PATTERNS` or `ALLOWED_WARN_PATTERNS`.
+
+**Auto-skip:** Tests that install their own spy (e.g., `vi.spyOn(console, 'error').mockImplementation(...)`) are auto-detected via identity check — the `afterEach` hook sees that `console.error` is no longer its spy and skips enforcement for that method.
