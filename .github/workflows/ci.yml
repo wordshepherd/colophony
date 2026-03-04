@@ -145,6 +145,8 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
       - uses: pnpm/action-setup@v4
         with:
           version: ${{ env.PNPM_VERSION }}
@@ -174,6 +176,45 @@ jobs:
             packages/plugin-sdk/coverage/
             packages/create-plugin/coverage/
           retention-days: 14
+      - name: Merge coverage reports
+        if: github.event_name == 'pull_request'
+        run: |
+          LCOV_FILES=(
+            apps/api/coverage/lcov.info
+            apps/web/coverage/lcov.info
+            packages/types/coverage/lcov.info
+            packages/api-client/coverage/lcov.info
+            packages/auth-client/coverage/lcov.info
+            packages/plugin-sdk/coverage/lcov.info
+            packages/create-plugin/coverage/lcov.info
+          )
+          for f in "${LCOV_FILES[@]}"; do
+            if [ ! -f "$f" ]; then
+              echo "::error::Missing coverage report: $f"
+              exit 1
+            fi
+          done
+          cat "${LCOV_FILES[@]}" > coverage-merged.lcov
+      - name: Install diff-cover
+        if: github.event_name == 'pull_request'
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install diff-cover package
+        if: github.event_name == 'pull_request'
+        run: pip install diff-cover==9.2.4
+      - name: Diff-cover (changed lines must be ≥80% covered)
+        if: github.event_name == 'pull_request'
+        run: |
+          diff-cover coverage-merged.lcov \
+            --compare-branch origin/${{ github.base_ref }} \
+            --fail-under 80 \
+            --diff-range-notation '..' \
+            --exclude '**/node_modules/**' \
+            --exclude '**/*.spec.ts' \
+            --exclude '**/*.test.ts' \
+            --exclude '**/*.spec.tsx' \
+            --exclude '**/*.test.tsx'
 
   # ──────────────────────────────────────────────────
   # API E2E tests (~5 min): needs Postgres + Redis

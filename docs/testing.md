@@ -164,6 +164,32 @@ Thresholds are set at **measured baseline minus 5%** (buffer for normal code chu
 
 **Threshold policy:** `max(0, measured - 5)`. Prevents CI from breaking on normal churn while catching large regressions. To update: run `pnpm test:cov` locally, update thresholds in the relevant `vitest.config.ts` or `jest.config.ts`, and update this table.
 
+### Changed-Line Coverage (diff-cover)
+
+In addition to global thresholds, PRs enforce **80% coverage on changed lines** using [diff-cover](https://github.com/Bachmann1234/diff-cover). This prevents PRs from adding large amounts of uncovered code even when the global average stays above the floor.
+
+**How it works:**
+
+1. All 7 package lcov reports are merged into `coverage-merged.lcov`
+2. `diff-cover` compares changed lines (vs `origin/main`) against the merged report
+3. If <80% of changed lines are covered, the CI job fails
+
+**Exclusions:** Test files (`*.spec.ts`, `*.test.ts`, `*.spec.tsx`, `*.test.tsx`) and `node_modules` are excluded — test code doesn't need to be covered by other tests.
+
+**Push to main:** diff-cover steps are skipped on push events; only global thresholds apply.
+
+**Local testing:**
+
+```bash
+pnpm test:cov
+cat apps/api/coverage/lcov.info apps/web/coverage/lcov.info \
+    packages/types/coverage/lcov.info packages/api-client/coverage/lcov.info \
+    packages/auth-client/coverage/lcov.info packages/plugin-sdk/coverage/lcov.info \
+    packages/create-plugin/coverage/lcov.info > coverage-merged.lcov
+pip install diff-cover==9.2.4
+diff-cover coverage-merged.lcov --compare-branch origin/main --fail-under 80
+```
+
 ---
 
 ## Test Architecture
