@@ -39,8 +39,8 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  const testOverrodeError = console.error !== errorSpy;
-  const testOverrodeWarn = console.warn !== warnSpy;
+  const testOverrodeError = (console.error as unknown) !== errorSpy;
+  const testOverrodeWarn = (console.warn as unknown) !== warnSpy;
 
   if (!testOverrodeError) {
     const unexpected = errorSpy.mock.calls.filter(
