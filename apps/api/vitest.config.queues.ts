@@ -6,7 +6,10 @@ export default defineConfig({
     include: ['src/__tests__/queues/**/*.test.ts'],
     globals: false,
     testTimeout: 30_000,
-    setupFiles: ['src/__tests__/queues/helpers/vitest-setup.ts'],
+    setupFiles: [
+      '../../test/vitest-console-setup.ts',
+      'src/__tests__/queues/helpers/vitest-setup.ts',
+    ],
     fileParallelism: false,
     pool: 'forks',
     forks: {
