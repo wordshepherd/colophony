@@ -80,6 +80,8 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
 
       - uses: pnpm/action-setup@v4
         with:
@@ -108,6 +110,16 @@ jobs:
         run: pnpm audit --audit-level=high
         continue-on-error: true
 
+      - name: Block new quarantined tests
+        if: github.event_name == 'pull_request'
+        run: |
+          FLAKY=$(git diff --name-only --diff-filter=A origin/main...HEAD | grep '\.flaky\.test\.' || true)
+          if [ -n "$FLAKY" ]; then
+            echo "::error::New quarantined test files detected — fix flaky tests instead of quarantining:"
+            echo "$FLAKY"
+            exit 1
+          fi
+
   # ──────────────────────────────────────────────────
   # Unit tests (~2 min): no infra required
   # ──────────────────────────────────────────────────
@@ -130,7 +142,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - name: Build workspace dependencies
         run: pnpm turbo run build --filter=@colophony/db --filter=@colophony/auth-client --filter=@colophony/types --filter=@colophony/api-contracts --filter=@colophony/plugin-sdk
-      - name: Run unit tests
+      - name: Run unit tests (shuffled, no retries)
         run: pnpm --filter @colophony/db test && pnpm --filter @colophony/auth-client test && pnpm --filter @colophony/api test && pnpm --filter @colophony/web test
 
   # ──────────────────────────────────────────────────

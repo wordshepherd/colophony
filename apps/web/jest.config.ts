@@ -52,7 +52,13 @@ const config: Config = {
     },
   },
   coverageDirectory: "./coverage",
-  testPathIgnorePatterns: ["/.next/", "/node_modules/", "/e2e/", "/_v1/"],
+  testPathIgnorePatterns: [
+    "/.next/",
+    "/node_modules/",
+    "/e2e/",
+    "/_v1/",
+    "\\.flaky\\.test\\.",
+  ],
 };
 
 export default config;

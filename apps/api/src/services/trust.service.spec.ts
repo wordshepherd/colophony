@@ -77,15 +77,26 @@ vi.mock('../federation/http-signatures.js', () => ({
 const mockFetch = vi.fn();
 vi.stubGlobal('fetch', mockFetch);
 
-// Mock dns.promises — SSRF checks are skipped in test but we still mock for explicitness
-vi.mock('node:dns', () => ({
-  default: {
-    promises: {
-      resolve4: vi.fn().mockResolvedValue(['93.184.216.34']),
-      resolve6: vi.fn().mockResolvedValue([]),
-    },
+// Mock url-validation — trampoline pattern so clearAllMocks doesn't wipe the
+// module-level mock binding. SSRF tests control this directly instead of going
+// through the fragile node:dns mock chain.
+const mockResolveAndCheckPrivateIp = vi.fn().mockResolvedValue(undefined);
+vi.mock('../lib/url-validation.js', () => ({
+  SsrfValidationError: class SsrfValidationError extends Error {
+    override name = 'SsrfValidationError' as const;
+    constructor(message: string) {
+      super(message);
+    }
   },
+  isPrivateIPv4: vi.fn(),
+  isPrivateIPv6: vi.fn(),
+  validateOutboundUrl: vi.fn(),
+  resolveAndCheckPrivateIp: (...args: unknown[]) =>
+    mockResolveAndCheckPrivateIp(...args),
 }));
+
+// Import mocked SsrfValidationError for use in SSRF test assertions
+import { SsrfValidationError } from '../lib/url-validation.js';
 
 /**
  * Create a mock Response object compatible with fetchAndValidateMetadata's
@@ -210,6 +221,8 @@ describe('trust.service', () => {
   beforeEach(async () => {
     vi.clearAllMocks();
     mockAuditLog.mockResolvedValue(undefined);
+    // Restore url-validation default (allow all) cleared by clearAllMocks
+    mockResolveAndCheckPrivateIp.mockResolvedValue(undefined);
     dbSelectResult = [];
     const mod = await import('./trust.service.js');
     trustService = mod.trustService;
@@ -805,12 +818,12 @@ describe('trust.service', () => {
 
   describe('SSRF protection', () => {
     it('rejects private IPv4 in production', async () => {
-      const dnsModule = await import('node:dns');
-      vi.spyOn(dnsModule.default.promises, 'resolve4').mockResolvedValueOnce([
-        '192.168.1.1',
-      ]);
+      mockResolveAndCheckPrivateIp.mockRejectedValueOnce(
+        new SsrfValidationError(
+          'Resolved to private IPv4 address: 192.168.1.1',
+        ),
+      );
 
-      // Temporarily set NODE_ENV to production for this test
       const original = process.env.NODE_ENV;
       process.env.NODE_ENV = 'production';
       try {
@@ -823,13 +836,9 @@ describe('trust.service', () => {
     });
 
     it('rejects private IPv6 in production', async () => {
-      const dnsModule = await import('node:dns');
-      vi.spyOn(dnsModule.default.promises, 'resolve4').mockResolvedValueOnce(
-        [],
+      mockResolveAndCheckPrivateIp.mockRejectedValueOnce(
+        new SsrfValidationError('Resolved to private IPv6 address: ::1'),
       );
-      vi.spyOn(dnsModule.default.promises, 'resolve6').mockResolvedValueOnce([
-        '::1',
-      ]);
 
       const original = process.env.NODE_ENV;
       process.env.NODE_ENV = 'production';
@@ -843,10 +852,9 @@ describe('trust.service', () => {
     });
 
     it('rejects localhost (127.0.0.1) in production', async () => {
-      const dnsModule = await import('node:dns');
-      vi.spyOn(dnsModule.default.promises, 'resolve4').mockResolvedValueOnce([
-        '127.0.0.1',
-      ]);
+      mockResolveAndCheckPrivateIp.mockRejectedValueOnce(
+        new SsrfValidationError('Resolved to private IPv4 address: 127.0.0.1'),
+      );
 
       const original = process.env.NODE_ENV;
       process.env.NODE_ENV = 'production';
@@ -860,15 +868,9 @@ describe('trust.service', () => {
     });
 
     it('skips SSRF check in development', async () => {
-      const dnsModule = await import('node:dns');
-      vi.spyOn(dnsModule.default.promises, 'resolve4').mockResolvedValueOnce([
-        '192.168.1.1',
-      ]);
-
       const original = process.env.NODE_ENV;
       process.env.NODE_ENV = 'development';
       try {
-        // Should proceed to fetch (which will fail on network, not SSRF)
         mockFetch.mockResolvedValueOnce(
           mockFetchResponse(sampleMetadataResponse),
         );
@@ -876,6 +878,8 @@ describe('trust.service', () => {
         const result =
           await trustService.fetchRemoteMetadata('remote.example.com');
         expect(result.domain).toBe('remote.example.com');
+        // resolveAndCheckPrivateIp should NOT have been called in dev mode
+        expect(mockResolveAndCheckPrivateIp).not.toHaveBeenCalled();
       } finally {
         process.env.NODE_ENV = original;
       }

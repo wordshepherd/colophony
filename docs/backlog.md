@@ -31,6 +31,7 @@
 - [x] Audit query/list endpoints — wait for API surfaces — (DEVLOG 2026-02-13; done 2026-02-18 PR #101)
 - [x] Seed data (`packages/db/src/seed.ts` has TODO) — wait for API layer — (code TODO; done 2026-02-18 PR #104)
 - [x] [P2] Sliding window rate limiting — replaced fixed-window Lua script with sliding-window-log algorithm using Redis sorted sets; fixes burst-at-boundary 2x rate vulnerability; kept custom two-tier design (IP pre-auth + user post-auth) — (dev feedback 2026-02-25; done 2026-02-25)
+- [ ] [P2] RLS app connection fallback to superuser — packages/db/src/client.ts appPool falls back to DATABASE_URL when DATABASE_APP_URL is unset; production could silently use superuser credentials — (Codex review 2026-03-03)
 
 ### QA / Testing
 
@@ -177,6 +178,8 @@
 - [x] [P4] Consider splitting schema migrations (enum changes vs new tables) for safer production rollback — documented as pattern + pre-flight validator instead of splitting 0031 (already applied) — (OpenCode review 2026-02-25, deferred pre-launch; done 2026-02-26)
 - [x] [P3] Federation rate limit fail mode: configurable fail-open/fail-closed + in-process fallback when Redis unavailable — (audit finding #4, 2026-03-01; done 2026-03-01 PR #225)
 - [x] [P3] Federation test gaps: integration tests for trust handshake flow and hub-first discovery path — (audit finding #5, 2026-03-01; done 2026-03-01 PR #225)
+- [ ] [P3] Unbounded peer query in migration broadcast — migration.service.ts:870 fetches all trusted peers with no LIMIT; small dataset in practice but violates pagination rule — (Codex review 2026-03-03)
+- [ ] [P3] Trust metadata SSRF uses custom resolveAndCheckPrivateIp instead of validateOutboundUrl — trust.service.ts:88; functionally equivalent but inconsistent with the standard pattern — (Codex review 2026-03-03)
 
 ### Design Decisions
 
@@ -230,6 +233,7 @@
 - [x] Notification preferences frontend — UI for users to manage email opt-in/opt-out per event type — (DEVLOG 2026-02-26; done 2026-02-26)
 - [x] Webhook delivery system (outbound) — (architecture doc, Relay; done 2026-02-26)
 - [x] In-app notification center — SSE + Redis pub/sub + bell UI + dual-channel preferences — (architecture doc, Relay; done 2026-02-26)
+- [ ] [P2] Defense-in-depth org filtering missing in webhook.service.ts — getEndpoint, listEndpoints, rotateSecret query by ID only (RLS-only, no explicit organizationId filter) — (Codex review 2026-03-03)
 
 ---
 
@@ -317,8 +321,9 @@
 - [x] [P2] Add `test:cov` scripts to all packages — add `--coverage` with lcov.info + JSON output to api, web, api-client, auth-client, create-plugin, plugin-sdk, types; collect coverage artifacts in CI — (Codex feedback 2026-03-03; done 2026-03-03)
 - [x] [P2] Per-package coverage gates — add `coverageThreshold` in `apps/web/jest.config.ts` and Vitest thresholds in `apps/api/vitest.config.ts`; measure current coverage first, set floors at current minus 5% buffer, ratchet up monthly — (Codex feedback 2026-03-03; done 2026-03-03)
 - [x] [P2] Changed-code coverage guardrails — enforce minimum coverage on changed files/lines in PRs (e.g., `diff-cover` or Codecov PR checks); prevents new low-coverage hotspots while legacy gaps burn down gradually — (Codex feedback 2026-03-03; done 2026-03-03 diff-cover 80% threshold)
-- [ ] [P3] Flakiness and determinism CI checks — run unit tests with retries disabled and `--sequence.shuffle` on at least one CI lane; add quarantine convention (`.flaky.test.ts` suffix or skip marker) and fail PRs that introduce new flaky markers — (Codex feedback 2026-03-03)
-- [ ] [P3] Risk-based test matrix — audit coverage per domain (pipeline, federation, workspace, forms) and document minimum test layers per domain (unit + service integration + API route + E2E happy path) in `docs/testing.md`; identify high-risk low-coverage hotspots — (Codex feedback 2026-03-03)
+- [x] [P3] Flakiness and determinism CI checks — run unit tests with retries disabled and `--sequence.shuffle` on at least one CI lane; add quarantine convention (`.flaky.test.ts` suffix or skip marker) and fail PRs that introduce new flaky markers — (Codex feedback 2026-03-03; done 2026-03-04)
+- [x] [P3] Risk-based test matrix — audit coverage per domain (pipeline, federation, workspace, forms) and document minimum test layers per domain (unit + service integration + API route + E2E happy path) in `docs/testing.md`; identify high-risk low-coverage hotspots — (Codex feedback 2026-03-03; done 2026-03-04)
+- [ ] [P3] Skill update: /codex-review should auto-add actionable out-of-scope findings to backlog — during both plan review and branch/diff review, any Important+ findings outside the current task scope should be appended to docs/backlog.md automatically — (workflow improvement 2026-03-03)
 - [ ] [P4] Ephemeral DB/queue per test worker — standardize `TestContext` factory for isolated schemas per worker; replace ad-hoc Redis db 1 patching in `vitest-setup.ts`; add explicit contract tests around external boundaries (webhooks, auth, adapters) with fixture replay — (Codex feedback 2026-03-03)
 - [x] [P4] Manual QA tracking — establish lightweight QA log (structured markdown or checklist) for pre-release smoke tests, exploratory testing sessions, and regression checks; track what was tested, time spent, and issues found — (Codex feedback 2026-03-03; done 2026-03-03)
 
