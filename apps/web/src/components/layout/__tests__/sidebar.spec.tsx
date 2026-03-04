@@ -168,6 +168,19 @@ describe("Sidebar", () => {
     expect(link.closest("a")).toHaveAttribute("href", "/federation");
   });
 
+  it("should hide Editor, Slate, and Admin sections for READER (non-editor, non-admin)", () => {
+    mockIsEditor = false;
+    mockIsAdmin = false;
+    render(<Sidebar />);
+    expect(screen.queryByText("Editor Dashboard")).not.toBeInTheDocument();
+    expect(screen.queryByText("Slate Dashboard")).not.toBeInTheDocument();
+    expect(screen.queryByText("Organization")).not.toBeInTheDocument();
+    // Submitter navigation always visible
+    expect(screen.getByText("My Submissions")).toBeInTheDocument();
+    expect(screen.getByText("Manuscripts")).toBeInTheDocument();
+    expect(screen.getByText("Settings")).toBeInTheDocument();
+  });
+
   it("should highlight Forms on sub-routes like /editor/forms/new", () => {
     mockIsEditor = true;
     mockPathname = "/editor/forms/new";

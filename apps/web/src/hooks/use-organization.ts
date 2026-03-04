@@ -98,7 +98,8 @@ export function useOrganization() {
   const isAdmin = currentOrg?.role === "ADMIN";
   const isEditor =
     currentOrg?.role === "EDITOR" || currentOrg?.role === "ADMIN";
-  const isReader = !!currentOrg;
+  const isReader = currentOrg?.role === "READER";
+  const canWrite = !!currentOrg && currentOrg.role !== "READER";
 
   return {
     user,
@@ -108,6 +109,7 @@ export function useOrganization() {
     isAdmin,
     isEditor,
     isReader,
+    canWrite,
     hasOrganizations: organizations.length > 0,
   };
 }

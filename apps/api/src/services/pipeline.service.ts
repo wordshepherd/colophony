@@ -474,6 +474,7 @@ export const pipelineService = {
     pipelineItemId: string,
     input: AddPipelineCommentInput,
   ) {
+    assertEditorOrAdmin(ctx.actor.role);
     const item = await pipelineService.getById(ctx.tx, pipelineItemId);
     if (!item) throw new PipelineItemNotFoundError(pipelineItemId);
 
@@ -498,7 +499,8 @@ export const pipelineService = {
       .select()
       .from(pipelineComments)
       .where(eq(pipelineComments.pipelineItemId, pipelineItemId))
-      .orderBy(desc(pipelineComments.createdAt));
+      .orderBy(desc(pipelineComments.createdAt))
+      .limit(1000);
   },
 
   // -------------------------------------------------------------------------
@@ -510,6 +512,7 @@ export const pipelineService = {
       .select()
       .from(pipelineHistory)
       .where(eq(pipelineHistory.pipelineItemId, pipelineItemId))
-      .orderBy(desc(pipelineHistory.changedAt));
+      .orderBy(desc(pipelineHistory.changedAt))
+      .limit(1000);
   },
 };
