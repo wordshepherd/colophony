@@ -176,7 +176,7 @@ jobs:
       - name: Run coverage (packages)
         run: pnpm --filter @colophony/types test:cov && pnpm --filter @colophony/auth-client test:cov && pnpm --filter @colophony/api-client test:cov && pnpm --filter @colophony/plugin-sdk test:cov && pnpm --filter @colophony/create-plugin test:cov
       - name: Upload coverage artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: coverage-reports
           path: |
