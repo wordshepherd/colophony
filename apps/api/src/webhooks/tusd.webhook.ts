@@ -127,7 +127,6 @@ export async function registerTusdWebhooks(
     '/webhooks/tusd',
     {
       bodyLimit: 1024 * 1024, // 1MB
-      /* eslint-disable @typescript-eslint/no-misused-promises */
       preHandler: async function webhookRateLimit(
         request: FastifyRequest,
         reply: FastifyReply,
@@ -170,7 +169,6 @@ export async function registerTusdWebhooks(
           );
         }
       },
-      /* eslint-enable @typescript-eslint/no-misused-promises */
     },
     async function tusdWebhookHandler(
       request: FastifyRequest,
