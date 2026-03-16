@@ -83,7 +83,6 @@ export async function registerDocumensoWebhooks(
     {
       config: { rawBody: true },
       bodyLimit: 256 * 1024,
-      /* eslint-disable @typescript-eslint/no-misused-promises */
       preHandler: async function webhookRateLimit(
         request: FastifyRequest,
         reply: FastifyReply,
@@ -123,7 +122,6 @@ export async function registerDocumensoWebhooks(
           );
         }
       },
-      /* eslint-enable @typescript-eslint/no-misused-promises */
     },
     async function documensoWebhookHandler(
       request: FastifyRequest,
