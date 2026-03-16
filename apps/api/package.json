@@ -73,9 +73,9 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
-    "@colophony/eslint-config": "workspace:*",
     "@colophony/typescript-config": "workspace:*",
     "@eslint/js": "^9.39.2",
+    "eslint": "^9.39.2",
     "@faker-js/faker": "^8.4.0",
     "@types/archiver": "^7.0.0",
     "@types/clamscan": "^2.4.1",

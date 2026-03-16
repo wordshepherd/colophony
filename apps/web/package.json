@@ -81,8 +81,9 @@
   },
   "devDependencies": {
     "@colophony/db": "workspace:*",
-    "@colophony/eslint-config": "workspace:*",
     "@colophony/typescript-config": "workspace:*",
+    "eslint": "^9.39.2",
+    "eslint-config-next": "^16.0.0",
     "@playwright/test": "^1.58.2",
     "@tailwindcss/postcss": "^4.2.1",
     "@testing-library/dom": "^10.0.0",
