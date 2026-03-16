@@ -521,3 +521,28 @@
 ### Monitoring
 
 - [~] GitHub GraphQL rate limit passive drain (~60 pts/hr) — diagnosed 2026-02-19, likely GitHub-internal (Dependabot, security scanning). At ~1.2% budget/hr, not actionable unless large exhaustion recurs. If so, convert skills from `gh pr list/create` (GraphQL) to `gh api` (REST) — (DEVLOG 2026-02-19)
+
+---
+
+## Simplification & Maintenance Debt
+
+> Items identified during architecture review (2026-03-16). Focused on reducing operational complexity and config drift.
+
+### Codebase Extraction
+
+- [ ] [P2] Extract GraphQL surface to feature branch — `src/graphql/` (builder, schema, resolvers, guards, router), Yoga plugin in `main.ts`, GraphQL-specific API key scopes. Service layer and shared types stay. Re-merge when user demand justifies it — (architecture review 2026-03-16)
+- [ ] [P2] Extract plugin system to feature branch — `packages/plugin-sdk/`, `packages/create-plugin/`, `src/adapters/extensions-accessor.ts`, `src/adapters/plugins-accessor.ts`, `src/services/plugin-registry.service.ts`, `src/plugins/`, `apps/web/src/components/plugins/`, `apps/web/src/lib/plugin-components.ts`, `PLUGIN_REGISTRY_URL` env var. Keep adapter registry and email/storage/payment/CMS adapters — (architecture review 2026-03-16)
+
+### Dev Tooling
+
+- [ ] [P2] Replace Overmind with hivemind or concurrently — Overmind solves signal handling but tmux dependency, `dev:clean` escape hatch, and WSL quirks are operational drag. hivemind (Go binary, no tmux, proper signal handling) preferred; concurrently as fallback. Test on macOS, Linux, WSL before standardizing. Keep `dev:clean` as escape hatch, not normal workflow. Turbo `--watch` only if shutdown behavior verified in this repo — (architecture review 2026-03-16)
+- [x] [P3] Remove `packages/eslint-config` — unused v1 legacy configs (`base.js`, `nextjs.js`, `nestjs.js`), neither app imports from it. Moved `eslint` and `eslint-config-next` to direct app devDependencies — (architecture review 2026-03-16; done 2026-03-16)
+
+### Testing & CI
+
+- [ ] [P2] Testing optimization — Python SDK in CI, test/CI contract clarity (prescriptive layer requirements per change type), frontend testability (stable `aria-*` names and test hooks in component layer to reduce E2E coupling to copy/CSS). User has additional input for when work starts — (architecture review 2026-03-16; tracking in backlog, not a GH issue yet)
+- [ ] [P3] Vitest everywhere — replace Jest in `apps/web` with Vitest to eliminate test runner split (`vi.*` vs `jest.*`), deduplicate mock APIs, coverage configs, and setup patterns — (architecture review 2026-03-16)
+
+### Architecture Boundaries
+
+- [ ] [P3] Clarify BullMQ/Inngest boundary — document explicit ownership rule (e.g., "Inngest may emit domain events and schedule orchestration; BullMQ may only execute side-effecting delivery jobs"). Each job type (email, webhooks, file scans, notification fanout) should have a single obvious home. Decide based on failure modes: which system owns retries, idempotency, dead-letter behavior, concurrency limits, and observability — (architecture review 2026-03-16)
