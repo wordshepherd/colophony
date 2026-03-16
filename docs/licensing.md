@@ -36,7 +36,6 @@ Some components are licensed under the permissive [MIT License](https://opensour
 | `@colophony/create-plugin`        | MIT     | Scaffolding tool for plugin developers      |
 | `@colophony/sdk` (TypeScript SDK) | MIT     | API consumers should not inherit AGPL       |
 | `colophony` (Python SDK)          | MIT     | API consumers should not inherit AGPL       |
-| `@colophony/eslint-config`        | MIT     | Shared dev tooling, not part of the runtime |
 | `@colophony/typescript-config`    | MIT     | Shared dev tooling, not part of the runtime |
 
 ---
