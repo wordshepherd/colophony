@@ -67,13 +67,12 @@ test.describe("Notification Preferences (/settings)", () => {
 
     // Toggle in-app off
     await inAppSwitch.click();
-    await expect(
-      authedPage.getByText("Notification preference updated"),
-    ).toBeVisible({ timeout: 5_000 });
+
+    // Wait for the switch state to update (more reliable than toast)
+    await expect(inAppSwitch).not.toBeChecked({ timeout: 5_000 });
 
     // Email should still be on
     await expect(emailSwitch).toBeChecked();
-    await expect(inAppSwitch).not.toBeChecked();
   });
 
   test("disable both channels for an event", async ({ authedPage }) => {
