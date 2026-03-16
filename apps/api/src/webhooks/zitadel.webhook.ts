@@ -87,7 +87,6 @@ export async function registerZitadelWebhooks(
     {
       config: { rawBody: true },
       bodyLimit: 256 * 1024, // 256kb
-      /* eslint-disable @typescript-eslint/no-misused-promises */
       preHandler: async function webhookRateLimit(
         request: FastifyRequest,
         reply: FastifyReply,
@@ -127,7 +126,6 @@ export async function registerZitadelWebhooks(
           request.log.warn('Webhook rate limit Redis error — allowing request');
         }
       },
-      /* eslint-enable @typescript-eslint/no-misused-promises */
     },
     async function zitadelWebhookHandler(
       request: FastifyRequest,

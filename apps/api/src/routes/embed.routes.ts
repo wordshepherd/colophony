@@ -164,7 +164,6 @@ export async function registerEmbedRoutes(
     '/embed/:token/submit',
     {
       bodyLimit: 512 * 1024, // 512KB
-      /* eslint-disable @typescript-eslint/no-misused-promises */
       preHandler: async function embedRateLimit(
         request: FastifyRequest,
         reply: FastifyReply,
@@ -205,7 +204,6 @@ export async function registerEmbedRoutes(
           request.log.warn('Embed rate limit Redis error — allowing request');
         }
       },
-      /* eslint-enable @typescript-eslint/no-misused-promises */
     },
     async (request, reply) => {
       const token = await verifyTokenParam(request, reply);
@@ -276,7 +274,6 @@ export async function registerEmbedRoutes(
     '/embed/:token/prepare-upload',
     {
       bodyLimit: 16 * 1024, // 16KB
-      /* eslint-disable @typescript-eslint/no-misused-promises */
       preHandler: async function embedPrepareRateLimit(
         request: FastifyRequest,
         reply: FastifyReply,
@@ -317,7 +314,6 @@ export async function registerEmbedRoutes(
           );
         }
       },
-      /* eslint-enable @typescript-eslint/no-misused-promises */
     },
     async (request, reply) => {
       const token = await verifyTokenParam(request, reply);
@@ -385,7 +381,6 @@ export async function registerEmbedRoutes(
   }>(
     '/embed/:token/upload-status/:manuscriptVersionId',
     {
-      /* eslint-disable @typescript-eslint/no-misused-promises */
       preHandler: async function embedStatusRateLimit(
         request: FastifyRequest,
         reply: FastifyReply,
@@ -427,7 +422,6 @@ export async function registerEmbedRoutes(
           );
         }
       },
-      /* eslint-enable @typescript-eslint/no-misused-promises */
     },
     async (request, reply) => {
       const token = await verifyTokenParam(request, reply);
@@ -488,7 +482,6 @@ export async function registerEmbedRoutes(
   app.get<{ Params: { statusToken: string } }>(
     '/embed/status/:statusToken',
     {
-      /* eslint-disable @typescript-eslint/no-misused-promises */
       preHandler: async function embedStatusCheckRateLimit(
         request: FastifyRequest,
         reply: FastifyReply,
@@ -529,7 +522,6 @@ export async function registerEmbedRoutes(
           );
         }
       },
-      /* eslint-enable @typescript-eslint/no-misused-promises */
     },
     async (request, reply) => {
       const { statusToken } = request.params;
