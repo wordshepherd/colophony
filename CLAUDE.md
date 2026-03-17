@@ -225,6 +225,8 @@ All other version pins are in their respective per-directory CLAUDE.md files.
 | **queue-tests**               | Queue/worker integration tests (19 tests, Redis + Postgres) |
 | **service-integration-tests** | Service integration tests (Postgres)                        |
 | **security-tests**            | Security tests (Postgres)                                   |
+| **webhook-tests**             | Webhook integration tests (Postgres)                        |
+| **python-sdk-tests**          | Python SDK smoke tests                                      |
 | **playwright-tests**          | Playwright E2E submissions project (20 tests)               |
 | **playwright-uploads**        | Playwright E2E uploads project (6 tests)                    |
 | **playwright-oidc**           | Playwright E2E OIDC project (6 tests)                       |

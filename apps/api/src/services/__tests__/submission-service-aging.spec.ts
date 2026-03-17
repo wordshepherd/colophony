@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 // Build a chainable mock for select().from().leftJoin().where().orderBy().limit()
 let mockRows: Array<Record<string, unknown>> = [];
@@ -80,10 +80,19 @@ vi.mock('../submission-reviewer.service.js', () => ({
 
 import { submissionService } from '../submission.service.js';
 
+// Pin time to noon on 2026-03-15 to avoid midnight boundary flakiness
+const FIXED_NOW = new Date('2026-03-15T12:00:00.000Z');
+
 beforeEach(() => {
   vi.clearAllMocks();
+  vi.useFakeTimers();
+  vi.setSystemTime(FIXED_NOW);
   mockRows = [];
   mockCountRows = [{ value: 0 }];
+});
+
+afterEach(() => {
+  vi.useRealTimers();
 });
 
 describe('submissionService.listAgingByOrg', () => {
@@ -92,8 +101,8 @@ describe('submissionService.listAgingByOrg', () => {
   } as unknown as Parameters<typeof submissionService.listAgingByOrg>[0];
 
   it('returns submissions older than threshold', async () => {
-    const thirtyFiveDaysAgo = new Date();
-    thirtyFiveDaysAgo.setDate(thirtyFiveDaysAgo.getDate() - 35);
+    // 35 days before fixed now
+    const thirtyFiveDaysAgo = new Date('2026-02-08T12:00:00.000Z');
 
     mockCountRows = [{ value: 1 }];
     mockRows = [
@@ -107,7 +116,7 @@ describe('submissionService.listAgingByOrg', () => {
 
     const result = await submissionService.listAgingByOrg(fakeTx, 30);
     expect(result.submissions).toHaveLength(1);
-    expect(result.submissions[0].daysPending).toBeGreaterThanOrEqual(35);
+    expect(result.submissions[0].daysPending).toBe(35);
     expect(result.submissions[0].title).toBe('Old Poem');
   });
 
@@ -120,8 +129,8 @@ describe('submissionService.listAgingByOrg', () => {
   });
 
   it('computes daysPending correctly', async () => {
-    const tenDaysAgo = new Date();
-    tenDaysAgo.setDate(tenDaysAgo.getDate() - 10);
+    // 10 days before fixed now
+    const tenDaysAgo = new Date('2026-03-05T12:00:00.000Z');
 
     mockCountRows = [{ value: 1 }];
     mockRows = [
@@ -134,7 +143,7 @@ describe('submissionService.listAgingByOrg', () => {
     ];
 
     const result = await submissionService.listAgingByOrg(fakeTx, 5);
-    expect(result.submissions[0].daysPending).toBeGreaterThanOrEqual(10);
+    expect(result.submissions[0].daysPending).toBe(10);
   });
 
   it('returns totalCount alongside submissions', async () => {
