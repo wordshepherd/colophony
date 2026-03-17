@@ -195,27 +195,27 @@ jobs:
       - name: Run coverage (API unit tests)
         run: pnpm --filter @colophony/api test:cov
       - name: Run coverage (API RLS tests)
-        run: pnpm --filter @colophony/api vitest run --config vitest.config.rls.ts --coverage --coverage.reportsDirectory=./coverage-rls
+        run: pnpm --filter @colophony/api exec vitest run --config vitest.config.rls.ts --coverage --coverage.reportsDirectory=./coverage-rls
         env:
           DATABASE_TEST_URL: postgresql://test:test@localhost:5433/colophony_test
           DATABASE_APP_URL: postgresql://app_user:app_password@localhost:5433/colophony_test
       - name: Run coverage (API webhook tests)
-        run: pnpm --filter @colophony/api vitest run --config vitest.config.webhooks.ts --coverage --coverage.reportsDirectory=./coverage-webhooks
+        run: pnpm --filter @colophony/api exec vitest run --config vitest.config.webhooks.ts --coverage --coverage.reportsDirectory=./coverage-webhooks
         env:
           DATABASE_TEST_URL: postgresql://test:test@localhost:5433/colophony_test
           DATABASE_APP_URL: postgresql://app_user:app_password@localhost:5433/colophony_test
       - name: Run coverage (API security tests)
-        run: pnpm --filter @colophony/api vitest run --config vitest.config.security.ts --coverage --coverage.reportsDirectory=./coverage-security
+        run: pnpm --filter @colophony/api exec vitest run --config vitest.config.security.ts --coverage --coverage.reportsDirectory=./coverage-security
         env:
           DATABASE_TEST_URL: postgresql://test:test@localhost:5433/colophony_test
           DATABASE_APP_URL: postgresql://app_user:app_password@localhost:5433/colophony_test
       - name: Run coverage (API service tests)
-        run: pnpm --filter @colophony/api vitest run --config vitest.config.services.ts --coverage --coverage.reportsDirectory=./coverage-services
+        run: pnpm --filter @colophony/api exec vitest run --config vitest.config.services.ts --coverage --coverage.reportsDirectory=./coverage-services
         env:
           DATABASE_TEST_URL: postgresql://test:test@localhost:5433/colophony_test
           DATABASE_APP_URL: postgresql://app_user:app_password@localhost:5433/colophony_test
       - name: Run coverage (API queue tests)
-        run: pnpm --filter @colophony/api vitest run --config vitest.config.queues.ts --coverage --coverage.reportsDirectory=./coverage-queues
+        run: pnpm --filter @colophony/api exec vitest run --config vitest.config.queues.ts --coverage --coverage.reportsDirectory=./coverage-queues
         env:
           DATABASE_TEST_URL: postgresql://test:test@localhost:5433/colophony_test
           DATABASE_APP_URL: postgresql://app_user:app_password@localhost:5433/colophony_test
@@ -398,6 +398,10 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - name: Build workspace dependencies
         run: pnpm turbo run build --filter=@colophony/db --filter=@colophony/types --filter=@colophony/api-contracts --filter=@colophony/plugin-sdk
+      - name: Run Drizzle migrations (for verify step)
+        run: pnpm db:migrate
+        env:
+          DATABASE_URL: postgresql://test:test@localhost:5433/colophony_test
       - name: Verify DB migrations
         run: pnpm --filter @colophony/db verify
         env:
@@ -585,7 +589,7 @@ jobs:
           cache: "pnpm"
       - run: pnpm install --frozen-lockfile
       - name: Build workspace dependencies
-        run: pnpm turbo run build --filter=@colophony/db --filter=@colophony/types --filter=@colophony/api-contracts --filter=@colophony/plugin-sdk
+        run: pnpm turbo run build --filter=@colophony/db --filter=@colophony/auth-client --filter=@colophony/types --filter=@colophony/api-contracts --filter=@colophony/plugin-sdk
       - name: Run webhook integration tests
         run: pnpm --filter @colophony/api test:webhooks
         env:
