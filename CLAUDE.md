@@ -108,7 +108,7 @@ Full project structure: [docs/architecture.md](docs/architecture.md)
 
 **Backend:** Fastify 5, TypeScript (strict), Drizzle ORM, BullMQ 5, Zitadel (auth), Stripe, nodemailer
 
-**API surfaces:** tRPC (built), oRPC REST + OpenAPI 3.1 (built), GraphQL via Pothos + Yoga (built — queries + mutations)
+**API surfaces:** tRPC (built), oRPC REST + OpenAPI 3.1 (built). GraphQL (Pothos + Yoga) extracted to feature branch — re-merge when demand materializes
 
 **Data:** PostgreSQL 16+ (RLS via Drizzle `pgPolicy`), Redis 7+, MinIO (S3-compatible)
 
@@ -427,7 +427,6 @@ pnpm db:add-migration <name>  # Add journal entry for a manual migration
 
 ```bash
 pnpm sdk:export-spec          # Export OpenAPI spec from running dev server → sdks/openapi.json
-pnpm sdk:export-schema        # Export GraphQL schema → sdks/schema.graphql
 pnpm sdk:generate             # Regenerate TypeScript + Python SDKs from committed spec
 ```
 
@@ -571,7 +570,7 @@ See [docs/architecture.md Section 6](docs/architecture.md) for full details.
 | Track | Component                                                | Status       |
 | ----- | -------------------------------------------------------- | ------------ |
 | 1     | Core Infrastructure (Fastify, Drizzle, Zitadel, Coolify) | **Complete** |
-| 2     | Colophony API (REST, GraphQL, tRPC, SDKs)                | **Complete** |
+| 2     | Colophony API (REST, tRPC, SDKs; GraphQL extracted)      | **Complete** |
 | 3     | Hopper — Submission Management                           | **Complete** |
 | 4     | Slate — Publication Pipeline                             | **Complete** |
 | 5     | Register — Identity & Federation                         | **Complete** |

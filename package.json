@@ -31,7 +31,6 @@
     "db:validate-enums": "pnpm --filter @colophony/db validate-enums",
     "db:reset": "bash scripts/db-reset.sh",
     "sdk:export-spec": "pnpm --filter @colophony/api exec tsx ../../scripts/export-openapi.ts",
-    "sdk:export-schema": "pnpm --filter @colophony/api exec tsx ../../scripts/export-schema.ts",
     "sdk:generate": "pnpm --filter @colophony/api exec tsx ../../scripts/generate-sdks.ts",
     "docker:up": "bash scripts/docker-up.sh",
     "zitadel:setup": "pnpm --filter @colophony/db exec tsx ../../scripts/setup-zitadel-dev.ts",
