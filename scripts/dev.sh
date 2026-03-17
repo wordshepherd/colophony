@@ -7,7 +7,7 @@ set -euo pipefail
 # Check for required binary
 if ! command -v hivemind &>/dev/null; then
   echo "Error: hivemind is required but not installed."
-  echo "  Linux: curl -L https://github.com/DarthSim/hivemind/releases/latest/download/hivemind-v1.1.0-linux-amd64.gz | gunzip > ~/.local/bin/hivemind && chmod +x ~/.local/bin/hivemind"
+  echo "  Linux: https://github.com/DarthSim/hivemind/releases/latest (download linux-amd64.gz, gunzip, chmod +x, add to PATH)"
   echo "  macOS: brew install hivemind"
   exit 1
 fi
