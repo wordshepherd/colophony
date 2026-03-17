@@ -299,12 +299,16 @@ const addSection = adminProcedure
   .output(issueSectionSchema)
   .handler(async ({ input, context }) => {
     const { id, ...data } = input;
-    return issueService.addSection(
-      context.dbTx,
-      id,
-      data,
-      context.authContext.orgId,
-    );
+    try {
+      return await issueService.addSection(
+        context.dbTx,
+        id,
+        data,
+        context.authContext.orgId,
+      );
+    } catch (e) {
+      mapServiceError(e);
+    }
   });
 
 const removeSection = adminProcedure

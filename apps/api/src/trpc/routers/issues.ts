@@ -196,7 +196,16 @@ export const issuesRouter = createRouter({
     .output(issueSectionSchema)
     .mutation(async ({ ctx, input }) => {
       const { id, ...data } = input;
-      return issueService.addSection(ctx.dbTx, id, data, ctx.authContext.orgId);
+      try {
+        return await issueService.addSection(
+          ctx.dbTx,
+          id,
+          data,
+          ctx.authContext.orgId,
+        );
+      } catch (e) {
+        mapServiceError(e);
+      }
     }),
 
   /** Remove a section from an issue. */
