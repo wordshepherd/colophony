@@ -1,27 +1,17 @@
-import { defineConfig } from 'vitest/config';
+import { mergeConfig } from 'vitest/config';
+import { integrationBase } from './vitest.config.integration-base';
 
-export default defineConfig({
+export default mergeConfig(integrationBase, {
   test: {
-    environment: 'node',
     include: ['src/__tests__/queues/**/*.test.ts'],
-    globals: false,
-    testTimeout: 30_000,
     setupFiles: [
       '../../test/vitest-console-setup.ts',
       'src/__tests__/queues/helpers/vitest-setup.ts',
     ],
-    fileParallelism: false,
-    pool: 'forks',
-    forks: {
-      singleFork: true,
-    },
     env: {
-      // Point @colophony/db's pool at the test database so that
-      // workers using withRls() exercise the real DB path.
       DATABASE_URL:
         process.env.DATABASE_APP_URL ??
         'postgresql://app_user:app_password@localhost:5433/colophony_test',
-      // Explicitly set DATABASE_APP_URL so appPool also uses test DB
       DATABASE_APP_URL:
         process.env.DATABASE_APP_URL ??
         'postgresql://app_user:app_password@localhost:5433/colophony_test',

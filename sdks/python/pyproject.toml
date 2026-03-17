@@ -15,9 +15,15 @@ httpx = ">=0.23.0,<0.29.0"
 attrs = ">=22.2.0"
 python-dateutil = "^2.8.0"
 
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.0"
+
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
 
 [tool.ruff]
 line-length = 120

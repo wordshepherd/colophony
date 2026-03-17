@@ -51,16 +51,21 @@ Object.defineProperty(window, "matchMedia", {
   })),
 });
 
-// Mock crypto.randomUUID
+// Mock crypto.randomUUID with deterministic counter
+let uuidCounter = 0;
 Object.defineProperty(globalThis, "crypto", {
   value: {
-    randomUUID: () => "test-uuid-" + Math.random().toString(36).substr(2, 9),
+    randomUUID: () => {
+      const count = (++uuidCounter).toString(16).padStart(12, "0");
+      return `00000000-0000-4000-8000-${count}`;
+    },
   },
 });
 
-// Clear localStorage after each test
+// Clear localStorage and reset mocks after each test
 afterEach(() => {
   localStorage.clear();
+  uuidCounter = 0;
   mockPush.mockClear();
   mockReplace.mockClear();
   mockBack.mockClear();
