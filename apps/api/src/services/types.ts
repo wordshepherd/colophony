@@ -15,8 +15,8 @@ export type AuditFn = (
 
 /**
  * Request-scoped context passed to service methods that operate within an
- * RLS-scoped transaction. Works for tRPC, REST (ts-rest), and GraphQL (Pothos)
- * surfaces — Fastify hooks provide the same fields on every request.
+ * RLS-scoped transaction. Works for tRPC and REST (oRPC) surfaces — Fastify
+ * hooks provide the same fields on every request.
  */
 export interface ServiceContext {
   /** RLS-scoped Drizzle transaction from the dbContext hook. */

@@ -4,8 +4,8 @@ import type { AuditFn, ServiceContext, UserServiceContext } from './types.js';
 
 /**
  * Build a {@link ServiceContext} from the request-scoped values provided by
- * Fastify hooks. Works for any API surface (tRPC, REST, GraphQL) since the
- * hooks decorate the same fields on every Fastify request.
+ * Fastify hooks. Works for any API surface (tRPC, REST) since the hooks
+ * decorate the same fields on every Fastify request.
  *
  * For tRPC, pass the narrowed `orgProcedure` context directly.
  */

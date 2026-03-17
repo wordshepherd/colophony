@@ -530,7 +530,7 @@
 
 ### Codebase Extraction
 
-- [ ] [P2] Extract GraphQL surface to feature branch — `src/graphql/` (builder, schema, resolvers, guards, router), Yoga plugin in `main.ts`, GraphQL-specific API key scopes. Service layer and shared types stay. Re-merge when user demand justifies it — (architecture review 2026-03-16)
+- [x] [P2] Extract GraphQL surface to feature branch — `src/graphql/` (builder, schema, resolvers, guards, router), Yoga plugin in `main.ts`, GraphQL-specific API key scopes. Service layer and shared types stay. Re-merge when user demand justifies it — (architecture review 2026-03-16; done 2026-03-16)
 - [ ] [P2] Extract plugin system to feature branch — `packages/plugin-sdk/`, `packages/create-plugin/`, `src/adapters/extensions-accessor.ts`, `src/adapters/plugins-accessor.ts`, `src/services/plugin-registry.service.ts`, `src/plugins/`, `apps/web/src/components/plugins/`, `apps/web/src/lib/plugin-components.ts`, `PLUGIN_REGISTRY_URL` env var. Keep adapter registry and email/storage/payment/CMS adapters — (architecture review 2026-03-16)
 
 ### Dev Tooling

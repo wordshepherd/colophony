@@ -70,11 +70,10 @@ Prerequisites: Node.js >= 22, pnpm 9.15+, Docker, tmux + Overmind. See [CONTRIBU
 
 ## API
 
-Colophony exposes three API surfaces:
+Colophony exposes two API surfaces:
 
 - **tRPC** — internal use between the Next.js frontend and the API
 - **REST + OpenAPI 3.1** — public API with full OpenAPI spec (`sdks/openapi.json`)
-- **GraphQL** — queries and mutations via Pothos + Yoga
 
 Client SDKs are available for [TypeScript](sdks/typescript/) and [Python](sdks/python/), generated from the OpenAPI spec.
 

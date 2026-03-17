@@ -4,7 +4,6 @@
  * Each API surface maps these to its own error format:
  * - tRPC: ForbiddenError → TRPCError({ code: 'FORBIDDEN' })
  * - REST: ForbiddenError → 403 response
- * - GraphQL: ForbiddenError → GraphQL error with FORBIDDEN extension
  */
 
 export class ForbiddenError extends Error {

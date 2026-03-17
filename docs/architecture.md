@@ -88,7 +88,7 @@ Organization
 | Asset                        | Why                                                           |
 | ---------------------------- | ------------------------------------------------------------- |
 | NestJS modules               | Framework under evaluation                                    |
-| tRPC router structure        | Keeping for internal use, adding REST + GraphQL               |
+| tRPC router structure        | Keeping for internal use, adding REST                         |
 | Prisma schema                | ORM under evaluation; data model changing significantly       |
 | Current auth implementation  | Replacing with external auth service                          |
 | Frontend component structure | Will be redesigned for new features                           |
@@ -102,12 +102,12 @@ Organization
 
 The original plan proposed 6 separate services. In practice, all backend logic runs in a single Fastify API (`apps/api/`) with internal module boundaries. Workers run in-process via BullMQ.
 
-| Service          | Responsibility                                                                                                                                                 | Communication                                   |
-| ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------- |
-| **Core API**     | All backend logic: submissions, editorial workflow, organizations, publications, forms, payments, GDPR, audit, federation, notifications, publication pipeline | REST + GraphQL (public), tRPC (internal to web) |
-| **Web Frontend** | Editor UI, submitter UI, admin UI                                                                                                                              | Consumes Core API via tRPC                      |
-| **Workers**      | Background jobs: virus scan, email, webhook delivery, S3 cleanup, outbox polling                                                                               | BullMQ queues via Redis (in-process)            |
-| **Auth**         | Authentication, OAuth, SSO                                                                                                                                     | Zitadel (external service, Docker sidecar)      |
+| Service          | Responsibility                                                                                                                                                 | Communication                              |
+| ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------ |
+| **Core API**     | All backend logic: submissions, editorial workflow, organizations, publications, forms, payments, GDPR, audit, federation, notifications, publication pipeline | REST (public), tRPC (internal to web)      |
+| **Web Frontend** | Editor UI, submitter UI, admin UI                                                                                                                              | Consumes Core API via tRPC                 |
+| **Workers**      | Background jobs: virus scan, email, webhook delivery, S3 cleanup, outbox polling                                                                               | BullMQ queues via Redis (in-process)       |
+| **Auth**         | Authentication, OAuth, SSO                                                                                                                                     | Zitadel (external service, Docker sidecar) |
 
 ### Deployment Models
 
@@ -133,7 +133,6 @@ sdks/
   typescript/           Generated TypeScript SDK (@colophony/sdk)
   python/               Generated Python SDK (colophony)
   openapi.json          Exported OpenAPI 3.1 spec
-  schema.graphql        Exported GraphQL schema
 ```
 
 All adapters (email, storage, payment, CMS) are built into `apps/api/src/adapters/` rather than separate packages. The plugin SDK defines adapter interfaces for third-party implementations.
@@ -152,7 +151,7 @@ All eight research areas have been investigated and decisions finalized. Each su
 
 **4.4 Managed Hosting Orchestration** — Resolved: **Coolify + Hetzner** (Phase 1, 0-100 tenants). Cheapest cost-to-feature ratio, REST API for tenant automation, open-source aligned. See [Section 5.4](#54-managed-hosting-orchestration).
 
-**4.5 API Layer Architecture** — Resolved: **tRPC (internal) + oRPC REST + OpenAPI 3.1 (public) + Pothos + GraphQL Yoga (power users)**. All three surfaces share the service layer and Zod schemas. See [Section 5.5](#55-api-layer-architecture).
+**4.5 API Layer Architecture** — Resolved: **tRPC (internal) + oRPC REST + OpenAPI 3.1 (public)**. GraphQL (Pothos + Yoga) was built but extracted to a feature branch pending user demand. Both surfaces share the service layer and Zod schemas. See [Section 5.5](#55-api-layer-architecture).
 
 **4.6 Form Builder Architecture** — Resolved: **Custom build** with dnd-kit + shadcn/ui. JSON-based form definitions stored in PostgreSQL JSONB. 15 field types, conditional logic, embeddable via iframe. See [Section 5.6](#56-form-builder-architecture).
 
@@ -171,7 +170,7 @@ All eight research areas have been investigated and decisions finalized. Each su
 **Decision:** Fastify 5
 **Decided:** 2026-02-11
 **Candidates evaluated:** NestJS 11, Fastify 5, Hono 4, Elysia 1.4, Express 5
-**Rationale:** Best balance of contributor friendliness (Express-like API, no decorators/DI), ecosystem completeness (GraphQL Yoga, tRPC adapter, OpenAPI), performance (~70-80k req/s), and maturity (OpenJS Foundation). Workers run in-process via BullMQ rather than separate worker apps.
+**Rationale:** Best balance of contributor friendliness (Express-like API, no decorators/DI), ecosystem completeness (tRPC adapter, OpenAPI), performance (~70-80k req/s), and maturity (OpenJS Foundation). Workers run in-process via BullMQ rather than separate worker apps.
 **Key implementation details:**
 
 - Plugin encapsulation model maps to shared packages in monorepo
@@ -228,18 +227,15 @@ All eight research areas have been investigated and decisions finalized. Each su
 
 ### 5.5 API Layer Architecture
 
-**Decision:** tRPC (internal) + oRPC REST + OpenAPI 3.1 (public) + Pothos + GraphQL Yoga (power users)
-**Decided:** 2026-02-11
+**Decision:** tRPC (internal) + oRPC REST + OpenAPI 3.1 (public)
+**Decided:** 2026-02-11 (GraphQL extracted to feature branch 2026-03-16)
 **Full research:** [docs/api-layer-v2-research.md](api-layer-v2-research.md)
-**Rationale:** Three API surfaces share the same service layer and Zod schemas from `@colophony/types`. tRPC for type-safe internal frontend communication, oRPC for OpenAPI 3.1 REST at `/v1/docs`, Pothos + Yoga for flexible GraphQL queries and mutations.
+**Rationale:** Two API surfaces share the same service layer and Zod schemas from `@colophony/types`. tRPC for type-safe internal frontend communication, oRPC for OpenAPI 3.1 REST at `/v1/docs`. GraphQL (Pothos + Yoga) was built but extracted to a feature branch (`chore/extract-graphql-to-feature-branch`) pending user demand — re-merge when needed.
 **Key implementation details:**
 
-- Pothos chosen over TypeGraphQL for Zod single-source-of-truth validation (StandardSchema)
-- Manual Drizzle type definitions and dataloader setup (no `@pothos/plugin-prisma` equivalent)
 - oRPC replaced ts-rest (from original plan) for better OpenAPI 3.1 and Zod 4 support
 - SDK generation: TypeScript (openapi-fetch) + Python (openapi-python-client)
-- REST versioning: URL path (`/v1/`); GraphQL versioning: schema evolution
-- Cost-based GraphQL rate limiting (1000 pts/min)
+- REST versioning: URL path (`/v1/`)
   **Archived:** Full evaluation (175 lines) — see git history. Full API research: `docs/api-layer-v2-research.md`
 
 ### 5.6 Form Builder Architecture
@@ -326,15 +322,15 @@ Four interaction effects between independently-evaluated research areas were ide
 
 **Not a "minimum viable product" — a complete platform that competes with Submittable on day one.**
 
-| Assumption           | Old (Wrong)               | Revised (Correct)                                 |
-| -------------------- | ------------------------- | ------------------------------------------------- |
-| **Timeline**         | 6-9 months to v2.0 MVP    | 18-24 months to single complete release           |
-| **Federation**       | Defer to v2.1 (too risky) | Build alongside core features (Months 10-15)      |
-| **GraphQL**          | Defer to v2.1             | Build alongside REST (Months 5-9)                 |
-| **Form builder**     | Ship basic, iterate later | Build complete (all 15 types + conditional logic) |
-| **Plugin system**    | Ship webhooks only        | Build Tier 0-4 before launch                      |
-| **Beta testing**     | None (ship to real users) | 4 private cohorts over 18 months                  |
-| **Release strategy** | v2.0 → v2.1 → v2.2        | Single v2.0 with complete feature set             |
+| Assumption           | Old (Wrong)               | Revised (Correct)                                                         |
+| -------------------- | ------------------------- | ------------------------------------------------------------------------- |
+| **Timeline**         | 6-9 months to v2.0 MVP    | 18-24 months to single complete release                                   |
+| **Federation**       | Defer to v2.1 (too risky) | Build alongside core features (Months 10-15)                              |
+| **GraphQL**          | Defer to v2.1             | Built alongside REST, then extracted to feature branch (no active demand) |
+| **Form builder**     | Ship basic, iterate later | Build complete (all 15 types + conditional logic)                         |
+| **Plugin system**    | Ship webhooks only        | Build Tier 0-4 before launch                                              |
+| **Beta testing**     | None (ship to real users) | 4 private cohorts over 18 months                                          |
+| **Release strategy** | v2.0 → v2.1 → v2.2        | Single v2.0 with complete feature set                                     |
 
 **Why this is architecturally superior:**
 
@@ -358,10 +354,10 @@ Track 1: Core Infrastructure                    ✅ Complete
 
 Track 2: Colophony API                          ✅ Complete
 ├─ Service layer extraction from tRPC routers
-├─ REST + GraphQL + tRPC (parallel, shared service layer)
-├─ Pothos + Drizzle manual integration patterns
+├─ REST + tRPC (parallel, shared service layer)
 ├─ SDK generation (TypeScript, Python)
-└─ API documentation (OpenAPI 3.1, GraphQL schema)
+├─ API documentation (OpenAPI 3.1)
+└─ GraphQL (Pothos + Yoga) built then extracted to feature branch
 
 Track 3: Hopper — Submission Management         ✅ Complete
 ├─ Form builder (all 15 field types + conditional logic)
@@ -463,7 +459,7 @@ Relay (cross-cutting)        → Started in Track 1, evolved with each track
 **Risks that were resolved during development:**
 
 - ~~Federation complexity~~ — Built and tested across Tracks 5 and 8. did:web + HTTP signatures + BSAP all working.
-- ~~Pothos + Drizzle gap~~ — Manual integration patterns work well. No switch to TypeGraphQL needed.
+- ~~Pothos + Drizzle gap~~ — Manual integration patterns worked well. GraphQL surface later extracted to feature branch (no active user demand).
 - ~~Form builder scope~~ — All 15 field types + conditional logic shipped.
 - ~~Plugin system maturity~~ — Tier 0-4 complete with SDK and registry.
 
@@ -479,9 +475,9 @@ Relay (cross-cutting)        → Started in Track 1, evolved with each track
 - Technology churn — 3-week build avoided dependency drift entirely.
 - Motivation/burnout — AI-assisted development kept momentum high.
 
-### 6.6 Pothos + Drizzle Decision Point — Resolved
+### 6.6 Pothos + Drizzle Decision Point — Resolved (Extracted)
 
-**Decision:** Pothos chosen and working well. Manual integration patterns (type definitions, dataloader, pagination) are acceptable. Zod single-source-of-truth advantage confirmed. No switch to TypeGraphQL needed.
+**Decision:** Pothos was chosen and worked well. Manual integration patterns (type definitions, dataloader, pagination) were acceptable. The GraphQL surface was later extracted to a feature branch (`chore/extract-graphql-to-feature-branch`) during architecture review — no active user demand justified the maintenance burden (~8,350 lines, 5 npm deps). Re-merge when demand materializes.
 
 ---
 
