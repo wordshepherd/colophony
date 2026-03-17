@@ -8,7 +8,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { BarChart3, ClipboardList, Inbox } from "lucide-react";
-import { DashboardPluginSlot } from "./dashboard-plugin-slot";
 import { OverviewStatsCards } from "@/components/analytics/overview-stats-cards";
 
 export default function EditorPage() {
@@ -93,8 +92,6 @@ export default function EditorPage() {
           </Card>
         </Link>
       </div>
-
-      <DashboardPluginSlot />
     </div>
   );
 }

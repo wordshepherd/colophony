@@ -174,7 +174,7 @@ jobs:
       - name: Run coverage (Web)
         run: pnpm --filter @colophony/web test:cov
       - name: Run coverage (packages)
-        run: pnpm --filter @colophony/types test:cov && pnpm --filter @colophony/auth-client test:cov && pnpm --filter @colophony/api-client test:cov && pnpm --filter @colophony/plugin-sdk test:cov && pnpm --filter @colophony/create-plugin test:cov
+        run: pnpm --filter @colophony/types test:cov && pnpm --filter @colophony/auth-client test:cov && pnpm --filter @colophony/api-client test:cov && pnpm --filter @colophony/plugin-sdk test:cov
       - name: Upload coverage artifacts
         uses: actions/upload-artifact@v7
         with:
@@ -186,7 +186,6 @@ jobs:
             packages/api-client/coverage/
             packages/auth-client/coverage/
             packages/plugin-sdk/coverage/
-            packages/create-plugin/coverage/
           retention-days: 14
       - name: Merge coverage reports
         if: github.event_name == 'pull_request'
@@ -198,7 +197,6 @@ jobs:
             packages/api-client/coverage/lcov.info
             packages/auth-client/coverage/lcov.info
             packages/plugin-sdk/coverage/lcov.info
-            packages/create-plugin/coverage/lcov.info
           )
           for f in "${LCOV_FILES[@]}"; do
             if [ ! -f "$f" ]; then

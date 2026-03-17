@@ -4,7 +4,6 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { useOrganization } from "@/hooks/use-organization";
-import { PluginSlot } from "@/components/plugins/plugin-slot";
 import {
   BarChart3,
   BookCopy,
@@ -23,7 +22,6 @@ import {
   Library,
   Mail,
   Network,
-  Puzzle,
   Send,
   Settings,
   Upload,
@@ -76,11 +74,6 @@ const adminNavigation = [
     name: "Webhooks",
     href: "/webhooks",
     icon: Webhook,
-  },
-  {
-    name: "Plugins",
-    href: "/plugins",
-    icon: Puzzle,
   },
   {
     name: "Federation",
@@ -239,8 +232,6 @@ export function Sidebar() {
             })}
           </>
         )}
-
-        <PluginSlot point="navigation.item" className="space-y-1" />
       </nav>
     </div>
   );

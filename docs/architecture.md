@@ -385,13 +385,13 @@ Track 5: Register — Identity & Federation       ✅ Complete
 ├─ Identity migration
 └─ Hub for managed hosting
 
-Track 6: Colophony Plugins                      ✅ Complete
-├─ Webhooks (Tier 0)
-├─ Adapters (Tier 1)
-├─ Workflow hooks (Tier 2)
-├─ UI extensions (Tier 3)
-├─ Full plugins (Tier 4)
-└─ Plugin SDK + registry
+Track 6: Colophony Plugins                      📦 Extracted
+├─ Webhooks (Tier 0) — kept (Relay webhook system)
+├─ Adapters (Tier 1) — kept (email, storage, payment, CMS)
+├─ Workflow hooks (Tier 2)  ─┐
+├─ UI extensions (Tier 3)   ├─ extracted to `chore/extract-plugin-system`
+├─ Full plugins (Tier 4)    │  Re-merge when demand materializes.
+└─ Plugin SDK + registry   ─┘
 
 Track 7: Writer Experience                      ✅ Complete
 ├─ Writer workspace (cross-org portfolio)
@@ -461,7 +461,7 @@ Relay (cross-cutting)        → Started in Track 1, evolved with each track
 - ~~Federation complexity~~ — Built and tested across Tracks 5 and 8. did:web + HTTP signatures + BSAP all working.
 - ~~Pothos + Drizzle gap~~ — Manual integration patterns worked well. GraphQL surface later extracted to feature branch (no active user demand).
 - ~~Form builder scope~~ — All 15 field types + conditional logic shipped.
-- ~~Plugin system maturity~~ — Tier 0-4 complete with SDK and registry.
+- ~~Plugin system maturity~~ — Tier 0-4 built; plugin system (Tiers 2-4, SDK, registry) later extracted to feature branch `chore/extract-plugin-system` pending demand. Adapters and webhooks remain in main.
 
 **Risks that remain open:**
 
