@@ -2,6 +2,7 @@ import { describe, it, expect, beforeAll } from 'vitest';
 import { globalSetup, getAdminPool, getAppPool } from './helpers/db-setup';
 
 const RLS_TABLES = [
+  // Core
   'organization_members',
   'form_definitions',
   'form_fields',
@@ -24,9 +25,44 @@ const RLS_TABLES = [
   'external_submissions',
   'correspondence',
   'writer_profiles',
+  // Submissions domain
+  'sim_sub_checks',
+  'submission_reviewers',
+  'submission_discussions',
+  'submission_votes',
+  // Slate pipeline
+  'pipeline_items',
+  'pipeline_history',
+  'pipeline_comments',
+  // Issues
+  'issues',
+  'issue_sections',
+  'issue_items',
+  // Publications & contracts
+  'publications',
+  'contract_templates',
+  'contracts',
+  // CMS
+  'cms_connections',
+  // Webhooks
+  'webhook_endpoints',
+  'webhook_deliveries',
+  // Notifications
+  'notification_preferences',
+  'email_sends',
+  'notifications_inbox',
+  // Email
+  'email_templates',
+  // Federation
+  'trusted_peers',
+  'inbound_transfers',
+  // Editor tools
+  'saved_queue_presets',
 ];
 
-/** RLS tables where app_user has full DML (excludes audit_events which is SELECT-only + function, journal_directory which is SELECT-only). */
+/** RLS tables where app_user has full DML (excludes audit_events which is SELECT-only + function, journal_directory which is SELECT-only).
+ *  Note: init-db.sh sets ALTER DEFAULT PRIVILEGES ... GRANT SELECT, INSERT, UPDATE, DELETE
+ *  so all tables created after init get full DML regardless of per-migration GRANT statements. */
 const RLS_TABLES_FULL_DML = RLS_TABLES.filter(
   (t) => t !== 'audit_events' && t !== 'journal_directory',
 );
@@ -139,7 +175,7 @@ describe('RLS Infrastructure', () => {
       expect(rows[0].rolbypassrls).toBe(false);
     });
 
-    it('should have full DML permissions on RLS tables (except audit_events)', async () => {
+    it('should have full DML permissions on RLS tables with full access', async () => {
       const admin = getAdminPool();
       for (const table of RLS_TABLES_FULL_DML) {
         const { rows } = await admin.query<{ has_priv: boolean }>(
@@ -313,14 +349,35 @@ describe('RLS Infrastructure', () => {
       }
     });
 
-    it('direct isolation policies reference current_org_id()', async () => {
+    it('org-scoped tables have policies referencing org context', async () => {
       const admin = getAdminPool();
-      const directTables = [
-        'submissions',
-        'submission_periods',
-        'payments',
-        'form_definitions',
-      ];
+
+      // Tables excluded from the org-policy check:
+      // - Nullable org policies (tested separately): audit_events, retention_policies, user_consents
+      // - User-scoped (current_user_id()): manuscripts, manuscript_versions, files,
+      //   external_submissions, correspondence, writer_profiles, identity_migrations,
+      //   journal_directory
+      // - Subquery-based: sim_sub_checks, piece_transfers
+      const orgPolicyExceptions = new Set([
+        'audit_events',
+        'retention_policies',
+        'user_consents',
+        'manuscripts',
+        'manuscript_versions',
+        'files',
+        'external_submissions',
+        'correspondence',
+        'writer_profiles',
+        'identity_migrations',
+        'journal_directory',
+        'sim_sub_checks',
+        'piece_transfers',
+      ]);
+
+      const orgScopedTables = RLS_TABLES.filter(
+        (t) => !orgPolicyExceptions.has(t),
+      );
+
       const { rows } = await admin.query<{
         tablename: string;
         policyname: string;
@@ -332,26 +389,25 @@ describe('RLS Infrastructure', () => {
         WHERE schemaname = 'public'
           AND tablename = ANY($1)
       `,
-        [directTables],
+        [orgScopedTables],
       );
 
-      // Each direct table should have at least one policy referencing current_org_id().
-      // Some tables (e.g., submissions) also have user-scoped policies (submitter_read)
-      // that reference current_user_id() instead — those are excluded from this check.
       const tableMap = new Map<string, typeof rows>();
       for (const row of rows) {
         if (!tableMap.has(row.tablename)) tableMap.set(row.tablename, []);
         tableMap.get(row.tablename)!.push(row);
       }
 
-      for (const table of directTables) {
+      for (const table of orgScopedTables) {
         const policies = tableMap.get(table) ?? [];
-        const hasOrgPolicy = policies.some((p) =>
-          p.qual.includes('current_org_id()'),
+        const hasOrgPolicy = policies.some(
+          (p) =>
+            p.qual.includes('current_org_id()') ||
+            p.qual.includes("current_setting('app.current_org"),
         );
         expect(
           hasOrgPolicy,
-          `${table} should have at least one policy referencing current_org_id()`,
+          `${table} should have at least one policy referencing current_org_id() or current_setting('app.current_org')`,
         ).toBe(true);
       }
     });
