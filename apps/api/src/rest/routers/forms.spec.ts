@@ -16,7 +16,6 @@ vi.mock('../../services/form.service.js', () => ({
     updateFieldWithAudit: vi.fn(),
     removeFieldWithAudit: vi.fn(),
     reorderFieldsWithAudit: vi.fn(),
-    getFieldsByFormIds: vi.fn(),
   },
   FormNotFoundError: class FormNotFoundError extends Error {
     name = 'FormNotFoundError';
