@@ -24,7 +24,7 @@ export function FunnelChart({ filter }: FunnelChartProps) {
     trpc.submissions.analyticsFunnel.useQuery(filter);
 
   return (
-    <Card>
+    <Card data-testid="chart-card-submission-funnel">
       <CardHeader>
         <CardTitle className="text-base">Submission Funnel</CardTitle>
       </CardHeader>

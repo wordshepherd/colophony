@@ -55,18 +55,12 @@ test.describe("Submission Analytics Dashboard", () => {
     await expect(page.getByText("Submission Funnel")).toBeVisible();
 
     // Verify Recharts renders SVG elements in chart cards
-    const statusCard = page
-      .locator("text=Status Breakdown")
-      .locator("..")
-      .locator("..");
+    const statusCard = page.getByTestId("chart-card-status-breakdown");
     await expect(statusCard.locator(".recharts-wrapper")).toBeVisible({
       timeout: 10_000,
     });
 
-    const funnelCard = page
-      .locator("text=Submission Funnel")
-      .locator("..")
-      .locator("..");
+    const funnelCard = page.getByTestId("chart-card-submission-funnel");
     await expect(funnelCard.locator(".recharts-wrapper")).toBeVisible({
       timeout: 10_000,
     });
@@ -110,16 +104,14 @@ test.describe("Submission Analytics Dashboard", () => {
     });
 
     await expect(page.getByText("Response Time Distribution")).toBeVisible();
-    await expect(page.getByText("Aging Submissions").first()).toBeVisible();
+
+    const agingCard = page.getByTestId("chart-card-aging-submissions");
+    await expect(agingCard).toBeVisible();
 
     // Aging table shows either data rows or empty message
-    const agingCard = page
-      .locator("text=Aging Submissions")
-      .first()
-      .locator("../..");
     const hasData = agingCard.locator("table");
     const hasEmpty = agingCard.getByText("No aging submissions found.");
-    await expect(hasData.or(hasEmpty).first()).toBeVisible({ timeout: 10_000 });
+    await expect(hasData.or(hasEmpty)).toBeVisible({ timeout: 10_000 });
   });
 
   test("date filter updates dashboard data", async ({ authedPage: page }) => {
@@ -129,11 +121,8 @@ test.describe("Submission Analytics Dashboard", () => {
     const totalCard = page.getByText("Total Submissions", { exact: true });
     await expect(totalCard).toBeVisible({ timeout: 10_000 });
 
-    // Get the initial total value (the bold number below the label)
-    const totalValue = totalCard
-      .locator("..")
-      .locator("..")
-      .locator(".text-2xl");
+    // Get the initial total value via testid
+    const totalValue = page.getByTestId("stat-value-total-submissions");
     await expect(totalValue).not.toHaveText("0");
 
     // Set start date to far future — should yield 0 submissions
