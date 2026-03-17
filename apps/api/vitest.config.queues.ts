@@ -4,10 +4,7 @@ import { integrationBase } from './vitest.config.integration-base';
 export default mergeConfig(integrationBase, {
   test: {
     include: ['src/__tests__/queues/**/*.test.ts'],
-    setupFiles: [
-      '../../test/vitest-console-setup.ts',
-      'src/__tests__/queues/helpers/vitest-setup.ts',
-    ],
+    setupFiles: ['src/__tests__/queues/helpers/vitest-setup.ts'],
     env: {
       DATABASE_URL:
         process.env.DATABASE_APP_URL ??
