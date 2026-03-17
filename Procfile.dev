@@ -1,2 +1,2 @@
-api: pnpm --filter @colophony/api dev
-web: pnpm --filter @colophony/web dev
+api: PORT=4000 pnpm --filter @colophony/api dev
+web: PORT=3000 pnpm --filter @colophony/web dev

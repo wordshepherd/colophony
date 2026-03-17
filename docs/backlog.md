@@ -535,7 +535,7 @@
 
 ### Dev Tooling
 
-- [ ] [P2] Replace Overmind with hivemind or concurrently — Overmind solves signal handling but tmux dependency, `dev:clean` escape hatch, and WSL quirks are operational drag. hivemind (Go binary, no tmux, proper signal handling) preferred; concurrently as fallback. Test on macOS, Linux, WSL before standardizing. Keep `dev:clean` as escape hatch, not normal workflow. Turbo `--watch` only if shutdown behavior verified in this repo — (architecture review 2026-03-16)
+- [ ] [P2] Replace Overmind with hivemind or concurrently — Overmind solves signal handling but tmux dependency, `dev:clean` escape hatch, and WSL quirks are operational drag. hivemind (Go binary, no tmux, proper signal handling) preferred; concurrently as fallback. Test on macOS, Linux, WSL before standardizing. Keep `dev:clean` as escape hatch, not normal workflow. Turbo `--watch` only if shutdown behavior verified in this repo — (architecture review 2026-03-16; code changes done 2026-03-16; pending cross-platform validation)
 - [x] [P3] Remove `packages/eslint-config` — unused v1 legacy configs (`base.js`, `nextjs.js`, `nestjs.js`), neither app imports from it. Moved `eslint` and `eslint-config-next` to direct app devDependencies — (architecture review 2026-03-16; done 2026-03-16)
 
 ### Testing & CI

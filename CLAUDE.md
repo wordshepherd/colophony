@@ -146,16 +146,16 @@ Summary: Stripe Checkout only (zero PCI scope). Webhook handler built with two-s
 
 Domain-specific quirks are in per-directory CLAUDE.md files. Cross-cutting quirks below:
 
-| Quirk                                                 | Details                                                                                                                                                                                                                           |
-| ----------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Docker Compose env_file**                           | `env_file:` sets container env only. For YAML `${VAR}` substitution, use `--env-file .env` on CLI                                                                                                                                 |
-| **PostgreSQL init-db.sh**                             | Only runs on first DB creation. Must `docker compose down -v` to re-run after changes                                                                                                                                             |
-| **WSL husky hooks need nvm PATH**                     | Husky v9 runs hooks under `sh`/`dash`; `nvm.sh` can't be sourced. Hooks add nvm node bin to PATH directly. `lint-staged` called without `npx`                                                                                     |
-| **CI: workspace deps need build before Vitest**       | Vitest resolves workspace packages via `exports` field (pointing to `dist/`). CI must build deps before running tests                                                                                                             |
-| **`drizzle-kit generate` TUI blocks automation**      | Interactive prompts (rename vs create) use a TUI that ignores piped stdin. Write manual migrations in non-interactive shells; snapshot files may need regeneration interactively                                                  |
-| **Playwright `webServer.env` replaces `process.env`** | `webServer.env` **replaces** (not merges) the child process environment. Must load `.env` files via `dotenv` and spread `...process.env` to ensure `DATABASE_URL` etc. reach dev servers                                          |
-| **Zitadel issuer ± trailing slash**                   | Zitadel v4.10.1 omits trailing slash in JWT `iss` claim. JWKS verifier uses array issuer `[base, base + "/"]` to match both. Don't normalize to one form                                                                          |
-| **Overmind requires tmux**                            | `pnpm dev` uses Overmind (tmux-based process manager). Install both `tmux` and `overmind`. Turbo stays for builds; Overmind replaces it for persistent dev servers only. Use `pnpm dev:clean` to kill orphans if Overmind crashes |
+| Quirk                                                 | Details                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| ----------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Docker Compose env_file**                           | `env_file:` sets container env only. For YAML `${VAR}` substitution, use `--env-file .env` on CLI                                                                                                                                                                                                                                                                                                                                 |
+| **PostgreSQL init-db.sh**                             | Only runs on first DB creation. Must `docker compose down -v` to re-run after changes                                                                                                                                                                                                                                                                                                                                             |
+| **WSL husky hooks need nvm PATH**                     | Husky v9 runs hooks under `sh`/`dash`; `nvm.sh` can't be sourced. Hooks add nvm node bin to PATH directly. `lint-staged` called without `npx`                                                                                                                                                                                                                                                                                     |
+| **CI: workspace deps need build before Vitest**       | Vitest resolves workspace packages via `exports` field (pointing to `dist/`). CI must build deps before running tests                                                                                                                                                                                                                                                                                                             |
+| **`drizzle-kit generate` TUI blocks automation**      | Interactive prompts (rename vs create) use a TUI that ignores piped stdin. Write manual migrations in non-interactive shells; snapshot files may need regeneration interactively                                                                                                                                                                                                                                                  |
+| **Playwright `webServer.env` replaces `process.env`** | `webServer.env` **replaces** (not merges) the child process environment. Must load `.env` files via `dotenv` and spread `...process.env` to ensure `DATABASE_URL` etc. reach dev servers                                                                                                                                                                                                                                          |
+| **Zitadel issuer ± trailing slash**                   | Zitadel v4.10.1 omits trailing slash in JWT `iss` claim. JWKS verifier uses array issuer `[base, base + "/"]` to match both. Don't normalize to one form                                                                                                                                                                                                                                                                          |
+| **hivemind for dev servers**                          | `pnpm dev` uses hivemind (single Go binary, no tmux). Install `hivemind`. Turbo stays for builds; hivemind replaces it for persistent dev servers only. Use `pnpm dev:clean` to kill orphans if hivemind crashes. No per-process `connect`/`restart` — use Ctrl+C to stop all, rely on hot-reload for changes. hivemind always injects a PORT env var (base 5000); `Procfile.dev` sets `PORT=` explicitly per process to override |
 
 **Version pin (cross-cutting):**
 
@@ -383,18 +383,17 @@ pnpm install
 pnpm db:migrate               # Run Drizzle migrations
 pnpm db:seed                  # Seed dev data (orgs, submissions, Slate pipeline)
 pnpm zitadel:setup            # Provision Zitadel + patch .env files (after volume wipe)
-pnpm dev                      # Overmind: builds packages, then API: 4000, Web: 3000
+pnpm dev                      # hivemind: builds packages, then API: 4000, Web: 3000
 ```
 
-**Overmind commands** (run from project root while `pnpm dev` is running):
+**hivemind controls** (while `pnpm dev` is running):
 
 ```bash
-overmind connect api           # Attach to API logs (detach: Ctrl+B D)
-overmind connect web           # Attach to Web logs
-overmind restart api           # Restart API only (Web continues)
-overmind kill                  # Stop all dev servers
-pnpm dev:clean                # Kill orphaned processes + stale files (fallback)
+Ctrl+C                         # Stop all dev servers (hivemind forwards signals)
+pnpm dev:clean                 # Kill orphaned processes + stale files (fallback)
 ```
+
+Note: hivemind does not support per-process attach/restart. Both apps have hot-reload, so file changes trigger automatic restarts. Use `pnpm dev:clean && pnpm dev` for a full restart.
 
 ### Running Tests
 
