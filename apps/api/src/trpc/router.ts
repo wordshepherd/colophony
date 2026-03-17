@@ -19,7 +19,6 @@ import { issuesRouter } from './routers/issues.js';
 import { cmsConnectionsRouter } from './routers/cms-connections.js';
 import { notificationPreferencesRouter } from './routers/notification-preferences.js';
 import { notificationsRouter } from './routers/notifications.js';
-import { pluginsRouter } from './routers/plugins.js';
 import { webhooksRouter } from './routers/webhooks.js';
 import { correspondenceRouter } from './routers/correspondence.js';
 import { emailTemplatesRouter } from './routers/email-templates.js';
@@ -75,7 +74,6 @@ export const appRouter = t.router({
   notificationPreferences: notificationPreferencesRouter,
   notifications: notificationsRouter,
   webhooks: webhooksRouter,
-  plugins: pluginsRouter,
   correspondence: correspondenceRouter,
   emailTemplates: emailTemplatesRouter,
   queuePresets: queuePresetsRouter,

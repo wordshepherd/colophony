@@ -60,10 +60,6 @@ jest.mock("@/components/notifications/notification-bell", () => ({
   NotificationBell: () => <div data-testid="notification-bell">Bell</div>,
 }));
 
-jest.mock("@/components/plugins/plugin-slot", () => ({
-  PluginSlot: () => null,
-}));
-
 describe("Header", () => {
   beforeEach(() => {
     jest.clearAllMocks();

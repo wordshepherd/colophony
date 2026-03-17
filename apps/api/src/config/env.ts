@@ -135,9 +135,6 @@ const envSchema = z
     SENDGRID_API_KEY: z.string().optional(),
     SENDGRID_FROM: z.string().optional(),
 
-    // Plugin registry
-    PLUGIN_REGISTRY_URL: z.string().url().optional(),
-
     // Monitoring — Sentry
     SENTRY_DSN: z.string().url().optional(),
     SENTRY_ENVIRONMENT: z.string().default('development'),
