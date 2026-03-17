@@ -103,9 +103,9 @@ test.describe("Import Submissions (/workspace/import)", () => {
       // Navigate to external submissions list to find created entries
       await authedPage.goto("/workspace/external");
 
-      // Look for our imported entries and capture IDs for cleanup
+      // Wait for the list to finish loading (heading renders before query resolves)
       const listMain = authedPage.locator("main");
-      await expect(listMain.getByRole("heading").first()).toBeVisible({
+      await expect(listMain.getByText("The Paris Review")).toBeVisible({
         timeout: 10_000,
       });
 
@@ -119,7 +119,7 @@ test.describe("Import Submissions (/workspace/import)", () => {
             createdIds.push(match[1]);
           }
           await authedPage.goto("/workspace/external");
-          await expect(listMain.getByRole("heading").first()).toBeVisible({
+          await expect(listMain.getByText(name)).toBeVisible({
             timeout: 10_000,
           });
         }
