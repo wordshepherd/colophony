@@ -46,7 +46,7 @@ pnpm zitadel:setup
 pnpm dev              # API on :4000, Web on :3000
 ```
 
-Prerequisites: Node.js >= 22, pnpm 9.15+, Docker, tmux + Overmind. See [CONTRIBUTING.md](CONTRIBUTING.md) for full setup instructions.
+Prerequisites: Node.js >= 22, pnpm 9.15+, Docker, [hivemind](https://github.com/DarthSim/hivemind). See [CONTRIBUTING.md](CONTRIBUTING.md) for full setup instructions.
 
 ## Tech Stack
 

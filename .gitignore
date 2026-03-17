@@ -47,9 +47,6 @@ Thumbs.db
 # Docker bind mounts (Zitadel PAT, etc.)
 .docker/
 
-# Overmind
-.overmind.sock
-
 # Session handoff (machine-readable, not for version control)
 session-handoff.md
 

@@ -115,7 +115,7 @@ The original plan proposed 6 separate services. In practice, all backend logic r
 | ------------------- | ------------------------- | ----------------------------------------------- |
 | **Self-hosted**     | Docker Compose            | Small magazine with a VPS                       |
 | **Managed hosting** | Coolify + Hetzner         | Magazines that don't want to run infrastructure |
-| **Development**     | Docker Compose + Overmind | Contributors                                    |
+| **Development**     | Docker Compose + hivemind | Contributors                                    |
 
 ### Monorepo Structure (Actual)
 

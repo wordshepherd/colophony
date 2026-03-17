@@ -11,7 +11,7 @@ Please read our [Code of Conduct](CODE_OF_CONDUCT.md) before participating.
 - Node.js >= 22
 - pnpm 9.15+
 - Docker and Docker Compose
-- tmux + [Overmind](https://github.com/DarthSim/overmind) — process supervisor for running the API and web dev servers concurrently with log multiplexing
+- [hivemind](https://github.com/DarthSim/hivemind) — process manager for running the API and web dev servers concurrently with labeled log output
 
 ### Setup
 
@@ -24,13 +24,7 @@ pnpm zitadel:setup    # Provision Zitadel auth (after first volume creation)
 pnpm dev              # Start dev servers (API: 4000, Web: 3000)
 ```
 
-Overmind manages the dev servers. Useful commands while `pnpm dev` is running:
-
-```bash
-overmind connect api   # Attach to API logs (detach: Ctrl+B D)
-overmind connect web   # Attach to Web logs
-overmind restart api   # Restart API only
-```
+hivemind manages the dev servers. Ctrl+C stops both. Both apps have hot-reload for file changes. Use `pnpm dev:clean` to kill orphaned processes if needed.
 
 ## Development Workflow
 
