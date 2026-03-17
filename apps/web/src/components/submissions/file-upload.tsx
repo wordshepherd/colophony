@@ -94,7 +94,10 @@ function UploadingFileItem({
   onRemove: () => void;
 }) {
   return (
-    <div className="flex items-center gap-3 p-3 border rounded-lg">
+    <div
+      className="flex items-center gap-3 p-3 border rounded-lg"
+      data-testid="file-row"
+    >
       <File className="h-8 w-8 text-muted-foreground flex-shrink-0" />
       <div className="flex-1 min-w-0">
         <p className="text-sm font-medium truncate">{upload.file.name}</p>
@@ -151,7 +154,10 @@ function ExistingFileItem({
   canDelete: boolean;
 }) {
   return (
-    <div className="flex items-center gap-3 p-3 border rounded-lg">
+    <div
+      className="flex items-center gap-3 p-3 border rounded-lg"
+      data-testid="file-row"
+    >
       <File className="h-8 w-8 text-muted-foreground flex-shrink-0" />
       <div className="flex-1 min-w-0">
         <p className="text-sm font-medium truncate">{file.filename}</p>
