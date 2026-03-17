@@ -1,22 +1,14 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Overmind process manager wrapper for dev servers.
-# Builds workspace packages first (via Turbo), then starts API + Web via Overmind.
+# hivemind process manager wrapper for dev servers.
+# Builds workspace packages first (via Turbo), then starts API + Web via hivemind.
 
-# Check for required binaries
-if ! command -v tmux &>/dev/null; then
-  echo "Error: tmux is required but not installed."
-  echo "  Ubuntu/Debian: sudo apt install tmux"
-  echo "  macOS: brew install tmux"
-  exit 1
-fi
-
-if ! command -v overmind &>/dev/null; then
-  echo "Error: overmind is required but not installed."
-  echo "  Install: https://github.com/DarthSim/overmind#installation"
-  echo "  Ubuntu/Debian: sudo apt install overmind (or download binary from releases)"
-  echo "  macOS: brew install overmind"
+# Check for required binary
+if ! command -v hivemind &>/dev/null; then
+  echo "Error: hivemind is required but not installed."
+  echo "  Linux: curl -L https://github.com/DarthSim/hivemind/releases/latest/download/hivemind-v1.1.0-linux-amd64.gz | gunzip > ~/.local/bin/hivemind && chmod +x ~/.local/bin/hivemind"
+  echo "  macOS: brew install hivemind"
   exit 1
 fi
 
@@ -27,7 +19,5 @@ bash scripts/dev-clean.sh 2>/dev/null || true
 echo "Building workspace packages..."
 pnpm exec turbo run build --filter='./packages/*'
 
-# Start dev servers via Overmind (exec replaces shell for clean signal handling)
-# --no-port: let each process use its own PORT (API from .env, Next.js default 3000)
-# Without this, Overmind sets PORT=5000/5100 which breaks Zitadel OIDC redirect URIs
-exec overmind start -f Procfile.dev --no-port
+# Start dev servers via hivemind (exec replaces shell for clean signal handling)
+exec hivemind Procfile.dev

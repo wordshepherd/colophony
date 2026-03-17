@@ -18,17 +18,6 @@ for port in 4000 3000; do
   fi
 done
 
-# Stop Overmind session (project-scoped via .overmind.sock)
-if [ -S .overmind.sock ]; then
-  echo "Stopping Overmind session..."
-  overmind kill 2>/dev/null || true
-  # Remove stale socket if overmind kill didn't clean up
-  if [ -S .overmind.sock ]; then
-    echo "Removing stale Overmind socket..."
-    rm -f .overmind.sock
-  fi
-fi
-
 # Remove stale Next.js dev lock
 if [ -f apps/web/.next/dev/lock ]; then
   echo "Removing stale Next.js lock..."
