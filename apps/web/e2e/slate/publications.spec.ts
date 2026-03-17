@@ -56,7 +56,6 @@ test.describe("Publications (/slate/publications)", () => {
     await authedPage
       .getByPlaceholder("Search by name...")
       .fill(slateData.publication.name);
-    await authedPage.waitForTimeout(400);
     await expect(
       authedPage.getByText(slateData.publication.name),
     ).toBeVisible();
@@ -65,7 +64,6 @@ test.describe("Publications (/slate/publications)", () => {
     await authedPage
       .getByPlaceholder("Search by name...")
       .fill("nonexistent-xyz-999");
-    await authedPage.waitForTimeout(400);
     await expect(
       authedPage.getByText("No publications", { exact: true }),
     ).toBeVisible();

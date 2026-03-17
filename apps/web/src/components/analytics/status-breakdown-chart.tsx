@@ -23,7 +23,7 @@ export function StatusBreakdownChart({ filter }: StatusBreakdownChartProps) {
     trpc.submissions.analyticsStatusBreakdown.useQuery(filter);
 
   return (
-    <Card>
+    <Card data-testid="chart-card-status-breakdown">
       <CardHeader>
         <CardTitle className="text-base">Status Breakdown</CardTitle>
       </CardHeader>

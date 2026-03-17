@@ -27,7 +27,7 @@ export function AgingTable({ filter }: AgingTableProps) {
     });
 
   return (
-    <Card>
+    <Card data-testid="chart-card-aging-submissions">
       <CardHeader>
         <CardTitle className="text-base">
           Aging Submissions

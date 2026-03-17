@@ -193,7 +193,7 @@ test.describe("File Upload (/submissions/:id — edit mode)", () => {
 
     // Find and click the delete button (X icon) for this file
     const fileRow = authedPage
-      .locator(".border.rounded-lg")
+      .getByTestId("file-row")
       .filter({ hasText: "to-delete.txt" });
     await fileRow.getByRole("button").click();
 

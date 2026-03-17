@@ -221,7 +221,10 @@ test.describe("Submission Detail & Edit", () => {
     await expect(authedPage.getByText("Withdraw submission?")).toBeVisible();
 
     // Confirm withdrawal
-    await authedPage.getByRole("button", { name: "Withdraw" }).last().click();
+    await authedPage
+      .getByRole("dialog")
+      .getByRole("button", { name: "Withdraw" })
+      .click();
 
     // Should show success toast
     await expect(authedPage.getByText("Submission withdrawn")).toBeVisible({
@@ -255,8 +258,8 @@ test.describe("Submission Detail & Edit", () => {
 
     // Confirm deletion
     await authedPage
+      .getByRole("dialog")
       .getByRole("button", { name: /Delete/ })
-      .last()
       .click();
 
     // Should redirect to submissions list
