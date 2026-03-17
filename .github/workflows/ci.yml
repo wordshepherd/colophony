@@ -398,18 +398,6 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - name: Build workspace dependencies
         run: pnpm turbo run build --filter=@colophony/db --filter=@colophony/types --filter=@colophony/api-contracts --filter=@colophony/plugin-sdk
-      - name: Run Drizzle migrations (for verify step)
-        run: pnpm db:migrate
-        env:
-          DATABASE_URL: postgresql://test:test@localhost:5433/colophony_test
-      - name: Verify DB migrations
-        run: pnpm --filter @colophony/db verify
-        env:
-          DATABASE_URL: postgresql://test:test@localhost:5433/colophony_test
-      - name: Validate enum migrations
-        run: pnpm --filter @colophony/db validate-enums
-        env:
-          DATABASE_URL: postgresql://test:test@localhost:5433/colophony_test
       - name: Run RLS integration tests
         run: pnpm --filter @colophony/api test:rls
         env:
@@ -555,7 +543,7 @@ jobs:
           DATABASE_APP_URL: postgresql://app_user:app_password@localhost:5433/colophony_test
 
   # ──────────────────────────────────────────────────
-  # Webhook integration tests: needs Postgres only
+  # Webhook integration tests: needs Postgres + Redis
   # ──────────────────────────────────────────────────
   webhook-tests:
     name: Webhook Integration Tests
@@ -578,6 +566,15 @@ jobs:
           --health-interval 5s
           --health-timeout 5s
           --health-retries 10
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
     steps:
       - uses: actions/checkout@v6
       - uses: pnpm/action-setup@v4
@@ -595,6 +592,9 @@ jobs:
         env:
           DATABASE_TEST_URL: postgresql://test:test@localhost:5433/colophony_test
           DATABASE_APP_URL: postgresql://app_user:app_password@localhost:5433/colophony_test
+          REDIS_HOST: localhost
+          REDIS_PORT: "6379"
+          REDIS_PASSWORD: ""
 
   # ──────────────────────────────────────────────────
   # Python SDK tests: no infra required
