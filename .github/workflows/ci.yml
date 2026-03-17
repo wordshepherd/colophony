@@ -143,7 +143,7 @@ jobs:
       - name: Build workspace dependencies
         run: pnpm turbo run build --filter=@colophony/db --filter=@colophony/auth-client --filter=@colophony/types --filter=@colophony/api-contracts --filter=@colophony/plugin-sdk
       - name: Run unit tests (shuffled, no retries)
-        run: pnpm --filter @colophony/db test && pnpm --filter @colophony/auth-client test && pnpm --filter @colophony/api test && pnpm --filter @colophony/web test
+        run: pnpm --filter @colophony/auth-client test && pnpm --filter @colophony/api test && pnpm --filter @colophony/web test
 
   # ──────────────────────────────────────────────────
   # Coverage report: runs test:cov across all packages
@@ -155,6 +155,29 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: colophony_test
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd "pg_isready -U test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
     steps:
       - uses: actions/checkout@v6
         with:
@@ -169,8 +192,36 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - name: Build workspace dependencies
         run: pnpm turbo run build --filter=@colophony/db --filter=@colophony/auth-client --filter=@colophony/types --filter=@colophony/api-contracts --filter=@colophony/plugin-sdk
-      - name: Run coverage (API)
+      - name: Run coverage (API unit tests)
         run: pnpm --filter @colophony/api test:cov
+      - name: Run coverage (API RLS tests)
+        run: pnpm --filter @colophony/api exec vitest run --config vitest.config.rls.ts --coverage --coverage.reportsDirectory=./coverage-rls
+        env:
+          DATABASE_TEST_URL: postgresql://test:test@localhost:5433/colophony_test
+          DATABASE_APP_URL: postgresql://app_user:app_password@localhost:5433/colophony_test
+      - name: Run coverage (API webhook tests)
+        run: pnpm --filter @colophony/api exec vitest run --config vitest.config.webhooks.ts --coverage --coverage.reportsDirectory=./coverage-webhooks
+        env:
+          DATABASE_TEST_URL: postgresql://test:test@localhost:5433/colophony_test
+          DATABASE_APP_URL: postgresql://app_user:app_password@localhost:5433/colophony_test
+      - name: Run coverage (API security tests)
+        run: pnpm --filter @colophony/api exec vitest run --config vitest.config.security.ts --coverage --coverage.reportsDirectory=./coverage-security
+        env:
+          DATABASE_TEST_URL: postgresql://test:test@localhost:5433/colophony_test
+          DATABASE_APP_URL: postgresql://app_user:app_password@localhost:5433/colophony_test
+      - name: Run coverage (API service tests)
+        run: pnpm --filter @colophony/api exec vitest run --config vitest.config.services.ts --coverage --coverage.reportsDirectory=./coverage-services
+        env:
+          DATABASE_TEST_URL: postgresql://test:test@localhost:5433/colophony_test
+          DATABASE_APP_URL: postgresql://app_user:app_password@localhost:5433/colophony_test
+      - name: Run coverage (API queue tests)
+        run: pnpm --filter @colophony/api exec vitest run --config vitest.config.queues.ts --coverage --coverage.reportsDirectory=./coverage-queues
+        env:
+          DATABASE_TEST_URL: postgresql://test:test@localhost:5433/colophony_test
+          DATABASE_APP_URL: postgresql://app_user:app_password@localhost:5433/colophony_test
+          REDIS_HOST: localhost
+          REDIS_PORT: "6379"
+          REDIS_PASSWORD: ""
       - name: Run coverage (Web)
         run: pnpm --filter @colophony/web test:cov
       - name: Run coverage (packages)
@@ -181,6 +232,11 @@ jobs:
           name: coverage-reports
           path: |
             apps/api/coverage/
+            apps/api/coverage-rls/
+            apps/api/coverage-webhooks/
+            apps/api/coverage-security/
+            apps/api/coverage-services/
+            apps/api/coverage-queues/
             apps/web/coverage/
             packages/types/coverage/
             packages/api-client/coverage/
@@ -192,6 +248,11 @@ jobs:
         run: |
           LCOV_FILES=(
             apps/api/coverage/lcov.info
+            apps/api/coverage-rls/lcov.info
+            apps/api/coverage-webhooks/lcov.info
+            apps/api/coverage-security/lcov.info
+            apps/api/coverage-services/lcov.info
+            apps/api/coverage-queues/lcov.info
             apps/web/coverage/lcov.info
             packages/types/coverage/lcov.info
             packages/api-client/coverage/lcov.info
@@ -480,6 +541,82 @@ jobs:
         env:
           DATABASE_TEST_URL: postgresql://test:test@localhost:5433/colophony_test
           DATABASE_APP_URL: postgresql://app_user:app_password@localhost:5433/colophony_test
+
+  # ──────────────────────────────────────────────────
+  # Webhook integration tests: needs Postgres + Redis
+  # ──────────────────────────────────────────────────
+  webhook-tests:
+    name: Webhook Integration Tests
+    needs: changes
+    if: needs.changes.outputs.docs_only != 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: colophony_test
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd "pg_isready -U test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v6
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+      - uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "pnpm"
+      - run: pnpm install --frozen-lockfile
+      - name: Build workspace dependencies
+        run: pnpm turbo run build --filter=@colophony/db --filter=@colophony/auth-client --filter=@colophony/types --filter=@colophony/api-contracts --filter=@colophony/plugin-sdk
+      - name: Run webhook integration tests
+        run: pnpm --filter @colophony/api test:webhooks
+        env:
+          DATABASE_TEST_URL: postgresql://test:test@localhost:5433/colophony_test
+          DATABASE_APP_URL: postgresql://app_user:app_password@localhost:5433/colophony_test
+          REDIS_HOST: localhost
+          REDIS_PORT: "6379"
+          REDIS_PASSWORD: ""
+
+  # ──────────────────────────────────────────────────
+  # Python SDK tests: no infra required
+  # ──────────────────────────────────────────────────
+  python-sdk-tests:
+    name: Python SDK Tests
+    needs: changes
+    if: needs.changes.outputs.docs_only != 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - name: Install Poetry
+        run: pip install poetry
+      - name: Install dependencies
+        run: cd sdks/python && poetry install
+      - name: Run Python SDK tests
+        run: cd sdks/python && poetry run pytest -v
 
   # ──────────────────────────────────────────────────
   # Playwright E2E tests (~5 min): submissions project
