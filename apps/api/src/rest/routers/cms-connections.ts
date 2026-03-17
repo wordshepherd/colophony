@@ -49,7 +49,11 @@ const list = orgProcedure
   .input(restListCmsConnectionsQuery)
   .output(paginatedConnectionsSchema)
   .handler(async ({ input, context }) => {
-    return cmsConnectionService.list(context.dbTx, input);
+    return cmsConnectionService.list(
+      context.dbTx,
+      input,
+      context.authContext.orgId,
+    );
   });
 
 const create = orgProcedure
@@ -94,6 +98,7 @@ const get = orgProcedure
       const connection = await cmsConnectionService.getById(
         context.dbTx,
         input.id,
+        context.authContext.orgId,
       );
       if (!connection) throw new CmsConnectionNotFoundError(input.id);
       return connection;

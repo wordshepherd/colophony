@@ -48,7 +48,7 @@ const list = orgProcedure
   .input(restListQuery)
   .output(paginatedIssuesSchema)
   .handler(async ({ input, context }) => {
-    return issueService.list(context.dbTx, input);
+    return issueService.list(context.dbTx, input, context.authContext.orgId);
   });
 
 const get = orgProcedure
@@ -65,7 +65,11 @@ const get = orgProcedure
   .output(issueSchema)
   .handler(async ({ input, context }) => {
     try {
-      const issue = await issueService.getById(context.dbTx, input.id);
+      const issue = await issueService.getById(
+        context.dbTx,
+        input.id,
+        context.authContext.orgId,
+      );
       if (!issue) throw new IssueNotFoundError(input.id);
       return issue;
     } catch (e) {
@@ -86,7 +90,11 @@ const getItems = orgProcedure
   .input(idParamSchema)
   .output(z.array(issueItemSchema))
   .handler(async ({ input, context }) => {
-    return issueService.getItems(context.dbTx, input.id);
+    return issueService.getItems(
+      context.dbTx,
+      input.id,
+      context.authContext.orgId,
+    );
   });
 
 const getSections = orgProcedure
@@ -102,7 +110,11 @@ const getSections = orgProcedure
   .input(idParamSchema)
   .output(z.array(issueSectionSchema))
   .handler(async ({ input, context }) => {
-    return issueService.getSections(context.dbTx, input.id);
+    return issueService.getSections(
+      context.dbTx,
+      input.id,
+      context.authContext.orgId,
+    );
   });
 
 const create = adminProcedure
@@ -237,7 +249,7 @@ const removeItem = adminProcedure
     tags: ['Issues'],
   })
   .input(z.object({ id: z.string().uuid(), itemId: z.string().uuid() }))
-  .output(issueItemSchema)
+  .output(issueItemSchema.nullable())
   .handler(async ({ input, context }) => {
     try {
       return await issueService.removeItemWithAudit(
@@ -264,7 +276,12 @@ const reorderItems = adminProcedure
   .output(z.array(issueItemSchema))
   .handler(async ({ input, context }) => {
     const { id, ...data } = input;
-    return issueService.reorderItems(context.dbTx, id, data);
+    return issueService.reorderItems(
+      context.dbTx,
+      id,
+      data,
+      context.authContext.orgId,
+    );
   });
 
 const addSection = adminProcedure
@@ -282,7 +299,16 @@ const addSection = adminProcedure
   .output(issueSectionSchema)
   .handler(async ({ input, context }) => {
     const { id, ...data } = input;
-    return issueService.addSection(context.dbTx, id, data);
+    try {
+      return await issueService.addSection(
+        context.dbTx,
+        id,
+        data,
+        context.authContext.orgId,
+      );
+    } catch (e) {
+      mapServiceError(e);
+    }
   });
 
 const removeSection = adminProcedure
@@ -296,9 +322,14 @@ const removeSection = adminProcedure
     tags: ['Issues'],
   })
   .input(z.object({ id: z.string().uuid(), sectionId: z.string().uuid() }))
-  .output(issueSectionSchema)
+  .output(issueSectionSchema.nullable())
   .handler(async ({ input, context }) => {
-    return issueService.removeSection(context.dbTx, input.id, input.sectionId);
+    return issueService.removeSection(
+      context.dbTx,
+      input.id,
+      input.sectionId,
+      context.authContext.orgId,
+    );
   });
 
 // ---------------------------------------------------------------------------

@@ -61,11 +61,12 @@ export const issueService = {
   // List / Get
   // -------------------------------------------------------------------------
 
-  async list(tx: DrizzleDb, input: ListIssuesInput) {
+  async list(tx: DrizzleDb, input: ListIssuesInput, orgId?: string) {
     const { publicationId, status, search, from, to, page, limit } = input;
     const offset = (page - 1) * limit;
 
     const conditions = [];
+    if (orgId) conditions.push(eq(issues.organizationId, orgId));
     if (publicationId) conditions.push(eq(issues.publicationId, publicationId));
     if (status) conditions.push(eq(issues.status, status));
     if (search) conditions.push(ilike(issues.title, `%${search}%`));
@@ -112,7 +113,11 @@ export const issueService = {
     return row ?? null;
   },
 
-  async getItems(tx: DrizzleDb, issueId: string) {
+  async getItems(tx: DrizzleDb, issueId: string, orgId?: string) {
+    if (orgId) {
+      const issue = await issueService.getById(tx, issueId, orgId);
+      if (!issue) return [];
+    }
     return tx
       .select({
         ...getTableColumns(issueItems),
@@ -126,7 +131,11 @@ export const issueService = {
       .limit(10000);
   },
 
-  async getSections(tx: DrizzleDb, issueId: string) {
+  async getSections(tx: DrizzleDb, issueId: string, orgId?: string) {
+    if (orgId) {
+      const issue = await issueService.getById(tx, issueId, orgId);
+      if (!issue) return [];
+    }
     return tx
       .select()
       .from(issueSections)
@@ -169,7 +178,12 @@ export const issueService = {
     return issue;
   },
 
-  async update(tx: DrizzleDb, id: string, input: UpdateIssueInput) {
+  async update(
+    tx: DrizzleDb,
+    id: string,
+    input: UpdateIssueInput,
+    orgId?: string,
+  ) {
     const values: Record<string, unknown> = { updatedAt: new Date() };
     if (input.title !== undefined) values.title = input.title;
     if (input.volume !== undefined) values.volume = input.volume;
@@ -183,7 +197,11 @@ export const issueService = {
     const [row] = await tx
       .update(issues)
       .set(values)
-      .where(eq(issues.id, id))
+      .where(
+        orgId
+          ? and(eq(issues.id, id), eq(issues.organizationId, orgId))
+          : eq(issues.id, id),
+      )
       .returning();
 
     return row ?? null;
@@ -195,7 +213,12 @@ export const issueService = {
     input: UpdateIssueInput,
   ) {
     assertEditorOrAdmin(ctx.actor.role);
-    const updated = await issueService.update(ctx.tx, id, input);
+    const updated = await issueService.update(
+      ctx.tx,
+      id,
+      input,
+      ctx.actor.orgId,
+    );
     if (!updated) throw new IssueNotFoundError(id);
     await ctx.audit({
       action: AuditActions.ISSUE_UPDATED,
@@ -206,7 +229,12 @@ export const issueService = {
     return updated;
   },
 
-  async updateStatus(tx: DrizzleDb, id: string, status: IssueStatus) {
+  async updateStatus(
+    tx: DrizzleDb,
+    id: string,
+    status: IssueStatus,
+    orgId?: string,
+  ) {
     const values: Record<string, unknown> = {
       status,
       updatedAt: new Date(),
@@ -216,7 +244,11 @@ export const issueService = {
     const [row] = await tx
       .update(issues)
       .set(values)
-      .where(eq(issues.id, id))
+      .where(
+        orgId
+          ? and(eq(issues.id, id), eq(issues.organizationId, orgId))
+          : eq(issues.id, id),
+      )
       .returning();
 
     return row ?? null;
@@ -224,9 +256,14 @@ export const issueService = {
 
   async publishWithAudit(ctx: ServiceContext, id: string) {
     assertEditorOrAdmin(ctx.actor.role);
-    const issue = await issueService.getById(ctx.tx, id);
+    const issue = await issueService.getById(ctx.tx, id, ctx.actor.orgId);
     if (!issue) throw new IssueNotFoundError(id);
-    const updated = await issueService.updateStatus(ctx.tx, id, 'PUBLISHED');
+    const updated = await issueService.updateStatus(
+      ctx.tx,
+      id,
+      'PUBLISHED',
+      ctx.actor.orgId,
+    );
     if (!updated) throw new IssueNotFoundError(id);
     await ctx.audit({
       action: AuditActions.ISSUE_PUBLISHED,
@@ -248,9 +285,14 @@ export const issueService = {
 
   async archiveWithAudit(ctx: ServiceContext, id: string) {
     assertEditorOrAdmin(ctx.actor.role);
-    const issue = await issueService.getById(ctx.tx, id);
+    const issue = await issueService.getById(ctx.tx, id, ctx.actor.orgId);
     if (!issue) throw new IssueNotFoundError(id);
-    const updated = await issueService.updateStatus(ctx.tx, id, 'ARCHIVED');
+    const updated = await issueService.updateStatus(
+      ctx.tx,
+      id,
+      'ARCHIVED',
+      ctx.actor.orgId,
+    );
     if (!updated) throw new IssueNotFoundError(id);
     await ctx.audit({
       action: AuditActions.ISSUE_ARCHIVED,
@@ -275,8 +317,9 @@ export const issueService = {
       externalUrl?: string;
       adapterType: string;
     },
+    orgId?: string,
   ) {
-    const issue = await issueService.getById(tx, issueId);
+    const issue = await issueService.getById(tx, issueId, orgId);
     if (!issue) return null;
 
     const metadata = issue.metadata ?? {};
@@ -291,7 +334,11 @@ export const issueService = {
     const [row] = await tx
       .update(issues)
       .set({ metadata: { ...metadata, cmsPublish }, updatedAt: new Date() })
-      .where(eq(issues.id, issueId))
+      .where(
+        orgId
+          ? and(eq(issues.id, issueId), eq(issues.organizationId, orgId))
+          : eq(issues.id, issueId),
+      )
       .returning();
 
     return row ?? null;
@@ -301,7 +348,16 @@ export const issueService = {
   // Items
   // -------------------------------------------------------------------------
 
-  async addItem(tx: DrizzleDb, issueId: string, input: AddIssueItemInput) {
+  async addItem(
+    tx: DrizzleDb,
+    issueId: string,
+    input: AddIssueItemInput,
+    orgId?: string,
+  ) {
+    if (orgId) {
+      const issue = await issueService.getById(tx, issueId, orgId);
+      if (!issue) throw new IssueNotFoundError(issueId);
+    }
     // Validate section belongs to this issue (if provided)
     if (input.issueSectionId) {
       const [section] = await tx
@@ -342,7 +398,12 @@ export const issueService = {
   ) {
     assertEditorOrAdmin(ctx.actor.role);
     try {
-      const item = await issueService.addItem(ctx.tx, issueId, input);
+      const item = await issueService.addItem(
+        ctx.tx,
+        issueId,
+        input,
+        ctx.actor.orgId,
+      );
       await ctx.audit({
         action: AuditActions.ISSUE_ITEM_ADDED,
         resource: AuditResources.ISSUE,
@@ -364,7 +425,16 @@ export const issueService = {
     }
   },
 
-  async removeItem(tx: DrizzleDb, issueId: string, itemId: string) {
+  async removeItem(
+    tx: DrizzleDb,
+    issueId: string,
+    itemId: string,
+    orgId?: string,
+  ) {
+    if (orgId) {
+      const issue = await issueService.getById(tx, issueId, orgId);
+      if (!issue) return null;
+    }
     const [row] = await tx
       .delete(issueItems)
       .where(and(eq(issueItems.id, itemId), eq(issueItems.issueId, issueId)))
@@ -379,7 +449,12 @@ export const issueService = {
     itemId: string,
   ) {
     assertEditorOrAdmin(ctx.actor.role);
-    const removed = await issueService.removeItem(ctx.tx, issueId, itemId);
+    const removed = await issueService.removeItem(
+      ctx.tx,
+      issueId,
+      itemId,
+      ctx.actor.orgId,
+    );
     if (removed) {
       await ctx.audit({
         action: AuditActions.ISSUE_ITEM_REMOVED,
@@ -391,14 +466,23 @@ export const issueService = {
     return removed;
   },
 
-  async reorderItems(tx: DrizzleDb, issueId: string, input: ReorderItemsInput) {
+  async reorderItems(
+    tx: DrizzleDb,
+    issueId: string,
+    input: ReorderItemsInput,
+    orgId?: string,
+  ) {
+    if (orgId) {
+      const issue = await issueService.getById(tx, issueId, orgId);
+      if (!issue) return [];
+    }
     for (const { id, sortOrder } of input.items) {
       await tx
         .update(issueItems)
         .set({ sortOrder })
         .where(and(eq(issueItems.id, id), eq(issueItems.issueId, issueId)));
     }
-    return issueService.getItems(tx, issueId);
+    return issueService.getItems(tx, issueId, orgId);
   },
 
   // -------------------------------------------------------------------------
@@ -409,7 +493,12 @@ export const issueService = {
     tx: DrizzleDb,
     issueId: string,
     input: AddIssueSectionInput,
+    orgId?: string,
   ) {
+    if (orgId) {
+      const issue = await issueService.getById(tx, issueId, orgId);
+      if (!issue) throw new IssueNotFoundError(issueId);
+    }
     const [row] = await tx
       .insert(issueSections)
       .values({
@@ -422,7 +511,16 @@ export const issueService = {
     return row;
   },
 
-  async removeSection(tx: DrizzleDb, issueId: string, sectionId: string) {
+  async removeSection(
+    tx: DrizzleDb,
+    issueId: string,
+    sectionId: string,
+    orgId?: string,
+  ) {
+    if (orgId) {
+      const issue = await issueService.getById(tx, issueId, orgId);
+      if (!issue) return null;
+    }
     const [row] = await tx
       .delete(issueSections)
       .where(
