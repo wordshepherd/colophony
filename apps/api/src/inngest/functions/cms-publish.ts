@@ -32,15 +32,15 @@ export const cmsPublishWorkflow = inngest.createFunction(
     // Step 1: Load issue, sections, items with submission data, and CMS connections
     const data = await step.run('load-issue-and-connections', async () => {
       return withRls({ orgId }, async (tx: DrizzleDb) => {
-        const issueRow = await issueService.getById(tx, issueId);
+        const issueRow = await issueService.getById(tx, issueId, orgId);
         if (!issueRow) {
           throw new Error(`Issue ${issueId} not found`);
         }
 
         const [sectionRows, itemRows, conns] = await Promise.all([
-          issueService.getSections(tx, issueId),
-          issueService.getItems(tx, issueId),
-          cmsConnectionService.listByPublication(tx, publicationId),
+          issueService.getSections(tx, issueId, orgId),
+          issueService.getItems(tx, issueId, orgId),
+          cmsConnectionService.listByPublication(tx, publicationId, orgId),
         ]);
 
         // Load submission data for each issue item via pipeline_items → submissions
@@ -134,12 +134,18 @@ export const cmsPublishWorkflow = inngest.createFunction(
 
           // Update last sync timestamp and persist publish result
           await withRls({ orgId }, async (tx: DrizzleDb) => {
-            await cmsConnectionService.updateLastSync(tx, conn.id);
-            await issueService.saveCmsPublishResult(tx, issueId, conn.id, {
-              externalId: publishResult.externalId,
-              externalUrl: publishResult.externalUrl,
-              adapterType: conn.adapterType,
-            });
+            await cmsConnectionService.updateLastSync(tx, conn.id, orgId);
+            await issueService.saveCmsPublishResult(
+              tx,
+              issueId,
+              conn.id,
+              {
+                externalId: publishResult.externalId,
+                externalUrl: publishResult.externalUrl,
+                adapterType: conn.adapterType,
+              },
+              orgId,
+            );
           });
 
           return {

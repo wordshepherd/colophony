@@ -4,7 +4,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 const mockUpdate = vi.fn();
 const mockSelectFrom = vi.fn();
 vi.mock('@colophony/db', () => ({
-  issues: { id: 'id', metadata: 'metadata' },
+  issues: { id: 'id', organizationId: 'organization_id', metadata: 'metadata' },
   issueSections: { id: 'id', issueId: 'issue_id', sortOrder: 'sort_order' },
   issueItems: {
     id: 'id',
@@ -171,5 +171,74 @@ describe('issueService.saveCmsPublishResult', () => {
         }),
       }),
     );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Defense-in-depth org filtering
+// ---------------------------------------------------------------------------
+
+describe('issueService defense-in-depth org filtering', () => {
+  function makeTxNoRows() {
+    const updateReturning = vi.fn().mockResolvedValue([]);
+    const updateWhere = vi.fn().mockReturnValue({ returning: updateReturning });
+    const updateSet = vi.fn().mockReturnValue({ where: updateWhere });
+    const selectLimitResult = vi.fn().mockResolvedValue([]);
+    return {
+      select: vi.fn().mockReturnValue({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            limit: selectLimitResult,
+            orderBy: vi.fn().mockReturnValue({
+              limit: vi.fn().mockResolvedValue([]),
+            }),
+          }),
+          leftJoin: vi.fn().mockReturnValue({
+            leftJoin: vi.fn().mockReturnValue({
+              where: vi.fn().mockReturnValue({
+                orderBy: vi.fn().mockReturnValue({
+                  limit: vi.fn().mockResolvedValue([]),
+                }),
+              }),
+            }),
+          }),
+        }),
+      }),
+      update: vi.fn().mockReturnValue({ set: updateSet }),
+    } as unknown as Parameters<typeof issueService.update>[0];
+  }
+
+  it('update returns null when orgId does not match', async () => {
+    const tx = makeTxNoRows();
+    const result = await issueService.update(
+      tx,
+      'issue-1',
+      { title: 'Changed' },
+      'wrong-org',
+    );
+    expect(result).toBeNull();
+  });
+
+  it('updateStatus returns null when orgId does not match', async () => {
+    const tx = makeTxNoRows();
+    const result = await issueService.updateStatus(
+      tx,
+      'issue-1',
+      'PUBLISHED',
+      'wrong-org',
+    );
+    expect(result).toBeNull();
+  });
+
+  it('getItems returns [] when orgId does not match parent issue', async () => {
+    const tx = makeTxNoRows();
+    const result = await issueService.getItems(tx, 'issue-1', 'wrong-org');
+    expect(result).toEqual([]);
+  });
+
+  it('getSections returns [] when orgId does not match parent issue', async () => {
+    const tx = makeTxNoRows();
+    const result = await issueService.getSections(tx, 'issue-1', 'wrong-org');
+    expect(result).toEqual([]);
   });
 });

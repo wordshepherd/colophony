@@ -18,6 +18,7 @@ vi.mock('./errors.js', () => ({
 vi.mock('@colophony/db', () => ({
   cmsConnections: {
     id: 'id',
+    organizationId: 'organization_id',
     publicationId: 'publication_id',
     isActive: 'is_active',
     createdAt: 'created_at',
@@ -171,5 +172,81 @@ describe('cmsConnectionService.testConnectionWithAudit', () => {
     const auditCall = (ctx.audit as ReturnType<typeof vi.fn>).mock.calls[0][0];
     expect(auditCall.action).toBe(AuditActions.CMS_CONNECTION_TESTED);
     expect(auditCall.newValue).toEqual({ success: false });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Defense-in-depth org filtering
+// ---------------------------------------------------------------------------
+
+describe('cmsConnectionService defense-in-depth org filtering', () => {
+  function makeTxNoRows(): DrizzleDb {
+    const updateReturning = vi.fn().mockResolvedValue([]);
+    const updateWhere = vi.fn().mockReturnValue({ returning: updateReturning });
+    const updateSet = vi.fn().mockReturnValue({ where: updateWhere });
+    const deleteReturning = vi.fn().mockResolvedValue([]);
+    const deleteWhere = vi.fn().mockReturnValue({ returning: deleteReturning });
+    const selectLimitResult = vi.fn().mockResolvedValue([]);
+    return {
+      select: vi.fn().mockReturnValue({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            limit: selectLimitResult,
+          }),
+        }),
+      }),
+      update: vi.fn().mockReturnValue({ set: updateSet }),
+      delete: vi.fn().mockReturnValue({ where: deleteWhere }),
+    } as unknown as DrizzleDb;
+  }
+
+  it('update returns null when orgId does not match', async () => {
+    const tx = makeTxNoRows();
+    const result = await cmsConnectionService.update(
+      tx,
+      'conn-1',
+      { name: 'Changed' },
+      'wrong-org',
+    );
+    expect(result).toBeNull();
+  });
+
+  it('update succeeds when orgId matches', async () => {
+    const tx = makeTx();
+    const result = await cmsConnectionService.update(
+      tx,
+      'conn-1',
+      { name: 'Changed' },
+      'org-1',
+    );
+    expect(result).not.toBeNull();
+  });
+
+  it('delete returns null when orgId does not match', async () => {
+    const tx = makeTxNoRows();
+    const result = await cmsConnectionService.delete(tx, 'conn-1', 'wrong-org');
+    expect(result).toBeNull();
+  });
+
+  it('testConnection throws when orgId does not match (getById returns null)', async () => {
+    const tx = makeTxNoRows();
+    await expect(
+      cmsConnectionService.testConnection(tx, 'conn-1', 'wrong-org'),
+    ).rejects.toThrow('CMS connection "conn-1" not found');
+  });
+
+  it('updateWithAudit passes actor.orgId to inner update', async () => {
+    const ctx = makeServiceContext();
+    const spy = vi.spyOn(cmsConnectionService, 'update');
+    await cmsConnectionService.updateWithAudit(ctx, 'conn-1', {
+      name: 'New',
+    });
+    expect(spy).toHaveBeenCalledWith(
+      ctx.tx,
+      'conn-1',
+      { name: 'New' },
+      'org-1',
+    );
+    spy.mockRestore();
   });
 });

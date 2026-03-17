@@ -32,7 +32,7 @@ export const issuesRouter = createRouter({
     .input(listIssuesSchema)
     .output(paginatedResponseSchema(issueSchema))
     .query(async ({ ctx, input }) => {
-      return issueService.list(ctx.dbTx, input);
+      return issueService.list(ctx.dbTx, input, ctx.authContext.orgId);
     }),
 
   /** Get issue by ID. */
@@ -42,7 +42,11 @@ export const issuesRouter = createRouter({
     .output(issueSchema)
     .query(async ({ ctx, input }) => {
       try {
-        const issue = await issueService.getById(ctx.dbTx, input.id);
+        const issue = await issueService.getById(
+          ctx.dbTx,
+          input.id,
+          ctx.authContext.orgId,
+        );
         if (!issue) throw new IssueNotFoundError(input.id);
         return issue;
       } catch (e) {
@@ -56,7 +60,7 @@ export const issuesRouter = createRouter({
     .input(idParamSchema)
     .output(z.array(issueItemSchema))
     .query(async ({ ctx, input }) => {
-      return issueService.getItems(ctx.dbTx, input.id);
+      return issueService.getItems(ctx.dbTx, input.id, ctx.authContext.orgId);
     }),
 
   /** Get sections in an issue. */
@@ -65,7 +69,11 @@ export const issuesRouter = createRouter({
     .input(idParamSchema)
     .output(z.array(issueSectionSchema))
     .query(async ({ ctx, input }) => {
-      return issueService.getSections(ctx.dbTx, input.id);
+      return issueService.getSections(
+        ctx.dbTx,
+        input.id,
+        ctx.authContext.orgId,
+      );
     }),
 
   /** Create an issue (admin only). */
@@ -173,7 +181,12 @@ export const issuesRouter = createRouter({
     .output(z.array(issueItemSchema))
     .mutation(async ({ ctx, input }) => {
       const { id, ...data } = input;
-      return issueService.reorderItems(ctx.dbTx, id, data);
+      return issueService.reorderItems(
+        ctx.dbTx,
+        id,
+        data,
+        ctx.authContext.orgId,
+      );
     }),
 
   /** Add a section to an issue. */
@@ -183,7 +196,7 @@ export const issuesRouter = createRouter({
     .output(issueSectionSchema)
     .mutation(async ({ ctx, input }) => {
       const { id, ...data } = input;
-      return issueService.addSection(ctx.dbTx, id, data);
+      return issueService.addSection(ctx.dbTx, id, data, ctx.authContext.orgId);
     }),
 
   /** Remove a section from an issue. */
@@ -192,6 +205,11 @@ export const issuesRouter = createRouter({
     .input(z.object({ id: z.string().uuid(), sectionId: z.string().uuid() }))
     .output(issueSectionSchema.nullable())
     .mutation(async ({ ctx, input }) => {
-      return issueService.removeSection(ctx.dbTx, input.id, input.sectionId);
+      return issueService.removeSection(
+        ctx.dbTx,
+        input.id,
+        input.sectionId,
+        ctx.authContext.orgId,
+      );
     }),
 });
