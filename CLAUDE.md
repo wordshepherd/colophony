@@ -45,11 +45,7 @@ Per-directory CLAUDE.md files contain domain-specific details:
 | **Documenso webhook**    | `apps/api/src/webhooks/documenso.webhook.ts`                                     |
 | **Inngest functions**    | `apps/api/src/inngest/`                                                          |
 | **Adapter registry**     | `apps/api/src/adapters/registry-accessor.ts` (module-level singleton)            |
-| **Extensions store**     | `apps/api/src/adapters/extensions-accessor.ts` (UI extension singleton)          |
-| **Plugins store**        | `apps/api/src/adapters/plugins-accessor.ts` (plugin manifest singleton)          |
-| **Plugin registry svc**  | `apps/api/src/services/plugin-registry.service.ts` (remote registry fetch+cache) |
-| **Config builder**       | `apps/api/src/colophony.config.ts` (maps env → adapter configs + plugins)        |
-| **Built-in plugins**     | `apps/api/src/plugins/` (plugin classes registered in config)                    |
+| **Config builder**       | `apps/api/src/colophony.config.ts` (maps env → adapter init)                     |
 | **SDK adapters**         | `apps/api/src/adapters/{email,storage,payment}/` (SDK-compatible)                |
 | **CMS adapters**         | `apps/api/src/adapters/cms/`                                                     |
 | **Federation discovery** | `apps/api/src/federation/discovery.routes.ts`                                    |
@@ -77,8 +73,6 @@ Per-directory CLAUDE.md files contain domain-specific details:
 | **Writer analytics UI**  | `apps/web/src/components/workspace/writer-*` (analytics page + chart components) |
 | **Next.js frontend**     | `apps/web/`                                                                      |
 | **tRPC client**          | `apps/web/src/lib/trpc.ts`                                                       |
-| **Plugin components**    | `apps/web/src/components/plugins/` (PluginSlot, extensions, error boundary)      |
-| **Component registry**   | `apps/web/src/lib/plugin-components.ts` (build-time Map registry)                |
 | **Env config (Zod)**     | `apps/api/src/config/env.ts`                                                     |
 | **Plugin SDK**           | `packages/plugin-sdk/src/` (adapters, hooks, config, plugin-base, testing)       |
 | **OpenAPI spec**         | `sdks/openapi.json` (exported from running API, 67 paths, 15 tag groups)         |
@@ -537,12 +531,6 @@ Canonical env definition with Zod validation: `apps/api/src/config/env.ts` (55 v
 | `DOCUMENSO_API_URL` / `DOCUMENSO_API_KEY` | Optional | —       | API     |
 | `DOCUMENSO_WEBHOOK_SECRET`                | Optional | —       | API     |
 
-<!-- Plugins -->
-
-| Variable              | Required | Default | Used by |
-| --------------------- | -------- | ------- | ------- |
-| `PLUGIN_REGISTRY_URL` | No       | —       | API     |
-
 <!-- Monitoring -->
 
 | Variable                    | Required | Default       | Used by |
@@ -567,19 +555,19 @@ Canonical env definition with Zod validation: `apps/api/src/config/env.ts` (55 v
 
 See [docs/architecture.md Section 6](docs/architecture.md) for full details.
 
-| Track | Component                                                | Status       |
-| ----- | -------------------------------------------------------- | ------------ |
-| 1     | Core Infrastructure (Fastify, Drizzle, Zitadel, Coolify) | **Complete** |
-| 2     | Colophony API (REST, tRPC, SDKs; GraphQL extracted)      | **Complete** |
-| 3     | Hopper — Submission Management                           | **Complete** |
-| 4     | Slate — Publication Pipeline                             | **Complete** |
-| 5     | Register — Identity & Federation                         | **Complete** |
-| 6     | Colophony Plugins                                        | **Complete** |
-| 7     | Monitoring & Observability (Sentry, Prometheus, metrics) | **Complete** |
-| 8     | Register Data Standard & Writer Tools (CSR, workspace)   | **Complete** |
-| 9     | Governance & Public Docs                                 | **Complete** |
-| 10    | Analytics & Reporting (submission + writer analytics)    | **Complete** |
-| —     | Relay — Notifications (cross-cutting)                    | **Complete** |
+| Track | Component                                                | Status        |
+| ----- | -------------------------------------------------------- | ------------- |
+| 1     | Core Infrastructure (Fastify, Drizzle, Zitadel, Coolify) | **Complete**  |
+| 2     | Colophony API (REST, tRPC, SDKs; GraphQL extracted)      | **Complete**  |
+| 3     | Hopper — Submission Management                           | **Complete**  |
+| 4     | Slate — Publication Pipeline                             | **Complete**  |
+| 5     | Register — Identity & Federation                         | **Complete**  |
+| 6     | Colophony Plugins (extracted to feature branch)          | **Extracted** |
+| 7     | Monitoring & Observability (Sentry, Prometheus, metrics) | **Complete**  |
+| 8     | Register Data Standard & Writer Tools (CSR, workspace)   | **Complete**  |
+| 9     | Governance & Public Docs                                 | **Complete**  |
+| 10    | Analytics & Reporting (submission + writer analytics)    | **Complete**  |
+| —     | Relay — Notifications (cross-cutting)                    | **Complete**  |
 
 ---
 
