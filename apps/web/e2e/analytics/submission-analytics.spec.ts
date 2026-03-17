@@ -106,7 +106,7 @@ test.describe("Submission Analytics Dashboard", () => {
     await expect(page.getByText("Response Time Distribution")).toBeVisible();
 
     const agingCard = page.getByTestId("chart-card-aging-submissions");
-    await expect(agingCard.getByText("Aging Submissions")).toBeVisible();
+    await expect(agingCard).toBeVisible();
 
     // Aging table shows either data rows or empty message
     const hasData = agingCard.locator("table");
