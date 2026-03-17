@@ -3,7 +3,6 @@ import cors from '@fastify/cors';
 import compress from '@fastify/compress';
 import helmet from '@fastify/helmet';
 import { pool, appPool } from '@colophony/db';
-import { loadConfig } from '@colophony/plugin-sdk';
 import { type Env, validateEnv } from './config/env.js';
 import { initSentry, captureException } from './config/sentry.js';
 import {
@@ -14,9 +13,7 @@ import {
   getContentType,
 } from './config/metrics.js';
 import metricsPlugin from './hooks/metrics.js';
-import { buildColophonyConfig } from './colophony.config.js';
-import { setGlobalExtensions } from './adapters/extensions-accessor.js';
-import { setGlobalPluginManifests } from './adapters/plugins-accessor.js';
+import { initAdapters } from './colophony.config.js';
 import { setGlobalRegistry } from './adapters/registry-accessor.js';
 import authPlugin from './hooks/auth.js';
 import rateLimitPlugin from './hooks/rate-limit.js';
@@ -356,16 +353,9 @@ async function start(): Promise<void> {
 
   const app = await buildApp(env);
 
-  // Initialize plugin SDK adapters + registry
-  const { config, adapterConfigs } = buildColophonyConfig(env);
-  const { registry, plugins, uiExtensions } = await loadConfig({
-    config,
-    adapterConfigs,
-    logger: app.log,
-  });
+  // Initialize adapters + registry
+  const registry = await initAdapters(env);
   setGlobalRegistry(registry);
-  setGlobalExtensions(uiExtensions);
-  setGlobalPluginManifests(plugins.map((p) => p.manifest));
 
   // Initialize shared logger for BullMQ workers
   const { setWorkerLogger } = await import('./config/logger.js');

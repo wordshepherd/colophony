@@ -99,10 +99,6 @@ jest.mock("@/lib/trpc", () => ({
   },
 }));
 
-jest.mock("@/components/plugins/plugin-slot", () => ({
-  PluginSlot: () => null,
-}));
-
 jest.mock("../status-transition", () => ({
   StatusTransition: () => <div data-testid="status-transition" />,
 }));
