@@ -27,7 +27,7 @@ export const cmsConnectionsRouter = createRouter({
     .input(listCmsConnectionsSchema)
     .output(paginatedResponseSchema(cmsConnectionSchema))
     .query(async ({ ctx, input }) => {
-      return cmsConnectionService.list(ctx.dbTx, input);
+      return cmsConnectionService.list(ctx.dbTx, input, ctx.authContext.orgId);
     }),
 
   /** Get CMS connection by ID. */
@@ -40,6 +40,7 @@ export const cmsConnectionsRouter = createRouter({
         const connection = await cmsConnectionService.getById(
           ctx.dbTx,
           input.id,
+          ctx.authContext.orgId,
         );
         if (!connection) throw new CmsConnectionNotFoundError(input.id);
         return connection;

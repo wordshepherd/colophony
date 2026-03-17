@@ -292,6 +292,7 @@ describe('cmsPublishWorkflow Inngest function', () => {
         externalUrl: 'https://ghost.example.com/spring-2026',
         adapterType: 'GHOST',
       },
+      'org-1',
     );
   });
 });

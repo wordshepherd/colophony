@@ -30,11 +30,14 @@ export const cmsConnectionService = {
   // List / Get
   // -------------------------------------------------------------------------
 
-  async list(tx: DrizzleDb, input: ListCmsConnectionsInput) {
+  async list(tx: DrizzleDb, input: ListCmsConnectionsInput, orgId?: string) {
     const { publicationId, page, limit } = input;
     const offset = (page - 1) * limit;
 
     const conditions = [];
+    if (orgId) {
+      conditions.push(eq(cmsConnections.organizationId, orgId));
+    }
     if (publicationId) {
       conditions.push(eq(cmsConnections.publicationId, publicationId));
     }
@@ -114,7 +117,12 @@ export const cmsConnectionService = {
     return connection;
   },
 
-  async update(tx: DrizzleDb, id: string, input: UpdateCmsConnectionInput) {
+  async update(
+    tx: DrizzleDb,
+    id: string,
+    input: UpdateCmsConnectionInput,
+    orgId?: string,
+  ) {
     const values: Record<string, unknown> = { updatedAt: new Date() };
     if (input.name !== undefined) values.name = input.name;
     if (input.config !== undefined) values.config = input.config;
@@ -123,7 +131,14 @@ export const cmsConnectionService = {
     const [row] = await tx
       .update(cmsConnections)
       .set(values)
-      .where(eq(cmsConnections.id, id))
+      .where(
+        orgId
+          ? and(
+              eq(cmsConnections.id, id),
+              eq(cmsConnections.organizationId, orgId),
+            )
+          : eq(cmsConnections.id, id),
+      )
       .returning();
 
     return row ?? null;
@@ -135,7 +150,12 @@ export const cmsConnectionService = {
     input: UpdateCmsConnectionInput,
   ) {
     assertEditorOrAdmin(ctx.actor.role);
-    const updated = await cmsConnectionService.update(ctx.tx, id, input);
+    const updated = await cmsConnectionService.update(
+      ctx.tx,
+      id,
+      input,
+      ctx.actor.orgId,
+    );
     if (!updated) throw new CmsConnectionNotFoundError(id);
     await ctx.audit({
       action: AuditActions.CMS_CONNECTION_UPDATED,
@@ -150,10 +170,17 @@ export const cmsConnectionService = {
     return updated;
   },
 
-  async delete(tx: DrizzleDb, id: string) {
+  async delete(tx: DrizzleDb, id: string, orgId?: string) {
     const [row] = await tx
       .delete(cmsConnections)
-      .where(eq(cmsConnections.id, id))
+      .where(
+        orgId
+          ? and(
+              eq(cmsConnections.id, id),
+              eq(cmsConnections.organizationId, orgId),
+            )
+          : eq(cmsConnections.id, id),
+      )
       .returning();
 
     return row ?? null;
@@ -161,7 +188,11 @@ export const cmsConnectionService = {
 
   async deleteWithAudit(ctx: ServiceContext, id: string) {
     assertEditorOrAdmin(ctx.actor.role);
-    const deleted = await cmsConnectionService.delete(ctx.tx, id);
+    const deleted = await cmsConnectionService.delete(
+      ctx.tx,
+      id,
+      ctx.actor.orgId,
+    );
     if (!deleted) throw new CmsConnectionNotFoundError(id);
     await ctx.audit({
       action: AuditActions.CMS_CONNECTION_DELETED,
@@ -176,8 +207,8 @@ export const cmsConnectionService = {
   // Test connection
   // -------------------------------------------------------------------------
 
-  async testConnection(tx: DrizzleDb, id: string) {
-    const connection = await cmsConnectionService.getById(tx, id);
+  async testConnection(tx: DrizzleDb, id: string, orgId?: string) {
+    const connection = await cmsConnectionService.getById(tx, id, orgId);
     if (!connection) throw new CmsConnectionNotFoundError(id);
 
     const adapter = getCmsAdapter(connection.adapterType);
@@ -187,7 +218,11 @@ export const cmsConnectionService = {
   async testConnectionWithAudit(ctx: ServiceContext, id: string) {
     let result: { success: boolean; error?: string };
     try {
-      result = await cmsConnectionService.testConnection(ctx.tx, id);
+      result = await cmsConnectionService.testConnection(
+        ctx.tx,
+        id,
+        ctx.actor.orgId,
+      );
     } catch (error) {
       await ctx.audit({
         action: AuditActions.CMS_CONNECTION_TESTED,
@@ -210,23 +245,36 @@ export const cmsConnectionService = {
   // Helpers for Inngest workers
   // -------------------------------------------------------------------------
 
-  async listByPublication(tx: DrizzleDb, publicationId: string) {
+  async listByPublication(
+    tx: DrizzleDb,
+    publicationId: string,
+    orgId?: string,
+  ) {
+    const conditions = [
+      eq(cmsConnections.publicationId, publicationId),
+      eq(cmsConnections.isActive, true),
+    ];
+    if (orgId) {
+      conditions.push(eq(cmsConnections.organizationId, orgId));
+    }
     return tx
       .select()
       .from(cmsConnections)
-      .where(
-        and(
-          eq(cmsConnections.publicationId, publicationId),
-          eq(cmsConnections.isActive, true),
-        ),
-      )
+      .where(and(...conditions))
       .limit(10000);
   },
 
-  async updateLastSync(tx: DrizzleDb, id: string) {
+  async updateLastSync(tx: DrizzleDb, id: string, orgId?: string) {
     await tx
       .update(cmsConnections)
       .set({ lastSyncAt: new Date(), updatedAt: new Date() })
-      .where(eq(cmsConnections.id, id));
+      .where(
+        orgId
+          ? and(
+              eq(cmsConnections.id, id),
+              eq(cmsConnections.organizationId, orgId),
+            )
+          : eq(cmsConnections.id, id),
+      );
   },
 };
