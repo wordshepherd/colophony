@@ -270,6 +270,44 @@ Workers and queues are started in `main.ts` and closed during graceful shutdown.
 - **Auto-disable**: After 5 consecutive final failures for an endpoint, sets endpoint status to DISABLED
 - **Always active**: No feature flag — harmless when no endpoints registered
 
+---
+
+## BullMQ / Inngest Boundary
+
+**Ownership rule:** Inngest owns orchestration + notification logic. BullMQ owns final-mile delivery (I/O-bound side effects).
+
+### Decision Criteria
+
+| Job type             | System  | Why                                                          |
+| -------------------- | ------- | ------------------------------------------------------------ |
+| Multi-step workflows | Inngest | Built-in step functions, retries per step, DAG visualization |
+| Notification fan-out | Inngest | Event-driven: one domain event → multiple notification types |
+| Email send           | BullMQ  | Final-mile I/O, adapter-specific retries, concurrency limit  |
+| Webhook delivery     | BullMQ  | Final-mile HTTP, custom backoff schedule, auto-disable logic |
+| File virus scan      | BullMQ  | Final-mile I/O (ClamAV TCP), job-level idempotency by fileId |
+| S3 cleanup (GDPR)    | BullMQ  | Final-mile S3 ops, long retention on failure                 |
+| Outbox polling       | BullMQ  | Repeatable cron job, bridges transactional events → Inngest  |
+| Transfer file fetch  | BullMQ  | Final-mile HTTP download from remote instance                |
+
+### Inventory
+
+- **BullMQ queues (6):** `email`, `webhook`, `file-scan`, `s3-cleanup`, `outbox-poller`, `transfer-fetch`
+- **Inngest functions (15):** 3 workflow (submission, pipeline, contract), 11 notification (per event type), 1 bridge (Documenso webhook → domain events)
+
+### Glue Pattern
+
+Inngest functions call `enqueue*()` helpers (e.g., `enqueueEmail()`, `enqueueWebhook()`) to dispatch BullMQ jobs. Fire-and-forget — Inngest does not wait for BullMQ job completion.
+
+### Outbox Pattern
+
+The outbox poller (`outbox-poller` BullMQ worker) is the default bridge for transactional domain events: service writes event to `domain_events` table inside the same DB transaction → poller picks up unprocessed events → sends to Inngest. **Exception:** Documenso webhook handler uses direct `inngest.send()` because the event source is already external (non-transactional, acceptable).
+
+### NEVER
+
+- Use BullMQ for multi-step workflows (no step-level retry, no DAG visibility)
+- Use Inngest for final-mile I/O delivery (email, HTTP, S3, ClamAV) — Inngest steps are for orchestration logic, not adapter-specific I/O with custom concurrency/backoff
+- Skip the outbox for domain events emitted inside DB transactions — direct `inngest.send()` outside a transaction risks event loss on crash
+
 ### Env Vars
 
 | Variable                    | Default       | Purpose                                     |
