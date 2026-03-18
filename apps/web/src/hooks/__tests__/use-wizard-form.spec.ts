@@ -1,5 +1,4 @@
 import { renderHook, act } from "@testing-library/react";
-import "../../../test/setup";
 import { useWizardForm } from "../use-wizard-form";
 import type { FormPage } from "@colophony/types";
 import type { FormFieldForRenderer } from "@/components/submissions/form-renderer/build-form-schema";
