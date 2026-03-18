@@ -365,6 +365,13 @@
       "when": 1779400000000,
       "tag": "0051_add_users_display_name",
       "breakpoints": true
+    },
+    {
+      "idx": 52,
+      "version": "7",
+      "when": 1779600000000,
+      "tag": "0052_revoke_delete_restricted_tables",
+      "breakpoints": true
     }
   ]
 }

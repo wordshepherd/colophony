@@ -111,6 +111,16 @@ When converting `varchar` columns to PostgreSQL enums:
 
 See migration 0031 (`federation_cleanup`) and its test suite (`migration-enum-cast.test.ts`) for a concrete example.
 
+### DELETE Restriction Pattern (Append-Only Tables)
+
+`ALTER DEFAULT PRIVILEGES` in `init-db.sh` grants full DML (including DELETE) to all future tables created by the superuser. Per-migration GRANTs that omit DELETE are **no-ops** because PostgreSQL GRANT is additive — it never removes existing privileges. To restrict DELETE on append-only/immutable tables, use explicit `REVOKE DELETE ON "<table>" FROM app_user;` in three places:
+
+1. **Migration** — so existing databases pick up the change
+2. **`scripts/init-db.sh`** — so fresh dev databases are correct from first boot
+3. **`scripts/init-prod.sh`** — so production re-grants don't restore DELETE
+
+Current restricted tables: `user_keys`, `trusted_peers`, `sim_sub_checks`, `inbound_transfers`, `documenso_webhook_events`. See migration `0052_revoke_delete_restricted_tables.sql`.
+
 ### Production RLS Verification
 
 ```bash

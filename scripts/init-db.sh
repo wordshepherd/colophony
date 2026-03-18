@@ -21,8 +21,30 @@ psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-E
     GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO app_user;
 
     -- Grant default permissions for future tables
+    -- NOTE: This grants full DML (including DELETE) to ALL future tables.
+    -- Tables that should be append-only/immutable need explicit REVOKE below.
     ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO app_user;
     ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT USAGE, SELECT ON SEQUENCES TO app_user;
+
+    -- Revoke DELETE on append-only/immutable tables (if they exist).
+    -- ALTER DEFAULT PRIVILEGES grants full DML to all tables; these tables
+    -- need explicit REVOKE to enforce immutability. Keep in sync with
+    -- migration 0052_revoke_delete_restricted_tables.sql.
+    -- Guarded: init-db.sh runs before migrations, so tables may not exist yet.
+    -- The migration itself applies the REVOKE on first run; this block covers
+    -- subsequent container restarts (tables already created by prior migrations).
+    DO \$\$
+    DECLARE
+        tbl TEXT;
+    BEGIN
+        FOREACH tbl IN ARRAY ARRAY['user_keys','trusted_peers','sim_sub_checks','inbound_transfers','documenso_webhook_events']
+        LOOP
+            IF EXISTS (SELECT 1 FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace WHERE n.nspname = 'public' AND c.relname = tbl) THEN
+                EXECUTE format('REVOKE DELETE ON %I FROM app_user', tbl);
+            END IF;
+        END LOOP;
+    END
+    \$\$;
 
     -- Create audit_writer role for tamper-proof audit trail
     -- NOLOGIN: only used as SECURITY DEFINER function owner, never connects directly
