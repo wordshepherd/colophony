@@ -1,6 +1,6 @@
+import { vi } from "vitest";
 import React from "react";
 import { render, screen } from "@testing-library/react";
-import "../../../../test/setup";
 
 let mockPeer: unknown = undefined;
 let mockIsPending = false;
@@ -26,7 +26,7 @@ function resetMocks() {
   mockError = null;
 }
 
-jest.mock("@/lib/trpc", () => ({
+vi.mock("@/lib/trpc", () => ({
   trpc: {
     federation: {
       getPeer: {
@@ -38,47 +38,47 @@ jest.mock("@/lib/trpc", () => ({
       },
       rejectPeer: {
         useMutation: () => ({
-          mutate: jest.fn(),
+          mutate: vi.fn(),
           isPending: false,
         }),
       },
       revokePeer: {
         useMutation: () => ({
-          mutate: jest.fn(),
+          mutate: vi.fn(),
           isPending: false,
         }),
       },
       acceptPeer: {
         useMutation: () => ({
-          mutate: jest.fn(),
+          mutate: vi.fn(),
           isPending: false,
         }),
       },
     },
     useUtils: () => ({
       federation: {
-        getPeer: { invalidate: jest.fn() },
-        listPeers: { invalidate: jest.fn() },
+        getPeer: { invalidate: vi.fn() },
+        listPeers: { invalidate: vi.fn() },
       },
     }),
   },
 }));
 
-jest.mock("@/hooks/use-organization", () => ({
+vi.mock("@/hooks/use-organization", () => ({
   useOrganization: () => ({
     isAdmin: true,
     isEditor: true,
   }),
 }));
 
-jest.mock("next/navigation", () => ({
+vi.mock("next/navigation", () => ({
   usePathname: () => "/federation/peers/peer-1",
   useRouter: () => ({
-    push: jest.fn(),
+    push: vi.fn(),
   }),
 }));
 
-jest.mock("next/link", () => ({
+vi.mock("next/link", () => ({
   __esModule: true,
   default: ({ children, href }: { children: React.ReactNode; href: string }) =>
     React.createElement("a", { href }, children),

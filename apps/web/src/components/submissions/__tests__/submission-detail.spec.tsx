@@ -1,6 +1,6 @@
+import { vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { SubmissionDetail } from "../submission-detail";
-import "../../../../test/setup";
 
 // --- Mutable mock state ---
 let mockSubmission: Record<string, unknown> | undefined;
@@ -33,17 +33,17 @@ function resetMocks() {
   };
 }
 
-const mockPush = jest.fn();
+const mockPush = vi.fn();
 
-jest.mock("next/navigation", () => ({
+vi.mock("next/navigation", () => ({
   useRouter: () => ({
     push: mockPush,
-    back: jest.fn(),
-    refresh: jest.fn(),
+    back: vi.fn(),
+    refresh: vi.fn(),
   }),
 }));
 
-jest.mock("@/hooks/use-organization", () => ({
+vi.mock("@/hooks/use-organization", () => ({
   useOrganization: () => ({
     user: { id: mockUserId },
     isEditor: mockIsEditor,
@@ -52,15 +52,15 @@ jest.mock("@/hooks/use-organization", () => ({
   }),
 }));
 
-jest.mock("@/lib/trpc", () => ({
+vi.mock("@/lib/trpc", () => ({
   trpc: {
     useUtils: () => ({
       submissions: {
-        getById: { invalidate: jest.fn() },
-        getHistory: { invalidate: jest.fn() },
+        getById: { invalidate: vi.fn() },
+        getHistory: { invalidate: vi.fn() },
       },
       files: {
-        getDownloadUrl: { fetch: jest.fn() },
+        getDownloadUrl: { fetch: vi.fn() },
       },
     }),
     submissions: {
@@ -77,13 +77,13 @@ jest.mock("@/lib/trpc", () => ({
         useQuery: () => ({ data: mockReviewers }),
       },
       markReviewerRead: {
-        useMutation: () => ({ mutate: jest.fn() }),
+        useMutation: () => ({ mutate: vi.fn() }),
       },
       delete: {
-        useMutation: () => ({ mutate: jest.fn(), isPending: false }),
+        useMutation: () => ({ mutate: vi.fn(), isPending: false }),
       },
       withdraw: {
-        useMutation: () => ({ mutate: jest.fn(), isPending: false }),
+        useMutation: () => ({ mutate: vi.fn(), isPending: false }),
       },
     },
     files: {
@@ -99,39 +99,39 @@ jest.mock("@/lib/trpc", () => ({
   },
 }));
 
-jest.mock("../status-transition", () => ({
+vi.mock("../status-transition", () => ({
   StatusTransition: () => <div data-testid="status-transition" />,
 }));
 
-jest.mock("../revise-and-resubmit-card", () => ({
+vi.mock("../revise-and-resubmit-card", () => ({
   ReviseAndResubmitCard: () => <div data-testid="rr-card" />,
 }));
 
-jest.mock("../compose-message-dialog", () => ({
+vi.mock("../compose-message-dialog", () => ({
   ComposeMessageDialog: () => null,
 }));
 
-jest.mock("../correspondence-history", () => ({
+vi.mock("../correspondence-history", () => ({
   CorrespondenceHistory: () => <div data-testid="correspondence" />,
 }));
 
-jest.mock("../reviewer-list", () => ({
+vi.mock("../reviewer-list", () => ({
   ReviewerList: () => <div data-testid="reviewer-list" />,
 }));
 
-jest.mock("../reviewer-picker", () => ({
+vi.mock("../reviewer-picker", () => ({
   ReviewerPicker: () => <div data-testid="reviewer-picker" />,
 }));
 
-jest.mock("../discussion-thread", () => ({
+vi.mock("../discussion-thread", () => ({
   DiscussionThread: () => <div data-testid="discussion-thread" />,
 }));
 
-jest.mock("../voting-panel", () => ({
+vi.mock("../voting-panel", () => ({
   VotingPanel: () => <div data-testid="voting-panel" />,
 }));
 
-jest.mock("../form-renderer/read-only-form-fields", () => ({
+vi.mock("../form-renderer/read-only-form-fields", () => ({
   ReadOnlyFormFields: () => <div data-testid="form-fields" />,
 }));
 

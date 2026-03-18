@@ -1,3 +1,4 @@
+import { vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { FileUpload } from "../file-upload";
 
@@ -10,9 +11,9 @@ let mockUploads: Array<{
   error?: string;
   scanStatus?: string;
 }>;
-const mockUploadFiles = jest.fn();
-const mockRemoveUpload = jest.fn();
-const mockCancelUpload = jest.fn();
+const mockUploadFiles = vi.fn();
+const mockRemoveUpload = vi.fn();
+const mockCancelUpload = vi.fn();
 
 let mockExistingFiles: Array<{
   id: string;
@@ -21,8 +22,8 @@ let mockExistingFiles: Array<{
   scanStatus: string;
 }>;
 let mockIsLoading: boolean;
-const mockDeleteMutateAsync = jest.fn();
-const mockInvalidateFiles = jest.fn();
+const mockDeleteMutateAsync = vi.fn();
+const mockInvalidateFiles = vi.fn();
 
 function resetMocks() {
   mockUploads = [];
@@ -30,7 +31,7 @@ function resetMocks() {
   mockIsLoading = false;
 }
 
-jest.mock("@/hooks/use-file-upload", () => ({
+vi.mock("@/hooks/use-file-upload", () => ({
   useFileUpload: () => ({
     uploads: mockUploads,
     uploadFiles: mockUploadFiles,
@@ -42,7 +43,7 @@ jest.mock("@/hooks/use-file-upload", () => ({
   }),
 }));
 
-jest.mock("@/lib/trpc", () => ({
+vi.mock("@/lib/trpc", () => ({
   trpc: {
     useUtils: () => ({
       files: {
@@ -65,7 +66,7 @@ jest.mock("@/lib/trpc", () => ({
   },
 }));
 
-jest.mock("@colophony/types", () => ({
+vi.mock("@colophony/types", () => ({
   MAX_FILE_SIZE: 50 * 1024 * 1024,
   MAX_FILES_PER_SUBMISSION: 10,
   ALLOWED_MIME_TYPES: ["application/pdf", "text/plain"],
@@ -91,7 +92,7 @@ function makeFileRecord(
 
 describe("FileUpload", () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     resetMocks();
   });
 

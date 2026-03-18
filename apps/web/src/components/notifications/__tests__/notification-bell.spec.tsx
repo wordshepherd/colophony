@@ -1,20 +1,20 @@
+import { vi } from "vitest";
 import { render, screen } from "@testing-library/react";
-import "../../../../test/setup";
 
 let mockCurrentOrg: { id: string; name: string; slug: string } | null;
 let mockUnreadCount: number;
 
-jest.mock("@/hooks/use-organization", () => ({
+vi.mock("@/hooks/use-organization", () => ({
   useOrganization: () => ({
     currentOrg: mockCurrentOrg,
   }),
 }));
 
-jest.mock("@/hooks/use-notification-stream", () => ({
-  useNotificationStream: jest.fn(),
+vi.mock("@/hooks/use-notification-stream", () => ({
+  useNotificationStream: vi.fn(),
 }));
 
-jest.mock("@/lib/trpc", () => ({
+vi.mock("@/lib/trpc", () => ({
   trpc: {
     notifications: {
       unreadCount: {
@@ -28,7 +28,7 @@ jest.mock("@/lib/trpc", () => ({
 }));
 
 // Mock Popover to just render children for testability
-jest.mock("@/components/ui/popover", () => ({
+vi.mock("@/components/ui/popover", () => ({
   Popover: ({
     children,
     open,
@@ -48,7 +48,7 @@ jest.mock("@/components/ui/popover", () => ({
   ),
 }));
 
-jest.mock("../notification-list", () => ({
+vi.mock("../notification-list", () => ({
   NotificationList: (_props: { onClose?: () => void }) => (
     <div data-testid="notification-list">NotificationList</div>
   ),

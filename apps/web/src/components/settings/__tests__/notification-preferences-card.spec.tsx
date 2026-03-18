@@ -1,6 +1,6 @@
+import { vi, type Mock } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { NotificationPreferencesCard } from "../notification-preferences-card";
-import "../../../../test/setup";
 
 // --- Mutable mock state ---
 let mockPreferences:
@@ -8,8 +8,8 @@ let mockPreferences:
   | undefined;
 let mockIsPending: boolean;
 let mockError: { message: string } | null;
-let mockRefetch: jest.Mock;
-let mockMutate: jest.Mock;
+let mockRefetch: Mock;
+let mockMutate: Mock;
 let mockMutationPending: boolean;
 let mockCurrentOrg: { id: string; name: string; slug: string } | null;
 
@@ -17,13 +17,13 @@ function resetMocks() {
   mockPreferences = undefined;
   mockIsPending = false;
   mockError = null;
-  mockRefetch = jest.fn();
-  mockMutate = jest.fn();
+  mockRefetch = vi.fn();
+  mockMutate = vi.fn();
   mockMutationPending = false;
   mockCurrentOrg = { id: "org-1", name: "Test Magazine", slug: "test-mag" };
 }
 
-jest.mock("@/lib/trpc", () => ({
+vi.mock("@/lib/trpc", () => ({
   trpc: {
     notificationPreferences: {
       list: {
@@ -48,16 +48,16 @@ jest.mock("@/lib/trpc", () => ({
       },
     },
     useUtils: () => ({
-      notificationPreferences: { list: { invalidate: jest.fn() } },
+      notificationPreferences: { list: { invalidate: vi.fn() } },
     }),
   },
 }));
 
-jest.mock("sonner", () => ({
-  toast: { success: jest.fn(), error: jest.fn() },
+vi.mock("sonner", () => ({
+  toast: { success: vi.fn(), error: vi.fn() },
 }));
 
-jest.mock("@/hooks/use-organization", () => ({
+vi.mock("@/hooks/use-organization", () => ({
   useOrganization: () => ({
     currentOrg: mockCurrentOrg,
   }),

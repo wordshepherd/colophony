@@ -1,6 +1,6 @@
+import { vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { FieldPropertiesPanel } from "../field-properties-panel";
-import "../../../../test/setup";
 
 const baseField = {
   id: "field-1",
@@ -25,7 +25,7 @@ const allFields = [
 
 describe("FieldPropertiesPanel", () => {
   it("renders common fields for any field type", () => {
-    const onUpdate = jest.fn();
+    const onUpdate = vi.fn();
     render(
       <FieldPropertiesPanel
         field={baseField}
@@ -43,7 +43,7 @@ describe("FieldPropertiesPanel", () => {
   });
 
   it("renders text config for text field type", () => {
-    const onUpdate = jest.fn();
+    const onUpdate = vi.fn();
     render(
       <FieldPropertiesPanel
         field={baseField}
@@ -59,7 +59,7 @@ describe("FieldPropertiesPanel", () => {
   });
 
   it("renders number config for number field type", () => {
-    const onUpdate = jest.fn();
+    const onUpdate = vi.fn();
     const numberField = {
       ...baseField,
       fieldType: "number" as const,
@@ -80,7 +80,7 @@ describe("FieldPropertiesPanel", () => {
   });
 
   it("renders select config for select field type", () => {
-    const onUpdate = jest.fn();
+    const onUpdate = vi.fn();
     const selectField = {
       ...baseField,
       fieldType: "select" as const,
@@ -106,7 +106,7 @@ describe("FieldPropertiesPanel", () => {
   });
 
   it("renders file upload config for file_upload field type", () => {
-    const onUpdate = jest.fn();
+    const onUpdate = vi.fn();
     const fileField = {
       ...baseField,
       fieldType: "file_upload" as const,
@@ -132,7 +132,7 @@ describe("FieldPropertiesPanel", () => {
       <FieldPropertiesPanel
         field={baseField}
         allFields={allFields}
-        onUpdate={jest.fn()}
+        onUpdate={vi.fn()}
         isSaving={true}
       />,
     );
@@ -148,7 +148,7 @@ describe("FieldPropertiesPanel", () => {
       <FieldPropertiesPanel
         field={baseField}
         allFields={allFields}
-        onUpdate={jest.fn()}
+        onUpdate={vi.fn()}
         isSaving={false}
       />,
     );
@@ -166,7 +166,7 @@ describe("FieldPropertiesPanel", () => {
       <FieldPropertiesPanel
         field={headerField}
         allFields={allFields}
-        onUpdate={jest.fn()}
+        onUpdate={vi.fn()}
         isSaving={false}
       />,
     );

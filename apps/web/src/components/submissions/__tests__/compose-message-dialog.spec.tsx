@@ -1,28 +1,28 @@
+import { vi, type Mock } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { ComposeMessageDialog } from "../compose-message-dialog";
-import "../../../../test/setup";
 
 // --- Mutable mock state ---
-let mockMutate: jest.Mock;
+let mockMutate: Mock;
 let mockIsPending: boolean;
 
 function resetMocks() {
-  mockMutate = jest.fn();
+  mockMutate = vi.fn();
   mockIsPending = false;
 }
 
-jest.mock("@tiptap/react", () => ({
+vi.mock("@tiptap/react", () => ({
   useEditor: () => ({
     getHTML: () => "<p>Test message</p>",
-    commands: { clearContent: jest.fn() },
+    commands: { clearContent: vi.fn() },
     chain: () => ({
       focus: () => ({
-        toggleBold: () => ({ run: jest.fn() }),
-        toggleItalic: () => ({ run: jest.fn() }),
-        toggleBulletList: () => ({ run: jest.fn() }),
-        toggleOrderedList: () => ({ run: jest.fn() }),
-        setLink: () => ({ run: jest.fn() }),
-        unsetLink: () => ({ run: jest.fn() }),
+        toggleBold: () => ({ run: vi.fn() }),
+        toggleItalic: () => ({ run: vi.fn() }),
+        toggleBulletList: () => ({ run: vi.fn() }),
+        toggleOrderedList: () => ({ run: vi.fn() }),
+        setLink: () => ({ run: vi.fn() }),
+        unsetLink: () => ({ run: vi.fn() }),
       }),
     }),
     isActive: () => false,
@@ -31,34 +31,34 @@ jest.mock("@tiptap/react", () => ({
     editor ? <div data-testid="editor-content">Editor</div> : null,
 }));
 
-jest.mock("@tiptap/starter-kit", () => ({
+vi.mock("@tiptap/starter-kit", () => ({
   __esModule: true,
   default: {},
 }));
 
-jest.mock("@tiptap/extension-placeholder", () => ({
+vi.mock("@tiptap/extension-placeholder", () => ({
   __esModule: true,
   default: { configure: () => ({}) },
 }));
 
-jest.mock("@tiptap/extension-link", () => ({
+vi.mock("@tiptap/extension-link", () => ({
   __esModule: true,
   default: { configure: () => ({}) },
 }));
 
-const mockToastSuccess = jest.fn();
-const mockToastError = jest.fn();
+const mockToastSuccess = vi.fn();
+const mockToastError = vi.fn();
 
-jest.mock("sonner", () => ({
+vi.mock("sonner", () => ({
   toast: {
     success: (...args: unknown[]) => mockToastSuccess(...args),
     error: (...args: unknown[]) => mockToastError(...args),
   },
 }));
 
-const mockInvalidate = jest.fn();
+const mockInvalidate = vi.fn();
 
-jest.mock("@/lib/trpc", () => ({
+vi.mock("@/lib/trpc", () => ({
   trpc: {
     correspondence: {
       send: {
@@ -89,7 +89,7 @@ beforeEach(() => {
 describe("ComposeMessageDialog", () => {
   const defaultProps = {
     open: true,
-    onOpenChange: jest.fn(),
+    onOpenChange: vi.fn(),
     submissionId: "sub-1",
     submissionTitle: "My Poem",
   };

@@ -1,11 +1,11 @@
+import { vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { SelectConfig } from "../field-config/select-config";
-import "../../../../test/setup";
 
 describe("SelectConfig", () => {
   it("renders existing options", () => {
-    const onChange = jest.fn();
+    const onChange = vi.fn();
     const config = {
       options: [
         { label: "Poetry", value: "poetry" },
@@ -23,7 +23,7 @@ describe("SelectConfig", () => {
 
   it("adds a new option with auto-generated value", async () => {
     const user = userEvent.setup();
-    const onChange = jest.fn();
+    const onChange = vi.fn();
     const config = { options: [] as Array<{ label: string; value: string }> };
 
     render(<SelectConfig config={config} onChange={onChange} />);
@@ -39,7 +39,7 @@ describe("SelectConfig", () => {
 
   it("adds option on Enter key", async () => {
     const user = userEvent.setup();
-    const onChange = jest.fn();
+    const onChange = vi.fn();
     const config = { options: [] as Array<{ label: string; value: string }> };
 
     render(<SelectConfig config={config} onChange={onChange} />);
@@ -54,7 +54,7 @@ describe("SelectConfig", () => {
 
   it("removes an option", async () => {
     const user = userEvent.setup();
-    const onChange = jest.fn();
+    const onChange = vi.fn();
     const config = {
       options: [
         { label: "Keep", value: "keep" },
@@ -74,7 +74,7 @@ describe("SelectConfig", () => {
 
   it("updates an option label on change", async () => {
     const user = userEvent.setup();
-    const onChange = jest.fn();
+    const onChange = vi.fn();
     const config = {
       options: [{ label: "Original", value: "original" }],
     };
@@ -92,14 +92,14 @@ describe("SelectConfig", () => {
   });
 
   it("disables add button when input is empty", () => {
-    const onChange = jest.fn();
+    const onChange = vi.fn();
     render(<SelectConfig config={{ options: [] }} onChange={onChange} />);
 
     expect(screen.getByText("Add")).toBeDisabled();
   });
 
   it("renders empty options list initially", () => {
-    const onChange = jest.fn();
+    const onChange = vi.fn();
     render(<SelectConfig config={{}} onChange={onChange} />);
 
     expect(screen.getByText("Options")).toBeInTheDocument();

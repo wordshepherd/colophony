@@ -1,7 +1,7 @@
+import { vi, type Mock } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { ManuscriptForm } from "../manuscript-form";
-import "../../../../test/setup";
 import { mockPush } from "../../../../test/setup";
 
 // --- Mutable mock state ---
@@ -13,28 +13,28 @@ let mockExistingManuscript:
     }
   | undefined;
 
-let mockCreateMutateAsync: jest.Mock;
+let mockCreateMutateAsync: Mock;
 let mockCreateIsPending: boolean;
 
-let mockUpdateMutateAsync: jest.Mock;
+let mockUpdateMutateAsync: Mock;
 let mockUpdateIsPending: boolean;
 
-const mockInvalidateList = jest.fn();
-const mockInvalidateGetById = jest.fn();
-const mockInvalidateGetDetail = jest.fn();
+const mockInvalidateList = vi.fn();
+const mockInvalidateGetById = vi.fn();
+const mockInvalidateGetDetail = vi.fn();
 
 function resetMocks() {
   mockExistingManuscript = undefined;
-  mockCreateMutateAsync = jest.fn().mockResolvedValue({
+  mockCreateMutateAsync = vi.fn().mockResolvedValue({
     id: "new-m-1",
     title: "New Manuscript",
   });
   mockCreateIsPending = false;
-  mockUpdateMutateAsync = jest.fn().mockResolvedValue({});
+  mockUpdateMutateAsync = vi.fn().mockResolvedValue({});
   mockUpdateIsPending = false;
 }
 
-jest.mock("@/lib/trpc", () => ({
+vi.mock("@/lib/trpc", () => ({
   trpc: {
     useUtils: () => ({
       manuscripts: {
@@ -76,21 +76,21 @@ jest.mock("@/lib/trpc", () => ({
   },
 }));
 
-const mockToastSuccess = jest.fn();
-jest.mock("sonner", () => ({
+const mockToastSuccess = vi.fn();
+vi.mock("sonner", () => ({
   toast: {
     get success() {
       return mockToastSuccess;
     },
     get error() {
-      return jest.fn();
+      return vi.fn();
     },
   },
 }));
 
 describe("ManuscriptForm", () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     resetMocks();
   });
 
@@ -142,7 +142,7 @@ describe("ManuscriptForm", () => {
   });
 
   it("calls onSuccess callback instead of navigating when provided", async () => {
-    const onSuccess = jest.fn();
+    const onSuccess = vi.fn();
     const user = userEvent.setup();
     render(<ManuscriptForm mode="create" onSuccess={onSuccess} />);
 

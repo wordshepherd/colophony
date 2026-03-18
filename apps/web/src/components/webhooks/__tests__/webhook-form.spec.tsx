@@ -1,8 +1,8 @@
+import { vi } from "vitest";
 import React from "react";
 import { render, screen } from "@testing-library/react";
-import "../../../../test/setup";
 
-const mockMutate = jest.fn();
+const mockMutate = vi.fn();
 let mockIsPending = false;
 
 function resetMocks() {
@@ -10,7 +10,7 @@ function resetMocks() {
   mockIsPending = false;
 }
 
-jest.mock("@/lib/trpc", () => ({
+vi.mock("@/lib/trpc", () => ({
   trpc: {
     webhooks: {
       create: {
@@ -29,11 +29,11 @@ jest.mock("@/lib/trpc", () => ({
   },
 }));
 
-jest.mock("next/navigation", () => ({
-  useRouter: () => ({ push: jest.fn() }),
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push: vi.fn() }),
 }));
 
-jest.mock("next/link", () => ({
+vi.mock("next/link", () => ({
   __esModule: true,
   default: ({
     children,
@@ -44,8 +44,8 @@ jest.mock("next/link", () => ({
   }) => <a href={href}>{children}</a>,
 }));
 
-jest.mock("sonner", () => ({
-  toast: { success: jest.fn(), error: jest.fn() },
+vi.mock("sonner", () => ({
+  toast: { success: vi.fn(), error: vi.fn() },
 }));
 
 import { WebhookForm } from "../webhook-form";

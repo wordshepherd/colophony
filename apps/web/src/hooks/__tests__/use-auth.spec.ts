@@ -1,18 +1,19 @@
+import { vi } from "vitest";
 import { renderHook, act } from "@testing-library/react";
 import { useAuth } from "../use-auth";
 
 // --- Mutable mock state ---
-const mockGetUser = jest.fn().mockResolvedValue(null);
-const mockSigninRedirect = jest.fn();
-const mockSignoutRedirect = jest.fn();
-const mockRemoveUser = jest.fn().mockResolvedValue(undefined);
+const mockGetUser = vi.fn().mockResolvedValue(null);
+const mockSigninRedirect = vi.fn();
+const mockSignoutRedirect = vi.fn();
+const mockRemoveUser = vi.fn().mockResolvedValue(undefined);
 const mockEvents = {
-  addUserLoaded: jest.fn(),
-  addUserUnloaded: jest.fn(),
-  addSilentRenewError: jest.fn(),
-  removeUserLoaded: jest.fn(),
-  removeUserUnloaded: jest.fn(),
-  removeSilentRenewError: jest.fn(),
+  addUserLoaded: vi.fn(),
+  addUserUnloaded: vi.fn(),
+  addSilentRenewError: vi.fn(),
+  removeUserLoaded: vi.fn(),
+  removeUserUnloaded: vi.fn(),
+  removeSilentRenewError: vi.fn(),
 };
 
 let mockUserManager: object | null = {
@@ -23,7 +24,7 @@ let mockUserManager: object | null = {
   events: mockEvents,
 };
 
-jest.mock("@/lib/oidc", () => ({
+vi.mock("@/lib/oidc", () => ({
   getUserManager: () => mockUserManager,
 }));
 
@@ -33,9 +34,9 @@ let mockProfilePending = false;
 let mockProfileError: Error | null = null;
 let mockQueryEnabled = false;
 
-const mockSetCurrentOrgId = jest.fn();
+const mockSetCurrentOrgId = vi.fn();
 
-jest.mock("@/lib/trpc", () => ({
+vi.mock("@/lib/trpc", () => ({
   trpc: {
     users: {
       me: {
@@ -65,7 +66,7 @@ function makeOidcUser(overrides: Record<string, unknown> = {}) {
 
 describe("useAuth", () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     mockGetUser.mockResolvedValue(null);
     mockUserManager = {
       getUser: mockGetUser,
@@ -304,7 +305,7 @@ describe("useAuth", () => {
 
   describe("stale OIDC token recovery", () => {
     it("forces re-auth when users.me returns UNAUTHORIZED after retries", async () => {
-      const warnSpy = jest.spyOn(console, "warn").mockImplementation();
+      const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
       mockGetUser.mockResolvedValue(makeOidcUser());
       mockProfileError = Object.assign(new Error("UNAUTHORIZED"), {
         data: { code: "UNAUTHORIZED" },

@@ -1,10 +1,10 @@
+import { vi, type Mock } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { BatchActionBar } from "../batch-action-bar";
-import "../../../../test/setup";
 
 // --- Mutable mock state ---
-let mockMutate: jest.Mock;
-let mockAssignMutate: jest.Mock;
+let mockMutate: Mock;
+let mockAssignMutate: Mock;
 let mockIsPending: boolean;
 let mockAssignIsPending: boolean;
 let mockMembersData:
@@ -12,14 +12,14 @@ let mockMembersData:
   | undefined;
 
 function resetMocks() {
-  mockMutate = jest.fn();
-  mockAssignMutate = jest.fn();
+  mockMutate = vi.fn();
+  mockAssignMutate = vi.fn();
   mockIsPending = false;
   mockAssignIsPending = false;
   mockMembersData = undefined;
 }
 
-jest.mock("@/lib/trpc", () => ({
+vi.mock("@/lib/trpc", () => ({
   trpc: {
     submissions: {
       batchUpdateStatus: {
@@ -35,7 +35,7 @@ jest.mock("@/lib/trpc", () => ({
         }),
       },
       list: {
-        invalidate: jest.fn(),
+        invalidate: vi.fn(),
       },
     },
     organizations: {
@@ -49,17 +49,17 @@ jest.mock("@/lib/trpc", () => ({
     },
     useUtils: () => ({
       submissions: {
-        list: { invalidate: jest.fn() },
+        list: { invalidate: vi.fn() },
       },
     }),
   },
 }));
 
-jest.mock("sonner", () => ({
+vi.mock("sonner", () => ({
   toast: {
-    success: jest.fn(),
-    warning: jest.fn(),
-    error: jest.fn(),
+    success: vi.fn(),
+    warning: vi.fn(),
+    error: vi.fn(),
   },
 }));
 
@@ -71,8 +71,8 @@ const defaultProps = {
   selectedCount: 3,
   selectedIds: ["id-1", "id-2", "id-3"],
   statusFilter: "SUBMITTED" as const,
-  onClear: jest.fn(),
-  onSuccess: jest.fn(),
+  onClear: vi.fn(),
+  onSuccess: vi.fn(),
 };
 
 describe("BatchActionBar", () => {

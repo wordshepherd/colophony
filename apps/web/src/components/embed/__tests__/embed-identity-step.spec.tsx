@@ -1,17 +1,17 @@
+import { vi } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { EmbedIdentityStep } from "../embed-identity-step";
-import "../../../../test/setup";
 
 describe("EmbedIdentityStep", () => {
   const defaultProps = {
     periodName: "Spring 2026 Submissions",
-    onContinue: jest.fn(),
+    onContinue: vi.fn(),
     isLoading: false,
   };
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it("requires email field", async () => {

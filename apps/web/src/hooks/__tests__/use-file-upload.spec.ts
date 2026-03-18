@@ -1,3 +1,4 @@
+import { vi } from "vitest";
 import { renderHook, act } from "@testing-library/react";
 import { useFileUpload } from "../use-file-upload";
 
@@ -7,33 +8,32 @@ let tusOnProgress:
   | undefined;
 let tusOnSuccess: (() => void) | undefined;
 let tusOnError: ((error: Error) => void) | undefined;
-const mockTusStart = jest.fn();
-const mockTusAbort = jest.fn();
+const mockTusStart = vi.fn();
+const mockTusAbort = vi.fn();
 
-jest.mock("tus-js-client", () => ({
-  Upload: jest.fn().mockImplementation(
-    (
-      _file: File,
-      options: {
-        onProgress?: (bytesUploaded: number, bytesTotal: number) => void;
-        onSuccess?: () => void;
-        onError?: (error: Error) => void;
-      },
-    ) => {
-      tusOnProgress = options.onProgress;
-      tusOnSuccess = options.onSuccess;
-      tusOnError = options.onError;
-      return { start: mockTusStart, abort: mockTusAbort };
+vi.mock("tus-js-client", () => ({
+  Upload: vi.fn().mockImplementation(function (
+    this: unknown,
+    _file: File,
+    options: {
+      onProgress?: (bytesUploaded: number, bytesTotal: number) => void;
+      onSuccess?: () => void;
+      onError?: (error: Error) => void;
     },
-  ),
+  ) {
+    tusOnProgress = options.onProgress;
+    tusOnSuccess = options.onSuccess;
+    tusOnError = options.onError;
+    return { start: mockTusStart, abort: mockTusAbort };
+  }),
 }));
 
 // Mock tRPC
 const trpcMock = {
-  invalidateFiles: jest.fn(),
+  invalidateFiles: vi.fn(),
 };
 
-jest.mock("@/lib/trpc", () => ({
+vi.mock("@/lib/trpc", () => ({
   trpc: {
     useUtils: () => ({
       files: {
@@ -43,9 +43,9 @@ jest.mock("@/lib/trpc", () => ({
       },
     }),
   },
-  getAccessToken: jest.fn(() => Promise.resolve("test-token")),
-  getCurrentOrgId: jest.fn(() => "org-123"),
-  getTusEndpoint: jest.fn(() => "http://localhost:1080/files/"),
+  getAccessToken: vi.fn(() => Promise.resolve("test-token")),
+  getCurrentOrgId: vi.fn(() => "org-123"),
+  getTusEndpoint: vi.fn(() => "http://localhost:1080/files/"),
 }));
 
 const mockInvalidateFiles = trpcMock.invalidateFiles;
@@ -53,12 +53,12 @@ const mockInvalidateFiles = trpcMock.invalidateFiles;
 describe("useFileUpload", () => {
   const defaultOptions = {
     manuscriptVersionId: "mv-123",
-    onUploadComplete: jest.fn(),
-    onError: jest.fn(),
+    onUploadComplete: vi.fn(),
+    onError: vi.fn(),
   };
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     tusOnProgress = undefined;
     tusOnSuccess = undefined;
     tusOnError = undefined;
@@ -104,7 +104,7 @@ describe("useFileUpload", () => {
   });
 
   it("should handle upload success", async () => {
-    jest.useFakeTimers();
+    vi.useFakeTimers();
     const { result } = renderHook(() => useFileUpload(defaultOptions));
     const file = new File(["content"], "test.pdf", {
       type: "application/pdf",
@@ -125,14 +125,14 @@ describe("useFileUpload", () => {
     expect(mockInvalidateFiles).not.toHaveBeenCalled();
 
     await act(async () => {
-      jest.advanceTimersByTime(1500);
+      vi.advanceTimersByTime(1500);
     });
 
     expect(mockInvalidateFiles).toHaveBeenCalledWith({
       manuscriptVersionId: "mv-123",
     });
     expect(defaultOptions.onUploadComplete).toHaveBeenCalled();
-    jest.useRealTimers();
+    vi.useRealTimers();
   });
 
   it("should handle upload error", async () => {

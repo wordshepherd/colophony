@@ -4,7 +4,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { DynamicFormField } from "../dynamic-form-field";
 import type { FormFieldForRenderer } from "../build-form-schema";
-import "../../../../../test/setup";
 
 function makeField(
   overrides: Partial<FormFieldForRenderer> & {

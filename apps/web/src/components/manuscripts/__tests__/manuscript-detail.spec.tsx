@@ -1,7 +1,7 @@
+import { vi, type Mock } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { ManuscriptDetail } from "../manuscript-detail";
-import "../../../../test/setup";
 import { mockPush } from "../../../../test/setup";
 
 // --- Mutable mock state ---
@@ -35,31 +35,31 @@ let mockRelatedSubmissions: Array<{
   versionNumber: number;
 }>;
 
-let mockDeleteMutate: jest.Mock;
+let mockDeleteMutate: Mock;
 let mockDeleteIsPending: boolean;
-let mockCreateVersionMutateAsync: jest.Mock;
+let mockCreateVersionMutateAsync: Mock;
 let mockCreateVersionIsPending: boolean;
-let mockUpdateMutateAsync: jest.Mock;
+let mockUpdateMutateAsync: Mock;
 let mockUpdateIsPending: boolean;
 
-const mockInvalidateList = jest.fn();
-const mockInvalidateGetDetail = jest.fn();
-const mockInvalidateGetById = jest.fn();
+const mockInvalidateList = vi.fn();
+const mockInvalidateGetDetail = vi.fn();
+const mockInvalidateGetById = vi.fn();
 
 function resetMocks() {
   mockManuscriptDetail = undefined;
   mockIsPending = false;
   mockError = null;
   mockRelatedSubmissions = [];
-  mockDeleteMutate = jest.fn();
+  mockDeleteMutate = vi.fn();
   mockDeleteIsPending = false;
-  mockCreateVersionMutateAsync = jest.fn().mockResolvedValue({});
+  mockCreateVersionMutateAsync = vi.fn().mockResolvedValue({});
   mockCreateVersionIsPending = false;
-  mockUpdateMutateAsync = jest.fn().mockResolvedValue({});
+  mockUpdateMutateAsync = vi.fn().mockResolvedValue({});
   mockUpdateIsPending = false;
 }
 
-jest.mock("@/lib/trpc", () => ({
+vi.mock("@/lib/trpc", () => ({
   trpc: {
     useUtils: () => ({
       manuscripts: {
@@ -117,7 +117,7 @@ jest.mock("@/lib/trpc", () => ({
     files: {
       getDownloadUrl: {
         useMutation: () => ({
-          mutateAsync: jest
+          mutateAsync: vi
             .fn()
             .mockResolvedValue({ url: "https://example.com/file" }),
           isPending: false,
@@ -127,7 +127,7 @@ jest.mock("@/lib/trpc", () => ({
   },
 }));
 
-jest.mock("@/components/submissions/file-upload", () => ({
+vi.mock("@/components/submissions/file-upload", () => ({
   FileUpload: (props: {
     manuscriptVersionId?: string | null;
     disabled?: boolean;
@@ -140,9 +140,9 @@ jest.mock("@/components/submissions/file-upload", () => ({
   ),
 }));
 
-const mockToastSuccess = jest.fn();
-const mockToastError = jest.fn();
-jest.mock("sonner", () => ({
+const mockToastSuccess = vi.fn();
+const mockToastError = vi.fn();
+vi.mock("sonner", () => ({
   toast: {
     get success() {
       return mockToastSuccess;
@@ -184,7 +184,7 @@ function makeManuscriptDetail(
 
 describe("ManuscriptDetail", () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     resetMocks();
   });
 
