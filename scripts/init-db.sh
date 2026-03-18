@@ -4,6 +4,12 @@
 
 set -e
 
+# Warn if APP_USER_PASSWORD is unset or uses the default
+if [ -z "$APP_USER_PASSWORD" ] || [ "$APP_USER_PASSWORD" = "app_password" ]; then
+  echo "⚠️  WARNING: APP_USER_PASSWORD is unset or using the default 'app_password'."
+  echo "   For production, generate a strong password: openssl rand -base64 48"
+fi
+
 psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-EOSQL
     -- Create non-superuser role for application (required for RLS)
     DO \$\$
@@ -57,6 +63,9 @@ psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-E
     \$\$;
 
     GRANT USAGE ON SCHEMA public TO audit_writer;
+
+    -- Enable pg_stat_statements for query monitoring
+    CREATE EXTENSION IF NOT EXISTS pg_stat_statements;
 
     -- Verify roles are not superusers
     SELECT usename, usesuper,

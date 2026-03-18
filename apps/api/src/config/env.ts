@@ -17,6 +17,12 @@ const envSchema = z
       )
       .optional(),
 
+    // Database hardening
+    DB_SSL: z.enum(['true', 'false', 'no-verify']).default('false'),
+    DB_SSL_CA_PATH: z.string().optional(),
+    DB_ADMIN_POOL_MAX: z.coerce.number().int().positive().default(5),
+    DB_APP_POOL_MAX: z.coerce.number().int().positive().default(20),
+
     // With defaults
     PORT: z.coerce.number().int().positive().default(4000),
     HOST: z.string().default('0.0.0.0'),

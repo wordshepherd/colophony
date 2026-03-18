@@ -164,6 +164,9 @@ function setupWithRls(tx: unknown) {
 
 const baseEnv = {
   DATABASE_URL: 'postgresql://localhost/test',
+  DB_SSL: 'false' as const,
+  DB_ADMIN_POOL_MAX: 5,
+  DB_APP_POOL_MAX: 20,
   PORT: 4000,
   HOST: '0.0.0.0',
   REDIS_HOST: 'localhost',

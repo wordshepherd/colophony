@@ -27,6 +27,7 @@
     "verify": "tsx --env-file=.env src/verify-migrations.ts --check",
     "verify:repair": "tsx --env-file=.env src/verify-migrations.ts --repair",
     "validate-enums": "tsx --env-file=.env src/validate-enum-migration.ts",
+    "test": "vitest run",
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
@@ -38,6 +39,7 @@
     "@types/node": "^25.5.0",
     "@types/pg": "^8.18.0",
     "drizzle-kit": "^0.31.9",
+    "vitest": "^3.2.1",
     "tsx": "^4.19.0",
     "typescript": "^5.7.2"
   }
