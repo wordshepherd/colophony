@@ -545,7 +545,7 @@
 - [x] [P2] Defense-in-depth org filtering — CMS connection service (`getById`, `update`, `delete`, `testConnection`) and issue service (`getById`, `getItems`, `getSections`) do not pass available `orgId` for defense-in-depth WHERE clause; REST/tRPC callers also omit it — (Codex plan review 2026-03-17; done 2026-03-17)
 - [x] [P2] RLS infrastructure test coverage — `rls-infrastructure.test.ts` `RLS_TABLES` array missing 23 of 45 RLS tables — added all, unified org-policy assertion — (Codex plan review 2026-03-17; done 2026-03-17)
 - [ ] [P3] Clean up redundant per-migration GRANTs — `init-db.sh` `ALTER DEFAULT PRIVILEGES` grants full DML to all tables, making per-migration `GRANT SELECT, INSERT, UPDATE` (without DELETE) on `sim_sub_checks`, `trusted_peers`, `inbound_transfers` effectively no-ops — (DEVLOG 2026-03-17)
-- [ ] [P3] Vitest everywhere — replace Jest in `apps/web` with Vitest to eliminate test runner split (`vi.*` vs `jest.*`), deduplicate mock APIs, coverage configs, and setup patterns — (architecture review 2026-03-16)
+- [x] [P3] Vitest everywhere — replace Jest in `apps/web` with Vitest to eliminate test runner split (`vi.*` vs `jest.*`), deduplicate mock APIs, coverage configs, and setup patterns — (architecture review 2026-03-16; done 2026-03-17)
 
 ### Architecture Boundaries
 
