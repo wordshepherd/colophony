@@ -1,4 +1,3 @@
-import "../../../../../test/setup";
 import { getPageFieldPaths } from "../build-page-schema";
 import type { FormFieldForRenderer } from "../build-form-schema";
 

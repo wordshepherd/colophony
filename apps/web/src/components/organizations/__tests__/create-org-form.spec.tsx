@@ -1,3 +1,4 @@
+import { vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { CreateOrgForm } from "../create-org-form";
@@ -8,10 +9,10 @@ let mockIsChecking = false;
 let mockIsAvailable: boolean | null = null;
 let mockHasOrganizations = false;
 let mockDebouncedSlug = "";
-const mockMutate = jest.fn();
-const mockInvalidate = jest.fn();
+const mockMutate = vi.fn();
+const mockInvalidate = vi.fn();
 
-jest.mock("@/hooks/use-slug-check", () => ({
+vi.mock("@/hooks/use-slug-check", () => ({
   useSlugCheck: (_slug: string) => {
     return {
       isChecking: mockIsChecking,
@@ -21,13 +22,13 @@ jest.mock("@/hooks/use-slug-check", () => ({
   },
 }));
 
-jest.mock("@/hooks/use-organization", () => ({
+vi.mock("@/hooks/use-organization", () => ({
   useOrganization: () => ({
     hasOrganizations: mockHasOrganizations,
   }),
 }));
 
-jest.mock("@/lib/trpc", () => ({
+vi.mock("@/lib/trpc", () => ({
   trpc: {
     useUtils: () => ({
       users: { me: { invalidate: mockInvalidate } },
@@ -44,19 +45,19 @@ jest.mock("@/lib/trpc", () => ({
       },
     },
   },
-  setCurrentOrgId: jest.fn(),
+  setCurrentOrgId: vi.fn(),
 }));
 
-jest.mock("sonner", () => ({
+vi.mock("sonner", () => ({
   toast: {
-    success: jest.fn(),
-    error: jest.fn(),
+    success: vi.fn(),
+    error: vi.fn(),
   },
 }));
 
 describe("CreateOrgForm", () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     mockIsChecking = false;
     mockIsAvailable = null;
     mockDebouncedSlug = "";

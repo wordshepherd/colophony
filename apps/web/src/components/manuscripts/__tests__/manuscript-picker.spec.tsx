@@ -1,7 +1,7 @@
+import { vi, type Mock } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { ManuscriptPicker } from "../manuscript-picker";
-import "../../../../test/setup";
 
 // --- Mutable mock state ---
 let mockManuscripts:
@@ -33,20 +33,20 @@ let mockManuscriptDetail:
     }
   | undefined;
 
-let mockCreateMutateAsync: jest.Mock;
+let mockCreateMutateAsync: Mock;
 let mockCreateIsPending: boolean;
 
 function resetMocks() {
   mockManuscripts = { items: [] };
   mockManuscriptDetail = undefined;
-  mockCreateMutateAsync = jest.fn().mockResolvedValue({
+  mockCreateMutateAsync = vi.fn().mockResolvedValue({
     id: "new-m-1",
     title: "New Manuscript",
   });
   mockCreateIsPending = false;
 }
 
-jest.mock("@/lib/trpc", () => ({
+vi.mock("@/lib/trpc", () => ({
   trpc: {
     manuscripts: {
       list: {
@@ -76,7 +76,7 @@ jest.mock("@/lib/trpc", () => ({
   },
 }));
 
-jest.mock("@/components/submissions/file-upload", () => ({
+vi.mock("@/components/submissions/file-upload", () => ({
   FileUpload: (props: {
     manuscriptVersionId?: string | null;
     disabled?: boolean;
@@ -89,15 +89,15 @@ jest.mock("@/components/submissions/file-upload", () => ({
 }));
 
 // Mock sonner
-jest.mock("sonner", () => ({
+vi.mock("sonner", () => ({
   toast: {
-    success: jest.fn(),
-    error: jest.fn(),
+    success: vi.fn(),
+    error: vi.fn(),
   },
 }));
 
 // Mock Popover to render content always visible for testing
-jest.mock("@/components/ui/popover", () => {
+vi.mock("@/components/ui/popover", () => {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   const React = require("react");
   return {
@@ -118,7 +118,7 @@ jest.mock("@/components/ui/popover", () => {
 });
 
 // Mock Command to render as plain HTML for testing
-jest.mock("@/components/ui/command", () => {
+vi.mock("@/components/ui/command", () => {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   const React = require("react");
   return {
@@ -169,12 +169,12 @@ jest.mock("@/components/ui/command", () => {
 
 describe("ManuscriptPicker", () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     resetMocks();
   });
 
   it("renders trigger with placeholder", () => {
-    render(<ManuscriptPicker value={null} onChange={jest.fn()} />);
+    render(<ManuscriptPicker value={null} onChange={vi.fn()} />);
 
     expect(screen.getByText("Select a manuscript...")).toBeInTheDocument();
   });
@@ -195,14 +195,14 @@ describe("ManuscriptPicker", () => {
       ],
     };
 
-    render(<ManuscriptPicker value={null} onChange={jest.fn()} />);
+    render(<ManuscriptPicker value={null} onChange={vi.fn()} />);
 
     expect(screen.getByText("My Poem")).toBeInTheDocument();
     expect(screen.getByText("Short Story")).toBeInTheDocument();
   });
 
   it("calls onChange with latest version ID when selected", async () => {
-    const onChange = jest.fn();
+    const onChange = vi.fn();
     mockManuscripts = {
       items: [
         {
@@ -242,7 +242,7 @@ describe("ManuscriptPicker", () => {
 
   it("shows inline create form when 'Create new' clicked", async () => {
     const user = userEvent.setup();
-    render(<ManuscriptPicker value={null} onChange={jest.fn()} />);
+    render(<ManuscriptPicker value={null} onChange={vi.fn()} />);
 
     await user.click(screen.getByText("Create new manuscript"));
 
@@ -254,7 +254,7 @@ describe("ManuscriptPicker", () => {
   });
 
   it("creates manuscript and auto-selects it", async () => {
-    const onChange = jest.fn();
+    const onChange = vi.fn();
     mockManuscriptDetail = {
       id: "new-m-1",
       title: "New Manuscript",
@@ -307,7 +307,7 @@ describe("ManuscriptPicker", () => {
     // Simulate a selected state by setting the internal state via detail query
     // We need to trigger the selected rendering path
     const { rerender } = render(
-      <ManuscriptPicker value="v-1" onChange={jest.fn()} />,
+      <ManuscriptPicker value="v-1" onChange={vi.fn()} />,
     );
 
     // Since value is set but selectedManuscriptId is internal state,
@@ -317,6 +317,6 @@ describe("ManuscriptPicker", () => {
     expect(screen.getByText("Select a manuscript...")).toBeInTheDocument();
 
     // Rerender doesn't help since internal state is managed
-    rerender(<ManuscriptPicker value="v-1" onChange={jest.fn()} />);
+    rerender(<ManuscriptPicker value="v-1" onChange={vi.fn()} />);
   });
 });

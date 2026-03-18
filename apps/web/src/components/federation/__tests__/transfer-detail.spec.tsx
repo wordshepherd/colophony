@@ -1,6 +1,6 @@
+import { vi } from "vitest";
 import React from "react";
 import { render, screen } from "@testing-library/react";
-import "../../../../test/setup";
 
 let mockTransfer: unknown = {
   id: "t-1",
@@ -52,7 +52,7 @@ function resetMocks() {
   mockError = null;
 }
 
-jest.mock("@/lib/trpc", () => ({
+vi.mock("@/lib/trpc", () => ({
   trpc: {
     transfers: {
       getById: {
@@ -64,7 +64,7 @@ jest.mock("@/lib/trpc", () => ({
       },
       cancel: {
         useMutation: () => ({
-          mutate: jest.fn(),
+          mutate: vi.fn(),
           isPending: false,
         }),
       },
@@ -72,22 +72,22 @@ jest.mock("@/lib/trpc", () => ({
     useUtils: () => ({
       transfers: {
         getById: {
-          invalidate: jest.fn(),
+          invalidate: vi.fn(),
         },
         list: {
-          invalidate: jest.fn(),
+          invalidate: vi.fn(),
         },
       },
     }),
   },
 }));
 
-jest.mock("next/navigation", () => ({
+vi.mock("next/navigation", () => ({
   usePathname: () => "/federation/transfers/t-1",
-  useRouter: () => ({ push: jest.fn() }),
+  useRouter: () => ({ push: vi.fn() }),
 }));
 
-jest.mock("next/link", () => ({
+vi.mock("next/link", () => ({
   __esModule: true,
   default: ({ children, href }: { children: React.ReactNode; href: string }) =>
     React.createElement("a", { href }, children),

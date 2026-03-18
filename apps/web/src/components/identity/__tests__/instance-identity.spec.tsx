@@ -1,6 +1,6 @@
+import { vi } from "vitest";
 import React from "react";
 import { render, screen, waitFor } from "@testing-library/react";
-import "../../../../test/setup";
 import { InstanceIdentity } from "../instance-identity";
 
 const fullMetadata = {
@@ -24,14 +24,14 @@ const fullMetadata = {
 };
 
 function mockFetchSuccess(data: unknown) {
-  global.fetch = jest.fn().mockResolvedValue({
+  global.fetch = vi.fn().mockResolvedValue({
     ok: true,
     json: () => Promise.resolve(data),
   } as Response);
 }
 
 function mockFetch503Disabled() {
-  global.fetch = jest.fn().mockResolvedValue({
+  global.fetch = vi.fn().mockResolvedValue({
     ok: false,
     status: 503,
     json: () => Promise.resolve({ error: "federation_disabled" }),
@@ -39,17 +39,17 @@ function mockFetch503Disabled() {
 }
 
 function mockFetchFailure() {
-  global.fetch = jest.fn().mockRejectedValue(new Error("Network error"));
+  global.fetch = vi.fn().mockRejectedValue(new Error("Network error"));
 }
 
 afterEach(() => {
-  jest.restoreAllMocks();
+  vi.restoreAllMocks();
 });
 
 describe("InstanceIdentity", () => {
   it("renders loading skeletons initially", () => {
     // Never-resolving fetch to keep loading state
-    global.fetch = jest.fn().mockReturnValue(new Promise(() => {}));
+    global.fetch = vi.fn().mockReturnValue(new Promise(() => {}));
 
     render(<InstanceIdentity apiUrl="http://localhost:4000" />);
 

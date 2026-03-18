@@ -1,3 +1,4 @@
+import { vi } from "vitest";
 import { renderHook, act } from "@testing-library/react";
 import { useSlugCheck } from "../use-slug-check";
 
@@ -7,7 +8,7 @@ let mockIsFetching = false;
 let lastQueryArgs: { slug: string } | undefined;
 let lastQueryOptions: { enabled: boolean } | undefined;
 
-jest.mock("@/lib/trpc", () => ({
+vi.mock("@/lib/trpc", () => ({
   trpc: {
     organizations: {
       checkSlug: {
@@ -23,8 +24,8 @@ jest.mock("@/lib/trpc", () => ({
 
 describe("useSlugCheck", () => {
   beforeEach(() => {
-    jest.useFakeTimers();
-    jest.clearAllMocks();
+    vi.useFakeTimers();
+    vi.clearAllMocks();
     mockData = undefined;
     mockIsFetching = false;
     lastQueryArgs = undefined;
@@ -32,7 +33,7 @@ describe("useSlugCheck", () => {
   });
 
   afterEach(() => {
-    jest.useRealTimers();
+    vi.useRealTimers();
   });
 
   describe("debouncing", () => {
@@ -57,7 +58,7 @@ describe("useSlugCheck", () => {
       rerender({ slug: "abcd" });
 
       act(() => {
-        jest.advanceTimersByTime(300);
+        vi.advanceTimersByTime(300);
       });
 
       expect(result.current.debouncedSlug).toBe("abcd");
@@ -71,19 +72,19 @@ describe("useSlugCheck", () => {
 
       rerender({ slug: "abcd" });
       act(() => {
-        jest.advanceTimersByTime(200);
+        vi.advanceTimersByTime(200);
       });
 
       rerender({ slug: "abcde" });
       act(() => {
-        jest.advanceTimersByTime(200);
+        vi.advanceTimersByTime(200);
       });
 
       // Only 200ms passed since last change — still old value
       expect(result.current.debouncedSlug).toBe("abc");
 
       act(() => {
-        jest.advanceTimersByTime(100);
+        vi.advanceTimersByTime(100);
       });
 
       expect(result.current.debouncedSlug).toBe("abcde");
@@ -94,7 +95,7 @@ describe("useSlugCheck", () => {
     it("should return null isAvailable for slugs < 3 chars", () => {
       renderHook(() => useSlugCheck("ab", true));
       act(() => {
-        jest.advanceTimersByTime(300);
+        vi.advanceTimersByTime(300);
       });
       // Query should not be enabled for invalid format
       expect(lastQueryOptions?.enabled).toBe(false);
@@ -104,7 +105,7 @@ describe("useSlugCheck", () => {
       const longSlug = "a".repeat(64);
       renderHook(() => useSlugCheck(longSlug, true));
       act(() => {
-        jest.advanceTimersByTime(300);
+        vi.advanceTimersByTime(300);
       });
       expect(lastQueryOptions?.enabled).toBe(false);
     });
@@ -112,7 +113,7 @@ describe("useSlugCheck", () => {
     it("should return null isAvailable for uppercase slugs", () => {
       renderHook(() => useSlugCheck("ABC", true));
       act(() => {
-        jest.advanceTimersByTime(300);
+        vi.advanceTimersByTime(300);
       });
       expect(lastQueryOptions?.enabled).toBe(false);
     });
@@ -120,7 +121,7 @@ describe("useSlugCheck", () => {
     it("should return null isAvailable for slugs with special chars", () => {
       renderHook(() => useSlugCheck("abc_def", true));
       act(() => {
-        jest.advanceTimersByTime(300);
+        vi.advanceTimersByTime(300);
       });
       expect(lastQueryOptions?.enabled).toBe(false);
     });
@@ -130,7 +131,7 @@ describe("useSlugCheck", () => {
     it("should disable query when enabled prop is false", () => {
       renderHook(() => useSlugCheck("valid-slug", false));
       act(() => {
-        jest.advanceTimersByTime(300);
+        vi.advanceTimersByTime(300);
       });
       expect(lastQueryOptions?.enabled).toBe(false);
     });
@@ -138,7 +139,7 @@ describe("useSlugCheck", () => {
     it("should pass slug to query when valid format", () => {
       renderHook(() => useSlugCheck("valid-slug", true));
       act(() => {
-        jest.advanceTimersByTime(300);
+        vi.advanceTimersByTime(300);
       });
       expect(lastQueryArgs?.slug).toBe("valid-slug");
       expect(lastQueryOptions?.enabled).toBe(true);
@@ -148,7 +149,7 @@ describe("useSlugCheck", () => {
       mockData = { available: true };
       const { result } = renderHook(() => useSlugCheck("valid-slug", true));
       act(() => {
-        jest.advanceTimersByTime(300);
+        vi.advanceTimersByTime(300);
       });
       expect(result.current.isAvailable).toBe(true);
     });
@@ -157,7 +158,7 @@ describe("useSlugCheck", () => {
       mockIsFetching = true;
       const { result } = renderHook(() => useSlugCheck("valid-slug", true));
       act(() => {
-        jest.advanceTimersByTime(300);
+        vi.advanceTimersByTime(300);
       });
       expect(result.current.isChecking).toBe(true);
     });

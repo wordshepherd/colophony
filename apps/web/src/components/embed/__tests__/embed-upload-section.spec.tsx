@@ -1,16 +1,16 @@
+import { vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { EmbedUploadSection } from "../embed-upload-section";
-import "../../../../test/setup";
 
 // Mock upload hooks
-const mockUseEmbedFileUpload = jest.fn();
-const mockUseEmbedUploadStatus = jest.fn();
+const mockUseEmbedFileUpload = vi.fn();
+const mockUseEmbedUploadStatus = vi.fn();
 
-jest.mock("@/hooks/use-embed-file-upload", () => ({
+vi.mock("@/hooks/use-embed-file-upload", () => ({
   useEmbedFileUpload: (...args: unknown[]) => mockUseEmbedFileUpload(...args),
 }));
 
-jest.mock("@/hooks/use-embed-upload-status", () => ({
+vi.mock("@/hooks/use-embed-upload-status", () => ({
   useEmbedUploadStatus: (...args: unknown[]) =>
     mockUseEmbedUploadStatus(...args),
 }));
@@ -28,17 +28,17 @@ const defaultProps = {
   },
   identity: { email: "test@example.com" },
   disabled: false,
-  onUploadStateChange: jest.fn(),
+  onUploadStateChange: vi.fn(),
 };
 
 describe("EmbedUploadSection", () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     mockUseEmbedFileUpload.mockReturnValue({
       uploads: [],
-      uploadFiles: jest.fn(),
-      removeUpload: jest.fn(),
-      cancelUpload: jest.fn(),
+      uploadFiles: vi.fn(),
+      removeUpload: vi.fn(),
+      cancelUpload: vi.fn(),
       isUploading: false,
     });
     mockUseEmbedUploadStatus.mockReturnValue({

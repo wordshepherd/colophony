@@ -1,6 +1,6 @@
+import { vi } from "vitest";
 import { render, screen, fireEvent, act } from "@testing-library/react";
 import { EditorSubmissionQueue } from "../editor-submission-queue";
-import "../../../../test/setup";
 
 // --- Mutable mock state ---
 let mockData:
@@ -27,7 +27,7 @@ function resetMocks() {
   mockQueryInput = undefined;
 }
 
-jest.mock("@/hooks/use-organization", () => ({
+vi.mock("@/hooks/use-organization", () => ({
   useOrganization: () => ({
     isAdmin: mockIsAdmin,
     isEditor: true,
@@ -39,15 +39,15 @@ jest.mock("@/hooks/use-organization", () => ({
   }),
 }));
 
-jest.mock("@/lib/trpc", () => ({
+vi.mock("@/lib/trpc", () => ({
   trpc: {
     useUtils: () => ({
       submissions: {
-        list: { invalidate: jest.fn() },
-        export: { fetch: jest.fn().mockResolvedValue([]) },
+        list: { invalidate: vi.fn() },
+        export: { fetch: vi.fn().mockResolvedValue([]) },
       },
       queuePresets: {
-        list: { invalidate: jest.fn() },
+        list: { invalidate: vi.fn() },
       },
     }),
     submissions: {
@@ -62,10 +62,10 @@ jest.mock("@/lib/trpc", () => ({
         },
       },
       batchUpdateStatus: {
-        useMutation: () => ({ mutate: jest.fn(), isPending: false }),
+        useMutation: () => ({ mutate: vi.fn(), isPending: false }),
       },
       batchAssignReviewers: {
-        useMutation: () => ({ mutate: jest.fn(), isPending: false }),
+        useMutation: () => ({ mutate: vi.fn(), isPending: false }),
       },
     },
     periods: {
@@ -85,10 +85,10 @@ jest.mock("@/lib/trpc", () => ({
         useQuery: () => ({ data: [] }),
       },
       create: {
-        useMutation: () => ({ mutate: jest.fn(), isPending: false }),
+        useMutation: () => ({ mutate: vi.fn(), isPending: false }),
       },
       delete: {
-        useMutation: () => ({ mutate: jest.fn(), isPending: false }),
+        useMutation: () => ({ mutate: vi.fn(), isPending: false }),
       },
     },
   },
@@ -208,18 +208,18 @@ describe("EditorSubmissionQueue", () => {
   });
 
   it("search input debounce works without crash", () => {
-    jest.useFakeTimers();
+    vi.useFakeTimers();
     mockData = { items: [], total: 0, page: 1, limit: 20, totalPages: 0 };
     render(<EditorSubmissionQueue />);
     const input = screen.getByPlaceholderText("Search by title...");
     fireEvent.change(input, { target: { value: "poetry" } });
     expect(input).toHaveValue("poetry");
     act(() => {
-      jest.advanceTimersByTime(300);
+      vi.advanceTimersByTime(300);
     });
     // No crash — component still renders
     expect(screen.getByText("No submissions")).toBeInTheDocument();
-    jest.useRealTimers();
+    vi.useRealTimers();
   });
 
   // --- Column sorting tests ---

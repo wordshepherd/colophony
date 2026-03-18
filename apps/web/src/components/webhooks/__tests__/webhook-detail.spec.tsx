@@ -1,6 +1,6 @@
+import { vi } from "vitest";
 import React from "react";
 import { render, screen } from "@testing-library/react";
-import "../../../../test/setup";
 
 let mockEndpoint: Record<string, unknown> | null = null;
 let mockDeliveries: unknown[] = [];
@@ -38,7 +38,7 @@ function resetMocks() {
   mockIsAdmin = true;
 }
 
-jest.mock("@/lib/trpc", () => ({
+vi.mock("@/lib/trpc", () => ({
   trpc: {
     webhooks: {
       getById: {
@@ -63,50 +63,50 @@ jest.mock("@/lib/trpc", () => ({
       },
       delete: {
         useMutation: () => ({
-          mutate: jest.fn(),
+          mutate: vi.fn(),
           isPending: false,
         }),
       },
       rotateSecret: {
         useMutation: () => ({
-          mutate: jest.fn(),
+          mutate: vi.fn(),
           isPending: false,
         }),
       },
       test: {
         useMutation: () => ({
-          mutate: jest.fn(),
+          mutate: vi.fn(),
           isPending: false,
         }),
       },
       retryDelivery: {
         useMutation: () => ({
-          mutate: jest.fn(),
+          mutate: vi.fn(),
           isPending: false,
         }),
       },
     },
     useUtils: () => ({
       webhooks: {
-        getById: { invalidate: jest.fn() },
-        deliveries: { invalidate: jest.fn() },
+        getById: { invalidate: vi.fn() },
+        deliveries: { invalidate: vi.fn() },
       },
     }),
   },
 }));
 
-jest.mock("@/hooks/use-organization", () => ({
+vi.mock("@/hooks/use-organization", () => ({
   useOrganization: () => ({
     isAdmin: mockIsAdmin,
     isEditor: true,
   }),
 }));
 
-jest.mock("next/navigation", () => ({
-  useRouter: () => ({ push: jest.fn() }),
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push: vi.fn() }),
 }));
 
-jest.mock("next/link", () => ({
+vi.mock("next/link", () => ({
   __esModule: true,
   default: ({
     children,
@@ -117,8 +117,8 @@ jest.mock("next/link", () => ({
   }) => <a href={href}>{children}</a>,
 }));
 
-jest.mock("sonner", () => ({
-  toast: { success: jest.fn(), error: jest.fn() },
+vi.mock("sonner", () => ({
+  toast: { success: vi.fn(), error: vi.fn() },
 }));
 
 import { WebhookDetail } from "../webhook-detail";

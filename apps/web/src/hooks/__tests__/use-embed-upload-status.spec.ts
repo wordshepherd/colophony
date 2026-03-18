@@ -1,9 +1,10 @@
+import { vi } from "vitest";
 import { renderHook, act } from "@testing-library/react";
 import { useEmbedUploadStatus } from "../use-embed-upload-status";
 
-const mockFetchUploadStatus = jest.fn();
+const mockFetchUploadStatus = vi.fn();
 
-jest.mock("@/lib/embed-api", () => ({
+vi.mock("@/lib/embed-api", () => ({
   fetchUploadStatus: (...args: unknown[]) => mockFetchUploadStatus(...args),
 }));
 
@@ -18,12 +19,12 @@ describe("useEmbedUploadStatus", () => {
   };
 
   beforeEach(() => {
-    jest.useFakeTimers();
-    jest.clearAllMocks();
+    vi.useFakeTimers();
+    vi.clearAllMocks();
   });
 
   afterEach(() => {
-    jest.useRealTimers();
+    vi.useRealTimers();
   });
 
   it("polls every 3s when enabled", async () => {
@@ -44,19 +45,19 @@ describe("useEmbedUploadStatus", () => {
 
     // Initial poll
     await act(async () => {
-      await jest.advanceTimersByTimeAsync(0);
+      await vi.advanceTimersByTimeAsync(0);
     });
     expect(mockFetchUploadStatus).toHaveBeenCalledTimes(1);
 
     // After 3 seconds
     await act(async () => {
-      await jest.advanceTimersByTimeAsync(3000);
+      await vi.advanceTimersByTimeAsync(3000);
     });
     expect(mockFetchUploadStatus).toHaveBeenCalledTimes(2);
 
     // After 6 seconds total
     await act(async () => {
-      await jest.advanceTimersByTimeAsync(3000);
+      await vi.advanceTimersByTimeAsync(3000);
     });
     expect(mockFetchUploadStatus).toHaveBeenCalledTimes(3);
   });
@@ -80,7 +81,7 @@ describe("useEmbedUploadStatus", () => {
     );
 
     await act(async () => {
-      await jest.advanceTimersByTimeAsync(0);
+      await vi.advanceTimersByTimeAsync(0);
     });
 
     expect(result.current.allClean).toBe(true);
@@ -88,7 +89,7 @@ describe("useEmbedUploadStatus", () => {
     // After many more intervals, no additional calls
     const callCount = mockFetchUploadStatus.mock.calls.length;
     await act(async () => {
-      await jest.advanceTimersByTimeAsync(9000);
+      await vi.advanceTimersByTimeAsync(9000);
     });
     expect(mockFetchUploadStatus).toHaveBeenCalledTimes(callCount);
   });
@@ -104,12 +105,12 @@ describe("useEmbedUploadStatus", () => {
     );
 
     await act(async () => {
-      await jest.advanceTimersByTimeAsync(0);
+      await vi.advanceTimersByTimeAsync(0);
     });
     const initial = mockFetchUploadStatus.mock.calls.length;
 
     await act(async () => {
-      await jest.advanceTimersByTimeAsync(6000);
+      await vi.advanceTimersByTimeAsync(6000);
     });
     // Should keep polling
     expect(mockFetchUploadStatus.mock.calls.length).toBeGreaterThan(initial);
@@ -135,18 +136,18 @@ describe("useEmbedUploadStatus", () => {
 
     // Initial poll triggers 429
     await act(async () => {
-      await jest.advanceTimersByTimeAsync(0);
+      await vi.advanceTimersByTimeAsync(0);
     });
 
     // After 3s (old interval), should not have polled again yet
     await act(async () => {
-      await jest.advanceTimersByTimeAsync(3000);
+      await vi.advanceTimersByTimeAsync(3000);
     });
     const callsAt3s = mockFetchUploadStatus.mock.calls.length;
 
     // After 10s (retryAfter), should have polled again
     await act(async () => {
-      await jest.advanceTimersByTimeAsync(7000);
+      await vi.advanceTimersByTimeAsync(7000);
     });
     expect(mockFetchUploadStatus.mock.calls.length).toBeGreaterThan(callsAt3s);
   });
@@ -168,14 +169,14 @@ describe("useEmbedUploadStatus", () => {
     const { unmount } = renderHook(() => useEmbedUploadStatus(defaultOptions));
 
     await act(async () => {
-      await jest.advanceTimersByTimeAsync(0);
+      await vi.advanceTimersByTimeAsync(0);
     });
     const callsBeforeUnmount = mockFetchUploadStatus.mock.calls.length;
 
     unmount();
 
     await act(async () => {
-      await jest.advanceTimersByTimeAsync(9000);
+      await vi.advanceTimersByTimeAsync(9000);
     });
     // No additional calls after unmount
     expect(mockFetchUploadStatus).toHaveBeenCalledTimes(callsBeforeUnmount);
@@ -187,7 +188,7 @@ describe("useEmbedUploadStatus", () => {
     );
 
     await act(async () => {
-      await jest.advanceTimersByTimeAsync(10000);
+      await vi.advanceTimersByTimeAsync(10000);
     });
 
     expect(mockFetchUploadStatus).not.toHaveBeenCalled();

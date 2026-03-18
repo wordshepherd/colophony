@@ -1,3 +1,4 @@
+import { vi } from "vitest";
 import React from "react";
 import { render, screen } from "@testing-library/react";
 import { Sidebar } from "../sidebar";
@@ -7,7 +8,7 @@ let mockIsEditor = false;
 let mockIsAdmin = false;
 let mockPathname = "/";
 
-jest.mock("@/hooks/use-organization", () => ({
+vi.mock("@/hooks/use-organization", () => ({
   useOrganization: () => ({
     isEditor: mockIsEditor,
     isAdmin: mockIsAdmin,
@@ -15,20 +16,20 @@ jest.mock("@/hooks/use-organization", () => ({
 }));
 
 // Override the global next/navigation mock to control pathname per-test
-jest.mock("next/navigation", () => ({
+vi.mock("next/navigation", () => ({
   useRouter: () => ({
-    push: jest.fn(),
-    replace: jest.fn(),
-    back: jest.fn(),
-    refresh: jest.fn(),
-    prefetch: jest.fn(),
+    push: vi.fn(),
+    replace: vi.fn(),
+    back: vi.fn(),
+    refresh: vi.fn(),
+    prefetch: vi.fn(),
   }),
   usePathname: () => mockPathname,
   useSearchParams: () => new URLSearchParams(),
 }));
 
 // Override next/link mock to pass className through (default mock drops it)
-jest.mock("next/link", () => ({
+vi.mock("next/link", () => ({
   __esModule: true,
   default: ({
     children,
@@ -43,7 +44,7 @@ jest.mock("next/link", () => ({
 
 describe("Sidebar", () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     mockIsEditor = false;
     mockIsAdmin = false;
     mockPathname = "/";

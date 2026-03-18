@@ -1,6 +1,6 @@
+import { vi } from "vitest";
 import React from "react";
 import { render, screen } from "@testing-library/react";
-import "../../../../test/setup";
 
 let mockMigration: unknown = {
   id: "m-1",
@@ -36,7 +36,7 @@ function resetMocks() {
   mockIsPending = false;
 }
 
-jest.mock("@/lib/trpc", () => ({
+vi.mock("@/lib/trpc", () => ({
   trpc: {
     migrations: {
       getById: {
@@ -48,19 +48,19 @@ jest.mock("@/lib/trpc", () => ({
       },
       approve: {
         useMutation: () => ({
-          mutate: jest.fn(),
+          mutate: vi.fn(),
           isPending: false,
         }),
       },
       reject: {
         useMutation: () => ({
-          mutate: jest.fn(),
+          mutate: vi.fn(),
           isPending: false,
         }),
       },
       cancel: {
         useMutation: () => ({
-          mutate: jest.fn(),
+          mutate: vi.fn(),
           isPending: false,
         }),
       },
@@ -68,25 +68,25 @@ jest.mock("@/lib/trpc", () => ({
     useUtils: () => ({
       migrations: {
         getById: {
-          invalidate: jest.fn(),
+          invalidate: vi.fn(),
         },
         list: {
-          invalidate: jest.fn(),
+          invalidate: vi.fn(),
         },
         listPending: {
-          invalidate: jest.fn(),
+          invalidate: vi.fn(),
         },
       },
     }),
   },
 }));
 
-jest.mock("next/navigation", () => ({
+vi.mock("next/navigation", () => ({
   usePathname: () => "/federation/migrations/m-1",
-  useRouter: () => ({ push: jest.fn() }),
+  useRouter: () => ({ push: vi.fn() }),
 }));
 
-jest.mock("next/link", () => ({
+vi.mock("next/link", () => ({
   __esModule: true,
   default: ({ children, href }: { children: React.ReactNode; href: string }) =>
     React.createElement("a", { href }, children),

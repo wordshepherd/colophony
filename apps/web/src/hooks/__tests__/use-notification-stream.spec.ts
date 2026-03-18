@@ -1,18 +1,19 @@
-jest.mock("@/lib/trpc", () => ({
-  getAccessToken: jest.fn().mockResolvedValue(null),
-  getCurrentOrgId: jest.fn().mockReturnValue(null),
+import { vi } from "vitest";
+vi.mock("@/lib/trpc", () => ({
+  getAccessToken: vi.fn().mockResolvedValue(null),
+  getCurrentOrgId: vi.fn().mockReturnValue(null),
   trpc: {
-    useUtils: jest.fn().mockReturnValue({
+    useUtils: vi.fn().mockReturnValue({
       notifications: {
-        unreadCount: { invalidate: jest.fn() },
-        list: { invalidate: jest.fn() },
+        unreadCount: { invalidate: vi.fn() },
+        list: { invalidate: vi.fn() },
       },
     }),
   },
 }));
 
-jest.mock("@/hooks/use-organization", () => ({
-  useOrganization: jest.fn().mockReturnValue({ currentOrg: null }),
+vi.mock("@/hooks/use-organization", () => ({
+  useOrganization: vi.fn().mockReturnValue({ currentOrg: null }),
 }));
 
 describe("useNotificationStream module", () => {

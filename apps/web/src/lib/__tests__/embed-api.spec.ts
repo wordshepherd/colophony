@@ -1,3 +1,4 @@
+import { vi } from "vitest";
 import {
   fetchEmbedForm,
   submitEmbedForm,
@@ -21,7 +22,7 @@ describe("embed-api", () => {
     body: unknown,
     headers?: Record<string, string>,
   ) {
-    globalThis.fetch = jest.fn().mockResolvedValue({
+    globalThis.fetch = vi.fn().mockResolvedValue({
       ok: status >= 200 && status < 300,
       status,
       statusText: status === 200 ? "OK" : "Error",
@@ -61,7 +62,7 @@ describe("embed-api", () => {
 
       try {
         await fetchEmbedForm(API_URL, TOKEN);
-        fail("Should have thrown");
+        expect.unreachable("Should have thrown");
       } catch (err) {
         const apiErr = err as EmbedApiError;
         expect(apiErr.status).toBe(404);
@@ -74,7 +75,7 @@ describe("embed-api", () => {
 
       try {
         await fetchEmbedForm(API_URL, TOKEN);
-        fail("Should have thrown");
+        expect.unreachable("Should have thrown");
       } catch (err) {
         const apiErr = err as EmbedApiError;
         expect(apiErr.status).toBe(410);
@@ -83,9 +84,7 @@ describe("embed-api", () => {
     });
 
     it("handles network error gracefully", async () => {
-      globalThis.fetch = jest
-        .fn()
-        .mockRejectedValue(new Error("Network error"));
+      globalThis.fetch = vi.fn().mockRejectedValue(new Error("Network error"));
 
       await expect(fetchEmbedForm(API_URL, TOKEN)).rejects.toThrow(
         "Network error",
@@ -119,7 +118,7 @@ describe("embed-api", () => {
 
       try {
         await submitEmbedForm(API_URL, TOKEN, { email: "", title: "" });
-        fail("Should have thrown");
+        expect.unreachable("Should have thrown");
       } catch (err) {
         const apiErr = err as EmbedApiError;
         expect(apiErr.status).toBe(400);
@@ -137,7 +136,7 @@ describe("embed-api", () => {
 
       try {
         await submitEmbedForm(API_URL, TOKEN, { email: "x@y.com", title: "T" });
-        fail("Should have thrown");
+        expect.unreachable("Should have thrown");
       } catch (err) {
         const apiErr = err as EmbedApiError;
         expect(apiErr.status).toBe(429);
@@ -150,7 +149,7 @@ describe("embed-api", () => {
 
       try {
         await submitEmbedForm(API_URL, TOKEN, { email: "x@y.com", title: "T" });
-        fail("Should have thrown");
+        expect.unreachable("Should have thrown");
       } catch (err) {
         expect((err as EmbedApiError).status).toBe(410);
       }

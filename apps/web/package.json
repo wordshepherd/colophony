@@ -9,9 +9,9 @@
     "start": "next start",
     "lint": "eslint --max-warnings 0 .",
     "type-check": "tsc --noEmit && tsc --noEmit -p tsconfig.e2e.json",
-    "test": "jest --randomize",
-    "test:watch": "jest --watch",
-    "test:cov": "jest --coverage",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:cov": "vitest run --coverage",
     "test:e2e": "playwright test --project submissions",
     "test:e2e:uploads": "playwright test --project uploads",
     "test:e2e:oidc": "OIDC_E2E=true playwright test --project oidc",
@@ -90,7 +90,7 @@
     "@testing-library/jest-dom": "^6.1.5",
     "@testing-library/react": "^16.0.0",
     "@testing-library/user-event": "^14.5.1",
-    "@types/jest": "^30.0.0",
+    "@vitest/coverage-v8": "^4.1.0",
     "@types/node": "^25.5.0",
     "@types/papaparse": "^5.5.2",
     "@types/pg": "^8.18.0",
@@ -98,12 +98,11 @@
     "@types/react-dom": "^19.0.0",
     "dotenv": "^17.3.1",
     "drizzle-orm": "^0.45.1",
-    "jest": "^30.3.0",
-    "jest-environment-jsdom": "^30.3.0",
+    "jsdom": "^26.1.0",
     "pg": "^8.20.0",
     "postcss": "^8.5.8",
     "tailwindcss": "^4.2.1",
-    "ts-jest": "^29.2.0",
-    "typescript": "^5.7.2"
+    "typescript": "^5.7.2",
+    "vitest": "^4.1.0"
   }
 }

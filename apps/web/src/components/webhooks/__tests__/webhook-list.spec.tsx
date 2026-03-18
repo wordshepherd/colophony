@@ -1,6 +1,6 @@
+import { vi } from "vitest";
 import React from "react";
 import { render, screen } from "@testing-library/react";
-import "../../../../test/setup";
 
 // Mutable mock state
 let mockWebhooks: unknown[] = [];
@@ -13,7 +13,7 @@ function resetMocks() {
   mockIsAdmin = true;
 }
 
-jest.mock("@/lib/trpc", () => ({
+vi.mock("@/lib/trpc", () => ({
   trpc: {
     webhooks: {
       list: {
@@ -34,18 +34,18 @@ jest.mock("@/lib/trpc", () => ({
   },
 }));
 
-jest.mock("@/hooks/use-organization", () => ({
+vi.mock("@/hooks/use-organization", () => ({
   useOrganization: () => ({
     isAdmin: mockIsAdmin,
     isEditor: true,
   }),
 }));
 
-jest.mock("next/navigation", () => ({
+vi.mock("next/navigation", () => ({
   usePathname: () => "/webhooks",
 }));
 
-jest.mock("next/link", () => ({
+vi.mock("next/link", () => ({
   __esModule: true,
   default: ({
     children,

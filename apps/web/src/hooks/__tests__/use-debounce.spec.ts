@@ -1,9 +1,10 @@
+import { vi } from "vitest";
 import { renderHook, act } from "@testing-library/react";
 import { useDebounce } from "../use-debounce";
 
 describe("useDebounce", () => {
   afterEach(() => {
-    jest.useRealTimers();
+    vi.useRealTimers();
   });
 
   it("returns initial value immediately", () => {
@@ -12,7 +13,7 @@ describe("useDebounce", () => {
   });
 
   it("debounces value updates by specified delay", () => {
-    jest.useFakeTimers();
+    vi.useFakeTimers();
 
     const { result, rerender } = renderHook(
       ({ value, delay }) => useDebounce(value, delay),
@@ -26,16 +27,16 @@ describe("useDebounce", () => {
     expect(result.current).toBe("a"); // not yet updated
 
     // Advance partially
-    act(() => jest.advanceTimersByTime(200));
+    act(() => vi.advanceTimersByTime(200));
     expect(result.current).toBe("a"); // still waiting
 
     // Advance past delay
-    act(() => jest.advanceTimersByTime(150));
+    act(() => vi.advanceTimersByTime(150));
     expect(result.current).toBe("b"); // now updated
   });
 
   it("cancels pending debounce on unmount", () => {
-    jest.useFakeTimers();
+    vi.useFakeTimers();
 
     const { result, rerender, unmount } = renderHook(
       ({ value, delay }) => useDebounce(value, delay),
@@ -48,6 +49,6 @@ describe("useDebounce", () => {
     unmount();
 
     // Timer should have been cleared — no errors from state update after unmount
-    act(() => jest.advanceTimersByTime(500));
+    act(() => vi.advanceTimersByTime(500));
   });
 });

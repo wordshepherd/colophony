@@ -19,6 +19,7 @@
         "name": "next"
       }
     ],
+    "types": ["vitest/globals"],
     "paths": {
       "@/*": ["./src/*"],
       "@colophony/api/trpc/client-types": ["../api/src/trpc/client-types.ts"]

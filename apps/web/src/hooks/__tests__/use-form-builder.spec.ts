@@ -1,14 +1,14 @@
+import { vi } from "vitest";
 import { renderHook, act } from "@testing-library/react";
-import "../../../test/setup";
 
 // --- Mutable mock state ---
 let mockFormData: Record<string, unknown> | undefined;
 let mockIsLoading: boolean;
 let mockError: { message: string } | null;
 
-const mockInvalidateGetById = jest.fn();
-const mockInvalidateList = jest.fn();
-const mockMutate = jest.fn();
+const mockInvalidateGetById = vi.fn();
+const mockInvalidateList = vi.fn();
+const mockMutate = vi.fn();
 
 function resetMocks() {
   mockIsLoading = false;
@@ -31,7 +31,7 @@ function resetMocks() {
   mockMutate.mockClear();
 }
 
-jest.mock("@/lib/trpc", () => ({
+vi.mock("@/lib/trpc", () => ({
   trpc: {
     useUtils: () => ({
       forms: {
@@ -90,8 +90,8 @@ jest.mock("@/lib/trpc", () => ({
   },
 }));
 
-jest.mock("sonner", () => ({
-  toast: { success: jest.fn(), error: jest.fn() },
+vi.mock("sonner", () => ({
+  toast: { success: vi.fn(), error: vi.fn() },
 }));
 
 // Must import after mocks are set up

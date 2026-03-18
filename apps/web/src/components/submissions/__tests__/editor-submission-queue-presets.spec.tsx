@@ -1,6 +1,6 @@
+import { vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { EditorSubmissionQueue } from "../editor-submission-queue";
-import "../../../../test/setup";
 
 // --- Mutable mock state ---
 let mockData:
@@ -23,8 +23,8 @@ let mockPresets: Array<{
   isDefault: boolean;
 }>;
 
-const mockCreateMutate = jest.fn();
-const mockDeleteMutate = jest.fn();
+const mockCreateMutate = vi.fn();
+const mockDeleteMutate = vi.fn();
 
 function resetMocks() {
   mockData = {
@@ -52,7 +52,7 @@ function resetMocks() {
   mockDeleteMutate.mockClear();
 }
 
-jest.mock("@/hooks/use-organization", () => ({
+vi.mock("@/hooks/use-organization", () => ({
   useOrganization: () => ({
     isAdmin: mockIsAdmin,
     isEditor: true,
@@ -64,15 +64,15 @@ jest.mock("@/hooks/use-organization", () => ({
   }),
 }));
 
-jest.mock("@/lib/trpc", () => ({
+vi.mock("@/lib/trpc", () => ({
   trpc: {
     useUtils: () => ({
       submissions: {
-        list: { invalidate: jest.fn() },
-        export: { fetch: jest.fn().mockResolvedValue([]) },
+        list: { invalidate: vi.fn() },
+        export: { fetch: vi.fn().mockResolvedValue([]) },
       },
       queuePresets: {
-        list: { invalidate: jest.fn() },
+        list: { invalidate: vi.fn() },
       },
     }),
     submissions: {
@@ -84,10 +84,10 @@ jest.mock("@/lib/trpc", () => ({
         }),
       },
       batchUpdateStatus: {
-        useMutation: () => ({ mutate: jest.fn(), isPending: false }),
+        useMutation: () => ({ mutate: vi.fn(), isPending: false }),
       },
       batchAssignReviewers: {
-        useMutation: () => ({ mutate: jest.fn(), isPending: false }),
+        useMutation: () => ({ mutate: vi.fn(), isPending: false }),
       },
     },
     periods: {

@@ -1,6 +1,6 @@
+import { vi, type Mock } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { FormList } from "../form-list";
-import "../../../../test/setup";
 
 // --- Mutable mock state ---
 let mockListData:
@@ -14,25 +14,25 @@ let mockListData:
   | undefined;
 let mockIsLoading: boolean;
 let mockError: { message: string } | null;
-let mockPublishMutate: jest.Mock;
-let mockArchiveMutate: jest.Mock;
-let mockDuplicateMutate: jest.Mock;
-let mockDeleteMutate: jest.Mock;
+let mockPublishMutate: Mock;
+let mockArchiveMutate: Mock;
+let mockDuplicateMutate: Mock;
+let mockDeleteMutate: Mock;
 
 function resetMocks() {
   mockIsLoading = false;
   mockError = null;
   mockListData = undefined;
-  mockPublishMutate = jest.fn();
-  mockArchiveMutate = jest.fn();
-  mockDuplicateMutate = jest.fn();
-  mockDeleteMutate = jest.fn();
+  mockPublishMutate = vi.fn();
+  mockArchiveMutate = vi.fn();
+  mockDuplicateMutate = vi.fn();
+  mockDeleteMutate = vi.fn();
 }
 
-jest.mock("@/lib/trpc", () => ({
+vi.mock("@/lib/trpc", () => ({
   trpc: {
     useUtils: () => ({
-      forms: { list: { invalidate: jest.fn() } },
+      forms: { list: { invalidate: vi.fn() } },
     }),
     forms: {
       list: {
@@ -70,8 +70,8 @@ jest.mock("@/lib/trpc", () => ({
   },
 }));
 
-jest.mock("sonner", () => ({
-  toast: { success: jest.fn(), error: jest.fn() },
+vi.mock("sonner", () => ({
+  toast: { success: vi.fn(), error: vi.fn() },
 }));
 
 const sampleForm = {

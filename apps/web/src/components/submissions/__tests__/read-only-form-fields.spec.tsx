@@ -1,6 +1,6 @@
+import { vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { ReadOnlyFormFields } from "../form-renderer/read-only-form-fields";
-import "../../../../test/setup";
 
 // --- Mutable mock state ---
 let mockFormDefinition: Record<string, unknown> | null;
@@ -13,7 +13,7 @@ function resetMocks() {
   mockError = null;
 }
 
-jest.mock("@/lib/trpc", () => ({
+vi.mock("@/lib/trpc", () => ({
   trpc: {
     forms: {
       getById: {
@@ -33,7 +33,7 @@ let mockVisibilityOverride: Map<
   { visible: boolean; required: boolean }
 > | null = null;
 
-jest.mock("@/hooks/use-conditional-fields", () => ({
+vi.mock("@/hooks/use-conditional-fields", () => ({
   useConditionalFields: (
     fields: Array<{ fieldKey: string }>,
     _formValues: Record<string, unknown>,

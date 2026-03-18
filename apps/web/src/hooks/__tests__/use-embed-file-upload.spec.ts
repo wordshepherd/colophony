@@ -1,3 +1,4 @@
+import { vi } from "vitest";
 import { renderHook, act } from "@testing-library/react";
 import { useEmbedFileUpload } from "../use-embed-file-upload";
 
@@ -7,28 +8,27 @@ let tusOnProgress:
 let tusOnSuccess: (() => void) | undefined;
 let tusOnError: ((error: Error) => void) | undefined;
 let tusConstructorArgs: Record<string, unknown>;
-const mockTusStart = jest.fn();
-const mockTusAbort = jest.fn();
+const mockTusStart = vi.fn();
+const mockTusAbort = vi.fn();
 
-jest.mock("tus-js-client", () => ({
-  Upload: jest.fn().mockImplementation(
-    (
-      _file: File,
-      options: {
-        onProgress?: (bytesUploaded: number, bytesTotal: number) => void;
-        onSuccess?: () => void;
-        onError?: (error: Error) => void;
-        headers?: Record<string, string>;
-        metadata?: Record<string, string>;
-      },
-    ) => {
-      tusOnProgress = options.onProgress;
-      tusOnSuccess = options.onSuccess;
-      tusOnError = options.onError;
-      tusConstructorArgs = options as unknown as Record<string, unknown>;
-      return { start: mockTusStart, abort: mockTusAbort };
+vi.mock("tus-js-client", () => ({
+  Upload: vi.fn().mockImplementation(function (
+    this: unknown,
+    _file: File,
+    options: {
+      onProgress?: (bytesUploaded: number, bytesTotal: number) => void;
+      onSuccess?: () => void;
+      onError?: (error: Error) => void;
+      headers?: Record<string, string>;
+      metadata?: Record<string, string>;
     },
-  ),
+  ) {
+    tusOnProgress = options.onProgress;
+    tusOnSuccess = options.onSuccess;
+    tusOnError = options.onError;
+    tusConstructorArgs = options as unknown as Record<string, unknown>;
+    return { start: mockTusStart, abort: mockTusAbort };
+  }),
 }));
 
 describe("useEmbedFileUpload", () => {
@@ -39,12 +39,12 @@ describe("useEmbedFileUpload", () => {
     embedToken: "col_emb_testtoken",
     maxFileSize: 50 * 1024 * 1024,
     allowedMimeTypes: ["application/pdf", "text/plain"],
-    onUploadComplete: jest.fn(),
-    onError: jest.fn(),
+    onUploadComplete: vi.fn(),
+    onError: vi.fn(),
   };
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     tusOnProgress = undefined;
     tusOnSuccess = undefined;
     tusOnError = undefined;
