@@ -1,43 +1,43 @@
+import { vi, type Mock } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { EmailTemplateEditor } from "../email-template-editor";
-import "../../../../test/setup";
 
 // --- Mutable mock state ---
-let mockUpsertMutate: jest.Mock;
+let mockUpsertMutate: Mock;
 let mockUpsertIsPending: boolean;
-let mockDeleteMutate: jest.Mock;
+let mockDeleteMutate: Mock;
 let mockDeleteIsPending: boolean;
-let mockPreviewMutate: jest.Mock;
+let mockPreviewMutate: Mock;
 let mockPreviewIsPending: boolean;
 let mockExistingData: Record<string, unknown> | null;
-let mockInsertContent: jest.Mock;
+let mockInsertContent: Mock;
 
 function resetMocks() {
-  mockUpsertMutate = jest.fn();
+  mockUpsertMutate = vi.fn();
   mockUpsertIsPending = false;
-  mockDeleteMutate = jest.fn();
+  mockDeleteMutate = vi.fn();
   mockDeleteIsPending = false;
-  mockPreviewMutate = jest.fn();
+  mockPreviewMutate = vi.fn();
   mockPreviewIsPending = false;
   mockExistingData = null;
-  mockInsertContent = jest.fn();
+  mockInsertContent = vi.fn();
 }
 
-jest.mock("@tiptap/react", () => ({
+vi.mock("@tiptap/react", () => ({
   useEditor: () => ({
     getHTML: () => "<p>Test body</p>",
     commands: {
-      clearContent: jest.fn(),
-      setContent: jest.fn(),
+      clearContent: vi.fn(),
+      setContent: vi.fn(),
     },
     chain: () => ({
       focus: () => ({
-        toggleBold: () => ({ run: jest.fn() }),
-        toggleItalic: () => ({ run: jest.fn() }),
-        toggleBulletList: () => ({ run: jest.fn() }),
-        toggleOrderedList: () => ({ run: jest.fn() }),
-        setLink: () => ({ run: jest.fn() }),
-        unsetLink: () => ({ run: jest.fn() }),
+        toggleBold: () => ({ run: vi.fn() }),
+        toggleItalic: () => ({ run: vi.fn() }),
+        toggleBulletList: () => ({ run: vi.fn() }),
+        toggleOrderedList: () => ({ run: vi.fn() }),
+        setLink: () => ({ run: vi.fn() }),
+        unsetLink: () => ({ run: vi.fn() }),
         insertContent: () => ({ run: mockInsertContent }),
       }),
     }),
@@ -47,39 +47,39 @@ jest.mock("@tiptap/react", () => ({
     editor ? <div data-testid="editor-content">Editor</div> : null,
 }));
 
-jest.mock("@tiptap/starter-kit", () => ({
+vi.mock("@tiptap/starter-kit", () => ({
   __esModule: true,
   default: {},
 }));
 
-jest.mock("@tiptap/extension-placeholder", () => ({
+vi.mock("@tiptap/extension-placeholder", () => ({
   __esModule: true,
   default: { configure: () => ({}) },
 }));
 
-jest.mock("@tiptap/extension-link", () => ({
+vi.mock("@tiptap/extension-link", () => ({
   __esModule: true,
   default: { configure: () => ({}) },
 }));
 
-const mockToastSuccess = jest.fn();
-const mockToastError = jest.fn();
+const mockToastSuccess = vi.fn();
+const mockToastError = vi.fn();
 
-jest.mock("sonner", () => ({
+vi.mock("sonner", () => ({
   toast: {
     success: (...args: unknown[]) => mockToastSuccess(...args),
     error: (...args: unknown[]) => mockToastError(...args),
   },
 }));
 
-const mockInvalidateList = jest.fn();
-const mockInvalidateGetByName = jest.fn();
+const mockInvalidateList = vi.fn();
+const mockInvalidateGetByName = vi.fn();
 
-jest.mock("@/hooks/use-organization", () => ({
+vi.mock("@/hooks/use-organization", () => ({
   useOrganization: () => ({ isAdmin: true }),
 }));
 
-jest.mock("@/lib/trpc", () => ({
+vi.mock("@/lib/trpc", () => ({
   trpc: {
     emailTemplates: {
       getByName: {
@@ -142,7 +142,7 @@ describe("EmailTemplateEditor", () => {
   const defaultProps = {
     templateName: "submission-received",
     mergeFields: ["submissionTitle", "submitterName", "orgName"],
-    onClose: jest.fn(),
+    onClose: vi.fn(),
   };
 
   it("renders subject input and body editor", () => {

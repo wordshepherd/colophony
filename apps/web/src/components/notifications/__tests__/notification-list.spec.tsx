@@ -1,5 +1,5 @@
+import { vi, type Mock } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
-import "../../../../test/setup";
 
 let mockData:
   | {
@@ -16,15 +16,15 @@ let mockData:
     }
   | undefined;
 let mockIsPending: boolean;
-let mockMarkReadMutate: jest.Mock;
-let mockMarkAllReadMutate: jest.Mock;
-const mockPush = jest.fn();
+let mockMarkReadMutate: Mock;
+let mockMarkAllReadMutate: Mock;
+const mockPush = vi.fn();
 
-jest.mock("next/navigation", () => ({
+vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: mockPush }),
 }));
 
-jest.mock("@/lib/trpc", () => ({
+vi.mock("@/lib/trpc", () => ({
   trpc: {
     notifications: {
       list: {
@@ -54,8 +54,8 @@ jest.mock("@/lib/trpc", () => ({
     },
     useUtils: () => ({
       notifications: {
-        unreadCount: { invalidate: jest.fn() },
-        list: { invalidate: jest.fn() },
+        unreadCount: { invalidate: vi.fn() },
+        list: { invalidate: vi.fn() },
       },
     }),
   },
@@ -66,8 +66,8 @@ import { NotificationList } from "../notification-list";
 beforeEach(() => {
   mockData = undefined;
   mockIsPending = false;
-  mockMarkReadMutate = jest.fn();
-  mockMarkAllReadMutate = jest.fn();
+  mockMarkReadMutate = vi.fn();
+  mockMarkAllReadMutate = vi.fn();
   mockPush.mockClear();
 });
 
@@ -119,7 +119,7 @@ describe("NotificationList", () => {
       ],
       total: 1,
     };
-    const onClose = jest.fn();
+    const onClose = vi.fn();
     render(<NotificationList onClose={onClose} />);
     fireEvent.click(screen.getByText("New submission: Test"));
     expect(mockMarkReadMutate).toHaveBeenCalledWith({ id: "n1" });

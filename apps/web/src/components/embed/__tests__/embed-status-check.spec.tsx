@@ -1,16 +1,16 @@
+import { vi, type MockedFunction } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import { EmbedStatusCheck } from "../embed-status-check";
-import "../../../../test/setup";
 
 // Mock embed-api module
-jest.mock("@/lib/embed-api", () => ({
-  fetchSubmissionStatus: jest.fn(),
+vi.mock("@/lib/embed-api", () => ({
+  fetchSubmissionStatus: vi.fn(),
 }));
 
 import { fetchSubmissionStatus } from "@/lib/embed-api";
 import type { EmbedApiError } from "@/lib/embed-api";
 
-const mockFetch = fetchSubmissionStatus as jest.MockedFunction<
+const mockFetch = fetchSubmissionStatus as MockedFunction<
   typeof fetchSubmissionStatus
 >;
 
@@ -21,7 +21,7 @@ const defaultProps = {
 
 describe("EmbedStatusCheck", () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it("shows loading spinner initially", () => {

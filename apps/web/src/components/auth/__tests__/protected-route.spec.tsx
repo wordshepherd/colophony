@@ -1,3 +1,4 @@
+import { vi, type Mock } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { ProtectedRoute } from "../protected-route";
 import { mockPush } from "../../../../test/setup";
@@ -9,8 +10,8 @@ let mockAuthReturn: {
   isAuthenticated: boolean;
   isEmailVerified: boolean;
   error: Error | null;
-  login: jest.Mock;
-  logout: jest.Mock;
+  login: Mock;
+  logout: Mock;
 };
 
 let mockOrgReturn: {
@@ -27,8 +28,8 @@ function resetAuth() {
     isAuthenticated: true,
     isEmailVerified: true,
     error: null,
-    login: jest.fn(),
-    logout: jest.fn(),
+    login: vi.fn(),
+    logout: vi.fn(),
   };
 }
 
@@ -41,17 +42,17 @@ function resetOrg() {
   };
 }
 
-jest.mock("@/hooks/use-auth", () => ({
+vi.mock("@/hooks/use-auth", () => ({
   useAuth: () => mockAuthReturn,
 }));
 
-jest.mock("@/hooks/use-organization", () => ({
+vi.mock("@/hooks/use-organization", () => ({
   useOrganization: () => mockOrgReturn,
 }));
 
 describe("ProtectedRoute", () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     resetAuth();
     resetOrg();
   });

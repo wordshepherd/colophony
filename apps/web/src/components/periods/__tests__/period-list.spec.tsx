@@ -1,6 +1,6 @@
+import { vi } from "vitest";
 import { render, screen, fireEvent, act } from "@testing-library/react";
 import { PeriodList } from "../period-list";
-import "../../../../test/setup";
 
 // --- Mutable mock state ---
 let mockData:
@@ -21,7 +21,7 @@ function resetMocks() {
   mockError = null;
 }
 
-jest.mock("@/lib/trpc", () => ({
+vi.mock("@/lib/trpc", () => ({
   trpc: {
     periods: {
       list: {
@@ -31,9 +31,9 @@ jest.mock("@/lib/trpc", () => ({
           error: mockError,
         }),
       },
-      create: { useMutation: () => ({ mutate: jest.fn(), isPending: false }) },
-      update: { useMutation: () => ({ mutate: jest.fn(), isPending: false }) },
-      delete: { useMutation: () => ({ mutate: jest.fn(), isPending: false }) },
+      create: { useMutation: () => ({ mutate: vi.fn(), isPending: false }) },
+      update: { useMutation: () => ({ mutate: vi.fn(), isPending: false }) },
+      delete: { useMutation: () => ({ mutate: vi.fn(), isPending: false }) },
     },
     forms: {
       list: {
@@ -41,13 +41,13 @@ jest.mock("@/lib/trpc", () => ({
       },
     },
     useUtils: () => ({
-      periods: { list: { invalidate: jest.fn() } },
+      periods: { list: { invalidate: vi.fn() } },
     }),
   },
 }));
 
-jest.mock("sonner", () => ({
-  toast: { success: jest.fn(), error: jest.fn() },
+vi.mock("sonner", () => ({
+  toast: { success: vi.fn(), error: vi.fn() },
 }));
 
 beforeEach(() => {
@@ -123,17 +123,17 @@ describe("PeriodList", () => {
   });
 
   it("debounces search input (300ms)", () => {
-    jest.useFakeTimers();
+    vi.useFakeTimers();
     mockData = { items: [], total: 0, page: 1, limit: 20, totalPages: 0 };
     render(<PeriodList />);
     const input = screen.getByPlaceholderText("Search by name...");
     fireEvent.change(input, { target: { value: "spring" } });
     expect(input).toHaveValue("spring");
     act(() => {
-      jest.advanceTimersByTime(300);
+      vi.advanceTimersByTime(300);
     });
     // No crash — component still renders
     expect(screen.getByText("No submission periods")).toBeInTheDocument();
-    jest.useRealTimers();
+    vi.useRealTimers();
   });
 });

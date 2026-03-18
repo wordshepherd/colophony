@@ -1,3 +1,4 @@
+import { vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { OrgSwitcher } from "../org-switcher";
@@ -15,10 +16,10 @@ let mockOrganizations: Array<{
   slug: string;
   role: string;
 }>;
-const mockSwitchOrganization = jest.fn();
+const mockSwitchOrganization = vi.fn();
 let mockIsAdmin = false;
 
-jest.mock("@/hooks/use-organization", () => ({
+vi.mock("@/hooks/use-organization", () => ({
   useOrganization: () => ({
     currentOrg: mockCurrentOrg,
     organizations: mockOrganizations,
@@ -35,7 +36,7 @@ const orgs = [
 
 describe("OrgSwitcher", () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     mockCurrentOrg = orgs[0];
     mockOrganizations = orgs;
     mockIsAdmin = false;

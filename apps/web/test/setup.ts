@@ -1,29 +1,28 @@
 import "./console-setup";
-import "@testing-library/jest-dom";
+import "@testing-library/jest-dom/vitest";
+import { vi, afterEach } from "vitest";
 import React from "react";
 
-jest.setTimeout(15000);
-
 // Mock next/navigation
-const mockPush = jest.fn();
-const mockReplace = jest.fn();
-const mockBack = jest.fn();
-const mockRefresh = jest.fn();
+const mockPush = vi.fn();
+const mockReplace = vi.fn();
+const mockBack = vi.fn();
+const mockRefresh = vi.fn();
 
-jest.mock("next/navigation", () => ({
+vi.mock("next/navigation", () => ({
   useRouter: () => ({
     push: mockPush,
     replace: mockReplace,
     back: mockBack,
     refresh: mockRefresh,
-    prefetch: jest.fn(),
+    prefetch: vi.fn(),
   }),
   usePathname: () => "/",
   useSearchParams: () => new URLSearchParams(),
 }));
 
 // Mock next/link
-jest.mock("next/link", () => ({
+vi.mock("next/link", () => ({
   __esModule: true,
   default: (props: { children: React.ReactNode; href: string }) =>
     React.createElement("a", { href: props.href }, props.children),
@@ -39,15 +38,15 @@ global.ResizeObserver = class ResizeObserver {
 // Mock window.matchMedia (required by shadcn/ui components)
 Object.defineProperty(window, "matchMedia", {
   writable: true,
-  value: jest.fn().mockImplementation((query: string) => ({
+  value: vi.fn().mockImplementation((query: string) => ({
     matches: false,
     media: query,
     onchange: null,
-    addListener: jest.fn(),
-    removeListener: jest.fn(),
-    addEventListener: jest.fn(),
-    removeEventListener: jest.fn(),
-    dispatchEvent: jest.fn(),
+    addListener: vi.fn(),
+    removeListener: vi.fn(),
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    dispatchEvent: vi.fn(),
   })),
 });
 

@@ -1,3 +1,4 @@
+import { vi } from "vitest";
 import React from "react";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -6,21 +7,21 @@ import { Header } from "../header";
 // --- Mutable mock state ---
 let mockPathname = "/";
 let mockIsAuthenticated = true;
-const mockLogin = jest.fn();
+const mockLogin = vi.fn();
 
-jest.mock("next/navigation", () => ({
+vi.mock("next/navigation", () => ({
   useRouter: () => ({
-    push: jest.fn(),
-    replace: jest.fn(),
-    back: jest.fn(),
-    refresh: jest.fn(),
-    prefetch: jest.fn(),
+    push: vi.fn(),
+    replace: vi.fn(),
+    back: vi.fn(),
+    refresh: vi.fn(),
+    prefetch: vi.fn(),
   }),
   usePathname: () => mockPathname,
   useSearchParams: () => new URLSearchParams(),
 }));
 
-jest.mock("next/link", () => ({
+vi.mock("next/link", () => ({
   __esModule: true,
   default: ({
     children,
@@ -33,14 +34,14 @@ jest.mock("next/link", () => ({
   }) => React.createElement("a", { href, className }, children),
 }));
 
-jest.mock("@/hooks/use-auth", () => ({
+vi.mock("@/hooks/use-auth", () => ({
   useAuth: () => ({
     isAuthenticated: mockIsAuthenticated,
     login: mockLogin,
   }),
 }));
 
-jest.mock("@/hooks/use-organization", () => ({
+vi.mock("@/hooks/use-organization", () => ({
   useOrganization: () => ({
     currentOrg: {
       id: "org-1",
@@ -51,18 +52,18 @@ jest.mock("@/hooks/use-organization", () => ({
     organizations: [
       { id: "org-1", name: "Test Org", slug: "test-org", role: "ADMIN" },
     ],
-    switchOrganization: jest.fn(),
+    switchOrganization: vi.fn(),
     isAdmin: true,
   }),
 }));
 
-jest.mock("@/components/notifications/notification-bell", () => ({
+vi.mock("@/components/notifications/notification-bell", () => ({
   NotificationBell: () => <div data-testid="notification-bell">Bell</div>,
 }));
 
 describe("Header", () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     mockPathname = "/";
     mockIsAuthenticated = true;
   });

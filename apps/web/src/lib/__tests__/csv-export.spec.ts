@@ -1,3 +1,4 @@
+import { vi, type Mock } from "vitest";
 import { toCsv, downloadFile } from "../csv-export";
 
 /** Strip the UTF-8 BOM prefix from CSV output for easier assertions. */
@@ -82,21 +83,21 @@ describe("toCsv", () => {
 
 describe("downloadFile", () => {
   it("creates and clicks a temporary anchor element", () => {
-    const createObjectURL = jest.fn(() => "blob:test-url");
-    const revokeObjectURL = jest.fn();
+    const createObjectURL = vi.fn(() => "blob:test-url");
+    const revokeObjectURL = vi.fn();
     Object.defineProperty(globalThis, "URL", {
       value: { createObjectURL, revokeObjectURL },
       writable: true,
       configurable: true,
     });
 
-    const clickSpy = jest.fn();
-    const appendChildSpy = jest.spyOn(document.body, "appendChild");
-    const removeChildSpy = jest.spyOn(document.body, "removeChild");
+    const clickSpy = vi.fn();
+    const appendChildSpy = vi.spyOn(document.body, "appendChild");
+    const removeChildSpy = vi.spyOn(document.body, "removeChild");
 
     // Mock createElement to spy on click
     const originalCreateElement = document.createElement.bind(document);
-    jest.spyOn(document, "createElement").mockImplementation((tag) => {
+    vi.spyOn(document, "createElement").mockImplementation((tag) => {
       const el = originalCreateElement(tag);
       if (tag === "a") {
         el.click = clickSpy;
@@ -114,6 +115,6 @@ describe("downloadFile", () => {
 
     appendChildSpy.mockRestore();
     removeChildSpy.mockRestore();
-    (document.createElement as jest.Mock).mockRestore();
+    (document.createElement as Mock).mockRestore();
   });
 });

@@ -1,11 +1,12 @@
 /**
- * Global Jest setup: fail tests that produce unexpected console.error/warn.
+ * Global Vitest setup: fail tests that produce unexpected console.error/warn.
  *
  * Spies on console.error and console.warn in beforeEach. In afterEach, any
  * calls that don't match the allowlist cause a test failure. Tests that
- * install their own spy (jest.spyOn(console, 'error')) are auto-detected via
+ * install their own spy (vi.spyOn(console, 'error')) are auto-detected via
  * identity check and skipped.
  */
+import { afterEach, beforeEach, vi, type MockInstance } from "vitest";
 
 const ALLOWED_ERROR_PATTERNS: RegExp[] = [
   /The above error occurred in the <\w+> component/,
@@ -30,12 +31,12 @@ function formatCalls(calls: unknown[][]): string {
     .join("\n");
 }
 
-let errorSpy: jest.SpyInstance;
-let warnSpy: jest.SpyInstance;
+let errorSpy: MockInstance;
+let warnSpy: MockInstance;
 
 beforeEach(() => {
-  errorSpy = jest.spyOn(console, "error").mockImplementation(() => {});
-  warnSpy = jest.spyOn(console, "warn").mockImplementation(() => {});
+  errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+  warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
 });
 
 afterEach(() => {

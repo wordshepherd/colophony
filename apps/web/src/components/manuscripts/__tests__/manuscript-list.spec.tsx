@@ -1,7 +1,7 @@
+import { vi } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { ManuscriptList } from "../manuscript-list";
-import "../../../../test/setup";
 
 // --- Mutable mock state ---
 let mockManuscripts:
@@ -35,7 +35,7 @@ function resetMocks() {
   mockLastInput = undefined;
 }
 
-jest.mock("@/lib/trpc", () => ({
+vi.mock("@/lib/trpc", () => ({
   trpc: {
     manuscripts: {
       list: {
@@ -54,7 +54,7 @@ jest.mock("@/lib/trpc", () => ({
 
 describe("ManuscriptList", () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     resetMocks();
   });
 

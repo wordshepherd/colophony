@@ -1,7 +1,7 @@
+import { vi, type Mock } from "vitest";
 import React from "react";
 import { render, screen } from "@testing-library/react";
 import { FormEditor } from "../form-editor";
-import "../../../../test/setup";
 
 // --- Mutable mock state ---
 let mockForm: Record<string, unknown> | undefined;
@@ -9,26 +9,26 @@ let mockIsLoading: boolean;
 let mockError: { message: string } | null;
 let mockSelectedFieldId: string | null;
 let mockIsPreviewMode: boolean;
-let mockAddField: jest.Mock;
-let mockSetSelectedFieldId: jest.Mock;
-let mockTogglePreview: jest.Mock;
-let mockPublishMutate: jest.Mock;
-let mockRemoveFieldMutate: jest.Mock;
-let mockReorderFieldsMutate: jest.Mock;
-let mockUpdateFieldMutate: jest.Mock;
+let mockAddField: Mock;
+let mockSetSelectedFieldId: Mock;
+let mockTogglePreview: Mock;
+let mockPublishMutate: Mock;
+let mockRemoveFieldMutate: Mock;
+let mockReorderFieldsMutate: Mock;
+let mockUpdateFieldMutate: Mock;
 
 function resetMocks() {
   mockIsLoading = false;
   mockError = null;
   mockSelectedFieldId = null;
   mockIsPreviewMode = false;
-  mockAddField = jest.fn();
-  mockSetSelectedFieldId = jest.fn();
-  mockTogglePreview = jest.fn();
-  mockPublishMutate = jest.fn();
-  mockRemoveFieldMutate = jest.fn();
-  mockReorderFieldsMutate = jest.fn();
-  mockUpdateFieldMutate = jest.fn();
+  mockAddField = vi.fn();
+  mockSetSelectedFieldId = vi.fn();
+  mockTogglePreview = vi.fn();
+  mockPublishMutate = vi.fn();
+  mockRemoveFieldMutate = vi.fn();
+  mockReorderFieldsMutate = vi.fn();
+  mockUpdateFieldMutate = vi.fn();
   mockForm = {
     id: "form-1",
     name: "Test Form",
@@ -78,7 +78,7 @@ function resetMocks() {
   };
 }
 
-jest.mock("@/hooks/use-form-builder", () => ({
+vi.mock("@/hooks/use-form-builder", () => ({
   useFormBuilder: () => ({
     form: mockForm,
     isLoading: mockIsLoading,
@@ -88,33 +88,33 @@ jest.mock("@/hooks/use-form-builder", () => ({
     isPreviewMode: mockIsPreviewMode,
     togglePreview: mockTogglePreview,
     addField: mockAddField,
-    updateForm: { mutate: jest.fn(), isPending: false },
+    updateForm: { mutate: vi.fn(), isPending: false },
     publishForm: { mutate: mockPublishMutate, isPending: false },
-    archiveForm: { mutate: jest.fn(), isPending: false },
-    duplicateForm: { mutate: jest.fn(), isPending: false },
-    deleteForm: { mutate: jest.fn(), isPending: false },
+    archiveForm: { mutate: vi.fn(), isPending: false },
+    duplicateForm: { mutate: vi.fn(), isPending: false },
+    deleteForm: { mutate: vi.fn(), isPending: false },
     updateField: { mutate: mockUpdateFieldMutate, isPending: false },
     removeField: { mutate: mockRemoveFieldMutate, isPending: false },
     reorderFields: { mutate: mockReorderFieldsMutate, isPending: false },
     activePageId: null,
-    setActivePageId: jest.fn(),
-    addPage: { mutate: jest.fn(), isPending: false },
-    updatePage: { mutate: jest.fn(), isPending: false },
-    removePage: { mutate: jest.fn(), isPending: false },
-    reorderPages: { mutate: jest.fn(), isPending: false },
+    setActivePageId: vi.fn(),
+    addPage: { mutate: vi.fn(), isPending: false },
+    updatePage: { mutate: vi.fn(), isPending: false },
+    removePage: { mutate: vi.fn(), isPending: false },
+    reorderPages: { mutate: vi.fn(), isPending: false },
   }),
 }));
 
-jest.mock("sonner", () => ({
-  toast: { success: jest.fn(), error: jest.fn() },
+vi.mock("sonner", () => ({
+  toast: { success: vi.fn(), error: vi.fn() },
 }));
 
-jest.mock("@/lib/trpc", () => ({
+vi.mock("@/lib/trpc", () => ({
   trpc: {
     useUtils: () => ({
       forms: {
         getById: {
-          setQueriesData: jest.fn(),
+          setQueriesData: vi.fn(),
         },
       },
     }),

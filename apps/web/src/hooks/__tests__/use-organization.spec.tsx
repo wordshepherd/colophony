@@ -1,3 +1,4 @@
+import { vi, type Mock } from "vitest";
 import { renderHook, act } from "@testing-library/react";
 import { useOrganization } from "../use-organization";
 import * as trpcLib from "@/lib/trpc";
@@ -32,31 +33,31 @@ const mockUser = {
 let currentMockUser: typeof mockUser | null = mockUser;
 let mockIsAuthenticated = true;
 
-jest.mock("../use-auth", () => ({
+vi.mock("../use-auth", () => ({
   useAuth: () => ({
     user: currentMockUser,
     isAuthenticated: mockIsAuthenticated,
   }),
 }));
 
-const mockInvalidate = jest.fn();
+const mockInvalidate = vi.fn();
 
-jest.mock("@/lib/trpc", () => ({
+vi.mock("@/lib/trpc", () => ({
   trpc: {
     useUtils: () => ({
       invalidate: mockInvalidate,
     }),
   },
-  getCurrentOrgId: jest.fn(() => null),
-  setCurrentOrgId: jest.fn(),
+  getCurrentOrgId: vi.fn(() => null),
+  setCurrentOrgId: vi.fn(),
 }));
 
-const mockGetCurrentOrgId = trpcLib.getCurrentOrgId as jest.Mock;
-const mockSetCurrentOrgId = trpcLib.setCurrentOrgId as jest.Mock;
+const mockGetCurrentOrgId = trpcLib.getCurrentOrgId as Mock;
+const mockSetCurrentOrgId = trpcLib.setCurrentOrgId as Mock;
 
 describe("useOrganization", () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     currentMockUser = mockUser;
     mockIsAuthenticated = true;
     mockGetCurrentOrgId.mockReturnValue(null);
@@ -124,7 +125,9 @@ describe("useOrganization", () => {
     });
 
     it("should log error for unknown org", () => {
-      const consoleSpy = jest.spyOn(console, "error").mockImplementation();
+      const consoleSpy = vi
+        .spyOn(console, "error")
+        .mockImplementation(() => {});
       mockGetCurrentOrgId.mockReturnValue("org-1");
       const { result } = renderHook(() => useOrganization());
 

@@ -1,26 +1,24 @@
+import { vi } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { EmbedForm } from "../embed-form";
-import "../../../../test/setup";
 
-const mockFetchEmbedForm = jest.fn();
-const mockSubmitEmbedForm = jest.fn();
-const mockPrepareEmbedUpload = jest.fn();
+const mockFetchEmbedForm = vi.fn();
+const mockSubmitEmbedForm = vi.fn();
+const mockPrepareEmbedUpload = vi.fn();
 
-jest.mock("@/lib/embed-api", () => ({
+vi.mock("@/lib/embed-api", () => ({
   fetchEmbedForm: (...args: unknown[]) => mockFetchEmbedForm(...args),
   submitEmbedForm: (...args: unknown[]) => mockSubmitEmbedForm(...args),
   prepareEmbedUpload: (...args: unknown[]) => mockPrepareEmbedUpload(...args),
-  fetchUploadStatus: jest
-    .fn()
-    .mockResolvedValue({ files: [], allClean: false }),
+  fetchUploadStatus: vi.fn().mockResolvedValue({ files: [], allClean: false }),
 }));
 
 // Mock tus-js-client
-jest.mock("tus-js-client", () => ({
-  Upload: jest.fn().mockImplementation(() => ({
-    start: jest.fn(),
-    abort: jest.fn(),
+vi.mock("tus-js-client", () => ({
+  Upload: vi.fn().mockImplementation(() => ({
+    start: vi.fn(),
+    abort: vi.fn(),
   })),
 }));
 
@@ -54,7 +52,7 @@ const validFormResponse = {
 
 describe("EmbedForm", () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it("shows loading spinner initially", () => {

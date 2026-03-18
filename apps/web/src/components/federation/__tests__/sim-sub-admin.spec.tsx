@@ -1,6 +1,6 @@
+import { vi } from "vitest";
 import React from "react";
 import { render, screen } from "@testing-library/react";
-import "../../../../test/setup";
 
 let mockIsPending = false;
 
@@ -8,7 +8,7 @@ function resetMocks() {
   mockIsPending = false;
 }
 
-jest.mock("@/lib/trpc", () => ({
+vi.mock("@/lib/trpc", () => ({
   trpc: {
     simsub: {
       listChecks: {
@@ -20,7 +20,7 @@ jest.mock("@/lib/trpc", () => ({
       },
       grantOverride: {
         useMutation: () => ({
-          mutate: jest.fn(),
+          mutate: vi.fn(),
           isPending: false,
         }),
       },
@@ -28,19 +28,19 @@ jest.mock("@/lib/trpc", () => ({
     useUtils: () => ({
       simsub: {
         listChecks: {
-          invalidate: jest.fn(),
+          invalidate: vi.fn(),
         },
       },
     }),
   },
 }));
 
-jest.mock("next/navigation", () => ({
+vi.mock("next/navigation", () => ({
   usePathname: () => "/federation/sim-sub",
-  useRouter: () => ({ push: jest.fn() }),
+  useRouter: () => ({ push: vi.fn() }),
 }));
 
-jest.mock("next/link", () => ({
+vi.mock("next/link", () => ({
   __esModule: true,
   default: ({ children, href }: { children: React.ReactNode; href: string }) =>
     React.createElement("a", { href }, children),

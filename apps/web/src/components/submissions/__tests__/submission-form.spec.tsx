@@ -1,11 +1,11 @@
+import { vi, type Mock } from "vitest";
 import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { SubmissionForm } from "../submission-form";
 // Navigation mocks imported to ensure setup.ts runs (registers next/navigation mock)
-import "../../../../test/setup";
 
 // Mock shadcn Select with native HTML elements (Radix Select doesn't work in jsdom)
-jest.mock("@/components/ui/select", () => {
+vi.mock("@/components/ui/select", () => {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   const React = require("react");
   const SelectContext = React.createContext({
@@ -79,20 +79,20 @@ let mockPublishedForms: {
   totalPages: number;
 };
 
-let mockCreateMutateAsync: jest.Mock;
+let mockCreateMutateAsync: Mock;
 let mockCreateIsPending: boolean;
 let mockCreateOnError: ((err: { message: string }) => void) | undefined;
 
-let mockUpdateMutateAsync: jest.Mock;
+let mockUpdateMutateAsync: Mock;
 let mockUpdateIsPending: boolean;
 
-let mockSubmitMutateAsync: jest.Mock;
+let mockSubmitMutateAsync: Mock;
 let mockSubmitIsPending: boolean;
 let mockSubmitOnError:
   | ((err: { message: string; data?: unknown }) => void)
   | undefined;
 
-const mockInvalidateGetById = jest.fn();
+const mockInvalidateGetById = vi.fn();
 
 function resetMocks() {
   mockExistingSubmission = undefined;
@@ -108,19 +108,19 @@ function resetMocks() {
     totalPages: 0,
   };
 
-  mockCreateMutateAsync = jest.fn().mockResolvedValue({ id: "new-sub-1" });
+  mockCreateMutateAsync = vi.fn().mockResolvedValue({ id: "new-sub-1" });
   mockCreateIsPending = false;
   mockCreateOnError = undefined;
 
-  mockUpdateMutateAsync = jest.fn().mockResolvedValue({});
+  mockUpdateMutateAsync = vi.fn().mockResolvedValue({});
   mockUpdateIsPending = false;
 
-  mockSubmitMutateAsync = jest.fn().mockResolvedValue({});
+  mockSubmitMutateAsync = vi.fn().mockResolvedValue({});
   mockSubmitIsPending = false;
   mockSubmitOnError = undefined;
 }
 
-jest.mock("@/lib/trpc", () => ({
+vi.mock("@/lib/trpc", () => ({
   trpc: {
     useUtils: () => ({
       submissions: { getById: { invalidate: mockInvalidateGetById } },
@@ -185,7 +185,7 @@ jest.mock("@/lib/trpc", () => ({
   },
 }));
 
-jest.mock("../file-upload", () => ({
+vi.mock("../file-upload", () => ({
   FileUpload: (props: {
     manuscriptVersionId?: string | null;
     disabled: boolean;
@@ -201,7 +201,7 @@ jest.mock("../file-upload", () => ({
 let mockManuscriptPickerOnChange:
   | ((versionId: string | null) => void)
   | undefined;
-jest.mock("@/components/manuscripts/manuscript-picker", () => ({
+vi.mock("@/components/manuscripts/manuscript-picker", () => ({
   ManuscriptPicker: (props: {
     value: string | null;
     onChange: (versionId: string | null) => void;
@@ -218,8 +218,8 @@ jest.mock("@/components/manuscripts/manuscript-picker", () => ({
   },
 }));
 
-jest.mock("../form-renderer", () => {
-  const actual = jest.requireActual("../form-renderer");
+vi.mock("../form-renderer", async () => {
+  const actual = await vi.importActual("../form-renderer");
   return {
     ...actual,
     DynamicFormFields: (props: {
@@ -235,9 +235,9 @@ jest.mock("../form-renderer", () => {
   };
 });
 
-const mockToastSuccess = jest.fn();
-const mockToastError = jest.fn();
-jest.mock("sonner", () => ({
+const mockToastSuccess = vi.fn();
+const mockToastError = vi.fn();
+vi.mock("sonner", () => ({
   toast: {
     get success() {
       return mockToastSuccess;
@@ -262,7 +262,7 @@ function makeDraftSubmission(overrides?: Record<string, unknown>) {
 
 describe("SubmissionForm", () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     resetMocks();
   });
 

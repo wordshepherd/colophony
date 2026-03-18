@@ -1,6 +1,6 @@
+import { vi } from "vitest";
 import React from "react";
 import { render, screen, fireEvent } from "@testing-library/react";
-import "../../../../test/setup";
 import { FormStepper, type FormStepperStep } from "../form-stepper";
 
 const steps: FormStepperStep[] = [
@@ -40,7 +40,7 @@ describe("FormStepper", () => {
   });
 
   it("calls onStepClick for completed step click", () => {
-    const onStepClick = jest.fn();
+    const onStepClick = vi.fn();
     render(
       <FormStepper
         steps={steps}
@@ -56,7 +56,7 @@ describe("FormStepper", () => {
   });
 
   it("does not call onStepClick for future step click", () => {
-    const onStepClick = jest.fn();
+    const onStepClick = vi.fn();
     render(
       <FormStepper
         steps={steps}
@@ -86,7 +86,7 @@ describe("FormStepper", () => {
   });
 
   it("applies disabled state correctly", () => {
-    const onStepClick = jest.fn();
+    const onStepClick = vi.fn();
     render(
       <FormStepper
         steps={steps}

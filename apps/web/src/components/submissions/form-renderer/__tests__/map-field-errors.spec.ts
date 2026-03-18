@@ -1,3 +1,4 @@
+import { vi } from "vitest";
 import { extractFieldErrors, mapFieldErrorsToForm } from "../map-field-errors";
 
 describe("extractFieldErrors", () => {
@@ -26,7 +27,7 @@ describe("extractFieldErrors", () => {
 
 describe("mapFieldErrorsToForm", () => {
   it("maps fieldErrors to setError calls", () => {
-    const setError = jest.fn();
+    const setError = vi.fn();
     const error = {
       data: {
         fieldErrors: [{ fieldKey: "bio", message: "Too short" }],
@@ -42,7 +43,7 @@ describe("mapFieldErrorsToForm", () => {
   });
 
   it("returns false when no fieldErrors", () => {
-    const setError = jest.fn();
+    const setError = vi.fn();
     const error = { message: "Something went wrong" };
 
     const result = mapFieldErrorsToForm(error, setError);
@@ -52,7 +53,7 @@ describe("mapFieldErrorsToForm", () => {
   });
 
   it("handles multiple field errors", () => {
-    const setError = jest.fn();
+    const setError = vi.fn();
     const error = {
       data: {
         fieldErrors: [
@@ -70,7 +71,7 @@ describe("mapFieldErrorsToForm", () => {
   });
 
   it("handles null/undefined error", () => {
-    const setError = jest.fn();
+    const setError = vi.fn();
 
     expect(mapFieldErrorsToForm(null, setError)).toBe(false);
     expect(mapFieldErrorsToForm(undefined, setError)).toBe(false);

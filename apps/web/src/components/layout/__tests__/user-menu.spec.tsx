@@ -1,12 +1,13 @@
+import { vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { UserMenu } from "../user-menu";
 
 // --- Mutable mock state ---
 let mockUser: { name: string | null; email: string } | null = null;
-const mockLogout = jest.fn();
+const mockLogout = vi.fn();
 
-jest.mock("@/hooks/use-auth", () => ({
+vi.mock("@/hooks/use-auth", () => ({
   useAuth: () => ({
     user: mockUser,
     logout: mockLogout,
@@ -15,7 +16,7 @@ jest.mock("@/hooks/use-auth", () => ({
 
 describe("UserMenu", () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     mockUser = { name: "Jane Doe", email: "jane@example.com" };
   });
 
