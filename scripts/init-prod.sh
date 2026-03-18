@@ -32,10 +32,22 @@ psql "$DATABASE_URL" <<-'EOSQL'
 GRANT USAGE ON SCHEMA public TO app_user;
 GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO app_user;
 GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO app_user;
+-- NOTE: This grants full DML (including DELETE) to ALL future tables.
+-- Tables that should be append-only/immutable need explicit REVOKE below.
 ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO app_user;
 ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT USAGE, SELECT ON SEQUENCES TO app_user;
 GRANT EXECUTE ON FUNCTION current_org_id() TO app_user;
 GRANT EXECUTE ON FUNCTION current_user_id() TO app_user;
+
+-- Revoke DELETE on append-only/immutable tables.
+-- ALTER DEFAULT PRIVILEGES grants full DML to all tables; these tables
+-- need explicit REVOKE to enforce immutability. Keep in sync with
+-- migration 0052_revoke_delete_restricted_tables.sql.
+REVOKE DELETE ON "user_keys" FROM app_user;
+REVOKE DELETE ON "trusted_peers" FROM app_user;
+REVOKE DELETE ON "sim_sub_checks" FROM app_user;
+REVOKE DELETE ON "inbound_transfers" FROM app_user;
+REVOKE DELETE ON "documenso_webhook_events" FROM app_user;
 EOSQL
 
 echo "Permissions granted."
