@@ -1,8 +1,13 @@
 import fs from "node:fs";
-import { defineConfig } from "drizzle-kit";
 import type { PoolConfig } from "pg";
 
-function buildSslConfig(): PoolConfig["ssl"] {
+/**
+ * Build SSL config from DB_SSL env var.
+ *   'false'     → undefined (no SSL)
+ *   'true'      → { rejectUnauthorized: true, ca?: Buffer } (verify CA)
+ *   'no-verify' → { rejectUnauthorized: false } (encrypt, skip CA check)
+ */
+export function buildSslConfig(): PoolConfig["ssl"] {
   const mode = process.env.DB_SSL ?? "false";
   if (mode === "false") return undefined;
   if (mode === "no-verify") return { rejectUnauthorized: false };
@@ -12,15 +17,3 @@ function buildSslConfig(): PoolConfig["ssl"] {
     ...(caPath ? { ca: fs.readFileSync(caPath, "utf8") } : {}),
   };
 }
-
-export default defineConfig({
-  dialect: "postgresql",
-  schema: "./src/schema/*",
-  out: "./migrations",
-  dbCredentials: {
-    url: process.env.DATABASE_URL!,
-    ssl: buildSslConfig(),
-  },
-  verbose: true,
-  strict: true,
-});

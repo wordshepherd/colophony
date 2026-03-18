@@ -16,6 +16,9 @@ export function createTestEnv(overrides?: Partial<Env>): Env {
     DATABASE_URL:
       process.env.DATABASE_APP_URL ??
       'postgresql://app_user:app_password@localhost:5433/colophony_test',
+    DB_SSL: 'false' as const,
+    DB_ADMIN_POOL_MAX: 5,
+    DB_APP_POOL_MAX: 20,
     PORT: 0,
     HOST: '127.0.0.1',
     NODE_ENV: 'test',

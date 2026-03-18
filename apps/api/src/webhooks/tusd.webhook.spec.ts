@@ -132,6 +132,9 @@ const mockAuditService = vi.mocked(auditService);
 
 const TEST_ENV = {
   DATABASE_URL: 'postgresql://test:test@localhost/test',
+  DB_SSL: 'false' as const,
+  DB_ADMIN_POOL_MAX: 5,
+  DB_APP_POOL_MAX: 20,
   PORT: 4000,
   HOST: '0.0.0.0',
   NODE_ENV: 'test' as const,
