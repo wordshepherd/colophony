@@ -36,11 +36,21 @@ echo "Step 1: Running Drizzle migrations..."
 pnpm --filter @colophony/db migrate
 echo "Migrations complete."
 
-# Step 1.5: Enable pg_stat_statements (idempotent — covers existing databases)
+# Step 1.5: Enable pg_stat_statements (idempotent — only if preloaded)
 echo ""
 echo "Step 1.5: Enabling pg_stat_statements..."
-psql "$DATABASE_URL" -c "CREATE EXTENSION IF NOT EXISTS pg_stat_statements;"
-echo "pg_stat_statements enabled."
+psql "$DATABASE_URL" -c "
+DO \$\$
+BEGIN
+    IF current_setting('shared_preload_libraries', true) LIKE '%pg_stat_statements%' THEN
+        CREATE EXTENSION IF NOT EXISTS pg_stat_statements;
+        RAISE NOTICE 'pg_stat_statements extension enabled';
+    ELSE
+        RAISE NOTICE 'pg_stat_statements not in shared_preload_libraries — skipping';
+    END IF;
+END
+\$\$;"
+echo "pg_stat_statements check complete."
 
 # Step 2: Grant permissions to app_user (GRANT is idempotent)
 # Drizzle migrations handle schema, RLS policies, helper functions, indexes, and triggers.

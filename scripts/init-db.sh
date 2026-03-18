@@ -64,8 +64,16 @@ psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-E
 
     GRANT USAGE ON SCHEMA public TO audit_writer;
 
-    -- Enable pg_stat_statements for query monitoring
-    CREATE EXTENSION IF NOT EXISTS pg_stat_statements;
+    -- Enable pg_stat_statements for query monitoring (only if preloaded)
+    DO \$\$
+    BEGIN
+        IF current_setting('shared_preload_libraries', true) LIKE '%pg_stat_statements%' THEN
+            CREATE EXTENSION IF NOT EXISTS pg_stat_statements;
+        ELSE
+            RAISE NOTICE 'pg_stat_statements not in shared_preload_libraries — skipping extension creation';
+        END IF;
+    END
+    \$\$;
 
     -- Verify roles are not superusers
     SELECT usename, usesuper,
