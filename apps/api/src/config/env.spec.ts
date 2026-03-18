@@ -144,6 +144,32 @@ describe('validateEnv', () => {
     expect(typeof env.CLAMAV_PORT).toBe('number');
   });
 
+  it('DB_SSL defaults to false', () => {
+    const env = validateEnv(validBase);
+    expect(env.DB_SSL).toBe('false');
+  });
+
+  it('DB_SSL accepts valid values', () => {
+    for (const value of ['true', 'false', 'no-verify'] as const) {
+      const env = validateEnv({ ...validBase, DB_SSL: value });
+      expect(env.DB_SSL).toBe(value);
+    }
+  });
+
+  it('DB_SSL rejects invalid values', () => {
+    expect(() => validateEnv({ ...validBase, DB_SSL: 'require' })).toThrow();
+  });
+
+  it('DB_ADMIN_POOL_MAX defaults to 5', () => {
+    const env = validateEnv(validBase);
+    expect(env.DB_ADMIN_POOL_MAX).toBe(5);
+  });
+
+  it('DB_APP_POOL_MAX defaults to 20', () => {
+    const env = validateEnv(validBase);
+    expect(env.DB_APP_POOL_MAX).toBe(20);
+  });
+
   it('transforms FEDERATION_ENABLED to boolean', () => {
     const envTrue = validateEnv({
       ...validBase,

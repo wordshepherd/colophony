@@ -12,15 +12,45 @@ if [ -z "$DATABASE_URL" ]; then
   exit 1
 fi
 
-if [ -z "$APP_DATABASE_URL" ]; then
-  echo "WARNING: APP_DATABASE_URL not set, skipping RLS verification"
+if [ -z "$DATABASE_APP_URL" ]; then
+  echo "WARNING: DATABASE_APP_URL not set, skipping RLS verification"
 fi
+
+# Block default/placeholder credentials in production
+for url_var in DATABASE_URL DATABASE_APP_URL; do
+  eval url_val=\$$url_var
+  if [ -n "$url_val" ]; then
+    case "$url_val" in
+      *app_password*|*CHANGE_ME*)
+        echo "ERROR: $url_var contains a default/placeholder password."
+        echo "  Generate a strong password: openssl rand -base64 48"
+        exit 1
+        ;;
+    esac
+  fi
+done
 
 # Step 1: Run Drizzle migrations (idempotent — tracks applied migrations in journal)
 echo ""
 echo "Step 1: Running Drizzle migrations..."
 pnpm --filter @colophony/db migrate
 echo "Migrations complete."
+
+# Step 1.5: Enable pg_stat_statements (idempotent — only if preloaded)
+echo ""
+echo "Step 1.5: Enabling pg_stat_statements..."
+psql "$DATABASE_URL" -c "
+DO \$\$
+BEGIN
+    IF current_setting('shared_preload_libraries', true) LIKE '%pg_stat_statements%' THEN
+        CREATE EXTENSION IF NOT EXISTS pg_stat_statements;
+        RAISE NOTICE 'pg_stat_statements extension enabled';
+    ELSE
+        RAISE NOTICE 'pg_stat_statements not in shared_preload_libraries — skipping';
+    END IF;
+END
+\$\$;"
+echo "pg_stat_statements check complete."
 
 # Step 2: Grant permissions to app_user (GRANT is idempotent)
 # Drizzle migrations handle schema, RLS policies, helper functions, indexes, and triggers.

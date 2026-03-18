@@ -43,8 +43,10 @@ export const submissions = pgTable(
 
 ### Connection Pools (`src/client.ts`)
 
-- **`pool`** — superuser (`colophony`). Used for migrations, admin tasks, and the Drizzle `db` instance.
-- **`appPool`** — non-superuser (`app_user`, `NOBYPASSRLS`). Used by `withRls()` and the `dbContext` hook for all request-scoped queries. Configured via `DATABASE_APP_URL` (falls back to `DATABASE_URL` with a security warning). **Required in production** — API startup fails if `DATABASE_APP_URL` is unset when `NODE_ENV=production`.
+- **`pool`** — superuser (`colophony`). Used for migrations, admin tasks, and the Drizzle `db` instance. Default max: **5** (`DB_ADMIN_POOL_MAX`).
+- **`appPool`** — non-superuser (`app_user`, `NOBYPASSRLS`). Used by `withRls()` and the `dbContext` hook for all request-scoped queries. Default max: **20** (`DB_APP_POOL_MAX`). Configured via `DATABASE_APP_URL` (falls back to `DATABASE_URL` with a security warning). **Required in production** — API startup fails if `DATABASE_APP_URL` is unset when `NODE_ENV=production`.
+
+Both pools support SSL via `DB_SSL` env var (`false` | `true` | `no-verify`). SSL config is extracted to `src/ssl.ts` and shared with `drizzle.config.ts`.
 
 **Always use `appPool` for tenant data queries.** The superuser `pool` bypasses all RLS policies.
 

@@ -188,9 +188,11 @@ All other version pins are in their respective per-directory CLAUDE.md files.
 
 ### Production Deployment Checklist
 
-- [ ] Change `app_user` password from default
-- [ ] PostgreSQL SSL/TLS (`sslmode=require`), connection pooling (PgBouncer), backups (WAL-G to S3)
-- [ ] `pg_stat_statements` for query monitoring
+- [x] Change `app_user` password from default (init script validation)
+- [x] PostgreSQL SSL/TLS support (`DB_SSL` env var)
+- [ ] Connection pooling (PgBouncer)
+- [ ] Backups (WAL-G to S3)
+- [x] `pg_stat_statements` for query monitoring
 - [ ] Rotate credentials quarterly
 - [x] AGPL license boundary documented — see `docs/licensing.md`
 - [x] Monitoring: Prometheus + Grafana (Sentry error tracking, `/metrics` endpoint, `--profile monitoring`)
@@ -431,14 +433,18 @@ Canonical env definition with Zod validation: `apps/api/src/config/env.ts` (55 v
 
 <!-- Core -->
 
-| Variable           | Required | Default                      | Used by |
-| ------------------ | -------- | ---------------------------- | ------- |
-| `DATABASE_URL`     | Yes      | —                            | API     |
-| `DATABASE_APP_URL` | Prod     | falls back to `DATABASE_URL` | API, DB |
-| `PORT` / `HOST`    | No       | `4000` / `0.0.0.0`           | API     |
-| `NODE_ENV`         | No       | `development`                | API     |
-| `LOG_LEVEL`        | No       | `info`                       | API     |
-| `CORS_ORIGIN`      | No       | `http://localhost:3000`      | API     |
+| Variable            | Required | Default                      | Used by |
+| ------------------- | -------- | ---------------------------- | ------- |
+| `DATABASE_URL`      | Yes      | —                            | API     |
+| `DATABASE_APP_URL`  | Prod     | falls back to `DATABASE_URL` | API, DB |
+| `DB_SSL`            | No       | `false`                      | DB      |
+| `DB_SSL_CA_PATH`    | No       | —                            | DB      |
+| `DB_ADMIN_POOL_MAX` | No       | `5`                          | DB      |
+| `DB_APP_POOL_MAX`   | No       | `20`                         | DB      |
+| `PORT` / `HOST`     | No       | `4000` / `0.0.0.0`           | API     |
+| `NODE_ENV`          | No       | `development`                | API     |
+| `LOG_LEVEL`         | No       | `info`                       | API     |
+| `CORS_ORIGIN`       | No       | `http://localhost:3000`      | API     |
 
 <!-- Redis -->
 

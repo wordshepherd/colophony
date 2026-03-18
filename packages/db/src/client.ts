@@ -1,6 +1,9 @@
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
 import * as schema from "./schema/index";
+import { buildSslConfig } from "./ssl.js";
+
+const ssl = buildSslConfig();
 
 /**
  * Admin pool — superuser connection for migrations, seed, and admin operations.
@@ -8,9 +11,10 @@ import * as schema from "./schema/index";
  */
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  max: parseInt(process.env.DB_POOL_MAX || "10", 10),
+  max: parseInt(process.env.DB_ADMIN_POOL_MAX || "5", 10),
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 2000,
+  ssl,
 });
 
 /**
@@ -27,9 +31,10 @@ if (!process.env.DATABASE_APP_URL && process.env.NODE_ENV !== "test") {
 
 const appPool = new Pool({
   connectionString: process.env.DATABASE_APP_URL || process.env.DATABASE_URL,
-  max: parseInt(process.env.DB_POOL_MAX || "10", 10),
+  max: parseInt(process.env.DB_APP_POOL_MAX || "20", 10),
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 2000,
+  ssl,
 });
 
 export const db = drizzle(pool, { schema });

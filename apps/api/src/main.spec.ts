@@ -61,6 +61,9 @@ vi.mock('ioredis', () => {
 
 const testEnv: Env = {
   DATABASE_URL: 'postgresql://test:test@localhost:5432/test',
+  DB_SSL: 'false' as const,
+  DB_ADMIN_POOL_MAX: 5,
+  DB_APP_POOL_MAX: 20,
   PORT: 0,
   HOST: '127.0.0.1',
   NODE_ENV: 'test',
