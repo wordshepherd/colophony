@@ -20,6 +20,31 @@ services:
       timeout: 5s
       retries: 5
 
+  # PgBouncer connection pooler (transaction mode for RLS SET LOCAL)
+  pgbouncer:
+    image: edoburu/pgbouncer:1.23.1-p2
+    container_name: colophony-pgbouncer
+    ports:
+      - '6432:6432'
+    environment:
+      POSTGRES_USER: colophony
+      POSTGRES_PASSWORD: password
+      APP_USER_PASSWORD: app_password
+      PGBOUNCER_DEFAULT_POOL_SIZE: 20
+      PGBOUNCER_MAX_CLIENT_CONN: 100
+      PGBOUNCER_MAX_DB_CONNECTIONS: 30
+    volumes:
+      - ./docker/pgbouncer/entrypoint.sh:/entrypoint.sh:ro
+    entrypoint: /entrypoint.sh
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -h 127.0.0.1 -p 6432']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
   # Test PostgreSQL database (in-memory for speed)
   postgres-test:
     image: postgres:16-alpine

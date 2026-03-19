@@ -150,6 +150,7 @@ Domain-specific quirks are in per-directory CLAUDE.md files. Cross-cutting quirk
 | ----------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Docker Compose env_file**                           | `env_file:` sets container env only. For YAML `${VAR}` substitution, use `--env-file .env` on CLI                                                                                                                                                                                                                                                                                                                                 |
 | **PostgreSQL init-db.sh**                             | Only runs on first DB creation. Must `docker compose down -v` to re-run after changes                                                                                                                                                                                                                                                                                                                                             |
+| **PgBouncer: migrations must bypass**                 | `drizzle-kit` and `pnpm db:migrate` use `DATABASE_URL` (direct port 5432). Only `DATABASE_APP_URL` routes through PgBouncer (port 6432). `SET LOCAL` is required (not `SET`) — transaction pooling reuses server connections                                                                                                                                                                                                      |
 | **WSL husky hooks need nvm PATH**                     | Husky v9 runs hooks under `sh`/`dash`; `nvm.sh` can't be sourced. Hooks add nvm node bin to PATH directly. `lint-staged` called without `npx`                                                                                                                                                                                                                                                                                     |
 | **CI: workspace deps need build before Vitest**       | Vitest resolves workspace packages via `exports` field (pointing to `dist/`). CI must build deps before running tests                                                                                                                                                                                                                                                                                                             |
 | **`drizzle-kit generate` TUI blocks automation**      | Interactive prompts (rename vs create) use a TUI that ignores piped stdin. Write manual migrations in non-interactive shells; snapshot files may need regeneration interactively                                                                                                                                                                                                                                                  |
@@ -190,7 +191,7 @@ All other version pins are in their respective per-directory CLAUDE.md files.
 
 - [x] Change `app_user` password from default (init script validation)
 - [x] PostgreSQL SSL/TLS support (`DB_SSL` env var)
-- [ ] Connection pooling (PgBouncer)
+- [x] Connection pooling (PgBouncer) — transaction mode, `DATABASE_APP_URL` routes through port 6432
 - [ ] Backups (WAL-G to S3)
 - [x] `pg_stat_statements` for query monitoring
 - [ ] Rotate credentials quarterly
@@ -433,18 +434,21 @@ Canonical env definition with Zod validation: `apps/api/src/config/env.ts` (55 v
 
 <!-- Core -->
 
-| Variable            | Required | Default                      | Used by |
-| ------------------- | -------- | ---------------------------- | ------- |
-| `DATABASE_URL`      | Yes      | —                            | API     |
-| `DATABASE_APP_URL`  | Prod     | falls back to `DATABASE_URL` | API, DB |
-| `DB_SSL`            | No       | `false`                      | DB      |
-| `DB_SSL_CA_PATH`    | No       | —                            | DB      |
-| `DB_ADMIN_POOL_MAX` | No       | `5`                          | DB      |
-| `DB_APP_POOL_MAX`   | No       | `20`                         | DB      |
-| `PORT` / `HOST`     | No       | `4000` / `0.0.0.0`           | API     |
-| `NODE_ENV`          | No       | `development`                | API     |
-| `LOG_LEVEL`         | No       | `info`                       | API     |
-| `CORS_ORIGIN`       | No       | `http://localhost:3000`      | API     |
+| Variable                       | Required | Default                      | Used by   |
+| ------------------------------ | -------- | ---------------------------- | --------- |
+| `DATABASE_URL`                 | Yes      | —                            | API       |
+| `DATABASE_APP_URL`             | Prod     | falls back to `DATABASE_URL` | API, DB   |
+| `DB_SSL`                       | No       | `false`                      | DB        |
+| `DB_SSL_CA_PATH`               | No       | —                            | DB        |
+| `DB_ADMIN_POOL_MAX`            | No       | `5`                          | DB        |
+| `DB_APP_POOL_MAX`              | No       | `20`                         | DB        |
+| `PGBOUNCER_DEFAULT_POOL_SIZE`  | No       | `20`                         | PgBouncer |
+| `PGBOUNCER_MAX_CLIENT_CONN`    | No       | `200`                        | PgBouncer |
+| `PGBOUNCER_MAX_DB_CONNECTIONS` | No       | `50`                         | PgBouncer |
+| `PORT` / `HOST`                | No       | `4000` / `0.0.0.0`           | API       |
+| `NODE_ENV`                     | No       | `development`                | API       |
+| `LOG_LEVEL`                    | No       | `info`                       | API       |
+| `CORS_ORIGIN`                  | No       | `http://localhost:3000`      | API       |
 
 <!-- Redis -->
 
