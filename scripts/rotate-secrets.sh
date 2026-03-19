@@ -171,13 +171,24 @@ alter_role() {
     return
   fi
 
-  if ! docker inspect colophony-postgres &> /dev/null; then
+  # Check container is running (not just exists) — docker inspect succeeds for stopped containers
+  local container_status
+  container_status=$(docker inspect --format='{{.State.Running}}' colophony-postgres 2>/dev/null || echo "false")
+
+  if [ "$container_status" != "true" ]; then
     echo -e "  ${RED}WARNING: colophony-postgres container not running — skipping ALTER ROLE${NC}"
     echo -e "  ${YELLOW}Password updated in ${ENV_FILE}. Run ALTER ROLE manually after starting the container.${NC}"
     return
   fi
 
-  docker exec colophony-postgres psql -U colophony -d colophony -c \
+  # Read POSTGRES_USER and POSTGRES_DB from .env.prod (respect overrides)
+  local pg_user pg_db
+  pg_user=$(grep "^POSTGRES_USER=" "$ENV_FILE" 2>/dev/null | cut -d= -f2)
+  pg_user=${pg_user:-colophony}
+  pg_db=$(grep "^POSTGRES_DB=" "$ENV_FILE" 2>/dev/null | cut -d= -f2)
+  pg_db=${pg_db:-colophony}
+
+  docker exec colophony-postgres psql -U "$pg_user" -d "$pg_db" -c \
     "ALTER ROLE ${role_name} WITH PASSWORD '${new_password}';" > /dev/null 2>&1
 
   echo -e "  ${GREEN}ALTER ROLE ${role_name}${NC} applied"

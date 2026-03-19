@@ -119,11 +119,9 @@ These credentials are issued by third-party providers. Rotate through each provi
 
 ### Zitadel (OIDC)
 
-1. Go to Zitadel Console → Project → Application → rotate client secret
-2. Update in `.env.prod`:
-   - `ZITADEL_CLIENT_SECRET`
-3. Restart: `docker compose --env-file .env.prod -f docker-compose.prod.yml restart api web`
-4. Verify: log in through the UI
+Colophony uses a **public OIDC client** (PKCE flow) — there is no client secret to rotate. The relevant env vars are `ZITADEL_AUTHORITY` and `ZITADEL_CLIENT_ID`, which are identifiers (not secrets).
+
+If your Zitadel instance issues **API keys or PATs** for service accounts, rotate those through the Zitadel Console and update the corresponding env vars. Restart API + Web after any change.
 
 ### Email (SMTP)
 
