@@ -515,7 +515,7 @@
 
 ### Security & Compliance
 
-- [ ] Rotate credentials quarterly — (CLAUDE.md)
+- [x] Rotate credentials quarterly — done 2026-03-19, `scripts/rotate-secrets.sh` + `docs/credential-rotation.md` — (CLAUDE.md)
 - [x] AGPL license boundary documented (Zitadel is AGPL) — done 2026-03-02 `docs/licensing.md` — (CLAUDE.md)
 
 ### Monitoring
