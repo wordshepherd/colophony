@@ -26,6 +26,39 @@ services:
     networks:
       - colophony
 
+  # PgBouncer connection pooler (transaction mode for RLS SET LOCAL)
+  pgbouncer:
+    image: edoburu/pgbouncer:1.23.1-p2
+    container_name: colophony-pgbouncer
+    expose:
+      - "6432"
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-colophony}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-colophony}
+      APP_USER_PASSWORD: ${APP_USER_PASSWORD}
+      PGBOUNCER_DEFAULT_POOL_SIZE: ${PGBOUNCER_DEFAULT_POOL_SIZE:-20}
+      PGBOUNCER_MAX_CLIENT_CONN: ${PGBOUNCER_MAX_CLIENT_CONN:-200}
+      PGBOUNCER_MAX_DB_CONNECTIONS: ${PGBOUNCER_MAX_DB_CONNECTIONS:-50}
+    volumes:
+      - ./docker/pgbouncer/entrypoint.sh:/entrypoint.sh:ro
+    entrypoint: /entrypoint.sh
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -p 6432"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 64M
+    networks:
+      - colophony
+
   # Fastify API + tRPC server
   api:
     build:
@@ -39,7 +72,7 @@ services:
       NODE_ENV: production
       PORT: 4000
       DATABASE_URL: postgresql://${POSTGRES_USER:-colophony}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-colophony}
-      DATABASE_APP_URL: postgresql://app_user:${APP_USER_PASSWORD}@postgres:5432/${POSTGRES_DB:-colophony}
+      DATABASE_APP_URL: postgresql://app_user:${APP_USER_PASSWORD}@pgbouncer:6432/${POSTGRES_DB:-colophony}?sslmode=disable
       REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
       REDIS_HOST: redis
       REDIS_PORT: 6379
@@ -58,6 +91,8 @@ services:
     depends_on:
       migrate:
         condition: service_completed_successfully
+      pgbouncer:
+        condition: service_healthy
       redis:
         condition: service_healthy
     restart: unless-stopped
