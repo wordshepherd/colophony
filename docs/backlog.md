@@ -508,7 +508,7 @@
 
 - [x] Change `app_user` password from default — (CLAUDE.md; done 2026-03-17 init script validation)
 - [x] PostgreSQL SSL/TLS (`DB_SSL` env var) — (CLAUDE.md; done 2026-03-17)
-- [ ] Connection pooling (PgBouncer) — (CLAUDE.md)
+- [x] Connection pooling (PgBouncer) — (CLAUDE.md, PR pending)
 - [ ] Backups (WAL-G to S3) — (CLAUDE.md)
 - [x] `pg_stat_statements` for query monitoring — (CLAUDE.md; done 2026-03-17)
 - [ ] Verify RLS in production — see `packages/db/CLAUDE.md` for verification queries — (CLAUDE.md)

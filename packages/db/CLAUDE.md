@@ -48,6 +48,16 @@ export const submissions = pgTable(
 
 Both pools support SSL via `DB_SSL` env var (`false` | `true` | `no-verify`). SSL config is extracted to `src/ssl.ts` and shared with `drizzle.config.ts`.
 
+### PgBouncer (Transaction Pooling)
+
+In production (and optionally dev), `DATABASE_APP_URL` routes through PgBouncer on port 6432 in **transaction pooling mode**. This multiplexes many client connections onto fewer PostgreSQL server connections.
+
+**Why transaction mode works:** `withRls()` uses `SET LOCAL` (transaction-scoped), and the codebase has no session state, cursors, prepared statements, temp tables, or `LISTEN/NOTIFY`. Server connections are returned to the pool after each transaction, so `SET LOCAL` context is automatically cleared.
+
+**Migration bypass:** `DATABASE_URL` (direct port 5432) is used for `drizzle-kit` and `pnpm db:migrate`. `drizzle-kit` may use features incompatible with transaction pooling. The `migrate` service in `docker-compose.prod.yml` connects directly to `postgres:5432`.
+
+**NEVER** use session-level `SET` (without `LOCAL`) — in transaction pooling mode, session state leaks to other clients sharing the same server connection.
+
 **Always use `appPool` for tenant data queries.** The superuser `pool` bypasses all RLS policies.
 
 ### `withRls()` — RLS transaction helper (`src/context.ts`)
