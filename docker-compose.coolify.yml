@@ -133,7 +133,7 @@ services:
       - colophony-staging
 
   pgbouncer:
-    image: edoburu/pgbouncer:1.23.1-p2
+    image: edoburu/pgbouncer:v1.23.1-p3
     expose:
       - "6432"
     environment:

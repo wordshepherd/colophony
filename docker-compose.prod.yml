@@ -28,7 +28,7 @@ services:
 
   # PgBouncer connection pooler (transaction mode for RLS SET LOCAL)
   pgbouncer:
-    image: edoburu/pgbouncer:1.23.1-p2
+    image: edoburu/pgbouncer:v1.23.1-p3
     container_name: colophony-pgbouncer
     expose:
       - "6432"
