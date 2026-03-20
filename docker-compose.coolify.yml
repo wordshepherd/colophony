@@ -1,9 +1,28 @@
-# Coolify overlay — used with: -f docker-compose.staging.yml -f docker-compose.coolify.yml
-# Adapts staging compose for Coolify/Traefik: removes host ports, adds labels, adds PgBouncer.
+# Coolify deployment — standalone compose for Hetzner VPS via Coolify.
+# Coolify reads this file directly (Docker Compose Location: /docker-compose.coolify.yml).
+# Traefik handles TLS termination; nginx handles routing, rate limiting, security headers.
 
 services:
   nginx:
-    ports: !reset []
+    image: nginx:alpine
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      api:
+        condition: service_healthy
+      web:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          memory: 128M
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.colophony.rule=Host(`${DOMAIN}`)"
@@ -11,15 +30,59 @@ services:
       - "traefik.http.routers.colophony.tls.certresolver=letsencrypt"
       - "traefik.http.services.colophony.loadbalancer.server.port=80"
     networks:
-      colophony-staging: null
-      coolify: null
+      - colophony-staging
+      - coolify
 
   api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    expose:
+      - "4000"
     environment:
+      NODE_ENV: production
+      PORT: 4000
+      LOG_LEVEL: ${LOG_LEVEL:-debug}
       DATABASE_URL: postgresql://${POSTGRES_USER:-colophony}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-colophony_staging}
       DATABASE_APP_URL: postgresql://app_user:${APP_USER_PASSWORD}@pgbouncer:6432/${POSTGRES_DB:-colophony_staging}?sslmode=disable
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      S3_ENDPOINT: http://minio:9000
+      S3_BUCKET: submissions
+      S3_QUARANTINE_BUCKET: quarantine
+      S3_ACCESS_KEY: ${MINIO_ROOT_USER}
+      S3_SECRET_KEY: ${MINIO_ROOT_PASSWORD}
+      S3_REGION: us-east-1
+      TUS_ENDPOINT: http://tusd:1080
       CORS_ORIGIN: https://${DOMAIN}
       APP_URL: https://${DOMAIN}
+      CLAMAV_HOST: clamav
+      CLAMAV_PORT: 3310
+      # Auth (Zitadel Cloud)
+      ZITADEL_AUTHORITY: ${ZITADEL_AUTHORITY:-}
+      ZITADEL_CLIENT_ID: ${ZITADEL_CLIENT_ID:-}
+      ZITADEL_WEBHOOK_SECRET: ${ZITADEL_WEBHOOK_SECRET:-}
+      # Payments
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
+      # Background jobs (Inngest Cloud)
+      INNGEST_EVENT_KEY: ${INNGEST_EVENT_KEY:-}
+      INNGEST_SIGNING_KEY: ${INNGEST_SIGNING_KEY:-}
+      # Email
+      EMAIL_PROVIDER: ${EMAIL_PROVIDER:-none}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      SMTP_FROM: ${SMTP_FROM:-}
+      # Monitoring
+      SENTRY_DSN: ${SENTRY_DSN:-}
+      SENTRY_ENVIRONMENT: ${SENTRY_ENVIRONMENT:-staging}
+      METRICS_ENABLED: ${METRICS_ENABLED:-true}
+      # Federation
+      FEDERATION_ENABLED: ${FEDERATION_ENABLED:-false}
     depends_on:
       migrate:
         condition: service_completed_successfully
@@ -27,6 +90,19 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4000/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    deploy:
+      resources:
+        limits:
+          memory: 384M
+    networks:
+      - colophony-staging
 
   web:
     build:
@@ -35,8 +111,26 @@ services:
       args:
         NEXT_PUBLIC_API_URL: https://${DOMAIN}/trpc
         NEXT_PUBLIC_TUS_URL: https://${DOMAIN}/upload/files/
-        NEXT_PUBLIC_ZITADEL_AUTHORITY: ${NEXT_PUBLIC_ZITADEL_AUTHORITY}
-        NEXT_PUBLIC_ZITADEL_CLIENT_ID: ${NEXT_PUBLIC_ZITADEL_CLIENT_ID}
+        NEXT_PUBLIC_ZITADEL_AUTHORITY: ${NEXT_PUBLIC_ZITADEL_AUTHORITY:-}
+        NEXT_PUBLIC_ZITADEL_CLIENT_ID: ${NEXT_PUBLIC_ZITADEL_CLIENT_ID:-}
+    expose:
+      - "3000"
+    environment:
+      NODE_ENV: production
+      API_URL: http://api:4000
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          memory: 192M
+    networks:
+      - colophony-staging
 
   pgbouncer:
     image: edoburu/pgbouncer:1.23.1-p2
@@ -69,6 +163,212 @@ services:
     networks:
       - colophony-staging
 
+  postgres:
+    build:
+      context: ./docker/postgres
+      dockerfile: Dockerfile
+    expose:
+      - "5432"
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-colophony}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-colophony_staging}
+      APP_USER_PASSWORD: ${APP_USER_PASSWORD}
+      # WAL-G backup config (omit BACKUP_S3_PREFIX to disable backups)
+      WALG_S3_PREFIX: ${BACKUP_S3_PREFIX:-}
+      AWS_ACCESS_KEY_ID: ${BACKUP_S3_ACCESS_KEY:-}
+      AWS_SECRET_ACCESS_KEY: ${BACKUP_S3_SECRET_KEY:-}
+      AWS_REGION: ${BACKUP_S3_REGION:-us-east-1}
+      AWS_ENDPOINT: ${BACKUP_S3_ENDPOINT:-}
+      AWS_S3_FORCE_PATH_STYLE: ${BACKUP_S3_FORCE_PATH_STYLE:-false}
+      WALG_COMPRESSION_METHOD: ${BACKUP_COMPRESSION:-lz4}
+      BACKUP_RETAIN_DAYS: ${BACKUP_RETAIN_DAYS:-7}
+    command:
+      - postgres
+      - -c
+      - archive_mode=on
+      - -c
+      - archive_command=test -n "$WALG_S3_PREFIX" && wal-g wal-push %p || true
+      - -c
+      - archive_timeout=60
+      - -c
+      - wal_level=replica
+    volumes:
+      - staging_postgres_data:/var/lib/postgresql/data
+      - ./scripts/init-db.sh:/docker-entrypoint-initdb.d/init-db.sh:ro
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-colophony}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    networks:
+      - colophony-staging
+
+  redis:
+    image: redis:7-alpine
+    expose:
+      - "6379"
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD}
+    volumes:
+      - staging_redis_data:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+    networks:
+      - colophony-staging
+
+  minio:
+    image: minio/minio:latest
+    expose:
+      - "9000"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+    volumes:
+      - staging_minio_data:/data
+    command: server /data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+    networks:
+      - colophony-staging
+
+  minio-setup:
+    image: minio/mc:latest
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      set -e;
+      mc alias set minio http://minio:9000 $${MINIO_ROOT_USER} $${MINIO_ROOT_PASSWORD};
+      mc mb minio/submissions --ignore-existing;
+      mc mb minio/quarantine --ignore-existing;
+      mc anonymous set none minio/submissions;
+      mc anonymous set none minio/quarantine;
+      "
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+    labels:
+      - "coolify.exclude_from_hc=true"
+    networks:
+      - colophony-staging
+
+  tusd:
+    image: tusproject/tusd:latest
+    expose:
+      - "1080"
+    environment:
+      AWS_ACCESS_KEY_ID: ${MINIO_ROOT_USER}
+      AWS_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD}
+      AWS_REGION: us-east-1
+    command:
+      - -s3-endpoint
+      - http://minio:9000
+      - -s3-bucket
+      - quarantine
+      - -s3-object-prefix
+      - uploads/
+      - -hooks-http
+      - http://api:4000/webhooks/tusd
+      - -hooks-http-forward-headers
+      - Authorization,X-Organization-Id,X-Embed-Token
+      - -cors-allow-origin
+      - ".*"
+      - -cors-allow-headers
+      - Authorization,Origin,X-Requested-With,Content-Type,Upload-Length,Upload-Offset,Tus-Resumable,Upload-Metadata,Upload-Defer-Length,X-Organization-Id,X-Embed-Token
+      - -behind-proxy
+      - -base-path
+      - /upload
+    depends_on:
+      minio:
+        condition: service_healthy
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+    networks:
+      - colophony-staging
+
+  clamav:
+    image: clamav/clamav:stable
+    expose:
+      - "3310"
+    volumes:
+      - staging_clamav_data:/var/lib/clamav
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "clamdscan", "--ping", "1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 120s
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    profiles:
+      - full
+    labels:
+      - "coolify.exclude_from_hc=true"
+    networks:
+      - colophony-staging
+
+  migrate:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+      target: builder
+    entrypoint: ["sh", "-c"]
+    command:
+      - |
+        apk add --no-cache postgresql16-client bash
+        /app/scripts/init-prod.sh
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-colophony}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-colophony_staging}
+      DATABASE_APP_URL: postgresql://app_user:${APP_USER_PASSWORD}@postgres:5432/${POSTGRES_DB:-colophony_staging}
+    volumes:
+      - ./scripts/init-prod.sh:/app/scripts/init-prod.sh:ro
+      - ./scripts/verify-rls.sh:/app/scripts/verify-rls.sh:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    labels:
+      - "coolify.exclude_from_hc=true"
+    networks:
+      - colophony-staging
+
+volumes:
+  staging_postgres_data:
+  staging_redis_data:
+  staging_minio_data:
+  staging_clamav_data:
+
 networks:
+  colophony-staging:
+    driver: bridge
   coolify:
     external: true
