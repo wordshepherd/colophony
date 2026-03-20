@@ -133,7 +133,9 @@ services:
       - colophony-staging
 
   pgbouncer:
-    image: edoburu/pgbouncer:v1.23.1-p3
+    build:
+      context: ./docker/pgbouncer
+      dockerfile: Dockerfile
     expose:
       - "6432"
     environment:
@@ -144,9 +146,6 @@ services:
       PGBOUNCER_DEFAULT_POOL_SIZE: ${PGBOUNCER_DEFAULT_POOL_SIZE:-10}
       PGBOUNCER_MAX_CLIENT_CONN: ${PGBOUNCER_MAX_CLIENT_CONN:-100}
       PGBOUNCER_MAX_DB_CONNECTIONS: ${PGBOUNCER_MAX_DB_CONNECTIONS:-25}
-    volumes:
-      - ./docker/pgbouncer/entrypoint.sh:/entrypoint.sh:ro
-    entrypoint: /entrypoint.sh
     depends_on:
       postgres:
         condition: service_healthy
@@ -195,10 +194,9 @@ services:
       - wal_level=replica
     volumes:
       - staging_postgres_data:/var/lib/postgresql/data
-      - ./scripts/init-db.sh:/docker-entrypoint-initdb.d/init-db.sh:ro
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-colophony}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-colophony} -d ${POSTGRES_DB:-colophony_staging}"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -350,9 +348,6 @@ services:
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-colophony}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-colophony_staging}
       DATABASE_APP_URL: postgresql://app_user:${APP_USER_PASSWORD}@postgres:5432/${POSTGRES_DB:-colophony_staging}
-    volumes:
-      - ./scripts/init-prod.sh:/app/scripts/init-prod.sh:ro
-      - ./scripts/verify-rls.sh:/app/scripts/verify-rls.sh:ro
     depends_on:
       postgres:
         condition: service_healthy

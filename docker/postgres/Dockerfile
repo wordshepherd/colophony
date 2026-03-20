@@ -13,5 +13,9 @@ RUN chmod +x /usr/local/bin/docker-entrypoint-walg.sh
 
 COPY crontab /etc/crontabs/walg-crontab
 
+# Embed init-db.sh in the image (bind-mount doesn't work with Coolify)
+COPY init-db.sh /docker-entrypoint-initdb.d/init-db.sh
+RUN chmod +x /docker-entrypoint-initdb.d/init-db.sh
+
 ENTRYPOINT ["docker-entrypoint-walg.sh"]
 CMD ["postgres"]

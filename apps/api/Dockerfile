@@ -16,6 +16,7 @@ RUN pnpm install --frozen-lockfile
 FROM deps AS builder
 COPY packages/ packages/
 COPY apps/api/ apps/api/
+COPY scripts/ scripts/
 RUN pnpm --filter @colophony/types build
 RUN pnpm --filter @colophony/db build
 RUN pnpm --filter @colophony/auth-client build
