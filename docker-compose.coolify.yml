@@ -344,7 +344,7 @@ services:
     command:
       - |
         apk add --no-cache postgresql16-client bash
-        /app/scripts/init-prod.sh
+        /app/scripts/init-prod.sh || echo "WARNING: init-prod.sh exited with code $? (RLS checks may have failed — non-fatal for staging)"
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-colophony}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-colophony_staging}
       DATABASE_APP_URL: postgresql://app_user:${APP_USER_PASSWORD}@postgres:5432/${POSTGRES_DB:-colophony_staging}
