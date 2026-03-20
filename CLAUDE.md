@@ -174,9 +174,9 @@ Application security controls (rate limiting, auth, RLS, audit, input validation
 
 **Remaining production TODOs:**
 
-- [ ] Backups (WAL-G to S3)
+- [x] Backups (WAL-G to S3) — `docker/postgres/` (WAL-G image), `scripts/backup-db.sh`, `scripts/verify-backup.sh`, `scripts/restore-backup.sh`
 - [x] Rotate credentials quarterly — `scripts/rotate-secrets.sh` + `docs/credential-rotation.md`
-- [ ] Verify RLS in production — see `packages/db/CLAUDE.md` for verification queries
+- [x] Verify RLS in production — `scripts/verify-rls.sh` (structural + behavioral, integrated into deploy via `init-prod.sh`)
 
 ---
 
