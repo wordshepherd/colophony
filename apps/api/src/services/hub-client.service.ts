@@ -136,18 +136,19 @@ export const hubClientService = {
     const url = `https://${env.HUB_DOMAIN}/federation/v1/hub/fingerprints/lookup`;
     const devMode =
       process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test';
-    await validateOutboundUrl(url, { devMode });
-
-    const { headers } = signFederationRequest({
-      method: 'POST',
-      url,
-      headers: { 'content-type': 'application/json' },
-      body,
-      privateKey: config.privateKey,
-      keyId: config.keyId,
-    });
 
     try {
+      await validateOutboundUrl(url, { devMode });
+
+      const { headers } = signFederationRequest({
+        method: 'POST',
+        url,
+        headers: { 'content-type': 'application/json' },
+        body,
+        privateKey: config.privateKey,
+        keyId: config.keyId,
+      });
+
       const response = await fetch(url, {
         method: 'POST',
         headers: { 'content-type': 'application/json', ...headers },
