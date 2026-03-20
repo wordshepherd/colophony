@@ -1,5 +1,7 @@
 # Deployment Guide
 
+> **Deploying with Coolify?** See [docs/coolify-deployment.md](coolify-deployment.md) for the Coolify + Hetzner guide (recommended for staging).
+
 ## System Requirements
 
 | Resource       | Minimum               | Recommended                |

@@ -1,10 +1,10 @@
 # Staging environment — mirrors production with lower resources and debug logging.
 # Usage: docker compose -f docker-compose.staging.yml --env-file .env.staging up -d
+# With Coolify: docker compose -f docker-compose.staging.yml -f docker-compose.coolify.yml up -d
 
 services:
   nginx:
     image: nginx:alpine
-    container_name: colophony-staging-nginx
     ports:
       - "${HTTP_PORT:-80}:80"
     volumes:
@@ -32,7 +32,6 @@ services:
     build:
       context: .
       dockerfile: apps/api/Dockerfile
-    container_name: colophony-staging-api
     expose:
       - "4000"
     env_file: .env.staging
@@ -40,7 +39,8 @@ services:
       NODE_ENV: production
       PORT: 4000
       LOG_LEVEL: ${LOG_LEVEL:-debug}
-      DATABASE_URL: postgresql://app_user:${APP_USER_PASSWORD}@postgres:5432/${POSTGRES_DB:-colophony_staging}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-colophony}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-colophony_staging}
+      DATABASE_APP_URL: postgresql://app_user:${APP_USER_PASSWORD}@postgres:5432/${POSTGRES_DB:-colophony_staging}
       REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
       REDIS_HOST: redis
       REDIS_PORT: 6379
@@ -82,7 +82,8 @@ services:
       args:
         NEXT_PUBLIC_API_URL: http://${DOMAIN:-localhost}/trpc
         NEXT_PUBLIC_TUS_URL: http://${DOMAIN:-localhost}/upload/files/
-    container_name: colophony-staging-web
+        NEXT_PUBLIC_ZITADEL_AUTHORITY: ${NEXT_PUBLIC_ZITADEL_AUTHORITY:-}
+        NEXT_PUBLIC_ZITADEL_CLIENT_ID: ${NEXT_PUBLIC_ZITADEL_CLIENT_ID:-}
     expose:
       - "3000"
     environment:
@@ -106,7 +107,6 @@ services:
     build:
       context: ./docker/postgres
       dockerfile: Dockerfile
-    container_name: colophony-staging-postgres
     expose:
       - "5432"
     environment:
@@ -151,7 +151,6 @@ services:
 
   redis:
     image: redis:7-alpine
-    container_name: colophony-staging-redis
     expose:
       - "6379"
     command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD}
@@ -172,7 +171,6 @@ services:
 
   minio:
     image: minio/minio:latest
-    container_name: colophony-staging-minio
     expose:
       - "9000"
     environment:
@@ -196,7 +194,6 @@ services:
 
   minio-setup:
     image: minio/mc:latest
-    container_name: colophony-staging-minio-setup
     depends_on:
       minio:
         condition: service_healthy
@@ -217,7 +214,6 @@ services:
 
   tusd:
     image: tusproject/tusd:latest
-    container_name: colophony-staging-tusd
     expose:
       - "1080"
     environment:
@@ -257,7 +253,6 @@ services:
 
   clamav:
     image: clamav/clamav:stable
-    container_name: colophony-staging-clamav
     expose:
       - "3310"
     volumes:
@@ -283,7 +278,6 @@ services:
       context: .
       dockerfile: apps/api/Dockerfile
       target: builder
-    container_name: colophony-staging-migrate
     entrypoint: ["sh", "-c"]
     command:
       - |

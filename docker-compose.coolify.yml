@@ -1,0 +1,74 @@
+# Coolify overlay — used with: -f docker-compose.staging.yml -f docker-compose.coolify.yml
+# Adapts staging compose for Coolify/Traefik: removes host ports, adds labels, adds PgBouncer.
+
+services:
+  nginx:
+    ports: !reset []
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.colophony.rule=Host(`${DOMAIN}`)"
+      - "traefik.http.routers.colophony.entrypoints=https"
+      - "traefik.http.routers.colophony.tls.certresolver=letsencrypt"
+      - "traefik.http.services.colophony.loadbalancer.server.port=80"
+    networks:
+      colophony-staging: null
+      coolify: null
+
+  api:
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-colophony}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-colophony_staging}
+      DATABASE_APP_URL: postgresql://app_user:${APP_USER_PASSWORD}@pgbouncer:6432/${POSTGRES_DB:-colophony_staging}?sslmode=disable
+      CORS_ORIGIN: https://${DOMAIN}
+      APP_URL: https://${DOMAIN}
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      pgbouncer:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: https://${DOMAIN}/trpc
+        NEXT_PUBLIC_TUS_URL: https://${DOMAIN}/upload/files/
+        NEXT_PUBLIC_ZITADEL_AUTHORITY: ${NEXT_PUBLIC_ZITADEL_AUTHORITY}
+        NEXT_PUBLIC_ZITADEL_CLIENT_ID: ${NEXT_PUBLIC_ZITADEL_CLIENT_ID}
+
+  pgbouncer:
+    image: edoburu/pgbouncer:1.23.1-p2
+    expose:
+      - "6432"
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-colophony}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-colophony_staging}
+      APP_USER_PASSWORD: ${APP_USER_PASSWORD}
+      PGBOUNCER_DEFAULT_POOL_SIZE: ${PGBOUNCER_DEFAULT_POOL_SIZE:-10}
+      PGBOUNCER_MAX_CLIENT_CONN: ${PGBOUNCER_MAX_CLIENT_CONN:-100}
+      PGBOUNCER_MAX_DB_CONNECTIONS: ${PGBOUNCER_MAX_DB_CONNECTIONS:-25}
+    volumes:
+      - ./docker/pgbouncer/entrypoint.sh:/entrypoint.sh:ro
+    entrypoint: /entrypoint.sh
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -p 6432"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 64M
+    networks:
+      - colophony-staging
+
+networks:
+  coolify:
+    external: true
