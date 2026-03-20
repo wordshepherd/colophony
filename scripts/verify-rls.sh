@@ -211,15 +211,17 @@ fi
 # Check GRANT/REVOKE enforcement on restricted tables
 # journal_directory: app_user should have SELECT only
 JD_INSERT=$(psql_cmd -c "SELECT has_table_privilege('app_user', 'journal_directory', 'INSERT');")
+JD_UPDATE=$(psql_cmd -c "SELECT has_table_privilege('app_user', 'journal_directory', 'UPDATE');")
 JD_DELETE=$(psql_cmd -c "SELECT has_table_privilege('app_user', 'journal_directory', 'DELETE');")
 JD_SELECT=$(psql_cmd -c "SELECT has_table_privilege('app_user', 'journal_directory', 'SELECT');")
 
-if [ "$JD_SELECT" = "t" ] && [ "$JD_INSERT" = "f" ] && [ "$JD_DELETE" = "f" ]; then
-  pass "journal_directory: app_user has SELECT only (no INSERT/DELETE)"
+if [ "$JD_SELECT" = "t" ] && [ "$JD_INSERT" = "f" ] && [ "$JD_UPDATE" = "f" ] && [ "$JD_DELETE" = "f" ]; then
+  pass "journal_directory: app_user has SELECT only (no INSERT/UPDATE/DELETE)"
 elif [ "$JD_SELECT" = "" ]; then
   info "journal_directory table not found — skipping privilege check"
 else
   [ "$JD_INSERT" = "t" ] && fail "journal_directory: app_user has INSERT (should be SELECT only)"
+  [ "$JD_UPDATE" = "t" ] && fail "journal_directory: app_user has UPDATE (should be SELECT only)"
   [ "$JD_DELETE" = "t" ] && fail "journal_directory: app_user has DELETE (should be SELECT only)"
 fi
 
@@ -250,7 +252,9 @@ else
   echo ""
   echo -e "${BOLD}Category 4: Data Isolation${NC}"
 
-  ISOLATION_RESULT=$(psql_cmd -c "
+  # psql exits non-zero due to ROLLBACK_SENTINEL exception — capture without tripping set -e
+  ISOLATION_RESULT=""
+  if ISOLATION_RESULT=$(psql_cmd -c "
   DO \$\$
   DECLARE
     org_a_id uuid := gen_random_uuid();
@@ -308,7 +312,10 @@ else
     RAISE EXCEPTION 'ROLLBACK_SENTINEL';
   END;
   \$\$;
-  " 2>&1)
+  " 2>&1); then
+    # psql returned 0 — unexpected (ROLLBACK_SENTINEL should cause non-zero)
+    true
+  fi
 
   if echo "$ISOLATION_RESULT" | grep -q "ROLLBACK_SENTINEL"; then
     # All tests passed (the exception is our controlled rollback)

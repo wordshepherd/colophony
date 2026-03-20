@@ -101,8 +101,8 @@ if echo "$WAL_VERIFY" | grep -qi "error\|gap\|missing"; then
   ISSUES=1
 else
   echo -e "  ${GREEN}WAL chain is continuous${NC}"
-  if $VERBOSE 2>/dev/null; then
-    echo "$WAL_VERIFY"
+  if [ "$JSON_MODE" = "false" ]; then
+    echo "$WAL_VERIFY" | head -5
   fi
 fi
 

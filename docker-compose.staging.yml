@@ -128,7 +128,7 @@ services:
       - -c
       - archive_mode=on
       - -c
-      - archive_command=wal-g wal-push %p
+      - archive_command=test -n "$WALG_S3_PREFIX" && wal-g wal-push %p || true
       - -c
       - archive_timeout=60
       - -c
@@ -287,7 +287,7 @@ services:
     entrypoint: ["sh", "-c"]
     command:
       - |
-        apk add --no-cache postgresql16-client
+        apk add --no-cache postgresql16-client bash
         /app/scripts/init-prod.sh
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-colophony}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-colophony_staging}
