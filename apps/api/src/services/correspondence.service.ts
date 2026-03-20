@@ -74,7 +74,8 @@ export const correspondenceService = {
       .select()
       .from(correspondence)
       .where(eq(correspondence.submissionId, submissionId))
-      .orderBy(desc(correspondence.sentAt));
+      .orderBy(desc(correspondence.sentAt))
+      .limit(500);
 
     return rows;
   },
