@@ -103,7 +103,9 @@ services:
       - colophony-staging
 
   postgres:
-    image: postgres:16-alpine
+    build:
+      context: ./docker/postgres
+      dockerfile: Dockerfile
     container_name: colophony-staging-postgres
     expose:
       - "5432"
@@ -112,6 +114,25 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB:-colophony_staging}
       APP_USER_PASSWORD: ${APP_USER_PASSWORD}
+      # WAL-G backup config (omit BACKUP_S3_PREFIX to disable backups in staging)
+      WALG_S3_PREFIX: ${BACKUP_S3_PREFIX:-}
+      AWS_ACCESS_KEY_ID: ${BACKUP_S3_ACCESS_KEY:-}
+      AWS_SECRET_ACCESS_KEY: ${BACKUP_S3_SECRET_KEY:-}
+      AWS_REGION: ${BACKUP_S3_REGION:-us-east-1}
+      AWS_ENDPOINT: ${BACKUP_S3_ENDPOINT:-}
+      AWS_S3_FORCE_PATH_STYLE: ${BACKUP_S3_FORCE_PATH_STYLE:-false}
+      WALG_COMPRESSION_METHOD: ${BACKUP_COMPRESSION:-lz4}
+      BACKUP_RETAIN_DAYS: ${BACKUP_RETAIN_DAYS:-7}
+    command:
+      - postgres
+      - -c
+      - archive_mode=on
+      - -c
+      - archive_command=test -n "$WALG_S3_PREFIX" && wal-g wal-push %p || true
+      - -c
+      - archive_timeout=60
+      - -c
+      - wal_level=replica
     volumes:
       - staging_postgres_data:/var/lib/postgresql/data
       - ./scripts/init-db.sh:/docker-entrypoint-initdb.d/init-db.sh:ro
@@ -266,13 +287,14 @@ services:
     entrypoint: ["sh", "-c"]
     command:
       - |
-        apk add --no-cache postgresql16-client
+        apk add --no-cache postgresql16-client bash
         /app/scripts/init-prod.sh
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-colophony}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-colophony_staging}
-      APP_DATABASE_URL: postgresql://app_user:${APP_USER_PASSWORD}@postgres:5432/${POSTGRES_DB:-colophony_staging}
+      DATABASE_APP_URL: postgresql://app_user:${APP_USER_PASSWORD}@postgres:5432/${POSTGRES_DB:-colophony_staging}
     volumes:
       - ./scripts/init-prod.sh:/app/scripts/init-prod.sh:ro
+      - ./scripts/verify-rls.sh:/app/scripts/verify-rls.sh:ro
     depends_on:
       postgres:
         condition: service_healthy
