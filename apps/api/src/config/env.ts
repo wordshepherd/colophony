@@ -79,7 +79,10 @@ const envSchema = z
     // Optional — validated when modules wire up
     STRIPE_SECRET_KEY: z.string().optional(),
     STRIPE_WEBHOOK_SECRET: z.string().optional(),
-    ZITADEL_AUTHORITY: z.string().url().optional(),
+    ZITADEL_AUTHORITY: z
+      .string()
+      .transform((v) => (v === '' ? undefined : v))
+      .pipe(z.string().url().optional()),
     ZITADEL_CLIENT_ID: z.string().optional(),
     ZITADEL_WEBHOOK_SECRET: z.string().optional(),
     DEV_AUTH_BYPASS: z
@@ -119,7 +122,10 @@ const envSchema = z
       .transform((v) => v === 'true'),
 
     // Documenso contract signing
-    DOCUMENSO_API_URL: z.string().url().optional(),
+    DOCUMENSO_API_URL: z
+      .string()
+      .transform((v) => (v === '' ? undefined : v))
+      .pipe(z.string().url().optional()),
     DOCUMENSO_API_KEY: z.string().optional(),
     DOCUMENSO_WEBHOOK_SECRET: z.string().optional(),
 
@@ -142,7 +148,10 @@ const envSchema = z
     SENDGRID_FROM: z.string().optional(),
 
     // Monitoring — Sentry
-    SENTRY_DSN: z.string().url().optional(),
+    SENTRY_DSN: z
+      .string()
+      .transform((v) => (v === '' ? undefined : v))
+      .pipe(z.string().url().optional()),
     SENTRY_ENVIRONMENT: z.string().default('development'),
     SENTRY_TRACES_SAMPLE_RATE: z.coerce.number().min(0).max(1).default(0),
     SENTRY_RELEASE: z.string().optional(),
