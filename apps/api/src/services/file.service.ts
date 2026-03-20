@@ -82,7 +82,8 @@ export const fileService = {
       .select()
       .from(files)
       .where(eq(files.manuscriptVersionId, manuscriptVersionId))
-      .orderBy(asc(files.uploadedAt));
+      .orderBy(asc(files.uploadedAt))
+      .limit(100);
   },
 
   async getById(tx: DrizzleDb, fileId: string) {

@@ -732,7 +732,8 @@ export const submissionService = {
       .select()
       .from(submissionHistory)
       .where(eq(submissionHistory.submissionId, submissionId))
-      .orderBy(asc(submissionHistory.changedAt));
+      .orderBy(asc(submissionHistory.changedAt))
+      .limit(1000);
   },
 
   // ---------------------------------------------------------------------------

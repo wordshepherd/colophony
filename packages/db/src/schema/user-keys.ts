@@ -61,4 +61,4 @@ export const userKeys = pgTable(
       withCheck: sql`user_id = current_setting('app.user_id', true)::uuid`,
     }),
   ],
-);
+).enableRLS();

@@ -35,15 +35,17 @@ export const hubClientService = {
       protocolVersion: '1.0',
     });
 
-    const response = await fetch(
-      `https://${env.HUB_DOMAIN}/federation/v1/hub/register`,
-      {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body,
-        signal: AbortSignal.timeout(10_000),
-      },
-    );
+    const registerUrl = `https://${env.HUB_DOMAIN}/federation/v1/hub/register`;
+    const devMode =
+      process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test';
+    await validateOutboundUrl(registerUrl, { devMode });
+
+    const response = await fetch(registerUrl, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body,
+      signal: AbortSignal.timeout(10_000),
+    });
 
     if (!response.ok) {
       const text = await response.text().catch(() => '');
@@ -92,6 +94,10 @@ export const hubClientService = {
     });
 
     const url = `https://${env.HUB_DOMAIN}/federation/v1/hub/fingerprints/register`;
+    const devMode =
+      process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test';
+    await validateOutboundUrl(url, { devMode });
+
     const { headers } = signFederationRequest({
       method: 'POST',
       url,
@@ -128,6 +134,10 @@ export const hubClientService = {
     });
 
     const url = `https://${env.HUB_DOMAIN}/federation/v1/hub/fingerprints/lookup`;
+    const devMode =
+      process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test';
+    await validateOutboundUrl(url, { devMode });
+
     const { headers } = signFederationRequest({
       method: 'POST',
       url,
