@@ -23,12 +23,6 @@ services:
       resources:
         limits:
           memory: 128M
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.colophony.rule=Host(`${DOMAIN}`)"
-      - "traefik.http.routers.colophony.entrypoints=https"
-      - "traefik.http.routers.colophony.tls.certresolver=letsencrypt"
-      - "traefik.http.services.colophony.loadbalancer.server.port=80"
     networks:
       - colophony-staging
       - coolify
