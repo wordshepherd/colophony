@@ -229,58 +229,106 @@ nginx:
 echo "0 3 * * * certbot renew --pre-hook 'docker compose -f /path/to/docker-compose.prod.yml stop nginx' --post-hook 'docker compose -f /path/to/docker-compose.prod.yml start nginx'" | crontab -
 ```
 
-## Backup & Restore
+## Backup & Restore (WAL-G)
 
-### Database backup
+Colophony uses [WAL-G](https://github.com/wal-g/wal-g) for continuous PostgreSQL backups:
+
+- **WAL archival** — every committed transaction is streamed to S3 in near-real-time
+- **Daily base backups** — full backup at 3:00 AM UTC via cron inside the postgres container
+- **Retention** — old backups pruned at 4:30 AM UTC (default: keep 7 full backups)
+- **PITR** — point-in-time recovery to any moment between backups
+
+### Configuration
+
+Add `BACKUP_*` variables to `.env.prod` (see `docker/postgres/wal-g.env.example` for full reference):
+
+| Variable                     | Required | Default     | Description                                            |
+| ---------------------------- | -------- | ----------- | ------------------------------------------------------ |
+| `BACKUP_S3_PREFIX`           | Yes      | —           | S3 bucket + path (e.g., `s3://colophony-backups/prod`) |
+| `BACKUP_S3_ACCESS_KEY`       | Yes      | —           | S3 access key                                          |
+| `BACKUP_S3_SECRET_KEY`       | Yes      | —           | S3 secret key                                          |
+| `BACKUP_S3_REGION`           | No       | `us-east-1` | AWS region                                             |
+| `BACKUP_S3_ENDPOINT`         | No       | —           | Custom endpoint (Backblaze, Wasabi, MinIO)             |
+| `BACKUP_S3_FORCE_PATH_STYLE` | No       | `false`     | `true` for MinIO                                       |
+| `BACKUP_COMPRESSION`         | No       | `lz4`       | Compression: lz4, lzma, zstd, brotli                   |
+| `BACKUP_RETAIN_DAYS`         | No       | `7`         | Number of full backups to retain                       |
+
+Provider examples (AWS S3, Backblaze B2, Wasabi, local MinIO) are in `docker/postgres/wal-g.env.example`.
+
+Backups are disabled if `BACKUP_S3_PREFIX` is not set (entrypoint skips cron startup).
+
+### Manual backup
 
 ```bash
-# Backup
-docker compose --env-file .env.prod -f docker-compose.prod.yml exec postgres \
-  pg_dump -U colophony colophony > backup_$(date +%Y%m%d).sql
-
-# Restore
-docker compose --env-file .env.prod -f docker-compose.prod.yml exec -T postgres \
-  psql -U colophony colophony < backup_20260210.sql
+bash scripts/backup-db.sh            # Push a full base backup now
+bash scripts/backup-db.sh --dry-run  # Preview without executing
 ```
 
-### Full volume backup
+### Verify backups
 
 ```bash
-# Stop services
-docker compose --env-file .env.prod -f docker-compose.prod.yml down
+bash scripts/verify-backup.sh        # List backups + WAL chain check
+bash scripts/verify-backup.sh --json # Machine-readable output
+```
 
-# Backup volumes
-docker run --rm \
-  -v colophony_postgres_data:/data \
-  -v $(pwd):/backup \
+### Restore
+
+```bash
+# Restore from latest backup
+bash scripts/restore-backup.sh --latest --confirm
+
+# Point-in-time recovery (restore to a specific moment)
+bash scripts/restore-backup.sh --latest --pitr "2026-03-19 14:00:00 UTC" --confirm
+
+# Restore a specific named backup
+bash scripts/restore-backup.sh base_000000010000000000000005 --confirm
+
+# Preview what would happen
+bash scripts/restore-backup.sh --latest --dry-run
+```
+
+The restore script stops services, fetches the backup, configures recovery, restarts PostgreSQL, verifies RLS, and brings application services back up.
+
+### Legacy volume backup (fallback)
+
+For environments without WAL-G, volume snapshots still work as a fallback:
+
+```bash
+# Stop, backup volumes, restart
+docker compose --env-file .env.prod -f docker-compose.prod.yml down
+docker run --rm -v colophony_postgres_data:/data -v $(pwd):/backup \
   alpine tar czf /backup/postgres_data.tar.gz -C /data .
-
-docker run --rm \
-  -v colophony_minio_data:/data \
-  -v $(pwd):/backup \
-  alpine tar czf /backup/minio_data.tar.gz -C /data .
-
-docker run --rm \
-  -v colophony_redis_data:/data \
-  -v $(pwd):/backup \
-  alpine tar czf /backup/redis_data.tar.gz -C /data .
-
-# Start services
 docker compose --env-file .env.prod -f docker-compose.prod.yml up -d
 ```
 
-### Restore from volume backup
+## RLS Verification
+
+Row-Level Security is verified automatically during every deploy (structural checks only).
+
+### Automatic (every deploy)
+
+The `migrate` service runs `verify-rls.sh --structural-only` after migrations. This checks:
+
+- All tenant tables have RLS enabled + forced
+- `app_user` and `audit_writer` roles have correct permissions
+- Every RLS table has at least one policy
+- GRANT/REVOKE enforcement on restricted tables
+
+### Full verification (manual)
+
+Run the complete behavioral test suite for go-live and after schema changes:
 
 ```bash
-docker compose --env-file .env.prod -f docker-compose.prod.yml down
+# Against local dev database
+DATABASE_URL=postgresql://colophony:colophony@localhost:5432/colophony \
+  bash scripts/verify-rls.sh
 
-docker run --rm \
-  -v colophony_postgres_data:/data \
-  -v $(pwd):/backup \
-  alpine sh -c "rm -rf /data/* && tar xzf /backup/postgres_data.tar.gz -C /data"
-
-docker compose --env-file .env.prod -f docker-compose.prod.yml up -d
+# Against production (via Docker)
+docker compose --env-file .env.prod -f docker-compose.prod.yml exec postgres \
+  bash /app/scripts/verify-rls.sh --verbose
 ```
+
+Full verification adds data isolation tests (cross-org visibility, cross-org INSERT rejection) and permission restriction tests (append-only tables, audit immutability). All behavioral tests run inside `BEGIN; ... ROLLBACK;` — zero data footprint.
 
 ## Updating
 

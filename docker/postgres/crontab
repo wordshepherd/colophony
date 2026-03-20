@@ -1,0 +1,8 @@
+# WAL-G backup schedule for Colophony PostgreSQL
+# Env vars are sourced from /env.sh (written by docker-entrypoint-walg.sh at boot)
+
+# Daily base backup at 3:00 AM UTC
+0 3 * * * . /env.sh && /usr/local/bin/wal-g backup-push /var/lib/postgresql/data 2>&1 | tee -a /var/log/wal-g-backup.log
+
+# Retention cleanup at 4:30 AM UTC (keep BACKUP_RETAIN_DAYS full backups, default 7)
+30 4 * * * . /env.sh && /usr/local/bin/wal-g delete retain FULL ${BACKUP_RETAIN_DAYS:-7} --confirm 2>&1 | tee -a /var/log/wal-g-retention.log
