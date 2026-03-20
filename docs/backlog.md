@@ -515,14 +515,14 @@
 
 ### Schema Bugs
 
-- [ ] [P2] `userKeys` table has `pgPolicy` definitions but missing `.enableRLS()` — RLS policies defined but not activated. Add `.enableRLS()` + generate migration — (DEVLOG 2026-03-19, RLS verification)
+- [x] [P2] `userKeys` table has `pgPolicy` definitions but missing `.enableRLS()` — RLS policies defined but not activated. Add `.enableRLS()` + generate migration — (DEVLOG 2026-03-19, RLS verification; done 2026-03-20)
 
 ### Security & Compliance
 
 - [x] Rotate credentials quarterly — done 2026-03-19, `scripts/rotate-secrets.sh` + `docs/credential-rotation.md` — (CLAUDE.md)
 - [x] AGPL license boundary documented (Zitadel is AGPL) — done 2026-03-02 `docs/licensing.md` — (CLAUDE.md)
-- [ ] [P2] Verify SSRF protection in `hub-client.service.ts` — `fetch()` calls at lines 38/104/141/199; `validateOutboundUrl` is imported but may not be called before every fetch — (Codex plan review 2026-03-19)
-- [ ] [P3] Add LIMIT to unbounded queries — `correspondence.service.ts:70`, `submission.service.ts:730`, `file.service.ts:80` — (Codex plan review 2026-03-19)
+- [x] [P2] Verify SSRF protection in `hub-client.service.ts` — `fetch()` calls at lines 38/104/141/199; `validateOutboundUrl` is imported but may not be called before every fetch — (Codex plan review 2026-03-19; done 2026-03-20)
+- [x] [P3] Add LIMIT to unbounded queries — `correspondence.service.ts:70`, `submission.service.ts:730`, `file.service.ts:80` — (Codex plan review 2026-03-19; done 2026-03-20)
 
 ### Monitoring
 

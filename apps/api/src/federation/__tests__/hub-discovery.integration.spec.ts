@@ -60,6 +60,7 @@ vi.mock('../audit.service.js', () => ({
 }));
 
 vi.mock('../../lib/url-validation.js', () => ({
+  validateOutboundUrl: vi.fn(),
   resolveAndCheckPrivateIp: vi.fn(),
   SsrfValidationError: class extends Error {},
 }));

@@ -135,8 +135,9 @@ describe('correspondenceService', () => {
         { id: 'c2', sentAt: new Date('2026-01-01') },
       ];
       const svc = makeSvc('EDITOR');
-      // Override the chain for list: select().from().where().orderBy()
-      const localOrderBy = vi.fn().mockReturnValue(rows);
+      // Override the chain for list: select().from().where().orderBy().limit()
+      const localLimit = vi.fn().mockReturnValue(rows);
+      const localOrderBy = vi.fn().mockReturnValue({ limit: localLimit });
       const localWhere = vi.fn().mockReturnValue({ orderBy: localOrderBy });
       const localFrom = vi.fn().mockReturnValue({ where: localWhere });
       const localSelect = vi.fn().mockReturnValue({ from: localFrom });
