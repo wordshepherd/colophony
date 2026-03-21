@@ -5,9 +5,11 @@ let mockRows: Array<Record<string, unknown>> = [];
 
 const mockReturning = vi.fn().mockImplementation(() => mockRows);
 const mockWhere = vi.fn().mockImplementation(() => mockRows);
-const mockOrderBy = vi.fn().mockImplementation(() => mockRows);
+const mockLimit = vi.fn().mockImplementation(() => mockRows);
+const mockOrderBy = vi.fn().mockImplementation(() => ({ limit: mockLimit }));
 const mockValues = vi.fn().mockReturnValue({ returning: mockReturning });
-const mockSet = vi.fn().mockReturnValue({ where: mockWhere });
+const mockUpdateWhere = vi.fn().mockReturnValue({ returning: mockReturning });
+const mockSet = vi.fn().mockReturnValue({ where: mockUpdateWhere });
 
 const mockFrom = vi.fn().mockReturnValue({
   where: vi.fn().mockImplementation(() => mockRows),
@@ -77,14 +79,14 @@ describe('queuePresetService', () => {
         { id: 'p-1', name: 'Alpha' },
         { id: 'p-2', name: 'Beta' },
       ];
-      mockOrderBy.mockResolvedValue(presets);
+      mockLimit.mockResolvedValue(presets);
       mockFrom.mockReturnValue({
         where: vi.fn().mockReturnValue({
-          orderBy: mockOrderBy,
+          orderBy: vi.fn().mockReturnValue({ limit: mockLimit }),
         }),
       });
 
-      const result = await queuePresetService.list(makeTx(), 'user-1');
+      const result = await queuePresetService.list(makeTx(), 'user-1', 'org-1');
       expect(result).toEqual(presets);
     });
   });
@@ -131,7 +133,7 @@ describe('queuePresetService', () => {
       });
 
       await expect(
-        queuePresetService.delete(makeTx(), 'user-1', 'p-missing'),
+        queuePresetService.delete(makeTx(), 'user-1', 'org-1', 'p-missing'),
       ).rejects.toThrow(PresetNotFoundError);
     });
   });
@@ -143,7 +145,7 @@ describe('queuePresetService', () => {
       });
 
       await expect(
-        queuePresetService.update(makeTx(), 'user-1', {
+        queuePresetService.update(makeTx(), 'user-1', 'org-1', {
           id: 'p-missing',
           name: 'New name',
         }),

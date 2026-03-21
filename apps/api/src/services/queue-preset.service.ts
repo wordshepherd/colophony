@@ -46,12 +46,18 @@ function isUniqueViolation(err: unknown): boolean {
 const MAX_PRESETS = 20;
 
 export const queuePresetService = {
-  async list(tx: DrizzleDb, userId: string) {
+  async list(tx: DrizzleDb, userId: string, organizationId: string) {
     return tx
       .select()
       .from(savedQueuePresets)
-      .where(eq(savedQueuePresets.userId, userId))
-      .orderBy(asc(savedQueuePresets.name));
+      .where(
+        and(
+          eq(savedQueuePresets.userId, userId),
+          eq(savedQueuePresets.organizationId, organizationId),
+        ),
+      )
+      .orderBy(asc(savedQueuePresets.name))
+      .limit(100);
   },
 
   async create(
@@ -68,6 +74,7 @@ export const queuePresetService = {
         .where(
           and(
             eq(savedQueuePresets.userId, userId),
+            eq(savedQueuePresets.organizationId, organizationId),
             eq(savedQueuePresets.isDefault, true),
           ),
         );
@@ -88,7 +95,8 @@ export const queuePresetService = {
       INSERT INTO saved_queue_presets (organization_id, user_id, name, filters, is_default)
       SELECT ${organizationId}, ${userId}, ${input.name}, ${JSON.stringify(input.filters)}::jsonb, ${isDefault}
       WHERE (
-        SELECT count(*) FROM saved_queue_presets WHERE user_id = ${userId}
+        SELECT count(*) FROM saved_queue_presets
+        WHERE user_id = ${userId} AND organization_id = ${organizationId}
       ) < ${MAX_PRESETS}
       RETURNING *
     `);
@@ -101,7 +109,12 @@ export const queuePresetService = {
     return row;
   },
 
-  async update(tx: DrizzleDb, userId: string, input: UpdateQueuePresetInput) {
+  async update(
+    tx: DrizzleDb,
+    userId: string,
+    organizationId: string,
+    input: UpdateQueuePresetInput,
+  ) {
     // Check ownership
     const [existing] = await tx
       .select({ id: savedQueuePresets.id })
@@ -110,6 +123,7 @@ export const queuePresetService = {
         and(
           eq(savedQueuePresets.id, input.id),
           eq(savedQueuePresets.userId, userId),
+          eq(savedQueuePresets.organizationId, organizationId),
         ),
       );
 
@@ -125,6 +139,7 @@ export const queuePresetService = {
         .where(
           and(
             eq(savedQueuePresets.userId, userId),
+            eq(savedQueuePresets.organizationId, organizationId),
             eq(savedQueuePresets.isDefault, true),
             ne(savedQueuePresets.id, input.id),
           ),
@@ -140,7 +155,12 @@ export const queuePresetService = {
       const [row] = await tx
         .update(savedQueuePresets)
         .set(updates)
-        .where(eq(savedQueuePresets.id, input.id))
+        .where(
+          and(
+            eq(savedQueuePresets.id, input.id),
+            eq(savedQueuePresets.organizationId, organizationId),
+          ),
+        )
         .returning();
 
       return row;
@@ -152,19 +172,35 @@ export const queuePresetService = {
     }
   },
 
-  async delete(tx: DrizzleDb, userId: string, id: string) {
+  async delete(
+    tx: DrizzleDb,
+    userId: string,
+    organizationId: string,
+    id: string,
+  ) {
     const [existing] = await tx
       .select({ id: savedQueuePresets.id })
       .from(savedQueuePresets)
       .where(
-        and(eq(savedQueuePresets.id, id), eq(savedQueuePresets.userId, userId)),
+        and(
+          eq(savedQueuePresets.id, id),
+          eq(savedQueuePresets.userId, userId),
+          eq(savedQueuePresets.organizationId, organizationId),
+        ),
       );
 
     if (!existing) {
       throw new PresetNotFoundError(id);
     }
 
-    await tx.delete(savedQueuePresets).where(eq(savedQueuePresets.id, id));
+    await tx
+      .delete(savedQueuePresets)
+      .where(
+        and(
+          eq(savedQueuePresets.id, id),
+          eq(savedQueuePresets.organizationId, organizationId),
+        ),
+      );
 
     return { deleted: true };
   },
