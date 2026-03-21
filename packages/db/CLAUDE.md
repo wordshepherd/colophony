@@ -131,7 +131,9 @@ See migration 0031 (`federation_cleanup`) and its test suite (`migration-enum-ca
 2. **`scripts/init-db.sh`** — so fresh dev databases are correct from first boot
 3. **`scripts/init-prod.sh`** — so production re-grants don't restore DELETE
 
-Current restricted tables: `user_keys`, `trusted_peers`, `sim_sub_checks`, `inbound_transfers`, `documenso_webhook_events`. See migration `0052_revoke_delete_restricted_tables.sql`.
+Current restricted tables (DELETE-only revoke): `user_keys`, `trusted_peers`, `sim_sub_checks`, `inbound_transfers`, `documenso_webhook_events`. See migration `0052_revoke_delete_restricted_tables.sql`.
+
+**SELECT-only tables** (REVOKE INSERT, UPDATE, DELETE): `journal_directory` (writes via superuser pool), `audit_events` (writes via `insert_audit_event()` SECURITY DEFINER). See migration `0054_revoke_journal_audit_permissions.sql`. Same three-place pattern applies.
 
 ### Production RLS Verification
 
