@@ -142,7 +142,7 @@ describe('queuePresetService', () => {
       } as never;
 
       await expect(
-        queuePresetService.update(tx, 'user-1', {
+        queuePresetService.update(tx, 'user-1', 'org-1', {
           id: 'preset-1',
           isDefault: true,
         }),

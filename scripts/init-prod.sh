@@ -78,6 +78,13 @@ REVOKE DELETE ON "trusted_peers" FROM app_user;
 REVOKE DELETE ON "sim_sub_checks" FROM app_user;
 REVOKE DELETE ON "inbound_transfers" FROM app_user;
 REVOKE DELETE ON "documenso_webhook_events" FROM app_user;
+
+-- Revoke INSERT, UPDATE, DELETE on SELECT-only tables.
+-- journal_directory: writes via superuser pool only.
+-- audit_events: writes via insert_audit_event() SECURITY DEFINER only.
+-- Keep in sync with migration 0054_revoke_journal_audit_permissions.sql.
+REVOKE INSERT, UPDATE, DELETE ON "journal_directory" FROM app_user;
+REVOKE INSERT, UPDATE, DELETE ON "audit_events" FROM app_user;
 EOSQL
 
 echo "Permissions granted."

@@ -30,6 +30,7 @@ export const queuePresetsRouter = createRouter({
         const rows = await queuePresetService.list(
           ctx.dbTx,
           ctx.authContext.userId,
+          ctx.authContext.orgId,
         );
         return rows.map(toPreset);
       } catch (e) {
@@ -64,6 +65,7 @@ export const queuePresetsRouter = createRouter({
         const row = await queuePresetService.update(
           ctx.dbTx,
           ctx.authContext.userId,
+          ctx.authContext.orgId,
           input,
         );
         return toPreset(row);
@@ -81,6 +83,7 @@ export const queuePresetsRouter = createRouter({
         return await queuePresetService.delete(
           ctx.dbTx,
           ctx.authContext.userId,
+          ctx.authContext.orgId,
           input.id,
         );
       } catch (e) {
