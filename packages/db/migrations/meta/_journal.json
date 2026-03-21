@@ -379,6 +379,13 @@
       "when": 1779800000000,
       "tag": "0053_user_keys_enable_rls",
       "breakpoints": true
+    },
+    {
+      "idx": 54,
+      "version": "7",
+      "when": 1780000000000,
+      "tag": "0054_revoke_journal_audit_permissions",
+      "breakpoints": true
     }
   ]
 }

@@ -52,6 +52,23 @@ psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-E
     END
     \$\$;
 
+    -- Revoke INSERT, UPDATE, DELETE on SELECT-only tables (if they exist).
+    -- journal_directory: writes via superuser pool only.
+    -- audit_events: writes via insert_audit_event() SECURITY DEFINER only.
+    -- Keep in sync with migration 0054_revoke_journal_audit_permissions.sql.
+    DO \$\$
+    DECLARE
+        tbl TEXT;
+    BEGIN
+        FOREACH tbl IN ARRAY ARRAY['journal_directory','audit_events']
+        LOOP
+            IF EXISTS (SELECT 1 FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace WHERE n.nspname = 'public' AND c.relname = tbl) THEN
+                EXECUTE format('REVOKE INSERT, UPDATE, DELETE ON %I FROM app_user', tbl);
+            END IF;
+        END LOOP;
+    END
+    \$\$;
+
     -- Create audit_writer role for tamper-proof audit trail
     -- NOLOGIN: only used as SECURITY DEFINER function owner, never connects directly
     DO \$\$

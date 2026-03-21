@@ -227,15 +227,17 @@ fi
 
 # audit_events: app_user should have SELECT only (INSERT via audit_writer function)
 AE_INSERT=$(psql_cmd -c "SELECT has_table_privilege('app_user', 'audit_events', 'INSERT');" 2>/dev/null || echo "")
+AE_UPDATE=$(psql_cmd -c "SELECT has_table_privilege('app_user', 'audit_events', 'UPDATE');" 2>/dev/null || echo "")
 AE_DELETE=$(psql_cmd -c "SELECT has_table_privilege('app_user', 'audit_events', 'DELETE');" 2>/dev/null || echo "")
 AE_SELECT=$(psql_cmd -c "SELECT has_table_privilege('app_user', 'audit_events', 'SELECT');" 2>/dev/null || echo "")
 
 if [ -z "$AE_SELECT" ]; then
   info "audit_events table not found — skipping privilege check"
-elif [ "$AE_SELECT" = "t" ] && [ "$AE_INSERT" = "f" ] && [ "$AE_DELETE" = "f" ]; then
+elif [ "$AE_SELECT" = "t" ] && [ "$AE_INSERT" = "f" ] && [ "$AE_UPDATE" = "f" ] && [ "$AE_DELETE" = "f" ]; then
   pass "audit_events: app_user has SELECT only (INSERT via audit_writer function)"
 else
   [ "$AE_INSERT" = "t" ] && fail "audit_events: app_user has direct INSERT (should use audit_writer function)"
+  [ "$AE_UPDATE" = "t" ] && fail "audit_events: app_user has UPDATE (should be SELECT only)"
   [ "$AE_DELETE" = "t" ] && fail "audit_events: app_user has DELETE on audit_events"
 fi
 
