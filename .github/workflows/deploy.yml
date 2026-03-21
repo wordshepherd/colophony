@@ -75,9 +75,6 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      - name: Generate Prisma client
-        run: pnpm db:generate
-
       - name: Type check
         run: pnpm type-check
 
@@ -87,7 +84,7 @@ jobs:
           NEXT_PUBLIC_API_URL: placeholder
 
   # ──────────────────────────────────────────────────
-  # Deploy to staging (auto on push to main)
+  # Deploy to staging via Coolify webhook
   # ──────────────────────────────────────────────────
   deploy-staging:
     name: Deploy to Staging
@@ -98,37 +95,32 @@ jobs:
       contents: read
     environment:
       name: staging
-      url: http://${{ vars.STAGING_DOMAIN }}
+      url: https://${{ vars.STAGING_DOMAIN }}
     steps:
-      - uses: actions/checkout@v6
-        with:
-          ref: ${{ needs.prepare.outputs.ref }}
+      - name: Trigger Coolify deployment
+        run: |
+          RESPONSE=$(curl -sf --max-time 30 \
+            -X GET \
+            "${{ secrets.COOLIFY_WEBHOOK_URL }}" \
+            2>&1) || {
+            echo "Failed to trigger Coolify webhook"
+            echo "Response: $RESPONSE"
+            exit 1
+          }
+          echo "Coolify deployment triggered"
 
-      - name: Deploy to staging
-        uses: appleboy/ssh-action@v1
-        with:
-          host: ${{ secrets.STAGING_HOST }}
-          username: ${{ secrets.STAGING_USER }}
-          key: ${{ secrets.STAGING_SSH_KEY }}
-          script: |
-            cd ${{ vars.STAGING_APP_DIR }}
-            git fetch origin main
-            git checkout ${{ needs.prepare.outputs.ref }}
-            docker compose -f docker-compose.staging.yml --env-file .env.staging build
-            docker compose -f docker-compose.staging.yml --env-file .env.staging up -d
-            echo "Waiting for health checks..."
-            sleep 15
-            docker compose -f docker-compose.staging.yml ps
+      - name: Wait for deployment
+        run: sleep 30
 
       - name: Verify deployment
         run: |
-          for i in $(seq 1 5); do
-            if curl -sf "http://${{ vars.STAGING_DOMAIN }}/health" > /dev/null 2>&1; then
+          for i in $(seq 1 10); do
+            if curl -sf "https://${{ vars.STAGING_DOMAIN }}/health" > /dev/null 2>&1; then
               echo "Staging is healthy"
               exit 0
             fi
-            echo "Attempt $i/5 — waiting..."
-            sleep 10
+            echo "Attempt $i/10 — waiting..."
+            sleep 15
           done
           echo "Staging health check failed"
           exit 1
@@ -145,7 +137,7 @@ jobs:
       contents: read
     environment:
       name: production
-      url: http://${{ vars.PRODUCTION_DOMAIN }}
+      url: https://${{ vars.PRODUCTION_DOMAIN }}
     steps:
       - uses: actions/checkout@v6
         with:
@@ -170,7 +162,7 @@ jobs:
       - name: Verify deployment
         run: |
           for i in $(seq 1 5); do
-            if curl -sf "http://${{ vars.PRODUCTION_DOMAIN }}/health" > /dev/null 2>&1; then
+            if curl -sf "https://${{ vars.PRODUCTION_DOMAIN }}/health" > /dev/null 2>&1; then
               echo "Production is healthy"
               exit 0
             fi

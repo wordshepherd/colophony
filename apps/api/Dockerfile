@@ -6,6 +6,9 @@ COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
 COPY packages/db/package.json packages/db/
 COPY packages/types/package.json packages/types/
 COPY packages/typescript-config/package.json packages/typescript-config/
+COPY packages/auth-client/package.json packages/auth-client/
+COPY packages/plugin-sdk/package.json packages/plugin-sdk/
+COPY packages/api-contracts/package.json packages/api-contracts/
 COPY apps/api/package.json apps/api/
 RUN pnpm install --frozen-lockfile
 
@@ -13,8 +16,12 @@ RUN pnpm install --frozen-lockfile
 FROM deps AS builder
 COPY packages/ packages/
 COPY apps/api/ apps/api/
+COPY scripts/ scripts/
 RUN pnpm --filter @colophony/types build
 RUN pnpm --filter @colophony/db build
+RUN pnpm --filter @colophony/auth-client build
+RUN pnpm --filter @colophony/plugin-sdk build
+RUN pnpm --filter @colophony/api-contracts build
 RUN pnpm --filter @colophony/api build
 # Deploy creates a standalone directory with production deps (pnpm's Docker approach)
 RUN pnpm --filter @colophony/api deploy --prod /app/deploy
@@ -34,6 +41,12 @@ COPY --from=builder /app/packages/db/dist ./node_modules/@colophony/db/dist
 COPY --from=builder /app/packages/db/package.json ./node_modules/@colophony/db/package.json
 COPY --from=builder /app/packages/types/dist ./node_modules/@colophony/types/dist
 COPY --from=builder /app/packages/types/package.json ./node_modules/@colophony/types/package.json
+COPY --from=builder /app/packages/auth-client/dist ./node_modules/@colophony/auth-client/dist
+COPY --from=builder /app/packages/auth-client/package.json ./node_modules/@colophony/auth-client/package.json
+COPY --from=builder /app/packages/plugin-sdk/dist ./node_modules/@colophony/plugin-sdk/dist
+COPY --from=builder /app/packages/plugin-sdk/package.json ./node_modules/@colophony/plugin-sdk/package.json
+COPY --from=builder /app/packages/api-contracts/dist ./node_modules/@colophony/api-contracts/dist
+COPY --from=builder /app/packages/api-contracts/package.json ./node_modules/@colophony/api-contracts/package.json
 
 # Copy Drizzle migrations (for production CD init step, not run at API startup)
 COPY --from=builder /app/packages/db/migrations ./migrations
