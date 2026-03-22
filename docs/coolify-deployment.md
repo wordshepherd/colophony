@@ -196,7 +196,9 @@ Check that the compose file paths are exactly: `docker-compose.staging.yml;docke
 
 ### 502 Bad Gateway after deploy
 
-Services may still be starting. Wait 30-60 seconds for healthchecks. Check Coolify logs for the `api` service.
+Services may still be starting. Wait for all healthchecks to go green in the Coolify dashboard (typically 30-60 seconds). Check Coolify logs for the `api` service.
+
+nginx uses Docker's embedded DNS resolver (`127.0.0.11`) with 10-second TTL to dynamically resolve upstream container IPs. This prevents stale routing after container recreation during redeploys. If you still see gateway timeouts, check that the nginx container itself restarted (it depends on `api` and `web` healthchecks).
 
 ### OIDC redirect fails
 

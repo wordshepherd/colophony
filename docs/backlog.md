@@ -511,7 +511,7 @@
 - [x] [P3] Connect Inngest Cloud to staging — event key + signing key — (DEVLOG 2026-03-20; done 2026-03-22)
 - [x] [P3] Coolify IPv6 network bug — `coolify` Docker network gets malformed IPv6 gateway on Hetzner; manual recreate needed after Coolify install — (DEVLOG 2026-03-20; confirmed fixed 2026-03-22)
 - [x] [P3] Investigate webhook rate limit Redis error — every Zitadel webhook request logs "Webhook rate limit Redis error — allowing request"; non-fatal but indicates Redis connection issue for webhook-specific rate limiter — (DEVLOG 2026-03-22; done 2026-03-22)
-- [ ] [P3] Coolify proxy restart after redeploy — intermittent gateway timeouts after Coolify redeploys require manual proxy restart; investigate if Traefik config or Coolify bug — (DEVLOG 2026-03-22)
+- [x] [P3] Coolify proxy restart after redeploy — root cause: nginx cached upstream IPs at startup; fix: Docker DNS resolver + variable-based proxy_pass for dynamic re-resolution — (DEVLOG 2026-03-22; done 2026-03-22)
 - [x] [P3] `queue-preset.service.ts:49` — `listByUser()` missing explicit `organizationId` filter and LIMIT — (Codex plan review 2026-03-20; done 2026-03-21 PR #292)
 - [x] Monitoring stack: Prometheus + Grafana (Sentry for errors) — done 2026-02-27 PR pending; Loki deferred to production
 
