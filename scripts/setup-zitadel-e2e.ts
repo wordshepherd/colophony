@@ -16,7 +16,7 @@
  *   tsx scripts/setup-zitadel-e2e.ts
  */
 
-import { writeFileSync } from "fs";
+import { existsSync, readFileSync, writeFileSync } from "fs";
 import { resolve } from "path";
 
 import {
@@ -49,6 +49,7 @@ const CONFIG_OUTPUT = resolve(
   __dirname,
   "../apps/web/e2e/.zitadel-e2e-config.json",
 );
+const API_ENV_PATH = resolve(__dirname, "../apps/api/.env");
 
 // ---------------------------------------------------------------------------
 // Main
@@ -126,6 +127,26 @@ async function main() {
 
   if (signingKey) {
     config.webhookSecret = signingKey;
+
+    // Patch ZITADEL_WEBHOOK_SECRET into API .env so the E2E API process
+    // can verify webhook signatures (it loads .env via tsx --env-file)
+    let envContent = "";
+    if (existsSync(API_ENV_PATH)) {
+      envContent = readFileSync(API_ENV_PATH, "utf-8");
+    }
+    const key = "ZITADEL_WEBHOOK_SECRET";
+    const line = `${key}=${signingKey}`;
+    const regex = new RegExp(`^${key}=.*$`, "m");
+    if (regex.test(envContent)) {
+      envContent = envContent.replace(regex, line);
+    } else {
+      if (envContent.length > 0 && !envContent.endsWith("\n")) {
+        envContent += "\n";
+      }
+      envContent += line + "\n";
+    }
+    writeFileSync(API_ENV_PATH, envContent);
+    console.log(`  Patched ZITADEL_WEBHOOK_SECRET into ${API_ENV_PATH}`);
   }
 
   writeFileSync(CONFIG_OUTPUT, JSON.stringify(config, null, 2) + "\n");

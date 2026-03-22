@@ -374,10 +374,13 @@ export async function findOrCreateTarget(
   });
 
   if (search.ok && search.data.targets?.length) {
-    const existing = search.data.targets[0];
-    console.log(`Found existing webhook target: ${existing.id}`);
-    // Zitadel returns signingKey on search too, but it may not always be present
-    return { targetId: existing.id, signingKey: existing.signingKey ?? null };
+    // Client-side exact match — Zitadel's targetNameQuery may not filter exactly
+    const existing = search.data.targets.find((t) => t.name === name);
+    if (existing) {
+      console.log(`Found existing webhook target: ${existing.id}`);
+      // Zitadel returns signingKey on search too, but it may not always be present
+      return { targetId: existing.id, signingKey: existing.signingKey ?? null };
+    }
   }
 
   // Create new target — Zitadel Actions v2 uses snake_case field names
@@ -403,20 +406,52 @@ export async function findOrCreateTarget(
 
 /**
  * Set a Zitadel execution that fires a target on an event group.
- * Idempotent — PUT replaces any existing execution for the same condition.
+ *
+ * Merges with existing targets: reads the current execution first, then
+ * PUTs the union of existing + new target IDs. This allows dev and E2E
+ * targets to coexist on the same Zitadel instance.
  */
 export async function setGroupExecution(
   token: string,
   group: string,
   targetId: string,
 ): Promise<void> {
+  // Read existing execution targets for this group
+  const search = await zitadelApi<{
+    executions?: Array<{
+      condition: { event?: { group?: string } };
+      targets?: string[];
+    }>;
+  }>(token, "/v2/actions/executions/search", "POST", {
+    queries: [
+      {
+        eventConditionQuery: {
+          group,
+        },
+      },
+    ],
+  });
+
+  const existingTargets: string[] = [];
+  if (search.ok && search.data.executions?.length) {
+    const existing = search.data.executions[0];
+    if (existing.targets) {
+      existingTargets.push(...existing.targets);
+    }
+  }
+
+  // Merge: add new target if not already present
+  const mergedTargets = existingTargets.includes(targetId)
+    ? existingTargets
+    : [...existingTargets, targetId];
+
   const res = await zitadelApi(token, "/v2/actions/executions", "PUT", {
     condition: {
       event: {
         group,
       },
     },
-    targets: [targetId],
+    targets: mergedTargets,
   });
 
   if (!res.ok) {
@@ -425,7 +460,13 @@ export async function setGroupExecution(
     );
   }
 
-  console.log(`  Execution set: group "${group}" → target ${targetId}`);
+  if (mergedTargets.length > 1) {
+    console.log(
+      `  Execution set: group "${group}" → ${mergedTargets.length} targets (merged)`,
+    );
+  } else {
+    console.log(`  Execution set: group "${group}" → target ${targetId}`);
+  }
 }
 
 /**
