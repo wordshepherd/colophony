@@ -21,6 +21,7 @@ import type { TusdPreCreateResponse } from '@colophony/types';
 import type { Env } from '../config/env.js';
 import { apiKeyService } from '../services/api-key.service.js';
 import { embedTokenService } from '../services/embed-token.service.js';
+import { statusTokenService } from '../services/status-token.service.js';
 import { fileService } from '../services/file.service.js';
 import { auditService } from '../services/audit.service.js';
 import { enqueueFileScan } from '../queues/file-scan.queue.js';
@@ -225,8 +226,12 @@ export async function registerTusdWebhooks(
       forwardedHeaders,
       'X-Embed-Token',
     );
+    const statusTokenHeader = getForwardedHeader(
+      forwardedHeaders,
+      'X-Status-Token',
+    );
 
-    // Extract guest-user-id from metadata (used by embed token auth)
+    // Extract guest-user-id from metadata (used by embed/status token auth)
     const guestUserId = metadata['guest-user-id'];
 
     // Validate token and resolve local user UUID
@@ -321,6 +326,15 @@ export async function registerTusdWebhooks(
         return;
       }
       userId = guestUserId;
+    } else if (statusTokenHeader) {
+      // Status token auth (R&R resubmission by embed submitters)
+      const resubmitCtx =
+        await statusTokenService.getResubmitContext(statusTokenHeader);
+      if (!resubmitCtx) {
+        await reply.status(200).send(rejectUpload(401, 'invalid_status_token'));
+        return;
+      }
+      userId = resubmitCtx.submitterId;
     } else if (env.NODE_ENV === 'test') {
       // Test mode: extract from forwarded test headers
       const testUserId = getForwardedHeader(forwardedHeaders, 'X-Test-User-Id');
@@ -424,10 +438,14 @@ export async function registerTusdWebhooks(
       forwardedHeaders,
       'X-Embed-Token',
     );
+    const postFinishStatusTokenHeader = getForwardedHeader(
+      forwardedHeaders,
+      'X-Status-Token',
+    );
     // orgId is optional — manuscript uploads are user-scoped, not org-scoped
     const orgId = getForwardedHeader(forwardedHeaders, 'X-Organization-Id');
 
-    // Extract guest-user-id from metadata (used by embed token auth)
+    // Extract guest-user-id from metadata (used by embed/status token auth)
     const postFinishGuestUserId = metadata['guest-user-id'];
 
     // Resolve userId from forwarded auth — fail closed if auth is invalid
@@ -500,6 +518,15 @@ export async function registerTusdWebhooks(
         return reply.status(400).send({ error: 'missing_guest_user_id' });
       }
       userId = postFinishGuestUserId;
+    } else if (postFinishStatusTokenHeader) {
+      // Status token auth (R&R resubmission by embed submitters)
+      const resubmitCtx = await statusTokenService.getResubmitContext(
+        postFinishStatusTokenHeader,
+      );
+      if (!resubmitCtx) {
+        return reply.status(401).send({ error: 'invalid_status_token' });
+      }
+      userId = resubmitCtx.submitterId;
     } else if (env.NODE_ENV === 'test') {
       const testUserId = getForwardedHeader(forwardedHeaders, 'X-Test-User-Id');
       if (!testUserId) {

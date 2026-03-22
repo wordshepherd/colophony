@@ -9,6 +9,7 @@ import {
   XCircle,
   Clock,
   AlertCircle,
+  RefreshCw,
 } from "lucide-react";
 
 type ViewState = "loading" | "loaded" | "not_found" | "token_expired" | "error";
@@ -177,6 +178,22 @@ export function EmbedStatusCheck({
             </div>
           )}
         </div>
+
+        {data.status === "Revision Requested" && (
+          <div className="border-t pt-4">
+            <p className="text-sm text-muted-foreground mb-3">
+              The editors have requested revisions to your submission. You can
+              upload a revised manuscript using the link below.
+            </p>
+            <a
+              href={`/embed/resubmit/${statusToken}`}
+              className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+            >
+              <RefreshCw className="h-4 w-4" />
+              Resubmit Revised Manuscript
+            </a>
+          </div>
+        )}
       </div>
     </div>
   );
