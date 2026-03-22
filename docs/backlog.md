@@ -484,6 +484,9 @@
 - [x] [P3] READER role enforcement — define what READER can and cannot do distinct from EDITOR; currently decorative — (persona gap analysis 2026-02-27; done 2026-03-03)
 - [ ] [P3] Email invitation workflow — invite by email link/token instead of requiring pre-existing Zitadel account — (persona gap analysis 2026-02-27)
 - [ ] [P3] Custom org roles beyond ADMIN/EDITOR/READER — named roles with configurable permission scopes — (persona gap analysis 2026-02-27)
+- [x] [P1] Documenso webhook: defense-in-depth org filter — mutation phase uses `withRls()` on appPool + explicit `orgId` on `updateStatus`; Codex review caught `set_config` on superuser pool doesn't enforce RLS — (Codex review 2026-03-22; done 2026-03-22)
+- [x] [P2] Documenso webhook: Zod schema validation — `documensoWebhookPayloadSchema` validates payload structure before processing — (Codex review 2026-03-22; done 2026-03-22)
+- [x] [P2] Documenso webhook: audit logging for contract status changes — `CONTRACT_SIGNED` and `CONTRACT_COMPLETED` audit actions logged via `auditService.log()` inside `withRls` — (Codex review 2026-03-22; done 2026-03-22)
 
 ---
 
