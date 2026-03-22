@@ -1,15 +1,22 @@
 import { describe, it, expect } from "vitest";
 import {
   zitadelWebhookPayloadSchema,
+  zitadelEventPayloadSchema,
   zitadelWebhookUserSchema,
 } from "./types.js";
 
 describe("zitadelWebhookPayloadSchema", () => {
   const validPayload = {
-    eventType: "user.created",
-    eventId: "evt-001",
-    creationDate: "2026-01-01T00:00:00Z",
-    user: { userId: "u-1", email: "a@b.com" },
+    aggregateID: "agg-001",
+    aggregateType: "user",
+    resourceOwner: "org-1",
+    instanceID: "inst-1",
+    version: "v2",
+    sequence: 1,
+    event_type: "user.human.added",
+    created_at: "2026-01-01T00:00:00Z",
+    userID: "system-user",
+    event_payload: { userName: "alice", email: "a@b.com" },
   };
 
   it("accepts a valid payload", () => {
@@ -30,55 +37,55 @@ describe("zitadelWebhookPayloadSchema", () => {
     }
   });
 
-  it("rejects missing eventId", () => {
-    const { eventId: _, ...rest } = validPayload;
+  it("rejects missing aggregateID", () => {
+    const { aggregateID: _, ...rest } = validPayload;
     expect(zitadelWebhookPayloadSchema.safeParse(rest).success).toBe(false);
   });
 
-  it("rejects empty eventId", () => {
+  it("rejects empty aggregateID", () => {
     expect(
       zitadelWebhookPayloadSchema.safeParse({
         ...validPayload,
-        eventId: "",
+        aggregateID: "",
       }).success,
     ).toBe(false);
   });
 
-  it("rejects empty eventType", () => {
+  it("rejects empty event_type", () => {
     expect(
       zitadelWebhookPayloadSchema.safeParse({
         ...validPayload,
-        eventType: "",
+        event_type: "",
       }).success,
     ).toBe(false);
   });
 
-  it("rejects empty creationDate", () => {
+  it("rejects empty created_at", () => {
     expect(
       zitadelWebhookPayloadSchema.safeParse({
         ...validPayload,
-        creationDate: "",
+        created_at: "",
       }).success,
     ).toBe(false);
   });
 
-  it("accepts unknown eventType strings", () => {
+  it("accepts unknown event_type strings", () => {
     const result = zitadelWebhookPayloadSchema.safeParse({
       ...validPayload,
-      eventType: "org.created",
+      event_type: "org.created",
     });
     expect(result.success).toBe(true);
   });
 
-  it("accepts payload without user field", () => {
-    const { user: _, ...rest } = validPayload;
+  it("accepts payload without event_payload field", () => {
+    const { event_payload: _, ...rest } = validPayload;
     expect(zitadelWebhookPayloadSchema.safeParse(rest).success).toBe(true);
   });
 
-  it("accepts user object without userId (lenient ingress)", () => {
+  it("accepts event_payload without email (lenient ingress)", () => {
     const result = zitadelWebhookPayloadSchema.safeParse({
       ...validPayload,
-      user: { email: "a@b.com" },
+      event_payload: { userName: "alice" },
     });
     expect(result.success).toBe(true);
   });
@@ -91,6 +98,24 @@ describe("zitadelWebhookPayloadSchema", () => {
   });
 });
 
+describe("zitadelEventPayloadSchema", () => {
+  it("preserves unknown fields (.passthrough)", () => {
+    const result = zitadelEventPayloadSchema.safeParse({
+      userName: "alice",
+      unknownField: "keep-me",
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.unknownField).toBe("keep-me");
+    }
+  });
+
+  it("accepts empty object (all fields optional)", () => {
+    expect(zitadelEventPayloadSchema.safeParse({}).success).toBe(true);
+  });
+});
+
+// Legacy schema — kept for backwards compatibility
 describe("zitadelWebhookUserSchema", () => {
   it("preserves unknown user fields (.passthrough)", () => {
     const result = zitadelWebhookUserSchema.safeParse({

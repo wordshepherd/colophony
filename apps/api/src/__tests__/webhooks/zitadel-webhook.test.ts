@@ -80,9 +80,9 @@ describe('Zitadel webhook integration', () => {
     const [user] = await db
       .select()
       .from(users)
-      .where(eq(users.zitadelUserId, payload.user.userId));
+      .where(eq(users.zitadelUserId, payload.aggregateID));
     expect(user).toBeDefined();
-    expect(user.email).toBe(payload.user.email);
+    expect(user.email).toBe(payload.event_payload.email);
     expect(user.emailVerified).toBe(false);
 
     const [audit] = await db
@@ -240,7 +240,12 @@ describe('Zitadel webhook integration', () => {
     const rows = await db
       .select()
       .from(zitadelWebhookEvents)
-      .where(eq(zitadelWebhookEvents.eventId, payload.eventId));
+      .where(
+        eq(
+          zitadelWebhookEvents.eventId,
+          `${payload.aggregateID}:${payload.sequence}`,
+        ),
+      );
     expect(rows).toHaveLength(1);
   });
 
