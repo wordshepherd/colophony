@@ -22,7 +22,7 @@ services:
 
   # PgBouncer connection pooler (transaction mode for RLS SET LOCAL)
   pgbouncer:
-    image: edoburu/pgbouncer:1.23.1-p2
+    image: edoburu/pgbouncer:latest
     container_name: colophony-pgbouncer
     ports:
       - '6432:6432'
