@@ -131,10 +131,10 @@ export async function registerZitadelWebhooks(
       request: FastifyRequest,
       reply: FastifyReply,
     ) {
-      // Verify signature
-      const signature = request.headers['x-zitadel-signature'] as
-        | string
-        | undefined;
+      // Verify signature — Zitadel sends 'ZITADEL-Signature' header,
+      // which Node.js lowercases to 'zitadel-signature'.
+      const signature = (request.headers['zitadel-signature'] ??
+        request.headers['x-zitadel-signature']) as string | undefined;
 
       const rawBody = (request as FastifyRequest & { rawBody?: Buffer })
         .rawBody;
@@ -240,12 +240,28 @@ export async function registerZitadelWebhooks(
   );
 }
 
+/**
+ * Maps Zitadel's actual event type names (e.g., 'user.human.added') to our
+ * internal names (e.g., 'user.created'). Passthrough for unknown types so
+ * the switch default case still logs them.
+ */
+const EVENT_TYPE_ALIASES: Record<string, string> = {
+  'user.human.added': 'user.created',
+  'user.human.changed': 'user.changed',
+  'user.human.deactivated': 'user.deactivated',
+  'user.human.reactivated': 'user.reactivated',
+  'user.human.removed': 'user.removed',
+  'user.human.email.verified': 'user.email.verified',
+};
+
 async function processEvent(
   payload: ZitadelWebhookPayload,
   request: FastifyRequest,
   tx: DrizzleDb,
 ): Promise<void> {
-  const { eventType, user: userData } = payload;
+  const rawEventType = payload.eventType;
+  const eventType = EVENT_TYPE_ALIASES[rawEventType] ?? rawEventType;
+  const { user: userData } = payload;
 
   if (!userData?.userId) {
     request.log.warn({ eventType }, 'Webhook event missing user data');
