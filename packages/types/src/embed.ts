@@ -184,6 +184,46 @@ export type EmbedStatusCheckResponse = z.infer<
 >;
 
 // ---------------------------------------------------------------------------
+// Resubmit schemas (R&R flow for embed submitters)
+// ---------------------------------------------------------------------------
+
+export const embedResubmitSubmitSchema = z.object({
+  manuscriptVersionId: z
+    .string()
+    .uuid()
+    .describe("New manuscript version with revised files"),
+});
+
+export type EmbedResubmitSubmitInput = z.infer<
+  typeof embedResubmitSubmitSchema
+>;
+
+export const embedResubmitContextResponseSchema = z.object({
+  submissionId: z.string().uuid().describe("Submission ID"),
+  title: z.string().nullable().describe("Submission title"),
+  organizationName: z.string().describe("Organization name"),
+  revisionNotes: z
+    .string()
+    .describe("Editor's revision notes from R&R transition"),
+});
+
+export type EmbedResubmitContextResponse = z.infer<
+  typeof embedResubmitContextResponseSchema
+>;
+
+export const embedResubmitSubmitResponseSchema = z.object({
+  success: z.literal(true),
+  submissionId: z.string().uuid().describe("Resubmitted submission ID"),
+  statusToken: z
+    .string()
+    .describe("New status check token (rotated on resubmit)"),
+});
+
+export type EmbedResubmitSubmitResponse = z.infer<
+  typeof embedResubmitSubmitResponseSchema
+>;
+
+// ---------------------------------------------------------------------------
 // Revoke schema
 // ---------------------------------------------------------------------------
 

@@ -5,6 +5,9 @@ import type {
   EmbedPrepareUploadResponse,
   EmbedUploadStatusResponse,
   EmbedStatusCheckResponse,
+  EmbedResubmitContextResponse,
+  EmbedResubmitSubmitInput,
+  EmbedResubmitSubmitResponse,
 } from "@colophony/types";
 
 export interface EmbedApiError {
@@ -104,4 +107,65 @@ export async function fetchSubmissionStatus(
     headers: { Accept: "application/json" },
   });
   return handleResponse<EmbedStatusCheckResponse>(res);
+}
+
+// ---------------------------------------------------------------------------
+// Resubmit (R&R flow)
+// ---------------------------------------------------------------------------
+
+export async function fetchResubmitContext(
+  apiUrl: string,
+  statusToken: string,
+): Promise<EmbedResubmitContextResponse> {
+  const res = await fetch(`${apiUrl}/embed/resubmit/${statusToken}`, {
+    headers: { Accept: "application/json" },
+  });
+  return handleResponse<EmbedResubmitContextResponse>(res);
+}
+
+export async function prepareResubmitUpload(
+  apiUrl: string,
+  statusToken: string,
+): Promise<EmbedPrepareUploadResponse> {
+  const res = await fetch(
+    `${apiUrl}/embed/resubmit/${statusToken}/prepare-upload`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+    },
+  );
+  return handleResponse<EmbedPrepareUploadResponse>(res);
+}
+
+export async function fetchResubmitUploadStatus(
+  apiUrl: string,
+  statusToken: string,
+  manuscriptVersionId: string,
+): Promise<EmbedUploadStatusResponse> {
+  const res = await fetch(
+    `${apiUrl}/embed/resubmit/${statusToken}/upload-status/${manuscriptVersionId}`,
+    {
+      headers: { Accept: "application/json" },
+    },
+  );
+  return handleResponse<EmbedUploadStatusResponse>(res);
+}
+
+export async function submitResubmission(
+  apiUrl: string,
+  statusToken: string,
+  body: EmbedResubmitSubmitInput,
+): Promise<EmbedResubmitSubmitResponse> {
+  const res = await fetch(`${apiUrl}/embed/resubmit/${statusToken}/submit`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+    },
+    body: JSON.stringify(body),
+  });
+  return handleResponse<EmbedResubmitSubmitResponse>(res);
 }

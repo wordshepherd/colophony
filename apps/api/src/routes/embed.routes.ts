@@ -4,9 +4,20 @@ import {
   embedSubmitSchema,
   embedPrepareUploadSchema,
   embedUploadStatusQuerySchema,
+  embedResubmitSubmitSchema,
   STATUS_TOKEN_PREFIX,
 } from '@colophony/types';
+import {
+  NotReviseAndResubmitError,
+  UnscannedFilesError,
+  InfectedFilesError,
+} from '../services/submission.service.js';
 import type { Env } from '../config/env.js';
+import {
+  ManuscriptVersionNotFoundError,
+  ManuscriptVersionOwnershipError,
+  NoFilesUploadedError,
+} from '../services/embed-submission.service.js';
 import {
   embedTokenService,
   type VerifiedEmbedToken,
@@ -561,6 +572,348 @@ export async function registerEmbedRoutes(
         organizationName: result.organizationName,
         periodName: result.periodName,
       };
+    },
+  );
+
+  // ---------------------------------------------------------------------------
+  // Resubmit endpoints (R&R flow for embed submitters)
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Verify status token from URL param for resubmit endpoints.
+   * Returns true if valid, sends error reply and returns false otherwise.
+   */
+  function verifyStatusTokenFormat(
+    statusToken: string,
+    reply: FastifyReply,
+  ): boolean {
+    if (
+      !statusToken.startsWith(STATUS_TOKEN_PREFIX) ||
+      statusToken.length < 20
+    ) {
+      void reply.status(404).send({
+        error: 'not_found',
+        message: 'Submission not found',
+      });
+      return false;
+    }
+    return true;
+  }
+
+  // ---------------------------------------------------------------------------
+  // GET /embed/resubmit/:statusToken — resubmit context
+  // ---------------------------------------------------------------------------
+  app.get<{ Params: { statusToken: string } }>(
+    '/embed/resubmit/:statusToken',
+    {
+      preHandler: async function resubmitContextRateLimit(
+        request: FastifyRequest,
+        reply: FastifyReply,
+      ) {
+        const redisClient = getRedis();
+        if (!redisClient) return;
+
+        const windowMs = env.RATE_LIMIT_WINDOW_SECONDS * 1000;
+        const windowId = Math.floor(Date.now() / windowMs);
+        const key = `${env.RATE_LIMIT_KEY_PREFIX}:embed:resubmit:${request.ip}:${windowId}`;
+
+        try {
+          const result = (await redisClient.eval(
+            RATE_LIMIT_LUA,
+            1,
+            key,
+            windowMs,
+          )) as [number, number];
+
+          const limit = 30;
+          if (result[0] > limit) {
+            const remainingMs = windowMs - (Date.now() % windowMs);
+            reply.header('Retry-After', Math.ceil(remainingMs / 1000));
+            return reply.status(429).send({
+              error: 'rate_limit_exceeded',
+              message: 'Too many requests. Please try again later.',
+            });
+          }
+        } catch {
+          request.log.warn(
+            'Embed resubmit context rate limit Redis error — allowing request',
+          );
+        }
+      },
+    },
+    async (request, reply) => {
+      const { statusToken } = request.params;
+      if (!verifyStatusTokenFormat(statusToken, reply)) return;
+
+      const ctx = await embedSubmissionService.getResubmitContext(statusToken);
+
+      if (!ctx) {
+        return reply.status(404).send({
+          error: 'not_found',
+          message:
+            'Submission not found, token expired, or not in revision-requested status',
+        });
+      }
+
+      return ctx;
+    },
+  );
+
+  // ---------------------------------------------------------------------------
+  // POST /embed/resubmit/:statusToken/prepare-upload — prepare file upload
+  // ---------------------------------------------------------------------------
+  app.post<{ Params: { statusToken: string } }>(
+    '/embed/resubmit/:statusToken/prepare-upload',
+    {
+      preHandler: async function resubmitPrepareRateLimit(
+        request: FastifyRequest,
+        reply: FastifyReply,
+      ) {
+        const redisClient = getRedis();
+        if (!redisClient) return;
+
+        const windowMs = env.RATE_LIMIT_WINDOW_SECONDS * 1000;
+        const windowId = Math.floor(Date.now() / windowMs);
+        const key = `${env.RATE_LIMIT_KEY_PREFIX}:embed:resubmit:${request.ip}:${windowId}`;
+
+        try {
+          const result = (await redisClient.eval(
+            RATE_LIMIT_LUA,
+            1,
+            key,
+            windowMs,
+          )) as [number, number];
+
+          const limit = 10;
+          if (result[0] > limit) {
+            const remainingMs = windowMs - (Date.now() % windowMs);
+            reply.header('Retry-After', Math.ceil(remainingMs / 1000));
+            return reply.status(429).send({
+              error: 'rate_limit_exceeded',
+              message: 'Too many requests. Please try again later.',
+            });
+          }
+        } catch {
+          request.log.warn(
+            'Embed resubmit prepare-upload rate limit Redis error — allowing request',
+          );
+        }
+      },
+    },
+    async (request, reply) => {
+      const { statusToken } = request.params;
+      if (!verifyStatusTokenFormat(statusToken, reply)) return;
+
+      const result = await embedSubmissionService.prepareResubmitUpload(
+        statusToken,
+        request.ip,
+        request.headers['user-agent'],
+      );
+
+      if (!result) {
+        return reply.status(404).send({
+          error: 'not_found',
+          message:
+            'Submission not found, token expired, or not in revision-requested status',
+        });
+      }
+
+      return {
+        manuscriptVersionId: result.manuscriptVersionId,
+        guestUserId: result.guestUserId,
+        tusEndpoint: result.tusEndpoint,
+        maxFileSize: result.maxFileSize,
+        maxFiles: result.maxFiles,
+        allowedMimeTypes: result.allowedMimeTypes,
+      };
+    },
+  );
+
+  // ---------------------------------------------------------------------------
+  // GET /embed/resubmit/:statusToken/upload-status/:manuscriptVersionId
+  // ---------------------------------------------------------------------------
+  app.get<{
+    Params: { statusToken: string; manuscriptVersionId: string };
+  }>(
+    '/embed/resubmit/:statusToken/upload-status/:manuscriptVersionId',
+    {
+      preHandler: async function resubmitUploadStatusRateLimit(
+        request: FastifyRequest,
+        reply: FastifyReply,
+      ) {
+        const redisClient = getRedis();
+        if (!redisClient) return;
+
+        const windowMs = env.RATE_LIMIT_WINDOW_SECONDS * 1000;
+        const windowId = Math.floor(Date.now() / windowMs);
+        const key = `${env.RATE_LIMIT_KEY_PREFIX}:embed:resubmit:poll:${request.ip}:${windowId}`;
+
+        try {
+          const result = (await redisClient.eval(
+            RATE_LIMIT_LUA,
+            1,
+            key,
+            windowMs,
+          )) as [number, number];
+
+          const limit = 60;
+          if (result[0] > limit) {
+            const remainingMs = windowMs - (Date.now() % windowMs);
+            reply.header('Retry-After', Math.ceil(remainingMs / 1000));
+            return reply.status(429).send({
+              error: 'rate_limit_exceeded',
+              message: 'Too many requests. Please try again later.',
+            });
+          }
+        } catch {
+          request.log.warn(
+            'Embed resubmit upload-status rate limit Redis error — allowing request',
+          );
+        }
+      },
+    },
+    async (request, reply) => {
+      const { statusToken, manuscriptVersionId } = request.params;
+      if (!verifyStatusTokenFormat(statusToken, reply)) return;
+
+      const uuidRegex =
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (!uuidRegex.test(manuscriptVersionId)) {
+        return reply.status(400).send({
+          error: 'validation_error',
+          message: 'Invalid manuscript version ID format',
+        });
+      }
+
+      const result = await embedSubmissionService.getResubmitUploadStatus(
+        statusToken,
+        manuscriptVersionId,
+      );
+
+      if (!result) {
+        return reply.status(404).send({
+          error: 'not_found',
+          message:
+            'Submission not found, token expired, or not in revision-requested status',
+        });
+      }
+
+      return result;
+    },
+  );
+
+  // ---------------------------------------------------------------------------
+  // POST /embed/resubmit/:statusToken/submit — submit resubmission
+  // ---------------------------------------------------------------------------
+  app.post<{ Params: { statusToken: string } }>(
+    '/embed/resubmit/:statusToken/submit',
+    {
+      bodyLimit: 16 * 1024,
+      preHandler: async function resubmitSubmitRateLimit(
+        request: FastifyRequest,
+        reply: FastifyReply,
+      ) {
+        const redisClient = getRedis();
+        if (!redisClient) return;
+
+        const windowMs = env.RATE_LIMIT_WINDOW_SECONDS * 1000;
+        const windowId = Math.floor(Date.now() / windowMs);
+        const key = `${env.RATE_LIMIT_KEY_PREFIX}:embed:resubmit:${request.ip}:${windowId}`;
+
+        try {
+          const result = (await redisClient.eval(
+            RATE_LIMIT_LUA,
+            1,
+            key,
+            windowMs,
+          )) as [number, number];
+
+          const limit = 10;
+          if (result[0] > limit) {
+            const remainingMs = windowMs - (Date.now() % windowMs);
+            reply.header('Retry-After', Math.ceil(remainingMs / 1000));
+            return reply.status(429).send({
+              error: 'rate_limit_exceeded',
+              message: 'Too many submissions. Please try again later.',
+            });
+          }
+        } catch {
+          request.log.warn(
+            'Embed resubmit submit rate limit Redis error — allowing request',
+          );
+        }
+      },
+    },
+    async (request, reply) => {
+      const { statusToken } = request.params;
+      if (!verifyStatusTokenFormat(statusToken, reply)) return;
+
+      const parsed = embedResubmitSubmitSchema.safeParse(request.body);
+      if (!parsed.success) {
+        const errors = parsed.error.issues.map((i) => ({
+          path: i.path.join('.'),
+          message: i.message,
+        }));
+        return reply.status(400).send({
+          error: 'validation_error',
+          message: 'Invalid request data',
+          details: errors,
+        });
+      }
+
+      try {
+        const result = await embedSubmissionService.submitResubmission(
+          statusToken,
+          parsed.data.manuscriptVersionId,
+          request.ip,
+          request.headers['user-agent'],
+        );
+
+        if (!result) {
+          return reply.status(404).send({
+            error: 'not_found',
+            message:
+              'Submission not found, token expired, or not in revision-requested status',
+          });
+        }
+
+        return result;
+      } catch (err) {
+        if (err instanceof NotReviseAndResubmitError) {
+          return reply.status(409).send({
+            error: 'conflict',
+            message: err.message,
+          });
+        }
+        if (err instanceof ManuscriptVersionNotFoundError) {
+          return reply.status(404).send({
+            error: 'not_found',
+            message: err.message,
+          });
+        }
+        if (err instanceof ManuscriptVersionOwnershipError) {
+          return reply.status(403).send({
+            error: 'forbidden',
+            message: err.message,
+          });
+        }
+        if (err instanceof NoFilesUploadedError) {
+          return reply.status(422).send({
+            error: 'unprocessable',
+            message: err.message,
+          });
+        }
+        if (
+          err instanceof UnscannedFilesError ||
+          err instanceof InfectedFilesError
+        ) {
+          return reply.status(422).send({
+            error: 'unprocessable',
+            message: err.message,
+          });
+        }
+        throw err;
+      }
     },
   );
 }
