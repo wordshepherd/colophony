@@ -8,11 +8,14 @@ export const documensoWebhookPayloadSchema = z.object({
   event: z.string(),
   data: z
     .object({
-      id: z.string(),
-      documentId: z.string(),
+      id: z.string().optional(),
+      documentId: z.string().optional(),
       status: z.string().optional(),
     })
-    .passthrough(),
+    .passthrough()
+    .refine((d) => d.id != null || d.documentId != null, {
+      message: "At least one of 'id' or 'documentId' must be present",
+    }),
 });
 
 export type DocumensoWebhookPayload = z.infer<

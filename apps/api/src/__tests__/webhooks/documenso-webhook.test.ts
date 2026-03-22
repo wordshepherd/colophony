@@ -51,19 +51,6 @@ vi.mock('../../services/audit.service.js', () => ({
   },
 }));
 
-// Mock withRls — execute callback directly (tests already use admin pool)
-const { mockWithRls } = vi.hoisted(() => ({
-  mockWithRls: vi.fn(),
-}));
-
-vi.mock('@colophony/db', async (importOriginal) => {
-  const actual = await importOriginal<Record<string, unknown>>();
-  return {
-    ...actual,
-    withRls: (...args: unknown[]) => mockWithRls(...args),
-  };
-});
-
 // Mock inngest to prevent real event sending
 const { mockInngestSend } = vi.hoisted(() => ({
   mockInngestSend: vi.fn().mockResolvedValue(undefined),
@@ -95,17 +82,6 @@ describe('Documenso webhook integration', () => {
   beforeEach(async () => {
     await truncateAllTables();
     vi.clearAllMocks();
-
-    // Default withRls mock: execute the callback directly with the admin drizzle instance
-    mockWithRls.mockImplementation(
-      async (
-        _ctx: { orgId?: string },
-        fn: (tx: unknown) => Promise<unknown>,
-      ) => {
-        const db = adminDb();
-        return fn(db);
-      },
-    );
   });
 
   async function postDocumenso(body: string, signature?: string) {
@@ -156,12 +132,6 @@ describe('Documenso webhook integration', () => {
       'SIGNED',
       expect.objectContaining({ signedAt: expect.any(Date) }),
       'org-1', // defense-in-depth org filter
-    );
-
-    // withRls called with correct org context
-    expect(mockWithRls).toHaveBeenCalledWith(
-      { orgId: 'org-1' },
-      expect.any(Function),
     );
 
     // Audit logged
@@ -220,12 +190,6 @@ describe('Documenso webhook integration', () => {
       'org-2', // defense-in-depth org filter
     );
 
-    // withRls called with correct org context
-    expect(mockWithRls).toHaveBeenCalledWith(
-      { orgId: 'org-2' },
-      expect.any(Function),
-    );
-
     // Audit logged
     expect(mockAuditLog).toHaveBeenCalledWith(expect.anything(), {
       resource: 'contract',
@@ -258,7 +222,6 @@ describe('Documenso webhook integration', () => {
 
     expect(mockUpdateStatus).not.toHaveBeenCalled();
     expect(mockAuditLog).not.toHaveBeenCalled();
-    expect(mockWithRls).not.toHaveBeenCalled();
     expect(mockInngestSend).not.toHaveBeenCalled();
 
     // Event still marked processed

@@ -1,6 +1,6 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import Redis from 'ioredis';
-import { pool, withRls } from '@colophony/db';
+import { pool } from '@colophony/db';
 import {
   documensoWebhookPayloadSchema,
   AuditActions,
@@ -253,8 +253,8 @@ async function processDocumensoEvent(
   payload: {
     event: string;
     data: {
-      id: string;
-      documentId: string;
+      id?: string;
+      documentId?: string;
       status?: string;
       [key: string]: unknown;
     };
@@ -262,7 +262,7 @@ async function processDocumensoEvent(
   request: FastifyRequest,
   tx: DrizzleDb,
 ): Promise<PendingInngestEvent[]> {
-  const documentId = payload.data.documentId ?? payload.data.id;
+  const documentId = (payload.data.documentId ?? payload.data.id)!;
   const pendingEvents: PendingInngestEvent[] = [];
 
   switch (payload.event) {
@@ -279,24 +279,25 @@ async function processDocumensoEvent(
         return pendingEvents;
       }
 
-      // Mutation phase: withRls for defense-in-depth RLS enforcement
-      await withRls({ orgId: contract.organizationId }, async (rlsTx) => {
-        await contractService.updateStatus(
-          rlsTx,
-          contract.id,
-          'SIGNED',
-          { signedAt: new Date() },
-          contract.organizationId,
-        );
+      // Defense-in-depth: explicit orgId filter on updateStatus prevents
+      // cross-org writes. Runs in the same transaction as idempotency
+      // bookkeeping to maintain atomicity. Audit uses insert_audit_event()
+      // SECURITY DEFINER function which works on any connection.
+      await contractService.updateStatus(
+        tx,
+        contract.id,
+        'SIGNED',
+        { signedAt: new Date() },
+        contract.organizationId,
+      );
 
-        await auditService.log(rlsTx, {
-          resource: AuditResources.CONTRACT,
-          action: AuditActions.CONTRACT_SIGNED,
-          organizationId: contract.organizationId,
-          resourceId: contract.id,
-          oldValue: { status: contract.status },
-          newValue: { status: 'SIGNED', documensoDocumentId: documentId },
-        });
+      await auditService.log(tx, {
+        resource: AuditResources.CONTRACT,
+        action: AuditActions.CONTRACT_SIGNED,
+        organizationId: contract.organizationId,
+        resourceId: contract.id,
+        oldValue: { status: contract.status },
+        newValue: { status: 'SIGNED', documensoDocumentId: documentId },
       });
 
       pendingEvents.push({
@@ -323,24 +324,21 @@ async function processDocumensoEvent(
         return pendingEvents;
       }
 
-      // Mutation phase: withRls for defense-in-depth RLS enforcement
-      await withRls({ orgId: contract.organizationId }, async (rlsTx) => {
-        await contractService.updateStatus(
-          rlsTx,
-          contract.id,
-          'COMPLETED',
-          { completedAt: new Date() },
-          contract.organizationId,
-        );
+      await contractService.updateStatus(
+        tx,
+        contract.id,
+        'COMPLETED',
+        { completedAt: new Date() },
+        contract.organizationId,
+      );
 
-        await auditService.log(rlsTx, {
-          resource: AuditResources.CONTRACT,
-          action: AuditActions.CONTRACT_COMPLETED,
-          organizationId: contract.organizationId,
-          resourceId: contract.id,
-          oldValue: { status: contract.status },
-          newValue: { status: 'COMPLETED', documensoDocumentId: documentId },
-        });
+      await auditService.log(tx, {
+        resource: AuditResources.CONTRACT,
+        action: AuditActions.CONTRACT_COMPLETED,
+        organizationId: contract.organizationId,
+        resourceId: contract.id,
+        oldValue: { status: contract.status },
+        newValue: { status: 'COMPLETED', documensoDocumentId: documentId },
       });
 
       pendingEvents.push({
