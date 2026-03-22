@@ -151,31 +151,10 @@ export async function registerZitadelWebhooks(
         if (!env.ZITADEL_WEBHOOK_SECRET) {
           request.log.error('ZITADEL_WEBHOOK_SECRET not configured');
         } else {
-          // Temporary debug logging for staging signature mismatch
-          const sigHeaders = Object.keys(request.headers)
-            .filter((h) => h.includes('zitadel') || h.includes('signature'))
-            .reduce(
-              (acc, h) => ({ ...acc, [h]: request.headers[h] }),
-              {} as Record<string, unknown>,
-            );
-          request.log.warn(
-            {
-              signatureHeadersFound: sigHeaders,
-              signatureValue: signature?.substring(0, 20) + '...',
-              bodyLength: rawBody.length,
-              secretLength: env.ZITADEL_WEBHOOK_SECRET.length,
-            },
-            'Invalid Zitadel webhook signature',
-          );
+          request.log.warn('Invalid Zitadel webhook signature');
         }
         return reply.status(401).send({ error: 'invalid_signature' });
       }
-
-      // Temporary: log raw payload to understand Zitadel's format
-      request.log.info(
-        { rawPayload: request.body },
-        'Zitadel webhook raw payload',
-      );
 
       const parsed = zitadelWebhookPayloadSchema.safeParse(request.body);
       if (!parsed.success) {
