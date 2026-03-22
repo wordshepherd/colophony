@@ -161,19 +161,35 @@ const testEnv: Env = {
 };
 
 function signPayload(body: string): string {
-  return createHmac('sha256', WEBHOOK_SECRET).update(body).digest('hex');
+  // Zitadel v2 uses timestamp-prefixed signature: t=<ts>,v1=<hmac>
+  // where HMAC is over `<ts>.<body>`
+  const ts = Math.floor(Date.now() / 1000).toString();
+  const hmac = createHmac('sha256', WEBHOOK_SECRET)
+    .update(`${ts}.${body}`)
+    .digest('hex');
+  return `t=${ts},v1=${hmac}`;
 }
 
+let sequenceCounter = 0;
 function makePayload(overrides: Record<string, unknown> = {}) {
+  sequenceCounter++;
   return {
-    eventId: 'evt-001',
-    eventType: 'user.created',
-    creationDate: new Date().toISOString(),
-    user: {
-      userId: 'zitadel-user-1',
+    aggregateID: 'zitadel-user-1',
+    aggregateType: 'user',
+    resourceOwner: 'org-1',
+    instanceID: 'instance-1',
+    version: 'v2',
+    sequence: sequenceCounter,
+    event_type: 'user.human.added',
+    created_at: new Date().toISOString(),
+    userID: 'system-user',
+    event_payload: {
+      userName: 'alice',
+      firstName: 'Alice',
+      lastName: 'Example',
+      displayName: 'Alice',
       email: 'alice@example.com',
       emailVerified: true,
-      displayName: 'Alice',
     },
     ...overrides,
   };
@@ -306,7 +322,9 @@ describe('Zitadel webhook handler', () => {
       return { rows: [] };
     });
 
-    const body = JSON.stringify(makePayload({ eventId: 'evt-duplicate' }));
+    const body = JSON.stringify(
+      makePayload({ aggregateID: 'evt-duplicate', sequence: 999 }),
+    );
     const sig = signPayload(body);
 
     const response = await app.inject({
@@ -347,7 +365,9 @@ describe('Zitadel webhook handler', () => {
       return { rows: [] };
     });
 
-    const body = JSON.stringify(makePayload({ eventId: 'evt-crash-recovery' }));
+    const body = JSON.stringify(
+      makePayload({ aggregateID: 'evt-crash-recovery', sequence: 998 }),
+    );
     const sig = signPayload(body);
 
     const response = await app.inject({
@@ -367,8 +387,8 @@ describe('Zitadel webhook handler', () => {
     expect(mockClientRelease).toHaveBeenCalledOnce();
   });
 
-  it('rejects invalid payload (missing eventId)', async () => {
-    const body = JSON.stringify({ eventType: 'user.created' });
+  it('rejects invalid payload (missing required fields)', async () => {
+    const body = JSON.stringify({ event_type: 'user.human.added' });
     const sig = signPayload(body);
 
     const response = await app.inject({
@@ -405,11 +425,12 @@ describe('Zitadel webhook handler', () => {
     expect(response.json().error).toBe('invalid_payload');
   });
 
-  it('rejects payload with empty eventType', async () => {
+  it('rejects payload with empty event_type', async () => {
     const body = JSON.stringify({
-      eventId: 'evt-empty-type',
-      eventType: '',
-      creationDate: new Date().toISOString(),
+      aggregateID: 'agg-1',
+      sequence: 1,
+      event_type: '',
+      created_at: new Date().toISOString(),
     });
     const sig = signPayload(body);
 
@@ -426,10 +447,8 @@ describe('Zitadel webhook handler', () => {
     expect(response.json().error).toBe('invalid_payload');
   });
 
-  it('accepts unknown eventType without user mutations or audit', async () => {
-    const body = JSON.stringify(
-      makePayload({ eventType: 'org.created', eventId: 'evt-unknown-type' }),
-    );
+  it('accepts unknown event_type without user mutations or audit', async () => {
+    const body = JSON.stringify(makePayload({ event_type: 'org.created' }));
     const sig = signPayload(body);
 
     const response = await app.inject({
@@ -448,12 +467,8 @@ describe('Zitadel webhook handler', () => {
     expect(mockAuditLog).not.toHaveBeenCalled();
   });
 
-  it('accepts payload with no user field without mutations or audit', async () => {
-    const body = JSON.stringify({
-      eventId: 'evt-no-user',
-      eventType: 'user.created',
-      creationDate: new Date().toISOString(),
-    });
+  it('upserts user with placeholder email when event_payload is missing', async () => {
+    const body = JSON.stringify(makePayload({ event_payload: undefined }));
     const sig = signPayload(body);
 
     const response = await app.inject({
@@ -467,9 +482,8 @@ describe('Zitadel webhook handler', () => {
     });
     expect(response.statusCode).toBe(200);
     expect(response.json().status).toBe('processed');
-    expect(mockTxInsert).not.toHaveBeenCalled();
-    expect(mockTxUpdate).not.toHaveBeenCalled();
-    expect(mockAuditLog).not.toHaveBeenCalled();
+    // Still upserts because aggregateID provides the userId
+    expect(mockTxInsert).toHaveBeenCalled();
   });
 
   it('logs audit event for user.created', async () => {
@@ -501,7 +515,7 @@ describe('Zitadel webhook handler', () => {
 
   it('logs audit event for user.deactivated', async () => {
     const body = JSON.stringify(
-      makePayload({ eventType: 'user.deactivated', eventId: 'evt-deact' }),
+      makePayload({ event_type: 'user.human.deactivated' }),
     );
     const sig = signPayload(body);
 
@@ -524,10 +538,9 @@ describe('Zitadel webhook handler', () => {
   it('syncs displayName on user.changed', async () => {
     const body = JSON.stringify(
       makePayload({
-        eventType: 'user.changed',
-        eventId: 'evt-display-name',
-        user: {
-          userId: 'zitadel-user-1',
+        event_type: 'user.human.changed',
+        event_payload: {
+          userName: 'alice',
           email: 'alice@example.com',
           emailVerified: true,
           displayName: 'Alice Smith',
@@ -556,7 +569,7 @@ describe('Zitadel webhook handler', () => {
 
   it('logs USER_UPDATED audit for user.changed', async () => {
     const body = JSON.stringify(
-      makePayload({ eventType: 'user.changed', eventId: 'evt-changed' }),
+      makePayload({ event_type: 'user.human.changed' }),
     );
     const sig = signPayload(body);
 
@@ -592,7 +605,7 @@ describe('Zitadel webhook handler', () => {
       return { rows: [] };
     });
 
-    const body = JSON.stringify(makePayload({ eventId: 'evt-dup-audit' }));
+    const body = JSON.stringify(makePayload());
     const sig = signPayload(body);
 
     await app.inject({
@@ -632,7 +645,7 @@ describe('Zitadel webhook handler', () => {
       return { rows: [] };
     });
 
-    const body = JSON.stringify(makePayload({ eventId: 'evt-error' }));
+    const body = JSON.stringify(makePayload());
     const sig = signPayload(body);
 
     const response = await app.inject({
@@ -655,8 +668,7 @@ describe('Zitadel webhook handler', () => {
       const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString();
       const body = JSON.stringify(
         makePayload({
-          eventId: 'evt-old',
-          creationDate: tenMinutesAgo,
+          created_at: tenMinutesAgo,
         }),
       );
       const sig = signPayload(body);
@@ -680,8 +692,7 @@ describe('Zitadel webhook handler', () => {
       ).toISOString();
       const body = JSON.stringify(
         makePayload({
-          eventId: 'evt-future',
-          creationDate: fiveMinutesAhead,
+          created_at: fiveMinutesAhead,
         }),
       );
       const sig = signPayload(body);
@@ -703,8 +714,7 @@ describe('Zitadel webhook handler', () => {
       const thirtySecondsAgo = new Date(Date.now() - 30 * 1000).toISOString();
       const body = JSON.stringify(
         makePayload({
-          eventId: 'evt-fresh',
-          creationDate: thirtySecondsAgo,
+          created_at: thirtySecondsAgo,
         }),
       );
       const sig = signPayload(body);
@@ -730,7 +740,7 @@ describe('Zitadel webhook handler', () => {
       // Simulate over-limit: count = 101, ttl = 30000ms
       mockRedisEval.mockResolvedValueOnce([101, 30000]);
 
-      const body = JSON.stringify(makePayload({ eventId: 'evt-rate-limited' }));
+      const body = JSON.stringify(makePayload());
       const sig = signPayload(body);
 
       const response = await app.inject({
@@ -750,7 +760,7 @@ describe('Zitadel webhook handler', () => {
     it('allows request when under rate limit', async () => {
       mockRedisEval.mockResolvedValueOnce([5, 60000]);
 
-      const body = JSON.stringify(makePayload({ eventId: 'evt-under-limit' }));
+      const body = JSON.stringify(makePayload());
       const sig = signPayload(body);
 
       const response = await app.inject({
@@ -768,7 +778,7 @@ describe('Zitadel webhook handler', () => {
     it('allows request when Redis errors (graceful degradation)', async () => {
       mockRedisEval.mockRejectedValueOnce(new Error('Redis connection failed'));
 
-      const body = JSON.stringify(makePayload({ eventId: 'evt-redis-err' }));
+      const body = JSON.stringify(makePayload());
       const sig = signPayload(body);
 
       const response = await app.inject({
@@ -794,7 +804,7 @@ describe('Zitadel webhook handler', () => {
       const values = vi.fn(() => ({ onConflictDoUpdate }));
       mockTxInsert.mockImplementation(() => ({ values }));
 
-      const body = JSON.stringify(makePayload({ eventId: 'evt-stale-upsert' }));
+      const body = JSON.stringify(makePayload());
       const sig = signPayload(body);
 
       const response = await app.inject({
@@ -817,7 +827,7 @@ describe('Zitadel webhook handler', () => {
       const values = vi.fn(() => ({ onConflictDoUpdate }));
       mockTxInsert.mockImplementation(() => ({ values }));
 
-      const body = JSON.stringify(makePayload({ eventId: 'evt-fresh-upsert' }));
+      const body = JSON.stringify(makePayload());
       const sig = signPayload(body);
 
       const response = await app.inject({
@@ -848,8 +858,7 @@ describe('Zitadel webhook handler', () => {
 
       const body = JSON.stringify(
         makePayload({
-          eventType: 'user.deactivated',
-          eventId: 'evt-stale-update',
+          event_type: 'user.human.deactivated',
         }),
       );
       const sig = signPayload(body);
@@ -869,11 +878,10 @@ describe('Zitadel webhook handler', () => {
       expect(mockTxSelect).toHaveBeenCalled();
     });
 
-    it('processes event with invalid creationDate without crash', async () => {
+    it('processes event with invalid created_at without crash', async () => {
       const body = JSON.stringify(
         makePayload({
-          eventId: 'evt-bad-date',
-          creationDate: 'not-a-date',
+          created_at: 'not-a-date',
         }),
       );
       const sig = signPayload(body);
@@ -887,7 +895,7 @@ describe('Zitadel webhook handler', () => {
         },
         payload: body,
       });
-      // Unparseable creationDate falls through freshness check and processing
+      // Unparseable created_at falls through freshness check and processing
       expect(response.statusCode).toBe(200);
       expect(response.json().status).toBe('processed');
     });
