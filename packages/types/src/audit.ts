@@ -92,6 +92,7 @@ export const AuditActions = {
 
   // Embed submission
   EMBED_SUBMISSION_CREATED: "EMBED_SUBMISSION_CREATED",
+  EMBED_SUBMISSION_RESUBMITTED: "EMBED_SUBMISSION_RESUBMITTED",
 
   // Guest user
   GUEST_USER_CREATED: "GUEST_USER_CREATED",
@@ -431,6 +432,7 @@ export interface EmbedTokenAuditParams extends BaseAuditParams {
     | typeof AuditActions.EMBED_TOKEN_CREATED
     | typeof AuditActions.EMBED_TOKEN_REVOKED
     | typeof AuditActions.EMBED_SUBMISSION_CREATED
+    | typeof AuditActions.EMBED_SUBMISSION_RESUBMITTED
     | typeof AuditActions.GUEST_USER_CREATED;
 }
 

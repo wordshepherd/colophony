@@ -101,6 +101,7 @@ export interface HopperSubmissionSubmittedEvent {
     isEmbed?: boolean;
     submitterEmail?: string;
     statusToken?: string;
+    resubmit?: boolean;
   };
 }
 

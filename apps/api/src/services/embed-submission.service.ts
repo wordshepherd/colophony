@@ -1,12 +1,15 @@
 import {
   db,
   users,
+  submissions,
   formDefinitions,
   formPages,
   formFields,
   manuscripts,
   manuscriptVersions,
+  files,
   eq,
+  and,
   sql,
 } from '@colophony/db';
 import { withRls } from '@colophony/db';
@@ -15,6 +18,8 @@ import type { EmbedSubmitInput } from '@colophony/types';
 import type {
   EmbedPrepareUploadResponse,
   EmbedUploadStatusResponse,
+  EmbedResubmitContextResponse,
+  EmbedResubmitSubmitResponse,
 } from '@colophony/types';
 import {
   AuditActions,
@@ -25,7 +30,12 @@ import {
 } from '@colophony/types';
 import type { VerifiedEmbedToken } from './embed-token.service.js';
 import { auditService } from './audit.service.js';
-import { submissionService } from './submission.service.js';
+import {
+  submissionService,
+  NotReviseAndResubmitError,
+  UnscannedFilesError,
+  InfectedFilesError,
+} from './submission.service.js';
 import { fileService } from './file.service.js';
 import { statusTokenService } from './status-token.service.js';
 import { validateEnv } from '../config/env.js';
@@ -400,5 +410,270 @@ export const embedSubmissionService = {
         pages,
       };
     });
+  },
+
+  // ---------------------------------------------------------------------------
+  // Resubmit flow (R&R for embed submitters)
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Get resubmit context for an R&R submission.
+   * Uses status token for auth (via SECURITY DEFINER function).
+   */
+  async getResubmitContext(
+    statusToken: string,
+  ): Promise<EmbedResubmitContextResponse | null> {
+    const ctx = await statusTokenService.getResubmitContext(statusToken);
+    if (!ctx) return null;
+
+    return {
+      submissionId: ctx.submissionId,
+      title: ctx.title,
+      organizationName: ctx.organizationName,
+      revisionNotes: ctx.revisionNotes ?? '',
+    };
+  },
+
+  /**
+   * Prepare file upload for an R&R resubmission.
+   * Authenticated via status token — creates manuscript + version under RLS.
+   */
+  async prepareResubmitUpload(
+    statusToken: string,
+    ipAddress: string,
+    userAgent: string | undefined,
+  ): Promise<(EmbedPrepareUploadResponse & { submitterId: string }) | null> {
+    const ctx = await statusTokenService.getResubmitContext(statusToken);
+    if (!ctx) return null;
+
+    const env = validateEnv();
+
+    const result = await withRls(
+      { orgId: ctx.organizationId, userId: ctx.submitterId },
+      async (tx) => {
+        const [manuscript] = await tx
+          .insert(manuscripts)
+          .values({
+            ownerId: ctx.submitterId,
+            title: `Resubmission — ${ctx.title ?? ctx.submissionId}`,
+          })
+          .returning({ id: manuscripts.id });
+
+        const [version] = await tx
+          .insert(manuscriptVersions)
+          .values({
+            manuscriptId: manuscript.id,
+            versionNumber: 1,
+          })
+          .returning({ id: manuscriptVersions.id });
+
+        await auditService.log(tx, {
+          action: AuditActions.MANUSCRIPT_CREATED,
+          resource: AuditResources.MANUSCRIPT,
+          resourceId: manuscript.id,
+          actorId: ctx.submitterId,
+          organizationId: ctx.organizationId,
+          ipAddress,
+          userAgent,
+          newValue: { resubmit: true, submissionId: ctx.submissionId },
+        });
+
+        return { manuscriptVersionId: version.id };
+      },
+    );
+
+    return {
+      manuscriptVersionId: result.manuscriptVersionId,
+      guestUserId: ctx.submitterId,
+      tusEndpoint: env.TUS_ENDPOINT,
+      maxFileSize: MAX_FILE_SIZE,
+      maxFiles: MAX_FILES_PER_MANUSCRIPT_VERSION,
+      allowedMimeTypes: [...ALLOWED_MIME_TYPES],
+      submitterId: ctx.submitterId,
+    };
+  },
+
+  /**
+   * Get upload status for files in a manuscript version during resubmission.
+   * Authenticated via status token.
+   */
+  async getResubmitUploadStatus(
+    statusToken: string,
+    manuscriptVersionId: string,
+  ): Promise<EmbedUploadStatusResponse | null> {
+    const ctx = await statusTokenService.getResubmitContext(statusToken);
+    if (!ctx) return null;
+
+    const fileList = await withRls(
+      { orgId: ctx.organizationId, userId: ctx.submitterId },
+      async (tx) => {
+        return fileService.listByManuscriptVersion(tx, manuscriptVersionId);
+      },
+    );
+
+    return {
+      files: fileList.map((f) => ({
+        id: f.id,
+        filename: f.filename,
+        size: Number(f.size),
+        mimeType: f.mimeType,
+        scanStatus: f.scanStatus,
+      })),
+      allClean:
+        fileList.length > 0 && fileList.every((f) => f.scanStatus === 'CLEAN'),
+    };
+  },
+
+  /**
+   * Submit an R&R resubmission with a new manuscript version.
+   *
+   * 1. Verify status token → get submission context
+   * 2. Under RLS: verify R&R status, file scans, update manuscript version
+   * 3. Transition status → SUBMITTED
+   * 4. Rotate status token
+   * 5. Enqueue outbox event (triggers confirmation email with new token)
+   */
+  async submitResubmission(
+    statusToken: string,
+    manuscriptVersionId: string,
+    ipAddress: string,
+    userAgent: string | undefined,
+  ): Promise<EmbedResubmitSubmitResponse | null> {
+    const ctx = await statusTokenService.getResubmitContext(statusToken);
+    if (!ctx) return null;
+
+    const env = validateEnv();
+
+    // Look up submitter email for the confirmation event
+    const [submitterRecord] = await db
+      .select({ email: users.email })
+      .from(users)
+      .where(eq(users.id, ctx.submitterId))
+      .limit(1);
+
+    if (!submitterRecord) return null;
+
+    const result = await withRls(
+      { orgId: ctx.organizationId, userId: ctx.submitterId },
+      async (tx) => {
+        // Defense-in-depth: explicit organizationId filter
+        const [existing] = await tx
+          .select({
+            id: submissions.id,
+            status: submissions.status,
+            submitterId: submissions.submitterId,
+            organizationId: submissions.organizationId,
+          })
+          .from(submissions)
+          .where(
+            and(
+              eq(submissions.id, ctx.submissionId),
+              eq(submissions.organizationId, ctx.organizationId),
+            ),
+          )
+          .limit(1);
+
+        if (!existing) return null;
+        if (existing.status !== 'REVISE_AND_RESUBMIT') {
+          throw new NotReviseAndResubmitError();
+        }
+
+        // Verify manuscript version ownership
+        const [version] = await tx
+          .select({
+            id: manuscriptVersions.id,
+            ownerId: manuscripts.ownerId,
+          })
+          .from(manuscriptVersions)
+          .innerJoin(
+            manuscripts,
+            eq(manuscriptVersions.manuscriptId, manuscripts.id),
+          )
+          .where(eq(manuscriptVersions.id, manuscriptVersionId))
+          .limit(1);
+
+        if (!version) {
+          throw new Error('Manuscript version not found');
+        }
+        if (version.ownerId !== ctx.submitterId) {
+          throw new Error(
+            'Manuscript version does not belong to the submitter',
+          );
+        }
+
+        // Validate file scan status
+        const versionFiles = await tx
+          .select({ scanStatus: files.scanStatus })
+          .from(files)
+          .where(eq(files.manuscriptVersionId, manuscriptVersionId));
+
+        if (
+          versionFiles.some(
+            (f) => f.scanStatus === 'PENDING' || f.scanStatus === 'SCANNING',
+          )
+        ) {
+          throw new UnscannedFilesError();
+        }
+        if (versionFiles.some((f) => f.scanStatus === 'INFECTED')) {
+          throw new InfectedFilesError();
+        }
+
+        // Update manuscript version on submission
+        await tx
+          .update(submissions)
+          .set({ manuscriptVersionId, updatedAt: new Date() })
+          .where(eq(submissions.id, ctx.submissionId));
+
+        // Transition to SUBMITTED
+        await submissionService.updateStatus(
+          tx,
+          ctx.submissionId,
+          'SUBMITTED',
+          ctx.submitterId,
+          undefined,
+          'submitter',
+        );
+
+        // Rotate status token
+        const newToken = await statusTokenService.generateAndStore(
+          tx,
+          ctx.submissionId,
+          env.STATUS_TOKEN_TTL_DAYS,
+        );
+
+        // Audit log
+        await auditService.log(tx, {
+          action: AuditActions.EMBED_SUBMISSION_RESUBMITTED,
+          resource: AuditResources.EMBED_TOKEN,
+          resourceId: ctx.submissionId,
+          actorId: ctx.submitterId,
+          organizationId: ctx.organizationId,
+          ipAddress,
+          userAgent,
+          newValue: { manuscriptVersionId, resubmit: true },
+        });
+
+        // Enqueue outbox event — triggers editor notification + embed confirmation email
+        await enqueueOutboxEvent(tx, 'hopper/submission.submitted', {
+          orgId: ctx.organizationId,
+          submissionId: ctx.submissionId,
+          submitterId: ctx.submitterId,
+          isEmbed: true,
+          submitterEmail: submitterRecord.email,
+          statusToken: newToken,
+          resubmit: true,
+        });
+
+        return { submissionId: ctx.submissionId, statusToken: newToken };
+      },
+    );
+
+    if (!result) return null;
+
+    return {
+      success: true as const,
+      submissionId: result.submissionId,
+      statusToken: result.statusToken,
+    };
   },
 };

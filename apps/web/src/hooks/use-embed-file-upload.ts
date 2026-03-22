@@ -8,8 +8,10 @@ interface UseEmbedFileUploadOptions {
   manuscriptVersionId: string;
   guestUserId: string;
   tusEndpoint: string;
-  embedToken: string;
+  embedToken?: string;
+  statusToken?: string;
   maxFileSize: number;
+  maxFiles?: number;
   allowedMimeTypes: string[];
   onUploadComplete?: () => void;
   onError?: (error: string) => void;
@@ -32,6 +34,7 @@ export function useEmbedFileUpload({
   guestUserId,
   tusEndpoint,
   embedToken,
+  statusToken,
   maxFileSize,
   allowedMimeTypes,
   onUploadComplete,
@@ -138,7 +141,8 @@ export function useEmbedFileUpload({
           "manuscript-version-id": manuscriptVersionId,
         },
         headers: {
-          "X-Embed-Token": embedToken,
+          ...(embedToken ? { "X-Embed-Token": embedToken } : {}),
+          ...(statusToken ? { "X-Status-Token": statusToken } : {}),
         },
         onProgress: (bytesUploaded, bytesTotal) => {
           const progress = Math.round((bytesUploaded / bytesTotal) * 100);
@@ -172,6 +176,7 @@ export function useEmbedFileUpload({
       guestUserId,
       tusEndpoint,
       embedToken,
+      statusToken,
       maxFileSize,
       allowedMimeTypes,
       updateUpload,
