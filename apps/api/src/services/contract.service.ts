@@ -176,6 +176,7 @@ export const contractService = {
       countersignedAt?: Date;
       completedAt?: Date;
     },
+    orgId?: string,
   ) {
     const values: Record<string, unknown> = {
       status,
@@ -189,7 +190,11 @@ export const contractService = {
     const [row] = await tx
       .update(contracts)
       .set(values)
-      .where(eq(contracts.id, id))
+      .where(
+        orgId
+          ? and(eq(contracts.id, id), eq(contracts.organizationId, orgId))
+          : eq(contracts.id, id),
+      )
       .returning();
 
     return row ?? null;

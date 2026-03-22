@@ -14,6 +14,7 @@ export * from "./embed";
 export * from "./publication";
 export * from "./pipeline";
 export * from "./contract";
+export * from "./documenso-webhook";
 export * from "./issue";
 export * from "./cms";
 export * from "./federation";

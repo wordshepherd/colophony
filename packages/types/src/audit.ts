@@ -114,6 +114,8 @@ export const AuditActions = {
   // Contract lifecycle
   CONTRACT_GENERATED: "CONTRACT_GENERATED",
   CONTRACT_SENT: "CONTRACT_SENT",
+  CONTRACT_SIGNED: "CONTRACT_SIGNED",
+  CONTRACT_COMPLETED: "CONTRACT_COMPLETED",
   CONTRACT_VOIDED: "CONTRACT_VOIDED",
 
   // Issue lifecycle
@@ -463,6 +465,8 @@ export interface ContractAuditParams extends BaseAuditParams {
   action:
     | typeof AuditActions.CONTRACT_GENERATED
     | typeof AuditActions.CONTRACT_SENT
+    | typeof AuditActions.CONTRACT_SIGNED
+    | typeof AuditActions.CONTRACT_COMPLETED
     | typeof AuditActions.CONTRACT_VOIDED;
 }
 
