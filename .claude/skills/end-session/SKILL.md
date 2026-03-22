@@ -147,7 +147,33 @@ Read `docs/backlog.md` and update it:
 
 1. **Check off completed items:** If any backlog items were completed in this session, mark them `[x]`.
 2. **Add new deferrals:** Any items raised during the session that were intentionally deferred (code review findings, ideas, discovered work) get added to the appropriate track section with a source annotation (e.g., `— (DEVLOG 2026-02-15, code review)`).
-3. **Add items from code reviews:** If `/opencode-review` or `/codex-review` was run, any findings that were noted but not addressed in this session should be added with their priority level (e.g., `- [ ] [P2] Add input validation on X endpoint — (code review 2026-02-15)`).
+3. **Harvest unaddressed code review findings:** If `/codex-review` or `/opencode-review` was run during this session (any mode: plan, branch, diff), systematically extract findings that were NOT addressed:
+
+   **a. Scan:** Locate all review output in the conversation. Each review groups findings by severity: Critical, Important, Suggestion.
+
+   **b. Filter out:**
+   - Findings that were **addressed** during the session (look for fix commits or "addressed" acknowledgments in conversation)
+   - **Plan drift findings** (these belong in the PR's `## Plan Overrides` table, not the backlog)
+   - **Formatting/style suggestions** that are handled by linters (Prettier, ESLint) — these are not actionable backlog items
+
+   **c. Map severity to priority:**
+   - Critical → `[P1]`
+   - Important → `[P2]`
+   - Suggestion → show to user but default to skip (user can opt-in)
+
+   **d. Present to user:** Show remaining Important+ findings as a numbered list:
+
+   ```
+   Unaddressed review findings:
+   1. [P2] <finding description> — <file:line>
+   2. [P1] <finding description> — <file:line>
+   3. [suggestion, skip by default] <finding description>
+
+   Add to backlog? (e.g., "1, 2", "all", "none")
+   ```
+
+   **e. Append confirmed items** to `docs/backlog.md` using the format:
+   `- [ ] [Px] <description> — (code review YYYY-MM-DD)`
 
 **Categorize new items** into the correct track section. If unsure which track an item belongs to, add it to the track currently being worked on. Use the existing format: `- [ ] Description — (source)`.
 
