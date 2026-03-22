@@ -171,6 +171,12 @@ export async function registerZitadelWebhooks(
         return reply.status(401).send({ error: 'invalid_signature' });
       }
 
+      // Temporary: log raw payload to understand Zitadel's format
+      request.log.info(
+        { rawPayload: request.body },
+        'Zitadel webhook raw payload',
+      );
+
       const parsed = zitadelWebhookPayloadSchema.safeParse(request.body);
       if (!parsed.success) {
         request.log.warn(
