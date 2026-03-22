@@ -504,9 +504,11 @@
 - [x] Coolify + Hetzner managed hosting setup — done 2026-03-20, staging live at staging.colophony.pub — (architecture doc Track 1)
 - [x] [P2] Fix tusd port mismatch — tusd listens on 8080, nginx proxies to 1080; add `-port 1080` to tusd command or update nginx upstream — (DEVLOG 2026-03-20, smoke test; done 2026-03-21 PR #292)
 - [x] [P2] Fix pre-existing RLS permission failures — `journal_directory` has INSERT/UPDATE/DELETE (should be SELECT only), `audit_events` has direct INSERT + DELETE (should use audit_writer) — (DEVLOG 2026-03-20, staging verify-rls.sh; done 2026-03-21 PR #292)
-- [x] [P3] Configure Zitadel webhook for staging — Actions → Targets → user event group → staging endpoint; automated in `pnpm zitadel:setup` with all 6 user lifecycle events — (DEVLOG 2026-03-20; done 2026-03-22)
+- [x] [P3] Configure Zitadel webhook for staging — Actions → Targets → user event group → staging endpoint; signature fix + v2 payload adaptation (PRs #293–#297), then automated in `pnpm zitadel:setup` with all 6 user lifecycle events via group execution (PR #299) — (DEVLOG 2026-03-20; done 2026-03-22)
 - [ ] [P3] Connect Inngest Cloud to staging — event key + signing key — (DEVLOG 2026-03-20)
-- [ ] [P3] Coolify IPv6 network bug — `coolify` Docker network gets malformed IPv6 gateway on Hetzner; manual recreate needed after Coolify install — (DEVLOG 2026-03-20)
+- [x] [P3] Coolify IPv6 network bug — `coolify` Docker network gets malformed IPv6 gateway on Hetzner; manual recreate needed after Coolify install — (DEVLOG 2026-03-20; confirmed fixed 2026-03-22)
+- [ ] [P3] Investigate webhook rate limit Redis error — every Zitadel webhook request logs "Webhook rate limit Redis error — allowing request"; non-fatal but indicates Redis connection issue for webhook-specific rate limiter — (DEVLOG 2026-03-22)
+- [ ] [P3] Coolify proxy restart after redeploy — intermittent gateway timeouts after Coolify redeploys require manual proxy restart; investigate if Traefik config or Coolify bug — (DEVLOG 2026-03-22)
 - [x] [P3] `queue-preset.service.ts:49` — `listByUser()` missing explicit `organizationId` filter and LIMIT — (Codex plan review 2026-03-20; done 2026-03-21 PR #292)
 - [x] Monitoring stack: Prometheus + Grafana (Sentry for errors) — done 2026-02-27 PR pending; Loki deferred to production
 
