@@ -187,26 +187,28 @@ export async function registerZitadelWebhooks(
       }
       const payload: ZitadelWebhookPayload = parsed.data;
 
+      // Derive idempotency key from aggregateID + sequence (Zitadel v2 has no eventId)
+      const eventId = `${payload.aggregateID}:${payload.sequence}`;
+
       // Timestamp freshness check — fail fast before acquiring DB connection
-      const eventTime = new Date(payload.creationDate);
+      const eventTime = new Date(payload.created_at);
       if (!isNaN(eventTime.getTime())) {
         const ageSeconds = (Date.now() - eventTime.getTime()) / 1000;
         if (ageSeconds > env.WEBHOOK_TIMESTAMP_MAX_AGE_SECONDS) {
           request.log.warn(
-            { eventId: payload.eventId, ageSeconds: Math.round(ageSeconds) },
+            { eventId, ageSeconds: Math.round(ageSeconds) },
             'Webhook event rejected: timestamp too old',
           );
           return reply.status(400).send({ error: 'event_too_old' });
         }
         if (ageSeconds < -60) {
           request.log.warn(
-            { eventId: payload.eventId, ageSeconds: Math.round(ageSeconds) },
+            { eventId, ageSeconds: Math.round(ageSeconds) },
             'Webhook event rejected: timestamp in the future',
           );
           return reply.status(400).send({ error: 'event_from_future' });
         }
       }
-      // Unparseable creationDate: fall through (Zod validated non-empty; format strictness not warranted)
 
       // SECURITY NOTE: Uses pool.connect() directly (bypasses RLS) because
       // webhooks are unauthenticated system events. The zitadel_webhook_events
@@ -216,20 +218,16 @@ export async function registerZitadelWebhooks(
         await client.query('BEGIN');
 
         // Two-step idempotency: INSERT then SELECT processed status.
-        // This handles crash recovery: if server crashes after INSERT but
-        // before marking processed, the row exists with processed = false.
-        // On retry, INSERT conflicts (no-op), SELECT finds processed = false,
-        // and we reprocess — preventing lost events.
         await client.query(
           `INSERT INTO zitadel_webhook_events (id, event_id, type, payload, processed, received_at)
            VALUES (gen_random_uuid(), $1, $2, $3, false, now())
            ON CONFLICT (event_id) DO NOTHING`,
-          [payload.eventId, payload.eventType, JSON.stringify(payload)],
+          [eventId, payload.event_type, JSON.stringify(payload)],
         );
 
         const statusResult = await client.query(
           `SELECT processed FROM zitadel_webhook_events WHERE event_id = $1`,
-          [payload.eventId],
+          [eventId],
         );
 
         if (statusResult.rows[0]?.processed === true) {
@@ -245,7 +243,7 @@ export async function registerZitadelWebhooks(
         // Mark as processed
         await client.query(
           `UPDATE zitadel_webhook_events SET processed = true, processed_at = now() WHERE event_id = $1`,
-          [payload.eventId],
+          [eventId],
         );
 
         await client.query('COMMIT');
@@ -280,47 +278,51 @@ async function processEvent(
   request: FastifyRequest,
   tx: DrizzleDb,
 ): Promise<void> {
-  const rawEventType = payload.eventType;
+  const rawEventType = payload.event_type;
   const eventType = EVENT_TYPE_ALIASES[rawEventType] ?? rawEventType;
-  const { user: userData } = payload;
+  const eventPayload = payload.event_payload;
 
-  if (!userData?.userId) {
-    request.log.warn({ eventType }, 'Webhook event missing user data');
+  // aggregateID is the user's ID for user.* events
+  const userId = payload.aggregateID;
+  if (!userId) {
+    request.log.warn({ eventType }, 'Webhook event missing aggregateID');
     return;
   }
 
   // Parse event timestamp for out-of-order guard
-  const eventTime = new Date(payload.creationDate);
+  const eventTime = new Date(payload.created_at);
   const hasValidTimestamp = !isNaN(eventTime.getTime());
 
   switch (eventType) {
     case 'user.created':
     case 'user.changed': {
+      const displayName =
+        eventPayload?.displayName ??
+        ([eventPayload?.firstName, eventPayload?.lastName]
+          .filter(Boolean)
+          .join(' ') ||
+          undefined);
       // Upsert with out-of-order guard: setWhere prevents stale overwrites
       const upsertResult = await tx
         .insert(users)
         .values({
-          email: userData.email ?? `${userData.userId}@placeholder.local`,
-          zitadelUserId: userData.userId,
-          ...(userData.displayName !== undefined
-            ? { displayName: userData.displayName }
-            : {}),
-          emailVerified: userData.emailVerified ?? false,
-          emailVerifiedAt: userData.emailVerified ? new Date() : undefined,
+          email: eventPayload?.email ?? `${userId}@placeholder.local`,
+          zitadelUserId: userId,
+          ...(displayName !== undefined ? { displayName } : {}),
+          emailVerified: eventPayload?.emailVerified ?? false,
+          emailVerifiedAt: eventPayload?.emailVerified ? new Date() : undefined,
           lastEventAt: hasValidTimestamp ? eventTime : undefined,
         })
         .onConflictDoUpdate({
           target: users.zitadelUserId,
           targetWhere: sql`${users.zitadelUserId} IS NOT NULL`,
           set: {
-            ...(userData.email ? { email: userData.email } : {}),
-            ...(userData.displayName !== undefined
-              ? { displayName: userData.displayName }
-              : {}),
-            ...(userData.emailVerified !== undefined
+            ...(eventPayload?.email ? { email: eventPayload.email } : {}),
+            ...(displayName !== undefined ? { displayName } : {}),
+            ...(eventPayload?.emailVerified !== undefined
               ? {
-                  emailVerified: userData.emailVerified,
-                  emailVerifiedAt: userData.emailVerified
+                  emailVerified: eventPayload.emailVerified,
+                  emailVerifiedAt: eventPayload.emailVerified
                     ? new Date()
                     : undefined,
                 }
@@ -336,7 +338,7 @@ async function processEvent(
       // rowCount === 0 means conflict + setWhere rejected (stale event)
       if (upsertResult.rowCount === 0) {
         request.log.info(
-          { zitadelUserId: userData.userId, eventType },
+          { zitadelUserId: userId, eventType },
           'Stale event skipped',
         );
         break;
@@ -349,15 +351,15 @@ async function processEvent(
             ? AuditActions.USER_CREATED
             : AuditActions.USER_UPDATED,
         newValue: {
-          zitadelUserId: userData.userId,
-          email: userData.email,
-          emailVerified: userData.emailVerified,
+          zitadelUserId: userId,
+          email: eventPayload?.email,
+          emailVerified: eventPayload?.emailVerified,
         },
         ipAddress: request.ip,
         userAgent: request.headers['user-agent'],
       });
       request.log.info(
-        { zitadelUserId: userData.userId, eventType },
+        { zitadelUserId: userId, eventType },
         'User upserted from webhook',
       );
       break;
@@ -373,7 +375,7 @@ async function processEvent(
         })
         .where(
           and(
-            eq(users.zitadelUserId, userData.userId),
+            eq(users.zitadelUserId, userId),
             hasValidTimestamp
               ? or(isNull(users.lastEventAt), lt(users.lastEventAt, eventTime))
               : undefined,
@@ -383,7 +385,7 @@ async function processEvent(
         await auditService.log(tx, {
           resource: AuditResources.USER,
           action: AuditActions.USER_DEACTIVATED,
-          newValue: { zitadelUserId: userData.userId },
+          newValue: { zitadelUserId: userId },
           ipAddress: request.ip,
           userAgent: request.headers['user-agent'],
         });
@@ -391,16 +393,16 @@ async function processEvent(
         const [existing] = await tx
           .select({ id: users.id })
           .from(users)
-          .where(eq(users.zitadelUserId, userData.userId))
+          .where(eq(users.zitadelUserId, userId))
           .limit(1);
         if (existing) {
           request.log.info(
-            { zitadelUserId: userData.userId, eventType },
+            { zitadelUserId: userId, eventType },
             'Stale event skipped',
           );
         } else {
           request.log.warn(
-            { zitadelUserId: userData.userId },
+            { zitadelUserId: userId },
             'user.deactivated: user not found locally',
           );
         }
@@ -418,7 +420,7 @@ async function processEvent(
         })
         .where(
           and(
-            eq(users.zitadelUserId, userData.userId),
+            eq(users.zitadelUserId, userId),
             hasValidTimestamp
               ? or(isNull(users.lastEventAt), lt(users.lastEventAt, eventTime))
               : undefined,
@@ -428,7 +430,7 @@ async function processEvent(
         await auditService.log(tx, {
           resource: AuditResources.USER,
           action: AuditActions.USER_REACTIVATED,
-          newValue: { zitadelUserId: userData.userId },
+          newValue: { zitadelUserId: userId },
           ipAddress: request.ip,
           userAgent: request.headers['user-agent'],
         });
@@ -436,16 +438,16 @@ async function processEvent(
         const [existing] = await tx
           .select({ id: users.id })
           .from(users)
-          .where(eq(users.zitadelUserId, userData.userId))
+          .where(eq(users.zitadelUserId, userId))
           .limit(1);
         if (existing) {
           request.log.info(
-            { zitadelUserId: userData.userId, eventType },
+            { zitadelUserId: userId, eventType },
             'Stale event skipped',
           );
         } else {
           request.log.warn(
-            { zitadelUserId: userData.userId },
+            { zitadelUserId: userId },
             'user.reactivated: user not found locally',
           );
         }
@@ -455,7 +457,7 @@ async function processEvent(
 
     case 'user.removed': {
       // GDPR: Anonymize email, preserve referential integrity
-      const anonymizedEmail = `deleted-${userData.userId}@anonymized.local`;
+      const anonymizedEmail = `deleted-${userId}@anonymized.local`;
       const result = await tx
         .update(users)
         .set({
@@ -468,7 +470,7 @@ async function processEvent(
         })
         .where(
           and(
-            eq(users.zitadelUserId, userData.userId),
+            eq(users.zitadelUserId, userId),
             hasValidTimestamp
               ? or(isNull(users.lastEventAt), lt(users.lastEventAt, eventTime))
               : undefined,
@@ -476,14 +478,14 @@ async function processEvent(
         );
       if (result.rowCount) {
         request.log.info(
-          { zitadelUserId: userData.userId },
+          { zitadelUserId: userId },
           'User anonymized (GDPR removal)',
         );
         await auditService.log(tx, {
           resource: AuditResources.USER,
           action: AuditActions.USER_REMOVED,
           newValue: {
-            zitadelUserId: userData.userId,
+            zitadelUserId: userId,
             email: anonymizedEmail,
           },
           ipAddress: request.ip,
@@ -493,16 +495,16 @@ async function processEvent(
         const [existing] = await tx
           .select({ id: users.id })
           .from(users)
-          .where(eq(users.zitadelUserId, userData.userId))
+          .where(eq(users.zitadelUserId, userId))
           .limit(1);
         if (existing) {
           request.log.info(
-            { zitadelUserId: userData.userId, eventType },
+            { zitadelUserId: userId, eventType },
             'Stale event skipped',
           );
         } else {
           request.log.warn(
-            { zitadelUserId: userData.userId },
+            { zitadelUserId: userId },
             'user.removed: user not found locally',
           );
         }
@@ -521,7 +523,7 @@ async function processEvent(
         })
         .where(
           and(
-            eq(users.zitadelUserId, userData.userId),
+            eq(users.zitadelUserId, userId),
             hasValidTimestamp
               ? or(isNull(users.lastEventAt), lt(users.lastEventAt, eventTime))
               : undefined,
@@ -531,7 +533,7 @@ async function processEvent(
         await auditService.log(tx, {
           resource: AuditResources.USER,
           action: AuditActions.USER_EMAIL_VERIFIED,
-          newValue: { zitadelUserId: userData.userId },
+          newValue: { zitadelUserId: userId },
           ipAddress: request.ip,
           userAgent: request.headers['user-agent'],
         });
@@ -539,16 +541,16 @@ async function processEvent(
         const [existing] = await tx
           .select({ id: users.id })
           .from(users)
-          .where(eq(users.zitadelUserId, userData.userId))
+          .where(eq(users.zitadelUserId, userId))
           .limit(1);
         if (existing) {
           request.log.info(
-            { zitadelUserId: userData.userId, eventType },
+            { zitadelUserId: userId, eventType },
             'Stale event skipped',
           );
         } else {
           request.log.warn(
-            { zitadelUserId: userData.userId },
+            { zitadelUserId: userId },
             'user.email.verified: user not found locally',
           );
         }
