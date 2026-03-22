@@ -45,6 +45,27 @@ import { enqueueOutboxEvent } from './outbox.js';
 // Error classes
 // ---------------------------------------------------------------------------
 
+export class ManuscriptVersionNotFoundError extends Error {
+  constructor() {
+    super('Manuscript version not found');
+    this.name = 'ManuscriptVersionNotFoundError';
+  }
+}
+
+export class ManuscriptVersionOwnershipError extends Error {
+  constructor() {
+    super('Manuscript version does not belong to the submitter');
+    this.name = 'ManuscriptVersionOwnershipError';
+  }
+}
+
+export class NoFilesUploadedError extends Error {
+  constructor() {
+    super('Cannot submit: no files have been uploaded');
+    this.name = 'NoFilesUploadedError';
+  }
+}
+
 export class PeriodClosedError extends Error {
   constructor(periodName: string) {
     super(`Submission period "${periodName}" is not currently open`);
@@ -593,12 +614,10 @@ export const embedSubmissionService = {
           .limit(1);
 
         if (!version) {
-          throw new Error('Manuscript version not found');
+          throw new ManuscriptVersionNotFoundError();
         }
         if (version.ownerId !== ctx.submitterId) {
-          throw new Error(
-            'Manuscript version does not belong to the submitter',
-          );
+          throw new ManuscriptVersionOwnershipError();
         }
 
         // Validate file scan status
@@ -606,6 +625,11 @@ export const embedSubmissionService = {
           .select({ scanStatus: files.scanStatus })
           .from(files)
           .where(eq(files.manuscriptVersionId, manuscriptVersionId));
+
+        // P1: Reject resubmissions with no uploaded files
+        if (versionFiles.length === 0) {
+          throw new NoFilesUploadedError();
+        }
 
         if (
           versionFiles.some(

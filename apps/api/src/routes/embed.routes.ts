@@ -14,6 +14,11 @@ import {
 } from '../services/submission.service.js';
 import type { Env } from '../config/env.js';
 import {
+  ManuscriptVersionNotFoundError,
+  ManuscriptVersionOwnershipError,
+  NoFilesUploadedError,
+} from '../services/embed-submission.service.js';
+import {
   embedTokenService,
   type VerifiedEmbedToken,
 } from '../services/embed-token.service.js';
@@ -877,6 +882,24 @@ export async function registerEmbedRoutes(
         if (err instanceof NotReviseAndResubmitError) {
           return reply.status(409).send({
             error: 'conflict',
+            message: err.message,
+          });
+        }
+        if (err instanceof ManuscriptVersionNotFoundError) {
+          return reply.status(404).send({
+            error: 'not_found',
+            message: err.message,
+          });
+        }
+        if (err instanceof ManuscriptVersionOwnershipError) {
+          return reply.status(403).send({
+            error: 'forbidden',
+            message: err.message,
+          });
+        }
+        if (err instanceof NoFilesUploadedError) {
+          return reply.status(422).send({
+            error: 'unprocessable',
             message: err.message,
           });
         }
