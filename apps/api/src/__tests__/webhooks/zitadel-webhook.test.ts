@@ -71,7 +71,7 @@ describe('Zitadel webhook integration', () => {
   }
 
   it('user.created → user record created + USER_CREATED audit', async () => {
-    const payload = createZitadelPayload({ eventType: 'user.created' });
+    const payload = createZitadelPayload({ eventType: 'user.human.added' });
     const res = await postZitadel(payload);
     expect(res.statusCode).toBe(200);
     expect(res.json()).toEqual({ status: 'processed' });
@@ -97,7 +97,7 @@ describe('Zitadel webhook integration', () => {
     await createUser({ zitadelUserId, email: 'old@example.com' });
 
     const payload = createZitadelPayload({
-      eventType: 'user.changed',
+      eventType: 'user.human.changed',
       userId: zitadelUserId,
       email: 'new@example.com',
     });
@@ -204,7 +204,7 @@ describe('Zitadel webhook integration', () => {
     await createUser({ zitadelUserId, emailVerified: false });
 
     const payload = createZitadelPayload({
-      eventType: 'user.email.verified',
+      eventType: 'user.human.email.verified',
       userId: zitadelUserId,
     });
     const res = await postZitadel(payload);
@@ -226,7 +226,7 @@ describe('Zitadel webhook integration', () => {
   });
 
   it('idempotency: duplicate event_id → second returns already_processed', async () => {
-    const payload = createZitadelPayload({ eventType: 'user.created' });
+    const payload = createZitadelPayload({ eventType: 'user.human.added' });
 
     const res1 = await postZitadel(payload);
     expect(res1.statusCode).toBe(200);
@@ -261,7 +261,7 @@ describe('Zitadel webhook integration', () => {
     // Send an older event (T1) with creationDate before lastEventAt
     const pastTime = new Date(Date.now() - 10_000); // T1 (10s ago)
     const payload = createZitadelPayload({
-      eventType: 'user.changed',
+      eventType: 'user.human.changed',
       userId: zitadelUserId,
       email: 'stale@example.com',
       creationDate: pastTime.toISOString(),

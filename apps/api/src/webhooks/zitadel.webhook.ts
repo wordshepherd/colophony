@@ -259,27 +259,12 @@ export async function registerZitadelWebhooks(
   );
 }
 
-/**
- * Maps Zitadel's actual event type names (e.g., 'user.human.added') to our
- * internal names (e.g., 'user.created'). Passthrough for unknown types so
- * the switch default case still logs them.
- */
-const EVENT_TYPE_ALIASES: Record<string, string> = {
-  'user.human.added': 'user.created',
-  'user.human.changed': 'user.changed',
-  'user.human.deactivated': 'user.deactivated',
-  'user.human.reactivated': 'user.reactivated',
-  'user.human.removed': 'user.removed',
-  'user.human.email.verified': 'user.email.verified',
-};
-
 async function processEvent(
   payload: ZitadelWebhookPayload,
   request: FastifyRequest,
   tx: DrizzleDb,
 ): Promise<void> {
-  const rawEventType = payload.event_type;
-  const eventType = EVENT_TYPE_ALIASES[rawEventType] ?? rawEventType;
+  const eventType = payload.event_type;
   const eventPayload = payload.event_payload;
 
   // aggregateID is the user's ID for user.* events
@@ -294,8 +279,10 @@ async function processEvent(
   const hasValidTimestamp = !isNaN(eventTime.getTime());
 
   switch (eventType) {
-    case 'user.created':
-    case 'user.changed': {
+    case 'user.human.added':
+    case 'user.human.changed':
+    case 'user.human.profile.changed': {
+      const isCreated = eventType === 'user.human.added';
       const displayName =
         eventPayload?.displayName ??
         ([eventPayload?.firstName, eventPayload?.lastName]
@@ -346,10 +333,9 @@ async function processEvent(
 
       await auditService.log(tx, {
         resource: AuditResources.USER,
-        action:
-          eventType === 'user.created'
-            ? AuditActions.USER_CREATED
-            : AuditActions.USER_UPDATED,
+        action: isCreated
+          ? AuditActions.USER_CREATED
+          : AuditActions.USER_UPDATED,
         newValue: {
           zitadelUserId: userId,
           email: eventPayload?.email,
@@ -365,7 +351,8 @@ async function processEvent(
       break;
     }
 
-    case 'user.deactivated': {
+    case 'user.deactivated':
+    case 'user.human.deactivated': {
       const result = await tx
         .update(users)
         .set({
@@ -410,7 +397,8 @@ async function processEvent(
       break;
     }
 
-    case 'user.reactivated': {
+    case 'user.reactivated':
+    case 'user.human.reactivated': {
       const result = await tx
         .update(users)
         .set({
@@ -455,7 +443,8 @@ async function processEvent(
       break;
     }
 
-    case 'user.removed': {
+    case 'user.removed':
+    case 'user.human.removed': {
       // GDPR: Anonymize email, preserve referential integrity
       const anonymizedEmail = `deleted-${userId}@anonymized.local`;
       const result = await tx
@@ -512,7 +501,7 @@ async function processEvent(
       break;
     }
 
-    case 'user.email.verified': {
+    case 'user.human.email.verified': {
       const result = await tx
         .update(users)
         .set({

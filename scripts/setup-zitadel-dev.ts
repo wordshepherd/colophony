@@ -6,7 +6,8 @@
  * 2. Read machine-user PAT
  * 3. Create/find project + OIDC app
  * 4. Create/find test user + sync to Colophony DB
- * 5. Patch apps/api/.env and apps/web/.env.local with Zitadel config
+ * 5. Set up webhook target + executions for user lifecycle events
+ * 6. Patch apps/api/.env and apps/web/.env.local with Zitadel config
  *
  * Idempotent: checks for existing resources before creating.
  * Separate project/app from E2E to avoid conflicts.
@@ -32,6 +33,7 @@ import {
   findOrCreateUser,
   ensureColophonyUser,
   disableMfaRequirement,
+  setupWebhookExecutions,
 } from "./zitadel-helpers";
 
 const DEV_PROJECT_NAME = "colophony-dev";
@@ -120,15 +122,49 @@ async function main() {
   console.log("\nSyncing to Colophony DB...");
   await ensureColophonyUser(zitadelUserId, TEST_USER_EMAIL, "quarterly-review");
 
-  // 8. Patch .env files
+  // 8. Set up webhook target + executions
+  console.log("\nSetting up webhook executions...");
+  const DEV_WEBHOOK_URL = "http://host.docker.internal:4000/webhooks/zitadel";
+  const signingKey = await setupWebhookExecutions(
+    token,
+    "colophony-dev-webhook",
+    DEV_WEBHOOK_URL,
+  );
+
+  // 9. Patch .env files
   // API uses projectId for audience validation (Zitadel JWT aud claim = project ID)
   // Web uses clientId for the OIDC client
   console.log("\nPatching .env files...");
 
-  patchEnvFile(API_ENV_PATH, {
+  const apiEnvPatches: Record<string, string> = {
     ZITADEL_AUTHORITY: ZITADEL_URL,
     ZITADEL_CLIENT_ID: projectId,
-  });
+  };
+
+  if (signingKey) {
+    apiEnvPatches.ZITADEL_WEBHOOK_SECRET = signingKey;
+    console.log("  Webhook signing key obtained from new target.");
+  } else {
+    // Target already existed — check if secret is already in .env
+    let hasSecret = false;
+    if (existsSync(API_ENV_PATH)) {
+      const envContent = readFileSync(API_ENV_PATH, "utf-8");
+      hasSecret = /^ZITADEL_WEBHOOK_SECRET=.+$/m.test(envContent);
+    }
+    if (!hasSecret) {
+      console.warn(
+        "\n⚠️  Webhook target already exists but ZITADEL_WEBHOOK_SECRET is not set in .env.",
+      );
+      console.warn(
+        "   The signing key is only returned when the target is first created.",
+      );
+      console.warn(
+        "   To regenerate: delete the target in Zitadel UI (Actions → Targets), then rerun this script.",
+      );
+    }
+  }
+
+  patchEnvFile(API_ENV_PATH, apiEnvPatches);
 
   patchEnvFile(WEB_ENV_PATH, {
     NEXT_PUBLIC_ZITADEL_AUTHORITY: ZITADEL_URL,
