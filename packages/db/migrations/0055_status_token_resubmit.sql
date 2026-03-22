@@ -39,7 +39,7 @@ RETURNS TABLE(
       SELECT sh.comment
       FROM public.submission_history sh
       WHERE sh.submission_id = s.id
-        AND sh.to_status = 'REVISE_AND_RESUBMIT'
+        AND sh.to_status::text = 'REVISE_AND_RESUBMIT'
       ORDER BY sh.changed_at DESC
       LIMIT 1
     )
