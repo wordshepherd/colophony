@@ -40,6 +40,30 @@ vi.mock('../../services/contract.service.js', () => ({
   },
 }));
 
+// Mock auditService — called inside withRls for contract status changes
+const { mockAuditLog } = vi.hoisted(() => ({
+  mockAuditLog: vi.fn().mockResolvedValue(undefined),
+}));
+
+vi.mock('../../services/audit.service.js', () => ({
+  auditService: {
+    log: mockAuditLog,
+  },
+}));
+
+// Mock withRls — execute callback directly (tests already use admin pool)
+const { mockWithRls } = vi.hoisted(() => ({
+  mockWithRls: vi.fn(),
+}));
+
+vi.mock('@colophony/db', async (importOriginal) => {
+  const actual = await importOriginal<Record<string, unknown>>();
+  return {
+    ...actual,
+    withRls: (...args: unknown[]) => mockWithRls(...args),
+  };
+});
+
 // Mock inngest to prevent real event sending
 const { mockInngestSend } = vi.hoisted(() => ({
   mockInngestSend: vi.fn().mockResolvedValue(undefined),
@@ -71,6 +95,17 @@ describe('Documenso webhook integration', () => {
   beforeEach(async () => {
     await truncateAllTables();
     vi.clearAllMocks();
+
+    // Default withRls mock: execute the callback directly with the admin drizzle instance
+    mockWithRls.mockImplementation(
+      async (
+        _ctx: { orgId?: string },
+        fn: (tx: unknown) => Promise<unknown>,
+      ) => {
+        const db = adminDb();
+        return fn(db);
+      },
+    );
   });
 
   async function postDocumenso(body: string, signature?: string) {
@@ -95,7 +130,7 @@ describe('Documenso webhook integration', () => {
 
   // ---- Happy path: DOCUMENT_SIGNED ----
 
-  it('DOCUMENT_SIGNED → contract SIGNED + inngest event', async () => {
+  it('DOCUMENT_SIGNED → contract SIGNED + audit + inngest event', async () => {
     const fakeContract = {
       id: 'contract-1',
       organizationId: 'org-1',
@@ -116,11 +151,28 @@ describe('Documenso webhook integration', () => {
       'doc-123',
     );
     expect(mockUpdateStatus).toHaveBeenCalledWith(
-      expect.anything(),
+      expect.anything(), // rlsTx
       'contract-1',
       'SIGNED',
       expect.objectContaining({ signedAt: expect.any(Date) }),
+      'org-1', // defense-in-depth org filter
     );
+
+    // withRls called with correct org context
+    expect(mockWithRls).toHaveBeenCalledWith(
+      { orgId: 'org-1' },
+      expect.any(Function),
+    );
+
+    // Audit logged
+    expect(mockAuditLog).toHaveBeenCalledWith(expect.anything(), {
+      resource: 'contract',
+      action: 'CONTRACT_SIGNED',
+      organizationId: 'org-1',
+      resourceId: 'contract-1',
+      oldValue: { status: 'SENT' },
+      newValue: { status: 'SIGNED', documensoDocumentId: 'doc-123' },
+    });
 
     // Inngest event sent after commit
     expect(mockInngestSend).toHaveBeenCalledWith({
@@ -142,7 +194,7 @@ describe('Documenso webhook integration', () => {
 
   // ---- Happy path: DOCUMENT_COMPLETED ----
 
-  it('DOCUMENT_COMPLETED → contract COMPLETED + inngest event', async () => {
+  it('DOCUMENT_COMPLETED → contract COMPLETED + audit + inngest event', async () => {
     const fakeContract = {
       id: 'contract-2',
       organizationId: 'org-2',
@@ -165,7 +217,24 @@ describe('Documenso webhook integration', () => {
       'contract-2',
       'COMPLETED',
       expect.objectContaining({ completedAt: expect.any(Date) }),
+      'org-2', // defense-in-depth org filter
     );
+
+    // withRls called with correct org context
+    expect(mockWithRls).toHaveBeenCalledWith(
+      { orgId: 'org-2' },
+      expect.any(Function),
+    );
+
+    // Audit logged
+    expect(mockAuditLog).toHaveBeenCalledWith(expect.anything(), {
+      resource: 'contract',
+      action: 'CONTRACT_COMPLETED',
+      organizationId: 'org-2',
+      resourceId: 'contract-2',
+      oldValue: { status: 'SIGNED' },
+      newValue: { status: 'COMPLETED', documensoDocumentId: 'doc-456' },
+    });
 
     expect(mockInngestSend).toHaveBeenCalledWith({
       name: 'slate/contract.completed',
@@ -188,6 +257,8 @@ describe('Documenso webhook integration', () => {
     expect(res.json()).toEqual({ status: 'processed' });
 
     expect(mockUpdateStatus).not.toHaveBeenCalled();
+    expect(mockAuditLog).not.toHaveBeenCalled();
+    expect(mockWithRls).not.toHaveBeenCalled();
     expect(mockInngestSend).not.toHaveBeenCalled();
 
     // Event still marked processed
@@ -276,7 +347,35 @@ describe('Documenso webhook integration', () => {
 
     expect(mockGetByDocumensoDocumentId).not.toHaveBeenCalled();
     expect(mockUpdateStatus).not.toHaveBeenCalled();
+    expect(mockAuditLog).not.toHaveBeenCalled();
     expect(mockInngestSend).not.toHaveBeenCalled();
+  });
+
+  // ---- Zod payload validation ----
+
+  it('invalid payload structure (missing documentId) → 400', async () => {
+    const invalidPayload = { event: 'DOCUMENT_SIGNED', data: {} };
+    const body = JSON.stringify(invalidPayload);
+    const sig = signPayload(body, WEBHOOK_SECRET);
+
+    const res = await postDocumenso(body, sig);
+    expect(res.statusCode).toBe(400);
+    expect(res.json()).toEqual({ error: 'invalid_payload' });
+
+    // No idempotency row created (rejected before insert)
+    const db = adminDb();
+    const events = await db.select().from(documensoWebhookEvents);
+    expect(events).toHaveLength(0);
+  });
+
+  it('invalid payload structure (missing data object) → 400', async () => {
+    const invalidPayload = { event: 'DOCUMENT_SIGNED' };
+    const body = JSON.stringify(invalidPayload);
+    const sig = signPayload(body, WEBHOOK_SECRET);
+
+    const res = await postDocumenso(body, sig);
+    expect(res.statusCode).toBe(400);
+    expect(res.json()).toEqual({ error: 'invalid_payload' });
   });
 
   // ---- Signature verification ----

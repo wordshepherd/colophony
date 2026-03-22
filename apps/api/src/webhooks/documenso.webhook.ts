@@ -1,9 +1,15 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import Redis from 'ioredis';
-import { pool } from '@colophony/db';
+import { pool, withRls } from '@colophony/db';
+import {
+  documensoWebhookPayloadSchema,
+  AuditActions,
+  AuditResources,
+} from '@colophony/types';
 import type { Env } from '../config/env.js';
 import { createDocumensoAdapter } from '../adapters/documenso.adapter.js';
 import { contractService } from '../services/contract.service.js';
+import { auditService } from '../services/audit.service.js';
 import { inngest } from '../inngest/client.js';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import type { DrizzleDb } from '@colophony/db';
@@ -29,6 +35,9 @@ return { current, ttl }
  *
  * Same pattern as stripe.webhook.ts: isolated Fastify scope, raw body parsing,
  * signature verification, two-step idempotency via documenso_webhook_events.
+ *
+ * Hardening: Zod payload validation, withRls() for mutation phase,
+ * defense-in-depth org filter on updateStatus, audit logging.
  */
 export async function registerDocumensoWebhooks(
   app: FastifyInstance,
@@ -135,11 +144,6 @@ export async function registerDocumensoWebhooks(
 
       // Verify signature
       if (!adapter || !env.DOCUMENSO_WEBHOOK_SECRET) {
-        if (!env.DOCUMENSO_API_URL) {
-          request.log.error('DOCUMENSO_API_URL not configured');
-        } else if (!env.DOCUMENSO_WEBHOOK_SECRET) {
-          request.log.error('DOCUMENSO_WEBHOOK_SECRET not configured');
-        }
         return reply.status(401).send({ error: 'invalid_signature' });
       }
 
@@ -158,22 +162,24 @@ export async function registerDocumensoWebhooks(
         return reply.status(401).send({ error: 'invalid_signature' });
       }
 
-      // Parse webhook payload
-      let webhookPayload: {
-        event: string;
-        data: {
-          id: string;
-          documentId: string;
-          status?: string;
-          [key: string]: unknown;
-        };
-      };
+      // Parse and validate webhook payload with Zod
+      let rawPayload: unknown;
       try {
-        webhookPayload = JSON.parse(payloadString) as typeof webhookPayload;
+        rawPayload = JSON.parse(payloadString);
       } catch {
         return reply.status(400).send({ error: 'invalid_json' });
       }
 
+      const parsed = documensoWebhookPayloadSchema.safeParse(rawPayload);
+      if (!parsed.success) {
+        request.log.warn(
+          { errors: parsed.error.flatten() },
+          'Invalid Documenso webhook payload structure',
+        );
+        return reply.status(400).send({ error: 'invalid_payload' });
+      }
+
+      const webhookPayload = parsed.data;
       const documensoId = `${webhookPayload.event}:${webhookPayload.data.id ?? webhookPayload.data.documentId}`;
 
       // Two-step idempotency via documenso_webhook_events
@@ -273,8 +279,24 @@ async function processDocumensoEvent(
         return pendingEvents;
       }
 
-      await contractService.updateStatus(tx, contract.id, 'SIGNED', {
-        signedAt: new Date(),
+      // Mutation phase: withRls for defense-in-depth RLS enforcement
+      await withRls({ orgId: contract.organizationId }, async (rlsTx) => {
+        await contractService.updateStatus(
+          rlsTx,
+          contract.id,
+          'SIGNED',
+          { signedAt: new Date() },
+          contract.organizationId,
+        );
+
+        await auditService.log(rlsTx, {
+          resource: AuditResources.CONTRACT,
+          action: AuditActions.CONTRACT_SIGNED,
+          organizationId: contract.organizationId,
+          resourceId: contract.id,
+          oldValue: { status: contract.status },
+          newValue: { status: 'SIGNED', documensoDocumentId: documentId },
+        });
       });
 
       pendingEvents.push({
@@ -301,8 +323,24 @@ async function processDocumensoEvent(
         return pendingEvents;
       }
 
-      await contractService.updateStatus(tx, contract.id, 'COMPLETED', {
-        completedAt: new Date(),
+      // Mutation phase: withRls for defense-in-depth RLS enforcement
+      await withRls({ orgId: contract.organizationId }, async (rlsTx) => {
+        await contractService.updateStatus(
+          rlsTx,
+          contract.id,
+          'COMPLETED',
+          { completedAt: new Date() },
+          contract.organizationId,
+        );
+
+        await auditService.log(rlsTx, {
+          resource: AuditResources.CONTRACT,
+          action: AuditActions.CONTRACT_COMPLETED,
+          organizationId: contract.organizationId,
+          resourceId: contract.id,
+          oldValue: { status: contract.status },
+          newValue: { status: 'COMPLETED', documensoDocumentId: documentId },
+        });
       });
 
       pendingEvents.push({
