@@ -7,7 +7,8 @@
  * 3. Create/find project + OIDC app (with JWT access tokens)
  * 4. Create/find test user
  * 5. Insert user into Colophony DB + add org membership
- * 6. Write config to apps/web/e2e/.zitadel-e2e-config.json
+ * 6. Set up webhook target + executions for user lifecycle events
+ * 7. Write config to apps/web/e2e/.zitadel-e2e-config.json
  *
  * Idempotent: checks for existing resources before creating.
  *
@@ -15,7 +16,7 @@
  *   tsx scripts/setup-zitadel-e2e.ts
  */
 
-import { writeFileSync } from "fs";
+import { existsSync, readFileSync, writeFileSync } from "fs";
 import { resolve } from "path";
 
 import {
@@ -31,6 +32,7 @@ import {
   findOrCreateUser,
   ensureColophonyUser,
   disableMfaRequirement,
+  setupWebhookExecutions,
 } from "./zitadel-helpers";
 
 const E2E_PROJECT_NAME = "colophony-e2e";
@@ -47,6 +49,7 @@ const CONFIG_OUTPUT = resolve(
   __dirname,
   "../apps/web/e2e/.zitadel-e2e-config.json",
 );
+const API_ENV_PATH = resolve(__dirname, "../apps/api/.env");
 
 // ---------------------------------------------------------------------------
 // Main
@@ -98,10 +101,20 @@ async function main() {
     "quarterly-review",
   );
 
-  // 8. Write config file
+  // 8. Set up webhook target + executions
+  const E2E_API_PORT = process.env.E2E_API_PORT || "4010";
+  const E2E_WEBHOOK_URL = `http://host.docker.internal:${E2E_API_PORT}/webhooks/zitadel`;
+  console.log("\nSetting up webhook executions...");
+  const signingKey = await setupWebhookExecutions(
+    token,
+    "colophony-e2e-webhook",
+    E2E_WEBHOOK_URL,
+  );
+
+  // 9. Write config file
   // projectId is used as ZITADEL_CLIENT_ID for the API's audience validation,
   // since Zitadel JWT access tokens put the project ID in the `aud` claim.
-  const config = {
+  const config: Record<string, string> = {
     authority: ZITADEL_URL,
     clientId,
     projectId,
@@ -111,6 +124,30 @@ async function main() {
     testOrgId: orgId,
     zitadelUserId,
   };
+
+  if (signingKey) {
+    config.webhookSecret = signingKey;
+
+    // Patch ZITADEL_WEBHOOK_SECRET into API .env so the E2E API process
+    // can verify webhook signatures (it loads .env via tsx --env-file)
+    let envContent = "";
+    if (existsSync(API_ENV_PATH)) {
+      envContent = readFileSync(API_ENV_PATH, "utf-8");
+    }
+    const key = "ZITADEL_WEBHOOK_SECRET";
+    const line = `${key}=${signingKey}`;
+    const regex = new RegExp(`^${key}=.*$`, "m");
+    if (regex.test(envContent)) {
+      envContent = envContent.replace(regex, line);
+    } else {
+      if (envContent.length > 0 && !envContent.endsWith("\n")) {
+        envContent += "\n";
+      }
+      envContent += line + "\n";
+    }
+    writeFileSync(API_ENV_PATH, envContent);
+    console.log(`  Patched ZITADEL_WEBHOOK_SECRET into ${API_ENV_PATH}`);
+  }
 
   writeFileSync(CONFIG_OUTPUT, JSON.stringify(config, null, 2) + "\n");
   console.log(`\nConfig written to: ${CONFIG_OUTPUT}`);

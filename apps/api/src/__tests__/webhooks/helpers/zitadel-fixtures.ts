@@ -16,8 +16,8 @@ let fixtureSequence = 0;
  * Create a Zitadel Actions v2 webhook payload matching `zitadelWebhookPayloadSchema`.
  * Defaults produce a valid, fresh `user.human.added` event.
  *
- * Maps legacy option names to the v2 payload format:
- * - eventType → event_type (with alias mapping)
+ * Uses Zitadel's actual event names directly (e.g., 'user.human.added').
+ * - eventType → event_type
  * - userId → aggregateID
  * - creationDate → created_at
  * - email/displayName/emailVerified → event_payload fields
@@ -25,18 +25,7 @@ let fixtureSequence = 0;
 export function createZitadelPayload(opts: ZitadelPayloadOptions = {}) {
   fixtureSequence++;
 
-  // Map legacy event types to Zitadel v2 names
-  const EVENT_TYPE_MAP: Record<string, string> = {
-    'user.created': 'user.human.added',
-    'user.changed': 'user.human.changed',
-    'user.deactivated': 'user.human.deactivated',
-    'user.reactivated': 'user.human.reactivated',
-    'user.removed': 'user.human.removed',
-    'user.email.verified': 'user.human.email.verified',
-  };
-
-  const rawEventType = opts.eventType ?? 'user.created';
-  const eventType = EVENT_TYPE_MAP[rawEventType] ?? rawEventType;
+  const eventType = opts.eventType ?? 'user.human.added';
   const aggregateID = opts.userId ?? faker.string.uuid();
 
   return {

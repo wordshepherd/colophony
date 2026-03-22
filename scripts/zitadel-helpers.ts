@@ -328,6 +328,174 @@ export async function ensureColophonyUser(
   }
 }
 
+// ---------------------------------------------------------------------------
+// Webhook target + execution helpers (Zitadel Actions v2)
+// ---------------------------------------------------------------------------
+
+/**
+ * Zitadel event groups to set executions for.
+ *
+ * The "user" group covers all user lifecycle events that the webhook handler
+ * supports: user.human.added, user.human.profile.changed, user.deactivated,
+ * user.reactivated, user.removed, user.human.email.verified.
+ *
+ * Note: Zitadel execution condition event names differ from the `event_type`
+ * field in the webhook payload. The webhook handler's EVENT_TYPE_ALIASES table
+ * maps the payload event names to internal names. Unknown events are logged
+ * and skipped.
+ */
+export const WEBHOOK_EVENT_GROUPS = ["user"] as const;
+
+/**
+ * Find or create a Zitadel Actions v2 webhook target.
+ *
+ * When the target is created, Zitadel returns a one-time `signingKey` (HMAC
+ * secret for ZITADEL-Signature verification). When the target already exists,
+ * the signing key is NOT returned — callers must handle this case.
+ */
+export async function findOrCreateTarget(
+  token: string,
+  name: string,
+  url: string,
+  timeout: string = "10s",
+): Promise<{ targetId: string; signingKey: string | null }> {
+  // Search for existing target by name
+  const search = await zitadelApi<{
+    targets?: Array<{ id: string; name: string; signingKey?: string }>;
+  }>(token, "/v2/actions/targets/search", "POST", {
+    queries: [
+      {
+        targetNameQuery: {
+          targetName: name,
+          method: "TEXT_QUERY_METHOD_EQUALS",
+        },
+      },
+    ],
+  });
+
+  if (search.ok && search.data.targets?.length) {
+    // Client-side exact match — Zitadel's targetNameQuery may not filter exactly
+    const existing = search.data.targets.find((t) => t.name === name);
+    if (existing) {
+      console.log(`Found existing webhook target: ${existing.id}`);
+      // Zitadel returns signingKey on search too, but it may not always be present
+      return { targetId: existing.id, signingKey: existing.signingKey ?? null };
+    }
+  }
+
+  // Create new target — Zitadel Actions v2 uses snake_case field names
+  const create = await zitadelApi<{
+    id: string;
+    signingKey: string;
+  }>(token, "/v2/actions/targets", "POST", {
+    name,
+    rest_webhook: { interrupt_on_error: false },
+    endpoint: url,
+    timeout,
+  });
+
+  if (!create.ok) {
+    throw new Error(
+      `Failed to create webhook target: ${JSON.stringify(create.data)}`,
+    );
+  }
+
+  console.log(`Created webhook target: ${create.data.id}`);
+  return { targetId: create.data.id, signingKey: create.data.signingKey };
+}
+
+/**
+ * Set a Zitadel execution that fires a target on an event group.
+ *
+ * Merges with existing targets: reads the current execution first, then
+ * PUTs the union of existing + new target IDs. This allows dev and E2E
+ * targets to coexist on the same Zitadel instance.
+ */
+export async function setGroupExecution(
+  token: string,
+  group: string,
+  targetId: string,
+): Promise<void> {
+  // Read existing execution targets for this group
+  const search = await zitadelApi<{
+    executions?: Array<{
+      condition: { event?: { group?: string } };
+      targets?: string[];
+    }>;
+  }>(token, "/v2/actions/executions/search", "POST", {
+    queries: [
+      {
+        eventConditionQuery: {
+          group,
+        },
+      },
+    ],
+  });
+
+  const existingTargets: string[] = [];
+  if (search.ok && search.data.executions?.length) {
+    const existing = search.data.executions[0];
+    if (existing.targets) {
+      existingTargets.push(...existing.targets);
+    }
+  }
+
+  // Merge: add new target if not already present
+  const mergedTargets = existingTargets.includes(targetId)
+    ? existingTargets
+    : [...existingTargets, targetId];
+
+  const res = await zitadelApi(token, "/v2/actions/executions", "PUT", {
+    condition: {
+      event: {
+        group,
+      },
+    },
+    targets: mergedTargets,
+  });
+
+  if (!res.ok) {
+    throw new Error(
+      `Failed to set execution for group ${group}: ${JSON.stringify(res.data)}`,
+    );
+  }
+
+  if (mergedTargets.length > 1) {
+    console.log(
+      `  Execution set: group "${group}" → ${mergedTargets.length} targets (merged)`,
+    );
+  } else {
+    console.log(`  Execution set: group "${group}" → target ${targetId}`);
+  }
+}
+
+/**
+ * Set up webhook target and executions for all user lifecycle events.
+ * Returns the signing key if the target was newly created, null if it existed.
+ */
+export async function setupWebhookExecutions(
+  token: string,
+  targetName: string,
+  webhookUrl: string,
+): Promise<string | null> {
+  console.log(`\nSetting up webhook target: ${targetName}`);
+  console.log(`  URL: ${webhookUrl}`);
+
+  const { targetId, signingKey } = await findOrCreateTarget(
+    token,
+    targetName,
+    webhookUrl,
+  );
+
+  console.log("\nConfiguring executions for user lifecycle events...");
+  for (const group of WEBHOOK_EVENT_GROUPS) {
+    await setGroupExecution(token, group, targetId);
+  }
+
+  console.log("\nWebhook executions configured.");
+  return signingKey;
+}
+
 export async function disableMfaRequirement(token: string): Promise<void> {
   const res = await zitadelApi(token, "/admin/v1/policies/login", "PUT", {
     allowUsernamePassword: true,
