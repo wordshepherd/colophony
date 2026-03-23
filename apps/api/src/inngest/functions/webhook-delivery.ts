@@ -1,23 +1,28 @@
+import type { InngestFunction } from 'inngest';
 import { withRls } from '@colophony/db';
 import { inngest } from '../client.js';
 import { webhookService } from '../../services/webhook.service.js';
 import { enqueueWebhook } from '../../queues/webhook.queue.js';
 import { validateEnv } from '../../config/env.js';
 
-export const webhookDelivery = inngest.createFunction(
-  { id: 'webhook-delivery', name: 'Webhook Delivery', retries: 3 },
-  [
-    { event: 'hopper/submission.submitted' },
-    { event: 'hopper/submission.accepted' },
-    { event: 'hopper/submission.rejected' },
-    { event: 'hopper/submission.withdrawn' },
-    { event: 'slate/pipeline.copyeditor-assigned' },
-    { event: 'slate/pipeline.copyedit-completed' },
-    { event: 'slate/pipeline.author-review-completed' },
-    { event: 'slate/pipeline.proofread-completed' },
-    { event: 'slate/contract.generated' },
-    { event: 'slate/issue.published' },
-  ],
+export const webhookDelivery: InngestFunction.Any = inngest.createFunction(
+  {
+    id: 'webhook-delivery',
+    name: 'Webhook Delivery',
+    retries: 3,
+    triggers: [
+      { event: 'hopper/submission.submitted' },
+      { event: 'hopper/submission.accepted' },
+      { event: 'hopper/submission.rejected' },
+      { event: 'hopper/submission.withdrawn' },
+      { event: 'slate/pipeline.copyeditor-assigned' },
+      { event: 'slate/pipeline.copyedit-completed' },
+      { event: 'slate/pipeline.author-review-completed' },
+      { event: 'slate/pipeline.proofread-completed' },
+      { event: 'slate/contract.generated' },
+      { event: 'slate/issue.published' },
+    ],
+  },
   async ({ event, step }) => {
     const orgId = (event.data as { orgId: string }).orgId;
 

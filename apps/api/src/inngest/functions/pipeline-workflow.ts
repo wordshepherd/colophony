@@ -1,3 +1,4 @@
+import type { InngestFunction } from 'inngest';
 import { withRls } from '@colophony/db';
 import { inngest } from '../client.js';
 import type { SubmissionAcceptedEvent } from '../events.js';
@@ -16,13 +17,13 @@ import { pipelineService } from '../../services/pipeline.service.js';
  * the corresponding Inngest event dispatched by the API when a user performs
  * an action (e.g., assigns a copyeditor, marks copyedit complete).
  */
-export const pipelineWorkflow = inngest.createFunction(
+export const pipelineWorkflow: InngestFunction.Any = inngest.createFunction(
   {
     id: 'pipeline-workflow',
     name: 'Publication Pipeline Workflow',
     retries: 3,
+    triggers: [{ event: 'slate/submission.accepted' }],
   },
-  { event: 'slate/submission.accepted' },
   async ({ event, step }) => {
     const { orgId, submissionId, publicationId } =
       event.data as SubmissionAcceptedEvent['data'];

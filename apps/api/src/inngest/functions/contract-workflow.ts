@@ -1,3 +1,4 @@
+import type { InngestFunction } from 'inngest';
 import {
   withRls,
   pipelineItems,
@@ -21,13 +22,13 @@ import { validateEnv } from '../../config/env.js';
  *
  *   DRAFT → SENT → SIGNED → COMPLETED
  */
-export const contractWorkflow = inngest.createFunction(
+export const contractWorkflow: InngestFunction.Any = inngest.createFunction(
   {
     id: 'contract-workflow',
     name: 'Contract Signing Workflow',
     retries: 3,
+    triggers: [{ event: 'slate/contract.generated' }],
   },
-  { event: 'slate/contract.generated' },
   async ({ event, step }) => {
     const { orgId, contractId, pipelineItemId } =
       event.data as ContractGeneratedEvent['data'];
