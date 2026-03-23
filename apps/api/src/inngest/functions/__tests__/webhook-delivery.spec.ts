@@ -29,8 +29,7 @@ vi.mock('@colophony/db', () => ({
 
 // Mock Inngest client — capture function config
 let capturedFunction: {
-  config: Record<string, unknown>;
-  triggers: unknown[];
+  config: Record<string, unknown> & { triggers?: unknown[] };
   handler: (args: {
     event: Record<string, unknown>;
     step: Record<string, unknown>;
@@ -41,11 +40,10 @@ vi.mock('../../client.js', () => ({
   inngest: {
     createFunction: (
       config: Record<string, unknown>,
-      triggers: unknown[],
       handler: (args: Record<string, unknown>) => Promise<unknown>,
     ) => {
-      capturedFunction = { config, triggers, handler };
-      return { config, triggers, handler };
+      capturedFunction = { config, handler };
+      return { config, handler };
     },
   },
 }));
@@ -61,8 +59,9 @@ describe('webhookDelivery Inngest function', () => {
   });
 
   it('listens to all expected event types', () => {
-    expect(capturedFunction.triggers).toHaveLength(10);
-    const eventNames = capturedFunction.triggers.map(
+    const triggers = capturedFunction.config.triggers as unknown[];
+    expect(triggers).toHaveLength(10);
+    const eventNames = triggers.map(
       (t: unknown) => (t as { event: string }).event,
     );
     expect(eventNames).toContain('hopper/submission.submitted');

@@ -1,3 +1,4 @@
+import type { InngestFunction } from 'inngest';
 import {
   withRls,
   db,
@@ -107,68 +108,69 @@ async function queueEmailForRecipient(params: {
 // Inngest function
 // ---------------------------------------------------------------------------
 
-export const discussionCommentNotification = inngest.createFunction(
-  {
-    id: 'discussion-comment-notification',
-    name: 'Discussion Comment Notification',
-    retries: 3,
-  },
-  { event: 'hopper/discussion.comment_added' },
-  async ({ event, step }) => {
-    const { orgId, submissionId, authorId, recipientUserIds } =
-      event.data as HopperDiscussionCommentEvent['data'];
+export const discussionCommentNotification: InngestFunction.Any =
+  inngest.createFunction(
+    {
+      id: 'discussion-comment-notification',
+      name: 'Discussion Comment Notification',
+      retries: 3,
+      triggers: [{ event: 'hopper/discussion.comment_added' }],
+    },
+    async ({ event, step }) => {
+      const { orgId, submissionId, authorId, recipientUserIds } =
+        event.data as HopperDiscussionCommentEvent['data'];
 
-    const { submission, orgName } = await step.run('resolve-data', async () =>
-      getSubmissionAndOrg(orgId, submissionId),
-    );
-
-    if (!submission) return { skipped: true, reason: 'submission-not-found' };
-
-    const author = await step.run('get-author', async () =>
-      getUserEmail(authorId),
-    );
-
-    const authorName = author?.email ?? 'A team member';
-
-    let notified = 0;
-
-    for (const recipientId of recipientUserIds) {
-      const recipient = await step.run(
-        `get-recipient-${recipientId}`,
-        async () => getUserEmail(recipientId),
+      const { submission, orgName } = await step.run('resolve-data', async () =>
+        getSubmissionAndOrg(orgId, submissionId),
       );
 
-      if (!recipient) continue;
+      if (!submission) return { skipped: true, reason: 'submission-not-found' };
 
-      await step.run(`queue-email-${recipientId}`, async () => {
-        await queueEmailForRecipient({
-          orgId,
-          userId: recipientId,
-          email: recipient.email,
-          eventType: 'discussion.comment_added',
-          templateName: 'discussion-comment',
-          templateData: {
-            submissionTitle: submission.title,
-            orgName,
-            authorName,
-          },
-          subject: `New discussion comment on: ${submission.title}`,
+      const author = await step.run('get-author', async () =>
+        getUserEmail(authorId),
+      );
+
+      const authorName = author?.email ?? 'A team member';
+
+      let notified = 0;
+
+      for (const recipientId of recipientUserIds) {
+        const recipient = await step.run(
+          `get-recipient-${recipientId}`,
+          async () => getUserEmail(recipientId),
+        );
+
+        if (!recipient) continue;
+
+        await step.run(`queue-email-${recipientId}`, async () => {
+          await queueEmailForRecipient({
+            orgId,
+            userId: recipientId,
+            email: recipient.email,
+            eventType: 'discussion.comment_added',
+            templateName: 'discussion-comment',
+            templateData: {
+              submissionTitle: submission.title,
+              orgName,
+              authorName,
+            },
+            subject: `New discussion comment on: ${submission.title}`,
+          });
         });
-      });
 
-      await step.run(`queue-in-app-${recipientId}`, async () => {
-        await queueInAppNotification({
-          orgId,
-          userId: recipientId,
-          eventType: 'discussion.comment_added',
-          title: `${authorName} commented on the discussion for: ${submission.title}`,
-          link: `/submissions/${submissionId}`,
+        await step.run(`queue-in-app-${recipientId}`, async () => {
+          await queueInAppNotification({
+            orgId,
+            userId: recipientId,
+            eventType: 'discussion.comment_added',
+            title: `${authorName} commented on the discussion for: ${submission.title}`,
+            link: `/submissions/${submissionId}`,
+          });
         });
-      });
 
-      notified++;
-    }
+        notified++;
+      }
 
-    return { notified };
-  },
-);
+      return { notified };
+    },
+  );

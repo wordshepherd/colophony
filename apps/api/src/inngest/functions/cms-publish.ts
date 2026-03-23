@@ -1,3 +1,4 @@
+import type { InngestFunction } from 'inngest';
 import { inngest } from '../client.js';
 import {
   withRls,
@@ -19,13 +20,13 @@ import type { CmsIssuePayload } from '../../adapters/cms/cms-adapter.interface.j
  * For each active CMS connection linked to the issue's publication,
  * publishes the issue content via the appropriate CMS adapter.
  */
-export const cmsPublishWorkflow = inngest.createFunction(
+export const cmsPublishWorkflow: InngestFunction.Any = inngest.createFunction(
   {
     id: 'slate-cms-publish',
     name: 'Slate: Publish issue to CMS',
     retries: 3,
+    triggers: [{ event: 'slate/issue.published' }],
   },
-  { event: 'slate/issue.published' },
   async ({ event, step }) => {
     const { orgId, issueId, publicationId } = event.data;
 
@@ -74,7 +75,34 @@ export const cmsPublishWorkflow = inngest.createFunction(
       });
     });
 
-    const { issue, sections, items, pieceData, connections } = data;
+    const { issue, sections, items, pieceData, connections } = data as {
+      issue: {
+        title: string;
+        volume: number | null;
+        issueNumber: number | null;
+        description: string | null;
+        coverImageUrl: string | null;
+        publicationDate: string | Date | null;
+      };
+      sections: { id: string; title: string }[];
+      items: {
+        pipelineItemId: string;
+        sortOrder: number;
+        issueSectionId: string | null;
+      }[];
+      pieceData: {
+        pipelineItemId: string;
+        title: string | null;
+        content: string | null;
+        submitterDisplayName: string | null;
+        submitterEmail: string;
+      }[];
+      connections: {
+        id: string;
+        adapterType: 'WORDPRESS' | 'GHOST';
+        config: unknown;
+      }[];
+    };
 
     if (connections.length === 0) {
       return { status: 'skipped', reason: 'No active CMS connections' };

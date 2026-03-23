@@ -58,7 +58,6 @@ vi.mock('../client.js', () => ({
   inngest: {
     createFunction: (
       _config: Record<string, unknown>,
-      _triggers: unknown,
       handler: (args: Record<string, unknown>) => Promise<unknown>,
     ) => {
       capturedFunction = { handler };

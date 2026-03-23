@@ -1,3 +1,4 @@
+import type { InngestFunction } from 'inngest';
 import {
   withRls,
   db,
@@ -75,357 +76,362 @@ async function getOrgEditors(orgId: string) {
 // Inngest functions
 // ---------------------------------------------------------------------------
 
-export const submissionReceivedNotification = inngest.createFunction(
-  {
-    id: 'submission-received-notification',
-    name: 'Submission Received Notification',
-    retries: 3,
-  },
-  { event: 'hopper/submission.submitted' },
-  async ({ event, step }) => {
-    const { orgId, submissionId, submitterId } =
-      event.data as HopperSubmissionSubmittedEvent['data'];
+export const submissionReceivedNotification: InngestFunction.Any =
+  inngest.createFunction(
+    {
+      id: 'submission-received-notification',
+      name: 'Submission Received Notification',
+      retries: 3,
+      triggers: [{ event: 'hopper/submission.submitted' }],
+    },
+    async ({ event, step }) => {
+      const { orgId, submissionId, submitterId } =
+        event.data as HopperSubmissionSubmittedEvent['data'];
 
-    const { submission, orgName } = await step.run('resolve-data', async () =>
-      getSubmissionAndOrg(orgId, submissionId),
-    );
+      const { submission, orgName } = await step.run('resolve-data', async () =>
+        getSubmissionAndOrg(orgId, submissionId),
+      );
 
-    if (!submission) return { skipped: true, reason: 'submission-not-found' };
+      if (!submission) return { skipped: true, reason: 'submission-not-found' };
 
-    const submitter = await step.run('get-submitter', async () =>
-      getUserEmail(submitterId),
-    );
+      const submitter = await step.run('get-submitter', async () =>
+        getUserEmail(submitterId),
+      );
 
-    const editors = await step.run('get-editors', async () =>
-      getOrgEditors(orgId),
-    );
+      const editors = await step.run('get-editors', async () =>
+        getOrgEditors(orgId),
+      );
 
-    await step.run('queue-emails', async () => {
-      for (const editor of editors) {
+      await step.run('queue-emails', async () => {
+        for (const editor of editors) {
+          await queueEmailForRecipient({
+            orgId,
+            userId: editor.userId,
+            email: editor.email,
+            eventType: 'submission.received',
+            templateName: 'submission-received',
+            templateData: {
+              submissionTitle: submission.title,
+              submitterName: submitter?.email ?? 'Unknown',
+              submitterEmail: submitter?.email ?? 'unknown',
+              orgName,
+            },
+            subject: `New submission: ${submission.title}`,
+          });
+        }
+      });
+
+      await step.run('queue-in-app-notifications', async () => {
+        for (const editor of editors) {
+          await queueInAppNotification({
+            orgId,
+            userId: editor.userId,
+            eventType: 'submission.received',
+            title: `New submission: ${submission.title}`,
+            link: `/submissions/${submissionId}`,
+          });
+        }
+      });
+
+      return { notified: editors.length };
+    },
+  );
+
+export const submissionAcceptedNotification: InngestFunction.Any =
+  inngest.createFunction(
+    {
+      id: 'submission-accepted-notification',
+      name: 'Submission Accepted Notification',
+      retries: 3,
+      triggers: [{ event: 'hopper/submission.accepted' }],
+    },
+    async ({ event, step }) => {
+      const { orgId, submissionId, submitterId, comment } =
+        event.data as HopperSubmissionAcceptedEvent['data'];
+
+      const { submission, orgName } = await step.run('resolve-data', async () =>
+        getSubmissionAndOrg(orgId, submissionId),
+      );
+
+      if (!submission) return { skipped: true, reason: 'submission-not-found' };
+
+      const submitter = await step.run('get-submitter', async () =>
+        getUserEmail(submitterId),
+      );
+
+      if (!submitter) return { skipped: true, reason: 'submitter-not-found' };
+
+      await step.run('queue-email', async () => {
         await queueEmailForRecipient({
           orgId,
-          userId: editor.userId,
-          email: editor.email,
-          eventType: 'submission.received',
-          templateName: 'submission-received',
+          userId: submitterId,
+          email: submitter.email,
+          eventType: 'submission.accepted',
+          templateName: 'submission-accepted',
           templateData: {
             submissionTitle: submission.title,
-            submitterName: submitter?.email ?? 'Unknown',
-            submitterEmail: submitter?.email ?? 'unknown',
+            submitterName: submitter.email,
+            submitterEmail: submitter.email,
             orgName,
+            editorComment: comment,
           },
-          subject: `New submission: ${submission.title}`,
+          subject: `Your submission has been accepted: ${submission.title}`,
         });
-      }
-    });
+      });
 
-    await step.run('queue-in-app-notifications', async () => {
-      for (const editor of editors) {
+      await step.run('queue-in-app', async () => {
         await queueInAppNotification({
           orgId,
-          userId: editor.userId,
-          eventType: 'submission.received',
-          title: `New submission: ${submission.title}`,
+          userId: submitterId,
+          eventType: 'submission.accepted',
+          title: `Your submission has been accepted: ${submission.title}`,
           link: `/submissions/${submissionId}`,
         });
-      }
-    });
-
-    return { notified: editors.length };
-  },
-);
-
-export const submissionAcceptedNotification = inngest.createFunction(
-  {
-    id: 'submission-accepted-notification',
-    name: 'Submission Accepted Notification',
-    retries: 3,
-  },
-  { event: 'hopper/submission.accepted' },
-  async ({ event, step }) => {
-    const { orgId, submissionId, submitterId, comment } =
-      event.data as HopperSubmissionAcceptedEvent['data'];
-
-    const { submission, orgName } = await step.run('resolve-data', async () =>
-      getSubmissionAndOrg(orgId, submissionId),
-    );
-
-    if (!submission) return { skipped: true, reason: 'submission-not-found' };
-
-    const submitter = await step.run('get-submitter', async () =>
-      getUserEmail(submitterId),
-    );
-
-    if (!submitter) return { skipped: true, reason: 'submitter-not-found' };
-
-    await step.run('queue-email', async () => {
-      await queueEmailForRecipient({
-        orgId,
-        userId: submitterId,
-        email: submitter.email,
-        eventType: 'submission.accepted',
-        templateName: 'submission-accepted',
-        templateData: {
-          submissionTitle: submission.title,
-          submitterName: submitter.email,
-          submitterEmail: submitter.email,
-          orgName,
-          editorComment: comment,
-        },
-        subject: `Your submission has been accepted: ${submission.title}`,
       });
-    });
 
-    await step.run('queue-in-app', async () => {
-      await queueInAppNotification({
-        orgId,
-        userId: submitterId,
-        eventType: 'submission.accepted',
-        title: `Your submission has been accepted: ${submission.title}`,
-        link: `/submissions/${submissionId}`,
-      });
-    });
-
-    await step.run('capture-correspondence', async () => {
-      try {
-        await withRls({ orgId }, async (tx) => {
-          await correspondenceService.create(tx, {
-            userId: submitterId,
-            submissionId,
-            direction: 'outbound',
-            channel: 'email',
-            sentAt: new Date(),
-            subject: `Your submission has been accepted: ${submission.title}`,
-            body: comment
-              ? `Congratulations! Your submission has been accepted.\n\nNote from the editors:\n${comment}`
-              : 'Congratulations! Your submission has been accepted.',
-            senderName: null,
-            senderEmail: null,
-            isPersonalized: !!comment,
-            source: 'colophony',
+      await step.run('capture-correspondence', async () => {
+        try {
+          await withRls({ orgId }, async (tx) => {
+            await correspondenceService.create(tx, {
+              userId: submitterId,
+              submissionId,
+              direction: 'outbound',
+              channel: 'email',
+              sentAt: new Date(),
+              subject: `Your submission has been accepted: ${submission.title}`,
+              body: comment
+                ? `Congratulations! Your submission has been accepted.\n\nNote from the editors:\n${comment}`
+                : 'Congratulations! Your submission has been accepted.',
+              senderName: null,
+              senderEmail: null,
+              isPersonalized: !!comment,
+              source: 'colophony',
+            });
           });
-        });
-      } catch {
-        // Non-fatal: correspondence capture should not block notifications
-      }
-    });
-
-    return { notified: 1 };
-  },
-);
-
-export const submissionRejectedNotification = inngest.createFunction(
-  {
-    id: 'submission-rejected-notification',
-    name: 'Submission Rejected Notification',
-    retries: 3,
-  },
-  { event: 'hopper/submission.rejected' },
-  async ({ event, step }) => {
-    const { orgId, submissionId, submitterId, comment } =
-      event.data as HopperSubmissionRejectedEvent['data'];
-
-    const { submission, orgName } = await step.run('resolve-data', async () =>
-      getSubmissionAndOrg(orgId, submissionId),
-    );
-
-    if (!submission) return { skipped: true, reason: 'submission-not-found' };
-
-    const submitter = await step.run('get-submitter', async () =>
-      getUserEmail(submitterId),
-    );
-
-    if (!submitter) return { skipped: true, reason: 'submitter-not-found' };
-
-    await step.run('queue-email', async () => {
-      await queueEmailForRecipient({
-        orgId,
-        userId: submitterId,
-        email: submitter.email,
-        eventType: 'submission.rejected',
-        templateName: 'submission-rejected',
-        templateData: {
-          submissionTitle: submission.title,
-          submitterName: submitter.email,
-          submitterEmail: submitter.email,
-          orgName,
-          editorComment: comment,
-        },
-        subject: `Update on your submission: ${submission.title}`,
+        } catch {
+          // Non-fatal: correspondence capture should not block notifications
+        }
       });
-    });
 
-    await step.run('queue-in-app', async () => {
-      await queueInAppNotification({
-        orgId,
-        userId: submitterId,
-        eventType: 'submission.rejected',
-        title: `Update on your submission: ${submission.title}`,
-        link: `/submissions/${submissionId}`,
-      });
-    });
+      return { notified: 1 };
+    },
+  );
 
-    await step.run('capture-correspondence', async () => {
-      try {
-        await withRls({ orgId }, async (tx) => {
-          await correspondenceService.create(tx, {
-            userId: submitterId,
-            submissionId,
-            direction: 'outbound',
-            channel: 'email',
-            sentAt: new Date(),
-            subject: `Update on your submission: ${submission.title}`,
-            body: comment
-              ? `Thank you for your submission. After careful review, we are unable to accept it at this time.\n\nNote from the editors:\n${comment}`
-              : 'Thank you for your submission. After careful review, we are unable to accept it at this time.',
-            senderName: null,
-            senderEmail: null,
-            isPersonalized: !!comment,
-            source: 'colophony',
-          });
-        });
-      } catch {
-        // Non-fatal: correspondence capture should not block notifications
-      }
-    });
+export const submissionRejectedNotification: InngestFunction.Any =
+  inngest.createFunction(
+    {
+      id: 'submission-rejected-notification',
+      name: 'Submission Rejected Notification',
+      retries: 3,
+      triggers: [{ event: 'hopper/submission.rejected' }],
+    },
+    async ({ event, step }) => {
+      const { orgId, submissionId, submitterId, comment } =
+        event.data as HopperSubmissionRejectedEvent['data'];
 
-    return { notified: 1 };
-  },
-);
+      const { submission, orgName } = await step.run('resolve-data', async () =>
+        getSubmissionAndOrg(orgId, submissionId),
+      );
 
-export const submissionReviseAndResubmitNotification = inngest.createFunction(
-  {
-    id: 'submission-revise-and-resubmit-notification',
-    name: 'Submission Revise and Resubmit Notification',
-    retries: 3,
-  },
-  { event: 'hopper/submission.revise_and_resubmit' },
-  async ({ event, step }) => {
-    const { orgId, submissionId, submitterId, comment } =
-      event.data as HopperSubmissionReviseAndResubmitEvent['data'];
+      if (!submission) return { skipped: true, reason: 'submission-not-found' };
 
-    const { submission, orgName } = await step.run('resolve-data', async () =>
-      getSubmissionAndOrg(orgId, submissionId),
-    );
+      const submitter = await step.run('get-submitter', async () =>
+        getUserEmail(submitterId),
+      );
 
-    if (!submission) return { skipped: true, reason: 'submission-not-found' };
+      if (!submitter) return { skipped: true, reason: 'submitter-not-found' };
 
-    const submitter = await step.run('get-submitter', async () =>
-      getUserEmail(submitterId),
-    );
-
-    if (!submitter) return { skipped: true, reason: 'submitter-not-found' };
-
-    await step.run('queue-email', async () => {
-      await queueEmailForRecipient({
-        orgId,
-        userId: submitterId,
-        email: submitter.email,
-        eventType: 'submission.revise_and_resubmit',
-        templateName: 'submission-revise-resubmit',
-        templateData: {
-          submissionTitle: submission.title,
-          submitterName: submitter.email,
-          submitterEmail: submitter.email,
-          orgName,
-          editorComment: comment,
-        },
-        subject: `Revision requested for your submission: ${submission.title}`,
-      });
-    });
-
-    await step.run('queue-in-app', async () => {
-      await queueInAppNotification({
-        orgId,
-        userId: submitterId,
-        eventType: 'submission.revise_and_resubmit',
-        title: `Revisions requested for: ${submission.title}`,
-        link: `/submissions/${submissionId}`,
-      });
-    });
-
-    await step.run('capture-correspondence', async () => {
-      try {
-        await withRls({ orgId }, async (tx) => {
-          await correspondenceService.create(tx, {
-            userId: submitterId,
-            submissionId,
-            direction: 'outbound',
-            channel: 'email',
-            sentAt: new Date(),
-            subject: `Revision requested for your submission: ${submission.title}`,
-            body: `After careful review, the editors are interested in your work but are requesting revisions.\n\nRevision notes:\n${comment}`,
-            senderName: null,
-            senderEmail: null,
-            isPersonalized: true,
-            source: 'colophony',
-          });
-        });
-      } catch {
-        // Non-fatal: correspondence capture should not block notifications
-      }
-    });
-
-    return { notified: 1 };
-  },
-);
-
-export const submissionWithdrawnNotification = inngest.createFunction(
-  {
-    id: 'submission-withdrawn-notification',
-    name: 'Submission Withdrawn Notification',
-    retries: 3,
-  },
-  { event: 'hopper/submission.withdrawn' },
-  async ({ event, step }) => {
-    const { orgId, submissionId, submitterId } =
-      event.data as HopperSubmissionWithdrawnEvent['data'];
-
-    const { submission, orgName } = await step.run('resolve-data', async () =>
-      getSubmissionAndOrg(orgId, submissionId),
-    );
-
-    if (!submission) return { skipped: true, reason: 'submission-not-found' };
-
-    const submitter = await step.run('get-submitter', async () =>
-      getUserEmail(submitterId),
-    );
-
-    const editors = await step.run('get-editors', async () =>
-      getOrgEditors(orgId),
-    );
-
-    await step.run('queue-emails', async () => {
-      for (const editor of editors) {
+      await step.run('queue-email', async () => {
         await queueEmailForRecipient({
           orgId,
-          userId: editor.userId,
-          email: editor.email,
-          eventType: 'submission.withdrawn',
-          templateName: 'submission-withdrawn',
+          userId: submitterId,
+          email: submitter.email,
+          eventType: 'submission.rejected',
+          templateName: 'submission-rejected',
           templateData: {
             submissionTitle: submission.title,
-            submitterName: submitter?.email ?? 'Unknown',
-            submitterEmail: submitter?.email ?? 'unknown',
+            submitterName: submitter.email,
+            submitterEmail: submitter.email,
             orgName,
+            editorComment: comment,
           },
-          subject: `Submission withdrawn: ${submission.title}`,
+          subject: `Update on your submission: ${submission.title}`,
         });
-      }
-    });
+      });
 
-    await step.run('queue-in-app-notifications', async () => {
-      for (const editor of editors) {
+      await step.run('queue-in-app', async () => {
         await queueInAppNotification({
           orgId,
-          userId: editor.userId,
-          eventType: 'submission.withdrawn',
-          title: `Submission withdrawn: ${submission.title}`,
+          userId: submitterId,
+          eventType: 'submission.rejected',
+          title: `Update on your submission: ${submission.title}`,
           link: `/submissions/${submissionId}`,
         });
-      }
-    });
+      });
 
-    return { notified: editors.length };
-  },
-);
+      await step.run('capture-correspondence', async () => {
+        try {
+          await withRls({ orgId }, async (tx) => {
+            await correspondenceService.create(tx, {
+              userId: submitterId,
+              submissionId,
+              direction: 'outbound',
+              channel: 'email',
+              sentAt: new Date(),
+              subject: `Update on your submission: ${submission.title}`,
+              body: comment
+                ? `Thank you for your submission. After careful review, we are unable to accept it at this time.\n\nNote from the editors:\n${comment}`
+                : 'Thank you for your submission. After careful review, we are unable to accept it at this time.',
+              senderName: null,
+              senderEmail: null,
+              isPersonalized: !!comment,
+              source: 'colophony',
+            });
+          });
+        } catch {
+          // Non-fatal: correspondence capture should not block notifications
+        }
+      });
+
+      return { notified: 1 };
+    },
+  );
+
+export const submissionReviseAndResubmitNotification: InngestFunction.Any =
+  inngest.createFunction(
+    {
+      id: 'submission-revise-and-resubmit-notification',
+      name: 'Submission Revise and Resubmit Notification',
+      retries: 3,
+      triggers: [{ event: 'hopper/submission.revise_and_resubmit' }],
+    },
+    async ({ event, step }) => {
+      const { orgId, submissionId, submitterId, comment } =
+        event.data as HopperSubmissionReviseAndResubmitEvent['data'];
+
+      const { submission, orgName } = await step.run('resolve-data', async () =>
+        getSubmissionAndOrg(orgId, submissionId),
+      );
+
+      if (!submission) return { skipped: true, reason: 'submission-not-found' };
+
+      const submitter = await step.run('get-submitter', async () =>
+        getUserEmail(submitterId),
+      );
+
+      if (!submitter) return { skipped: true, reason: 'submitter-not-found' };
+
+      await step.run('queue-email', async () => {
+        await queueEmailForRecipient({
+          orgId,
+          userId: submitterId,
+          email: submitter.email,
+          eventType: 'submission.revise_and_resubmit',
+          templateName: 'submission-revise-resubmit',
+          templateData: {
+            submissionTitle: submission.title,
+            submitterName: submitter.email,
+            submitterEmail: submitter.email,
+            orgName,
+            editorComment: comment,
+          },
+          subject: `Revision requested for your submission: ${submission.title}`,
+        });
+      });
+
+      await step.run('queue-in-app', async () => {
+        await queueInAppNotification({
+          orgId,
+          userId: submitterId,
+          eventType: 'submission.revise_and_resubmit',
+          title: `Revisions requested for: ${submission.title}`,
+          link: `/submissions/${submissionId}`,
+        });
+      });
+
+      await step.run('capture-correspondence', async () => {
+        try {
+          await withRls({ orgId }, async (tx) => {
+            await correspondenceService.create(tx, {
+              userId: submitterId,
+              submissionId,
+              direction: 'outbound',
+              channel: 'email',
+              sentAt: new Date(),
+              subject: `Revision requested for your submission: ${submission.title}`,
+              body: `After careful review, the editors are interested in your work but are requesting revisions.\n\nRevision notes:\n${comment}`,
+              senderName: null,
+              senderEmail: null,
+              isPersonalized: true,
+              source: 'colophony',
+            });
+          });
+        } catch {
+          // Non-fatal: correspondence capture should not block notifications
+        }
+      });
+
+      return { notified: 1 };
+    },
+  );
+
+export const submissionWithdrawnNotification: InngestFunction.Any =
+  inngest.createFunction(
+    {
+      id: 'submission-withdrawn-notification',
+      name: 'Submission Withdrawn Notification',
+      retries: 3,
+      triggers: [{ event: 'hopper/submission.withdrawn' }],
+    },
+    async ({ event, step }) => {
+      const { orgId, submissionId, submitterId } =
+        event.data as HopperSubmissionWithdrawnEvent['data'];
+
+      const { submission, orgName } = await step.run('resolve-data', async () =>
+        getSubmissionAndOrg(orgId, submissionId),
+      );
+
+      if (!submission) return { skipped: true, reason: 'submission-not-found' };
+
+      const submitter = await step.run('get-submitter', async () =>
+        getUserEmail(submitterId),
+      );
+
+      const editors = await step.run('get-editors', async () =>
+        getOrgEditors(orgId),
+      );
+
+      await step.run('queue-emails', async () => {
+        for (const editor of editors) {
+          await queueEmailForRecipient({
+            orgId,
+            userId: editor.userId,
+            email: editor.email,
+            eventType: 'submission.withdrawn',
+            templateName: 'submission-withdrawn',
+            templateData: {
+              submissionTitle: submission.title,
+              submitterName: submitter?.email ?? 'Unknown',
+              submitterEmail: submitter?.email ?? 'unknown',
+              orgName,
+            },
+            subject: `Submission withdrawn: ${submission.title}`,
+          });
+        }
+      });
+
+      await step.run('queue-in-app-notifications', async () => {
+        for (const editor of editors) {
+          await queueInAppNotification({
+            orgId,
+            userId: editor.userId,
+            eventType: 'submission.withdrawn',
+            title: `Submission withdrawn: ${submission.title}`,
+            link: `/submissions/${submissionId}`,
+          });
+        }
+      });
+
+      return { notified: editors.length };
+    },
+  );

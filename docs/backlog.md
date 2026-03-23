@@ -252,7 +252,7 @@
 - [x] Zod 3 → 4 — ground-up rewrite (stable May 2025); touches types package, all tRPC inputs, env config; largest migration surface — (dependabot #80; done 2026-02-17)
 - [x] TanStack Query 4 → 5 — upgraded with tRPC 11; `isPending` alias pattern used; `fetchStatus` workaround removed from `use-auth.ts` — (dependabot #74; done 2026-02-17)
 - [x] tRPC 10 → 11 — combined tRPC 11 + TQ5 + TS 5.7.2 migration; TS2742 quirk resolved — (CLAUDE.md version pin; done 2026-02-17)
-- [ ] Inngest 3 → 4 — hard breaking change (v4.0.3 errors on v3-style function config); ~15 function definitions across 11 files + client/serve config + 4 test files; mechanical but touches critical workflow orchestration (pipeline, contracts, notifications) — (dependabot #315, closed 2026-03-22)
+- [x] Inngest 3 → 4 — hard breaking change (v4.0.3 errors on v3-style function config); 15 function definitions across 11 files + 6 test files; TS2742 fix via `InngestFunction.Any` annotation — (dependabot #315; done 2026-03-22)
 
 ### [P2] Medium — Dev tooling, lower risk
 
