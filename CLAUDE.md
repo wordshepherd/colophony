@@ -372,6 +372,7 @@ pnpm docker:up                # Core infra + Zitadel (or --full for ClamAV, --co
 pnpm install
 pnpm db:migrate               # Run Drizzle migrations
 pnpm db:seed                  # Seed dev data (orgs, submissions, Slate pipeline)
+pnpm db:seed:staging          # Rich staging/demo data (80 subs, forms, editorial, federation, etc.)
 pnpm zitadel:setup            # Provision Zitadel + patch .env files (after volume wipe)
 pnpm dev                      # hivemind: builds packages, then API: 4000, Web: 3000
 ```
@@ -401,6 +402,7 @@ Full testing guide: [docs/testing.md](docs/testing.md)
 pnpm db:migrate               # Validate journal + run Drizzle migrations
 pnpm db:generate              # Generate migration from schema changes
 pnpm db:seed                  # Seed test data
+pnpm db:seed:staging          # Seed rich staging/demo data (all feature areas)
 pnpm db:reset                 # Drop and recreate with migrations + RLS
 pnpm db:validate-migrations   # Check SQL files ↔ journal consistency
 pnpm db:add-migration <name>  # Add journal entry for a manual migration

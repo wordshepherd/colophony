@@ -26,6 +26,7 @@
     "db:check": "pnpm --filter @colophony/db check",
     "db:studio": "pnpm --filter @colophony/db studio",
     "db:seed": "pnpm --filter @colophony/db seed",
+    "db:seed:staging": "pnpm --filter @colophony/db seed:staging",
     "db:verify": "pnpm --filter @colophony/db verify",
     "db:verify:repair": "pnpm --filter @colophony/db verify:repair",
     "db:validate-enums": "pnpm --filter @colophony/db validate-enums",
