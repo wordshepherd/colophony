@@ -114,12 +114,25 @@ jobs:
           ref: ${{ needs.prepare.outputs.ref }}
 
       - name: Trigger Coolify deployment
+        env:
+          COOLIFY_TOKEN: ${{ secrets.COOLIFY_API_TOKEN }}
+          COOLIFY_URL: ${{ secrets.COOLIFY_WEBHOOK_URL }}
         run: |
+          if [ -z "$COOLIFY_TOKEN" ]; then
+            echo "ERROR: COOLIFY_API_TOKEN secret is empty"
+            exit 1
+          fi
+          echo "Token length: ${#COOLIFY_TOKEN} chars"
+          if [ -z "$COOLIFY_URL" ]; then
+            echo "ERROR: COOLIFY_WEBHOOK_URL secret is empty"
+            exit 1
+          fi
+          echo "URL length: ${#COOLIFY_URL} chars"
           HTTP_CODE=$(curl -s -o /tmp/coolify-response.txt -w "%{http_code}" \
             --max-time 30 \
             -X GET \
-            -H "Authorization: Bearer ${{ secrets.COOLIFY_API_TOKEN }}" \
-            "${{ secrets.COOLIFY_WEBHOOK_URL }}" \
+            -H "Authorization: Bearer ${COOLIFY_TOKEN}" \
+            "${COOLIFY_URL}" \
             2>/tmp/coolify-error.txt)
           BODY=$(cat /tmp/coolify-response.txt 2>/dev/null || true)
           CURL_ERR=$(cat /tmp/coolify-error.txt 2>/dev/null || true)
