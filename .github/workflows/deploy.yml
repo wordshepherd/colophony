@@ -118,6 +118,7 @@ jobs:
           HTTP_CODE=$(curl -s -o /tmp/coolify-response.txt -w "%{http_code}" \
             --max-time 30 \
             -X GET \
+            -H "Authorization: Bearer ${{ secrets.COOLIFY_API_TOKEN }}" \
             "${{ secrets.COOLIFY_WEBHOOK_URL }}" \
             2>/tmp/coolify-error.txt)
           BODY=$(cat /tmp/coolify-response.txt 2>/dev/null || true)
