@@ -114,7 +114,7 @@ fi
 if [ "${SEED_STAGING:-}" = "true" ]; then
   echo ""
   echo "Step 4: Seeding staging demo data..."
-  pnpm db:seed:staging
+  node /app/packages/db/dist/seed-staging.js
   echo "Staging seed complete."
 fi
 
