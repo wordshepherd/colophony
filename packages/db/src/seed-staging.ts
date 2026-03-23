@@ -558,7 +558,190 @@ async function main() {
       }
     }
 
-    console.log(`  E2E demo user: ${E2E_EMAIL} (ADMIN in both orgs)`);
+    // Create submissions owned by the E2E user (writer POV for portfolio/tracker)
+    const e2eSubmissionData = [
+      {
+        title: "The Librarian's Ghost",
+        status: "ACCEPTED" as const,
+        daysBack: 45,
+      },
+      {
+        title: "Ode to a Broken Window",
+        status: "UNDER_REVIEW" as const,
+        daysBack: 12,
+      },
+      {
+        title: "What the Sparrows Know",
+        status: "REJECTED" as const,
+        daysBack: 90,
+      },
+      {
+        title: "The Cartographer's Apprentice",
+        status: "SUBMITTED" as const,
+        daysBack: 5,
+      },
+      {
+        title: "Still Life with Bees",
+        status: "REVISE_AND_RESUBMIT" as const,
+        daysBack: 30,
+      },
+    ];
+
+    for (const sub of e2eSubmissionData) {
+      const [s] = await tx
+        .insert(submissions)
+        .values({
+          organizationId: base.org1.id,
+          submitterId: e2eUser!.id,
+          submissionPeriodId: base.openPeriod.id,
+          title: sub.title,
+          content: `Submission text for "${sub.title}".`,
+          coverLetter: `Dear Editors, please consider "${sub.title}" for publication.`,
+          status: sub.status,
+          submittedAt: daysAgo(sub.daysBack),
+        })
+        .returning();
+
+      // Manuscript + version for each
+      const [ms] = await tx
+        .insert(manuscripts)
+        .values({ ownerId: e2eUser!.id, title: sub.title })
+        .returning();
+      const [ver] = await tx
+        .insert(manuscriptVersions)
+        .values({
+          manuscriptId: ms!.id,
+          versionNumber: 1,
+          label: "Submitted version",
+        })
+        .returning();
+      await tx
+        .update(submissions)
+        .set({ manuscriptVersionId: ver!.id })
+        .where(eq(submissions.id, s!.id));
+
+      // History entries
+      type AnyStatus =
+        | "DRAFT"
+        | "SUBMITTED"
+        | "UNDER_REVIEW"
+        | "ACCEPTED"
+        | "REJECTED"
+        | "HOLD"
+        | "WITHDRAWN"
+        | "REVISE_AND_RESUBMIT";
+      const histories: {
+        submissionId: string;
+        fromStatus: AnyStatus | null;
+        toStatus: AnyStatus;
+        changedBy: string;
+        changedAt: Date;
+        comment?: string;
+      }[] = [
+        {
+          submissionId: s!.id,
+          fromStatus: "DRAFT" as const,
+          toStatus: "SUBMITTED" as const,
+          changedBy: e2eUser!.id,
+          changedAt: daysAgo(sub.daysBack),
+        },
+      ];
+
+      if (!["SUBMITTED", "DRAFT"].includes(sub.status)) {
+        histories.push({
+          submissionId: s!.id,
+          fromStatus: "SUBMITTED" as const,
+          toStatus: "UNDER_REVIEW" as const,
+          changedBy: base.editorUser.id,
+          changedAt: daysAgo(sub.daysBack - 3),
+        });
+      }
+
+      if (
+        ["ACCEPTED", "REJECTED", "REVISE_AND_RESUBMIT"].includes(sub.status)
+      ) {
+        histories.push({
+          submissionId: s!.id,
+          fromStatus: "UNDER_REVIEW" as const,
+          toStatus: sub.status,
+          changedBy: base.adminUser.id,
+          changedAt: daysAgo(Math.max(1, sub.daysBack - 10)),
+          comment:
+            sub.status === "ACCEPTED"
+              ? "Wonderful piece — accepted for the Spring issue."
+              : sub.status === "REJECTED"
+                ? "Thank you for submitting. Not the right fit this time."
+                : "Strong work — we'd love to see a revised version addressing our notes.",
+        });
+      }
+
+      await tx.insert(submissionHistory).values(histories);
+
+      // Correspondence on the accepted submission
+      if (sub.status === "ACCEPTED") {
+        await tx.insert(correspondence).values({
+          userId: e2eUser!.id,
+          submissionId: s!.id,
+          direction: "outbound",
+          channel: "email",
+          sentAt: daysAgo(Math.max(1, sub.daysBack - 12)),
+          subject: `Acceptance: ${sub.title}`,
+          body: `Dear writer, we are delighted to accept "${sub.title}" for publication in The Quarterly Review. We'll be in touch about next steps.`,
+          senderName: "The Quarterly Review",
+          senderEmail: "editor@quarterlyreview.org",
+          isPersonalized: true,
+          source: "auto",
+        });
+      }
+    }
+
+    // External submissions tracked by the E2E user (writer workspace tracker)
+    const e2eExternalSubs = [
+      {
+        journal: "The Paris Review",
+        status: "rejected" as const,
+        daysBack: 120,
+      },
+      { journal: "Ploughshares", status: "sent" as const, daysBack: 8 },
+      { journal: "Tin House", status: "accepted" as const, daysBack: 60 },
+      { journal: "AGNI", status: "no_response" as const, daysBack: 150 },
+      {
+        journal: "Narrative Magazine",
+        status: "in_review" as const,
+        daysBack: 25,
+      },
+      {
+        journal: "The Kenyon Review",
+        status: "rejected" as const,
+        daysBack: 95,
+      },
+    ];
+
+    for (const ext of e2eExternalSubs) {
+      await tx.insert(externalSubmissions).values({
+        userId: e2eUser!.id,
+        journalName: ext.journal,
+        status: ext.status,
+        sentAt: daysAgo(ext.daysBack),
+        respondedAt: ["accepted", "rejected"].includes(ext.status)
+          ? daysAgo(ext.daysBack - randomInt(20, 50))
+          : null,
+        method: "Submittable",
+        notes: ext.status === "accepted" ? "Accepted for Fall issue!" : null,
+      });
+    }
+
+    // Writer profile for the E2E user
+    await tx.insert(writerProfiles).values({
+      userId: e2eUser!.id,
+      platform: "chillsubs",
+      externalId: "e2e-demo-user",
+      profileUrl: "https://chillsubs.com/user/e2e-demo",
+    });
+
+    console.log(
+      `  E2E demo user: ${E2E_EMAIL} (ADMIN in both orgs, 5 submissions, 6 external, 1 profile)`,
+    );
 
     const allWriters = [
       base.writerUser,
