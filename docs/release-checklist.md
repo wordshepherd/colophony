@@ -57,3 +57,14 @@ These flows have no Playwright coverage — verify manually or via MCP:
 - [ ] **Error states** — trigger 404, 403, 500 pages, verify user-friendly messages
 - [ ] **Loading states** — verify skeleton/spinner displays during data fetches
 - [ ] **Copy review** — scan user-facing text for typos, unclear language
+
+## 6. Deployment
+
+- [ ] All sections above verified on staging
+- [ ] Create git tag: `git tag v<major>.<minor>.<patch>`
+- [ ] Push tag: `git push origin v<major>.<minor>.<patch>`
+- [ ] Create GitHub Release with changelog
+- [ ] Dispatch production deploy: Actions → Deploy → production → tag
+- [ ] Verify smoke test passes in workflow output
+- [ ] Monitor Sentry for 15 minutes post-deploy
+- [ ] Spot-check one critical flow on production

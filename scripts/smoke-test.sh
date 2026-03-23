@@ -43,7 +43,15 @@ else
   fail "GET /health — expected {\"status\":\"ok\"}, got: ${HEALTH_BODY:-<no response>}"
 fi
 
-# --- 2. Security headers ---
+# --- 2. Readiness endpoint ---
+READY_BODY=$(curl -sf --max-time 10 "${BASE_URL}/ready" 2>/dev/null || true)
+if echo "$READY_BODY" | grep -q '"status":"ready"'; then
+  pass "GET /ready — 200, database reachable"
+else
+  fail "GET /ready — expected {\"status\":\"ready\"}, got: ${READY_BODY:-<no response>}"
+fi
+
+# --- 3. Security headers ---
 HEADERS=$(curl -sI --max-time 10 "${BASE_URL}/health" 2>/dev/null || true)
 check_header() {
   if echo "$HEADERS" | grep -qi "^$1:"; then
@@ -56,7 +64,7 @@ check_header "X-Frame-Options"
 check_header "Strict-Transport-Security"
 check_header "X-Content-Type-Options"
 
-# --- 3. TLS certificate ---
+# --- 4. TLS certificate ---
 if [ "$SKIP_TLS" = true ]; then
   warn "TLS check skipped (--skip-tls)"
 else
@@ -68,7 +76,7 @@ else
   fi
 fi
 
-# --- 4. tusd tus headers ---
+# --- 5. tusd tus headers ---
 TUS_HEADERS=$(curl -sI --max-time 10 -X OPTIONS "${BASE_URL}/upload" 2>/dev/null || true)
 if echo "$TUS_HEADERS" | grep -qi "Tus-Resumable"; then
   pass "OPTIONS /upload — Tus-Resumable header present"
@@ -76,7 +84,7 @@ else
   fail "OPTIONS /upload — Tus-Resumable header missing"
 fi
 
-# --- 5. Unauthenticated tRPC returns 401 ---
+# --- 6. Unauthenticated tRPC returns 401 ---
 TRPC_STATUS=$(curl -so /dev/null --max-time 10 -w "%{http_code}" "${BASE_URL}/trpc/submissions.list" 2>/dev/null || true)
 if [ "$TRPC_STATUS" = "401" ]; then
   pass "GET /trpc/submissions.list — 401 (auth required)"
@@ -86,7 +94,7 @@ else
   warn "GET /trpc/submissions.list — got ${TRPC_STATUS} (expected 401)"
 fi
 
-# --- 6. Frontend serves HTML ---
+# --- 7. Frontend serves HTML ---
 FRONT_STATUS=$(curl -so /dev/null --max-time 10 -w "%{http_code}" "${BASE_URL}/" 2>/dev/null || true)
 FRONT_TYPE=$(curl -sI --max-time 10 "${BASE_URL}/" 2>/dev/null | grep -i "^content-type:" || true)
 if [ "$FRONT_STATUS" = "200" ] && echo "$FRONT_TYPE" | grep -qi "text/html"; then
@@ -95,7 +103,7 @@ else
   fail "GET / — expected 200 text/html, got status=${FRONT_STATUS}"
 fi
 
-# --- 7. CORS preflight on /trpc ---
+# --- 8. CORS preflight on /trpc ---
 CORS_HEADERS=$(curl -sI --max-time 10 -X OPTIONS \
   -H "Origin: ${BASE_URL}" \
   -H "Access-Control-Request-Method: POST" \

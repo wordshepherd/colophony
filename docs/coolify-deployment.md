@@ -21,7 +21,7 @@ Deploy Colophony to a Hetzner VPS managed by [Coolify](https://coolify.io) (self
 3. Connect your Git repository
 4. Set the **Docker Compose file paths** to:
    ```
-   docker-compose.staging.yml;docker-compose.coolify.yml
+   docker-compose.coolify.yml
    ```
 5. Set the **Environment file** to `.env.staging`
 
@@ -167,13 +167,14 @@ Internet → Traefik (Coolify, TLS) → nginx (:80) → api/web/tusd
                                               redis, minio
 ```
 
-The Coolify overlay (`docker-compose.coolify.yml`) on top of `docker-compose.staging.yml`:
+`docker-compose.coolify.yml` is a standalone compose file (not an overlay). Key differences from the production compose (`docker-compose.prod.yml`):
 
-- Removes host port bindings from nginx (Traefik routes traffic)
-- Adds Traefik labels for service discovery
-- Adds PgBouncer (required for RLS `SET LOCAL` in transaction pooling mode)
-- Overrides URLs to use `https://` (Traefik terminates TLS)
-- Removes `container_name` directives (Coolify manages naming)
+- No host port bindings on nginx (Traefik routes traffic)
+- PgBouncer with lower pool sizes (10/100/25 vs 20/200/50)
+- Migrations run inline in the API entrypoint (Coolify crash-loops one-shot containers)
+- MinIO bucket setup inlined in the API entrypoint (same reason)
+- `coolify` external network for Traefik service discovery
+- Debug logging by default (`LOG_LEVEL: ${LOG_LEVEL:-debug}`)
 
 ## 9. Backups (Future)
 
@@ -192,7 +193,7 @@ See [docs/deployment.md — Backup & Restore](deployment.md#backup--restore-wal-
 
 ### Build fails in Coolify
 
-Check that the compose file paths are exactly: `docker-compose.staging.yml;docker-compose.coolify.yml` (semicolon-separated, no spaces).
+Check that the compose file path is exactly: `docker-compose.coolify.yml`.
 
 ### 502 Bad Gateway after deploy
 

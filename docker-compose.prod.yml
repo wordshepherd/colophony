@@ -84,8 +84,11 @@ services:
       S3_SECRET_KEY: ${MINIO_ROOT_PASSWORD}
       S3_REGION: us-east-1
       TUS_ENDPOINT: http://tusd:1080
-      CORS_ORIGIN: http://${DOMAIN:-localhost}
-      APP_URL: http://${DOMAIN:-localhost}
+      CORS_ORIGIN: https://${DOMAIN:-localhost}
+      APP_URL: https://${DOMAIN:-localhost}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      SENTRY_ENVIRONMENT: ${SENTRY_ENVIRONMENT:-production}
+      METRICS_ENABLED: ${METRICS_ENABLED:-true}
       CLAMAV_HOST: clamav
       CLAMAV_PORT: 3310
     depends_on:
@@ -115,8 +118,10 @@ services:
       context: .
       dockerfile: apps/web/Dockerfile
       args:
-        NEXT_PUBLIC_API_URL: http://${DOMAIN:-localhost}/trpc
-        NEXT_PUBLIC_TUS_URL: http://${DOMAIN:-localhost}/upload/files/
+        NEXT_PUBLIC_API_URL: https://${DOMAIN:-localhost}/trpc
+        NEXT_PUBLIC_TUS_URL: https://${DOMAIN:-localhost}/upload/files/
+        NEXT_PUBLIC_ZITADEL_AUTHORITY: ${NEXT_PUBLIC_ZITADEL_AUTHORITY:-}
+        NEXT_PUBLIC_ZITADEL_CLIENT_ID: ${NEXT_PUBLIC_ZITADEL_CLIENT_ID:-}
     container_name: colophony-web
     expose:
       - "3000"
@@ -280,11 +285,11 @@ services:
       - -hooks-http
       - http://api:4000/webhooks/tusd
       - -hooks-http-forward-headers
-      - Authorization,X-Organization-Id,X-Embed-Token
+      - Authorization,X-Organization-Id,X-Embed-Token,X-Status-Token
       - -cors-allow-origin
       - ".*"
       - -cors-allow-headers
-      - Authorization,Origin,X-Requested-With,Content-Type,Upload-Length,Upload-Offset,Tus-Resumable,Upload-Metadata,Upload-Defer-Length,X-Organization-Id,X-Embed-Token
+      - Authorization,Origin,X-Requested-With,Content-Type,Upload-Length,Upload-Offset,Tus-Resumable,Upload-Metadata,Upload-Defer-Length,X-Organization-Id,X-Embed-Token,X-Status-Token
       - -behind-proxy
       - -base-path
       - /upload
