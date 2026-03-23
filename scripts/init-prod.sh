@@ -108,5 +108,15 @@ else
   fi
 fi
 
+# Step 4 (optional): Seed staging demo data
+# Set SEED_STAGING=true in Coolify env to populate rich demo/QA data.
+# Idempotent — safe to run on every deploy.
+if [ "${SEED_STAGING:-}" = "true" ]; then
+  echo ""
+  echo "Step 4: Seeding staging demo data..."
+  pnpm db:seed:staging
+  echo "Staging seed complete."
+fi
+
 echo ""
 echo "=== Production initialization complete ==="
