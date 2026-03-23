@@ -1,9 +1,9 @@
 name: Deploy
 
 on:
-  # Auto-deploy to staging on merge to main (enable when staging server is configured)
-  # push:
-  #   branches: [main]
+  # Auto-deploy to staging on merge to main
+  push:
+    branches: [main]
   # Manual deploy to staging or production
   workflow_dispatch:
     inputs:
@@ -97,6 +97,10 @@ jobs:
       name: staging
       url: https://${{ vars.STAGING_DOMAIN }}
     steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ needs.prepare.outputs.ref }}
+
       - name: Trigger Coolify deployment
         run: |
           RESPONSE=$(curl -sf --max-time 30 \
@@ -124,6 +128,9 @@ jobs:
           done
           echo "Staging health check failed"
           exit 1
+
+      - name: Run smoke tests
+        run: bash scripts/smoke-test.sh "https://${{ vars.STAGING_DOMAIN }}"
 
   # ──────────────────────────────────────────────────
   # Deploy to production (manual dispatch only)
@@ -171,3 +178,6 @@ jobs:
           done
           echo "Production health check failed"
           exit 1
+
+      - name: Run smoke tests
+        run: bash scripts/smoke-test.sh "https://${{ vars.PRODUCTION_DOMAIN }}"
