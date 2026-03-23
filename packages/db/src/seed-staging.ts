@@ -11,7 +11,11 @@
  * Usage: pnpm --filter @colophony/db seed:staging
  */
 
-import { createHash, generateKeyPairSync } from "node:crypto";
+import {
+  createHash,
+  generateKeyPairSync,
+  randomInt as cryptoRandomInt,
+} from "node:crypto";
 import { eq, sql } from "drizzle-orm";
 import { db, pool } from "./client";
 import type { DrizzleDb } from "./context";
@@ -60,11 +64,11 @@ import {
 // ---------------------------------------------------------------------------
 
 function randomInt(min: number, max: number): number {
-  return Math.floor(Math.random() * (max - min + 1)) + min;
+  return cryptoRandomInt(min, max + 1);
 }
 
 function randomFrom<T>(arr: T[]): T {
-  return arr[Math.floor(Math.random() * arr.length)]!;
+  return arr[cryptoRandomInt(0, arr.length)]!;
 }
 
 /** Generate an Ed25519 keypair in PEM format */
