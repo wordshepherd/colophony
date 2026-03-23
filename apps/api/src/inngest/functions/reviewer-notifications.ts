@@ -1,3 +1,4 @@
+import type { InngestFunction } from 'inngest';
 import {
   withRls,
   db,
@@ -107,59 +108,60 @@ async function queueEmailForRecipient(params: {
 // Inngest function
 // ---------------------------------------------------------------------------
 
-export const reviewerAssignedNotification = inngest.createFunction(
-  {
-    id: 'reviewer-assigned-notification',
-    name: 'Reviewer Assigned Notification',
-    retries: 3,
-  },
-  { event: 'hopper/reviewer.assigned' },
-  async ({ event, step }) => {
-    const { orgId, submissionId, reviewerUserId, assignedBy } =
-      event.data as HopperReviewerAssignedEvent['data'];
+export const reviewerAssignedNotification: InngestFunction.Any =
+  inngest.createFunction(
+    {
+      id: 'reviewer-assigned-notification',
+      name: 'Reviewer Assigned Notification',
+      retries: 3,
+      triggers: [{ event: 'hopper/reviewer.assigned' }],
+    },
+    async ({ event, step }) => {
+      const { orgId, submissionId, reviewerUserId, assignedBy } =
+        event.data as HopperReviewerAssignedEvent['data'];
 
-    const { submission, orgName } = await step.run('resolve-data', async () =>
-      getSubmissionAndOrg(orgId, submissionId),
-    );
+      const { submission, orgName } = await step.run('resolve-data', async () =>
+        getSubmissionAndOrg(orgId, submissionId),
+      );
 
-    if (!submission) return { skipped: true, reason: 'submission-not-found' };
+      if (!submission) return { skipped: true, reason: 'submission-not-found' };
 
-    const reviewer = await step.run('get-reviewer', async () =>
-      getUserEmail(reviewerUserId),
-    );
+      const reviewer = await step.run('get-reviewer', async () =>
+        getUserEmail(reviewerUserId),
+      );
 
-    if (!reviewer) return { skipped: true, reason: 'reviewer-not-found' };
+      if (!reviewer) return { skipped: true, reason: 'reviewer-not-found' };
 
-    const assigner = await step.run('get-assigner', async () =>
-      getUserEmail(assignedBy),
-    );
+      const assigner = await step.run('get-assigner', async () =>
+        getUserEmail(assignedBy),
+      );
 
-    await step.run('queue-email', async () => {
-      await queueEmailForRecipient({
-        orgId,
-        userId: reviewerUserId,
-        email: reviewer.email,
-        eventType: 'reviewer.assigned',
-        templateName: 'reviewer-assigned',
-        templateData: {
-          submissionTitle: submission.title,
-          orgName,
-          assignedByName: assigner?.email ?? 'An editor',
-        },
-        subject: `You've been assigned to review: ${submission.title}`,
+      await step.run('queue-email', async () => {
+        await queueEmailForRecipient({
+          orgId,
+          userId: reviewerUserId,
+          email: reviewer.email,
+          eventType: 'reviewer.assigned',
+          templateName: 'reviewer-assigned',
+          templateData: {
+            submissionTitle: submission.title,
+            orgName,
+            assignedByName: assigner?.email ?? 'An editor',
+          },
+          subject: `You've been assigned to review: ${submission.title}`,
+        });
       });
-    });
 
-    await step.run('queue-in-app', async () => {
-      await queueInAppNotification({
-        orgId,
-        userId: reviewerUserId,
-        eventType: 'reviewer.assigned',
-        title: `You've been assigned to review: ${submission.title}`,
-        link: `/submissions/${submissionId}`,
+      await step.run('queue-in-app', async () => {
+        await queueInAppNotification({
+          orgId,
+          userId: reviewerUserId,
+          eventType: 'reviewer.assigned',
+          title: `You've been assigned to review: ${submission.title}`,
+          link: `/submissions/${submissionId}`,
+        });
       });
-    });
 
-    return { notified: 1 };
-  },
-);
+      return { notified: 1 };
+    },
+  );

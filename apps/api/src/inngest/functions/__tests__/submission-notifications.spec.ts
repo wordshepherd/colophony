@@ -68,9 +68,7 @@ vi.mock('../../../config/env.js', () => ({
 // Mock Inngest client — return the handler function directly
 vi.mock('../../client.js', () => ({
   inngest: {
-    createFunction: vi.fn(
-      (_config: unknown, _trigger: unknown, handler: unknown) => handler,
-    ),
+    createFunction: vi.fn((_config: unknown, handler: unknown) => handler),
   },
 }));
 
