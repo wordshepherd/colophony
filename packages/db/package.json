@@ -37,8 +37,8 @@
   "devDependencies": {
     "@colophony/typescript-config": "workspace:*",
     "@types/node": "^25.5.0",
-    "@types/pg": "^8.18.0",
-    "drizzle-kit": "^0.31.9",
+    "@types/pg": "^8.20.0",
+    "drizzle-kit": "^0.31.10",
     "vitest": "^3.2.1",
     "tsx": "^4.19.0",
     "typescript": "^5.7.2"
