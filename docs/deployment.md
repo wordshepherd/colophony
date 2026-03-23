@@ -475,17 +475,17 @@ docker compose --env-file .env.prod -f docker-compose.prod.yml exec postgres \
 
 ### Environments Overview
 
-| Environment | Compose file               | Trigger                    | URL                 |
-| ----------- | -------------------------- | -------------------------- | ------------------- |
-| Development | docker-compose.yml         | Manual (`pnpm dev`)        | localhost:3000/4000 |
-| Staging     | docker-compose.coolify.yml | Auto on merge to `main`    | staging domain      |
-| Production  | docker-compose.prod.yml    | Manual `workflow_dispatch` | production domain   |
+| Environment | Compose file               | Trigger                        | URL                 |
+| ----------- | -------------------------- | ------------------------------ | ------------------- |
+| Development | docker-compose.yml         | Manual (`pnpm dev`)            | localhost:3000/4000 |
+| Staging     | docker-compose.coolify.yml | Auto after CI passes on `main` | staging domain      |
+| Production  | docker-compose.prod.yml    | Manual `workflow_dispatch`     | production domain   |
 
 ### Staging (Automatic)
 
 1. PR merged to `main`
 2. CI pipeline runs (all jobs must pass)
-3. Deploy workflow triggers — Coolify webhook fires
+3. Deploy workflow triggers via `workflow_run` (only after CI succeeds) — Coolify webhook fires
 4. Coolify pulls latest `main`, rebuilds images, starts services
 5. `init-prod.sh` runs migrations + RLS verification
 6. Health check + smoke test verify deployment
