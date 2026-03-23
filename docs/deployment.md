@@ -470,3 +470,95 @@ docker compose --env-file .env.prod -f docker-compose.prod.yml exec postgres \
   psql -U colophony -c "SELECT usename, usesuper FROM pg_user WHERE usename = 'app_user';"
 # Expected: app_user | f
 ```
+
+## Release Process (Tag-Based)
+
+### Environments Overview
+
+| Environment | Compose file               | Trigger                    | URL                 |
+| ----------- | -------------------------- | -------------------------- | ------------------- |
+| Development | docker-compose.yml         | Manual (`pnpm dev`)        | localhost:3000/4000 |
+| Staging     | docker-compose.coolify.yml | Auto on merge to `main`    | staging domain      |
+| Production  | docker-compose.prod.yml    | Manual `workflow_dispatch` | production domain   |
+
+### Staging (Automatic)
+
+1. PR merged to `main`
+2. CI pipeline runs (all jobs must pass)
+3. Deploy workflow triggers — Coolify webhook fires
+4. Coolify pulls latest `main`, rebuilds images, starts services
+5. `init-prod.sh` runs migrations + RLS verification
+6. Health check + smoke test verify deployment
+
+### Production Release
+
+#### Pre-release
+
+1. Verify staging is healthy and has been validated
+2. Run through [release checklist](release-checklist.md) on staging
+3. Review migrations for destructive changes — if any, prepare rollback SQL
+
+#### Tag and deploy
+
+4. Tag: `git tag v<major>.<minor>.<patch>`
+5. Push: `git push origin v<major>.<minor>.<patch>`
+6. Create GitHub Release with changelog
+7. Actions → Deploy → Run workflow → production → enter tag
+
+#### Post-deploy
+
+8. Health check + smoke test run automatically in workflow
+9. Monitor Sentry for 15-30 minutes
+10. Spot-check one critical flow on production
+
+### Rollback
+
+#### Code rollback (redeploy previous tag)
+
+1. Actions → Deploy → Run workflow → production → enter previous tag
+2. Previous tag skips new migrations (Drizzle is additive)
+3. Smoke test verifies rollback
+
+#### When rollback is NOT safe
+
+- The release added a migration that drops columns or changes types
+- The previous code depends on schema that no longer exists
+- In these cases: fix forward (hotfix branch) or restore from WAL-G backup
+
+#### Database restore (disaster recovery)
+
+See `scripts/restore-backup.sh` — supports PITR (point-in-time recovery).
+
+### Migration Safety
+
+| Safe (rollback-friendly)      | Unsafe (needs rollback SQL) |
+| ----------------------------- | --------------------------- |
+| ADD COLUMN (nullable/default) | DROP COLUMN                 |
+| CREATE TABLE                  | ALTER TYPE (enum changes)   |
+| CREATE INDEX CONCURRENTLY     | DROP TABLE                  |
+| ADD pgPolicy                  | Rename column/table         |
+
+For unsafe migrations: write `rollback-NNNN.sql` alongside the migration in `packages/db/migrations/` and test on staging before production deploy.
+
+### Docker Image Pruning
+
+On Coolify: verify Docker Cleanup is enabled in Settings.
+
+On the production server, add a weekly cron:
+
+```
+0 5 * * 0 docker image prune -f --filter "until=168h"
+```
+
+### Environment Differences
+
+| Aspect                 | Staging (Coolify)         | Production                     |
+| ---------------------- | ------------------------- | ------------------------------ |
+| PgBouncer pool size    | 10                        | 20                             |
+| Max client connections | 100                       | 200                            |
+| Postgres memory        | 512M                      | 1G                             |
+| pg_stat_statements     | No                        | Yes                            |
+| Log level              | debug                     | info                           |
+| Sentry environment     | staging                   | production                     |
+| Container names        | Auto (Coolify)            | Explicit (colophony-\*)        |
+| One-shot containers    | Inlined in API entrypoint | Separate migrate + minio-setup |
