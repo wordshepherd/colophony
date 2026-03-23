@@ -195,11 +195,23 @@ See [docs/deployment.md — Backup & Restore](deployment.md#backup--restore-wal-
 
 Check that the compose file path is exactly: `docker-compose.coolify.yml`.
 
-### 502 Bad Gateway after deploy
+### 502 Bad Gateway / maintenance page after deploy
 
-Services may still be starting. Wait for all healthchecks to go green in the Coolify dashboard (typically 30-60 seconds). Check Coolify logs for the `api` service.
+During a redeploy, nginx starts immediately and serves a maintenance page while backends initialize. The API can take up to 2 minutes on first deploy (migrations, RLS verification, optional seeding). The maintenance page auto-refreshes every 30 seconds.
 
-nginx uses Docker's embedded DNS resolver (`127.0.0.11`) with 10-second TTL to dynamically resolve upstream container IPs. This prevents stale routing after container recreation during redeploys. If you still see gateway timeouts, check that the nginx container itself restarted (it depends on `api` and `web` healthchecks).
+nginx's Docker healthcheck uses `/nginx-health` — a local endpoint that does not depend on backend availability. Coolify uses this health status for Traefik routing decisions.
+
+**If the maintenance page persists beyond 3 minutes:**
+
+1. Check API health: Coolify dashboard → api service → logs
+2. Check if `init-prod.sh` is still running (migrations, RLS verification)
+3. Verify database connectivity: check pgbouncer and postgres service logs
+
+**If you see raw 502 errors (not the maintenance page):**
+
+1. nginx itself may be down — check nginx service logs in Coolify
+2. Verify nginx container is healthy: `docker ps | grep nginx`
+3. Check that the nginx image built successfully (maintenance.html must be embedded)
 
 ### OIDC redirect fails
 
