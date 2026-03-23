@@ -118,25 +118,6 @@ jobs:
           COOLIFY_TOKEN: ${{ secrets.COOLIFY_API_TOKEN }}
           COOLIFY_URL: ${{ secrets.COOLIFY_WEBHOOK_URL }}
         run: |
-          if [ -z "$COOLIFY_TOKEN" ]; then
-            echo "ERROR: COOLIFY_API_TOKEN secret is empty"
-            exit 1
-          fi
-          echo "Token length: ${#COOLIFY_TOKEN} chars"
-          echo "Token first char: $(echo "$COOLIFY_TOKEN" | cut -c1)"
-          echo "Token char 2: $(echo "$COOLIFY_TOKEN" | cut -c2)"
-          # Test token against version endpoint first
-          TEST_CODE=$(curl -s -o /tmp/coolify-test.txt -w "%{http_code}" \
-            --max-time 10 \
-            -H "Authorization: Bearer ${COOLIFY_TOKEN}" \
-            "http://5.78.179.142:8000/api/v1/version" 2>/dev/null)
-          TEST_BODY=$(cat /tmp/coolify-test.txt 2>/dev/null || true)
-          echo "Token test against /version: HTTP ${TEST_CODE} — ${TEST_BODY}"
-          if [ -z "$COOLIFY_URL" ]; then
-            echo "ERROR: COOLIFY_WEBHOOK_URL secret is empty"
-            exit 1
-          fi
-          echo "URL length: ${#COOLIFY_URL} chars"
           HTTP_CODE=$(curl -s -o /tmp/coolify-response.txt -w "%{http_code}" \
             --max-time 30 \
             -X GET \
@@ -144,14 +125,10 @@ jobs:
             "${COOLIFY_URL}" \
             2>/tmp/coolify-error.txt)
           BODY=$(cat /tmp/coolify-response.txt 2>/dev/null || true)
-          CURL_ERR=$(cat /tmp/coolify-error.txt 2>/dev/null || true)
           if [ "$HTTP_CODE" = "200" ] || [ "$HTTP_CODE" = "201" ]; then
             echo "Coolify deployment triggered (HTTP $HTTP_CODE)"
           else
-            echo "Failed to trigger Coolify webhook"
-            echo "HTTP status: $HTTP_CODE"
-            echo "Response body: $BODY"
-            echo "Curl error: $CURL_ERR"
+            echo "Failed to trigger Coolify webhook (HTTP $HTTP_CODE): $BODY"
             exit 1
           fi
 
