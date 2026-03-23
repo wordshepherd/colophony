@@ -115,15 +115,22 @@ jobs:
 
       - name: Trigger Coolify deployment
         run: |
-          RESPONSE=$(curl -sf --max-time 30 \
+          HTTP_CODE=$(curl -s -o /tmp/coolify-response.txt -w "%{http_code}" \
+            --max-time 30 \
             -X GET \
             "${{ secrets.COOLIFY_WEBHOOK_URL }}" \
-            2>&1) || {
+            2>/tmp/coolify-error.txt)
+          BODY=$(cat /tmp/coolify-response.txt 2>/dev/null || true)
+          CURL_ERR=$(cat /tmp/coolify-error.txt 2>/dev/null || true)
+          if [ "$HTTP_CODE" = "200" ] || [ "$HTTP_CODE" = "201" ]; then
+            echo "Coolify deployment triggered (HTTP $HTTP_CODE)"
+          else
             echo "Failed to trigger Coolify webhook"
-            echo "Response: $RESPONSE"
+            echo "HTTP status: $HTTP_CODE"
+            echo "Response body: $BODY"
+            echo "Curl error: $CURL_ERR"
             exit 1
-          }
-          echo "Coolify deployment triggered"
+          fi
 
       - name: Wait for deployment
         run: sleep 30
