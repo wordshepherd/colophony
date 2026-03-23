@@ -512,6 +512,54 @@ async function main() {
       { organizationId: base.org1.id, userId: editor3!.id, role: "EDITOR" },
     ]);
 
+    // -----------------------------------------------------------------------
+    // E2E test user — ensure it exists in the DB and is an ADMIN in both orgs.
+    // The Zitadel setup script creates this user in Zitadel, but the DB record
+    // only appears after first login (webhook sync). We upsert here so the
+    // staging site is demo-ready without requiring a prior login.
+    //
+    // Credentials: e2e-test@colophony.dev / E2eTestPassword1!
+    // -----------------------------------------------------------------------
+    const E2E_EMAIL = "e2e-test@colophony.dev";
+
+    // Check if the user already exists (created by Zitadel webhook on first login)
+    let [e2eUser] = await tx
+      .select()
+      .from(users)
+      .where(eq(users.email, E2E_EMAIL));
+
+    if (!e2eUser) {
+      [e2eUser] = await tx
+        .insert(users)
+        .values({
+          email: E2E_EMAIL,
+          zitadelUserId: "seed-zitadel-e2e-001",
+          emailVerified: true,
+          emailVerifiedAt: daysAgo(1),
+        })
+        .returning();
+    }
+
+    // Ensure ADMIN membership in both orgs (idempotent — skip if already a member)
+    for (const org of [base.org1, base.org2]) {
+      const [existing] = await tx
+        .select({ id: organizationMembers.id })
+        .from(organizationMembers)
+        .where(
+          sql`${organizationMembers.organizationId} = ${org.id} AND ${organizationMembers.userId} = ${e2eUser!.id}`,
+        );
+
+      if (!existing) {
+        await tx.insert(organizationMembers).values({
+          organizationId: org.id,
+          userId: e2eUser!.id,
+          role: "ADMIN",
+        });
+      }
+    }
+
+    console.log(`  E2E demo user: ${E2E_EMAIL} (ADMIN in both orgs)`);
+
     const allWriters = [
       base.writerUser,
       writer2!,
