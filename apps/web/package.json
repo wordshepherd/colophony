@@ -98,7 +98,7 @@
     "@types/react-dom": "^19.0.0",
     "dotenv": "^17.3.1",
     "drizzle-orm": "^0.45.1",
-    "jsdom": "^26.1.0",
+    "jsdom": "^29.0.1",
     "pg": "^8.20.0",
     "postcss": "^8.5.8",
     "tailwindcss": "^4.2.2",
