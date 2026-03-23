@@ -32,6 +32,10 @@ import {
   submissionReviewers,
   submissionDiscussions,
   submissionVotes,
+  publications,
+  contractTemplates,
+  issues,
+  issueSections,
   pipelineItems,
   pipelineComments,
   pipelineHistory,
@@ -296,16 +300,144 @@ async function main() {
     return;
   }
 
+  // Check if base seed already ran (org exists but no stagingSeeded flag)
+  const baseAlreadyRan = existing.length > 0;
+
   console.log("Seeding staging data...\n");
 
   await db.transaction(async (rawTx) => {
     const tx = rawTx as unknown as DrizzleDb;
 
     // -----------------------------------------------------------------------
-    // Run base seed first (creates orgs, users, submissions, pipeline, etc.)
+    // Run base seed first, or load existing entities if base already ran
     // -----------------------------------------------------------------------
-    const base = await seedBase(tx);
-    console.log("  Base seed complete.\n");
+    let base: import("./seed").SeedResult;
+
+    if (baseAlreadyRan) {
+      console.log("  Base seed already present — loading existing entities.\n");
+      // Query all the entities that seedBase() would have created
+      const [org1] = await tx
+        .select()
+        .from(organizations)
+        .where(eq(organizations.slug, "quarterly-review"));
+      const [org2] = await tx
+        .select()
+        .from(organizations)
+        .where(eq(organizations.slug, "inkwell-press"));
+      const [adminUser] = await tx
+        .select()
+        .from(users)
+        .where(eq(users.email, "editor@quarterlyreview.org"));
+      const [editorUser] = await tx
+        .select()
+        .from(users)
+        .where(eq(users.email, "reader@quarterlyreview.org"));
+      const [writerUser] = await tx
+        .select()
+        .from(users)
+        .where(eq(users.email, "writer@example.com"));
+      const [inkwellAdmin] = await tx
+        .select()
+        .from(users)
+        .where(eq(users.email, "admin@inkwellpress.org"));
+      const [openPeriod] = await tx
+        .select()
+        .from(submissionPeriods)
+        .where(eq(submissionPeriods.name, "Spring 2026 Reading Period"));
+      const [winterPeriod] = await tx
+        .select()
+        .from(submissionPeriods)
+        .where(eq(submissionPeriods.name, "Winter 2025 Reading Period"));
+      const [inkwellPeriod] = await tx
+        .select()
+        .from(submissionPeriods)
+        .where(eq(submissionPeriods.name, "Open Submissions 2026"));
+      const [submittedSub] = await tx
+        .select()
+        .from(submissions)
+        .where(eq(submissions.title, "The Weight of Small Things"));
+      const [underReviewSub] = await tx
+        .select()
+        .from(submissions)
+        .where(eq(submissions.title, "Cartography of Absence"));
+      const [acceptedSub] = await tx
+        .select()
+        .from(submissions)
+        .where(eq(submissions.title, "Field Notes on Disappearing"));
+      const [acceptedSub2] = await tx
+        .select()
+        .from(submissions)
+        .where(eq(submissions.title, "The Architecture of Longing"));
+      const [manuscript1] = await tx
+        .select()
+        .from(manuscripts)
+        .where(eq(manuscripts.title, "The Weight of Small Things"));
+      const [version1] = await tx
+        .select()
+        .from(manuscriptVersions)
+        .where(eq(manuscriptVersions.manuscriptId, manuscript1!.id));
+      const [pub1] = await tx
+        .select()
+        .from(publications)
+        .where(eq(publications.slug, "the-quarterly-review"));
+      const [pub2] = await tx
+        .select()
+        .from(publications)
+        .where(eq(publications.slug, "quarterly-online"));
+      const allPipeItems = await tx
+        .select()
+        .from(pipelineItems)
+        .where(eq(pipelineItems.organizationId, org1!.id));
+      const pipeItem1 = allPipeItems.find(
+        (p) => p.submissionId === acceptedSub!.id,
+      )!;
+      const pipeItem2 = allPipeItems.find(
+        (p) => p.submissionId === acceptedSub2!.id,
+      )!;
+      const [template1] = await tx
+        .select()
+        .from(contractTemplates)
+        .where(eq(contractTemplates.organizationId, org1!.id));
+      const [issue1] = await tx
+        .select()
+        .from(issues)
+        .where(eq(issues.title, "Spring 2026"));
+      const allSections = await tx
+        .select()
+        .from(issueSections)
+        .where(eq(issueSections.issueId, issue1!.id));
+      const poetrySection = allSections.find((s) => s.title === "Poetry")!;
+      const fictionSection = allSections.find((s) => s.title === "Fiction")!;
+
+      base = {
+        org1: org1!,
+        org2: org2!,
+        adminUser: adminUser!,
+        editorUser: editorUser!,
+        writerUser: writerUser!,
+        inkwellAdmin: inkwellAdmin!,
+        openPeriod: openPeriod!,
+        winterPeriod: winterPeriod!,
+        inkwellPeriod: inkwellPeriod!,
+        submittedSub: submittedSub!,
+        underReviewSub: underReviewSub!,
+        acceptedSub: acceptedSub!,
+        acceptedSub2: acceptedSub2!,
+        manuscript1: manuscript1!,
+        version1: version1!,
+        pub1: pub1!,
+        pub2: pub2!,
+        pipeItem1,
+        pipeItem2,
+        template1: template1!,
+        issue1: issue1!,
+        poetrySection,
+        fictionSection,
+      };
+    } else {
+      base = await seedBase(tx);
+      console.log("  Base seed complete.\n");
+    }
 
     // -----------------------------------------------------------------------
     // Section A: Additional users

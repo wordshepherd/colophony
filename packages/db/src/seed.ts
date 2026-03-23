@@ -855,12 +855,11 @@ async function main() {
   console.log(`\nSeed API key (quarterly-review, read-only): ${SEED_API_KEY}`);
 }
 
-// Only run main() when this file is the direct entry point (not imported by seed-staging.ts)
-const isDirectEntryPoint =
-  import.meta.url === `file://${process.argv[1]}` ||
-  process.argv[1]?.endsWith("/seed.ts") === true;
-
-if (isDirectEntryPoint) {
+// Only run main() when this file is the direct entry point (not imported by seed-staging.ts).
+// Check argv[1] to detect if seed.ts is the script being run by tsx.
+const isSeedEntryPoint =
+  process.argv[1]?.replace(/\\/g, "/").endsWith("/seed.ts") ?? false;
+if (isSeedEntryPoint) {
   main()
     .catch((e) => {
       console.error("Seed failed:", e);
