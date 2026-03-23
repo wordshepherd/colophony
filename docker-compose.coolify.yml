@@ -9,16 +9,18 @@ services:
       dockerfile: Dockerfile
     depends_on:
       api:
-        condition: service_healthy
+        condition: service_started
       web:
-        condition: service_healthy
+        condition: service_started
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost/health"]
-      interval: 30s
-      timeout: 10s
+      test: ["CMD", "curl", "-f", "http://localhost/nginx-health"]
+      interval: 10s
+      timeout: 5s
       retries: 3
-      start_period: 10s
+      start_period: 5s
+    stop_signal: SIGQUIT
+    stop_grace_period: 30s
     deploy:
       resources:
         limits:

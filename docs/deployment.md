@@ -162,7 +162,7 @@ curl http://localhost/health
 
 **Services:**
 
-- **nginx** — Reverse proxy, TLS termination, rate limiting
+- **nginx** — Reverse proxy, TLS termination, rate limiting (built from `nginx/Dockerfile` — embeds config + maintenance page)
 - **web** — Next.js frontend (standalone output)
 - **api** — Fastify API with tRPC + REST + GraphQL, background jobs (BullMQ)
 - **tusd** — Resumable file upload server (tus protocol)
@@ -216,13 +216,17 @@ Mount the certificates volume in `docker-compose.prod.yml`:
 
 ```yaml
 nginx:
+  build:
+    context: ./nginx
+    dockerfile: Dockerfile
   volumes:
-    - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
     - /etc/letsencrypt:/etc/letsencrypt:ro
   ports:
     - "80:80"
     - "443:443"
 ```
+
+> **Note:** nginx uses a built image (`nginx/Dockerfile`) that embeds `nginx.conf` and a maintenance page. The maintenance page is served automatically when backends are unavailable during deploys. nginx starts immediately without waiting for backend health checks — it will show the maintenance page until backends are ready.
 
 ### Certificate renewal
 
