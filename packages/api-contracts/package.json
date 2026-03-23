@@ -18,7 +18,7 @@
   },
   "dependencies": {
     "@colophony/types": "workspace:*",
-    "@orpc/contract": "^1.13.7",
+    "@orpc/contract": "^1.13.9",
     "zod": "^4.3.6"
   },
   "devDependencies": {
