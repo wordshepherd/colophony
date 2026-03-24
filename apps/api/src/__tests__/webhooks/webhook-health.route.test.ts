@@ -6,13 +6,16 @@ import {
   getAdminPool,
 } from '../rls/helpers/db-setup';
 import { truncateAllTables } from '../rls/helpers/cleanup';
+import type { Pool } from 'pg';
 import { buildWebhookApp } from './helpers/webhook-app';
 
 describe('GET /webhooks/health', () => {
   let app: FastifyInstance;
+  let pool: Pool;
 
   beforeAll(async () => {
     await globalSetup();
+    pool = getAdminPool();
     app = await buildWebhookApp();
   });
 
@@ -22,7 +25,7 @@ describe('GET /webhooks/health', () => {
   });
 
   beforeEach(async () => {
-    await truncateAllTables(getAdminPool());
+    await truncateAllTables();
   });
 
   it('returns unknown status when no events exist for any provider', async () => {
@@ -44,7 +47,6 @@ describe('GET /webhooks/health', () => {
   });
 
   it('returns healthy status when events are recent', async () => {
-    const pool = getAdminPool();
     await pool.query(
       `INSERT INTO zitadel_webhook_events (event_id, type, payload, received_at)
        VALUES ('test:1', 'user.human.created', '{}', NOW())`,
@@ -67,7 +69,7 @@ describe('GET /webhooks/health', () => {
   });
 
   it('returns stale status when events exceed threshold', async () => {
-    const pool = getAdminPool();
+    // uses pool from beforeAll
     // Insert an event 2 hours ago — default Zitadel threshold is 3600s (1 hour)
     await pool.query(
       `INSERT INTO zitadel_webhook_events (event_id, type, payload, received_at)
