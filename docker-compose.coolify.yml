@@ -134,11 +134,15 @@ services:
         NEXT_PUBLIC_TUS_URL: https://${DOMAIN}/upload/files/
         NEXT_PUBLIC_ZITADEL_AUTHORITY: ${NEXT_PUBLIC_ZITADEL_AUTHORITY:-}
         NEXT_PUBLIC_ZITADEL_CLIENT_ID: ${NEXT_PUBLIC_ZITADEL_CLIENT_ID:-}
+        NEXT_PUBLIC_SENTRY_DSN: ${SENTRY_DSN:-}
+        NEXT_PUBLIC_SENTRY_ENVIRONMENT: ${SENTRY_ENVIRONMENT:-staging}
     expose:
       - "3000"
     environment:
       NODE_ENV: production
       API_URL: http://api:4000
+      SENTRY_DSN: ${SENTRY_DSN:-}
+      SENTRY_ENVIRONMENT: ${SENTRY_ENVIRONMENT:-staging}
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000"]
@@ -336,11 +340,70 @@ services:
     networks:
       - colophony-staging
 
+  # Prometheus metrics collection
+  prometheus:
+    build:
+      context: ./docker/prometheus
+      dockerfile: Dockerfile
+    expose:
+      - "9090"
+    volumes:
+      - staging_prometheus_data:/prometheus
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+    networks:
+      - colophony-staging
+
+  # AlertManager for Slack notifications
+  alertmanager:
+    build:
+      context: ./docker/alertmanager
+      dockerfile: Dockerfile
+    expose:
+      - "9093"
+    environment:
+      SLACK_WEBHOOK_URL: ${SLACK_WEBHOOK_URL:-}
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 64M
+    networks:
+      - colophony-staging
+
+  # Grafana dashboards
+  grafana:
+    build:
+      context: ./docker/grafana
+      dockerfile: Dockerfile
+    expose:
+      - "3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD}
+      GF_USERS_ALLOW_SIGN_UP: 'false'
+    depends_on:
+      - prometheus
+    volumes:
+      - staging_grafana_data:/var/lib/grafana
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+    networks:
+      - colophony-staging
+
 volumes:
   staging_postgres_data:
   staging_redis_data:
   staging_minio_data:
   staging_clamav_data:
+  staging_prometheus_data:
+  staging_grafana_data:
 
 networks:
   colophony-staging:

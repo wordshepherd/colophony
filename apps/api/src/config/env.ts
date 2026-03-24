@@ -161,6 +161,23 @@ const envSchema = z
       .enum(['true', 'false'])
       .default('false')
       .transform((v) => v === 'true'),
+
+    // Monitoring — Webhook health staleness thresholds (seconds)
+    WEBHOOK_HEALTH_ZITADEL_STALE_SECONDS: z.coerce
+      .number()
+      .int()
+      .positive()
+      .default(3600),
+    WEBHOOK_HEALTH_STRIPE_STALE_SECONDS: z.coerce
+      .number()
+      .int()
+      .positive()
+      .default(86400),
+    WEBHOOK_HEALTH_DOCUMENSO_STALE_SECONDS: z.coerce
+      .number()
+      .int()
+      .positive()
+      .default(86400),
   })
   .refine(
     (env) =>

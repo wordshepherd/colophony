@@ -124,12 +124,16 @@ services:
         NEXT_PUBLIC_TUS_URL: https://${DOMAIN:-localhost}/upload/files/
         NEXT_PUBLIC_ZITADEL_AUTHORITY: ${NEXT_PUBLIC_ZITADEL_AUTHORITY:-}
         NEXT_PUBLIC_ZITADEL_CLIENT_ID: ${NEXT_PUBLIC_ZITADEL_CLIENT_ID:-}
+        NEXT_PUBLIC_SENTRY_DSN: ${SENTRY_DSN:-}
+        NEXT_PUBLIC_SENTRY_ENVIRONMENT: ${SENTRY_ENVIRONMENT:-production}
     container_name: colophony-web
     expose:
       - "3000"
     environment:
       NODE_ENV: production
       API_URL: http://api:4000
+      SENTRY_DSN: ${SENTRY_DSN:-}
+      SENTRY_ENVIRONMENT: ${SENTRY_ENVIRONMENT:-production}
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000"]
@@ -356,11 +360,73 @@ services:
     networks:
       - colophony
 
+  # Prometheus metrics collection
+  prometheus:
+    image: prom/prometheus:v3.3.0
+    container_name: colophony-prometheus
+    expose:
+      - "9090"
+    volumes:
+      - ./docker/prometheus/prometheus.prod.yml:/etc/prometheus/prometheus.yml:ro
+      - ./docker/prometheus/alert-rules.yml:/etc/prometheus/alert-rules.yml:ro
+      - prometheus_data:/prometheus
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+    networks:
+      - colophony
+
+  # AlertManager for Slack notifications
+  alertmanager:
+    image: prom/alertmanager:v0.28.1
+    container_name: colophony-alertmanager
+    expose:
+      - "9093"
+    environment:
+      SLACK_WEBHOOK_URL: ${SLACK_WEBHOOK_URL:-}
+    volumes:
+      - ./docker/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 64M
+    networks:
+      - colophony
+
+  # Grafana dashboards
+  grafana:
+    image: grafana/grafana:12.0.1
+    container_name: colophony-grafana
+    expose:
+      - "3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+      GF_USERS_ALLOW_SIGN_UP: 'false'
+    volumes:
+      - ./docker/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./docker/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana_data:/var/lib/grafana
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+    networks:
+      - colophony
+
 volumes:
   postgres_data:
   redis_data:
   minio_data:
   clamav_data:
+  prometheus_data:
+  grafana_data:
 
 networks:
   colophony:
