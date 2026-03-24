@@ -217,6 +217,10 @@ services:
       - archive_timeout=60
       - -c
       - wal_level=replica
+      - -c
+      - log_min_duration_statement=1000
+      - -c
+      - "log_line_prefix=%m [%p] %q%u@%d "
     volumes:
       - staging_postgres_data:/var/lib/postgresql/data
     restart: unless-stopped
@@ -397,6 +401,40 @@ services:
     networks:
       - colophony-staging
 
+  # Loki log aggregation
+  loki:
+    build:
+      context: ./docker/loki
+      dockerfile: Dockerfile
+    expose:
+      - "3100"
+    volumes:
+      - staging_loki_data:/loki
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+    networks:
+      - colophony-staging
+
+  # Promtail log shipper
+  promtail:
+    build:
+      context: ./docker/promtail
+      dockerfile: Dockerfile
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    depends_on:
+      - loki
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+    networks:
+      - colophony-staging
+
 volumes:
   staging_postgres_data:
   staging_redis_data:
@@ -404,6 +442,7 @@ volumes:
   staging_clamav_data:
   staging_prometheus_data:
   staging_grafana_data:
+  staging_loki_data:
 
 networks:
   colophony-staging:
