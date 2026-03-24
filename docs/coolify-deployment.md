@@ -189,6 +189,51 @@ BACKUP_S3_ENDPOINT=https://...  # for non-AWS providers
 
 See [docs/deployment.md — Backup & Restore](deployment.md#backup--restore-wal-g) for full documentation.
 
+## 10. Monitoring Access
+
+Grafana is accessible at `https://<your-domain>/grafana` (proxied through nginx).
+
+**Credentials:** `GRAFANA_ADMIN_USER` / `GRAFANA_ADMIN_PASSWORD` from Coolify environment variables. Change the admin password after first login.
+
+**Pre-provisioned dashboards:**
+
+- **API Metrics** — HTTP request rates, latency percentiles, error rates, BullMQ queue depth, DB pool stats
+- **Logs Exploration** — Loki log search across all containers (Pino JSON parsing for API logs)
+
+**Data sources** (auto-provisioned):
+
+- Prometheus (`http://prometheus:9090`)
+- Loki (`http://loki:3100`)
+
+Grafana's health endpoint (`/grafana/api/health`) is checked by the uptime workflow and post-deploy verification. It does not require authentication.
+
+## 11. AlertManager Slack Notifications
+
+Set `SLACK_WEBHOOK_URL` in Coolify environment variables to enable alert delivery to Slack.
+
+**Setup:**
+
+1. Create an Incoming Webhook in your Slack workspace (Apps → Incoming Webhooks)
+2. Set `SLACK_WEBHOOK_URL` to the webhook URL (format: `https://hooks.slack.com/services/T.../B.../xxx`)
+3. Alerts route to the channel configured in `docker/alertmanager/alertmanager.yml`
+
+**If `SLACK_WEBHOOK_URL` is not set:** AlertManager starts with a placeholder URL and alerts silently fail to deliver.
+
+**To verify configuration:**
+
+```bash
+ssh <staging-host> docker exec colophony-alertmanager wget -qO- http://localhost:9093/api/v2/status
+```
+
+**Active alert rules** (defined in `docker/prometheus/alert-rules.yml`):
+
+- HighErrorRate (5xx >5% for 5m) — critical
+- QueueDepthCritical (>100 jobs for 10m) — warning
+- DBPoolExhaustion (waiting clients >0 for 5m) — warning
+- HealthEndpointDown (unreachable for 2m) — critical
+- HighRequestLatency (p99 >5s for 5m) — warning
+- BullMQJobFailureSpike (>10% failure rate for 5m) — warning
+
 ## Troubleshooting
 
 ### Build fails in Coolify

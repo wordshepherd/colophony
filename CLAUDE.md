@@ -96,6 +96,7 @@ Per-directory CLAUDE.md files contain domain-specific details:
 | **CLI: Sentry issues**   | `scripts/sentry-issues.sh` (list Sentry issues via API)                          |
 | **CLI: Zitadel admin**   | `scripts/zitadel-admin.sh` (users, orgs, sessions, health)                       |
 | **CLI: Coolify deploy**  | `scripts/coolify-deploy.sh` (trigger deploy + health check + smoke test)         |
+| **Uptime workflow**      | `.github/workflows/uptime.yml` (cron health checks, issue-based alerting)        |
 | **Writer workspace**     | `packages/db/src/schema/writer-workspace.ts`                                     |
 | **CSR types**            | `packages/types/src/csr.ts`                                                      |
 | **CSR service**          | `apps/api/src/services/csr.service.ts` (export/import for data portability)      |

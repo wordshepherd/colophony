@@ -148,6 +148,20 @@ jobs:
           echo "Staging health check failed"
           exit 1
 
+      - name: Verify Grafana accessible
+        run: |
+          for i in $(seq 1 5); do
+            HTTP_CODE=$(curl -so /dev/null -w "%{http_code}" --max-time 10 \
+              "https://${{ vars.STAGING_DOMAIN }}/grafana/api/health" 2>/dev/null || echo "000")
+            if [ "$HTTP_CODE" = "200" ]; then
+              echo "Grafana is accessible"
+              exit 0
+            fi
+            echo "Attempt $i/5 — Grafana HTTP $HTTP_CODE, waiting..."
+            sleep 10
+          done
+          echo "::warning::Grafana not accessible after deploy (non-blocking)"
+
       - name: Run smoke tests
         run: bash scripts/smoke-test.sh "https://${{ vars.STAGING_DOMAIN }}"
 
