@@ -512,9 +512,10 @@
 - [x] [P3] Connect Inngest Cloud to staging — event key + signing key — (DEVLOG 2026-03-20; done 2026-03-22)
 - [x] [P3] Coolify IPv6 network bug — `coolify` Docker network gets malformed IPv6 gateway on Hetzner; manual recreate needed after Coolify install — (DEVLOG 2026-03-20; confirmed fixed 2026-03-22)
 - [x] [P3] Investigate webhook rate limit Redis error — every Zitadel webhook request logs "Webhook rate limit Redis error — allowing request"; non-fatal but indicates Redis connection issue for webhook-specific rate limiter — (DEVLOG 2026-03-22; done 2026-03-22)
-- [x] [P3] Coolify proxy restart after redeploy — root cause: nginx cached upstream IPs at startup; fix: Docker DNS resolver + variable-based proxy_pass for dynamic re-resolution — (DEVLOG 2026-03-22; done 2026-03-22)
+- [x] [P3] Coolify proxy restart after redeploy — original fix: Docker DNS resolver + variable-based proxy_pass in nginx for dynamic re-resolution (DEVLOG 2026-03-22; done 2026-03-22). Root cause updated 2026-03-24: the real issue is Traefik's Docker provider losing container references during all-at-once teardown, not nginx DNS caching. nginx fix is still valuable but doesn't prevent the Traefik stale routing. Auto-recovery added to deploy workflow (PR #336). Permanent fix: split into individual Coolify services (see P1 item below)
 - [x] [P3] `queue-preset.service.ts:49` — `listByUser()` missing explicit `organizationId` filter and LIMIT — (Codex plan review 2026-03-20; done 2026-03-21 PR #292)
 - [x] Monitoring stack: Prometheus + Grafana (Sentry for errors) — done 2026-02-27 PR pending; Loki deferred to production
+- [ ] [P1] Split Coolify deployment into individual services — current all-at-once Docker Compose teardown causes Traefik stale routing (Docker provider loses track of containers during simultaneous recreation). Split into individual Coolify resources (postgres, redis, api, web, nginx, tusd, minio, +monitoring) on a shared Docker network. Enables independent deploys, smaller blast radius, staggered health checks, and eliminates the proxy restart workaround. Required for production Coolify deployments — (2026-03-24, deploy debugging session)
 
 ### Database Hardening
 
