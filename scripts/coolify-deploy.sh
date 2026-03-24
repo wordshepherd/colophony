@@ -23,6 +23,7 @@ NO_WAIT=false
 SKIP_CONFIRM=false
 HEALTH_URL=""
 SKIP_SMOKE=false
+OIDC_ISSUER=""
 
 # Polling config (matches deploy.yml)
 POLL_ATTEMPTS=10
@@ -43,6 +44,7 @@ usage() {
   echo "  --no-wait             Fire and forget (no health check)"
   echo "  --health-url <url>    URL to poll for health (e.g., https://staging.example.com)"
   echo "  --skip-smoke          Skip smoke test after deploy"
+  echo "  --oidc-issuer <url>   Zitadel issuer URL (passed to smoke-test.sh)"
   echo "  -h, --help            Show this help"
   exit 1
 }
@@ -96,6 +98,10 @@ while [ $# -gt 0 ]; do
     --skip-smoke)
       SKIP_SMOKE=true
       shift
+      ;;
+    --oidc-issuer)
+      OIDC_ISSUER="${2:?--oidc-issuer requires a value}"
+      shift 2
       ;;
     -h|--help)
       usage
@@ -178,7 +184,11 @@ for i in $(seq 1 "$POLL_ATTEMPTS"); do
       SMOKE_SCRIPT="${SCRIPT_DIR}/smoke-test.sh"
       if [ -f "$SMOKE_SCRIPT" ]; then
         echo -e "\n${BOLD}Running smoke tests...${NC}"
-        bash "$SMOKE_SCRIPT" "${HEALTH_URL%/}"
+        SMOKE_ARGS=("${HEALTH_URL%/}")
+        if [ -n "$OIDC_ISSUER" ]; then
+          SMOKE_ARGS+=(--oidc-issuer "$OIDC_ISSUER")
+        fi
+        bash "$SMOKE_SCRIPT" "${SMOKE_ARGS[@]}"
       else
         echo -e "${YELLOW}⚠ smoke-test.sh not found at ${SMOKE_SCRIPT}${NC}"
       fi
