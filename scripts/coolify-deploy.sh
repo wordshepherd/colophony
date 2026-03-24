@@ -100,7 +100,7 @@ while [ $# -gt 0 ]; do
       shift
       ;;
     --oidc-issuer)
-      OIDC_ISSUER="${2:?--oidc-issuer requires a value}"
+      OIDC_ISSUER="${2:-}"
       shift 2
       ;;
     -h|--help)

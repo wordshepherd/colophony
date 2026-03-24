@@ -42,7 +42,7 @@ while [ $# -gt 0 ]; do
     --skip-tls)      SKIP_TLS=true; shift ;;
     --skip-grafana)  SKIP_GRAFANA=true; shift ;;
     --skip-webhooks) SKIP_WEBHOOKS=true; shift ;;
-    --oidc-issuer)   OIDC_ISSUER="${2:?--oidc-issuer requires a value}"; shift 2 ;;
+    --oidc-issuer)   OIDC_ISSUER="${2:-}"; shift 2 ;;
     *)               echo "Unknown option: $1"; exit 1 ;;
   esac
 done
