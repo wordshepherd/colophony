@@ -35,6 +35,7 @@
     "sdk:generate": "pnpm --filter @colophony/api exec tsx ../../scripts/generate-sdks.ts",
     "docker:up": "bash scripts/docker-up.sh",
     "zitadel:setup": "pnpm --filter @colophony/db exec tsx ../../scripts/setup-zitadel-dev.ts",
+    "zitadel:cloud-webhook": "pnpm --filter @colophony/db exec tsx ../../scripts/configure-zitadel-cloud-webhook.ts",
     "clean": "turbo run clean && rm -rf node_modules",
     "prepare": "husky"
   },
