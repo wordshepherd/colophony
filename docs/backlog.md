@@ -539,7 +539,7 @@
 ### Monitoring
 
 - [~] GitHub GraphQL rate limit passive drain (~60 pts/hr) — diagnosed 2026-02-19, likely GitHub-internal (Dependabot, security scanning). At ~1.2% budget/hr, not actionable unless large exhaustion recurs. If so, convert skills from `gh pr list/create` (GraphQL) to `gh api` (REST) — (DEVLOG 2026-02-19)
-- [ ] [P2] Enhanced post-deploy smoke tests — verify `NEXT_PUBLIC_API_URL` in built frontend bundle (no double `/trpc`), Grafana `/grafana/api/health`, OIDC discovery endpoint reachable, webhook provider freshness from `/webhooks/health`. Existing `scripts/smoke-test.sh` already checks `/health`, `/ready`, security headers, TLS, tus, tRPC 401, frontend HTML, CORS — extend it with these 4 checks. Triggered by duplicate `/trpc` bug (PR #328) that passed all tests because auth E2E tests don't make tRPC calls — (2026-03-24)
+- [x] [P2] Enhanced post-deploy smoke tests — verify `NEXT_PUBLIC_API_URL` in built frontend bundle (no double `/trpc`), Grafana `/grafana/api/health`, OIDC discovery endpoint reachable, webhook provider freshness from `/webhooks/health`. Existing `scripts/smoke-test.sh` already checks `/health`, `/ready`, security headers, TLS, tus, tRPC 401, frontend HTML, CORS — extend it with these 4 checks. Triggered by duplicate `/trpc` bug (PR #328) that passed all tests because auth E2E tests don't make tRPC calls — (2026-03-24; done 2026-03-24)
 
 ---
 
