@@ -1,7 +1,8 @@
 import fp from 'fastify-plugin';
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { createJwksVerifier } from '@colophony/auth-client';
-import { db, eq, users } from '@colophony/db';
+import { db, eq, and, isNull, sql, users, type DrizzleDb } from '@colophony/db';
+import type { JWTPayload } from 'jose';
 import type {
   AuthContext,
   AuthAuditParams,
@@ -327,8 +328,10 @@ export default fp(
 
         // Validate token
         let sub: string;
+        let payload: JWTPayload;
         try {
-          const { payload } = await verifyToken(token);
+          const result = await verifyToken(token);
+          payload = result.payload;
           if (!payload.sub) {
             void logAuthFailure(request, AuditActions.AUTH_TOKEN_INVALID, {
               reason: 'missing_sub_claim',
@@ -358,20 +361,100 @@ export default fp(
         }
 
         // Resolve local user by Zitadel user ID
-        const user = await db.query.users.findFirst({
+        let user = await db.query.users.findFirst({
           where: eq(users.zitadelUserId, sub),
         });
 
         if (!user) {
-          void logAuthFailure(request, AuditActions.AUTH_USER_NOT_PROVISIONED, {
-            reason: 'not_provisioned',
-            zitadelUserId: sub,
-          });
-          return reply.status(403).send({
-            error: 'user_not_provisioned',
-            message:
-              'User not found. Account may not have been synced yet. Please try again shortly.',
-          });
+          // JIT provisioning: create user from OIDC token claims
+          const rawEmail =
+            (payload.email as string | undefined) ?? `${sub}@placeholder.local`;
+          const jitEmail = rawEmail.toLowerCase().trim();
+          const jitDisplayName =
+            (payload.name as string | undefined) ?? undefined;
+          const jitEmailVerified =
+            (payload.email_verified as boolean | undefined) ?? false;
+
+          try {
+            const [jitUser] = await db.transaction(async (tx) => {
+              const [created] = await tx
+                .insert(users)
+                .values({
+                  email: jitEmail,
+                  zitadelUserId: sub,
+                  ...(jitDisplayName ? { displayName: jitDisplayName } : {}),
+                  emailVerified: jitEmailVerified,
+                  emailVerifiedAt: jitEmailVerified ? new Date() : undefined,
+                })
+                .onConflictDoUpdate({
+                  target: users.zitadelUserId,
+                  targetWhere: sql`${users.zitadelUserId} IS NOT NULL`,
+                  set: { updatedAt: new Date() },
+                })
+                .returning();
+
+              await auditService.log(tx as unknown as DrizzleDb, {
+                action: AuditActions.USER_JIT_PROVISIONED,
+                resource: AuditResources.USER,
+                resourceId: created.id,
+                newValue: {
+                  zitadelUserId: sub,
+                  email: created.email,
+                  source: 'jit',
+                },
+                ipAddress: request.ip,
+                userAgent: request.headers['user-agent'],
+              });
+
+              return [created];
+            });
+
+            request.log.info(
+              { zitadelUserId: sub, email: jitUser.email },
+              'JIT provisioned user',
+            );
+            user = jitUser;
+          } catch (err) {
+            // Email uniqueness conflict — a guest user with this email exists.
+            // Link the Zitadel identity to the existing guest record.
+            if ((err as { code?: string }).code === '23505') {
+              const [linked] = await db
+                .update(users)
+                .set({
+                  zitadelUserId: sub,
+                  isGuest: false,
+                  updatedAt: new Date(),
+                })
+                .where(
+                  and(
+                    eq(users.email, jitEmail),
+                    eq(users.isGuest, true),
+                    isNull(users.deletedAt),
+                  ),
+                )
+                .returning();
+
+              if (linked) {
+                request.log.info(
+                  { zitadelUserId: sub, email: linked.email },
+                  'JIT linked to existing guest user',
+                );
+                user = linked;
+              } else {
+                void logAuthFailure(
+                  request,
+                  AuditActions.AUTH_USER_NOT_PROVISIONED,
+                  { reason: 'jit_link_failed', zitadelUserId: sub },
+                );
+                return reply.status(403).send({
+                  error: 'user_not_provisioned',
+                  message: 'User provisioning failed. Please try again.',
+                });
+              }
+            } else {
+              throw err;
+            }
+          }
         }
 
         if (user.deletedAt) {
