@@ -176,7 +176,7 @@ if [ "$SUBCOMMAND" = "tail" ]; then
       CONTAINERS=$(list_containers)
       for c in $CONTAINERS; do
         echo -e "\n${CYAN}=== ${c} ===${NC}"
-        run_cmd "docker logs --tail ${LINES} ${c} 2>&1" || true
+        run_cmd "docker logs --tail ${LINES} ${FOLLOW_FLAG} ${c} 2>&1" || true
       done
     }
     exit 0

@@ -214,8 +214,8 @@ if [ "$SUBCOMMAND" = "alerts" ]; then
     exit 0
   fi
 
-  # Filter to firing alerts (active, not silenced/inhibited)
-  FIRING=$(echo "$RESPONSE" | jq '[.[] | select(.status.state == "active")]')
+  # Filter to firing alerts (active AND not silenced/inhibited)
+  FIRING=$(echo "$RESPONSE" | jq '[.[] | select(.status.state == "active" and (.status.silencedBy | length) == 0 and (.status.inhibitedBy | length) == 0)]')
   COUNT=$(echo "$FIRING" | jq 'length')
 
   echo -e "${BOLD}AlertManager Alerts${NC} — ${ALERTMANAGER_URL}"
