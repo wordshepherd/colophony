@@ -1,0 +1,34 @@
+# Coolify resource: Gateway
+# Services: nginx
+# Deploy frequency: Rare (nginx.conf changes only)
+# This resource stays up during app deploys — Traefik always has a valid route.
+# nginx serves a maintenance page (502/503/504) when backends are restarting.
+# Configure Coolify UI "Domains" field on this resource for Traefik routing.
+
+services:
+  nginx:
+    build:
+      context: ../nginx
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/nginx-health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+    stop_signal: SIGQUIT
+    stop_grace_period: 30s
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+    networks:
+      - colophony-net
+      - coolify
+
+networks:
+  colophony-net:
+    external: true
+  coolify:
+    external: true

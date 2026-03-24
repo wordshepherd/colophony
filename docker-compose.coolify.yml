@@ -1,5 +1,8 @@
-# Coolify deployment — standalone compose for Hetzner VPS via Coolify.
-# Coolify reads this file directly (Docker Compose Location: /docker-compose.coolify.yml).
+# DEPRECATED: This monolithic compose file is replaced by coolify/*.yml (5 separate Coolify resources).
+# See docs/coolify-deployment.md for migration instructions.
+# This file will be removed after migration is confirmed on staging.
+#
+# Original: Coolify deployment — standalone compose for Hetzner VPS via Coolify.
 # Traefik handles TLS termination; nginx handles routing, rate limiting, security headers.
 
 services:

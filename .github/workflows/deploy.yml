@@ -20,6 +20,11 @@ on:
         description: 'Git tag or commit SHA to deploy (default: latest main)'
         required: false
         type: string
+      groups:
+        description: 'Comma-separated groups to deploy (data,app,gateway,uploads,monitoring,all)'
+        required: false
+        default: 'all'
+        type: string
 
 concurrency:
   group: deploy-${{ github.event.inputs.environment || 'staging' }}
@@ -96,7 +101,7 @@ jobs:
           NEXT_PUBLIC_API_URL: placeholder
 
   # ──────────────────────────────────────────────────
-  # Deploy to staging via Coolify webhook
+  # Deploy to staging via Coolify webhooks (5 resource groups)
   # ──────────────────────────────────────────────────
   deploy-staging:
     name: Deploy to Staging
@@ -105,6 +110,7 @@ jobs:
     if: needs.prepare.outputs.environment == 'staging'
     permissions:
       contents: read
+      actions: write
     environment:
       name: staging
       url: https://${{ vars.STAGING_DOMAIN }}
@@ -112,48 +118,126 @@ jobs:
       - uses: actions/checkout@v6
         with:
           ref: ${{ needs.prepare.outputs.ref }}
+          fetch-depth: 0
 
-      - name: Setup SSH
-        id: ssh
+      - name: Detect deploy groups
+        id: groups
         env:
-          SSH_KEY: ${{ secrets.STAGING_SSH_KEY }}
+          GH_TOKEN: ${{ github.token }}
         run: |
-          if [ -n "$SSH_KEY" ]; then
-            mkdir -p ~/.ssh
-            echo "$SSH_KEY" > ~/.ssh/deploy_key
-            chmod 600 ~/.ssh/deploy_key
-            echo "available=true" >> "$GITHUB_OUTPUT"
+          deploy_data=false
+          deploy_app=false
+          deploy_gateway=false
+          deploy_uploads=false
+          deploy_monitoring=false
+
+          # Manual dispatch: use explicit groups input
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            GROUPS="${{ github.event.inputs.groups }}"
+            if echo "$GROUPS" | grep -qw "all"; then
+              deploy_data=true; deploy_app=true; deploy_gateway=true
+              deploy_uploads=true; deploy_monitoring=true
+            else
+              echo "$GROUPS" | grep -qw "data" && deploy_data=true || true
+              echo "$GROUPS" | grep -qw "app" && deploy_app=true || true
+              echo "$GROUPS" | grep -qw "gateway" && deploy_gateway=true || true
+              echo "$GROUPS" | grep -qw "uploads" && deploy_uploads=true || true
+              echo "$GROUPS" | grep -qw "monitoring" && deploy_monitoring=true || true
+            fi
           else
-            echo "available=false" >> "$GITHUB_OUTPUT"
+            # Auto-deploy: detect changed files since last deploy
+            LAST_SHA="${{ vars.LAST_DEPLOYED_SHA }}"
+            CURRENT_SHA="${{ needs.prepare.outputs.ref }}"
+
+            if [ -z "$LAST_SHA" ] || ! git rev-parse --verify "$LAST_SHA" >/dev/null 2>&1; then
+              echo "No valid LAST_DEPLOYED_SHA — deploying all groups (safe fallback)"
+              deploy_data=true; deploy_app=true; deploy_gateway=true
+              deploy_uploads=true; deploy_monitoring=true
+            else
+              echo "Diffing $LAST_SHA..$CURRENT_SHA"
+              CHANGED=$(git diff --name-only "$LAST_SHA" "$CURRENT_SHA" 2>/dev/null || echo "")
+
+              if [ -z "$CHANGED" ]; then
+                echo "No changes detected — deploying app group (default)"
+                deploy_app=true
+              else
+                for file in $CHANGED; do
+                  case "$file" in
+                    docker/postgres/*|docker/pgbouncer/*|coolify/data.yml)
+                      deploy_data=true ;;
+                    apps/api/*|apps/web/*|packages/*|coolify/app.yml)
+                      deploy_app=true ;;
+                    scripts/init-prod.sh|pnpm-lock.yaml|pnpm-workspace.yaml|package.json|turbo.json)
+                      deploy_app=true ;;
+                    nginx/*|coolify/gateway.yml)
+                      deploy_gateway=true ;;
+                    coolify/uploads.yml)
+                      deploy_uploads=true ;;
+                    docker/prometheus/*|docker/alertmanager/*|docker/grafana/*|docker/loki/*|docker/promtail/*|coolify/monitoring.yml)
+                      deploy_monitoring=true ;;
+                  esac
+                done
+
+                # If nothing matched (e.g., docs-only changes), deploy app as default
+                if [ "$deploy_data" = "false" ] && [ "$deploy_app" = "false" ] && \
+                   [ "$deploy_gateway" = "false" ] && [ "$deploy_uploads" = "false" ] && \
+                   [ "$deploy_monitoring" = "false" ]; then
+                  echo "No infra-relevant changes detected — deploying app group (default)"
+                  deploy_app=true
+                fi
+              fi
+            fi
           fi
 
-      - name: Snapshot Traefik config (pre-deploy)
-        if: steps.ssh.outputs.available == 'true'
-        run: |
-          echo "::group::Pre-deploy Traefik dynamic config"
-          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
-            root@${{ vars.STAGING_DOMAIN }} \
-            "date -u '+%Y-%m-%dT%H:%M:%SZ' && cat /data/coolify/proxy/dynamic/*.yaml 2>/dev/null || echo 'no yaml files'" \
-            | tee /tmp/traefik-pre.txt
-          echo "::endgroup::"
+          echo "Deploy groups: data=$deploy_data app=$deploy_app gateway=$deploy_gateway uploads=$deploy_uploads monitoring=$deploy_monitoring"
+          echo "deploy_data=$deploy_data" >> "$GITHUB_OUTPUT"
+          echo "deploy_app=$deploy_app" >> "$GITHUB_OUTPUT"
+          echo "deploy_gateway=$deploy_gateway" >> "$GITHUB_OUTPUT"
+          echo "deploy_uploads=$deploy_uploads" >> "$GITHUB_OUTPUT"
+          echo "deploy_monitoring=$deploy_monitoring" >> "$GITHUB_OUTPUT"
 
-      - name: Trigger Coolify deployment
+      - name: Deploy groups
         env:
           COOLIFY_TOKEN: ${{ secrets.COOLIFY_API_TOKEN }}
-          COOLIFY_URL: ${{ secrets.COOLIFY_WEBHOOK_URL }}
+          WEBHOOK_DATA: ${{ secrets.COOLIFY_WEBHOOK_DATA }}
+          WEBHOOK_APP: ${{ secrets.COOLIFY_WEBHOOK_APP }}
+          WEBHOOK_GATEWAY: ${{ secrets.COOLIFY_WEBHOOK_GATEWAY }}
+          WEBHOOK_UPLOADS: ${{ secrets.COOLIFY_WEBHOOK_UPLOADS }}
+          WEBHOOK_MONITORING: ${{ secrets.COOLIFY_WEBHOOK_MONITORING }}
         run: |
-          HTTP_CODE=$(curl -s -o /tmp/coolify-response.txt -w "%{http_code}" \
-            --max-time 30 \
-            -X GET \
-            -H "Authorization: Bearer ${COOLIFY_TOKEN}" \
-            "${COOLIFY_URL}" \
-            2>/tmp/coolify-error.txt)
-          BODY=$(cat /tmp/coolify-response.txt 2>/dev/null || true)
-          if [ "$HTTP_CODE" = "200" ] || [ "$HTTP_CODE" = "201" ]; then
-            echo "Coolify deployment triggered (HTTP $HTTP_CODE)"
-          else
-            echo "Failed to trigger Coolify webhook (HTTP $HTTP_CODE): $BODY"
-            exit 1
+          deploy_group() {
+            local name="$1" url="$2"
+            if [ -z "$url" ]; then
+              echo "⚠ Skipping $name (no webhook URL configured)"
+              return 0
+            fi
+            echo "Deploying $name..."
+            HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 30 \
+              -X GET -H "Authorization: Bearer ${COOLIFY_TOKEN}" "$url")
+            if [ "$HTTP_CODE" != "200" ] && [ "$HTTP_CODE" != "201" ]; then
+              echo "Failed to deploy $name (HTTP $HTTP_CODE)"
+              exit 1
+            fi
+            echo "✓ $name deployment triggered"
+          }
+
+          # Deploy in dependency order with waits between dependent groups
+          if [ "${{ steps.groups.outputs.deploy_data }}" = "true" ]; then
+            deploy_group "data" "$WEBHOOK_DATA"
+            echo "Waiting 30s for data services to start..."
+            sleep 30
+          fi
+          if [ "${{ steps.groups.outputs.deploy_app }}" = "true" ]; then
+            deploy_group "app" "$WEBHOOK_APP"
+          fi
+          if [ "${{ steps.groups.outputs.deploy_uploads }}" = "true" ]; then
+            deploy_group "uploads" "$WEBHOOK_UPLOADS"
+          fi
+          if [ "${{ steps.groups.outputs.deploy_gateway }}" = "true" ]; then
+            deploy_group "gateway" "$WEBHOOK_GATEWAY"
+          fi
+          if [ "${{ steps.groups.outputs.deploy_monitoring }}" = "true" ]; then
+            deploy_group "monitoring" "$WEBHOOK_MONITORING"
           fi
 
       - name: Wait for deployment
@@ -162,8 +246,8 @@ jobs:
       - name: Verify deployment
         run: |
           for i in $(seq 1 10); do
-            if curl -sf "https://${{ vars.STAGING_DOMAIN }}/health" > /dev/null 2>&1; then
-              echo "Staging is healthy"
+            if curl -sf "https://${{ vars.STAGING_DOMAIN }}/ready" > /dev/null 2>&1; then
+              echo "Staging is healthy (DB connectivity verified)"
               exit 0
             fi
             echo "Attempt $i/10 — waiting..."
@@ -172,49 +256,20 @@ jobs:
           echo "Staging health check failed"
           exit 1
 
-      - name: Snapshot Traefik config (post-deploy)
-        if: steps.ssh.outputs.available == 'true'
-        run: |
-          echo "::group::Post-deploy Traefik dynamic config"
-          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
-            root@${{ vars.STAGING_DOMAIN }} \
-            "date -u '+%Y-%m-%dT%H:%M:%SZ' && cat /data/coolify/proxy/dynamic/*.yaml 2>/dev/null || echo 'no yaml files'" \
-            | tee /tmp/traefik-post.txt
-          echo "::endgroup::"
-          echo "::group::Config diff"
-          diff /tmp/traefik-pre.txt /tmp/traefik-post.txt || true
-          echo "::endgroup::"
-
       - name: Run smoke tests
-        id: smoke
-        continue-on-error: true
         run: >-
           bash scripts/smoke-test.sh
           "https://${{ vars.STAGING_DOMAIN }}"
           --oidc-issuer "${{ vars.ZITADEL_AUTHORITY }}"
 
-      - name: Recover proxy and retry smoke tests
-        if: steps.smoke.outcome == 'failure'
+      - name: Update last deployed SHA
+        if: success()
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          if [ "${{ steps.ssh.outputs.available }}" != "true" ]; then
-            echo "Smoke tests failed and no STAGING_SSH_KEY configured for proxy recovery"
-            exit 1
-          fi
-          echo "Smoke tests failed — restarting Coolify proxy (stale container IPs)"
-          echo "::group::Traefik config at failure time"
-          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
-            root@${{ vars.STAGING_DOMAIN }} \
-            "date -u '+%Y-%m-%dT%H:%M:%SZ' && cat /data/coolify/proxy/dynamic/*.yaml 2>/dev/null || echo 'no yaml files'"
-          echo "::endgroup::"
-          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
-            root@${{ vars.STAGING_DOMAIN }} \
-            "docker restart coolify-proxy"
-          echo "Waiting 10s for proxy to recover..."
-          sleep 10
-          echo "Retrying smoke tests..."
-          bash scripts/smoke-test.sh \
-            "https://${{ vars.STAGING_DOMAIN }}" \
-            --oidc-issuer "${{ vars.ZITADEL_AUTHORITY }}"
+          gh variable set LAST_DEPLOYED_SHA \
+            --body "${{ needs.prepare.outputs.ref }}" \
+            --repo "${{ github.repository }}"
 
   # ──────────────────────────────────────────────────
   # Deploy to production (manual dispatch only)

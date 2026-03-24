@@ -1,0 +1,72 @@
+# Coolify resource: Upload Infrastructure
+# Services: tusd, clamav
+# Deploy frequency: Rare
+# Requires: data group (minio) and app group (api) for webhooks.
+# tusd tolerates unavailable backends — tus protocol is resumable by design.
+
+services:
+  tusd:
+    image: tusproject/tusd:latest
+    expose:
+      - "1080"
+    environment:
+      AWS_ACCESS_KEY_ID: ${MINIO_ROOT_USER}
+      AWS_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD}
+      AWS_REGION: us-east-1
+    command:
+      - -port
+      - "1080"
+      - -s3-endpoint
+      - http://minio:9000
+      - -s3-bucket
+      - quarantine
+      - -s3-object-prefix
+      - uploads/
+      - -hooks-http
+      - http://api:4000/webhooks/tusd
+      - -hooks-http-forward-headers
+      - Authorization,X-Organization-Id,X-Embed-Token,X-Status-Token
+      - -cors-allow-origin
+      - ".*"
+      - -cors-allow-headers
+      - Authorization,Origin,X-Requested-With,Content-Type,Upload-Length,Upload-Offset,Tus-Resumable,Upload-Metadata,Upload-Defer-Length,X-Organization-Id,X-Embed-Token,X-Status-Token
+      - -behind-proxy
+      - -base-path
+      - /upload
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+    networks:
+      - colophony-net
+
+  clamav:
+    image: clamav/clamav:stable
+    expose:
+      - "3310"
+    volumes:
+      - staging_clamav_data:/var/lib/clamav
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "clamdscan", "--ping", "1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 120s
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    labels:
+      - "coolify.exclude_from_hc=true"
+    networks:
+      - colophony-net
+
+volumes:
+  staging_clamav_data:
+    name: colophony_staging_clamav_data
+
+networks:
+  colophony-net:
+    external: true
