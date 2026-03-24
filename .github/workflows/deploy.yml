@@ -113,6 +113,30 @@ jobs:
         with:
           ref: ${{ needs.prepare.outputs.ref }}
 
+      - name: Setup SSH
+        id: ssh
+        env:
+          SSH_KEY: ${{ secrets.STAGING_SSH_KEY }}
+        run: |
+          if [ -n "$SSH_KEY" ]; then
+            mkdir -p ~/.ssh
+            echo "$SSH_KEY" > ~/.ssh/deploy_key
+            chmod 600 ~/.ssh/deploy_key
+            echo "available=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "available=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Snapshot Traefik config (pre-deploy)
+        if: steps.ssh.outputs.available == 'true'
+        run: |
+          echo "::group::Pre-deploy Traefik dynamic config"
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
+            root@${{ vars.STAGING_DOMAIN }} \
+            "date -u '+%Y-%m-%dT%H:%M:%SZ' && cat /data/coolify/proxy/dynamic/*.yaml 2>/dev/null || echo 'no yaml files'" \
+            | tee /tmp/traefik-pre.txt
+          echo "::endgroup::"
+
       - name: Trigger Coolify deployment
         env:
           COOLIFY_TOKEN: ${{ secrets.COOLIFY_API_TOKEN }}
@@ -148,6 +172,19 @@ jobs:
           echo "Staging health check failed"
           exit 1
 
+      - name: Snapshot Traefik config (post-deploy)
+        if: steps.ssh.outputs.available == 'true'
+        run: |
+          echo "::group::Post-deploy Traefik dynamic config"
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
+            root@${{ vars.STAGING_DOMAIN }} \
+            "date -u '+%Y-%m-%dT%H:%M:%SZ' && cat /data/coolify/proxy/dynamic/*.yaml 2>/dev/null || echo 'no yaml files'" \
+            | tee /tmp/traefik-post.txt
+          echo "::endgroup::"
+          echo "::group::Config diff"
+          diff /tmp/traefik-pre.txt /tmp/traefik-post.txt || true
+          echo "::endgroup::"
+
       - name: Run smoke tests
         id: smoke
         continue-on-error: true
@@ -157,30 +194,27 @@ jobs:
           --oidc-issuer "${{ vars.ZITADEL_AUTHORITY }}"
 
       - name: Recover proxy and retry smoke tests
-        if: steps.smoke.outcome == 'failure' && secrets.STAGING_SSH_KEY != ''
-        env:
-          SSH_KEY: ${{ secrets.STAGING_SSH_KEY }}
+        if: steps.smoke.outcome == 'failure'
         run: |
+          if [ "${{ steps.ssh.outputs.available }}" != "true" ]; then
+            echo "Smoke tests failed and no STAGING_SSH_KEY configured for proxy recovery"
+            exit 1
+          fi
           echo "Smoke tests failed — restarting Coolify proxy (stale container IPs)"
-          mkdir -p ~/.ssh
-          echo "$SSH_KEY" > ~/.ssh/deploy_key
-          chmod 600 ~/.ssh/deploy_key
+          echo "::group::Traefik config at failure time"
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
+            root@${{ vars.STAGING_DOMAIN }} \
+            "date -u '+%Y-%m-%dT%H:%M:%SZ' && cat /data/coolify/proxy/dynamic/*.yaml 2>/dev/null || echo 'no yaml files'"
+          echo "::endgroup::"
           ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
             root@${{ vars.STAGING_DOMAIN }} \
             "docker restart coolify-proxy"
-          rm -f ~/.ssh/deploy_key
           echo "Waiting 10s for proxy to recover..."
           sleep 10
           echo "Retrying smoke tests..."
           bash scripts/smoke-test.sh \
             "https://${{ vars.STAGING_DOMAIN }}" \
             --oidc-issuer "${{ vars.ZITADEL_AUTHORITY }}"
-
-      - name: Fail if smoke tests failed without recovery
-        if: steps.smoke.outcome == 'failure' && secrets.STAGING_SSH_KEY == ''
-        run: |
-          echo "Smoke tests failed and no STAGING_SSH_KEY configured for proxy recovery"
-          exit 1
 
   # ──────────────────────────────────────────────────
   # Deploy to production (manual dispatch only)
