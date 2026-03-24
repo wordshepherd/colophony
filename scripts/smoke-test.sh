@@ -130,24 +130,31 @@ else
 fi
 
 # --- 9. NEXT_PUBLIC_API_URL — no doubled /trpc in JS bundle ---
-FRONT_HTML=$(curl -sf --max-time 10 "${BASE_URL}/" 2>/dev/null || true)
-if [ -z "$FRONT_HTML" ]; then
-  fail "Bundle check — could not fetch frontend HTML"
-else
-  CHUNK_URLS=$(echo "$FRONT_HTML" | grep -oE '/_next/static/[^"'"'"']+\.js' | sort -u | head -10)
-  FOUND_DOUBLE=false
+# Fetch multiple pages to cover route-specific bundles. The home page (/) doesn't
+# use tRPC, so we also fetch /dashboard which loads the tRPC client bundle.
+FOUND_DOUBLE=false
+FETCH_FAILED=true
+for page in "/" "/dashboard"; do
+  PAGE_HTML=$(curl -sf --max-time 10 "${BASE_URL}${page}" 2>/dev/null || true)
+  if [ -z "$PAGE_HTML" ]; then
+    continue
+  fi
+  FETCH_FAILED=false
+  CHUNK_URLS=$(echo "$PAGE_HTML" | grep -oE '/_next/static/[^"'"'"']+\.js' | sort -u | head -15)
   for chunk in $CHUNK_URLS; do
     CHUNK_BODY=$(curl -sf --max-time 5 "${BASE_URL}${chunk}" 2>/dev/null || true)
     if echo "$CHUNK_BODY" | grep -q '/trpc/trpc'; then
       FOUND_DOUBLE=true
-      break
+      break 2
     fi
   done
-  if [ "$FOUND_DOUBLE" = true ]; then
-    fail "Bundle check — found /trpc/trpc in JS bundle (NEXT_PUBLIC_API_URL likely ends in /trpc)"
-  else
-    pass "Bundle check — no /trpc/trpc in JS bundles"
-  fi
+done
+if [ "$FETCH_FAILED" = true ]; then
+  fail "Bundle check — could not fetch frontend HTML"
+elif [ "$FOUND_DOUBLE" = true ]; then
+  fail "Bundle check — found /trpc/trpc in JS bundle (NEXT_PUBLIC_API_URL likely ends in /trpc)"
+else
+  pass "Bundle check — no /trpc/trpc in JS bundles"
 fi
 
 # --- 10. Grafana health ---
