@@ -143,7 +143,7 @@ for page in "/" "/dashboard"; do
   CHUNK_URLS=$(echo "$PAGE_HTML" | grep -oE '/_next/static/[^"'"'"']+\.js' | sort -u | head -15)
   for chunk in $CHUNK_URLS; do
     CHUNK_BODY=$(curl -sf --max-time 5 "${BASE_URL}${chunk}" 2>/dev/null || true)
-    if echo "$CHUNK_BODY" | grep -q '/trpc/trpc'; then
+    if echo "$CHUNK_BODY" | grep -v 'github.com/trpc/trpc' | grep -q '/trpc/trpc'; then
       FOUND_DOUBLE=true
       break 2
     fi
