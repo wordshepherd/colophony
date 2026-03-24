@@ -157,7 +157,7 @@ jobs:
           --oidc-issuer "${{ vars.ZITADEL_AUTHORITY }}"
 
       - name: Recover proxy and retry smoke tests
-        if: steps.smoke.outcome == 'failure'
+        if: steps.smoke.outcome == 'failure' && secrets.STAGING_SSH_KEY != ''
         env:
           SSH_KEY: ${{ secrets.STAGING_SSH_KEY }}
         run: |
@@ -175,6 +175,12 @@ jobs:
           bash scripts/smoke-test.sh \
             "https://${{ vars.STAGING_DOMAIN }}" \
             --oidc-issuer "${{ vars.ZITADEL_AUTHORITY }}"
+
+      - name: Fail if smoke tests failed without recovery
+        if: steps.smoke.outcome == 'failure' && secrets.STAGING_SSH_KEY == ''
+        run: |
+          echo "Smoke tests failed and no STAGING_SSH_KEY configured for proxy recovery"
+          exit 1
 
   # ──────────────────────────────────────────────────
   # Deploy to production (manual dispatch only)
