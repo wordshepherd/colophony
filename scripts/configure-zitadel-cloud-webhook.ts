@@ -136,8 +136,10 @@ async function listTargets(
   }>(token, "/v2/actions/targets/search", "POST", {}, baseUrl);
 
   if (!res.ok) {
-    console.error(`Failed to list targets (HTTP ${res.status}):`, res.data);
-    return [];
+    throw new Error(
+      `Failed to list targets (HTTP ${res.status}): ${JSON.stringify(res.data)}. ` +
+        "Check that --authority and --token are correct and the PAT has IAM_OWNER permissions.",
+    );
   }
 
   return res.data.targets ?? [];
@@ -152,8 +154,10 @@ async function listExecutions(
   }>(token, "/v2/actions/executions/search", "POST", {}, baseUrl);
 
   if (!res.ok) {
-    console.error(`Failed to list executions (HTTP ${res.status}):`, res.data);
-    return [];
+    throw new Error(
+      `Failed to list executions (HTTP ${res.status}): ${JSON.stringify(res.data)}. ` +
+        "Check that --authority and --token are correct and the PAT has IAM_OWNER permissions.",
+    );
   }
 
   return res.data.executions ?? [];
@@ -187,6 +191,7 @@ async function deleteTarget(
 function printDiagnostic(
   targets: TargetInfo[],
   executions: ExecutionInfo[],
+  scopeToTargetId?: string,
 ): void {
   console.log("\n--- Targets ---");
   if (targets.length === 0) {
@@ -224,9 +229,17 @@ function printDiagnostic(
     console.log(`\n  (${otherExecutions.length} non-event executions omitted)`);
   }
 
-  // Coverage analysis
+  // Coverage analysis — scope to a specific target if provided
   console.log("\n--- Coverage Analysis ---");
-  const configuredGroups = eventExecutions
+  const scopedExecutions = scopeToTargetId
+    ? eventExecutions.filter((e) => e.targets?.includes(scopeToTargetId))
+    : eventExecutions;
+
+  if (scopeToTargetId) {
+    console.log(`  (scoped to target: ${scopeToTargetId})`);
+  }
+
+  const configuredGroups = scopedExecutions
     .filter((e) => e.condition.event?.group)
     .map((e) => e.condition.event!.group!);
 
@@ -327,8 +340,9 @@ async function main() {
   const targets = await listTargets(config.token, config.authority);
   const executions = await listExecutions(config.token, config.authority);
 
-  // Always show diagnostic
-  printDiagnostic(targets, executions);
+  // Always show diagnostic — scope to configured target if it exists
+  const matchingTarget = targets.find((t) => t.name === config.targetName);
+  printDiagnostic(targets, executions, matchingTarget?.id);
 
   if (config.diagnose) {
     console.log("\n=== Diagnose complete (read-only) ===");
@@ -369,11 +383,12 @@ async function main() {
   // Configure
   await configure(config);
 
-  // Re-diagnose to verify
+  // Re-diagnose to verify — scope to the target we just configured
   console.log("\n--- Verifying configuration ---");
   const newTargets = await listTargets(config.token, config.authority);
   const newExecutions = await listExecutions(config.token, config.authority);
-  printDiagnostic(newTargets, newExecutions);
+  const configuredTarget = newTargets.find((t) => t.name === config.targetName);
+  printDiagnostic(newTargets, newExecutions, configuredTarget?.id);
 
   console.log("\n=== Configuration complete ===");
 }
