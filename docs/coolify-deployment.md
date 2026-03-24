@@ -16,18 +16,42 @@ Deploy Colophony to a Hetzner VPS managed by [Coolify](https://coolify.io) (self
 
 ## 1. Coolify Project Setup
 
-1. In Coolify dashboard, create a new **Project** (e.g., "Colophony Staging")
-2. Add a new **Resource** → **Docker Compose**
-3. Connect your Git repository
-4. Set the **Docker Compose file paths** to:
-   ```
-   docker-compose.coolify.yml
-   ```
-5. Set the **Environment file** to `.env.staging`
+Colophony uses **5 separate Coolify resources** (one per service group) to enable independent deploys and eliminate Traefik stale routing issues.
+
+### Prerequisites: Create shared network
+
+SSH to the VPS and run:
+
+```bash
+bash scripts/coolify-network-setup.sh
+```
+
+This creates the `colophony-net` Docker network shared by all 5 resources.
+
+### Create 5 resources
+
+In Coolify dashboard, create a new **Project** (e.g., "Colophony Staging"), then add 5 **Docker Compose** resources:
+
+| Resource       | Compose path             | Domain (Coolify UI)      | Notes                               |
+| -------------- | ------------------------ | ------------------------ | ----------------------------------- |
+| **Data**       | `coolify/data.yml`       | —                        | postgres, pgbouncer, redis, minio   |
+| **App**        | `coolify/app.yml`        | —                        | api, web (most frequently deployed) |
+| **Gateway**    | `coolify/gateway.yml`    | `staging.yourdomain.com` | nginx — set Domain here only        |
+| **Uploads**    | `coolify/uploads.yml`    | —                        | tusd, clamav                        |
+| **Monitoring** | `coolify/monitoring.yml` | —                        | prometheus, grafana, loki, etc.     |
+
+For each resource:
+
+1. Connect your Git repository
+2. Set the compose file path (see table above)
+3. Set the environment file to `.env.staging`
+4. **Gateway only:** Set the "Domains" field to your staging domain (for Traefik routing)
 
 ## 2. Environment Variables
 
-In the Coolify resource settings, add all variables from `.env.staging.example`. Key ones:
+Each Coolify resource needs its own subset of environment variables. The Data resource needs DB/Redis/MinIO credentials. The App resource needs the full set (API + Web config). The Gateway resource needs none. The Uploads resource needs MinIO credentials. The Monitoring resource needs Grafana/Slack config.
+
+In each resource's settings, add variables from `.env.staging.example`. Key ones:
 
 ### Required — Infrastructure
 
@@ -125,10 +149,15 @@ METRICS_ENABLED=true
 
 ## 6. First Deployment
 
-1. Click **Deploy** in the Coolify dashboard (or push to configured branch)
-2. Watch the build logs in Coolify
-3. The `migrate` service runs automatically (Drizzle migrations + RLS verification)
-4. Wait for all healthchecks to go green
+Deploy resources in dependency order:
+
+1. **Data** — deploy first, wait for all healthchecks green (postgres, pgbouncer, redis, minio)
+2. **App** — deploy after data is healthy. The API entrypoint runs migrations + RLS verification + MinIO bucket setup
+3. **Uploads** — deploy after app is healthy (tusd needs minio + api)
+4. **Gateway** — deploy last. Traefik picks up nginx for routing
+5. **Monitoring** — deploy anytime (independent)
+
+Watch build logs in each Coolify resource. Wait for all healthchecks to go green.
 
 ### Post-deployment smoke test
 
@@ -146,35 +175,55 @@ bash scripts/smoke-test.sh https://staging.yourdomain.com
 
 ## 7. Auto-Deploy
 
-### Option A: Coolify webhook (recommended)
+### Webhook-based deployment (recommended)
 
-Coolify provides a webhook URL for each resource. Add it to GitHub Actions:
+Each Coolify resource has its own webhook URL. Add all 5 to GitHub Actions secrets:
 
-1. In Coolify, copy the **Webhook URL** from resource settings
-2. In GitHub repo → Settings → Secrets, add `COOLIFY_WEBHOOK_URL`
-3. The deploy workflow (`.github/workflows/deploy.yml`) triggers Coolify via this webhook
+| GitHub Secret                | Coolify Resource      |
+| ---------------------------- | --------------------- |
+| `COOLIFY_WEBHOOK_DATA`       | Data                  |
+| `COOLIFY_WEBHOOK_APP`        | App                   |
+| `COOLIFY_WEBHOOK_GATEWAY`    | Gateway               |
+| `COOLIFY_WEBHOOK_UPLOADS`    | Uploads               |
+| `COOLIFY_WEBHOOK_MONITORING` | Monitoring            |
+| `COOLIFY_API_TOKEN`          | Bearer token (shared) |
 
-### Option B: Coolify Git integration
+The deploy workflow (`.github/workflows/deploy.yml`) uses **smart detection** — it diffs changed files since the last successful deploy (`vars.LAST_DEPLOYED_SHA`) and only redeploys affected groups. Manual dispatch supports selecting specific groups.
 
-Enable **Auto Deploy** in Coolify resource settings. Coolify polls the repo or uses a GitHub webhook to deploy on push to the configured branch.
+### CLI deployment
+
+```bash
+# Deploy all groups
+bash scripts/coolify-deploy.sh --group all --health-url https://staging.yourdomain.com
+
+# Deploy app group only (most common)
+bash scripts/coolify-deploy.sh --group app --health-url https://staging.yourdomain.com
+```
+
+### Coolify Git integration (alternative)
+
+Enable **Auto Deploy** on each Coolify resource individually. Not recommended — all resources would redeploy on every push, losing the benefit of the split.
 
 ## 8. Compose Architecture
 
 ```
-Internet → Traefik (Coolify, TLS) → nginx (:80) → api/web/tusd
-                                                     ↓
-                                              pgbouncer → postgres
-                                              redis, minio
+Internet → Traefik (Coolify, TLS) → [Gateway] nginx (:80) → [App] api (:4000), web (:3000)
+                                                                ↓          ↘ [Uploads] tusd (:1080), clamav
+                                                          [Data] pgbouncer → postgres
+                                                                 redis, minio
+                                                          [Monitoring] prometheus, grafana, loki, ...
 ```
 
-`docker-compose.coolify.yml` is a standalone compose file (not an overlay). Key differences from the production compose (`docker-compose.prod.yml`):
+The deployment uses **5 separate Coolify resources** (`coolify/*.yml`), each a standalone compose file sharing the `colophony-net` external Docker network. Only the Gateway resource also joins the `coolify` network (for Traefik service discovery).
+
+Key differences from the production compose (`docker-compose.prod.yml`):
 
 - No host port bindings on nginx (Traefik routes traffic)
 - PgBouncer with lower pool sizes (10/100/25 vs 20/200/50)
 - Migrations run inline in the API entrypoint (Coolify crash-loops one-shot containers)
 - MinIO bucket setup inlined in the API entrypoint (same reason)
-- `coolify` external network for Traefik service discovery
 - Debug logging by default (`LOG_LEVEL: ${LOG_LEVEL:-debug}`)
+- Split into 5 resources for independent deploy cycles
 
 ## 9. Backups (Future)
 
@@ -234,11 +283,29 @@ ssh <staging-host> docker exec colophony-alertmanager wget -qO- http://localhost
 - HighRequestLatency (p99 >5s for 5m) — warning
 - BullMQJobFailureSpike (>10% failure rate for 5m) — warning
 
+## Migration from Single Resource
+
+If migrating from the deprecated monolithic `docker-compose.coolify.yml`:
+
+1. SSH to host: `bash scripts/coolify-network-setup.sh` to create `colophony-net`
+2. Identify current volume names: `docker volume ls | grep staging`
+3. Create 5 Coolify resources (see Section 1), each pointing to its compose file
+4. Copy env vars from old resource to appropriate new resources
+5. Deploy in order: Data → (wait healthy) → App → Uploads → Gateway → Monitoring
+6. If old volume names don't match `colophony_staging_*`, either update `name:` in compose files to match, or copy data: `docker run --rm -v old_vol:/from -v new_vol:/to alpine cp -a /from/. /to/`
+7. Verify with smoke tests: `bash scripts/smoke-test.sh https://staging.yourdomain.com`
+8. Decommission old single resource in Coolify UI
+9. Update GitHub secrets: replace `COOLIFY_WEBHOOK_URL` with 5 group-specific URLs
+
 ## Troubleshooting
 
 ### Build fails in Coolify
 
-Check that the compose file path is exactly: `docker-compose.coolify.yml`.
+Check that each resource's compose file path matches: `coolify/data.yml`, `coolify/app.yml`, etc.
+
+### Service can't resolve hostname across groups
+
+Verify the `colophony-net` network exists (`docker network ls`) and that both resources have it declared as `external: true` in their compose files.
 
 ### 502 Bad Gateway / maintenance page after deploy
 
