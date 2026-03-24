@@ -1,0 +1,111 @@
+name: Uptime Check
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+
+permissions:
+  issues: write
+
+env:
+  STAGING_URL: https://staging.colophony.pub
+  ISSUE_TITLE: 'Staging Down: Health Check Failure'
+  ISSUE_LABEL: 'ops:uptime'
+
+jobs:
+  check:
+    name: Health Check
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Check health endpoint
+        id: health
+        run: |
+          HTTP_CODE=$(curl -so /dev/null -w "%{http_code}" \
+            --max-time 15 --retry 1 --retry-delay 5 \
+            "${{ env.STAGING_URL }}/health" 2>/dev/null || echo "000")
+          echo "status=$HTTP_CODE" >> "$GITHUB_OUTPUT"
+
+      - name: Check webhook health endpoint
+        id: webhook
+        run: |
+          HTTP_CODE=$(curl -so /dev/null -w "%{http_code}" \
+            --max-time 15 --retry 1 --retry-delay 5 \
+            "${{ env.STAGING_URL }}/webhooks/health" 2>/dev/null || echo "000")
+          echo "status=$HTTP_CODE" >> "$GITHUB_OUTPUT"
+
+      - name: Check Grafana
+        id: grafana
+        run: |
+          HTTP_CODE=$(curl -so /dev/null -w "%{http_code}" \
+            --max-time 15 --retry 1 --retry-delay 5 \
+            "${{ env.STAGING_URL }}/grafana/api/health" 2>/dev/null || echo "000")
+          echo "status=$HTTP_CODE" >> "$GITHUB_OUTPUT"
+
+      - name: Evaluate results
+        id: result
+        run: |
+          HEALTH="${{ steps.health.outputs.status }}"
+          WEBHOOK="${{ steps.webhook.outputs.status }}"
+          GRAFANA="${{ steps.grafana.outputs.status }}"
+
+          FAILURES=""
+          [ "$HEALTH" != "200" ] && FAILURES="${FAILURES}- /health: HTTP ${HEALTH}\n"
+          [ "$WEBHOOK" != "200" ] && FAILURES="${FAILURES}- /webhooks/health: HTTP ${WEBHOOK}\n"
+          [ "$GRAFANA" != "200" ] && FAILURES="${FAILURES}- /grafana/api/health: HTTP ${GRAFANA}\n"
+
+          if [ -n "$FAILURES" ]; then
+            echo "failed=true" >> "$GITHUB_OUTPUT"
+            {
+              echo "details<<DELIM"
+              echo -e "$FAILURES"
+              echo "DELIM"
+            } >> "$GITHUB_OUTPUT"
+          else
+            echo "failed=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Report failure
+        if: steps.result.outputs.failed == 'true'
+        run: |
+          ISSUE_NUM=$(gh issue list \
+            --repo "${{ github.repository }}" \
+            --label "${{ env.ISSUE_LABEL }}" \
+            --state all \
+            --json number \
+            --jq '.[0].number // empty' 2>/dev/null || true)
+
+          BODY="**$(date -u '+%Y-%m-%d %H:%M UTC')** — Health check failed:
+
+          ${{ steps.result.outputs.details }}
+          [Workflow run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})"
+
+          if [ -z "$ISSUE_NUM" ]; then
+            gh issue create \
+              --repo "${{ github.repository }}" \
+              --title "${{ env.ISSUE_TITLE }}" \
+              --label "${{ env.ISSUE_LABEL }}" \
+              --body "$BODY"
+          else
+            gh issue reopen "$ISSUE_NUM" --repo "${{ github.repository }}" 2>/dev/null || true
+            gh issue comment "$ISSUE_NUM" --repo "${{ github.repository }}" --body "$BODY"
+          fi
+
+      - name: Report recovery
+        if: steps.result.outputs.failed == 'false'
+        run: |
+          ISSUE_NUM=$(gh issue list \
+            --repo "${{ github.repository }}" \
+            --label "${{ env.ISSUE_LABEL }}" \
+            --state open \
+            --json number \
+            --jq '.[0].number // empty' 2>/dev/null || true)
+
+          if [ -n "$ISSUE_NUM" ]; then
+            gh issue comment "$ISSUE_NUM" \
+              --repo "${{ github.repository }}" \
+              --body "**$(date -u '+%Y-%m-%d %H:%M UTC')** — Recovered. All endpoints healthy."
+            gh issue close "$ISSUE_NUM" --repo "${{ github.repository }}"
+          fi
