@@ -11,7 +11,16 @@ import Fastify, { type FastifyInstance } from 'fastify';
 import authPlugin from './auth.js';
 import type { Env } from '../config/env.js';
 
-// Mock @colophony/db
+// Mock @colophony/db — use trampoline pattern to avoid hoisting issues
+const mockReturning = vi.fn();
+const mockOnConflict = vi.fn(() => ({ returning: mockReturning }));
+const mockValues = vi.fn(() => ({ onConflictDoUpdate: mockOnConflict }));
+const mockInsert = vi.fn(() => ({ values: mockValues }));
+const mockUpdateReturning = vi.fn();
+const mockUpdateWhere = vi.fn(() => ({ returning: mockUpdateReturning }));
+const mockUpdateSet = vi.fn(() => ({ where: mockUpdateWhere }));
+const mockUpdate = vi.fn(() => ({ set: mockUpdateSet }));
+
 vi.mock('@colophony/db', () => ({
   db: {
     query: {
@@ -19,9 +28,16 @@ vi.mock('@colophony/db', () => ({
         findFirst: vi.fn(),
       },
     },
+    transaction: vi.fn((cb: (tx: unknown) => unknown) =>
+      cb({
+        insert: (...args: Parameters<typeof mockInsert>) => mockInsert(...args),
+      }),
+    ),
+    update: (...args: Parameters<typeof mockUpdate>) => mockUpdate(...args),
   },
   eq: vi.fn((_col: unknown, val: unknown) => val),
-  users: { zitadelUserId: 'zitadel_user_id' },
+  sql: (...a: unknown[]) => a,
+  users: { zitadelUserId: 'zitadel_user_id', email: 'email' },
   pool: {
     query: vi.fn().mockResolvedValue({ rows: [{ '?column?': 1 }] }),
   },
@@ -29,9 +45,15 @@ vi.mock('@colophony/db', () => ({
 
 // Mock audit service
 const mockLogDirect = vi.fn().mockResolvedValue(undefined);
+const mockAuditLog = vi.fn().mockResolvedValue(undefined);
 vi.mock('../services/audit.service.js', () => ({
   auditService: {
-    logDirect: (...args: unknown[]) => mockLogDirect(...args),
+    logDirect: function (...args: unknown[]) {
+      return mockLogDirect(...args);
+    },
+    log: function (...args: unknown[]) {
+      return mockAuditLog(...args);
+    },
   },
 }));
 
@@ -187,6 +209,12 @@ describe('auth plugin', () => {
       }));
     });
 
+    beforeEach(() => {
+      mockReturning.mockReset();
+      mockAuditLog.mockReset().mockResolvedValue(undefined);
+      mockUpdateReturning.mockReset();
+    });
+
     afterAll(async () => {
       await app.close();
     });
@@ -331,9 +359,14 @@ describe('auth plugin', () => {
       expect(response.json().error).toBe('token_expired');
     });
 
-    it('returns 403 when user not provisioned', async () => {
+    it('JIT provisions user when not found in DB', async () => {
       mockVerifyToken.mockResolvedValueOnce({
-        payload: { sub: 'zitadel-user-999' },
+        payload: {
+          sub: 'zitadel-user-999',
+          email: 'newuser@example.com',
+          name: 'New User',
+          email_verified: true,
+        },
         header: { alg: 'RS256' },
       });
 
@@ -343,13 +376,94 @@ describe('auth plugin', () => {
         undefined,
       );
 
+      const jitUser = {
+        id: 'jit-user-uuid',
+        email: 'newuser@example.com',
+        zitadelUserId: 'zitadel-user-999',
+        displayName: 'New User',
+        emailVerified: true,
+        emailVerifiedAt: new Date(),
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        isGuest: false,
+        deletedAt: null,
+        lastEventAt: null,
+        migratedToDomain: null,
+        migratedToDid: null,
+        migratedAt: null,
+      };
+      mockReturning.mockResolvedValueOnce([jitUser]);
+
       const response = await app.inject({
         method: 'GET',
         url: '/protected',
         headers: { authorization: 'Bearer valid-token' },
       });
-      expect(response.statusCode).toBe(403);
-      expect(response.json().error).toBe('user_not_provisioned');
+      expect(response.statusCode).toBe(200);
+      const body = response.json();
+      expect(body.authContext.userId).toBe('jit-user-uuid');
+      expect(body.authContext.zitadelUserId).toBe('zitadel-user-999');
+      expect(body.authContext.email).toBe('newuser@example.com');
+      expect(mockAuditLog).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({
+          action: 'USER_JIT_PROVISIONED',
+          resource: 'user',
+          resourceId: 'jit-user-uuid',
+        }),
+      );
+    });
+
+    it('JIT links to existing guest user on email conflict', async () => {
+      mockVerifyToken.mockResolvedValueOnce({
+        payload: {
+          sub: 'zitadel-user-888',
+          email: 'guest@example.com',
+        },
+        header: { alg: 'RS256' },
+      });
+
+      const dbModule = await import('@colophony/db');
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      vi.mocked(dbModule.db.query.users.findFirst).mockResolvedValueOnce(
+        undefined,
+      );
+
+      // Simulate email uniqueness conflict from the transaction
+      const conflictError = new Error('unique_violation') as Error & {
+        code: string;
+      };
+      conflictError.code = '23505';
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      vi.mocked(dbModule.db.transaction).mockRejectedValueOnce(conflictError);
+
+      const linkedUser = {
+        id: 'guest-uuid',
+        email: 'guest@example.com',
+        zitadelUserId: 'zitadel-user-888',
+        displayName: null,
+        emailVerified: false,
+        emailVerifiedAt: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        isGuest: false,
+        deletedAt: null,
+        lastEventAt: null,
+        migratedToDomain: null,
+        migratedToDid: null,
+        migratedAt: null,
+      };
+      mockUpdateReturning.mockResolvedValueOnce([linkedUser]);
+
+      const response = await app.inject({
+        method: 'GET',
+        url: '/protected',
+        headers: { authorization: 'Bearer valid-token' },
+      });
+      expect(response.statusCode).toBe(200);
+      const body = response.json();
+      expect(body.authContext.userId).toBe('guest-uuid');
+      expect(body.authContext.zitadelUserId).toBe('zitadel-user-888');
     });
 
     it('returns 403 when user is deactivated', async () => {
@@ -530,6 +644,9 @@ describe('auth plugin', () => {
 
     beforeEach(() => {
       mockLogDirect.mockClear().mockResolvedValue(undefined);
+      mockAuditLog.mockClear().mockResolvedValue(undefined);
+      mockReturning.mockReset();
+      mockUpdateReturning.mockReset();
     });
 
     afterAll(async () => {
@@ -606,9 +723,9 @@ describe('auth plugin', () => {
       expect(params.actorId).toBeUndefined();
     });
 
-    it('audits user not provisioned as AUTH_USER_NOT_PROVISIONED with zitadelUserId', async () => {
+    it('audits JIT provisioning as USER_JIT_PROVISIONED', async () => {
       mockVerifyToken.mockResolvedValueOnce({
-        payload: { sub: 'zitadel-unknown-user' },
+        payload: { sub: 'zitadel-unknown-user', email: 'jit@example.com' },
         header: { alg: 'RS256' },
       });
 
@@ -618,6 +735,25 @@ describe('auth plugin', () => {
         undefined,
       );
 
+      mockReturning.mockResolvedValueOnce([
+        {
+          id: 'jit-audit-uuid',
+          email: 'jit@example.com',
+          zitadelUserId: 'zitadel-unknown-user',
+          displayName: null,
+          emailVerified: false,
+          emailVerifiedAt: null,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          isGuest: false,
+          deletedAt: null,
+          lastEventAt: null,
+          migratedToDomain: null,
+          migratedToDid: null,
+          migratedAt: null,
+        },
+      ]);
+
       await app.inject({
         method: 'GET',
         url: '/protected',
@@ -625,15 +761,19 @@ describe('auth plugin', () => {
       });
       await flushPromises();
 
-      expect(mockLogDirect).toHaveBeenCalledOnce();
-      const params = mockLogDirect.mock.calls[0][0];
-      expect(params.action).toBe('AUTH_USER_NOT_PROVISIONED');
-      expect(params.resource).toBe('auth');
-      expect(params.newValue).toEqual({
-        reason: 'not_provisioned',
-        zitadelUserId: 'zitadel-unknown-user',
-      });
-      expect(params.actorId).toBeUndefined();
+      expect(mockAuditLog).toHaveBeenCalledOnce();
+      expect(mockAuditLog).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({
+          action: 'USER_JIT_PROVISIONED',
+          resource: 'user',
+          resourceId: 'jit-audit-uuid',
+          newValue: expect.objectContaining({
+            zitadelUserId: 'zitadel-unknown-user',
+            source: 'jit',
+          }),
+        }),
+      );
     });
 
     it('audits token missing sub claim as AUTH_TOKEN_INVALID', async () => {
@@ -756,6 +896,9 @@ describe('auth plugin', () => {
       mockVerifyKey.mockReset();
       mockTouchLastUsed.mockReset().mockResolvedValue(undefined);
       mockLogDirect.mockClear().mockResolvedValue(undefined);
+      mockAuditLog.mockClear().mockResolvedValue(undefined);
+      mockReturning.mockReset();
+      mockUpdateReturning.mockReset();
     });
 
     afterAll(async () => {

@@ -8,6 +8,7 @@ import { z } from "zod";
 export const AuditActions = {
   // User lifecycle (synced from Zitadel webhooks)
   USER_CREATED: "USER_CREATED",
+  USER_JIT_PROVISIONED: "USER_JIT_PROVISIONED",
   USER_UPDATED: "USER_UPDATED",
   USER_DEACTIVATED: "USER_DEACTIVATED",
   USER_REACTIVATED: "USER_REACTIVATED",
@@ -314,6 +315,7 @@ export interface UserAuditParams extends BaseAuditParams {
   resource: typeof AuditResources.USER;
   action:
     | typeof AuditActions.USER_CREATED
+    | typeof AuditActions.USER_JIT_PROVISIONED
     | typeof AuditActions.USER_UPDATED
     | typeof AuditActions.USER_DEACTIVATED
     | typeof AuditActions.USER_REACTIVATED
