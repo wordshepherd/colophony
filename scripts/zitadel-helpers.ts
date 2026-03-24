@@ -89,8 +89,9 @@ export async function zitadelApi<T>(
   path: string,
   method: string = "POST",
   body?: unknown,
+  baseUrl: string = ZITADEL_URL,
 ): Promise<ApiResponse<T>> {
-  const res = await fetch(`${ZITADEL_URL}${path}`, {
+  const res = await fetch(`${baseUrl}${path}`, {
     method,
     headers: {
       "Content-Type": "application/json",
@@ -347,6 +348,21 @@ export async function ensureColophonyUser(
 export const WEBHOOK_EVENT_GROUPS = ["user"] as const;
 
 /**
+ * Individual event types the webhook handler supports (for diagnostics).
+ * These are the `event_type` values in the webhook payload — note that
+ * execution condition names may differ from these payload names.
+ */
+export const WEBHOOK_EVENT_TYPES = [
+  "user.human.added",
+  "user.human.changed",
+  "user.human.profile.changed",
+  "user.human.email.verified",
+  "user.deactivated",
+  "user.reactivated",
+  "user.removed",
+] as const;
+
+/**
  * Find or create a Zitadel Actions v2 webhook target.
  *
  * When the target is created, Zitadel returns a one-time `signingKey` (HMAC
@@ -358,20 +374,27 @@ export async function findOrCreateTarget(
   name: string,
   url: string,
   timeout: string = "10s",
+  baseUrl?: string,
 ): Promise<{ targetId: string; signingKey: string | null }> {
   // Search for existing target by name
   const search = await zitadelApi<{
     targets?: Array<{ id: string; name: string; signingKey?: string }>;
-  }>(token, "/v2/actions/targets/search", "POST", {
-    queries: [
-      {
-        targetNameQuery: {
-          targetName: name,
-          method: "TEXT_QUERY_METHOD_EQUALS",
+  }>(
+    token,
+    "/v2/actions/targets/search",
+    "POST",
+    {
+      queries: [
+        {
+          targetNameQuery: {
+            targetName: name,
+            method: "TEXT_QUERY_METHOD_EQUALS",
+          },
         },
-      },
-    ],
-  });
+      ],
+    },
+    baseUrl,
+  );
 
   if (search.ok && search.data.targets?.length) {
     // Client-side exact match — Zitadel's targetNameQuery may not filter exactly
@@ -387,12 +410,18 @@ export async function findOrCreateTarget(
   const create = await zitadelApi<{
     id: string;
     signingKey: string;
-  }>(token, "/v2/actions/targets", "POST", {
-    name,
-    rest_webhook: { interrupt_on_error: false },
-    endpoint: url,
-    timeout,
-  });
+  }>(
+    token,
+    "/v2/actions/targets",
+    "POST",
+    {
+      name,
+      rest_webhook: { interrupt_on_error: false },
+      endpoint: url,
+      timeout,
+    },
+    baseUrl,
+  );
 
   if (!create.ok) {
     throw new Error(
@@ -415,6 +444,7 @@ export async function setGroupExecution(
   token: string,
   group: string,
   targetId: string,
+  baseUrl?: string,
 ): Promise<void> {
   // Read existing execution targets for this group
   const search = await zitadelApi<{
@@ -422,15 +452,21 @@ export async function setGroupExecution(
       condition: { event?: { group?: string } };
       targets?: string[];
     }>;
-  }>(token, "/v2/actions/executions/search", "POST", {
-    queries: [
-      {
-        eventConditionQuery: {
-          group,
+  }>(
+    token,
+    "/v2/actions/executions/search",
+    "POST",
+    {
+      queries: [
+        {
+          eventConditionQuery: {
+            group,
+          },
         },
-      },
-    ],
-  });
+      ],
+    },
+    baseUrl,
+  );
 
   const existingTargets: string[] = [];
   if (search.ok && search.data.executions?.length) {
@@ -445,14 +481,20 @@ export async function setGroupExecution(
     ? existingTargets
     : [...existingTargets, targetId];
 
-  const res = await zitadelApi(token, "/v2/actions/executions", "PUT", {
-    condition: {
-      event: {
-        group,
+  const res = await zitadelApi(
+    token,
+    "/v2/actions/executions",
+    "PUT",
+    {
+      condition: {
+        event: {
+          group,
+        },
       },
+      targets: mergedTargets,
     },
-    targets: mergedTargets,
-  });
+    baseUrl,
+  );
 
   if (!res.ok) {
     throw new Error(
