@@ -1,0 +1,106 @@
+# Coolify resource: Monitoring Stack
+# Services: prometheus, alertmanager, grafana, loki, promtail
+# Deploy frequency: Rare (dashboard/alert rule changes)
+# Note: Promtail Docker socket mount works cross-compose (host-level).
+# Risk: Coolify may convert the bind mount to a directory — test during migration.
+
+services:
+  prometheus:
+    build:
+      context: ../docker/prometheus
+      dockerfile: Dockerfile
+    expose:
+      - "9090"
+    volumes:
+      - staging_prometheus_data:/prometheus
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+    networks:
+      - colophony-net
+
+  alertmanager:
+    build:
+      context: ../docker/alertmanager
+      dockerfile: Dockerfile
+    expose:
+      - "9093"
+    environment:
+      SLACK_WEBHOOK_URL: ${SLACK_WEBHOOK_URL:-}
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 64M
+    networks:
+      - colophony-net
+
+  grafana:
+    build:
+      context: ../docker/grafana
+      dockerfile: Dockerfile
+    expose:
+      - "3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD}
+      GF_USERS_ALLOW_SIGN_UP: 'false'
+      GF_SERVER_ROOT_URL: https://${DOMAIN}/grafana
+      GF_SERVER_SERVE_FROM_SUB_PATH: 'true'
+    depends_on:
+      - prometheus
+    volumes:
+      - staging_grafana_data:/var/lib/grafana
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+    networks:
+      - colophony-net
+
+  loki:
+    build:
+      context: ../docker/loki
+      dockerfile: Dockerfile
+    expose:
+      - "3100"
+    volumes:
+      - staging_loki_data:/loki
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+    networks:
+      - colophony-net
+
+  promtail:
+    build:
+      context: ../docker/promtail
+      dockerfile: Dockerfile
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    depends_on:
+      - loki
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+    networks:
+      - colophony-net
+
+volumes:
+  staging_prometheus_data:
+    name: colophony_staging_prometheus_data
+  staging_grafana_data:
+    name: colophony_staging_grafana_data
+  staging_loki_data:
+    name: colophony_staging_loki_data
+
+networks:
+  colophony-net:
+    external: true

@@ -144,6 +144,7 @@ known_nonsuite_prefixes=(
   ".husky/"
   ".vscode/"
   ".claude/"
+  "coolify/"
   "apps/web/src/components/layout/"
   "apps/web/src/components/periods/"
   "apps/web/src/app/page.tsx"
