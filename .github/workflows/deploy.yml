@@ -263,10 +263,17 @@ jobs:
           --oidc-issuer "${{ vars.ZITADEL_AUTHORITY }}"
 
       - name: Update last deployed SHA
-        if: success()
+        if: >-
+          success() &&
+          steps.groups.outputs.deploy_data == 'true' &&
+          steps.groups.outputs.deploy_app == 'true' &&
+          steps.groups.outputs.deploy_gateway == 'true' &&
+          steps.groups.outputs.deploy_uploads == 'true' &&
+          steps.groups.outputs.deploy_monitoring == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          echo "All groups deployed — updating LAST_DEPLOYED_SHA"
           gh variable set LAST_DEPLOYED_SHA \
             --body "${{ needs.prepare.outputs.ref }}" \
             --repo "${{ github.repository }}"
