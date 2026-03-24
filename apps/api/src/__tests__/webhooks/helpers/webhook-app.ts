@@ -5,6 +5,7 @@ import { registerStripeWebhooks } from '../../../webhooks/stripe.webhook.js';
 import { registerZitadelWebhooks } from '../../../webhooks/zitadel.webhook.js';
 import { registerTusdWebhooks } from '../../../webhooks/tusd.webhook.js';
 import { registerDocumensoWebhooks } from '../../../webhooks/documenso.webhook.js';
+import { registerWebhookHealthRoute } from '../../../webhooks/webhook-health.route.js';
 
 /**
  * Build a full Env object suitable for webhook integration tests.
@@ -61,6 +62,9 @@ export function createTestEnv(overrides?: Partial<Env>): Env {
     SENTRY_ENVIRONMENT: 'test',
     SENTRY_TRACES_SAMPLE_RATE: 0,
     METRICS_ENABLED: false,
+    WEBHOOK_HEALTH_ZITADEL_STALE_SECONDS: 3600,
+    WEBHOOK_HEALTH_STRIPE_STALE_SECONDS: 86400,
+    WEBHOOK_HEALTH_DOCUMENSO_STALE_SECONDS: 86400,
     STATUS_TOKEN_TTL_DAYS: 90,
     FEDERATION_RATE_LIMIT_FAIL_MODE: 'open' as const,
     DOCUMENSO_API_URL: 'http://localhost:9999',
@@ -95,6 +99,9 @@ export async function buildWebhookApp(
   });
   await app.register(async (scope) => {
     await registerDocumensoWebhooks(scope, { env });
+  });
+  await app.register(async (scope) => {
+    await registerWebhookHealthRoute(scope, { env });
   });
 
   await app.ready();

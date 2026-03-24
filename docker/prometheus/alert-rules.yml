@@ -1,0 +1,57 @@
+groups:
+  - name: colophony-api
+    rules:
+      - alert: HighErrorRate
+        expr: |
+          (sum(rate(http_requests_total{status_code=~"5.."}[5m])) /
+           sum(rate(http_requests_total[5m]))) > 0.05
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "High 5xx error rate ({{ $value | humanizePercentage }})"
+
+      - alert: QueueDepthCritical
+        expr: bullmq_queue_depth{state="waiting"} > 100
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Queue {{ $labels.queue }} has {{ $value }} waiting jobs"
+
+      - alert: DBPoolExhaustion
+        expr: db_pool_waiting_clients > 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "DB pool {{ $labels.pool }} has {{ $value }} waiting clients"
+
+      - alert: HealthEndpointDown
+        expr: up{job="colophony-api"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Colophony API is unreachable"
+
+      - alert: HighRequestLatency
+        expr: |
+          histogram_quantile(0.99,
+            sum(rate(http_request_duration_seconds_bucket[5m])) by (le)
+          ) > 5
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "p99 latency is {{ $value | humanizeDuration }}"
+
+      - alert: BullMQJobFailureSpike
+        expr: |
+          (sum(rate(bullmq_jobs_total{status="failed"}[5m])) /
+           sum(rate(bullmq_jobs_total[5m]))) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "BullMQ job failure rate is {{ $value | humanizePercentage }}"

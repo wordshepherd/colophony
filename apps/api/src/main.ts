@@ -60,6 +60,7 @@ import {
   getWebhookQueueInstance,
 } from './queues/index.js';
 import { registerInngestRoutes } from './inngest/serve.js';
+import { registerWebhookHealthRoute } from './webhooks/webhook-health.route.js';
 import { registerFederationDiscoveryRoutes } from './federation/discovery.routes.js';
 import { registerFederationDidRoutes } from './federation/did.routes.js';
 import { registerFederationTrustRoutes } from './federation/trust.routes.js';
@@ -219,6 +220,11 @@ export async function buildApp(env: Env): Promise<FastifyInstance> {
       });
     });
   }
+
+  // Webhook health endpoint — isolated scope (public, no auth/rate-limit)
+  await app.register(async (scope) => {
+    await registerWebhookHealthRoute(scope, { env });
+  });
 
   // Inngest serve endpoint — isolated scope (Inngest handles its own auth)
   await app.register(async (scope) => {
