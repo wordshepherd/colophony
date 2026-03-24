@@ -84,6 +84,12 @@ Per-directory CLAUDE.md files contain domain-specific details:
 | **Metrics registry**     | `apps/api/src/config/metrics.ts` (Prometheus counters, histograms, gauges)       |
 | **Metrics plugin**       | `apps/api/src/hooks/metrics.ts` (Fastify plugin — HTTP request instrumentation)  |
 | **Instrumented worker**  | `apps/api/src/config/instrumented-worker.ts` (BullMQ wrapper with metrics)       |
+| **Webhook health**       | `apps/api/src/webhooks/webhook-health.route.ts`                                  |
+| **Alert rules**          | `docker/prometheus/alert-rules.yml`                                              |
+| **AlertManager config**  | `docker/alertmanager/alertmanager.yml`                                           |
+| **Loki config**          | `docker/loki/loki-config.yml` (dev), `loki-config.prod.yml` (prod)               |
+| **Promtail config**      | `docker/promtail/promtail-config.yml`                                            |
+| **Grafana dashboards**   | `docker/grafana/dashboards/` (API metrics + logs exploration)                    |
 | **Writer workspace**     | `packages/db/src/schema/writer-workspace.ts`                                     |
 | **CSR types**            | `packages/types/src/csr.ts`                                                      |
 | **CSR service**          | `apps/api/src/services/csr.service.ts` (export/import for data portability)      |
@@ -375,6 +381,12 @@ pnpm db:seed                  # Seed dev data (orgs, submissions, Slate pipeline
 pnpm db:seed:staging          # Rich staging/demo data (80 subs, forms, editorial, federation, etc.)
 pnpm zitadel:setup            # Provision Zitadel + patch .env files (after volume wipe)
 pnpm dev                      # hivemind: builds packages, then API: 4000, Web: 3000
+```
+
+**Optional monitoring stack** (Prometheus + Grafana + AlertManager + Loki):
+
+```bash
+docker compose --profile monitoring up -d  # Prometheus:9090, Grafana:3001, AlertManager:9093, Loki:3100
 ```
 
 **hivemind controls** (while `pnpm dev` is running):
