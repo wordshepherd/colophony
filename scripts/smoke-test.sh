@@ -1,6 +1,11 @@
 #!/usr/bin/env bash
 # Post-deployment smoke test for Colophony staging.
-# Usage: bash scripts/smoke-test.sh https://staging.example.com [--skip-tls]
+# Usage: bash scripts/smoke-test.sh <base-url> [OPTIONS]
+#   Options:
+#     --skip-tls            Skip TLS certificate check
+#     --skip-grafana        Skip Grafana health check
+#     --skip-webhooks       Skip webhook freshness check
+#     --oidc-issuer <url>   Zitadel issuer URL for OIDC discovery check
 set -euo pipefail
 
 # --- Colors ---
@@ -15,20 +20,30 @@ warn() { echo -e "${YELLOW}⚠ $1${NC}"; }
 
 FAILURES=0
 SKIP_TLS=false
+SKIP_GRAFANA=false
+SKIP_WEBHOOKS=false
+OIDC_ISSUER=""
 
 # --- Parse args ---
 if [ $# -lt 1 ]; then
-  echo "Usage: bash scripts/smoke-test.sh <base-url> [--skip-tls]"
-  echo "  e.g. bash scripts/smoke-test.sh https://staging.example.com"
+  echo "Usage: bash scripts/smoke-test.sh <base-url> [OPTIONS]"
+  echo "  Options:"
+  echo "    --skip-tls            Skip TLS certificate check"
+  echo "    --skip-grafana        Skip Grafana health check"
+  echo "    --skip-webhooks       Skip webhook freshness check"
+  echo "    --oidc-issuer <url>   Zitadel issuer URL for OIDC discovery check"
   exit 1
 fi
 
 BASE_URL="${1%/}"  # strip trailing slash
 shift
-for arg in "$@"; do
-  case "$arg" in
-    --skip-tls) SKIP_TLS=true ;;
-    *) echo "Unknown option: $arg"; exit 1 ;;
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --skip-tls)      SKIP_TLS=true; shift ;;
+    --skip-grafana)  SKIP_GRAFANA=true; shift ;;
+    --skip-webhooks) SKIP_WEBHOOKS=true; shift ;;
+    --oidc-issuer)   OIDC_ISSUER="${2:?--oidc-issuer requires a value}"; shift 2 ;;
+    *)               echo "Unknown option: $1"; exit 1 ;;
   esac
 done
 
@@ -112,6 +127,71 @@ if echo "$CORS_HEADERS" | grep -qi "Access-Control-Allow"; then
   pass "OPTIONS /trpc — CORS headers present"
 else
   fail "OPTIONS /trpc — CORS headers missing"
+fi
+
+# --- 9. NEXT_PUBLIC_API_URL — no doubled /trpc in JS bundle ---
+# Fetch multiple pages to cover route-specific bundles. The home page (/) doesn't
+# use tRPC, so we also fetch /dashboard which loads the tRPC client bundle.
+FOUND_DOUBLE=false
+FETCH_FAILED=true
+for page in "/" "/dashboard"; do
+  PAGE_HTML=$(curl -sf --max-time 10 "${BASE_URL}${page}" 2>/dev/null || true)
+  if [ -z "$PAGE_HTML" ]; then
+    continue
+  fi
+  FETCH_FAILED=false
+  CHUNK_URLS=$(echo "$PAGE_HTML" | grep -oE '/_next/static/[^"'"'"']+\.js' | sort -u | head -15)
+  for chunk in $CHUNK_URLS; do
+    CHUNK_BODY=$(curl -sf --max-time 5 "${BASE_URL}${chunk}" 2>/dev/null || true)
+    if echo "$CHUNK_BODY" | grep -q '/trpc/trpc'; then
+      FOUND_DOUBLE=true
+      break 2
+    fi
+  done
+done
+if [ "$FETCH_FAILED" = true ]; then
+  fail "Bundle check — could not fetch frontend HTML"
+elif [ "$FOUND_DOUBLE" = true ]; then
+  fail "Bundle check — found /trpc/trpc in JS bundle (NEXT_PUBLIC_API_URL likely ends in /trpc)"
+else
+  pass "Bundle check — no /trpc/trpc in JS bundles"
+fi
+
+# --- 10. Grafana health ---
+if [ "$SKIP_GRAFANA" = true ]; then
+  warn "Grafana check skipped (--skip-grafana)"
+else
+  GRAFANA_STATUS=$(curl -so /dev/null --max-time 10 -w "%{http_code}" "${BASE_URL}/grafana/api/health" 2>/dev/null || true)
+  if [ "$GRAFANA_STATUS" = "200" ]; then
+    pass "GET /grafana/api/health — 200"
+  else
+    warn "GET /grafana/api/health — got ${GRAFANA_STATUS:-no response} (monitoring may not be deployed)"
+  fi
+fi
+
+# --- 11. OIDC discovery ---
+if [ -z "$OIDC_ISSUER" ]; then
+  warn "OIDC discovery check skipped (no --oidc-issuer provided)"
+else
+  OIDC_URL="${OIDC_ISSUER%/}/.well-known/openid-configuration"
+  OIDC_STATUS=$(curl -so /dev/null --max-time 10 -w "%{http_code}" "$OIDC_URL" 2>/dev/null || true)
+  if [ "$OIDC_STATUS" = "200" ]; then
+    pass "OIDC discovery — ${OIDC_ISSUER} reachable"
+  else
+    fail "OIDC discovery — ${OIDC_URL} returned ${OIDC_STATUS:-no response}"
+  fi
+fi
+
+# --- 12. Webhook provider freshness ---
+if [ "$SKIP_WEBHOOKS" = true ]; then
+  warn "Webhook freshness check skipped (--skip-webhooks)"
+else
+  SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+  if bash "$SCRIPT_DIR/webhook-health.sh" --url "$BASE_URL" --quiet 2>/dev/null; then
+    pass "GET /webhooks/health — all providers healthy"
+  else
+    warn "GET /webhooks/health — one or more providers stale/unknown"
+  fi
 fi
 
 # --- Results ---
