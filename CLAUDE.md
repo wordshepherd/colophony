@@ -90,6 +90,12 @@ Per-directory CLAUDE.md files contain domain-specific details:
 | **Loki config**          | `docker/loki/loki-config.yml` (dev), `loki-config.prod.yml` (prod)               |
 | **Promtail config**      | `docker/promtail/promtail-config.yml`                                            |
 | **Grafana dashboards**   | `docker/grafana/dashboards/` (API metrics + logs exploration)                    |
+| **CLI: webhook health**  | `scripts/webhook-health.sh` (query `/webhooks/health`, formatted status)         |
+| **CLI: log query**       | `scripts/grafana-query.sh` (Loki logs + AlertManager alerts)                     |
+| **CLI: container logs**  | `scripts/coolify-logs.sh` (tail/search Docker logs, local or SSH)                |
+| **CLI: Sentry issues**   | `scripts/sentry-issues.sh` (list Sentry issues via API)                          |
+| **CLI: Zitadel admin**   | `scripts/zitadel-admin.sh` (users, orgs, sessions, health)                       |
+| **CLI: Coolify deploy**  | `scripts/coolify-deploy.sh` (trigger deploy + health check + smoke test)         |
 | **Writer workspace**     | `packages/db/src/schema/writer-workspace.ts`                                     |
 | **CSR types**            | `packages/types/src/csr.ts`                                                      |
 | **CSR service**          | `apps/api/src/services/csr.service.ts` (export/import for data portability)      |
@@ -387,6 +393,18 @@ pnpm dev                      # hivemind: builds packages, then API: 4000, Web: 
 
 ```bash
 docker compose --profile monitoring up -d  # Prometheus:9090, Grafana:3001, AlertManager:9093, Loki:3100
+```
+
+**CLI tooling** (all scripts self-document with `--help`):
+
+```bash
+bash scripts/webhook-health.sh                                           # Check webhook provider freshness
+bash scripts/grafana-query.sh logs --query '{service="api"} |= "error"'  # Search Loki logs
+bash scripts/grafana-query.sh alerts                                     # List firing alerts
+bash scripts/coolify-logs.sh tail api -f                                 # Follow API container logs
+bash scripts/sentry-issues.sh                                            # Recent unresolved Sentry issues
+bash scripts/zitadel-admin.sh status                                     # Zitadel health check
+bash scripts/coolify-deploy.sh                                           # Trigger Coolify deployment
 ```
 
 **hivemind controls** (while `pnpm dev` is running):
