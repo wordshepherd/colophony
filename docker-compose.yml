@@ -229,12 +229,12 @@ services:
 
   # AlertManager for Slack notifications (optional — for monitoring)
   alertmanager:
-    image: prom/alertmanager:v0.28.1
+    build: ./docker/alertmanager
     container_name: colophony-alertmanager
     ports:
       - '9093:9093'
-    volumes:
-      - ./docker/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+    environment:
+      - SLACK_WEBHOOK_URL=${SLACK_WEBHOOK_URL:-}
     profiles:
       - monitoring
 
