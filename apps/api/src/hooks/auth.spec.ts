@@ -36,8 +36,15 @@ vi.mock('@colophony/db', () => ({
     update: (...args: Parameters<typeof mockUpdate>) => mockUpdate(...args),
   },
   eq: vi.fn((_col: unknown, val: unknown) => val),
+  and: vi.fn((...conditions: unknown[]) => conditions),
+  isNull: vi.fn((col: unknown) => col),
   sql: (...a: unknown[]) => a,
-  users: { zitadelUserId: 'zitadel_user_id', email: 'email' },
+  users: {
+    zitadelUserId: 'zitadel_user_id',
+    email: 'email',
+    isGuest: 'is_guest',
+    deletedAt: 'deleted_at',
+  },
   pool: {
     query: vi.fn().mockResolvedValue({ rows: [{ '?column?': 1 }] }),
   },

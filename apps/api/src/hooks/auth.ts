@@ -1,7 +1,7 @@
 import fp from 'fastify-plugin';
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { createJwksVerifier } from '@colophony/auth-client';
-import { db, eq, sql, users, type DrizzleDb } from '@colophony/db';
+import { db, eq, and, isNull, sql, users, type DrizzleDb } from '@colophony/db';
 import type { JWTPayload } from 'jose';
 import type {
   AuthContext,
@@ -367,8 +367,9 @@ export default fp(
 
         if (!user) {
           // JIT provisioning: create user from OIDC token claims
-          const jitEmail =
+          const rawEmail =
             (payload.email as string | undefined) ?? `${sub}@placeholder.local`;
+          const jitEmail = rawEmail.toLowerCase().trim();
           const jitDisplayName =
             (payload.name as string | undefined) ?? undefined;
           const jitEmailVerified =
@@ -424,7 +425,13 @@ export default fp(
                   isGuest: false,
                   updatedAt: new Date(),
                 })
-                .where(eq(users.email, jitEmail))
+                .where(
+                  and(
+                    eq(users.email, jitEmail),
+                    eq(users.isGuest, true),
+                    isNull(users.deletedAt),
+                  ),
+                )
                 .returning();
 
               if (linked) {
