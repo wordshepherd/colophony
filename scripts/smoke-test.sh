@@ -92,7 +92,9 @@ else
 fi
 
 # --- 5. tusd tus headers ---
-TUS_HEADERS=$(curl -sI --max-time 10 -X OPTIONS "${BASE_URL}/upload" 2>/dev/null || true)
+TUS_HEADERS=$(curl -sI --max-time 10 -X OPTIONS \
+  -H "Origin: ${BASE_URL}" \
+  "${BASE_URL}/upload" 2>/dev/null || true)
 if echo "$TUS_HEADERS" | grep -qi "Tus-Resumable"; then
   pass "OPTIONS /upload — Tus-Resumable header present"
 else
