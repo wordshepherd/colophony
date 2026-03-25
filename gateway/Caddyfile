@@ -1,5 +1,6 @@
 {
 	admin localhost:2019
+	order rate_limit before reverse_proxy
 }
 
 {$DOMAIN:localhost} {
@@ -13,6 +14,27 @@
 		X-XSS-Protection "1; mode=block"
 		Referrer-Policy "strict-origin-when-cross-origin"
 		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+	}
+
+	# Gateway rate limiting (defense-in-depth — API has its own limits)
+	@rate_limited {
+		not path /caddy-health /health /ready /webhooks /webhooks/* /hooks /hooks/* /grafana /grafana/* /upload /upload/*
+	}
+	rate_limit @rate_limited {
+		zone general {
+			key    {remote_host}
+			events {$CADDY_RL_GENERAL_MAX:300}
+			window {$CADDY_RL_GENERAL_WINDOW:1m}
+		}
+	}
+
+	@upload_limited path /upload /upload/*
+	rate_limit @upload_limited {
+		zone uploads {
+			key    {remote_host}
+			events {$CADDY_RL_UPLOAD_MAX:30}
+			window {$CADDY_RL_UPLOAD_WINDOW:1m}
+		}
 	}
 
 	# Gateway health check (local, no proxy)
