@@ -50,13 +50,13 @@ Prerequisites: Node.js >= 22, pnpm 9.15+, Docker, [hivemind](https://github.com/
 
 ## Tech Stack
 
-| Layer        | Technologies                                              |
-| ------------ | --------------------------------------------------------- |
-| **Frontend** | Next.js 16, React 19, TypeScript, Tailwind CSS, shadcn/ui |
-| **Backend**  | Fastify 5, TypeScript, Drizzle ORM, BullMQ                |
-| **Auth**     | Zitadel (OIDC)                                            |
-| **Data**     | PostgreSQL 16+ (RLS), Redis 7+, MinIO (S3-compatible)     |
-| **Infra**    | Docker Compose (self-hosted), Coolify + Hetzner (managed) |
+| Layer        | Technologies                                               |
+| ------------ | ---------------------------------------------------------- |
+| **Frontend** | Next.js 16, React 19, TypeScript, Tailwind CSS, shadcn/ui  |
+| **Backend**  | Fastify 5, TypeScript, Drizzle ORM, BullMQ                 |
+| **Auth**     | Zitadel (OIDC)                                             |
+| **Data**     | PostgreSQL 16+ (RLS), Redis 7+, MinIO (S3-compatible)      |
+| **Infra**    | Docker Compose (self-hosted), Hetzner VPS (Docker Compose) |
 
 ## Documentation
 
@@ -82,7 +82,7 @@ Client SDKs are available for [TypeScript](sdks/typescript/) and [Python](sdks/p
 Colophony supports two deployment models:
 
 - **Self-hosted** — Docker Compose with PostgreSQL, Redis, MinIO, and Zitadel
-- **Managed hosting** — Coolify on Hetzner (see [docs/deployment.md](docs/deployment.md))
+- **Managed hosting** — Hetzner VPS with Docker Compose (see [docs/deployment.md](docs/deployment.md))
 
 ## License
 

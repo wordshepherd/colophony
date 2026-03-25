@@ -169,10 +169,10 @@ WAITED=0
 INTERVAL=5
 
 while [ $WAITED -lt $MAX_WAIT ]; do
-  # Check if nginx is healthy (depends on api and web)
-  NGINX_HEALTH=$(docker inspect --format='{{.State.Health.Status}}' colophony-nginx 2>/dev/null || echo "not found")
+  # Check if Caddy is healthy (depends on api and web)
+  CADDY_HEALTH=$(docker inspect --format='{{.State.Health.Status}}' colophony-caddy 2>/dev/null || echo "not found")
 
-  if [ "$NGINX_HEALTH" = "healthy" ]; then
+  if [ "$CADDY_HEALTH" = "healthy" ]; then
     echo ""
     echo -e "${GREEN}${BOLD}======================================${NC}"
     echo -e "${GREEN}${BOLD}  Colophony is ready!${NC}"
@@ -191,7 +191,7 @@ while [ $WAITED -lt $MAX_WAIT ]; do
     exit 0
   fi
 
-  echo "  Waiting... (${WAITED}s / ${MAX_WAIT}s) - nginx: ${NGINX_HEALTH}"
+  echo "  Waiting... (${WAITED}s / ${MAX_WAIT}s) - caddy: ${CADDY_HEALTH}"
   sleep $INTERVAL
   WAITED=$((WAITED + INTERVAL))
 done

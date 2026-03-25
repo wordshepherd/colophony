@@ -1,12 +1,19 @@
 services:
-  # Reverse proxy — only externally exposed service
-  nginx:
+  # Caddy reverse proxy — TLS termination + routing
+  caddy:
     build:
-      context: ./nginx
+      context: ./gateway
       dockerfile: Dockerfile
-    container_name: colophony-nginx
+    container_name: colophony-caddy
     ports:
       - "${HTTP_PORT:-80}:80"
+      - "${HTTPS_PORT:-443}:443"
+      - "${HTTPS_PORT:-443}:443/udp"
+    environment:
+      DOMAIN: ${DOMAIN:-localhost}
+    volumes:
+      - caddy_data:/data
+      - caddy_config:/config
     depends_on:
       api:
         condition: service_started
@@ -14,12 +21,11 @@ services:
         condition: service_started
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost/nginx-health"]
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/caddy-health"]
       interval: 10s
       timeout: 5s
       retries: 3
-      start_period: 5s
-    stop_signal: SIGQUIT
+      start_period: 10s
     stop_grace_period: 30s
     deploy:
       resources:
@@ -69,16 +75,23 @@ services:
     container_name: colophony-api
     expose:
       - "4000"
-    env_file: .env.prod
     environment:
       NODE_ENV: production
       PORT: 4000
+      HOST: 0.0.0.0
+      # Database
       DATABASE_URL: postgresql://${POSTGRES_USER:-colophony}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-colophony}
       DATABASE_APP_URL: postgresql://app_user:${APP_USER_PASSWORD}@pgbouncer:6432/${POSTGRES_DB:-colophony}?sslmode=disable
+      DB_SSL: ${DB_SSL:-false}
+      DB_SSL_CA_PATH: ${DB_SSL_CA_PATH:-}
+      DB_ADMIN_POOL_MAX: ${DB_ADMIN_POOL_MAX:-5}
+      DB_APP_POOL_MAX: ${DB_APP_POOL_MAX:-20}
+      # Redis
       REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
       REDIS_HOST: redis
       REDIS_PORT: 6379
       REDIS_PASSWORD: ${REDIS_PASSWORD}
+      # S3 / MinIO
       S3_ENDPOINT: http://minio:9000
       S3_BUCKET: submissions
       S3_QUARANTINE_BUCKET: quarantine
@@ -86,13 +99,75 @@ services:
       S3_SECRET_KEY: ${MINIO_ROOT_PASSWORD}
       S3_REGION: us-east-1
       TUS_ENDPOINT: http://tusd:1080
+      # Application
       CORS_ORIGIN: https://${DOMAIN:-localhost}
       APP_URL: https://${DOMAIN:-localhost}
       LOG_LEVEL: ${LOG_LEVEL:-info}
-      SENTRY_ENVIRONMENT: ${SENTRY_ENVIRONMENT:-production}
-      METRICS_ENABLED: ${METRICS_ENABLED:-true}
+      # Rate limiting
+      RATE_LIMIT_DEFAULT_MAX: ${RATE_LIMIT_DEFAULT_MAX:-60}
+      RATE_LIMIT_AUTH_MAX: ${RATE_LIMIT_AUTH_MAX:-200}
+      RATE_LIMIT_WINDOW_SECONDS: ${RATE_LIMIT_WINDOW_SECONDS:-60}
+      RATE_LIMIT_KEY_PREFIX: ${RATE_LIMIT_KEY_PREFIX:-colophony:rl}
+      AUTH_FAILURE_THROTTLE_MAX: ${AUTH_FAILURE_THROTTLE_MAX:-10}
+      AUTH_FAILURE_THROTTLE_WINDOW_SECONDS: ${AUTH_FAILURE_THROTTLE_WINDOW_SECONDS:-300}
+      # Webhook hardening
+      WEBHOOK_TIMESTAMP_MAX_AGE_SECONDS: ${WEBHOOK_TIMESTAMP_MAX_AGE_SECONDS:-300}
+      WEBHOOK_RATE_LIMIT_MAX: ${WEBHOOK_RATE_LIMIT_MAX:-100}
+      # ClamAV
       CLAMAV_HOST: clamav
       CLAMAV_PORT: 3310
+      VIRUS_SCAN_ENABLED: ${VIRUS_SCAN_ENABLED:-true}
+      # Auth (Zitadel)
+      ZITADEL_AUTHORITY: ${ZITADEL_AUTHORITY:-}
+      ZITADEL_CLIENT_ID: ${ZITADEL_CLIENT_ID:-}
+      ZITADEL_WEBHOOK_SECRET: ${ZITADEL_WEBHOOK_SECRET:-}
+      DEV_AUTH_BYPASS: ${DEV_AUTH_BYPASS:-false}
+      # Payments (Stripe)
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
+      # Federation
+      FEDERATION_ENABLED: ${FEDERATION_ENABLED:-false}
+      FEDERATION_DOMAIN: ${FEDERATION_DOMAIN:-}
+      FEDERATION_CONTACT: ${FEDERATION_CONTACT:-}
+      FEDERATION_PRIVATE_KEY: ${FEDERATION_PRIVATE_KEY:-}
+      FEDERATION_PUBLIC_KEY: ${FEDERATION_PUBLIC_KEY:-}
+      FEDERATION_RATE_LIMIT_MAX: ${FEDERATION_RATE_LIMIT_MAX:-60}
+      FEDERATION_RATE_LIMIT_WINDOW_SECONDS: ${FEDERATION_RATE_LIMIT_WINDOW_SECONDS:-60}
+      FEDERATION_RATE_LIMIT_FAIL_MODE: ${FEDERATION_RATE_LIMIT_FAIL_MODE:-open}
+      # Status tokens
+      STATUS_TOKEN_TTL_DAYS: ${STATUS_TOKEN_TTL_DAYS:-90}
+      # Background jobs (Inngest)
+      INNGEST_EVENT_KEY: ${INNGEST_EVENT_KEY:-}
+      INNGEST_SIGNING_KEY: ${INNGEST_SIGNING_KEY:-}
+      INNGEST_DEV: ${INNGEST_DEV:-false}
+      # Contracts (Documenso)
+      DOCUMENSO_API_URL: ${DOCUMENSO_API_URL:-}
+      DOCUMENSO_API_KEY: ${DOCUMENSO_API_KEY:-}
+      DOCUMENSO_WEBHOOK_SECRET: ${DOCUMENSO_WEBHOOK_SECRET:-}
+      # Federation hub (managed hosting)
+      HUB_DOMAIN: ${HUB_DOMAIN:-}
+      HUB_REGISTRATION_TOKEN: ${HUB_REGISTRATION_TOKEN:-}
+      # Email / Relay
+      EMAIL_PROVIDER: ${EMAIL_PROVIDER:-none}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      SMTP_FROM: ${SMTP_FROM:-}
+      SMTP_SECURE: ${SMTP_SECURE:-false}
+      SENDGRID_API_KEY: ${SENDGRID_API_KEY:-}
+      SENDGRID_FROM: ${SENDGRID_FROM:-}
+      # Monitoring — Sentry
+      SENTRY_DSN: ${SENTRY_DSN:-}
+      SENTRY_ENVIRONMENT: ${SENTRY_ENVIRONMENT:-production}
+      SENTRY_TRACES_SAMPLE_RATE: ${SENTRY_TRACES_SAMPLE_RATE:-0}
+      SENTRY_RELEASE: ${SENTRY_RELEASE:-}
+      # Monitoring — Prometheus
+      METRICS_ENABLED: ${METRICS_ENABLED:-true}
+      # Monitoring — Webhook health staleness
+      WEBHOOK_HEALTH_ZITADEL_STALE_SECONDS: ${WEBHOOK_HEALTH_ZITADEL_STALE_SECONDS:-3600}
+      WEBHOOK_HEALTH_STRIPE_STALE_SECONDS: ${WEBHOOK_HEALTH_STRIPE_STALE_SECONDS:-86400}
+      WEBHOOK_HEALTH_DOCUMENSO_STALE_SECONDS: ${WEBHOOK_HEALTH_DOCUMENSO_STALE_SECONDS:-86400}
     depends_on:
       migrate:
         condition: service_completed_successfully
@@ -463,6 +538,8 @@ services:
       - colophony
 
 volumes:
+  caddy_data:
+  caddy_config:
   postgres_data:
   redis_data:
   minio_data:
