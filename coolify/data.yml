@@ -6,7 +6,7 @@
 services:
   postgres:
     build:
-      context: ../docker/postgres
+      context: ./docker/postgres
       dockerfile: Dockerfile
     expose:
       - "5432"
@@ -55,7 +55,7 @@ services:
 
   pgbouncer:
     build:
-      context: ../docker/pgbouncer
+      context: ./docker/pgbouncer
       dockerfile: Dockerfile
     expose:
       - "6432"
