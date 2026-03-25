@@ -263,6 +263,10 @@ jobs:
           --oidc-issuer "${{ vars.ZITADEL_AUTHORITY }}"
 
       - name: Update last deployed SHA
+        # Non-fatal: GITHUB_TOKEN lacks permission to write environment variables.
+        # Smart deploy detection falls back to deploying all groups when LAST_DEPLOYED_SHA is unset.
+        # TODO: Either use a PAT with variables:write scope, or remove this step if Coolify is dropped.
+        continue-on-error: true
         if: >-
           success() &&
           steps.groups.outputs.deploy_data == 'true' &&
