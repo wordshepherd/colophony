@@ -516,6 +516,7 @@
 - [x] [P3] `queue-preset.service.ts:49` — `listByUser()` missing explicit `organizationId` filter and LIMIT — (Codex plan review 2026-03-20; done 2026-03-21 PR #292)
 - [x] Monitoring stack: Prometheus + Grafana (Sentry for errors) — done 2026-02-27 PR pending; Loki deferred to production
 - [x] [P1] Split Coolify deployment into individual services — split monolithic docker-compose.coolify.yml into 5 Coolify resources (data, app, gateway, uploads, monitoring) on shared `colophony-net` network. Smart deploy detection via LAST_DEPLOYED_SHA. Eliminates Traefik stale routing and proxy restart workaround — (2026-03-24, deploy debugging session; done 2026-03-24)
+- [ ] [P2] Evaluate dropping Coolify in favor of direct SSH + Docker Compose deploy — Coolify's Docker Compose support is second-class: 10+ quirks discovered during service split (broken Traefik label injection, Caddyfile artifacts, volume name rewriting, build context path issues, Domains field generating invalid labels, Preserve Repository hidden requirement, UUID network auto-creation). The production deploy path already uses SSH + `docker-compose.prod.yml` without Coolify. Evaluate: (1) standalone Traefik or certbot for TLS on staging, (2) GitHub Actions SSH deploy matching production, (3) env var management via `.env` on server + `gh secret`. Would eliminate the Coolify abstraction layer and unify staging/production deploy paths — (2026-03-24, Coolify service split session)
 
 ### Database Hardening
 
