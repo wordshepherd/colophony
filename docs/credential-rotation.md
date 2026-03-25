@@ -80,16 +80,15 @@ The script:
   # Expected: PONG
   ```
 
-#### `minio-credentials` (S3-compatible storage root)
+#### `garage-credentials` (S3-compatible storage)
 
-- **Env vars:** `MINIO_ROOT_USER`, `MINIO_ROOT_PASSWORD`
+- **Env vars:** `GARAGE_S3_ACCESS_KEY`, `GARAGE_S3_SECRET_KEY`
 - **Rotation:** `.env.prod` update only (applied on restart)
-- **Affected services:** minio, minio-setup, api, tusd
-- **Why no runtime update:** MinIO has no runtime API for root credential changes.
+- **Affected services:** garage, garage-setup, api, tusd
+- **Notes:** Garage supports runtime key import via admin API. For simplicity, the rotation script updates `.env.prod` and restarts.
 - **Verification:**
   ```bash
-  docker exec colophony-minio mc alias set local http://localhost:9000 NEW_USER NEW_PASSWORD
-  docker exec colophony-minio mc ls local/
+  curl -s -H "Authorization: Bearer $GARAGE_ADMIN_TOKEN" http://localhost:3903/health
   ```
 
 #### `tus-hook-secret` (upload webhook HMAC)

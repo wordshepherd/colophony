@@ -8,7 +8,7 @@ import { defineConfig, devices } from "@playwright/test";
  *
  * Three projects:
  * - submissions: existing tests (fake OIDC + API key interception, no external services)
- * - uploads: requires tusd + MinIO (docker-compose.e2e.yml)
+ * - uploads: requires tusd + Garage (docker-compose.e2e.yml)
  * - oidc: requires Zitadel (docker-compose --profile auth)
  *
  * IMPORTANT: Playwright's webServer.env replaces process.env entirely for child

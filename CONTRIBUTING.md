@@ -16,7 +16,7 @@ Please read our [Code of Conduct](CODE_OF_CONDUCT.md) before participating.
 ### Setup
 
 ```bash
-pnpm docker:up        # Start core infrastructure (PostgreSQL, Redis, MinIO, Zitadel)
+pnpm docker:up        # Start core infrastructure (PostgreSQL, Redis, Garage, Zitadel)
 pnpm install          # Install dependencies
 pnpm db:migrate       # Run database migrations
 pnpm db:seed          # Seed development data

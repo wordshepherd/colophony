@@ -219,7 +219,7 @@ All eight research areas have been investigated and decisions finalized. Each su
 **Key implementation details:**
 
 - Hetzner CX32 servers (~$7/mo each, 4 vCPU, 8GB), ~10-15 tenants per server
-- Shared infrastructure (PostgreSQL with RLS, Redis, MinIO, Zitadel) on dedicated servers
+- Shared infrastructure (PostgreSQL with RLS, Redis, Garage, Zitadel) on dedicated servers
 - Monitoring via Prometheus + Grafana (deployed alongside via Coolify)
 - Phase 2 (100-500 tenants): evaluate Fly.io or Kamal
 - Phase 3 (500+ tenants): Kubernetes with dedicated platform hire

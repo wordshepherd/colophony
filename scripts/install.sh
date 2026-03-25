@@ -72,8 +72,10 @@ echo -e "${BOLD}Generating secrets...${NC}"
 POSTGRES_PASSWORD=$(openssl rand -base64 48 | tr -d '=/+' | head -c 48)
 APP_USER_PASSWORD=$(openssl rand -base64 48 | tr -d '=/+' | head -c 48)
 REDIS_PASSWORD=$(openssl rand -base64 48 | tr -d '=/+' | head -c 48)
-MINIO_ROOT_USER=$(openssl rand -hex 16)
-MINIO_ROOT_PASSWORD=$(openssl rand -base64 48 | tr -d '=/+' | head -c 48)
+GARAGE_RPC_SECRET=$(openssl rand -hex 32)
+GARAGE_ADMIN_TOKEN=$(openssl rand -base64 32 | tr -d '=/+' | head -c 32)
+GARAGE_S3_ACCESS_KEY=$(openssl rand -hex 16)
+GARAGE_S3_SECRET_KEY=$(openssl rand -base64 48 | tr -d '=/+' | head -c 48)
 TUS_HOOK_SECRET=$(openssl rand -hex 32)
 
 echo "  Secrets generated."
@@ -124,9 +126,11 @@ APP_USER_PASSWORD=${APP_USER_PASSWORD}
 # Redis
 REDIS_PASSWORD=${REDIS_PASSWORD}
 
-# MinIO (S3-compatible storage)
-MINIO_ROOT_USER=${MINIO_ROOT_USER}
-MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD}
+# Garage S3-compatible storage
+GARAGE_RPC_SECRET=${GARAGE_RPC_SECRET}
+GARAGE_ADMIN_TOKEN=${GARAGE_ADMIN_TOKEN}
+GARAGE_S3_ACCESS_KEY=${GARAGE_S3_ACCESS_KEY}
+GARAGE_S3_SECRET_KEY=${GARAGE_S3_SECRET_KEY}
 
 # tusd webhook
 TUS_HOOK_SECRET=${TUS_HOOK_SECRET}

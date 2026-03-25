@@ -59,8 +59,8 @@ const envSchema = z
       .default(300),
     WEBHOOK_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(100),
 
-    // S3 / MinIO
-    S3_ENDPOINT: z.string().default('http://localhost:9000'),
+    // S3 / Garage
+    S3_ENDPOINT: z.string().default('http://localhost:3900'),
     S3_BUCKET: z.string().default('submissions'),
     S3_QUARANTINE_BUCKET: z.string().default('quarantine'),
     S3_ACCESS_KEY: z.string().default('minioadmin'),

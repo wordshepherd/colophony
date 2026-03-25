@@ -1298,7 +1298,7 @@ jobs:
 
   # ──────────────────────────────────────────────────
   # Playwright E2E tests (~8 min): uploads project
-  # Requires PostgreSQL + MinIO + tusd
+  # Requires PostgreSQL + Garage + tusd
   # ──────────────────────────────────────────────────
   playwright-uploads:
     name: Playwright Uploads E2E
@@ -1367,22 +1367,58 @@ jobs:
         run: |
           echo 'DATABASE_URL="postgresql://colophony:password@localhost:5432/colophony"' > packages/db/.env
           pnpm db:seed
-      - name: Start MinIO
+      - name: Start Garage
         run: |
-          docker run -d --name minio --network host \
-            -e MINIO_ROOT_USER=minioadmin \
-            -e MINIO_ROOT_PASSWORD=minioadmin \
-            minio/minio:RELEASE.2025-09-07T16-13-09Z server /data --console-address ":9001"
-          timeout 30 bash -c 'until curl -sf http://localhost:9000/minio/health/live; do sleep 2; done'
-      - name: Create MinIO buckets
+          mkdir -p /tmp/garage
+          cat > /tmp/garage/garage.toml << 'TOML'
+          metadata_dir = "/var/lib/garage/meta"
+          data_dir = "/var/lib/garage/data"
+          db_engine = "sqlite"
+          replication_factor = 1
+          rpc_bind_addr = "[::]:3901"
+          rpc_public_addr = "127.0.0.1:3901"
+          [s3_api]
+          api_bind_addr = "[::]:3900"
+          s3_region = "us-east-1"
+          [admin]
+          api_bind_addr = "[::]:3903"
+          TOML
+          for attempt in 1 2 3; do
+            docker run -d --name garage --network host \
+              -e GARAGE_RPC_SECRET=$(openssl rand -hex 32) \
+              -e GARAGE_ADMIN_TOKEN=ci-admin-token \
+              -v /tmp/garage/garage.toml:/etc/garage.toml \
+              dxflrs/garage:v2.2.0 && break
+            echo "Garage start attempt $attempt failed, retrying in 5s..."
+            docker rm -f garage 2>/dev/null || true
+            sleep 5
+          done
+          timeout 30 bash -c 'until curl -sf http://localhost:3903/health; do sleep 2; done'
+      - name: Setup Garage buckets
         run: |
-          docker run --rm --network host --entrypoint /bin/sh minio/mc:RELEASE.2025-08-13T08-35-41Z -c "
-            mc alias set minio http://localhost:9000 minioadmin minioadmin;
-            mc mb minio/submissions --ignore-existing;
-            mc mb minio/quarantine --ignore-existing;
-            mc anonymous set none minio/submissions;
-            mc anonymous set none minio/quarantine;
-          "
+          ADMIN="http://localhost:3903"
+          AUTH="-H Authorization:Bearer ci-admin-token"
+          # Layout
+          NODE_ID=$(curl -sf $AUTH "$ADMIN/v2/GetClusterStatus" | jq -r '.nodes[0].id')
+          curl -sf -X POST $AUTH -H 'Content-Type: application/json' \
+            -d "[{\"id\":\"$NODE_ID\",\"zone\":\"dc1\",\"capacity\":1073741824}]" \
+            "$ADMIN/v2/UpdateClusterLayout"
+          VERSION=$(curl -sf $AUTH "$ADMIN/v2/GetClusterLayout" | jq '.version')
+          curl -sf -X POST $AUTH -H 'Content-Type: application/json' \
+            -d "{\"version\":$((VERSION+1))}" \
+            "$ADMIN/v2/ApplyClusterLayout"
+          # Import key
+          curl -sf -X POST $AUTH -H 'Content-Type: application/json' \
+            -d '{"name":"ci","accessKeyId":"minioadmin","secretAccessKey":"minioadmin"}' \
+            "$ADMIN/v2/ImportKey"
+          # Create buckets + allow key
+          for BUCKET in submissions quarantine; do
+            BUCKET_ID=$(curl -sf -X POST $AUTH -H 'Content-Type: application/json' \
+              -d "{\"globalAlias\":\"$BUCKET\"}" "$ADMIN/v2/CreateBucket" | jq -r '.id')
+            curl -sf -X POST $AUTH -H 'Content-Type: application/json' \
+              -d "{\"bucketId\":\"$BUCKET_ID\",\"accessKeyId\":\"minioadmin\",\"permissions\":{\"read\":true,\"write\":true,\"owner\":true}}" \
+              "$ADMIN/v2/AllowBucketKey"
+          done
       - name: Start tusd
         run: |
           for attempt in 1 2 3; do
@@ -1392,7 +1428,7 @@ jobs:
               -e AWS_REGION=us-east-1 \
               tusproject/tusd:v2.8.0 \
               -port 1080 \
-              -s3-endpoint http://localhost:9000 \
+              -s3-endpoint http://localhost:3900 \
               -s3-bucket quarantine \
               -s3-object-prefix uploads/ \
               -hooks-http http://localhost:4010/webhooks/tusd \
@@ -1412,7 +1448,7 @@ jobs:
       - name: Show container logs on failure
         if: failure()
         run: |
-          echo "=== MinIO logs ===" && docker logs minio 2>&1 | tail -50 || true
+          echo "=== Garage logs ===" && docker logs garage 2>&1 | tail -50 || true
           echo "=== tusd logs ===" && docker logs tusd 2>&1 | tail -100 || true
       - name: Upload Playwright report
         if: ${{ !cancelled() }}

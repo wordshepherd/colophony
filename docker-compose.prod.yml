@@ -96,12 +96,12 @@ services:
       REDIS_HOST: redis
       REDIS_PORT: 6379
       REDIS_PASSWORD: ${REDIS_PASSWORD}
-      # S3 / MinIO
-      S3_ENDPOINT: http://minio:9000
+      # S3 / Garage
+      S3_ENDPOINT: http://garage:3900
       S3_BUCKET: submissions
       S3_QUARANTINE_BUCKET: quarantine
-      S3_ACCESS_KEY: ${MINIO_ROOT_USER}
-      S3_SECRET_KEY: ${MINIO_ROOT_PASSWORD}
+      S3_ACCESS_KEY: ${GARAGE_S3_ACCESS_KEY}
+      S3_SECRET_KEY: ${GARAGE_S3_SECRET_KEY}
       S3_REGION: us-east-1
       TUS_ENDPOINT: http://tusd:1080
       # Application
@@ -241,7 +241,7 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB:-colophony}
       APP_USER_PASSWORD: ${APP_USER_PASSWORD}
-      # WAL-G backup config (mapped from BACKUP_* vars to avoid collision with MinIO)
+      # WAL-G backup config (mapped from BACKUP_* vars to avoid collision with Garage)
       WALG_S3_PREFIX: ${BACKUP_S3_PREFIX:-}
       AWS_ACCESS_KEY_ID: ${BACKUP_S3_ACCESS_KEY:-}
       AWS_SECRET_ACCESS_KEY: ${BACKUP_S3_SECRET_KEY:-}
@@ -306,50 +306,48 @@ services:
     networks:
       - colophony
 
-  # MinIO S3-compatible file storage
-  minio:
-    image: minio/minio:RELEASE.2025-09-07T16-13-09Z
-    container_name: colophony-minio
+  # Garage S3-compatible object storage
+  garage:
+    image: dxflrs/garage:v2.2.0
+    container_name: colophony-garage
     expose:
-      - "9000"
+      - "3900"
+      - "3903"
     environment:
-      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
-      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+      GARAGE_RPC_SECRET: ${GARAGE_RPC_SECRET}
+      GARAGE_ADMIN_TOKEN: ${GARAGE_ADMIN_TOKEN}
     volumes:
-      - minio_data:/data
-    command: server /data
+      - ./docker/garage/garage.toml:/etc/garage.toml:ro
+      - garage_data:/var/lib/garage/data
+      - garage_meta:/var/lib/garage/meta
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
+      test: ["CMD", "curl", "-sf", "http://localhost:3903/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     deploy:
       resources:
         limits:
-          memory: 512M
+          memory: 256M
     networks:
       - colophony
 
-  # Create default MinIO buckets on startup
-  minio-setup:
-    image: minio/mc:RELEASE.2025-08-13T08-35-41Z
-    container_name: colophony-minio-setup
+  # Initialize Garage buckets and API key on startup
+  garage-setup:
+    image: alpine:3.21
+    container_name: colophony-garage-setup
     depends_on:
-      minio:
+      garage:
         condition: service_healthy
-    entrypoint: >
-      /bin/sh -c "
-      set -e;
-      mc alias set minio http://minio:9000 $${MINIO_ROOT_USER} $${MINIO_ROOT_PASSWORD};
-      mc mb minio/submissions --ignore-existing;
-      mc mb minio/quarantine --ignore-existing;
-      mc anonymous set none minio/submissions;
-      mc anonymous set none minio/quarantine;
-      "
+    volumes:
+      - ./docker/garage/init-garage.sh:/init-garage.sh:ro
+    entrypoint: ['/bin/sh', '-c', 'apk add --no-cache curl jq > /dev/null 2>&1 && sh /init-garage.sh']
     environment:
-      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
-      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+      GARAGE_ADMIN_URL: http://garage:3903
+      GARAGE_ADMIN_TOKEN: ${GARAGE_ADMIN_TOKEN}
+      GARAGE_S3_ACCESS_KEY: ${GARAGE_S3_ACCESS_KEY}
+      GARAGE_S3_SECRET_KEY: ${GARAGE_S3_SECRET_KEY}
     networks:
       - colophony
 
@@ -360,14 +358,14 @@ services:
     expose:
       - "1080"
     environment:
-      AWS_ACCESS_KEY_ID: ${MINIO_ROOT_USER}
-      AWS_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD}
+      AWS_ACCESS_KEY_ID: ${GARAGE_S3_ACCESS_KEY}
+      AWS_SECRET_ACCESS_KEY: ${GARAGE_S3_SECRET_KEY}
       AWS_REGION: us-east-1
     command:
       - -port
       - "1080"
       - -s3-endpoint
-      - http://minio:9000
+      - http://garage:3900
       - -s3-bucket
       - quarantine
       - -s3-object-prefix
@@ -384,8 +382,8 @@ services:
       - -base-path
       - /upload
     depends_on:
-      minio:
-        condition: service_healthy
+      garage-setup:
+        condition: service_completed_successfully
       api:
         condition: service_healthy
     restart: unless-stopped
@@ -551,8 +549,10 @@ volumes:
     name: ${VOLUME_PREFIX:-colophony}_postgres_data
   redis_data:
     name: ${VOLUME_PREFIX:-colophony}_redis_data
-  minio_data:
-    name: ${VOLUME_PREFIX:-colophony}_minio_data
+  garage_data:
+    name: ${VOLUME_PREFIX:-colophony}_garage_data
+  garage_meta:
+    name: ${VOLUME_PREFIX:-colophony}_garage_meta
   clamav_data:
     name: ${VOLUME_PREFIX:-colophony}_clamav_data
   prometheus_data:

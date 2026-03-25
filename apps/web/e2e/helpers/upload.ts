@@ -1,7 +1,7 @@
 /**
  * Upload-specific E2E test helpers.
  *
- * Provides utilities for file upload tests that interact with tusd + MinIO:
+ * Provides utilities for file upload tests that interact with tusd + Garage:
  * - Test file generation
  * - DB queries for file assertions
  * - tus request interception to swap Bearer→API key
