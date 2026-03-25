@@ -28,84 +28,83 @@ Per-directory CLAUDE.md files contain domain-specific details:
 - **`apps/api/CLAUDE.md`** — Hook registration, tRPC procedures, auth, webhooks
 - **`apps/web/CLAUDE.md`** — tRPC client, providers, auth utilities, conventions
 
-| What                     | Path                                                                              |
-| ------------------------ | --------------------------------------------------------------------------------- |
-| **Drizzle schema**       | `packages/db/src/schema/` (one file per table group)                              |
-| **Drizzle migrations**   | `packages/db/migrations/`                                                         |
-| **Drizzle client**       | `packages/db/src/client.ts`                                                       |
-| **RLS context**          | `packages/db/src/context.ts` (`withRls()`)                                        |
-| **Shared Zod schemas**   | `packages/types/src/`                                                             |
-| **Zitadel auth client**  | `packages/auth-client/src/`                                                       |
-| **Fastify app entry**    | `apps/api/src/main.ts`                                                            |
-| **Fastify hooks**        | `apps/api/src/hooks/` (auth, rate-limit, org-context, db-context, audit)          |
-| **Service layer**        | `apps/api/src/services/`                                                          |
-| **tRPC (internal)**      | `apps/api/src/trpc/`                                                              |
-| **Zitadel webhook**      | `apps/api/src/webhooks/zitadel.webhook.ts`                                        |
-| **Stripe webhook**       | `apps/api/src/webhooks/stripe.webhook.ts`                                         |
-| **Documenso webhook**    | `apps/api/src/webhooks/documenso.webhook.ts`                                      |
-| **Inngest functions**    | `apps/api/src/inngest/`                                                           |
-| **Adapter registry**     | `apps/api/src/adapters/registry-accessor.ts` (module-level singleton)             |
-| **Config builder**       | `apps/api/src/colophony.config.ts` (maps env → adapter init)                      |
-| **SDK adapters**         | `apps/api/src/adapters/{email,storage,payment}/` (SDK-compatible)                 |
-| **CMS adapters**         | `apps/api/src/adapters/cms/`                                                      |
-| **Federation discovery** | `apps/api/src/federation/discovery.routes.ts`                                     |
-| **Federation DID**       | `apps/api/src/federation/did.routes.ts`                                           |
-| **Federation service**   | `apps/api/src/services/federation.service.ts`                                     |
-| **Federation trust**     | `apps/api/src/federation/trust.routes.ts` (S2S), `trust-admin.routes.ts`          |
-| **Trust service**        | `apps/api/src/services/trust.service.ts`                                          |
-| **HTTP signatures**      | `apps/api/src/federation/http-signatures.ts`                                      |
-| **Federation auth**      | `apps/api/src/federation/federation-auth.ts` (S2S signature middleware)           |
-| **Sim-sub (BSAP)**       | `apps/api/src/federation/simsub.routes.ts` (S2S), `simsub-admin.routes.ts`        |
-| **Sim-sub service**      | `apps/api/src/services/simsub.service.ts`                                         |
-| **Fingerprint service**  | `apps/api/src/services/fingerprint.service.ts`                                    |
-| **Transfer routes**      | `apps/api/src/federation/transfer.routes.ts` (S2S), `transfer-admin.routes.ts`    |
-| **Transfer service**     | `apps/api/src/services/transfer.service.ts`                                       |
-| **Migration routes**     | `apps/api/src/federation/migration.routes.ts` (S2S), `migration-admin.routes.ts`  |
-| **Migration service**    | `apps/api/src/services/migration.service.ts`, `migration-bundle.service.ts`       |
-| **Hub routes**           | `apps/api/src/federation/hub.routes.ts` (S2S), `hub-admin.routes.ts`              |
-| **Hub auth**             | `apps/api/src/federation/hub-auth.ts` (S2S hub auth middleware)                   |
-| **Hub service**          | `apps/api/src/services/hub.service.ts`                                            |
-| **Hub client service**   | `apps/api/src/services/hub-client.service.ts`                                     |
-| **Analytics service**    | `apps/api/src/services/submission-analytics.service.ts`                           |
-| **Analytics components** | `apps/web/src/components/analytics/` (charts, filters, dashboard page)            |
-| **Portfolio service**    | `apps/api/src/services/portfolio.service.ts` (cross-org UNION ALL, status maps)   |
-| **Writer analytics svc** | `apps/api/src/services/writer-analytics.service.ts` (personal stats/charts)       |
-| **Writer analytics UI**  | `apps/web/src/components/workspace/writer-*` (analytics page + chart components)  |
-| **Next.js frontend**     | `apps/web/`                                                                       |
-| **tRPC client**          | `apps/web/src/lib/trpc.ts`                                                        |
-| **Env config (Zod)**     | `apps/api/src/config/env.ts`                                                      |
-| **Plugin SDK**           | `packages/plugin-sdk/src/` (adapters, hooks, config, plugin-base, testing)        |
-| **OpenAPI spec**         | `sdks/openapi.json` (exported from running API, 67 paths, 15 tag groups)          |
-| **TypeScript SDK**       | `sdks/typescript/` (`@colophony/sdk` — openapi-fetch + generated types)           |
-| **Python SDK**           | `sdks/python/` (`colophony` — openapi-python-client generated)                    |
-| **SDK generation**       | `scripts/generate-sdks.ts` (regenerate both SDKs from committed spec)             |
-| **SSRF validation**      | `apps/api/src/lib/url-validation.ts` (validateOutboundUrl, isPrivateIPv4/v6)      |
-| **Sentry config**        | `apps/api/src/config/sentry.ts` (init, captureException, isSentryEnabled)         |
-| **Metrics registry**     | `apps/api/src/config/metrics.ts` (Prometheus counters, histograms, gauges)        |
-| **Metrics plugin**       | `apps/api/src/hooks/metrics.ts` (Fastify plugin — HTTP request instrumentation)   |
-| **Instrumented worker**  | `apps/api/src/config/instrumented-worker.ts` (BullMQ wrapper with metrics)        |
-| **Webhook health**       | `apps/api/src/webhooks/webhook-health.route.ts`                                   |
-| **Alert rules**          | `docker/prometheus/alert-rules.yml`                                               |
-| **AlertManager config**  | `docker/alertmanager/alertmanager.yml`                                            |
-| **Loki config**          | `docker/loki/loki-config.yml` (dev), `loki-config.prod.yml` (prod)                |
-| **Promtail config**      | `docker/promtail/promtail-config.yml`                                             |
-| **Grafana dashboards**   | `docker/grafana/dashboards/` (API metrics + logs exploration)                     |
-| **CLI: webhook health**  | `scripts/webhook-health.sh` (query `/webhooks/health`, formatted status)          |
-| **CLI: log query**       | `scripts/grafana-query.sh` (Loki logs + AlertManager alerts)                      |
-| **CLI: container logs**  | `scripts/coolify-logs.sh` (tail/search Docker logs, local or SSH)                 |
-| **CLI: Sentry issues**   | `scripts/sentry-issues.sh` (list Sentry issues via API)                           |
-| **CLI: Zitadel admin**   | `scripts/zitadel-admin.sh` (users, orgs, sessions, health)                        |
-| **CLI: Coolify deploy**  | `scripts/coolify-deploy.sh` (trigger deploy + health check + smoke test)          |
-| **CLI: Coolify network** | `scripts/coolify-network-setup.sh` (create shared `colophony-net` Docker network) |
-| **Coolify compose**      | `coolify/*.yml` (5 resources: data, app, gateway, uploads, monitoring)            |
-| **Uptime workflow**      | `.github/workflows/uptime.yml` (cron health checks, issue-based alerting)         |
-| **Writer workspace**     | `packages/db/src/schema/writer-workspace.ts`                                      |
-| **CSR types**            | `packages/types/src/csr.ts`                                                       |
-| **CSR service**          | `apps/api/src/services/csr.service.ts` (export/import for data portability)       |
-| **CSR format spec**      | `docs/csr-format.md`                                                              |
-| **Backlog**              | `docs/backlog.md` (track-organized, drives session focus)                         |
-| **QA log**               | `docs/qa-log.md`                                                                  |
-| **Release checklist**    | `docs/release-checklist.md`                                                       |
+| What                     | Path                                                                                    |
+| ------------------------ | --------------------------------------------------------------------------------------- |
+| **Drizzle schema**       | `packages/db/src/schema/` (one file per table group)                                    |
+| **Drizzle migrations**   | `packages/db/migrations/`                                                               |
+| **Drizzle client**       | `packages/db/src/client.ts`                                                             |
+| **RLS context**          | `packages/db/src/context.ts` (`withRls()`)                                              |
+| **Shared Zod schemas**   | `packages/types/src/`                                                                   |
+| **Zitadel auth client**  | `packages/auth-client/src/`                                                             |
+| **Fastify app entry**    | `apps/api/src/main.ts`                                                                  |
+| **Fastify hooks**        | `apps/api/src/hooks/` (auth, rate-limit, org-context, db-context, audit)                |
+| **Service layer**        | `apps/api/src/services/`                                                                |
+| **tRPC (internal)**      | `apps/api/src/trpc/`                                                                    |
+| **Zitadel webhook**      | `apps/api/src/webhooks/zitadel.webhook.ts`                                              |
+| **Stripe webhook**       | `apps/api/src/webhooks/stripe.webhook.ts`                                               |
+| **Documenso webhook**    | `apps/api/src/webhooks/documenso.webhook.ts`                                            |
+| **Inngest functions**    | `apps/api/src/inngest/`                                                                 |
+| **Adapter registry**     | `apps/api/src/adapters/registry-accessor.ts` (module-level singleton)                   |
+| **Config builder**       | `apps/api/src/colophony.config.ts` (maps env → adapter init)                            |
+| **SDK adapters**         | `apps/api/src/adapters/{email,storage,payment}/` (SDK-compatible)                       |
+| **CMS adapters**         | `apps/api/src/adapters/cms/`                                                            |
+| **Federation discovery** | `apps/api/src/federation/discovery.routes.ts`                                           |
+| **Federation DID**       | `apps/api/src/federation/did.routes.ts`                                                 |
+| **Federation service**   | `apps/api/src/services/federation.service.ts`                                           |
+| **Federation trust**     | `apps/api/src/federation/trust.routes.ts` (S2S), `trust-admin.routes.ts`                |
+| **Trust service**        | `apps/api/src/services/trust.service.ts`                                                |
+| **HTTP signatures**      | `apps/api/src/federation/http-signatures.ts`                                            |
+| **Federation auth**      | `apps/api/src/federation/federation-auth.ts` (S2S signature middleware)                 |
+| **Sim-sub (BSAP)**       | `apps/api/src/federation/simsub.routes.ts` (S2S), `simsub-admin.routes.ts`              |
+| **Sim-sub service**      | `apps/api/src/services/simsub.service.ts`                                               |
+| **Fingerprint service**  | `apps/api/src/services/fingerprint.service.ts`                                          |
+| **Transfer routes**      | `apps/api/src/federation/transfer.routes.ts` (S2S), `transfer-admin.routes.ts`          |
+| **Transfer service**     | `apps/api/src/services/transfer.service.ts`                                             |
+| **Migration routes**     | `apps/api/src/federation/migration.routes.ts` (S2S), `migration-admin.routes.ts`        |
+| **Migration service**    | `apps/api/src/services/migration.service.ts`, `migration-bundle.service.ts`             |
+| **Hub routes**           | `apps/api/src/federation/hub.routes.ts` (S2S), `hub-admin.routes.ts`                    |
+| **Hub auth**             | `apps/api/src/federation/hub-auth.ts` (S2S hub auth middleware)                         |
+| **Hub service**          | `apps/api/src/services/hub.service.ts`                                                  |
+| **Hub client service**   | `apps/api/src/services/hub-client.service.ts`                                           |
+| **Analytics service**    | `apps/api/src/services/submission-analytics.service.ts`                                 |
+| **Analytics components** | `apps/web/src/components/analytics/` (charts, filters, dashboard page)                  |
+| **Portfolio service**    | `apps/api/src/services/portfolio.service.ts` (cross-org UNION ALL, status maps)         |
+| **Writer analytics svc** | `apps/api/src/services/writer-analytics.service.ts` (personal stats/charts)             |
+| **Writer analytics UI**  | `apps/web/src/components/workspace/writer-*` (analytics page + chart components)        |
+| **Next.js frontend**     | `apps/web/`                                                                             |
+| **tRPC client**          | `apps/web/src/lib/trpc.ts`                                                              |
+| **Env config (Zod)**     | `apps/api/src/config/env.ts`                                                            |
+| **Plugin SDK**           | `packages/plugin-sdk/src/` (adapters, hooks, config, plugin-base, testing)              |
+| **OpenAPI spec**         | `sdks/openapi.json` (exported from running API, 67 paths, 15 tag groups)                |
+| **TypeScript SDK**       | `sdks/typescript/` (`@colophony/sdk` — openapi-fetch + generated types)                 |
+| **Python SDK**           | `sdks/python/` (`colophony` — openapi-python-client generated)                          |
+| **SDK generation**       | `scripts/generate-sdks.ts` (regenerate both SDKs from committed spec)                   |
+| **SSRF validation**      | `apps/api/src/lib/url-validation.ts` (validateOutboundUrl, isPrivateIPv4/v6)            |
+| **Sentry config**        | `apps/api/src/config/sentry.ts` (init, captureException, isSentryEnabled)               |
+| **Metrics registry**     | `apps/api/src/config/metrics.ts` (Prometheus counters, histograms, gauges)              |
+| **Metrics plugin**       | `apps/api/src/hooks/metrics.ts` (Fastify plugin — HTTP request instrumentation)         |
+| **Instrumented worker**  | `apps/api/src/config/instrumented-worker.ts` (BullMQ wrapper with metrics)              |
+| **Webhook health**       | `apps/api/src/webhooks/webhook-health.route.ts`                                         |
+| **Alert rules**          | `docker/prometheus/alert-rules.yml`                                                     |
+| **AlertManager config**  | `docker/alertmanager/alertmanager.yml`                                                  |
+| **Loki config**          | `docker/loki/loki-config.yml` (dev), `loki-config.prod.yml` (prod)                      |
+| **Promtail config**      | `docker/promtail/promtail-config.yml`                                                   |
+| **Grafana dashboards**   | `docker/grafana/dashboards/` (API metrics + logs exploration)                           |
+| **CLI: webhook health**  | `scripts/webhook-health.sh` (query `/webhooks/health`, formatted status)                |
+| **CLI: log query**       | `scripts/grafana-query.sh` (Loki logs + AlertManager alerts)                            |
+| **CLI: container logs**  | `scripts/server-logs.sh` (tail/search Docker logs, local or SSH)                        |
+| **CLI: Sentry issues**   | `scripts/sentry-issues.sh` (list Sentry issues via API)                                 |
+| **CLI: Zitadel admin**   | `scripts/zitadel-admin.sh` (users, orgs, sessions, health)                              |
+| **Gateway config**       | `gateway/Caddyfile` (Caddy reverse proxy — routing, security headers, maintenance page) |
+| **Gateway Dockerfile**   | `gateway/Dockerfile`                                                                    |
+| **Uptime workflow**      | `.github/workflows/uptime.yml` (cron health checks, issue-based alerting)               |
+| **Writer workspace**     | `packages/db/src/schema/writer-workspace.ts`                                            |
+| **CSR types**            | `packages/types/src/csr.ts`                                                             |
+| **CSR service**          | `apps/api/src/services/csr.service.ts` (export/import for data portability)             |
+| **CSR format spec**      | `docs/csr-format.md`                                                                    |
+| **Backlog**              | `docs/backlog.md` (track-organized, drives session focus)                               |
+| **QA log**               | `docs/qa-log.md`                                                                        |
+| **Release checklist**    | `docs/release-checklist.md`                                                             |
 
 Full project structure: [docs/architecture.md](docs/architecture.md)
 
@@ -121,7 +120,7 @@ Full project structure: [docs/architecture.md](docs/architecture.md)
 
 **Data:** PostgreSQL 16+ (RLS via Drizzle `pgPolicy`), Redis 7+, MinIO (S3-compatible)
 
-**Infra:** Docker Compose (self-hosted), Coolify + Hetzner (managed hosting)
+**Infra:** Docker Compose (self-hosted), Caddy (TLS + routing), Hetzner VPS
 
 ---
 
@@ -161,30 +160,20 @@ Summary: Stripe Checkout only (zero PCI scope). Webhook handler built with two-s
 
 Domain-specific quirks are in per-directory CLAUDE.md files. Cross-cutting quirks below:
 
-| Quirk                                                 | Details                                                                                                                                                                                                                                                                                                                                                                                                                                          |
-| ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **Docker Compose env_file**                           | `env_file:` sets container env only. For YAML `${VAR}` substitution, use `--env-file .env` on CLI                                                                                                                                                                                                                                                                                                                                                |
-| **PostgreSQL init-db.sh**                             | Only runs on first DB creation. Must `docker compose down -v` to re-run after changes                                                                                                                                                                                                                                                                                                                                                            |
-| **PgBouncer: migrations must bypass**                 | `drizzle-kit` and `pnpm db:migrate` use `DATABASE_URL` (direct port 5432). Only `DATABASE_APP_URL` routes through PgBouncer (port 6432). `SET LOCAL` is required (not `SET`) — transaction pooling reuses server connections                                                                                                                                                                                                                     |
-| **WSL husky hooks need nvm PATH**                     | Husky v9 runs hooks under `sh`/`dash`; `nvm.sh` can't be sourced. Hooks add nvm node bin to PATH directly. `lint-staged` called without `npx`                                                                                                                                                                                                                                                                                                    |
-| **CI: workspace deps need build before Vitest**       | Vitest resolves workspace packages via `exports` field (pointing to `dist/`). CI must build deps before running tests                                                                                                                                                                                                                                                                                                                            |
-| **`drizzle-kit generate` TUI blocks automation**      | Interactive prompts (rename vs create) use a TUI that ignores piped stdin. Write manual migrations in non-interactive shells; snapshot files may need regeneration interactively                                                                                                                                                                                                                                                                 |
-| **Playwright `webServer.env` replaces `process.env`** | `webServer.env` **replaces** (not merges) the child process environment. Must load `.env` files via `dotenv` and spread `...process.env` to ensure `DATABASE_URL` etc. reach dev servers                                                                                                                                                                                                                                                         |
-| **Zitadel issuer ± trailing slash**                   | Zitadel v4.10.1 omits trailing slash in JWT `iss` claim. JWKS verifier uses array issuer `[base, base + "/"]` to match both. Don't normalize to one form                                                                                                                                                                                                                                                                                         |
-| **hivemind for dev servers**                          | `pnpm dev` uses hivemind (single Go binary, no tmux). Install `hivemind`. Turbo stays for builds; hivemind replaces it for persistent dev servers only. Use `pnpm dev:clean` to kill orphans if hivemind crashes. No per-process `connect`/`restart` — use Ctrl+C to stop all, rely on hot-reload for changes. hivemind always injects a PORT env var (base 5000); `Procfile.dev` sets `PORT=` explicitly per process to override                |
-| **Coolify: bind mounts → directories**                | Coolify converts `./path/to/file:/container/path:ro` bind mounts into directories. All file mounts must be embedded in Docker images via COPY. Affects Coolify compose files only — staging/prod compose files still use bind mounts for non-Coolify deployments                                                                                                                                                                                 |
-| **Coolify: `restart:unless-stopped` on all**          | Coolify injects `restart: unless-stopped` on every service, including one-shot containers (migrate, minio-setup). One-shot services must be merged into long-running containers or will crash-loop                                                                                                                                                                                                                                               |
-| **Coolify: 5 resources share `colophony-net`**        | Coolify deployment is split into 5 resources (`coolify/*.yml`: data, app, gateway, uploads, monitoring) sharing an external `colophony-net` Docker network. Create the network with `scripts/coolify-network-setup.sh` before first deploy. Only the gateway resource joins the `coolify` network (for Traefik discovery). This replaces the monolithic `docker-compose.coolify.yml` (deprecated) and eliminates the Traefik stale routing issue |
-| **Coolify: `${VAR}` in labels not resolved**          | Docker Compose `${VAR}` substitution works in `environment:` but not in `labels:`. Traefik labels in `coolify/gateway.yml` hardcode the domain. Update both the compose file and Coolify UI "Domains" field when changing                                                                                                                                                                                                                        |
-| **Coolify: `--project-directory` is repo root**       | Build contexts in compose files must be relative to the repo root (e.g., `./docker/postgres`), not the compose file's parent directory. Coolify's `docker compose` invocation passes `--project-directory` pointing to the clone root                                                                                                                                                                                                            |
-| **Coolify: Preserve Repository for builds**           | "Preserve Repository During Deployment" must be enabled on all Docker Compose resources that build custom Dockerfiles. Without it, Coolify discards the repo clone after extracting the compose file, and build contexts fail                                                                                                                                                                                                                    |
-| **Coolify: no Traefik labels on Docker Compose**      | Coolify does not inject Traefik routing labels on Docker Compose resources (only single-container resources). Labels must be defined explicitly in the compose file. The gateway compose (`coolify/gateway.yml`) has these labels                                                                                                                                                                                                                |
-| **Coolify: auto-adds UUID network per resource**      | Coolify adds a network named after the resource UUID (`external: true`) to every Docker Compose resource. This network is created automatically on successful deploy. If the first deploy fails for other reasons, manually create it: `docker network create <uuid>`                                                                                                                                                                            |
-| **Coolify: proxy reconfig drops Caddyfile**           | Redeploying/reconfiguring the proxy via Coolify UI writes a `Caddyfile` to `/data/coolify/proxy/dynamic/`. Traefik's file provider parses all files in that directory — the Caddyfile is invalid Traefik config and silently breaks Docker provider route loading. Delete it: `rm /data/coolify/proxy/dynamic/Caddyfile && docker restart coolify-proxy`                                                                                         |
-| **Coolify: clear "Domains" for compose resources**    | Coolify's "Domains" UI field generates broken Traefik labels on Docker Compose resources (`Host(``)` with domain as `PathPrefix`). Define Traefik labels in the compose file instead and leave the Coolify Domains field empty. The gateway compose (`coolify/gateway.yml`) has the correct labels                                                                                                                                               |
-| **Zitadel Actions v2 payload format**                 | Zitadel sends `event_type` (not `eventType`), `created_at` (not `creationDate`), `aggregateID:sequence` for idempotency (no `eventId`), and user data in `event_payload` (not `user`). Signature header is `ZITADEL-Signature` with format `t=<ts>,v1=<hmac>` where HMAC is over `<ts>.<body>`. Handler maps `user.human.*` event names to internal `user.*` names via alias table                                                               |
-| **Coolify: API requires Bearer token**                | Coolify's deploy webhook requires `Authorization: Bearer <token>` header. API access must be enabled in Coolify settings. Tokens contain a pipe character (`2\|abc...`); pass via `env:` block in GitHub Actions (not inline `${{ }}` interpolation) to avoid shell escaping issues                                                                                                                                                              |
-| **GitHub: secrets don't trim whitespace**             | GitHub Actions secret values are stored verbatim — leading/trailing spaces are not trimmed. A pasted secret with a leading space will silently cause auth failures. GitHub masks the value in logs, making this invisible. Verify with `echo "Length: ${#VAR} chars"` in the workflow                                                                                                                                                            |
+| Quirk                                                 | Details                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| ----------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Docker Compose env_file**                           | `env_file:` sets container env only. For YAML `${VAR}` substitution, use `--env-file .env` on CLI                                                                                                                                                                                                                                                                                                                                 |
+| **PostgreSQL init-db.sh**                             | Only runs on first DB creation. Must `docker compose down -v` to re-run after changes                                                                                                                                                                                                                                                                                                                                             |
+| **PgBouncer: migrations must bypass**                 | `drizzle-kit` and `pnpm db:migrate` use `DATABASE_URL` (direct port 5432). Only `DATABASE_APP_URL` routes through PgBouncer (port 6432). `SET LOCAL` is required (not `SET`) — transaction pooling reuses server connections                                                                                                                                                                                                      |
+| **WSL husky hooks need nvm PATH**                     | Husky v9 runs hooks under `sh`/`dash`; `nvm.sh` can't be sourced. Hooks add nvm node bin to PATH directly. `lint-staged` called without `npx`                                                                                                                                                                                                                                                                                     |
+| **CI: workspace deps need build before Vitest**       | Vitest resolves workspace packages via `exports` field (pointing to `dist/`). CI must build deps before running tests                                                                                                                                                                                                                                                                                                             |
+| **`drizzle-kit generate` TUI blocks automation**      | Interactive prompts (rename vs create) use a TUI that ignores piped stdin. Write manual migrations in non-interactive shells; snapshot files may need regeneration interactively                                                                                                                                                                                                                                                  |
+| **Playwright `webServer.env` replaces `process.env`** | `webServer.env` **replaces** (not merges) the child process environment. Must load `.env` files via `dotenv` and spread `...process.env` to ensure `DATABASE_URL` etc. reach dev servers                                                                                                                                                                                                                                          |
+| **Zitadel issuer ± trailing slash**                   | Zitadel v4.10.1 omits trailing slash in JWT `iss` claim. JWKS verifier uses array issuer `[base, base + "/"]` to match both. Don't normalize to one form                                                                                                                                                                                                                                                                          |
+| **hivemind for dev servers**                          | `pnpm dev` uses hivemind (single Go binary, no tmux). Install `hivemind`. Turbo stays for builds; hivemind replaces it for persistent dev servers only. Use `pnpm dev:clean` to kill orphans if hivemind crashes. No per-process `connect`/`restart` — use Ctrl+C to stop all, rely on hot-reload for changes. hivemind always injects a PORT env var (base 5000); `Procfile.dev` sets `PORT=` explicitly per process to override |
+| **Caddy `DOMAIN` env var controls TLS**               | Caddy auto-provisions HTTPS (LetsEncrypt) when `DOMAIN` is a real domain. When `DOMAIN=localhost` (or unset), Caddy uses self-signed certs. Set `DOMAIN` in `.env.staging`/`.env.prod`                                                                                                                                                                                                                                            |
+| **Zitadel Actions v2 payload format**                 | Zitadel sends `event_type` (not `eventType`), `created_at` (not `creationDate`), `aggregateID:sequence` for idempotency (no `eventId`), and user data in `event_payload` (not `user`). Signature header is `ZITADEL-Signature` with format `t=<ts>,v1=<hmac>` where HMAC is over `<ts>.<body>`. Handler maps `user.human.*` event names to internal `user.*` names via alias table                                                |
+| **GitHub: secrets don't trim whitespace**             | GitHub Actions secret values are stored verbatim — leading/trailing spaces are not trimmed. A pasted secret with a leading space will silently cause auth failures. GitHub masks the value in logs, making this invisible. Verify with `echo "Length: ${#VAR} chars"` in the workflow                                                                                                                                             |
 
 **Version pin (cross-cutting):**
 
@@ -411,10 +400,9 @@ docker compose --profile monitoring up -d  # Prometheus:9090, Grafana:3001, Aler
 bash scripts/webhook-health.sh                                           # Check webhook provider freshness
 bash scripts/grafana-query.sh logs --query '{service="api"} |= "error"'  # Search Loki logs
 bash scripts/grafana-query.sh alerts                                     # List firing alerts
-bash scripts/coolify-logs.sh tail api -f                                 # Follow API container logs
+bash scripts/server-logs.sh tail api -f                                  # Follow API container logs
 bash scripts/sentry-issues.sh                                            # Recent unresolved Sentry issues
 bash scripts/zitadel-admin.sh status                                     # Zitadel health check
-bash scripts/coolify-deploy.sh                                           # Trigger Coolify deployment
 ```
 
 **hivemind controls** (while `pnpm dev` is running):

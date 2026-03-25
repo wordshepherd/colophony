@@ -109,7 +109,7 @@ else
 fi
 
 # Step 4 (optional): Seed staging demo data
-# Set SEED_STAGING=true in Coolify env to populate rich demo/QA data.
+# Set SEED_STAGING=true in .env.staging to populate rich demo/QA data.
 # Idempotent — safe to run on every deploy.
 if [ "${SEED_STAGING:-}" = "true" ]; then
   echo ""

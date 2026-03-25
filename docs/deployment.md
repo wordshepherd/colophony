@@ -1,7 +1,5 @@
 # Deployment Guide
 
-> **Deploying with Coolify?** See [docs/coolify-deployment.md](coolify-deployment.md) for the Coolify + Hetzner guide (recommended for staging).
-
 ## System Requirements
 
 | Resource       | Minimum               | Recommended                |
@@ -16,7 +14,7 @@
 **Additional requirements:**
 
 - `openssl` (for secret generation during installation)
-- Port 80 available (configurable via `HTTP_PORT`)
+- Ports 80 and 443 available (configurable via `HTTP_PORT` / `HTTPS_PORT`)
 
 ## Quick Start
 
@@ -120,7 +118,8 @@ curl http://localhost/health
 | ------------------------ | ------------------------------------------- | ----------- |
 | `POSTGRES_USER`          | PostgreSQL superuser name                   | `colophony` |
 | `POSTGRES_DB`            | Database name                               | `colophony` |
-| `HTTP_PORT`              | Nginx listen port                           | `80`        |
+| `HTTP_PORT`              | Caddy HTTP listen port                      | `80`        |
+| `HTTPS_PORT`             | Caddy HTTPS listen port                     | `443`       |
 | `RATE_LIMIT_DEFAULT_MAX` | General rate limit (req/min)                | `60`        |
 | `RATE_LIMIT_AUTH_MAX`    | Auth rate limit (req/min)                   | `200`       |
 | `ZITADEL_AUTHORITY`      | Zitadel issuer URL                          | (empty)     |
@@ -141,7 +140,7 @@ curl http://localhost/health
 
 ```
                    ┌─────────┐
-  Internet ──────> │  nginx  │ :80
+  Internet ──────> │  caddy  │ :80/:443
                    └────┬────┘
                         │
           ┌─────────────┼─────────────┐
@@ -162,7 +161,7 @@ curl http://localhost/health
 
 **Services:**
 
-- **nginx** — Reverse proxy, TLS termination, rate limiting (built from `nginx/Dockerfile` — embeds config + maintenance page)
+- **caddy** — Reverse proxy with automatic TLS (built from `gateway/Dockerfile` — embeds Caddyfile + maintenance page)
 - **web** — Next.js frontend (standalone output)
 - **api** — Fastify API with tRPC + REST + GraphQL, background jobs (BullMQ)
 - **tusd** — Resumable file upload server (tus protocol)
@@ -174,66 +173,15 @@ curl http://localhost/health
 - **zitadel** — Zitadel auth service (OIDC provider, dev compose only — production uses external Zitadel)
 - **inngest** — Inngest dev server (dev compose only — production uses Inngest Cloud or self-hosted)
 
-## SSL/TLS with Let's Encrypt
+## SSL/TLS (Automatic)
 
-### Option 1: Certbot standalone (simplest)
+Caddy automatically provisions and renews TLS certificates via Let's Encrypt (ACME). No manual certbot setup is required.
 
-```bash
-# Install certbot
-apt install certbot
+- Set the `DOMAIN` variable in your `.env.prod` or `.env.staging` file
+- Ensure ports 80 and 443 are open (Caddy needs both for ACME challenges and HTTPS)
+- Caddy handles HTTP-to-HTTPS redirect automatically
 
-# Get certificate (stop nginx first)
-docker compose --env-file .env.prod -f docker-compose.prod.yml stop nginx
-certbot certonly --standalone -d your-domain.com
-docker compose --env-file .env.prod -f docker-compose.prod.yml start nginx
-```
-
-### Option 2: Nginx SSL configuration
-
-After obtaining certificates, update `nginx/nginx.conf`:
-
-```nginx
-server {
-    listen 80;
-    server_name your-domain.com;
-    return 301 https://$server_name$request_uri;
-}
-
-server {
-    listen 443 ssl;
-    server_name your-domain.com;
-
-    ssl_certificate /etc/letsencrypt/live/your-domain.com/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/your-domain.com/privkey.pem;
-    ssl_protocols TLSv1.2 TLSv1.3;
-    ssl_ciphers HIGH:!aNULL:!MD5;
-
-    # ... existing location blocks ...
-}
-```
-
-Mount the certificates volume in `docker-compose.prod.yml`:
-
-```yaml
-nginx:
-  build:
-    context: ./nginx
-    dockerfile: Dockerfile
-  volumes:
-    - /etc/letsencrypt:/etc/letsencrypt:ro
-  ports:
-    - "80:80"
-    - "443:443"
-```
-
-> **Note:** nginx uses a built image (`nginx/Dockerfile`) that embeds `nginx.conf` and a maintenance page. The maintenance page is served automatically when backends are unavailable during deploys. nginx starts immediately without waiting for backend health checks — it will show the maintenance page until backends are ready.
-
-### Certificate renewal
-
-```bash
-# Auto-renew with cron
-echo "0 3 * * * certbot renew --pre-hook 'docker compose -f /path/to/docker-compose.prod.yml stop nginx' --post-hook 'docker compose -f /path/to/docker-compose.prod.yml start nginx'" | crontab -
-```
+> **Note:** Caddy uses a built image (`gateway/Dockerfile`) that embeds the `Caddyfile` and a maintenance page. The maintenance page is served automatically when backends are unavailable during deploys. Caddy starts immediately without waiting for backend health checks — it will show the maintenance page until backends are ready.
 
 ## Backup & Restore (WAL-G)
 
@@ -445,8 +393,8 @@ docker compose --env-file .env.prod -f docker-compose.prod.yml exec postgres \
 # Change the HTTP port in .env.prod
 HTTP_PORT=8080
 
-# Restart nginx
-docker compose --env-file .env.prod -f docker-compose.prod.yml up -d nginx
+# Restart caddy
+docker compose --env-file .env.prod -f docker-compose.prod.yml up -d caddy
 ```
 
 ### Reset everything (destructive)
@@ -479,18 +427,18 @@ docker compose --env-file .env.prod -f docker-compose.prod.yml exec postgres \
 
 ### Environments Overview
 
-| Environment | Compose file                                           | Trigger                        | URL                 |
-| ----------- | ------------------------------------------------------ | ------------------------------ | ------------------- |
-| Development | docker-compose.yml                                     | Manual (`pnpm dev`)            | localhost:3000/4000 |
-| Staging     | `coolify/*.yml` ([5 resources](coolify-deployment.md)) | Auto after CI passes on `main` | staging domain      |
-| Production  | docker-compose.prod.yml                                | Manual `workflow_dispatch`     | production domain   |
+| Environment | Compose file            | Trigger                        | URL                 |
+| ----------- | ----------------------- | ------------------------------ | ------------------- |
+| Development | docker-compose.yml      | Manual (`pnpm dev`)            | localhost:3000/4000 |
+| Staging     | docker-compose.prod.yml | Auto after CI passes on `main` | staging domain      |
+| Production  | docker-compose.prod.yml | Manual `workflow_dispatch`     | production domain   |
 
 ### Staging (Automatic)
 
 1. PR merged to `main`
 2. CI pipeline runs (all jobs must pass)
-3. Deploy workflow triggers via `workflow_run` (only after CI succeeds) — Coolify webhook fires
-4. Coolify pulls latest `main`, rebuilds images, starts services
+3. Deploy workflow triggers via `workflow_run` (only after CI succeeds) — SSHs to staging server
+4. Server pulls latest `main`, rebuilds images via `docker compose`, starts services
 5. `init-prod.sh` runs migrations + RLS verification
 6. Health check + smoke test verify deployment
 
@@ -546,8 +494,6 @@ For unsafe migrations: write `rollback-NNNN.sql` alongside the migration in `pac
 
 ### Docker Image Pruning
 
-On Coolify: verify Docker Cleanup is enabled in Settings.
-
 On the production server, add a weekly cron:
 
 ```
@@ -556,13 +502,35 @@ On the production server, add a weekly cron:
 
 ### Environment Differences
 
-| Aspect                 | Staging (Coolify)         | Production                     |
-| ---------------------- | ------------------------- | ------------------------------ |
-| PgBouncer pool size    | 10                        | 20                             |
-| Max client connections | 100                       | 200                            |
-| Postgres memory        | 512M                      | 1G                             |
-| pg_stat_statements     | No                        | Yes                            |
-| Log level              | debug                     | info                           |
-| Sentry environment     | staging                   | production                     |
-| Container names        | Auto (Coolify)            | Explicit (colophony-\*)        |
-| One-shot containers    | Inlined in API entrypoint | Separate migrate + minio-setup |
+| Aspect                 | Staging      | Production |
+| ---------------------- | ------------ | ---------- |
+| PgBouncer pool size    | 10           | 20         |
+| Max client connections | 100          | 200        |
+| Postgres memory        | 512M         | 1G         |
+| pg_stat_statements     | No           | Yes        |
+| Log level              | debug        | info       |
+| Sentry environment     | staging      | production |
+| Env file               | .env.staging | .env.prod  |
+
+### Server-Side Migration (Coolify to Docker Compose)
+
+One-time cutover steps for migrating a staging server from Coolify to direct Docker Compose:
+
+1. SSH to the staging server
+2. Stop Coolify-managed containers:
+   ```bash
+   docker stop $(docker ps -q --filter "label=coolify.managed=true")
+   ```
+3. Stop the Coolify proxy:
+   ```bash
+   docker stop coolify-proxy
+   ```
+4. Start the stack with Docker Compose:
+   ```bash
+   docker compose -f docker-compose.prod.yml --env-file .env.staging up -d --build
+   ```
+5. Caddy auto-provisions TLS certificates (ensure ports 80/443 are open)
+6. Verify the deployment:
+   ```bash
+   bash scripts/smoke-test.sh https://staging.colophony.pub
+   ```

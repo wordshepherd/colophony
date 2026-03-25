@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 # Tail and search Docker container logs (local or remote via SSH).
-# Usage: bash scripts/coolify-logs.sh <tail|search> [OPTIONS]
+# Usage: bash scripts/server-logs.sh <tail|search> [OPTIONS]
 #
 # Examples:
-#   bash scripts/coolify-logs.sh tail api
-#   bash scripts/coolify-logs.sh tail --all --follow
-#   bash scripts/coolify-logs.sh search "error" --since 1h
-#   bash scripts/coolify-logs.sh tail api --host staging.example.com
+#   bash scripts/server-logs.sh tail api
+#   bash scripts/server-logs.sh tail --all --follow
+#   bash scripts/server-logs.sh search "error" --since 1h
+#   bash scripts/server-logs.sh tail api --host staging.example.com
 set -euo pipefail
 
 # --- Colors ---
@@ -27,7 +27,7 @@ SINCE="1h"
 SSH_HOST=""
 
 usage() {
-  echo "Usage: bash scripts/coolify-logs.sh <tail|search> [OPTIONS]"
+  echo "Usage: bash scripts/server-logs.sh <tail|search> [OPTIONS]"
   echo ""
   echo "Subcommands:"
   echo "  tail <service>        Tail container logs for a service"
@@ -64,7 +64,7 @@ resolve_container() {
   local service="$1"
   local container
 
-  # Try docker compose ps first (works for both local and Coolify deployments)
+  # Try docker compose ps first (works for both local and remote deployments)
   container=$(run_cmd "docker compose ps --format '{{.Name}}' --status running 2>/dev/null" | grep -i "$service" | head -1) || true
 
   if [ -z "$container" ]; then
@@ -208,7 +208,7 @@ fi
 if [ "$SUBCOMMAND" = "search" ]; then
   if [ -z "$PATTERN" ]; then
     echo -e "${RED}ERROR: Specify a search pattern${NC}" >&2
-    echo "  Usage: bash scripts/coolify-logs.sh search \"error\" [--service api] [--since 1h]"
+    echo "  Usage: bash scripts/server-logs.sh search \"error\" [--service api] [--since 1h]"
     exit 1
   fi
 

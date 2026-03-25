@@ -1,0 +1,72 @@
+{$DOMAIN:localhost} {
+	# Compression
+	encode gzip
+
+	# Security headers (all responses)
+	header {
+		X-Frame-Options "SAMEORIGIN"
+		X-Content-Type-Options "nosniff"
+		X-XSS-Protection "1; mode=block"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+	}
+
+	# Gateway health check (local, no proxy)
+	handle /caddy-health {
+		respond "ok" 200
+	}
+
+	# Health + readiness probes (no rate limit)
+	handle /health {
+		reverse_proxy api:4000
+	}
+	handle /ready {
+		reverse_proxy api:4000
+	}
+
+	# tRPC API
+	handle /trpc/* {
+		reverse_proxy api:4000
+	}
+
+	# REST API
+	handle /api/* {
+		reverse_proxy api:4000
+	}
+
+	# Webhooks (Stripe, Zitadel, Documenso, tusd)
+	handle /webhooks/* {
+		reverse_proxy api:4000
+	}
+	handle /hooks/* {
+		reverse_proxy api:4000
+	}
+
+	# Resumable file uploads via tus protocol
+	handle /upload/* {
+		reverse_proxy tusd:1080 {
+			flush_interval -1
+		}
+	}
+
+	# Grafana (sub-path)
+	redir /grafana /grafana/ 301
+	handle /grafana/* {
+		reverse_proxy grafana:3000
+	}
+
+	# Next.js frontend (default)
+	handle {
+		reverse_proxy web:3000
+	}
+
+	# Maintenance page on backend errors
+	handle_errors {
+		@backend_down expression `{err.status_code} in [502, 503, 504]`
+		handle @backend_down {
+			root * /srv
+			rewrite * /maintenance.html
+			file_server
+		}
+	}
+}
