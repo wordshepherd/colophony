@@ -1395,7 +1395,8 @@ jobs:
             docker rm -f garage 2>/dev/null || true
             sleep 5
           done
-          timeout 30 bash -c 'until curl -sf http://localhost:3903/health; do sleep 2; done'
+          # Wait for admin API (not /health — that requires a layout, applied in next step)
+          timeout 30 bash -c 'until curl -sf -H "Authorization: Bearer ci-admin-token" http://localhost:3903/v2/GetClusterStatus > /dev/null 2>&1; do sleep 2; done'
       - name: Setup Garage buckets
         run: |
           ADMIN="http://localhost:3903"

@@ -322,7 +322,7 @@ services:
       - garage_meta:/var/lib/garage/meta
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-sf", "http://localhost:3903/health"]
+      test: ["CMD", "sh", "-c", "curl -sf http://localhost:3903/health || curl -sf -H \"Authorization: Bearer $GARAGE_ADMIN_TOKEN\" http://localhost:3903/v2/GetClusterStatus > /dev/null"]
       interval: 10s
       timeout: 5s
       retries: 5
