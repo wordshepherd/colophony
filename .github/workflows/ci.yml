@@ -1383,6 +1383,8 @@ jobs:
           [admin]
           api_bind_addr = "[::]:3903"
           TOML
+          # Strip leading whitespace from TOML (YAML heredoc indentation)
+          sed -i 's/^[[:space:]]*//' /tmp/garage/garage.toml
           for attempt in 1 2 3; do
             docker run -d --name garage --network host \
               -e GARAGE_RPC_SECRET=$(openssl rand -hex 32) \
