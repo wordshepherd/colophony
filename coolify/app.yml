@@ -6,7 +6,7 @@
 services:
   api:
     build:
-      context: ..
+      context: .
       dockerfile: apps/api/Dockerfile
       target: builder
     expose:
@@ -93,7 +93,7 @@ services:
 
   web:
     build:
-      context: ..
+      context: .
       dockerfile: apps/web/Dockerfile
       args:
         NEXT_PUBLIC_API_URL: https://${DOMAIN}
