@@ -1,7 +1,7 @@
-# Docker Compose override for E2E tests requiring tusd + MinIO.
+# Docker Compose override for E2E tests requiring tusd + Garage.
 #
 # Usage:
-#   docker compose -f docker-compose.yml -f docker-compose.e2e.yml up tusd minio minio-setup -d
+#   docker compose -f docker-compose.yml -f docker-compose.e2e.yml up tusd garage garage-setup -d
 #
 # Overrides:
 # - tusd webhook URL points to E2E API port (4010)
@@ -13,7 +13,7 @@ services:
       - -port
       - "1080"
       - -s3-endpoint
-      - http://minio:9000
+      - http://garage:3900
       - -s3-bucket
       - quarantine
       - -s3-object-prefix

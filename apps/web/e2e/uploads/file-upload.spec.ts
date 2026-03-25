@@ -2,7 +2,7 @@
  * E2E tests for file upload flow.
  *
  * Prerequisites:
- * - tusd + MinIO running (docker-compose.e2e.yml)
+ * - tusd + Garage running (docker-compose.e2e.yml)
  * - pnpm db:seed
  *
  * Auth strategy: uses existing authedPage fixture (fake OIDC + API key

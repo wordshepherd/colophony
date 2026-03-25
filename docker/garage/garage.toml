@@ -1,0 +1,24 @@
+# Garage S3-compatible object storage configuration
+# https://garagehq.deuxfleurs.fr/documentation/reference-manual/configuration/
+#
+# Secrets (rpc_secret, admin_token) are overridden by environment variables:
+#   GARAGE_RPC_SECRET, GARAGE_ADMIN_TOKEN
+
+metadata_dir = "/var/lib/garage/meta"
+data_dir = "/var/lib/garage/data"
+db_engine = "sqlite"
+replication_factor = 1
+compression_level = "none"
+
+rpc_bind_addr = "[::]:3901"
+rpc_public_addr = "127.0.0.1:3901"
+rpc_secret = "0000000000000000000000000000000000000000000000000000000000000000"
+
+[s3_api]
+api_bind_addr = "[::]:3900"
+s3_region = "us-east-1"
+root_domain = ".s3.garage.localhost"
+
+[admin]
+api_bind_addr = "[::]:3903"
+admin_token = "placeholder"

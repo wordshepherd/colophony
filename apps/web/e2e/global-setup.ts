@@ -3,7 +3,7 @@
  *
  * Checks:
  * 1. Seed data exists (all projects)
- * 2. tusd + MinIO reachable (uploads project)
+ * 2. tusd + Garage reachable (uploads project)
  * 3. Zitadel reachable + config exists (oidc project)
  *
  * NOTE: Playwright passes ALL configured projects to globalSetup, even when
@@ -91,18 +91,16 @@ export default async function globalSetup() {
       await disconnectDb();
       throw new Error(
         "E2E prerequisite failed: tusd not reachable at http://localhost:1080.\n" +
-          "Run `docker compose -f docker-compose.yml -f docker-compose.e2e.yml up tusd minio minio-setup -d`",
+          "Run `docker compose -f docker-compose.yml -f docker-compose.e2e.yml up tusd garage garage-setup -d`",
       );
     }
 
-    const minioOk = await isReachable(
-      "http://localhost:9000/minio/health/live",
-    );
-    if (!minioOk) {
+    const garageOk = await isReachable("http://localhost:3903/health");
+    if (!garageOk) {
       await disconnectDb();
       throw new Error(
-        "E2E prerequisite failed: MinIO not reachable at http://localhost:9000.\n" +
-          "Run `docker compose -f docker-compose.yml -f docker-compose.e2e.yml up minio minio-setup -d`",
+        "E2E prerequisite failed: Garage not reachable at http://localhost:3903.\n" +
+          "Run `docker compose -f docker-compose.yml -f docker-compose.e2e.yml up garage garage-setup -d`",
       );
     }
   }

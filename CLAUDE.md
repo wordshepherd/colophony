@@ -118,7 +118,7 @@ Full project structure: [docs/architecture.md](docs/architecture.md)
 
 **API surfaces:** tRPC (built), oRPC REST + OpenAPI 3.1 (built). GraphQL (Pothos + Yoga) extracted to feature branch — re-merge when demand materializes
 
-**Data:** PostgreSQL 16+ (RLS via Drizzle `pgPolicy`), Redis 7+, MinIO (S3-compatible)
+**Data:** PostgreSQL 16+ (RLS via Drizzle `pgPolicy`), Redis 7+, Garage (S3-compatible)
 
 **Infra:** Docker Compose (self-hosted), Caddy (TLS + routing), Hetzner VPS
 

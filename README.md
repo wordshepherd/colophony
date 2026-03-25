@@ -38,7 +38,7 @@ Colophony is designed for independent literary publications that want full contr
 ```bash
 git clone https://github.com/colophony-project/colophony.git
 cd colophony
-pnpm docker:up        # PostgreSQL, Redis, MinIO, Zitadel
+pnpm docker:up        # PostgreSQL, Redis, Garage, Zitadel
 pnpm install
 pnpm db:migrate
 pnpm db:seed
@@ -55,7 +55,7 @@ Prerequisites: Node.js >= 22, pnpm 9.15+, Docker, [hivemind](https://github.com/
 | **Frontend** | Next.js 16, React 19, TypeScript, Tailwind CSS, shadcn/ui  |
 | **Backend**  | Fastify 5, TypeScript, Drizzle ORM, BullMQ                 |
 | **Auth**     | Zitadel (OIDC)                                             |
-| **Data**     | PostgreSQL 16+ (RLS), Redis 7+, MinIO (S3-compatible)      |
+| **Data**     | PostgreSQL 16+ (RLS), Redis 7+, Garage (S3-compatible)     |
 | **Infra**    | Docker Compose (self-hosted), Hetzner VPS (Docker Compose) |
 
 ## Documentation
@@ -81,7 +81,7 @@ Client SDKs are available for [TypeScript](sdks/typescript/) and [Python](sdks/p
 
 Colophony supports two deployment models:
 
-- **Self-hosted** — Docker Compose with PostgreSQL, Redis, MinIO, and Zitadel
+- **Self-hosted** — Docker Compose with PostgreSQL, Redis, Garage, and Zitadel
 - **Managed hosting** — Hetzner VPS with Docker Compose (see [docs/deployment.md](docs/deployment.md))
 
 ## License
