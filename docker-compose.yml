@@ -22,7 +22,7 @@ services:
 
   # PgBouncer connection pooler (transaction mode for RLS SET LOCAL)
   pgbouncer:
-    image: edoburu/pgbouncer:latest
+    image: edoburu/pgbouncer:v1.25.1-p0
     container_name: colophony-pgbouncer
     ports:
       - '6432:6432'
@@ -202,7 +202,7 @@ services:
 
   # Inngest workflow engine (optional — for Slate publication pipeline)
   inngest:
-    image: inngest/inngest:latest
+    image: inngest/inngest:v1.17.5
     container_name: colophony-inngest
     ports:
       - '8288:8288'
