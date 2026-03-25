@@ -302,6 +302,25 @@ docker compose --env-file .env.prod -f docker-compose.prod.yml up -d --build
 
 For major updates, check the release notes for breaking changes and required migration steps.
 
+### Migrating from MinIO to Garage
+
+If upgrading from a deployment that used MinIO for S3 storage, file data must be migrated before switching:
+
+```bash
+# 1. Copy files from MinIO to Garage using rclone or aws-cli
+#    (both speak S3 protocol — configure source=MinIO, dest=Garage)
+rclone sync minio:submissions garage:submissions
+rclone sync minio:quarantine garage:quarantine
+
+# 2. Update .env.prod with GARAGE_* variables (see Environment Variables)
+
+# 3. Deploy with new compose (Garage replaces MinIO)
+docker compose --env-file .env.prod -f docker-compose.prod.yml up -d --build
+
+# 4. Verify uploads work, then remove old MinIO volume
+docker volume rm colophony_minio_data
+```
+
 ## Virus Scanning
 
 ClamAV is optional and runs under the `full` profile:

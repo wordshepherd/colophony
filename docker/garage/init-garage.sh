@@ -66,18 +66,22 @@ for BUCKET_ALIAS in submissions quarantine; do
 
   if [ "${HTTP_CODE}" = "200" ]; then
     BUCKET_ID=$(echo "${BODY}" | jq -r '.id')
-    echo "Bucket '${BUCKET_ALIAS}' created (${BUCKET_ID}). Granting access..."
-    curl -sf -X POST \
-      -H "${AUTH}" -H "Content-Type: application/json" \
-      -d "{\"bucketId\":\"${BUCKET_ID}\",\"accessKeyId\":\"${GARAGE_S3_ACCESS_KEY}\",\"permissions\":{\"read\":true,\"write\":true,\"owner\":true}}" \
-      "${ADMIN}/v2/AllowBucketKey" > /dev/null
-    echo "Access granted."
+    echo "Bucket '${BUCKET_ALIAS}' created (${BUCKET_ID})."
   elif [ "${HTTP_CODE}" = "409" ]; then
-    echo "Bucket '${BUCKET_ALIAS}' already exists, skipping."
+    echo "Bucket '${BUCKET_ALIAS}' already exists."
+    BUCKET_ID=$(curl -sf -H "${AUTH}" "${ADMIN}/v2/GetBucketInfo?globalAlias=${BUCKET_ALIAS}" | jq -r '.id')
   else
     echo "Failed to create bucket '${BUCKET_ALIAS}' (HTTP ${HTTP_CODE})."
     exit 1
   fi
+
+  # Always grant access (idempotent — handles credential rotation)
+  echo "Granting key access to '${BUCKET_ALIAS}'..."
+  curl -sf -X POST \
+    -H "${AUTH}" -H "Content-Type: application/json" \
+    -d "{\"bucketId\":\"${BUCKET_ID}\",\"accessKeyId\":\"${GARAGE_S3_ACCESS_KEY}\",\"permissions\":{\"read\":true,\"write\":true,\"owner\":true}}" \
+    "${ADMIN}/v2/AllowBucketKey" > /dev/null
+  echo "Access granted."
 done
 
 echo "Garage setup complete."
