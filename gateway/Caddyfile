@@ -1,5 +1,5 @@
 {
-	admin :2019
+	admin localhost:2019
 }
 
 {$DOMAIN:localhost} {
