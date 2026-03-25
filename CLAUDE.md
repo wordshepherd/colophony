@@ -209,10 +209,10 @@ Application security controls (rate limiting, auth, RLS, audit, input validation
 
 ### Git Hooks (husky)
 
-| Hook           | Checks                                                                                                                                                                            |
-| -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Pre-commit** | Secret scanning (`scripts/check-secrets.sh`), lint-staged (Prettier on `.ts`/`.tsx`/`.json`/`.md`, ESLint `--max-warnings 0` on `.ts`/`.tsx` via `scripts/lint-staged-eslint.sh`) |
-| **Pre-push**   | `pnpm type-check` (tsc --noEmit, scoped to `db` + `api` packages), `pnpm lint` (ESLint). Full workspace type-check runs in CI.                                                    |
+| Hook           | Checks                                                                                                                                                                                                                                                           |
+| -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Pre-commit** | Secret scanning (`scripts/check-secrets.sh`), lint-staged (Prettier on `.ts`/`.tsx`/`.json`/`.md`, ESLint `--max-warnings 0` on `.ts`/`.tsx` via `scripts/lint-staged-eslint.sh`)                                                                                |
+| **Pre-push**   | `pnpm type-check` (tsc --noEmit, scoped to `db` + `api` packages), `pnpm lint` (ESLint), Docker Compose validation (if compose files changed), shell syntax check (if `.sh` changed), garage.toml validation (if changed). Full workspace type-check runs in CI. |
 
 ### CI Pipeline (GitHub Actions)
 
@@ -256,6 +256,11 @@ Application security controls (rate limiting, auth, RLS, audit, input validation
 /new-migration <name> # Add Drizzle schema + generate migration + RLS policy
 /stripe-webhook <evt> # Add Stripe webhook handler with idempotency
 /test-rls             # Run RLS integration tests
+
+# Infrastructure
+/smoke-test           # Validate infra locally (compose, Garage S3, shell scripts)
+/smoke-test compose   # Fast: compose + config only (no Docker daemon needed)
+/smoke-test garage    # Garage S3 round-trip only (requires Docker)
 
 # Frontend
 /new-page <name>      # Scaffold Next.js page (auth, dashboard, or public)
