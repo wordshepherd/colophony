@@ -1405,7 +1405,7 @@ jobs:
           # Layout
           NODE_ID=$(auth "$ADMIN/v2/GetClusterStatus" | jq -r '.nodes[0].id')
           auth -X POST -H 'Content-Type: application/json' \
-            -d "[{\"id\":\"$NODE_ID\",\"zone\":\"dc1\",\"capacity\":1073741824}]" \
+            -d "{\"$NODE_ID\":{\"zone\":\"dc1\",\"capacity\":1073741824}}" \
             "$ADMIN/v2/UpdateClusterLayout"
           VERSION=$(auth "$ADMIN/v2/GetClusterLayout" | jq '.version')
           auth -X POST -H 'Content-Type: application/json' \

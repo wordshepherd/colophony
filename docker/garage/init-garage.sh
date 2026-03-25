@@ -27,7 +27,7 @@ if [ "${LAYOUT_VERSION}" = "0" ]; then
   NODE_ID=$(curl -sf -H "${AUTH}" "${ADMIN}/v2/GetClusterStatus" | jq -r '.nodes[0].id')
   curl -sf -X POST \
     -H "${AUTH}" -H "Content-Type: application/json" \
-    -d "[{\"id\":\"${NODE_ID}\",\"zone\":\"dc1\",\"capacity\":1073741824}]" \
+    -d "{\"${NODE_ID}\":{\"zone\":\"dc1\",\"capacity\":1073741824}}" \
     "${ADMIN}/v2/UpdateClusterLayout" > /dev/null
   curl -sf -X POST \
     -H "${AUTH}" -H "Content-Type: application/json" \
