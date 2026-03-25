@@ -1,3 +1,7 @@
+{
+	admin :2019
+}
+
 {$DOMAIN:localhost} {
 	# Compression
 	encode gzip

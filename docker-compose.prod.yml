@@ -21,7 +21,7 @@ services:
         condition: service_started
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/caddy-health"]
+      test: ["CMD", "curl", "-sf", "http://localhost:2019/config/"]
       interval: 10s
       timeout: 5s
       retries: 3
