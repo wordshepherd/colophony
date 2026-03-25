@@ -2,22 +2,13 @@ global:
   resolve_timeout: 5m
 
 route:
-  receiver: 'slack'
+  # Default: discard all alerts. Set receiver to 'slack' and configure
+  # SLACK_WEBHOOK_URL in alertmanager-slack.yml to enable Slack alerts.
+  receiver: 'null'
   group_by: ['alertname']
   group_wait: 30s
   group_interval: 5m
   repeat_interval: 4h
 
 receivers:
-  - name: 'slack'
-    slack_configs:
-      - api_url: '${SLACK_WEBHOOK_URL}'
-        channel: '#alerts'
-        send_resolved: true
-        title: '{{ .CommonLabels.alertname }}'
-        text: >-
-          {{ range .Alerts }}
-          *{{ .Labels.severity }}*: {{ .Annotations.summary }}
-          {{ end }}
-
   - name: 'null'
