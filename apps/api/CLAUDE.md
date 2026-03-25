@@ -17,6 +17,8 @@
 | REST context      | `src/rest/context.ts`                                          |
 | REST error mapper | `src/rest/error-mapper.ts`                                     |
 | REST org handlers | `src/rest/routers/organizations.ts`                            |
+| Form service      | `src/services/form.service.ts`                                 |
+| Form validation   | `src/services/form-validation.service.ts`                      |
 | GDPR service      | `src/services/gdpr.service.ts`                                 |
 | Embed routes      | `src/routes/embed.routes.ts`                                   |
 | Embed token svc   | `src/services/embed-token.service.ts`                          |
@@ -354,5 +356,5 @@ The outbox poller (`outbox-poller` BullMQ worker) is the default bridge for tran
 | ------- | ------ | --------------------------------------------------- |
 | Fastify | 5.x    | Major version; check plugin compat before upgrading |
 | tRPC    | 11.x   | Internal only; upgraded from v10 with Zod 4         |
-| Stripe  | 20.3   | —                                                   |
+| Stripe  | 20.4   | —                                                   |
 | BullMQ  | 5      | —                                                   |
