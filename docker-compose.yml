@@ -22,7 +22,7 @@ services:
 
   # PgBouncer connection pooler (transaction mode for RLS SET LOCAL)
   pgbouncer:
-    image: edoburu/pgbouncer:latest
+    image: edoburu/pgbouncer:v1.25.1-p0
     container_name: colophony-pgbouncer
     ports:
       - '6432:6432'
@@ -80,57 +80,60 @@ services:
       timeout: 5s
       retries: 5
 
-  # MinIO for S3-compatible file storage
-  minio:
-    image: minio/minio:latest
-    container_name: colophony-minio
+  # Garage S3-compatible object storage
+  garage:
+    image: dxflrs/garage:v2.2.0
+    container_name: colophony-garage
     ports:
-      - '9000:9000'
-      - '9001:9001'
+      - '3900:3900'
+      - '3903:3903'
     environment:
-      MINIO_ROOT_USER: minioadmin
-      MINIO_ROOT_PASSWORD: minioadmin
+      GARAGE_RPC_SECRET: c3271611d1485e6846ee882c6ad2f858a5a3b4fe89c4e4e96a3d13a901838887
+      GARAGE_ADMIN_TOKEN: devadmintoken
     volumes:
-      - minio_data:/data
-    command: server /data --console-address ":9001"
+      - ./docker/garage/garage.toml:/etc/garage.toml:ro
+      - ./docker/garage/start-garage.sh:/start-garage.sh:ro
+      - garage_data:/var/lib/garage/data
+      - garage_meta:/var/lib/garage/meta
+    entrypoint: ['/bin/sh', '/start-garage.sh']
     healthcheck:
-      test: ['CMD', 'curl', '-f', 'http://localhost:9000/minio/health/live']
-      interval: 30s
-      timeout: 20s
-      retries: 3
+      test: ['CMD', 'curl', '-sf', 'http://localhost:3903/health']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
 
-  # Create default MinIO bucket on startup
-  minio-setup:
-    image: minio/mc:latest
-    container_name: colophony-minio-setup
+  # Initialize Garage API key and buckets on startup
+  garage-setup:
+    image: alpine:3.21
+    container_name: colophony-garage-setup
     depends_on:
-      minio:
+      garage:
         condition: service_healthy
-    entrypoint: >
-      /bin/sh -c "
-      set -e;
-      mc alias set minio http://minio:9000 minioadmin minioadmin;
-      mc mb minio/submissions --ignore-existing;
-      mc mb minio/quarantine --ignore-existing;
-      mc anonymous set none minio/submissions;
-      mc anonymous set none minio/quarantine;
-      "
+    volumes:
+      - ./docker/garage/init-garage.sh:/init-garage.sh:ro
+    entrypoint: ['/bin/sh', '-c', 'apk add --no-cache curl jq > /dev/null 2>&1 && sh /init-garage.sh']
+    environment:
+      GARAGE_ADMIN_URL: http://garage:3903
+      GARAGE_ADMIN_TOKEN: devadmintoken
+      GARAGE_S3_ACCESS_KEY: GKdeadbeef12345678abcdef00
+      GARAGE_S3_SECRET_KEY: '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef'
 
   # tusd for resumable file uploads (tus protocol)
   tusd:
-    image: tusproject/tusd:latest
+    image: tusproject/tusd:v2.8.0
     container_name: colophony-tusd
     ports:
       - '1080:1080'
     environment:
-      AWS_ACCESS_KEY_ID: minioadmin
-      AWS_SECRET_ACCESS_KEY: minioadmin
+      AWS_ACCESS_KEY_ID: GKdeadbeef12345678abcdef00
+      AWS_SECRET_ACCESS_KEY: '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef'
       AWS_REGION: us-east-1
     command:
       - -port
       - "1080"
       - -s3-endpoint
-      - http://minio:9000
+      - http://garage:3900
       - -s3-bucket
       - quarantine
       - -s3-object-prefix
@@ -146,8 +149,8 @@ services:
       - -behind-proxy
       - -verbose
     depends_on:
-      minio:
-        condition: service_healthy
+      garage-setup:
+        condition: service_completed_successfully
     extra_hosts:
       - 'host.docker.internal:host-gateway'
 
@@ -202,7 +205,7 @@ services:
 
   # Inngest workflow engine (optional — for Slate publication pipeline)
   inngest:
-    image: inngest/inngest:latest
+    image: inngest/inngest:v1.17.5
     container_name: colophony-inngest
     ports:
       - '8288:8288'
@@ -306,7 +309,8 @@ services:
 volumes:
   postgres_data:
   redis_data:
-  minio_data:
+  garage_data:
+  garage_meta:
   clamav_data:
   prometheus_data:
   grafana_data:

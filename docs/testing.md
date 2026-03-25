@@ -44,7 +44,7 @@ pnpm --filter @colophony/api test:queues
 # Playwright browser E2E — submissions only (20 tests, requires dev servers)
 pnpm --filter @colophony/web test:e2e
 
-# Playwright — upload flow (6 tests, requires tusd + MinIO)
+# Playwright — upload flow (6 tests, requires tusd + Garage)
 pnpm --filter @colophony/web test:e2e:uploads
 
 # Playwright — embed form (10 tests, requires dev servers)
@@ -389,15 +389,15 @@ pnpm --filter @colophony/web test:e2e    # Auto-starts API + Web dev servers
 pnpm --filter @colophony/web test:e2e:ui # Interactive UI mode
 ```
 
-The `playwright.config.ts` `webServer` config auto-starts API (port 4010) and Web (port 3010) dev servers on dedicated E2E ports. The `submissions` project requires no Zitadel, MinIO, or Redis (`VIRUS_SCAN_ENABLED=false` in API webServer env).
+The `playwright.config.ts` `webServer` config auto-starts API (port 4010) and Web (port 3010) dev servers on dedicated E2E ports. The `submissions` project requires no Zitadel, Garage, or Redis (`VIRUS_SCAN_ENABLED=false` in API webServer env).
 
 #### Upload E2E Tests (uploads project)
 
-Requires tusd + MinIO for real file upload flow:
+Requires tusd + Garage for real file upload flow:
 
 ```bash
-# Start tusd + MinIO with E2E overrides (webhook→port 4010, forwards X-Api-Key)
-docker compose -f docker-compose.yml -f docker-compose.e2e.yml up tusd minio minio-setup -d
+# Start tusd + Garage with E2E overrides (webhook→port 4010, forwards X-Api-Key)
+docker compose -f docker-compose.yml -f docker-compose.e2e.yml up tusd garage garage-setup -d
 
 # Run upload tests
 pnpm --filter @colophony/web test:e2e:uploads

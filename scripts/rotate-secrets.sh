@@ -6,7 +6,7 @@
 #   postgres-password    ALTER ROLE colophony + update .env.prod
 #   app-user-password    ALTER ROLE app_user + update .env.prod
 #   redis-password       Update .env.prod (restart applies it)
-#   minio-credentials    Update MINIO_ROOT_USER + MINIO_ROOT_PASSWORD in .env.prod
+#   garage-credentials   Update GARAGE_S3_ACCESS_KEY + GARAGE_S3_SECRET_KEY in .env.prod
 #   tus-hook-secret      Update .env.prod
 #
 # Flags:
@@ -32,7 +32,7 @@ ALL_CREDENTIALS=(
   postgres-password
   app-user-password
   redis-password
-  minio-credentials
+  garage-credentials
   tus-hook-secret
 )
 
@@ -226,13 +226,13 @@ for cred in "${CREDENTIALS[@]}"; do
       NEEDS_RESTART+=(redis api)
       ;;
 
-    minio-credentials)
-      NEW_USER=$(generate_hex 16)
-      NEW_PASS=$(generate_password)
-      update_env_var "MINIO_ROOT_USER" "$NEW_USER"
-      update_env_var "MINIO_ROOT_PASSWORD" "$NEW_PASS"
-      ROTATED+=("minio-credentials")
-      NEEDS_RESTART+=(minio minio-setup api tusd)
+    garage-credentials)
+      NEW_KEY=$(generate_hex 16)
+      NEW_SECRET=$(generate_password)
+      update_env_var "GARAGE_S3_ACCESS_KEY" "$NEW_KEY"
+      update_env_var "GARAGE_S3_SECRET_KEY" "$NEW_SECRET"
+      ROTATED+=("garage-credentials")
+      NEEDS_RESTART+=(garage garage-setup api tusd)
       ;;
 
     tus-hook-secret)

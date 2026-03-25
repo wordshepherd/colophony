@@ -55,9 +55,11 @@ openssl rand -base64 48 | tr -d '=/+'  # APP_USER_PASSWORD
 # Redis password
 openssl rand -base64 48 | tr -d '=/+'  # REDIS_PASSWORD
 
-# MinIO credentials
-openssl rand -hex 16                   # MINIO_ROOT_USER
-openssl rand -base64 48 | tr -d '=/+'  # MINIO_ROOT_PASSWORD
+# Garage credentials
+openssl rand -hex 32                   # GARAGE_RPC_SECRET
+openssl rand -hex 32                   # GARAGE_ADMIN_TOKEN
+openssl rand -hex 16                   # GARAGE_S3_ACCESS_KEY
+openssl rand -base64 48 | tr -d '=/+'  # GARAGE_S3_SECRET_KEY
 
 # tusd webhook secret
 openssl rand -hex 32                   # TUS_HOOK_SECRET
@@ -102,15 +104,17 @@ curl http://localhost/health
 
 ### Required
 
-| Variable              | Description                                | Example                   |
-| --------------------- | ------------------------------------------ | ------------------------- |
-| `DOMAIN`              | Your domain name                           | `submissions.example.com` |
-| `POSTGRES_PASSWORD`   | PostgreSQL superuser password              | (generated)               |
-| `APP_USER_PASSWORD`   | App database user password (non-superuser) | (generated)               |
-| `REDIS_PASSWORD`      | Redis password                             | (generated)               |
-| `MINIO_ROOT_USER`     | MinIO access key                           | (generated)               |
-| `MINIO_ROOT_PASSWORD` | MinIO secret key                           | (generated)               |
-| `TUS_HOOK_SECRET`     | tusd webhook auth secret                   | (generated)               |
+| Variable               | Description                                | Example                   |
+| ---------------------- | ------------------------------------------ | ------------------------- |
+| `DOMAIN`               | Your domain name                           | `submissions.example.com` |
+| `POSTGRES_PASSWORD`    | PostgreSQL superuser password              | (generated)               |
+| `APP_USER_PASSWORD`    | App database user password (non-superuser) | (generated)               |
+| `REDIS_PASSWORD`       | Redis password                             | (generated)               |
+| `GARAGE_RPC_SECRET`    | Garage inter-node RPC secret               | (generated)               |
+| `GARAGE_ADMIN_TOKEN`   | Garage admin API token                     | (generated)               |
+| `GARAGE_S3_ACCESS_KEY` | Garage S3 access key                       | (generated)               |
+| `GARAGE_S3_SECRET_KEY` | Garage S3 secret key                       | (generated)               |
+| `TUS_HOOK_SECRET`      | tusd webhook auth secret                   | (generated)               |
 
 ### Optional
 
@@ -154,8 +158,8 @@ curl http://localhost/health
               ┌──────┘  │  └──────┐  │
               │         │         │  │
         ┌─────▼──┐ ┌────▼───┐ ┌──▼──▼──┐
-        │postgres│ │ redis  │ │ minio  │
-        │ :5432  │ │ :6379  │ │ :9000  │
+        │postgres│ │ redis  │ │ garage │
+        │ :5432  │ │ :6379  │ │ :3900  │
         └────────┘ └────────┘ └────────┘
 ```
 
@@ -167,7 +171,7 @@ curl http://localhost/health
 - **tusd** — Resumable file upload server (tus protocol)
 - **postgres** — PostgreSQL 16 with Row-Level Security
 - **redis** — Sessions, cache, BullMQ job queue
-- **minio** — S3-compatible file storage
+- **garage** — S3-compatible file storage (Garage v2.2.0)
 - **clamav** — Virus scanning (optional, `--profile full`)
 - **migrate** — One-shot: runs Drizzle migrations + RLS policies
 - **zitadel** — Zitadel auth service (OIDC provider, dev compose only — production uses external Zitadel)
@@ -202,12 +206,12 @@ Add `BACKUP_*` variables to `.env.prod` (see `docker/postgres/wal-g.env.example`
 | `BACKUP_S3_ACCESS_KEY`       | Yes      | —           | S3 access key                                          |
 | `BACKUP_S3_SECRET_KEY`       | Yes      | —           | S3 secret key                                          |
 | `BACKUP_S3_REGION`           | No       | `us-east-1` | AWS region                                             |
-| `BACKUP_S3_ENDPOINT`         | No       | —           | Custom endpoint (Backblaze, Wasabi, MinIO)             |
-| `BACKUP_S3_FORCE_PATH_STYLE` | No       | `false`     | `true` for MinIO                                       |
+| `BACKUP_S3_ENDPOINT`         | No       | —           | Custom endpoint (Backblaze, Wasabi, Garage)            |
+| `BACKUP_S3_FORCE_PATH_STYLE` | No       | `false`     | `true` for Garage                                      |
 | `BACKUP_COMPRESSION`         | No       | `lz4`       | Compression: lz4, lzma, zstd, brotli                   |
 | `BACKUP_RETAIN_DAYS`         | No       | `7`         | Number of full backups to retain                       |
 
-Provider examples (AWS S3, Backblaze B2, Wasabi, local MinIO) are in `docker/postgres/wal-g.env.example`.
+Provider examples (AWS S3, Backblaze B2, Wasabi, local Garage) are in `docker/postgres/wal-g.env.example`.
 
 Backups are disabled if `BACKUP_S3_PREFIX` is not set (entrypoint skips cron startup).
 
