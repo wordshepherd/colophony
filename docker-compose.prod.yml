@@ -308,7 +308,7 @@ services:
 
   # MinIO S3-compatible file storage
   minio:
-    image: minio/minio:latest
+    image: minio/minio:RELEASE.2025-09-07T16-13-09Z
     container_name: colophony-minio
     expose:
       - "9000"
@@ -333,7 +333,7 @@ services:
 
   # Create default MinIO buckets on startup
   minio-setup:
-    image: minio/mc:latest
+    image: minio/mc:RELEASE.2025-08-13T08-35-41Z
     container_name: colophony-minio-setup
     depends_on:
       minio:
@@ -355,7 +355,7 @@ services:
 
   # tusd for resumable file uploads
   tusd:
-    image: tusproject/tusd:latest
+    image: tusproject/tusd:v2.8.0
     container_name: colophony-tusd
     expose:
       - "1080"

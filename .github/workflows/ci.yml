@@ -1372,11 +1372,11 @@ jobs:
           docker run -d --name minio --network host \
             -e MINIO_ROOT_USER=minioadmin \
             -e MINIO_ROOT_PASSWORD=minioadmin \
-            minio/minio:latest server /data --console-address ":9001"
+            minio/minio:RELEASE.2025-09-07T16-13-09Z server /data --console-address ":9001"
           timeout 30 bash -c 'until curl -sf http://localhost:9000/minio/health/live; do sleep 2; done'
       - name: Create MinIO buckets
         run: |
-          docker run --rm --network host --entrypoint /bin/sh minio/mc:latest -c "
+          docker run --rm --network host --entrypoint /bin/sh minio/mc:RELEASE.2025-08-13T08-35-41Z -c "
             mc alias set minio http://localhost:9000 minioadmin minioadmin;
             mc mb minio/submissions --ignore-existing;
             mc mb minio/quarantine --ignore-existing;
@@ -1385,18 +1385,23 @@ jobs:
           "
       - name: Start tusd
         run: |
-          docker run -d --name tusd --network host \
-            -e AWS_ACCESS_KEY_ID=minioadmin \
-            -e AWS_SECRET_ACCESS_KEY=minioadmin \
-            -e AWS_REGION=us-east-1 \
-            tusproject/tusd:latest \
-            -port 1080 \
-            -s3-endpoint http://localhost:9000 \
-            -s3-bucket quarantine \
-            -s3-object-prefix uploads/ \
-            -hooks-http http://localhost:4010/webhooks/tusd \
-            -hooks-http-forward-headers Authorization,X-Organization-Id,X-Api-Key \
-            -behind-proxy -verbose
+          for attempt in 1 2 3; do
+            docker run -d --name tusd --network host \
+              -e AWS_ACCESS_KEY_ID=minioadmin \
+              -e AWS_SECRET_ACCESS_KEY=minioadmin \
+              -e AWS_REGION=us-east-1 \
+              tusproject/tusd:v2.8.0 \
+              -port 1080 \
+              -s3-endpoint http://localhost:9000 \
+              -s3-bucket quarantine \
+              -s3-object-prefix uploads/ \
+              -hooks-http http://localhost:4010/webhooks/tusd \
+              -hooks-http-forward-headers Authorization,X-Organization-Id,X-Api-Key \
+              -behind-proxy -verbose && break
+            echo "tusd start attempt $attempt failed, retrying in 5s..."
+            docker rm -f tusd 2>/dev/null || true
+            sleep 5
+          done
           timeout 15 bash -c 'until curl -sf http://localhost:1080; do sleep 2; done'
       - name: Install Playwright browsers
         run: pnpm --filter @colophony/web exec playwright install --with-deps chromium
