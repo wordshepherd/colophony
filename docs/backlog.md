@@ -517,7 +517,7 @@
 - [x] Monitoring stack: Prometheus + Grafana (Sentry for errors) — done 2026-02-27 PR pending; Loki deferred to production
 - [x] [P1] Split Coolify deployment into individual services — split monolithic docker-compose.coolify.yml into 5 Coolify resources (data, app, gateway, uploads, monitoring) on shared `colophony-net` network. Smart deploy detection via LAST_DEPLOYED_SHA. Eliminates Traefik stale routing and proxy restart workaround — (2026-03-24, deploy debugging session; done 2026-03-24)
 - [x] [P2] Drop Coolify in favor of direct SSH + Docker Compose deploy — replaced nginx with Caddy (automatic HTTPS), unified staging/production on single `docker-compose.prod.yml` + SSH deploy, removed 5 Coolify compose files + Coolify quirks + LAST_DEPLOYED_SHA smart detection — (2026-03-24; done 2026-03-25)
-- [ ] [P3] Gateway-level rate limiting via Caddy `rate_limit` module — API already has sliding-window rate limiting at Fastify level; gateway-level rate limiting deferred as defense-in-depth — (2026-03-25, Coolify removal)
+- [x] [P3] Gateway-level rate limiting via Caddy `rate_limit` module — API already has sliding-window rate limiting at Fastify level; gateway-level rate limiting deferred as defense-in-depth — (2026-03-25, Coolify removal)
 
 ### Database Hardening
 
