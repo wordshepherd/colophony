@@ -1400,25 +1400,26 @@ jobs:
       - name: Setup Garage buckets
         run: |
           ADMIN="http://localhost:3903"
-          AUTH="-H Authorization:Bearer ci-admin-token"
+          TOKEN="ci-admin-token"
+          auth() { curl -sf -H "Authorization: Bearer $TOKEN" "$@"; }
           # Layout
-          NODE_ID=$(curl -sf $AUTH "$ADMIN/v2/GetClusterStatus" | jq -r '.nodes[0].id')
-          curl -sf -X POST $AUTH -H 'Content-Type: application/json' \
+          NODE_ID=$(auth "$ADMIN/v2/GetClusterStatus" | jq -r '.nodes[0].id')
+          auth -X POST -H 'Content-Type: application/json' \
             -d "[{\"id\":\"$NODE_ID\",\"zone\":\"dc1\",\"capacity\":1073741824}]" \
             "$ADMIN/v2/UpdateClusterLayout"
-          VERSION=$(curl -sf $AUTH "$ADMIN/v2/GetClusterLayout" | jq '.version')
-          curl -sf -X POST $AUTH -H 'Content-Type: application/json' \
+          VERSION=$(auth "$ADMIN/v2/GetClusterLayout" | jq '.version')
+          auth -X POST -H 'Content-Type: application/json' \
             -d "{\"version\":$((VERSION+1))}" \
             "$ADMIN/v2/ApplyClusterLayout"
           # Import key
-          curl -sf -X POST $AUTH -H 'Content-Type: application/json' \
+          auth -X POST -H 'Content-Type: application/json' \
             -d '{"name":"ci","accessKeyId":"minioadmin","secretAccessKey":"minioadmin"}' \
             "$ADMIN/v2/ImportKey"
           # Create buckets + allow key
           for BUCKET in submissions quarantine; do
-            BUCKET_ID=$(curl -sf -X POST $AUTH -H 'Content-Type: application/json' \
+            BUCKET_ID=$(auth -X POST -H 'Content-Type: application/json' \
               -d "{\"globalAlias\":\"$BUCKET\"}" "$ADMIN/v2/CreateBucket" | jq -r '.id')
-            curl -sf -X POST $AUTH -H 'Content-Type: application/json' \
+            auth -X POST -H 'Content-Type: application/json' \
               -d "{\"bucketId\":\"$BUCKET_ID\",\"accessKeyId\":\"minioadmin\",\"permissions\":{\"read\":true,\"write\":true,\"owner\":true}}" \
               "$ADMIN/v2/AllowBucketKey"
           done
