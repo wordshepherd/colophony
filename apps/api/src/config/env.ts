@@ -63,8 +63,12 @@ const envSchema = z
     S3_ENDPOINT: z.string().default('http://localhost:3900'),
     S3_BUCKET: z.string().default('submissions'),
     S3_QUARANTINE_BUCKET: z.string().default('quarantine'),
-    S3_ACCESS_KEY: z.string().default('minioadmin'),
-    S3_SECRET_KEY: z.string().default('minioadmin'),
+    S3_ACCESS_KEY: z.string().default('GKdeadbeef12345678abcdef00'),
+    S3_SECRET_KEY: z
+      .string()
+      .default(
+        '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
+      ),
     S3_REGION: z.string().default('us-east-1'),
     TUS_ENDPOINT: z.string().default('http://localhost:1080/files/'),
 

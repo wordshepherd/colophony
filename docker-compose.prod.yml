@@ -318,14 +318,17 @@ services:
       GARAGE_ADMIN_TOKEN: ${GARAGE_ADMIN_TOKEN}
     volumes:
       - ./docker/garage/garage.toml:/etc/garage.toml:ro
+      - ./docker/garage/start-garage.sh:/start-garage.sh:ro
       - garage_data:/var/lib/garage/data
       - garage_meta:/var/lib/garage/meta
+    entrypoint: ['/bin/sh', '/start-garage.sh']
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "sh", "-c", "curl -sf http://localhost:3903/health || curl -sf -H \"Authorization: Bearer $GARAGE_ADMIN_TOKEN\" http://localhost:3903/v2/GetClusterStatus > /dev/null"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+      test: ["CMD", "curl", "-sf", "http://localhost:3903/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
     deploy:
       resources:
         limits:

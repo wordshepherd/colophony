@@ -74,8 +74,8 @@ APP_USER_PASSWORD=$(openssl rand -base64 48 | tr -d '=/+' | head -c 48)
 REDIS_PASSWORD=$(openssl rand -base64 48 | tr -d '=/+' | head -c 48)
 GARAGE_RPC_SECRET=$(openssl rand -hex 32)
 GARAGE_ADMIN_TOKEN=$(openssl rand -base64 32 | tr -d '=/+' | head -c 32)
-GARAGE_S3_ACCESS_KEY=$(openssl rand -hex 16)
-GARAGE_S3_SECRET_KEY=$(openssl rand -base64 48 | tr -d '=/+' | head -c 48)
+GARAGE_S3_ACCESS_KEY="GK$(openssl rand -hex 12)"
+GARAGE_S3_SECRET_KEY=$(openssl rand -hex 32)
 TUS_HOOK_SECRET=$(openssl rand -hex 32)
 
 echo "  Secrets generated."
