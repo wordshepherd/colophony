@@ -276,7 +276,8 @@ jobs:
           echo "All groups deployed — updating LAST_DEPLOYED_SHA"
           gh variable set LAST_DEPLOYED_SHA \
             --body "${{ needs.prepare.outputs.ref }}" \
-            --repo "${{ github.repository }}"
+            --repo "${{ github.repository }}" \
+            --env staging
 
   # ──────────────────────────────────────────────────
   # Deploy to production (manual dispatch only)
