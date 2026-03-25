@@ -11,6 +11,11 @@ services:
       - "${HTTPS_PORT:-443}:443/udp"
     environment:
       DOMAIN: ${DOMAIN:-localhost}
+      # Gateway rate limiting (defense-in-depth — API has its own limits)
+      CADDY_RL_GENERAL_MAX: ${CADDY_RL_GENERAL_MAX:-300}
+      CADDY_RL_GENERAL_WINDOW: ${CADDY_RL_GENERAL_WINDOW:-1m}
+      CADDY_RL_UPLOAD_MAX: ${CADDY_RL_UPLOAD_MAX:-30}
+      CADDY_RL_UPLOAD_WINDOW: ${CADDY_RL_UPLOAD_WINDOW:-1m}
     volumes:
       - caddy_data:/data
       - caddy_config:/config
