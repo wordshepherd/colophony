@@ -21,7 +21,7 @@ services:
         condition: service_started
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/caddy-health"]
+      test: ["CMD", "curl", "-sf", "http://localhost:2019/config/"]
       interval: 10s
       timeout: 5s
       retries: 3
@@ -539,14 +539,23 @@ services:
 
 volumes:
   caddy_data:
+    name: ${VOLUME_PREFIX:-colophony}_caddy_data
   caddy_config:
+    name: ${VOLUME_PREFIX:-colophony}_caddy_config
   postgres_data:
+    name: ${VOLUME_PREFIX:-colophony}_postgres_data
   redis_data:
+    name: ${VOLUME_PREFIX:-colophony}_redis_data
   minio_data:
+    name: ${VOLUME_PREFIX:-colophony}_minio_data
   clamav_data:
+    name: ${VOLUME_PREFIX:-colophony}_clamav_data
   prometheus_data:
+    name: ${VOLUME_PREFIX:-colophony}_prometheus_data
   grafana_data:
+    name: ${VOLUME_PREFIX:-colophony}_grafana_data
   loki_data:
+    name: ${VOLUME_PREFIX:-colophony}_loki_data
 
 networks:
   colophony:

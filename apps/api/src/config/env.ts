@@ -109,7 +109,10 @@ const envSchema = z
       .enum(['true', 'false'])
       .default('false')
       .transform((v) => v === 'true'),
-    FEDERATION_CONTACT: z.string().email().optional(),
+    FEDERATION_CONTACT: z
+      .string()
+      .transform((v) => (v === '' ? undefined : v))
+      .pipe(z.string().email().optional()),
     FEDERATION_PRIVATE_KEY: z.string().optional(),
     FEDERATION_PUBLIC_KEY: z.string().optional(),
 

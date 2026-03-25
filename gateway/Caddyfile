@@ -1,3 +1,7 @@
+{
+	admin localhost:2019
+}
+
 {$DOMAIN:localhost} {
 	# Compression
 	encode gzip
@@ -25,25 +29,30 @@
 	}
 
 	# tRPC API
-	handle /trpc/* {
+	@trpc path /trpc /trpc/*
+	handle @trpc {
 		reverse_proxy api:4000
 	}
 
 	# REST API
-	handle /api/* {
+	@api path /api /api/*
+	handle @api {
 		reverse_proxy api:4000
 	}
 
 	# Webhooks (Stripe, Zitadel, Documenso, tusd)
-	handle /webhooks/* {
+	@webhooks path /webhooks /webhooks/*
+	handle @webhooks {
 		reverse_proxy api:4000
 	}
-	handle /hooks/* {
+	@hooks path /hooks /hooks/*
+	handle @hooks {
 		reverse_proxy api:4000
 	}
 
 	# Resumable file uploads via tus protocol
-	handle /upload/* {
+	@upload path /upload /upload/*
+	handle @upload {
 		reverse_proxy tusd:1080 {
 			flush_interval -1
 		}
