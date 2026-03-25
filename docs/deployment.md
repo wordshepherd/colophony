@@ -479,11 +479,11 @@ docker compose --env-file .env.prod -f docker-compose.prod.yml exec postgres \
 
 ### Environments Overview
 
-| Environment | Compose file               | Trigger                        | URL                 |
-| ----------- | -------------------------- | ------------------------------ | ------------------- |
-| Development | docker-compose.yml         | Manual (`pnpm dev`)            | localhost:3000/4000 |
-| Staging     | docker-compose.coolify.yml | Auto after CI passes on `main` | staging domain      |
-| Production  | docker-compose.prod.yml    | Manual `workflow_dispatch`     | production domain   |
+| Environment | Compose file                                           | Trigger                        | URL                 |
+| ----------- | ------------------------------------------------------ | ------------------------------ | ------------------- |
+| Development | docker-compose.yml                                     | Manual (`pnpm dev`)            | localhost:3000/4000 |
+| Staging     | `coolify/*.yml` ([5 resources](coolify-deployment.md)) | Auto after CI passes on `main` | staging domain      |
+| Production  | docker-compose.prod.yml                                | Manual `workflow_dispatch`     | production domain   |
 
 ### Staging (Automatic)
 
