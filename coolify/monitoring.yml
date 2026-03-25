@@ -7,7 +7,7 @@
 services:
   prometheus:
     build:
-      context: ../docker/prometheus
+      context: ./docker/prometheus
       dockerfile: Dockerfile
     expose:
       - "9090"
@@ -23,7 +23,7 @@ services:
 
   alertmanager:
     build:
-      context: ../docker/alertmanager
+      context: ./docker/alertmanager
       dockerfile: Dockerfile
     expose:
       - "9093"
@@ -39,7 +39,7 @@ services:
 
   grafana:
     build:
-      context: ../docker/grafana
+      context: ./docker/grafana
       dockerfile: Dockerfile
     expose:
       - "3000"
@@ -63,7 +63,7 @@ services:
 
   loki:
     build:
-      context: ../docker/loki
+      context: ./docker/loki
       dockerfile: Dockerfile
     expose:
       - "3100"
@@ -79,7 +79,7 @@ services:
 
   promtail:
     build:
-      context: ../docker/promtail
+      context: ./docker/promtail
       dockerfile: Dockerfile
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
