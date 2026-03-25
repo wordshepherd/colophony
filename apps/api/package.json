@@ -53,7 +53,7 @@
     "bullmq": "^5.71.0",
     "clamscan": "^2.4.0",
     "drizzle-orm": "^0.45.1",
-    "fastify": "^5.8.2",
+    "fastify": "^5.8.3",
     "fastify-plugin": "^5.0.0",
     "fastify-raw-body": "^5.0.0",
     "inngest": "^4.0.4",
