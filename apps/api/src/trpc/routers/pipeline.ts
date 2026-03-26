@@ -7,8 +7,11 @@ import {
   pipelineItemSchema,
   pipelineHistoryEntrySchema,
   pipelineCommentSchema,
+  saveCopyeditInputSchema,
+  copyeditContentSchema,
   idParamSchema,
   paginatedResponseSchema,
+  manuscriptVersionSchema,
 } from '@colophony/types';
 import { z } from 'zod';
 import {
@@ -165,5 +168,36 @@ export const pipelineRouter = createRouter({
         input.id,
         ctx.authContext.orgId,
       );
+    }),
+
+  /** Get manuscript content for the copyedit tab. */
+  getCopyeditContent: orgProcedure
+    .use(requireScopes('pipeline:read'))
+    .input(idParamSchema)
+    .output(copyeditContentSchema)
+    .query(async ({ ctx, input }) => {
+      return pipelineService.getCopyeditContent(
+        ctx.dbTx,
+        input.id,
+        ctx.authContext.orgId,
+      );
+    }),
+
+  /** Save copyedited content as a new manuscript version. */
+  saveCopyedit: orgProcedure
+    .use(requireScopes('pipeline:write'))
+    .input(idParamSchema.merge(saveCopyeditInputSchema))
+    .output(manuscriptVersionSchema)
+    .mutation(async ({ ctx, input }) => {
+      const { id, ...data } = input;
+      try {
+        return await pipelineService.saveCopyeditWithAudit(
+          toServiceContext(ctx),
+          id,
+          data,
+        );
+      } catch (e) {
+        mapServiceError(e);
+      }
     }),
 });

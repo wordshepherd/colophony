@@ -186,3 +186,41 @@ export const listPipelineItemsSchema = z.object({
 });
 
 export type ListPipelineItemsInput = z.infer<typeof listPipelineItemsSchema>;
+
+// ---------------------------------------------------------------------------
+// Copyedit
+// ---------------------------------------------------------------------------
+
+export const saveCopyeditInputSchema = z.object({
+  content: z
+    .object({
+      type: z.literal("doc"),
+      attrs: z.record(z.string(), z.unknown()).optional(),
+      content: z.array(z.unknown()),
+    })
+    .passthrough()
+    .describe("ProseMirror document with copyedited content"),
+  label: z
+    .string()
+    .max(255)
+    .optional()
+    .describe("Version label (defaults to 'Copyedit')"),
+});
+
+export type SaveCopyeditInput = z.infer<typeof saveCopyeditInputSchema>;
+
+export const copyeditContentSchema = z.object({
+  content: z.unknown().nullable(),
+  contentExtractionStatus: z.string(),
+  genreHint: z.string().nullable(),
+  versions: z.array(
+    z.object({
+      id: z.string().uuid(),
+      versionNumber: z.number(),
+      label: z.string().nullable(),
+      createdAt: z.coerce.date(),
+    }),
+  ),
+});
+
+export type CopyeditContent = z.infer<typeof copyeditContentSchema>;

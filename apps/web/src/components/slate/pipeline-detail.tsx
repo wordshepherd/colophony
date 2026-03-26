@@ -10,6 +10,7 @@ import { PipelineRoleAssignment } from "./pipeline-role-assignment";
 import { PipelineComments } from "./pipeline-comments";
 import { PipelineHistory } from "./pipeline-history";
 import { PipelineContractsTab } from "./pipeline-contracts-tab";
+import { PipelineCopyeditTab } from "./pipeline-copyedit-tab";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -70,6 +71,10 @@ export function PipelineDetail({ pipelineItemId }: PipelineDetailProps) {
         <TabsList>
           <TabsTrigger value="details">Details</TabsTrigger>
           <TabsTrigger value="contracts">Contracts</TabsTrigger>
+          {(item.stage === "COPYEDIT_IN_PROGRESS" ||
+            item.stage === "AUTHOR_REVIEW") && (
+            <TabsTrigger value="copyedit">Copyedit</TabsTrigger>
+          )}
         </TabsList>
 
         <TabsContent value="details">
@@ -240,6 +245,13 @@ export function PipelineDetail({ pipelineItemId }: PipelineDetailProps) {
             isAdmin={isAdmin}
           />
         </TabsContent>
+
+        {(item.stage === "COPYEDIT_IN_PROGRESS" ||
+          item.stage === "AUTHOR_REVIEW") && (
+          <TabsContent value="copyedit">
+            <PipelineCopyeditTab pipelineItemId={pipelineItemId} />
+          </TabsContent>
+        )}
       </Tabs>
     </div>
   );

@@ -12,6 +12,7 @@ import { createHash } from "node:crypto";
 import { eq } from "drizzle-orm";
 import { db, pool } from "./client";
 import type { DrizzleDb } from "./context";
+import { proseFictionDoc } from "./seed-content";
 import {
   organizations,
   users,
@@ -300,6 +301,8 @@ export async function seedBase(tx: DrizzleDb): Promise<SeedResult> {
 
   // ----- Manuscripts + Versions + Files -----
   // Create a manuscript for the writer's submitted work
+  const fictionContent = proseFictionDoc();
+
   const [manuscript1] = await tx
     .insert(manuscripts)
     .values({
@@ -307,6 +310,7 @@ export async function seedBase(tx: DrizzleDb): Promise<SeedResult> {
       title: "The Weight of Small Things",
       description:
         "A short story about the objects we carry and the memories they hold.",
+      genre: { primary: "prose", sub: "short_fiction", hybrid: [] },
     })
     .returning();
 
@@ -316,6 +320,9 @@ export async function seedBase(tx: DrizzleDb): Promise<SeedResult> {
       manuscriptId: manuscript1!.id,
       versionNumber: 1,
       label: "Initial submission",
+      content: fictionContent,
+      contentFormat: "prosemirror_v1",
+      contentExtractionStatus: "COMPLETE",
     })
     .returning();
 
