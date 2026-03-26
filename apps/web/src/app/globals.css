@@ -111,6 +111,35 @@
   --density-line-height: 1.4;
 }
 
+/* Manuscript typography — reading-quality rendering for literary content */
+.manuscript-prose {
+  max-width: 65ch;
+  line-height: 1.65;
+  font-size: 1.0625rem;
+  text-align: left;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.manuscript-prose p + p {
+  text-indent: 1.5em;
+}
+
+.manuscript-prose > p:first-child {
+  text-indent: 0;
+}
+
+.manuscript-poetry {
+  max-width: 50ch;
+  line-height: 1.55;
+  font-size: 1.0625rem;
+  text-align: left;
+  padding-top: 2rem;
+  padding-bottom: 2rem;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
 @layer base {
   * {
     @apply border-border;
