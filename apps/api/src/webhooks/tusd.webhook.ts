@@ -25,6 +25,8 @@ import { statusTokenService } from '../services/status-token.service.js';
 import { fileService } from '../services/file.service.js';
 import { auditService } from '../services/audit.service.js';
 import { enqueueFileScan } from '../queues/file-scan.queue.js';
+import { enqueueContentExtract } from '../queues/content-extract.queue.js';
+import { SUPPORTED_MIME_TYPES } from '../converters/index.js';
 import { getGlobalRegistry } from '../adapters/registry-accessor.js';
 import type { S3StorageAdapter } from '../adapters/storage/index.js';
 
@@ -641,6 +643,20 @@ export async function registerTusdWebhooks(
             storage.defaultBucket,
             storageKey,
           );
+
+          // Chain: enqueue content extraction after successful move
+          // Only for supported MIME types — skip images, audio, etc.
+          if (SUPPORTED_MIME_TYPES.has(mimeType)) {
+            await enqueueContentExtract(env, {
+              fileId: fileIdToScan,
+              storageKey,
+              manuscriptVersionId,
+              userId,
+              ...(orgId ? { organizationId: orgId } : {}),
+              mimeType,
+              filename,
+            });
+          }
         } catch (s3Err) {
           // Log but don't fail — file is still accessible from quarantine
           // and can be moved by a reconciliation job

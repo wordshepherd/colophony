@@ -83,6 +83,11 @@ export const AuditActions = {
   MANUSCRIPT_DELETED: "MANUSCRIPT_DELETED",
   MANUSCRIPT_VERSION_CREATED: "MANUSCRIPT_VERSION_CREATED",
 
+  // Content extraction lifecycle
+  CONTENT_EXTRACT_COMPLETE: "CONTENT_EXTRACT_COMPLETE",
+  CONTENT_EXTRACT_FAILED: "CONTENT_EXTRACT_FAILED",
+  CONTENT_EXTRACT_UNSUPPORTED: "CONTENT_EXTRACT_UNSUPPORTED",
+
   // Payment lifecycle
   PAYMENT_SUCCEEDED: "PAYMENT_SUCCEEDED",
   PAYMENT_EXPIRED: "PAYMENT_EXPIRED",
@@ -371,7 +376,10 @@ export interface ManuscriptAuditParams extends BaseAuditParams {
     | typeof AuditActions.MANUSCRIPT_CREATED
     | typeof AuditActions.MANUSCRIPT_UPDATED
     | typeof AuditActions.MANUSCRIPT_DELETED
-    | typeof AuditActions.MANUSCRIPT_VERSION_CREATED;
+    | typeof AuditActions.MANUSCRIPT_VERSION_CREATED
+    | typeof AuditActions.CONTENT_EXTRACT_COMPLETE
+    | typeof AuditActions.CONTENT_EXTRACT_FAILED
+    | typeof AuditActions.CONTENT_EXTRACT_UNSUPPORTED;
 }
 
 export interface AuthAuditParams extends BaseAuditParams {

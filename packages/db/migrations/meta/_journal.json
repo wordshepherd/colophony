@@ -393,6 +393,13 @@
       "when": 1780200000000,
       "tag": "0055_status_token_resubmit",
       "breakpoints": true
+    },
+    {
+      "idx": 56,
+      "version": "7",
+      "when": 1780400000000,
+      "tag": "0056_content_extraction",
+      "breakpoints": true
     }
   ]
 }

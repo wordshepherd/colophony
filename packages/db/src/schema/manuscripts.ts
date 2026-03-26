@@ -12,7 +12,7 @@ import {
   unique,
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
-import { scanStatusEnum } from "./enums";
+import { scanStatusEnum, contentExtractionStatusEnum } from "./enums";
 import { users } from "./users";
 
 // ---------------------------------------------------------------------------
@@ -65,6 +65,13 @@ export const manuscriptVersions = pgTable(
     label: varchar("label", { length: 255 }),
     contentFingerprint: varchar("content_fingerprint", { length: 64 }),
     federationFingerprint: varchar("federation_fingerprint", { length: 64 }),
+    content: jsonb("content"),
+    contentFormat: varchar("content_format", { length: 50 }),
+    contentExtractionStatus: contentExtractionStatusEnum(
+      "content_extraction_status",
+    )
+      .notNull()
+      .default("PENDING"),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),

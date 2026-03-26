@@ -2,74 +2,78 @@
 
 ## Key Paths
 
-| What              | Path                                                           |
-| ----------------- | -------------------------------------------------------------- |
-| App entry         | `src/main.ts`                                                  |
-| Env config (Zod)  | `src/config/env.ts`                                            |
-| Fastify hooks     | `src/hooks/`                                                   |
-| Service layer     | `src/services/`                                                |
-| Manuscript svc    | `src/services/manuscript.service.ts`                           |
-| tRPC router       | `src/trpc/router.ts`                                           |
-| tRPC client types | `src/trpc/client-types.ts`                                     |
-| tRPC init         | `src/trpc/init.ts`                                             |
-| tRPC context      | `src/trpc/context.ts`                                          |
-| REST router       | `src/rest/router.ts`                                           |
-| REST context      | `src/rest/context.ts`                                          |
-| REST error mapper | `src/rest/error-mapper.ts`                                     |
-| REST org handlers | `src/rest/routers/organizations.ts`                            |
-| Form service      | `src/services/form.service.ts`                                 |
-| Form validation   | `src/services/form-validation.service.ts`                      |
-| GDPR service      | `src/services/gdpr.service.ts`                                 |
-| Embed routes      | `src/routes/embed.routes.ts`                                   |
-| Embed token svc   | `src/services/embed-token.service.ts`                          |
-| Embed submit svc  | `src/services/embed-submission.service.ts`                     |
-| tusd webhook      | `src/webhooks/tusd.webhook.ts`                                 |
-| Zitadel webhook   | `src/webhooks/zitadel.webhook.ts`                              |
-| Stripe webhook    | `src/webhooks/stripe.webhook.ts`                               |
-| Documenso webhook | `src/webhooks/documenso.webhook.ts`                            |
-| Inngest client    | `src/inngest/client.ts`                                        |
-| Inngest functions | `src/inngest/functions/`                                       |
-| Inngest serve     | `src/inngest/serve.ts`                                         |
-| Email adapters    | `src/adapters/email/` (SmtpEmailAdapter, SendGridEmailAdapter) |
-| Storage adapter   | `src/adapters/storage/` (S3StorageAdapter)                     |
-| Payment adapter   | `src/adapters/payment/` (StripePaymentAdapter)                 |
-| Registry accessor | `src/adapters/registry-accessor.ts`                            |
-| Config builder    | `src/colophony.config.ts`                                      |
-| Email templates   | `src/templates/email/` (MJML)                                  |
-| Email queue       | `src/queues/email.queue.ts`                                    |
-| Email worker      | `src/workers/email.worker.ts`                                  |
-| Email service     | `src/services/email.service.ts`                                |
-| Notif pref svc    | `src/services/notification-preference.service.ts`              |
-| Webhook queue     | `src/queues/webhook.queue.ts`                                  |
-| Webhook worker    | `src/workers/webhook.worker.ts`                                |
-| Webhook service   | `src/services/webhook.service.ts`                              |
-| CMS adapters      | `src/adapters/cms/`                                            |
-| Documenso adapter | `src/adapters/documenso.adapter.ts`                            |
-| Outbox poller     | `src/workers/outbox-poller.worker.ts`                          |
-| SSE notif stream  | `src/sse/notification-stream.ts` (hijacked, manual CORS)       |
-| Redis pub/sub     | `src/sse/redis-pubsub.ts`                                      |
-| Federation trust  | `src/federation/trust.routes.ts` (S2S)                         |
-| Trust admin       | `src/federation/trust-admin.routes.ts`                         |
-| Key admin         | `src/federation/key-admin.routes.ts`                           |
-| Trust service     | `src/services/trust.service.ts`                                |
-| HTTP signatures   | `src/federation/http-signatures.ts`                            |
-| Federation auth   | `src/federation/federation-auth.ts`                            |
-| Sim-sub routes    | `src/federation/simsub.routes.ts` (S2S)                        |
-| Sim-sub admin     | `src/federation/simsub-admin.routes.ts`                        |
-| Sim-sub service   | `src/services/simsub.service.ts`                               |
-| Fingerprint svc   | `src/services/fingerprint.service.ts`                          |
-| Transfer routes   | `src/federation/transfer.routes.ts` (S2S)                      |
-| Transfer admin    | `src/federation/transfer-admin.routes.ts`                      |
-| Transfer service  | `src/services/transfer.service.ts`                             |
-| Migration routes  | `src/federation/migration.routes.ts` (S2S)                     |
-| Migration admin   | `src/federation/migration-admin.routes.ts`                     |
-| Migration service | `src/services/migration.service.ts`                            |
-| Migration bundle  | `src/services/migration-bundle.service.ts`                     |
-| Hub routes        | `src/federation/hub.routes.ts` (S2S)                           |
-| Hub admin         | `src/federation/hub-admin.routes.ts`                           |
-| Hub auth          | `src/federation/hub-auth.ts`                                   |
-| Hub service       | `src/services/hub.service.ts`                                  |
-| Hub client svc    | `src/services/hub-client.service.ts`                           |
+| What               | Path                                                           |
+| ------------------ | -------------------------------------------------------------- |
+| App entry          | `src/main.ts`                                                  |
+| Env config (Zod)   | `src/config/env.ts`                                            |
+| Fastify hooks      | `src/hooks/`                                                   |
+| Service layer      | `src/services/`                                                |
+| Manuscript svc     | `src/services/manuscript.service.ts`                           |
+| tRPC router        | `src/trpc/router.ts`                                           |
+| tRPC client types  | `src/trpc/client-types.ts`                                     |
+| tRPC init          | `src/trpc/init.ts`                                             |
+| tRPC context       | `src/trpc/context.ts`                                          |
+| REST router        | `src/rest/router.ts`                                           |
+| REST context       | `src/rest/context.ts`                                          |
+| REST error mapper  | `src/rest/error-mapper.ts`                                     |
+| REST org handlers  | `src/rest/routers/organizations.ts`                            |
+| Form service       | `src/services/form.service.ts`                                 |
+| Form validation    | `src/services/form-validation.service.ts`                      |
+| GDPR service       | `src/services/gdpr.service.ts`                                 |
+| Embed routes       | `src/routes/embed.routes.ts`                                   |
+| Embed token svc    | `src/services/embed-token.service.ts`                          |
+| Embed submit svc   | `src/services/embed-submission.service.ts`                     |
+| tusd webhook       | `src/webhooks/tusd.webhook.ts`                                 |
+| Zitadel webhook    | `src/webhooks/zitadel.webhook.ts`                              |
+| Stripe webhook     | `src/webhooks/stripe.webhook.ts`                               |
+| Documenso webhook  | `src/webhooks/documenso.webhook.ts`                            |
+| Inngest client     | `src/inngest/client.ts`                                        |
+| Inngest functions  | `src/inngest/functions/`                                       |
+| Inngest serve      | `src/inngest/serve.ts`                                         |
+| Email adapters     | `src/adapters/email/` (SmtpEmailAdapter, SendGridEmailAdapter) |
+| Storage adapter    | `src/adapters/storage/` (S3StorageAdapter)                     |
+| Payment adapter    | `src/adapters/payment/` (StripePaymentAdapter)                 |
+| Registry accessor  | `src/adapters/registry-accessor.ts`                            |
+| Config builder     | `src/colophony.config.ts`                                      |
+| Email templates    | `src/templates/email/` (MJML)                                  |
+| Content converters | `src/converters/` (text, docx, smart-typography, barrel)       |
+| Content queue      | `src/queues/content-extract.queue.ts`                          |
+| Content worker     | `src/workers/content-extract.worker.ts`                        |
+| Content svc        | `src/services/content-extraction.service.ts`                   |
+| Email queue        | `src/queues/email.queue.ts`                                    |
+| Email worker       | `src/workers/email.worker.ts`                                  |
+| Email service      | `src/services/email.service.ts`                                |
+| Notif pref svc     | `src/services/notification-preference.service.ts`              |
+| Webhook queue      | `src/queues/webhook.queue.ts`                                  |
+| Webhook worker     | `src/workers/webhook.worker.ts`                                |
+| Webhook service    | `src/services/webhook.service.ts`                              |
+| CMS adapters       | `src/adapters/cms/`                                            |
+| Documenso adapter  | `src/adapters/documenso.adapter.ts`                            |
+| Outbox poller      | `src/workers/outbox-poller.worker.ts`                          |
+| SSE notif stream   | `src/sse/notification-stream.ts` (hijacked, manual CORS)       |
+| Redis pub/sub      | `src/sse/redis-pubsub.ts`                                      |
+| Federation trust   | `src/federation/trust.routes.ts` (S2S)                         |
+| Trust admin        | `src/federation/trust-admin.routes.ts`                         |
+| Key admin          | `src/federation/key-admin.routes.ts`                           |
+| Trust service      | `src/services/trust.service.ts`                                |
+| HTTP signatures    | `src/federation/http-signatures.ts`                            |
+| Federation auth    | `src/federation/federation-auth.ts`                            |
+| Sim-sub routes     | `src/federation/simsub.routes.ts` (S2S)                        |
+| Sim-sub admin      | `src/federation/simsub-admin.routes.ts`                        |
+| Sim-sub service    | `src/services/simsub.service.ts`                               |
+| Fingerprint svc    | `src/services/fingerprint.service.ts`                          |
+| Transfer routes    | `src/federation/transfer.routes.ts` (S2S)                      |
+| Transfer admin     | `src/federation/transfer-admin.routes.ts`                      |
+| Transfer service   | `src/services/transfer.service.ts`                             |
+| Migration routes   | `src/federation/migration.routes.ts` (S2S)                     |
+| Migration admin    | `src/federation/migration-admin.routes.ts`                     |
+| Migration service  | `src/services/migration.service.ts`                            |
+| Migration bundle   | `src/services/migration-bundle.service.ts`                     |
+| Hub routes         | `src/federation/hub.routes.ts` (S2S)                           |
+| Hub admin          | `src/federation/hub-admin.routes.ts`                           |
+| Hub auth           | `src/federation/hub-auth.ts`                                   |
+| Hub service        | `src/services/hub.service.ts`                                  |
+| Hub client svc     | `src/services/hub-client.service.ts`                           |
 
 ### Service Method Naming
 
@@ -242,6 +246,19 @@ Workers and queues are started in `main.ts` and closed during graceful shutdown.
 - **Flow**: PENDING → SCANNING → CLEAN/INFECTED/FAILED
 - **Fail closed**: ClamAV errors → FAILED status → downloads blocked → BullMQ retries (3 attempts, exponential backoff)
 - **Feature flag**: `VIRUS_SCAN_ENABLED` (default `true`). When `false`, files are marked CLEAN immediately in the tusd webhook
+- **Chaining**: On CLEAN, enqueues `content-extract` job for supported MIME types (text/plain, docx)
+
+### Content Extract Worker
+
+- **Queue**: `content-extract` — jobs enqueued from file-scan worker (CLEAN) or tusd webhook (scan disabled)
+- **Job idempotency**: `jobId: fileId` prevents duplicate extractions; also skips if version status is COMPLETE or EXTRACTING
+- **Flow**: PENDING → EXTRACTING → COMPLETE/FAILED/UNSUPPORTED
+- **Processing**: Download from S3 → format-specific converter (.txt or .docx) → smart typography pass → store ProseMirror JSON in `manuscript_versions.content`
+- **Canonical source**: Only supported MIME types enqueued; first file to start extraction wins (multi-file race protection)
+- **Defense-in-depth**: All service methods verify manuscript ownership via explicit JOIN
+- **Retries**: 3 attempts, exponential backoff from 30s
+- **Concurrency**: 3
+- **Always active**: Not feature-gated
 
 ### Email Worker
 
@@ -293,7 +310,7 @@ Workers and queues are started in `main.ts` and closed during graceful shutdown.
 
 ### Inventory
 
-- **BullMQ queues (6):** `email`, `webhook`, `file-scan`, `s3-cleanup`, `outbox-poller`, `transfer-fetch`
+- **BullMQ queues (7):** `email`, `webhook`, `file-scan`, `content-extract`, `s3-cleanup`, `outbox-poller`, `transfer-fetch`
 - **Inngest functions (15):** 3 workflow (submission, pipeline, contract), 11 notification (per event type), 1 bridge (Documenso webhook → domain events)
 
 ### Glue Pattern
