@@ -13,3 +13,7 @@ export {
 } from './transfer-fetch.worker.js';
 export { startEmailWorker, stopEmailWorker } from './email.worker.js';
 export { startWebhookWorker, stopWebhookWorker } from './webhook.worker.js';
+export {
+  startContentExtractWorker,
+  stopContentExtractWorker,
+} from './content-extract.worker.js';

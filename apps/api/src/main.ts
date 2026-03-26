@@ -43,6 +43,8 @@ import {
   stopEmailWorker,
   startWebhookWorker,
   stopWebhookWorker,
+  startContentExtractWorker,
+  stopContentExtractWorker,
 } from './workers/index.js';
 import {
   closeFileScanQueue,
@@ -58,6 +60,8 @@ import {
   getTransferFetchQueueInstance,
   getEmailQueueInstance,
   getWebhookQueueInstance,
+  closeContentExtractQueue,
+  getContentExtractQueueInstance,
 } from './queues/index.js';
 import { registerInngestRoutes } from './inngest/serve.js';
 import { registerWebhookHealthRoute } from './webhooks/webhook-health.route.js';
@@ -398,6 +402,10 @@ async function start(): Promise<void> {
     app.log.info('Email worker started');
   }
 
+  // Start content extraction worker (processes files after scan)
+  startContentExtractWorker(env, registry);
+  app.log.info('Content extract worker started');
+
   // Start webhook delivery worker
   startWebhookWorker(env);
   app.log.info('Webhook delivery worker started');
@@ -411,6 +419,7 @@ async function start(): Promise<void> {
       { name: 'transfer-fetch', queue: getTransferFetchQueueInstance() },
       { name: 'email', queue: getEmailQueueInstance() },
       { name: 'webhook', queue: getWebhookQueueInstance() },
+      { name: 'content-extract', queue: getContentExtractQueueInstance() },
     ];
     const activeQueues = allQueues.filter((q) => q.queue !== null) as Array<{
       name: string;
@@ -451,6 +460,8 @@ async function start(): Promise<void> {
       await closeTransferFetchQueue();
       await stopEmailWorker();
       await closeEmailQueue();
+      await stopContentExtractWorker();
+      await closeContentExtractQueue();
       await stopWebhookWorker();
       await closeWebhookQueue();
       await closeAllSSEConnections();

@@ -39,3 +39,10 @@ export {
   type WebhookJobData,
   type WebhookPayload,
 } from './webhook.queue.js';
+
+export {
+  enqueueContentExtract,
+  closeContentExtractQueue,
+  getContentExtractQueueInstance,
+  type ContentExtractJobData,
+} from './content-extract.queue.js';
