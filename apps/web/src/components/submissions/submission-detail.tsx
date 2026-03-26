@@ -63,6 +63,8 @@ interface SubmissionDetailProps {
   backHref?: string;
   queueIds?: string[];
   queueIdx?: number;
+  /** When true, hides back link, queue nav, and reading mode toggle (split pane manages those) */
+  embedded?: boolean;
 }
 
 const scanStatusIcons: Record<
@@ -95,6 +97,7 @@ export function SubmissionDetail({
   backHref = "/submissions",
   queueIds,
   queueIdx,
+  embedded = false,
 }: SubmissionDetailProps) {
   const router = useRouter();
   const { user, isEditor, isAdmin } = useOrganization();
@@ -203,14 +206,18 @@ export function SubmissionDetail({
       {/* Header */}
       <div className="flex items-start justify-between">
         <div className="space-y-1">
-          <Link
-            href={backHref}
-            className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground"
-          >
-            <ArrowLeft className="mr-1 h-4 w-4" />
-            Back to submissions
-          </Link>
-          <h1 className="text-2xl font-bold">{submission.title}</h1>
+          {!embedded && (
+            <Link
+              href={backHref}
+              className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground"
+            >
+              <ArrowLeft className="mr-1 h-4 w-4" />
+              Back to submissions
+            </Link>
+          )}
+          <h1 className={embedded ? "text-lg font-bold" : "text-2xl font-bold"}>
+            {submission.title}
+          </h1>
           <div className="flex items-center gap-2">
             <StatusBadge status={submission.status as SubmissionStatus} />
             <span className="text-sm text-muted-foreground">
@@ -223,7 +230,7 @@ export function SubmissionDetail({
         </div>
 
         <div className="flex gap-2">
-          {(isEditor || isAdmin) && (
+          {!embedded && (isEditor || isAdmin) && (
             <Button
               variant={isReadingMode ? "default" : "outline"}
               size="icon"
@@ -276,8 +283,8 @@ export function SubmissionDetail({
         />
       )}
 
-      {/* Queue navigation */}
-      {queueIds && queueIds.length > 0 && queueIdx != null && (
+      {/* Queue navigation — hidden when embedded in split pane */}
+      {!embedded && queueIds && queueIds.length > 0 && queueIdx != null && (
         <div className="flex items-center justify-between rounded-lg border p-2">
           <Button
             variant="ghost"
@@ -424,13 +431,21 @@ export function SubmissionDetail({
       {/* Content */}
       <div
         className={
-          isReadingMode
+          !embedded && isReadingMode
             ? "max-w-3xl mx-auto space-y-6"
-            : "grid gap-6 md:grid-cols-3"
+            : embedded
+              ? "space-y-6"
+              : "grid gap-6 md:grid-cols-3"
         }
       >
         <div
-          className={isReadingMode ? "space-y-6" : "md:col-span-2 space-y-6"}
+          className={
+            !embedded && isReadingMode
+              ? "space-y-6"
+              : embedded
+                ? "space-y-6"
+                : "md:col-span-2 space-y-6"
+          }
         >
           {/* Main content */}
           <Card>
@@ -573,8 +588,8 @@ export function SubmissionDetail({
           )}
         </div>
 
-        {/* Sidebar — hidden in reading mode */}
-        {!isReadingMode && (
+        {/* Sidebar — hidden in reading mode and embedded mode */}
+        {!embedded && !isReadingMode && (
           <div className="space-y-6">
             {/* History */}
             <Card>

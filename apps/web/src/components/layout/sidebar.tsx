@@ -53,7 +53,8 @@ const writingNavigation: NavItem[] = [
 
 const editorialNavigation: NavItem[] = [
   { name: "Editor Dashboard", href: "/editor", icon: LayoutDashboard },
-  { name: "Submissions", href: "/editor/submissions", icon: Inbox },
+  { name: "Reading Queue", href: "/editor/queue", icon: BookOpen },
+  { name: "All Submissions", href: "/editor/submissions", icon: Inbox },
   { name: "Forms", href: "/editor/forms", icon: ClipboardList },
   { name: "Periods", href: "/editor/periods", icon: Calendar },
 ];
