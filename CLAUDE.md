@@ -103,6 +103,9 @@ Per-directory CLAUDE.md files contain domain-specific details:
 | **CSR service**          | `apps/api/src/services/csr.service.ts` (export/import for data portability)             |
 | **CSR format spec**      | `docs/csr-format.md`                                                                    |
 | **Backlog**              | `docs/backlog.md` (track-organized, drives session focus)                               |
+| **Design system**        | `docs/DESIGN_SYSTEM.md` (roles, density, navigation, typography, migration path)        |
+| **Manuscript format**    | `docs/manuscript-format.md` (ProseMirror JSON schema, conversion pipeline)              |
+| **Density provider**     | `apps/web/src/hooks/use-density.tsx` (DensityProvider + useDensity hook)                |
 | **QA log**               | `docs/qa-log.md`                                                                        |
 | **Release checklist**    | `docs/release-checklist.md`                                                             |
 
