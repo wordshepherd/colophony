@@ -107,6 +107,11 @@ Per-directory CLAUDE.md files contain domain-specific details:
 | **Manuscript format**    | `docs/manuscript-format.md` (ProseMirror JSON schema, conversion pipeline)                 |
 | **Density provider**     | `apps/web/src/hooks/use-density.tsx` (DensityProvider + useDensity hook)                   |
 | **Layout shells**        | `apps/web/src/app/(dashboard)/{editor,slate,federation,webhooks,organizations}/layout.tsx` |
+| **Split pane**           | `apps/web/src/components/editor/editorial-split-pane.tsx` (triage/deep-read orchestrator)  |
+| **ManuscriptRenderer**   | `apps/web/src/components/manuscripts/manuscript-renderer.tsx` (genre-aware typography)     |
+| **Keyboard shortcuts**   | `apps/web/src/hooks/use-shortcuts.ts` (shell-scoped shortcut hook)                         |
+| **ProseMirror types**    | `apps/web/src/lib/manuscript.ts` (doc types + textToProseMirrorDoc converter)              |
+| **Literata font**        | `apps/web/src/lib/fonts.ts` (variable font with optical sizing)                            |
 | **QA log**               | `docs/qa-log.md`                                                                           |
 | **Release checklist**    | `docs/release-checklist.md`                                                                |
 
