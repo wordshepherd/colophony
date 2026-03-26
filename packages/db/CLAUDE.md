@@ -73,7 +73,9 @@ Acquires a dedicated connection, sets `app.current_org` and/or `app.user_id` via
 
 ### User-Scoped RLS (Manuscripts)
 
-Manuscripts use `owner_id = current_user_id()` instead of org-scoped isolation. The `current_user_id()` SQL function (migration 0000) returns `app.user_id`. Files use dual RLS: owner CRUD via manuscript ownership chain (`files → manuscript_versions → manuscripts WHERE owner_id = current_user_id()`) + org SELECT for editors on submitted manuscripts (`files → manuscript_versions → submissions WHERE organization_id = current_org_id()`). This is a new pattern — all other tables use org-scoped isolation only.
+Manuscripts use `owner_id = current_user_id()` instead of org-scoped isolation. The `current_user_id()` SQL function (migration 0000) returns `app.user_id`. All three manuscript-related tables use dual RLS: owner CRUD via manuscript ownership chain + org SELECT for editors on submitted (non-DRAFT) manuscripts. The org SELECT policies allow editors to see manuscript metadata and extracted content in the reading queue without owning the manuscript.
+
+**RLS recursion caveat:** `manuscript_versions` RLS references `manuscripts`; `manuscripts` org_read needs `manuscript_versions` to resolve `manuscript_id`. To break this cycle, `manuscripts_org_read` uses `manuscript_ids_for_org()` — a SECURITY DEFINER function that bypasses RLS on `manuscript_versions` for the lookup. `manuscript_versions_org_read` and `files_org_read` go through `submissions` only (no recursion risk).
 
 ### NEVER
 

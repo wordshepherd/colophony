@@ -400,6 +400,13 @@
       "when": 1780400000000,
       "tag": "0056_content_extraction",
       "breakpoints": true
+    },
+    {
+      "idx": 57,
+      "version": "7",
+      "when": 1780600000000,
+      "tag": "0057_manuscript_org_read_policies",
+      "breakpoints": true
     }
   ]
 }
