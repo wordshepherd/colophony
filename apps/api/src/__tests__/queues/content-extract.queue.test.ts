@@ -97,6 +97,7 @@ describe('content-extract queue integration', () => {
     const file = await createFile(version.id, {
       mimeType: 'text/plain',
       filename: 'story.txt',
+      scanStatus: 'CLEAN' as any,
     });
 
     mockStorage.downloadFromBucket.mockResolvedValue(
@@ -139,6 +140,7 @@ describe('content-extract queue integration', () => {
     const file = await createFile(version.id, {
       mimeType: 'image/png',
       filename: 'photo.png',
+      scanStatus: 'CLEAN' as any,
     });
 
     mockStorage.downloadFromBucket.mockResolvedValue(
@@ -167,36 +169,54 @@ describe('content-extract queue integration', () => {
     expect(updated.content).toBeNull();
   });
 
-  it('skips extraction if version already COMPLETE (idempotency)', async () => {
+  it('re-extracts when a new file arrives (merges all files)', async () => {
     const user = await createUser();
     const manuscript = await createManuscript(user.id);
     const version = await createManuscriptVersion(manuscript.id);
-    const file = await createFile(version.id, {
+    const file1 = await createFile(version.id, {
       mimeType: 'text/plain',
-      filename: 'story.txt',
+      filename: 'poem1.txt',
+      scanStatus: 'CLEAN' as any,
+    });
+    const file2 = await createFile(version.id, {
+      mimeType: 'text/plain',
+      filename: 'poem2.txt',
+      scanStatus: 'CLEAN' as any,
     });
 
-    // Pre-set status to COMPLETE
-    const db = adminDb();
-    await db
-      .update(manuscriptVersions)
-      .set({ contentExtractionStatus: 'COMPLETE' })
-      .where(eq(manuscriptVersions.id, version.id));
+    // Mock S3: return different content per storage key
+    mockStorage.downloadFromBucket.mockImplementation(
+      async (_bucket: string, key: string) => {
+        if (key === file1.storageKey) return textStream('First poem');
+        if (key === file2.storageKey) return textStream('Second poem');
+        return textStream('');
+      },
+    );
 
     const jobData: ContentExtractJobData = {
-      fileId: file.id,
-      storageKey: file.storageKey,
+      fileId: file2.id,
+      storageKey: file2.storageKey,
       manuscriptVersionId: version.id,
       userId: user.id,
       mimeType: 'text/plain',
-      filename: 'story.txt',
+      filename: 'poem2.txt',
     };
 
-    await queue.add('extract', jobData, { jobId: file.id });
-    await waitForJobCompletion(queue, file.id);
+    await queue.add('extract', jobData, { jobId: file2.id });
+    await waitForJobCompletion(queue, file2.id);
 
-    // S3 should NOT have been called
-    expect(mockStorage.downloadFromBucket).not.toHaveBeenCalled();
+    const db = adminDb();
+    const [updated] = await db
+      .select()
+      .from(manuscriptVersions)
+      .where(eq(manuscriptVersions.id, version.id));
+
+    expect(updated.contentExtractionStatus).toBe('COMPLETE');
+    const doc = updated.content as any;
+    // Should have content from both files merged with a section break
+    expect(doc.content.length).toBeGreaterThan(2);
+    // S3 called twice (once per file)
+    expect(mockStorage.downloadFromBucket).toHaveBeenCalledTimes(2);
   });
 
   it('applies smart typography to extracted content', async () => {
@@ -253,6 +273,7 @@ describe('content-extract queue integration', () => {
     const file = await createFile(version.id, {
       mimeType: 'text/plain',
       filename: 'story.txt',
+      scanStatus: 'CLEAN' as any,
     });
 
     mockStorage.downloadFromBucket.mockRejectedValue(
