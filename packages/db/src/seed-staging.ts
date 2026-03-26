@@ -609,7 +609,7 @@ async function main() {
 
       // Manuscript + version for each — cycle genres and extraction statuses
       const genreBuilders = [proseFictionDoc, poetryDoc, creativeNonfictionDoc];
-      const genreNames = ["prose", "poetry", "creative_nonfiction"] as const;
+      const genreNames = ["fiction", "poetry", "creative_nonfiction"] as const;
       const genreIdx = subIdx % genreBuilders.length;
       const [ms] = await tx
         .insert(manuscripts)
@@ -1111,7 +1111,7 @@ async function main() {
             creativeNonfictionDoc,
           ];
           const bulkGenreNames = [
-            "prose",
+            "fiction",
             "poetry",
             "creative_nonfiction",
           ] as const;

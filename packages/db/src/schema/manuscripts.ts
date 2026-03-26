@@ -107,39 +107,19 @@ export const manuscriptVersions = pgTable(
         AND s.status != 'DRAFT'
       )`,
     }),
-    // Copyedit: org editors can INSERT new versions for manuscripts in their pipeline
+    // Copyedit: org editors can INSERT new versions for manuscripts in their pipeline.
+    // Uses SECURITY DEFINER function to avoid RLS recursion on manuscript_versions.
     pgPolicy("manuscript_versions_copyedit_insert", {
       for: "insert",
       to: "app_user",
-      withCheck: sql`manuscript_id IN (
-        SELECT m.id FROM manuscripts m
-        JOIN manuscript_versions mv ON mv.manuscript_id = m.id
-        JOIN submissions s ON s.manuscript_version_id = mv.id
-        JOIN pipeline_items pi ON pi.submission_id = s.id
-        WHERE pi.organization_id = current_org_id()
-          AND pi.stage IN ('COPYEDIT_IN_PROGRESS', 'AUTHOR_REVIEW')
-      )`,
+      withCheck: sql`manuscript_id IN (SELECT manuscript_ids_in_copyedit(current_org_id()))`,
     }),
     // Copyedit: org editors can UPDATE versions for manuscripts in their pipeline
     pgPolicy("manuscript_versions_copyedit_update", {
       for: "update",
       to: "app_user",
-      using: sql`manuscript_id IN (
-        SELECT m.id FROM manuscripts m
-        JOIN manuscript_versions mv ON mv.manuscript_id = m.id
-        JOIN submissions s ON s.manuscript_version_id = mv.id
-        JOIN pipeline_items pi ON pi.submission_id = s.id
-        WHERE pi.organization_id = current_org_id()
-          AND pi.stage IN ('COPYEDIT_IN_PROGRESS', 'AUTHOR_REVIEW')
-      )`,
-      withCheck: sql`manuscript_id IN (
-        SELECT m.id FROM manuscripts m
-        JOIN manuscript_versions mv ON mv.manuscript_id = m.id
-        JOIN submissions s ON s.manuscript_version_id = mv.id
-        JOIN pipeline_items pi ON pi.submission_id = s.id
-        WHERE pi.organization_id = current_org_id()
-          AND pi.stage IN ('COPYEDIT_IN_PROGRESS', 'AUTHOR_REVIEW')
-      )`,
+      using: sql`manuscript_id IN (SELECT manuscript_ids_in_copyedit(current_org_id()))`,
+      withCheck: sql`manuscript_id IN (SELECT manuscript_ids_in_copyedit(current_org_id()))`,
     }),
   ],
 ).enableRLS();

@@ -310,7 +310,7 @@ export async function seedBase(tx: DrizzleDb): Promise<SeedResult> {
       title: "The Weight of Small Things",
       description:
         "A short story about the objects we carry and the memories they hold.",
-      genre: { primary: "prose", sub: "short_fiction", hybrid: [] },
+      genre: { primary: "fiction", sub: "short_fiction", hybrid: [] },
     })
     .returning();
 
