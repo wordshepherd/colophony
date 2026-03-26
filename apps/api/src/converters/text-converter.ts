@@ -35,6 +35,7 @@ function convertProse(text: string): ProseMirrorNode[] {
     if (!trimmed) {
       if (part.length >= 3 && /\n{3,}/.test(part)) {
         nodes.push({ type: 'section_break' });
+        paragraphIndex = 0; // Reset: first paragraph after section break is not indented
       }
       continue;
     }

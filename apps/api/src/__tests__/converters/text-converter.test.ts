@@ -26,6 +26,8 @@ describe('text-converter', () => {
     expect(doc.content[0].type).toBe('paragraph');
     expect(doc.content[1].type).toBe('section_break');
     expect(doc.content[2].type).toBe('paragraph');
+    // First paragraph after section break should NOT be indented
+    expect(doc.content[2].attrs).toEqual({ indent: false });
   });
 
   it('converts poetry to poem_line nodes', () => {

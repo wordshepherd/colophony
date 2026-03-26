@@ -643,19 +643,10 @@ export async function registerTusdWebhooks(
             storage.defaultBucket,
             storageKey,
           );
-        } catch (s3Err) {
-          // Log but don't fail — file is still accessible from quarantine
-          // and can be moved by a reconciliation job
-          request.log.error(
-            s3Err,
-            'Failed to move file from quarantine (scan disabled)',
-          );
-        }
 
-        // Chain: enqueue content extraction (scan skipped, file is CLEAN)
-        // Only for supported MIME types — skip images, audio, etc.
-        if (SUPPORTED_MIME_TYPES.has(mimeType)) {
-          try {
+          // Chain: enqueue content extraction after successful move
+          // Only for supported MIME types — skip images, audio, etc.
+          if (SUPPORTED_MIME_TYPES.has(mimeType)) {
             await enqueueContentExtract(env, {
               fileId: fileIdToScan,
               storageKey,
@@ -665,12 +656,14 @@ export async function registerTusdWebhooks(
               mimeType,
               filename,
             });
-          } catch (extractErr) {
-            request.log.error(
-              extractErr,
-              'Failed to enqueue content extraction (scan disabled path)',
-            );
           }
+        } catch (s3Err) {
+          // Log but don't fail — file is still accessible from quarantine
+          // and can be moved by a reconciliation job
+          request.log.error(
+            s3Err,
+            'Failed to move file from quarantine (scan disabled)',
+          );
         }
       }
 

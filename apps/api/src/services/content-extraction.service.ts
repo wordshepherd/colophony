@@ -1,16 +1,19 @@
 import {
   manuscriptVersions,
   manuscripts,
+  files,
   eq,
   and,
   type DrizzleDb,
   sql,
 } from '@colophony/db';
+import { asc, inArray } from 'drizzle-orm';
 import type {
   ProseMirrorDoc,
   GenreHint,
   ContentExtractionStatus,
 } from '@colophony/types';
+import { SUPPORTED_MIME_TYPES } from '../converters/index.js';
 
 const GENRE_TO_HINT: Record<string, GenreHint> = {
   poetry: 'poetry',
@@ -125,5 +128,51 @@ export const contentExtractionService = {
         : undefined;
 
     return primary ? (GENRE_TO_HINT[primary] ?? 'prose') : null;
+  },
+
+  /**
+   * Get all clean files with supported MIME types for a manuscript version,
+   * ordered by upload time. Used by the worker to extract all files and merge.
+   * Defense-in-depth: verifies ownership via manuscripts.owner_id.
+   */
+  async getCleanSupportedFiles(
+    tx: DrizzleDb,
+    manuscriptVersionId: string,
+    userId: string,
+  ): Promise<
+    Array<{
+      id: string;
+      filename: string;
+      mimeType: string;
+      storageKey: string;
+    }>
+  > {
+    return tx
+      .select({
+        id: files.id,
+        filename: files.filename,
+        mimeType: files.mimeType,
+        storageKey: files.storageKey,
+      })
+      .from(files)
+      .innerJoin(
+        manuscriptVersions,
+        eq(files.manuscriptVersionId, manuscriptVersions.id),
+      )
+      .innerJoin(
+        manuscripts,
+        and(
+          eq(manuscriptVersions.manuscriptId, manuscripts.id),
+          eq(manuscripts.ownerId, userId),
+        ),
+      )
+      .where(
+        and(
+          eq(files.manuscriptVersionId, manuscriptVersionId),
+          eq(files.scanStatus, 'CLEAN'),
+          inArray(files.mimeType, [...SUPPORTED_MIME_TYPES]),
+        ),
+      )
+      .orderBy(asc(files.uploadedAt));
   },
 };
