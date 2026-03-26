@@ -21,4 +21,32 @@ pnpm lint || {
   exit 1
 }
 
+# Infrastructure checks — only run when relevant files changed
+CHANGED=$(git diff --name-only @{upstream}..HEAD 2>/dev/null || git diff --name-only origin/main..HEAD 2>/dev/null || echo "")
+
+if echo "$CHANGED" | grep -q 'docker-compose'; then
+  echo "→ Validating Docker Compose files..."
+  docker compose -f docker-compose.yml config --quiet 2>&1 || { echo "docker-compose.yml is invalid"; exit 1; }
+  docker compose -f docker-compose.prod.yml config --quiet 2>&1 || { echo "docker-compose.prod.yml is invalid"; exit 1; }
+  docker compose -f docker-compose.yml -f docker-compose.e2e.yml config --quiet 2>&1 || { echo "docker-compose.e2e.yml overlay is invalid"; exit 1; }
+fi
+
+if echo "$CHANGED" | grep -q '\.sh$'; then
+  echo "→ Checking shell script syntax..."
+  SHELL_FAIL=0
+  for f in $(echo "$CHANGED" | grep '\.sh$'); do
+    if [ -f "$f" ]; then
+      bash -n "$f" 2>&1 || { echo "Syntax error in $f"; SHELL_FAIL=1; }
+    fi
+  done
+  [ "$SHELL_FAIL" -eq 1 ] && exit 1
+fi
+
+if echo "$CHANGED" | grep -q 'garage.toml'; then
+  echo "→ Validating garage.toml..."
+  for section in '\[s3_api\]' '\[admin\]' 'rpc_bind_addr' 'metadata_dir' 'data_dir'; do
+    grep -q "$section" docker/garage/garage.toml || { echo "garage.toml missing $section"; exit 1; }
+  done
+fi
+
 echo "Pre-push checks passed."
