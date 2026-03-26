@@ -1,6 +1,10 @@
 import { z } from "zod";
 import { scanStatusSchema, fileSchema } from "./file";
 import { simSubPolicySchema } from "./sim-sub-policy";
+import {
+  proseMirrorDocSchema,
+  contentExtractionStatusSchema,
+} from "./prosemirror";
 
 export const submissionStatusSchema = z
   .enum([
@@ -185,6 +189,14 @@ export const submissionDetailSchema = submissionSchema.extend({
       manuscriptId: z.string().uuid(),
       manuscriptTitle: z.string(),
       versionNumber: z.number().int(),
+      extractedContent: proseMirrorDocSchema
+        .nullable()
+        .describe(
+          "ProseMirror JSON from backend extraction (null if not yet extracted)",
+        ),
+      contentExtractionStatus: contentExtractionStatusSchema.describe(
+        "Backend content extraction status",
+      ),
     })
     .nullable()
     .describe("Linked manuscript info (null if no manuscript attached)"),

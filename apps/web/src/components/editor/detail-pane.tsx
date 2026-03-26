@@ -8,7 +8,8 @@ import { textToProseMirrorDoc } from "@/lib/manuscript";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
-import { BookOpen } from "lucide-react";
+import { BookOpen, Loader2, AlertCircle } from "lucide-react";
+import type { ProseMirrorDoc } from "@colophony/types";
 import { useState } from "react";
 
 interface DetailPaneProps {
@@ -76,14 +77,16 @@ function DeepReadView({ submissionId }: { submissionId: string }) {
     );
   }
 
-  // Convert plain text content to ProseMirror doc (fallback path —
-  // the only path until the backend content extraction pipeline ships)
-  const content = submission.content
-    ? textToProseMirrorDoc(submission.content)
-    : null;
+  // Prefer backend-extracted ProseMirror content; fall back to client-side
+  // plain text conversion when extraction has not completed.
+  const extractionStatus = submission.manuscript?.contentExtractionStatus;
+  const content: ProseMirrorDoc | null =
+    submission.manuscript?.extractedContent && extractionStatus === "COMPLETE"
+      ? (submission.manuscript.extractedContent as ProseMirrorDoc)
+      : submission.content
+        ? textToProseMirrorDoc(submission.content)
+        : null;
 
-  // Only show "As submitted" toggle when the doc has smart_text marks
-  // (not present in the plain text fallback — toggle would be a no-op)
   const hasSmartTextMarks = content?.attrs?.smart_typography_applied === true;
 
   return (
@@ -118,6 +121,20 @@ function DeepReadView({ submissionId }: { submissionId: string }) {
               </div>
             )}
           </div>
+
+          {/* Extraction status (transient states only) */}
+          {extractionStatus === "PENDING" ||
+          extractionStatus === "EXTRACTING" ? (
+            <div className="flex items-center gap-2 text-xs text-muted-foreground mb-4">
+              <Loader2 className="h-3 w-3 animate-spin" />
+              Content extraction in progress...
+            </div>
+          ) : extractionStatus === "FAILED" ? (
+            <div className="flex items-center gap-2 text-xs text-destructive mb-4">
+              <AlertCircle className="h-3 w-3" />
+              Content extraction failed — showing plain text fallback
+            </div>
+          ) : null}
 
           {/* Manuscript content */}
           {content ? (

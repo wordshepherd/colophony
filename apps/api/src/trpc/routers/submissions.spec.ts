@@ -433,6 +433,51 @@ describe('submissions tRPC router', () => {
         caller.submissions.getById({ id: SUBMISSION_ID }),
       ).rejects.toThrow('not found');
     });
+
+    it('returns extracted content when manuscript has completed extraction', async () => {
+      const sub = {
+        ...makeDraftSubmission(),
+        manuscript: {
+          manuscriptId: 'd4444444-4444-4444-a444-444444444499',
+          manuscriptTitle: 'Test Manuscript',
+          versionNumber: 1,
+          extractedContent: {
+            type: 'doc' as const,
+            attrs: { genre_hint: 'prose', smart_typography_applied: true },
+            content: [{ type: 'paragraph', text: 'Hello world' }],
+          },
+          contentExtractionStatus: 'COMPLETE' as const,
+        },
+      };
+      mockService.getByIdWithAccess.mockResolvedValueOnce(sub as never);
+
+      const caller = createCaller(orgContext());
+      const result = await caller.submissions.getById({ id: SUBMISSION_ID });
+      expect(result.manuscript).not.toBeNull();
+      expect(result.manuscript!.extractedContent).toEqual(
+        sub.manuscript.extractedContent,
+      );
+      expect(result.manuscript!.contentExtractionStatus).toBe('COMPLETE');
+    });
+
+    it('returns null extractedContent when extraction is pending', async () => {
+      const sub = {
+        ...makeDraftSubmission(),
+        manuscript: {
+          manuscriptId: 'd4444444-4444-4444-a444-444444444499',
+          manuscriptTitle: 'Test Manuscript',
+          versionNumber: 1,
+          extractedContent: null,
+          contentExtractionStatus: 'PENDING' as const,
+        },
+      };
+      mockService.getByIdWithAccess.mockResolvedValueOnce(sub as never);
+
+      const caller = createCaller(orgContext());
+      const result = await caller.submissions.getById({ id: SUBMISSION_ID });
+      expect(result.manuscript!.extractedContent).toBeNull();
+      expect(result.manuscript!.contentExtractionStatus).toBe('PENDING');
+    });
   });
 
   describe('getHistory', () => {
