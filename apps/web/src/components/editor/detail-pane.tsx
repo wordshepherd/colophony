@@ -82,6 +82,10 @@ function DeepReadView({ submissionId }: { submissionId: string }) {
     ? textToProseMirrorDoc(submission.content)
     : null;
 
+  // Only show "As submitted" toggle when the doc has smart_text marks
+  // (not present in the plain text fallback — toggle would be a no-op)
+  const hasSmartTextMarks = content?.attrs?.smart_typography_applied === true;
+
   return (
     <DensityProvider density="comfortable">
       <div className="h-full overflow-y-auto">
@@ -98,7 +102,7 @@ function DeepReadView({ submissionId }: { submissionId: string }) {
                 </p>
               )}
             </div>
-            {content && (
+            {hasSmartTextMarks && (
               <div className="flex items-center gap-2">
                 <Switch
                   id="show-as-submitted"

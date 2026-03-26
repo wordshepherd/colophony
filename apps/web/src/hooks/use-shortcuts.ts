@@ -42,6 +42,9 @@ export function useShortcuts(bindings: ShortcutBinding[]): void {
       }
     }
 
+    // Ignore modified keypresses (Ctrl+R, Cmd+K, etc.)
+    if (event.metaKey || event.ctrlKey || event.altKey) return;
+
     for (const binding of bindingsRef.current) {
       if (binding.enabled === false) continue;
       if (event.key === binding.key) {
