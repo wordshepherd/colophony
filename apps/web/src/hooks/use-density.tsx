@@ -10,7 +10,13 @@ interface DensityContextValue {
   isComfortable: boolean;
 }
 
-const DensityContext = createContext<DensityContextValue | null>(null);
+const COMFORTABLE_DEFAULT: DensityContextValue = {
+  density: "comfortable",
+  isCompact: false,
+  isComfortable: true,
+};
+
+const DensityContext = createContext<DensityContextValue>(COMFORTABLE_DEFAULT);
 
 interface DensityProviderProps {
   density: DensityLevel;
@@ -40,12 +46,9 @@ export function DensityProvider({ density, children }: DensityProviderProps) {
 
 /**
  * Read the current density level from the nearest DensityProvider.
- * Throws if called outside a DensityProvider.
+ * Returns comfortable defaults when used outside a provider — components
+ * render normally without requiring every call site to be wrapped.
  */
 export function useDensity(): DensityContextValue {
-  const context = useContext(DensityContext);
-  if (!context) {
-    throw new Error("useDensity must be used within a DensityProvider");
-  }
-  return context;
+  return useContext(DensityContext);
 }

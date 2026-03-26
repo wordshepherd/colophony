@@ -44,15 +44,14 @@ describe("useDensity", () => {
     expect(result.current.isCompact).toBe(true);
   });
 
-  it("throws when used outside provider", () => {
-    // Suppress console.error from React's error boundary
-    const spy = vi.spyOn(console, "error").mockImplementation(() => {});
+  it("returns comfortable defaults when used outside provider", () => {
+    const { result } = renderHook(() => useDensity());
 
-    expect(() => {
-      renderHook(() => useDensity());
-    }).toThrow("useDensity must be used within a DensityProvider");
-
-    spy.mockRestore();
+    expect(result.current).toEqual({
+      density: "comfortable",
+      isCompact: false,
+      isComfortable: true,
+    });
   });
 
   it("sets data-density attribute on wrapper", () => {
