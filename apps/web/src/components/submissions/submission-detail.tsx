@@ -7,6 +7,7 @@ import { formatDistanceToNow, format } from "date-fns";
 import { trpc } from "@/lib/trpc";
 import { useOrganization } from "@/hooks/use-organization";
 import { StatusBadge } from "./status-badge";
+import { WriterStatusBadge } from "./writer-status-badge";
 import { StatusTransition } from "./status-transition";
 import { ReviseAndResubmitCard } from "./revise-and-resubmit-card";
 import { ComposeMessageDialog } from "./compose-message-dialog";
@@ -107,10 +108,23 @@ export function SubmissionDetail({
   const [isReadingMode, setIsReadingMode] = useState(false);
   const utils = trpc.useUtils();
 
-  const { data: submission, isPending: isLoading } =
-    trpc.submissions.getById.useQuery({
-      id: submissionId,
-    });
+  // Editors use getById (full internal status); writers use mySubmissionDetail (projected status)
+  const isEditorView = isEditor || isAdmin;
+
+  const { data: editorSubmission, isPending: isEditorLoading } =
+    trpc.submissions.getById.useQuery(
+      { id: submissionId },
+      { enabled: isEditorView },
+    );
+
+  const { data: writerSubmission, isPending: isWriterLoading } =
+    trpc.submissions.mySubmissionDetail.useQuery(
+      { id: submissionId },
+      { enabled: !isEditorView },
+    );
+
+  const submission = isEditorView ? editorSubmission : writerSubmission;
+  const isLoading = isEditorView ? isEditorLoading : isWriterLoading;
 
   // v2: listByManuscriptVersion (files belong to manuscript versions)
   const { data: files } = trpc.files.listByManuscriptVersion.useQuery(
@@ -193,13 +207,24 @@ export function SubmissionDetail({
   }
 
   const isOwner = user?.id === submission.submitterId;
-  const canEdit = isOwner && submission.status === "DRAFT";
-  const canDelete = isOwner && submission.status === "DRAFT";
+  // Writer submissions have writerStatus; editor submissions have status
+  const effectiveStatus =
+    "status" in submission ? submission.status : undefined;
+  const effectiveWriterStatus =
+    "writerStatus" in submission ? submission.writerStatus : undefined;
+  const canEdit =
+    isOwner &&
+    (effectiveStatus === "DRAFT" || effectiveWriterStatus === "DRAFT");
+  const canDelete = canEdit;
   const canWithdraw =
     isOwner &&
-    ["SUBMITTED", "UNDER_REVIEW", "HOLD", "REVISE_AND_RESUBMIT"].includes(
-      submission.status,
-    );
+    (effectiveStatus
+      ? ["SUBMITTED", "UNDER_REVIEW", "HOLD", "REVISE_AND_RESUBMIT"].includes(
+          effectiveStatus,
+        )
+      : effectiveWriterStatus === "RECEIVED" ||
+        effectiveWriterStatus === "IN_REVIEW" ||
+        effectiveWriterStatus === "REVISION_REQUESTED");
 
   return (
     <div className="space-y-6">
@@ -219,7 +244,14 @@ export function SubmissionDetail({
             {submission.title}
           </h1>
           <div className="flex items-center gap-2">
-            <StatusBadge status={submission.status as SubmissionStatus} />
+            {"writerStatus" in submission ? (
+              <WriterStatusBadge
+                status={submission.writerStatus}
+                label={submission.writerStatusLabel}
+              />
+            ) : (
+              <StatusBadge status={submission.status as SubmissionStatus} />
+            )}
             <span className="text-sm text-muted-foreground">
               Created{" "}
               {formatDistanceToNow(new Date(submission.createdAt), {
@@ -319,8 +351,8 @@ export function SubmissionDetail({
       {/* Editor status transitions — hidden in reading mode */}
       {!isReadingMode &&
         (isEditor || isAdmin) &&
-        EDITOR_ALLOWED_TRANSITIONS[submission.status as SubmissionStatus]
-          ?.length > 0 && (
+        effectiveStatus &&
+        EDITOR_ALLOWED_TRANSITIONS[effectiveStatus]?.length > 0 && (
           <Card>
             <CardHeader>
               <CardTitle>Editor Actions</CardTitle>
@@ -331,7 +363,7 @@ export function SubmissionDetail({
             <CardContent>
               <StatusTransition
                 submissionId={submissionId}
-                currentStatus={submission.status as SubmissionStatus}
+                currentStatus={effectiveStatus}
               />
               <div className="mt-4 pt-4 border-t">
                 <Button
@@ -350,7 +382,8 @@ export function SubmissionDetail({
       {/* Revise and Resubmit card — shown to owner when in R&R status, hidden in reading mode */}
       {!isReadingMode &&
         isOwner &&
-        submission.status === "REVISE_AND_RESUBMIT" &&
+        (effectiveStatus === "REVISE_AND_RESUBMIT" ||
+          effectiveWriterStatus === "REVISION_REQUESTED") &&
         submission.manuscript && (
           <ReviseAndResubmitCard
             submissionId={submissionId}
@@ -418,7 +451,8 @@ export function SubmissionDetail({
           isAdmin ||
           (reviewers ?? []).some((r) => r.reviewerUserId === user?.id)) &&
         !isOwner &&
-        submission.status !== "DRAFT" && (
+        effectiveStatus !== "DRAFT" &&
+        effectiveWriterStatus !== "DRAFT" && (
           <VotingPanel
             submissionId={submissionId}
             votingEnabled={votingConfig.votingEnabled}

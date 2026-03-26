@@ -11,6 +11,7 @@ import { useOrganization } from "@/hooks/use-organization";
 import { MemberList } from "./member-list";
 import { EmailTemplateSettings } from "./email-template-settings";
 import { VotingSettings } from "./voting-settings";
+import { WriterStatusSettings } from "./writer-status-settings";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -140,6 +141,9 @@ export function OrgSettings() {
           <TabsTrigger value="members">Members</TabsTrigger>
           <TabsTrigger value="email-templates">Email Templates</TabsTrigger>
           <TabsTrigger value="voting">Voting</TabsTrigger>
+          {isAdmin && (
+            <TabsTrigger value="writer-status">Writer Status</TabsTrigger>
+          )}
         </TabsList>
 
         <TabsContent value="general" className="mt-6">
@@ -253,6 +257,12 @@ export function OrgSettings() {
             </CardContent>
           </Card>
         </TabsContent>
+
+        {isAdmin && (
+          <TabsContent value="writer-status" className="mt-6">
+            <WriterStatusSettings />
+          </TabsContent>
+        )}
       </Tabs>
 
       {/* Danger Zone — admin only */}

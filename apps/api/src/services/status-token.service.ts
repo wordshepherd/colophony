@@ -1,11 +1,14 @@
 import crypto from 'node:crypto';
 import { pool, submissions, eq, type DrizzleDb } from '@colophony/db';
-import { STATUS_TOKEN_PREFIX } from '@colophony/types';
+import { STATUS_TOKEN_PREFIX, projectWriterStatus } from '@colophony/types';
+import type { SubmissionStatus, WriterStatus } from '@colophony/types';
+import { writerProjectionService } from './writer-projection.service.js';
 
 export interface StatusCheckResult {
   submissionId: string;
   title: string | null;
   status: string;
+  writerStatus: WriterStatus;
   submittedAt: Date | null;
   organizationName: string;
   periodName: string | null;
@@ -25,24 +28,6 @@ export interface ResubmitContext {
 
 function hashToken(plainText: string): string {
   return crypto.createHash('sha256').update(plainText).digest('hex');
-}
-
-/**
- * User-friendly status mapping.
- * Internal statuses → labels safe for external submitters.
- */
-const STATUS_DISPLAY_MAP: Record<string, string> = {
-  SUBMITTED: 'Under Review',
-  UNDER_REVIEW: 'Under Review',
-  HOLD: 'Under Review',
-  ACCEPTED: 'Accepted',
-  REJECTED: 'Not Accepted',
-  WITHDRAWN: 'Withdrawn',
-  REVISE_AND_RESUBMIT: 'Revision Requested',
-};
-
-function mapStatusForDisplay(internalStatus: string): string {
-  return STATUS_DISPLAY_MAP[internalStatus] ?? 'Under Review';
 }
 
 export const statusTokenService = {
@@ -99,10 +84,27 @@ export const statusTokenService = {
     if (result.rows.length === 0) return null;
 
     const row = result.rows[0];
+
+    // Fetch org settings for configurable writer status labels
+    const orgResult = await pool.query<{ settings: unknown }>(
+      'SELECT settings FROM organizations WHERE id = $1',
+      [row.organization_id],
+    );
+    const orgSettings =
+      (orgResult.rows[0]?.settings as Record<string, unknown>) ?? {};
+
+    const writerStatus = projectWriterStatus(
+      row.submission_status as SubmissionStatus,
+    );
+
     return {
       submissionId: row.submission_id,
       title: row.submission_title,
-      status: mapStatusForDisplay(row.submission_status),
+      status: writerProjectionService.projectLabel(
+        row.submission_status,
+        orgSettings,
+      ),
+      writerStatus,
       submittedAt: row.submitted_at,
       organizationName: row.organization_name,
       periodName: row.period_name,

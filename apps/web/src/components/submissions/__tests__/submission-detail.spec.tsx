@@ -65,9 +65,15 @@ vi.mock("@/lib/trpc", () => ({
     }),
     submissions: {
       getById: {
-        useQuery: () => ({
-          data: mockSubmission,
-          isPending: mockIsLoading,
+        useQuery: (_input: unknown, opts?: { enabled?: boolean }) => ({
+          data: opts?.enabled === false ? undefined : mockSubmission,
+          isPending: opts?.enabled === false ? false : mockIsLoading,
+        }),
+      },
+      mySubmissionDetail: {
+        useQuery: (_input: unknown, opts?: { enabled?: boolean }) => ({
+          data: opts?.enabled === false ? undefined : mockSubmission,
+          isPending: opts?.enabled === false ? false : mockIsLoading,
         }),
       },
       getHistory: {

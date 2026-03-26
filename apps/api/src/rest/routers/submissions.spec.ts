@@ -264,6 +264,7 @@ describe('submissions REST router', () => {
       expect(mockService.listBySubmitter).toHaveBeenCalledWith(
         expect.anything(),
         USER_ID,
+        ORG_ID,
         expect.objectContaining({ page: 1, limit: 20 }),
       );
     });

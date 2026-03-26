@@ -18,10 +18,6 @@ vi.mock('@colophony/db', () => ({
   eq: vi.fn(),
 }));
 
-vi.mock('@colophony/types', () => ({
-  STATUS_TOKEN_PREFIX: 'col_sta_',
-}));
-
 import { statusTokenService } from './status-token.service.js';
 
 // ---------------------------------------------------------------------------
@@ -32,6 +28,15 @@ function createMockTx() {
   return {
     update: mockUpdate,
   } as any;
+}
+
+/** Set up mockPoolQuery for verifyToken: first call returns the token row, second returns org settings. */
+function mockVerifyTokenCalls(
+  row: Record<string, unknown>,
+  orgSettings: Record<string, unknown> = {},
+) {
+  mockPoolQuery.mockResolvedValueOnce({ rows: [row] }); // verify_status_token
+  mockPoolQuery.mockResolvedValueOnce({ rows: [{ settings: orgSettings }] }); // org settings
 }
 
 // ---------------------------------------------------------------------------
@@ -110,18 +115,16 @@ describe('statusTokenService', () => {
     });
 
     it('returns expired=false for valid token', async () => {
-      mockPoolQuery.mockResolvedValue({
-        rows: [
-          {
-            submission_id: 'sub-1',
-            submission_title: 'My Poem',
-            submission_status: 'SUBMITTED',
-            submitted_at: new Date('2026-01-15'),
-            organization_name: 'Test Org',
-            period_name: 'Spring 2026',
-            token_expired: false,
-          },
-        ],
+      mockVerifyTokenCalls({
+        submission_id: 'sub-1',
+        submission_title: 'My Poem',
+        submission_status: 'SUBMITTED',
+        submitted_at: new Date('2026-01-15'),
+        organization_name: 'Test Org',
+        period_name: 'Spring 2026',
+        token_expired: false,
+        organization_id: 'org-1',
+        submitter_id: 'user-1',
       });
 
       const result = await statusTokenService.verifyToken('col_sta_abc123');
@@ -129,22 +132,21 @@ describe('statusTokenService', () => {
       expect(result).not.toBeNull();
       expect(result!.expired).toBe(false);
       expect(result!.title).toBe('My Poem');
-      expect(result!.status).toBe('Under Review');
+      expect(result!.status).toBe('Received');
+      expect(result!.writerStatus).toBe('RECEIVED');
     });
 
     it('returns expired=true for expired token', async () => {
-      mockPoolQuery.mockResolvedValue({
-        rows: [
-          {
-            submission_id: 'sub-1',
-            submission_title: 'My Poem',
-            submission_status: 'SUBMITTED',
-            submitted_at: new Date('2026-01-15'),
-            organization_name: 'Test Org',
-            period_name: 'Spring 2026',
-            token_expired: true,
-          },
-        ],
+      mockVerifyTokenCalls({
+        submission_id: 'sub-1',
+        submission_title: 'My Poem',
+        submission_status: 'SUBMITTED',
+        submitted_at: new Date('2026-01-15'),
+        organization_name: 'Test Org',
+        period_name: 'Spring 2026',
+        token_expired: true,
+        organization_id: 'org-1',
+        submitter_id: 'user-1',
       });
 
       const result = await statusTokenService.verifyToken('col_sta_expired');
@@ -155,33 +157,51 @@ describe('statusTokenService', () => {
 
     it('maps internal status to display status correctly', async () => {
       const testCases = [
-        { internal: 'SUBMITTED', display: 'Under Review' },
-        { internal: 'UNDER_REVIEW', display: 'Under Review' },
-        { internal: 'HOLD', display: 'Under Review' },
-        { internal: 'ACCEPTED', display: 'Accepted' },
-        { internal: 'REJECTED', display: 'Not Accepted' },
-        { internal: 'WITHDRAWN', display: 'Withdrawn' },
-        { internal: 'REVISE_AND_RESUBMIT', display: 'Revision Requested' },
-        { internal: 'UNKNOWN_STATUS', display: 'Under Review' },
+        {
+          internal: 'SUBMITTED',
+          display: 'Received',
+          writerStatus: 'RECEIVED',
+        },
+        {
+          internal: 'UNDER_REVIEW',
+          display: 'In Review',
+          writerStatus: 'IN_REVIEW',
+        },
+        { internal: 'HOLD', display: 'In Review', writerStatus: 'IN_REVIEW' },
+        { internal: 'ACCEPTED', display: 'Accepted', writerStatus: 'ACCEPTED' },
+        {
+          internal: 'REJECTED',
+          display: 'Decision Sent',
+          writerStatus: 'DECISION_SENT',
+        },
+        {
+          internal: 'WITHDRAWN',
+          display: 'Withdrawn',
+          writerStatus: 'WITHDRAWN',
+        },
+        {
+          internal: 'REVISE_AND_RESUBMIT',
+          display: 'Revision Requested',
+          writerStatus: 'REVISION_REQUESTED',
+        },
       ];
 
       for (const tc of testCases) {
-        mockPoolQuery.mockResolvedValueOnce({
-          rows: [
-            {
-              submission_id: 'sub-1',
-              submission_title: 'Test',
-              submission_status: tc.internal,
-              submitted_at: new Date(),
-              organization_name: 'Org',
-              period_name: null,
-              token_expired: false,
-            },
-          ],
+        mockVerifyTokenCalls({
+          submission_id: 'sub-1',
+          submission_title: 'Test',
+          submission_status: tc.internal,
+          submitted_at: new Date(),
+          organization_name: 'Org',
+          period_name: null,
+          token_expired: false,
+          organization_id: 'org-1',
+          submitter_id: 'user-1',
         });
 
         const result = await statusTokenService.verifyToken('col_sta_test');
         expect(result!.status).toBe(tc.display);
+        expect(result!.writerStatus).toBe(tc.writerStatus);
       }
     });
   });

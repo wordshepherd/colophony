@@ -101,6 +101,40 @@ vi.mock('../../config/env.js', () => ({
 }));
 
 // Mock simsubService
+vi.mock('../../services/organization.service.js', () => ({
+  organizationService: {
+    getById: vi.fn().mockResolvedValue({ settings: {} }),
+  },
+  UserNotFoundError: class UserNotFoundError extends Error {
+    name = 'UserNotFoundError';
+    constructor(email = 'unknown') {
+      super(`User with email "${email}" not found`);
+    }
+  },
+  SlugTakenError: class SlugTakenError extends Error {
+    name = 'SlugTakenError';
+    constructor(slug = 'unknown') {
+      super(`Slug "${slug}" is already taken`);
+    }
+  },
+  LastAdminError: class LastAdminError extends Error {
+    name = 'LastAdminError';
+    constructor() {
+      super('Cannot remove the last admin of an organization');
+    }
+  },
+}));
+
+vi.mock('../../services/writer-projection.service.js', () => ({
+  writerProjectionService: {
+    project: vi.fn().mockReturnValue({
+      writerStatus: 'DRAFT',
+      writerStatusLabel: 'Draft',
+    }),
+    projectLabel: vi.fn().mockReturnValue('Draft'),
+  },
+}));
+
 vi.mock('../../services/simsub.service.js', () => ({
   simsubService: {
     preSubmitCheck: vi.fn().mockResolvedValue(undefined),
@@ -370,7 +404,7 @@ describe('submissions tRPC router', () => {
   // -------------------------------------------------------------------------
 
   describe('mySubmissions', () => {
-    it('passes userId filter to service', async () => {
+    it('passes userId and orgId filter to service', async () => {
       const response = {
         items: [],
         total: 0,
@@ -386,6 +420,7 @@ describe('submissions tRPC router', () => {
       expect(mockService.listBySubmitter).toHaveBeenCalledWith(
         expect.anything(),
         USER_ID,
+        ORG_ID,
         { page: 1, limit: 20, sortBy: 'createdAt', sortOrder: 'desc' },
       );
     });

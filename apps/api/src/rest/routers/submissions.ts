@@ -82,6 +82,7 @@ const mine = orgProcedure
     return submissionService.listBySubmitter(
       context.dbTx,
       context.authContext.userId,
+      context.authContext.orgId,
       input,
     );
   });
