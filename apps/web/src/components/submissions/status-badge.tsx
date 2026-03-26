@@ -1,4 +1,11 @@
 import { Badge } from "@/components/ui/badge";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { useDensity } from "@/hooks/use-density";
 import { cn } from "@/lib/utils";
 import type { SubmissionStatus } from "@colophony/types";
 import {
@@ -73,16 +80,30 @@ interface StatusBadgeProps {
 }
 
 export function StatusBadge({ status, className }: StatusBadgeProps) {
+  const { isCompact } = useDensity();
   const config = statusConfig[status];
   const Icon = config.icon;
 
-  return (
+  const badge = (
     <Badge
       variant="secondary"
       className={cn("gap-1", config.className, className)}
     >
       <Icon className="h-3 w-3" />
-      {config.label}
+      {!isCompact && config.label}
     </Badge>
   );
+
+  if (isCompact) {
+    return (
+      <TooltipProvider delayDuration={200}>
+        <Tooltip>
+          <TooltipTrigger asChild>{badge}</TooltipTrigger>
+          <TooltipContent>{config.label}</TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    );
+  }
+
+  return badge;
 }
