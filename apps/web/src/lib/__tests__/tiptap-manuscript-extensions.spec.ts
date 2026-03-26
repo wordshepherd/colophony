@@ -209,6 +209,59 @@ describe("tiptapToProseMirror", () => {
     expect(result.content[5].marks).toEqual([{ type: "emphasis" }]);
   });
 
+  it("preserves multi-segment marks (partial bold)", () => {
+    // Simulate TipTap output: "Hello " (no marks) + "world" (bold)
+    const tiptapJson = {
+      type: "doc",
+      content: [
+        {
+          type: "paragraph",
+          attrs: { indent: false },
+          content: [
+            { type: "text", text: "Hello " },
+            { type: "text", text: "world", marks: [{ type: "strong" }] },
+          ],
+        },
+      ],
+    };
+    const result = tiptapToProseMirror(tiptapJson);
+    const para = result.content[0];
+    // Multi-segment with different marks → preserved as content children
+    expect(para.content).toHaveLength(2);
+    expect(para.content![0].text).toBe("Hello ");
+    expect(para.content![1].text).toBe("world");
+    expect(para.content![1].marks).toEqual([{ type: "strong" }]);
+  });
+
+  it("flattens multi-segment with same marks", () => {
+    const tiptapJson = {
+      type: "doc",
+      content: [
+        {
+          type: "paragraph",
+          content: [
+            {
+              type: "text",
+              text: "Hello ",
+              marks: [{ type: "emphasis" }],
+            },
+            {
+              type: "text",
+              text: "world",
+              marks: [{ type: "emphasis" }],
+            },
+          ],
+        },
+      ],
+    };
+    const result = tiptapToProseMirror(tiptapJson);
+    const para = result.content[0];
+    // Same marks on all segments → flattened to single text
+    expect(para.text).toBe("Hello world");
+    expect(para.marks).toEqual([{ type: "emphasis" }]);
+    expect(para.content).toBeUndefined();
+  });
+
   it("defaults to prose genre_hint when no original doc", () => {
     const tiptap = proseMirrorToTiptap(proseDoc);
     const result = tiptapToProseMirror(tiptap);

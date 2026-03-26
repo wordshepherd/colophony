@@ -272,9 +272,10 @@ function nodeToTiptap(node: ProseMirrorNode): JSONContent {
 /**
  * Convert a single TipTap JSONContent node back to Colophony format.
  *
- * Extracts text from nested { type: "text" } children and lifts it
- * to the parent node. Multi-segment text (multiple text children with
- * different marks) is concatenated — marks from the first segment are used.
+ * When a block node has a single text child, uses Colophony's flat format
+ * (text/marks on the block node). When there are multiple text children
+ * with different marks (e.g., partial bold), preserves them as content
+ * children to avoid data loss.
  */
 function nodeFromTiptap(node: JSONContent): ProseMirrorNode {
   const { type, attrs, content } = node;
@@ -310,23 +311,35 @@ function nodeFromTiptap(node: JSONContent): ProseMirrorNode {
   };
 
   if (content && content.length > 0) {
-    // Collect text segments and marks from text children
-    const textParts: string[] = [];
-    let firstMarks: ProseMirrorMark[] | undefined;
+    const textChildren = content.filter((c) => c.type === "text" && c.text);
 
-    for (const child of content) {
-      if (child.type === "text" && child.text) {
-        textParts.push(child.text);
-        if (firstMarks === undefined) {
-          firstMarks = convertMarksFromTiptap(child.marks);
-        }
-      }
-    }
+    if (textChildren.length === 1) {
+      // Single text child: use flat format (text/marks on block node)
+      result.text = textChildren[0].text!;
+      const marks = convertMarksFromTiptap(textChildren[0].marks);
+      if (marks) result.marks = marks;
+    } else if (textChildren.length > 1) {
+      // Multiple text children with different marks: check if all share the same marks
+      const allSameMarks = textChildren.every(
+        (c) =>
+          JSON.stringify(c.marks ?? []) ===
+          JSON.stringify(textChildren[0].marks ?? []),
+      );
 
-    if (textParts.length > 0) {
-      result.text = textParts.join("");
-      if (firstMarks) {
-        result.marks = firstMarks;
+      if (allSameMarks) {
+        // All segments have same marks — safe to flatten
+        result.text = textChildren.map((c) => c.text!).join("");
+        const marks = convertMarksFromTiptap(textChildren[0].marks);
+        if (marks) result.marks = marks;
+      } else {
+        // Mixed marks — preserve as content children to avoid data loss
+        result.content = textChildren.map((c) => ({
+          type: "paragraph" as const,
+          text: c.text!,
+          ...(c.marks
+            ? { marks: convertMarksFromTiptap(c.marks) ?? undefined }
+            : {}),
+        }));
       }
     }
   }

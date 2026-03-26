@@ -32,6 +32,7 @@ export function PipelineCopyeditTab({
   const saveMutation = trpc.pipeline.saveCopyedit.useMutation({
     onSuccess: () => {
       toast.success("Copyedit saved as new version");
+      setEditedDoc(null); // Clear dirty state to prevent duplicate saves
       utils.pipeline.getCopyeditContent.invalidate({ id: pipelineItemId });
       setActiveTab("diff");
     },
@@ -92,6 +93,7 @@ export function PipelineCopyeditTab({
   }
 
   const content = copyeditData.content as ProseMirrorDoc;
+  const previousContent = copyeditData.previousContent;
   const genreHint = (copyeditData.genreHint as GenreHint) ?? "prose";
 
   const isDirty = editedDoc !== null;
@@ -147,7 +149,20 @@ export function PipelineCopyeditTab({
         <TabsContent value="diff" className="mt-4">
           {editedDoc && originalDoc ? (
             <div className="rounded-md border p-6">
+              <p className="text-xs text-muted-foreground mb-4">
+                Comparing: current edits vs loaded version
+              </p>
               <ManuscriptDiff original={originalDoc} edited={editedDoc} />
+            </div>
+          ) : previousContent ? (
+            <div className="rounded-md border p-6">
+              <p className="text-xs text-muted-foreground mb-4">
+                Comparing: current version vs previous version
+              </p>
+              <ManuscriptDiff
+                original={previousContent as ProseMirrorDoc}
+                edited={originalDoc}
+              />
             </div>
           ) : (
             <div className="text-center py-8 text-muted-foreground">

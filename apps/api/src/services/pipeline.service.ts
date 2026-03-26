@@ -578,6 +578,7 @@ export const pipelineService = {
     if (!sub?.manuscriptVersionId) {
       return {
         content: null,
+        previousContent: null,
         contentExtractionStatus: 'PENDING' as const,
         genreHint: null,
         versions: [],
@@ -598,6 +599,7 @@ export const pipelineService = {
     if (!version) {
       return {
         content: null,
+        previousContent: null,
         contentExtractionStatus: 'PENDING' as const,
         genreHint: null,
         versions: [],
@@ -623,11 +625,24 @@ export const pipelineService = {
       .where(eq(manuscriptVersions.manuscriptId, version.manuscriptId))
       .orderBy(asc(manuscriptVersions.versionNumber));
 
+    // Get previous version content for diff view (if > 1 version exists)
+    let previousContent: unknown = null;
+    if (versions.length > 1) {
+      const prevVersionId = versions[versions.length - 2].id;
+      const [prev] = await tx
+        .select({ content: manuscriptVersions.content })
+        .from(manuscriptVersions)
+        .where(eq(manuscriptVersions.id, prevVersionId))
+        .limit(1);
+      previousContent = prev?.content ?? null;
+    }
+
     const genreHint =
       (manuscript?.genre as { primary?: string } | null)?.primary ?? null;
 
     return {
       content: version.content,
+      previousContent,
       contentExtractionStatus: version.contentExtractionStatus,
       genreHint,
       versions,

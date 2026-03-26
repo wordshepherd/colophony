@@ -211,6 +211,7 @@ export type SaveCopyeditInput = z.infer<typeof saveCopyeditInputSchema>;
 
 export const copyeditContentSchema = z.object({
   content: z.unknown().nullable(),
+  previousContent: z.unknown().nullable(),
   contentExtractionStatus: z.string(),
   genreHint: z.string().nullable(),
   versions: z.array(
