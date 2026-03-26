@@ -25,6 +25,8 @@ import { statusTokenService } from '../services/status-token.service.js';
 import { fileService } from '../services/file.service.js';
 import { auditService } from '../services/audit.service.js';
 import { enqueueFileScan } from '../queues/file-scan.queue.js';
+import { enqueueContentExtract } from '../queues/content-extract.queue.js';
+import { SUPPORTED_MIME_TYPES } from '../converters/index.js';
 import { getGlobalRegistry } from '../adapters/registry-accessor.js';
 import type { S3StorageAdapter } from '../adapters/storage/index.js';
 
@@ -648,6 +650,27 @@ export async function registerTusdWebhooks(
             s3Err,
             'Failed to move file from quarantine (scan disabled)',
           );
+        }
+
+        // Chain: enqueue content extraction (scan skipped, file is CLEAN)
+        // Only for supported MIME types — skip images, audio, etc.
+        if (SUPPORTED_MIME_TYPES.has(mimeType)) {
+          try {
+            await enqueueContentExtract(env, {
+              fileId: fileIdToScan,
+              storageKey,
+              manuscriptVersionId,
+              userId,
+              ...(orgId ? { organizationId: orgId } : {}),
+              mimeType,
+              filename,
+            });
+          } catch (extractErr) {
+            request.log.error(
+              extractErr,
+              'Failed to enqueue content extraction (scan disabled path)',
+            );
+          }
         }
       }
 

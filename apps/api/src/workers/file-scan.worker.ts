@@ -12,6 +12,8 @@ import { auditService } from '../services/audit.service.js';
 import type { S3StorageAdapter } from '../adapters/storage/index.js';
 import { createInstrumentedWorker } from '../config/instrumented-worker.js';
 import type { Worker } from 'bullmq';
+import { enqueueContentExtract } from '../queues/content-extract.queue.js';
+import { SUPPORTED_MIME_TYPES } from '../converters/index.js';
 
 let worker: Worker<FileScanJobData> | null = null;
 let clamInstance: NodeClam | null = null;
@@ -131,6 +133,23 @@ export function startFileScanWorker(
               organizationId: job.data.organizationId,
             });
           });
+
+          // Chain: enqueue content extraction for the clean file
+          // Only for supported MIME types — skip images, audio, etc.
+          const file = await withRls(rlsCtx, async (tx: DrizzleDb) =>
+            fileService.getById(tx, fileId),
+          );
+          if (file && SUPPORTED_MIME_TYPES.has(file.mimeType)) {
+            await enqueueContentExtract(env, {
+              fileId: file.id,
+              storageKey,
+              manuscriptVersionId: file.manuscriptVersionId,
+              userId: job.data.userId,
+              organizationId: job.data.organizationId,
+              mimeType: file.mimeType,
+              filename: file.filename,
+            });
+          }
         } else {
           // INFECTED: delete from quarantine
           await storage.deleteFromBucket(storage.quarantineBucket, storageKey);

@@ -21,10 +21,12 @@ vi.mock('@colophony/db', () => ({
 
 const mockUpdateScanStatus = vi.fn();
 const mockUpdateContentHash = vi.fn();
+const mockGetById = vi.fn();
 vi.mock('../../services/file.service.js', () => ({
   fileService: {
     updateScanStatus: (...args: unknown[]) => mockUpdateScanStatus(...args),
     updateContentHash: (...args: unknown[]) => mockUpdateContentHash(...args),
+    getById: (...args: unknown[]) => mockGetById(...args),
   },
 }));
 
@@ -46,6 +48,12 @@ vi.mock('clamscan', () => ({
       },
     };
   }),
+}));
+
+const mockEnqueueContentExtract = vi.fn();
+vi.mock('../../queues/content-extract.queue.js', () => ({
+  enqueueContentExtract: (...args: unknown[]) =>
+    mockEnqueueContentExtract(...args),
 }));
 
 // Mock instrumented worker — capture the processor function directly
@@ -116,8 +124,15 @@ describe('file-scan worker', () => {
     capturedProcessor = null;
     // withRls passes through to the callback with a mock tx
     mockWithRls.mockImplementation(
-      async (_ctx: unknown, fn: (tx: unknown) => Promise<void>) => fn({}),
+      async (_ctx: unknown, fn: (tx: unknown) => Promise<unknown>) => fn({}),
     );
+    // getById returns a file record for content extraction chaining
+    mockGetById.mockResolvedValue({
+      id: 'file-1',
+      manuscriptVersionId: 'mv-1',
+      mimeType: 'text/plain',
+      filename: 'test.txt',
+    });
   });
 
   function getProcessor() {

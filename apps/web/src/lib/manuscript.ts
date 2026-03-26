@@ -1,55 +1,24 @@
-// ProseMirror document types aligned with docs/manuscript-format.md spec
-// and a plain-text-to-ProseMirror converter for immediate use before
-// the backend content extraction pipeline ships.
+// ProseMirror document types — re-exported from shared package.
+// Converter functions are frontend-only (plain-text fallback before backend
+// content extraction pipeline).
 
-// --- Types ---
+// --- Types (from shared package) ---
 
-export type GenreHint = "prose" | "poetry" | "hybrid" | "creative_nonfiction";
+export type {
+  GenreHint,
+  ProseMirrorMark,
+  ProseMirrorNodeType,
+  ProseMirrorNode,
+  SubmissionMetadata,
+  ProseMirrorDoc,
+  ReadingAnchor,
+} from "@colophony/types";
 
-export interface ProseMirrorMark {
-  type: "emphasis" | "strong" | "small_caps" | "smart_text";
-  attrs?: { original?: string };
-}
-
-export type ProseMirrorNodeType =
-  | "paragraph"
-  | "section_break"
-  | "block_quote"
-  | "poem_line"
-  | "stanza_break"
-  | "preserved_indent"
-  | "caesura"
-  | "preserved_whitespace";
-
-export interface ProseMirrorNode {
-  type: ProseMirrorNodeType;
-  attrs?: Record<string, unknown>;
-  content?: ProseMirrorNode[];
-  text?: string;
-  marks?: ProseMirrorMark[];
-}
-
-export interface SubmissionMetadata {
-  original_filename: string;
-  original_format: string;
-  converted_at: string; // ISO 8601
-  converter_version: string;
-}
-
-export interface ProseMirrorDoc {
-  type: "doc";
-  attrs?: {
-    genre_hint?: GenreHint;
-    submission_metadata?: SubmissionMetadata;
-    smart_typography_applied?: boolean;
-  };
-  content: ProseMirrorNode[];
-}
-
-export interface ReadingAnchor {
-  nodeIndex: number;
-  charOffset: number;
-}
+import type {
+  GenreHint,
+  ProseMirrorNode,
+  ProseMirrorDoc,
+} from "@colophony/types";
 
 // --- Converter ---
 

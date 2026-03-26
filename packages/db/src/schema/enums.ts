@@ -21,6 +21,14 @@ export const scanStatusEnum = pgEnum("ScanStatus", [
   "FAILED",
 ]);
 
+export const contentExtractionStatusEnum = pgEnum("ContentExtractionStatus", [
+  "PENDING",
+  "EXTRACTING",
+  "COMPLETE",
+  "FAILED",
+  "UNSUPPORTED",
+]);
+
 export const paymentStatusEnum = pgEnum("PaymentStatus", [
   "PENDING",
   "PROCESSING",
