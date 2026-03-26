@@ -20,6 +20,10 @@ AS $$
   AND s.status != 'DRAFT';
 $$;
 --> statement-breakpoint
+REVOKE ALL ON FUNCTION manuscript_ids_for_org(uuid) FROM PUBLIC;
+--> statement-breakpoint
+GRANT EXECUTE ON FUNCTION manuscript_ids_for_org(uuid) TO app_user;
+--> statement-breakpoint
 CREATE POLICY "manuscripts_org_read" ON "manuscripts" AS PERMISSIVE FOR SELECT TO "app_user"
 USING (id IN (SELECT manuscript_ids_for_org(current_org_id())));
 --> statement-breakpoint
