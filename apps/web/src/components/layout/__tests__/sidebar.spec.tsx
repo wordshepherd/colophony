@@ -67,7 +67,7 @@ describe("Sidebar", () => {
     expect(screen.getByText("Settings")).toBeInTheDocument();
   });
 
-  it("should show Editor section only when isEditor", () => {
+  it("should show Editorial section only when isEditor", () => {
     mockIsEditor = false;
     const { rerender } = render(<Sidebar />);
     expect(screen.queryByText("Editor Dashboard")).not.toBeInTheDocument();
@@ -77,7 +77,7 @@ describe("Sidebar", () => {
     expect(screen.getByText("Editor Dashboard")).toBeInTheDocument();
   });
 
-  it("should show Admin section only when isAdmin", () => {
+  it("should show Operations section only when isAdmin", () => {
     mockIsAdmin = false;
     const { rerender } = render(<Sidebar />);
     expect(screen.queryByText("Organization")).not.toBeInTheDocument();
@@ -120,10 +120,10 @@ describe("Sidebar", () => {
     expect(nav).toHaveAttribute("aria-label", "Main navigation");
   });
 
-  it("should show Editor section header text", () => {
+  it("should show Editorial section header text", () => {
     mockIsEditor = true;
     render(<Sidebar />);
-    expect(screen.getByText("Editor")).toBeInTheDocument();
+    expect(screen.getByText("Editorial")).toBeInTheDocument();
   });
 
   it("should show Forms link when isEditor", () => {
@@ -157,7 +157,7 @@ describe("Sidebar", () => {
     expect(dashboardLink?.className).toMatch(/(?:^|\s)bg-accent(?:\s|$)/);
   });
 
-  it("should show Federation link in admin section when isAdmin", () => {
+  it("should show Federation link in Operations section when isAdmin", () => {
     mockIsAdmin = true;
     render(<Sidebar />);
     const link = screen.getByText("Federation");
@@ -165,14 +165,14 @@ describe("Sidebar", () => {
     expect(link.closest("a")).toHaveAttribute("href", "/federation");
   });
 
-  it("should hide Editor, Slate, and Admin sections for READER (non-editor, non-admin)", () => {
+  it("should hide Editorial, Production, and Operations sections for READER (non-editor, non-admin)", () => {
     mockIsEditor = false;
     mockIsAdmin = false;
     render(<Sidebar />);
     expect(screen.queryByText("Editor Dashboard")).not.toBeInTheDocument();
-    expect(screen.queryByText("Slate Dashboard")).not.toBeInTheDocument();
+    expect(screen.queryByText("Production Dashboard")).not.toBeInTheDocument();
     expect(screen.queryByText("Organization")).not.toBeInTheDocument();
-    // Submitter navigation always visible
+    // Writing navigation always visible
     expect(screen.getByText("My Submissions")).toBeInTheDocument();
     expect(screen.getByText("Manuscripts")).toBeInTheDocument();
     expect(screen.getByText("Settings")).toBeInTheDocument();
@@ -188,5 +188,22 @@ describe("Sidebar", () => {
 
     const dashboardLink = screen.getByText("Editor Dashboard").closest("a");
     expect(dashboardLink?.className).not.toMatch(/(?:^|\s)bg-accent(?:\s|$)/);
+  });
+
+  it("should highlight active group header", () => {
+    mockPathname = "/workspace";
+    render(<Sidebar />);
+
+    const writingHeader = screen.getByText("Writing");
+    expect(writingHeader.className).toMatch(/text-foreground/);
+  });
+
+  it("should not highlight inactive group headers", () => {
+    mockIsEditor = true;
+    mockPathname = "/workspace";
+    render(<Sidebar />);
+
+    const editorialHeader = screen.getByText("Editorial");
+    expect(editorialHeader.className).toMatch(/text-muted-foreground/);
   });
 });
