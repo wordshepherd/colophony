@@ -2,6 +2,8 @@
 // Shared between the backend content extraction pipeline and the frontend
 // ManuscriptRenderer component.
 
+import { z } from "zod";
+
 // --- Genre ---
 
 export type GenreHint = "prose" | "poetry" | "hybrid" | "creative_nonfiction";
@@ -67,3 +69,27 @@ export type ContentExtractionStatus =
   | "COMPLETE"
   | "FAILED"
   | "UNSUPPORTED";
+
+// --- Zod Schemas (for tRPC output validation) ---
+
+export const contentExtractionStatusSchema = z.enum([
+  "PENDING",
+  "EXTRACTING",
+  "COMPLETE",
+  "FAILED",
+  "UNSUPPORTED",
+]);
+
+/**
+ * Lightweight structural check for ProseMirror JSON.
+ * Validates the document envelope (type + content array) without
+ * recursively validating every node — full node structure is
+ * guaranteed by the backend converters.
+ */
+export const proseMirrorDocSchema = z
+  .object({
+    type: z.literal("doc"),
+    attrs: z.record(z.string(), z.unknown()).optional(),
+    content: z.array(z.unknown()),
+  })
+  .passthrough();

@@ -557,6 +557,9 @@ export const submissionService = {
               manuscriptId: manuscripts.id,
               manuscriptTitle: manuscripts.title,
               versionNumber: manuscriptVersions.versionNumber,
+              extractedContent: manuscriptVersions.content,
+              contentExtractionStatus:
+                manuscriptVersions.contentExtractionStatus,
             })
             .from(manuscriptVersions)
             .innerJoin(
@@ -573,7 +576,18 @@ export const submissionService = {
       ...submission,
       files: versionFiles,
       submitterEmail: submitter?.email ?? null,
-      manuscript: manuscriptInfo,
+      manuscript: manuscriptInfo
+        ? {
+            ...manuscriptInfo,
+            // Drizzle jsonb() returns `unknown`; tRPC .output() validates at
+            // runtime via proseMirrorDocSchema — cast is safe here.
+            extractedContent: manuscriptInfo.extractedContent as {
+              type: 'doc';
+              content: unknown[];
+              attrs?: Record<string, unknown>;
+            } | null,
+          }
+        : null,
     };
   },
 
