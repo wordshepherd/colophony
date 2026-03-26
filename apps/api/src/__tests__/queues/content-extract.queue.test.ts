@@ -226,6 +226,7 @@ describe('content-extract queue integration', () => {
     const file = await createFile(version.id, {
       mimeType: 'text/plain',
       filename: 'quotes.txt',
+      scanStatus: 'CLEAN' as any,
     });
 
     mockStorage.downloadFromBucket.mockResolvedValue(
