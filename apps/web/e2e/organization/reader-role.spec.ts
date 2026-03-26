@@ -14,9 +14,9 @@ test.describe("READER role restrictions", () => {
       authedPage.getByRole("link", { name: "Editor Dashboard" }),
     ).not.toBeVisible();
 
-    // Slate section should be hidden
+    // Production section should be hidden
     await expect(
-      authedPage.getByRole("link", { name: "Slate Dashboard" }),
+      authedPage.getByRole("link", { name: "Production Dashboard" }),
     ).not.toBeVisible();
 
     // Admin section should be hidden (Organization link)
