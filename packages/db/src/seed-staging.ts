@@ -771,6 +771,248 @@ async function main() {
       `  E2E demo user: ${E2E_EMAIL} (ADMIN in both orgs, 5 submissions, 6 external, 1 profile)`,
     );
 
+    // -----------------------------------------------------------------------
+    // Section A2: Dev user writer-side data (david@mahaffey.me)
+    //
+    // The dev user typically exists from Zitadel login; if not, create it.
+    // Adds writer-side submissions, manuscripts, and workspace data so the
+    // account has content on both editor and writer sides.
+    // -----------------------------------------------------------------------
+    const DEV_EMAIL = "david@mahaffey.me";
+
+    let [devUser] = await tx
+      .select()
+      .from(users)
+      .where(eq(users.email, DEV_EMAIL));
+
+    if (!devUser) {
+      [devUser] = await tx
+        .insert(users)
+        .values({
+          email: DEV_EMAIL,
+          zitadelUserId: "seed-zitadel-dev-001",
+          emailVerified: true,
+          emailVerifiedAt: daysAgo(180),
+        })
+        .returning();
+    }
+
+    // Ensure membership in org1 (editor side already set up manually; this is
+    // idempotent — skip if already a member)
+    const [devMembership] = await tx
+      .select({ id: organizationMembers.id })
+      .from(organizationMembers)
+      .where(
+        sql`${organizationMembers.organizationId} = ${base.org1.id} AND ${organizationMembers.userId} = ${devUser!.id}`,
+      );
+
+    if (!devMembership) {
+      await tx.insert(organizationMembers).values({
+        organizationId: base.org1.id,
+        userId: devUser!.id,
+        role: "ADMIN",
+      });
+    }
+
+    // Writer-side submissions with manuscripts and full content
+    const devSubmissionData = [
+      {
+        title: "The Apiarist's Lament",
+        status: "ACCEPTED" as const,
+        daysBack: 60,
+        genre: "fiction" as const,
+      },
+      {
+        title: "Nocturne for a Rust Belt Town",
+        status: "UNDER_REVIEW" as const,
+        daysBack: 14,
+        genre: "poetry" as const,
+      },
+      {
+        title: "On Forgetting How to Read",
+        status: "SUBMITTED" as const,
+        daysBack: 7,
+        genre: "creative_nonfiction" as const,
+      },
+      {
+        title: "Every House a Reliquary",
+        status: "REJECTED" as const,
+        daysBack: 110,
+        genre: "fiction" as const,
+      },
+      {
+        title: "Field Guide to Small Silences",
+        status: "REVISE_AND_RESUBMIT" as const,
+        daysBack: 35,
+        genre: "poetry" as const,
+      },
+      {
+        title: "The Secondhand Sublime",
+        status: "ACCEPTED" as const,
+        daysBack: 25,
+        genre: "creative_nonfiction" as const,
+      },
+    ];
+
+    const devGenreBuilderMap = {
+      fiction: proseFictionDoc,
+      poetry: poetryDoc,
+      creative_nonfiction: creativeNonfictionDoc,
+    } as const;
+
+    for (const sub of devSubmissionData) {
+      const [s] = await tx
+        .insert(submissions)
+        .values({
+          organizationId: base.org1.id,
+          submitterId: devUser!.id,
+          submissionPeriodId: base.openPeriod.id,
+          title: sub.title,
+          content: `Submission text for "${sub.title}".`,
+          coverLetter: `Dear Editors, please consider "${sub.title}" for publication.`,
+          status: sub.status,
+          submittedAt: daysAgo(sub.daysBack),
+        })
+        .returning();
+
+      const [ms] = await tx
+        .insert(manuscripts)
+        .values({
+          ownerId: devUser!.id,
+          title: sub.title,
+          genre: { primary: sub.genre, sub: null, hybrid: [] },
+        })
+        .returning();
+
+      const [ver] = await tx
+        .insert(manuscriptVersions)
+        .values({
+          manuscriptId: ms!.id,
+          versionNumber: 1,
+          label: "Submitted version",
+          content: devGenreBuilderMap[sub.genre](),
+          contentFormat: "prosemirror_v1",
+          contentExtractionStatus: "COMPLETE",
+        })
+        .returning();
+
+      await tx
+        .update(submissions)
+        .set({ manuscriptVersionId: ver!.id })
+        .where(eq(submissions.id, s!.id));
+
+      // History entries
+      type AnyStatus =
+        | "DRAFT"
+        | "SUBMITTED"
+        | "UNDER_REVIEW"
+        | "ACCEPTED"
+        | "REJECTED"
+        | "HOLD"
+        | "WITHDRAWN"
+        | "REVISE_AND_RESUBMIT";
+      const histories: {
+        submissionId: string;
+        fromStatus: AnyStatus | null;
+        toStatus: AnyStatus;
+        changedBy: string;
+        changedAt: Date;
+        comment?: string;
+      }[] = [
+        {
+          submissionId: s!.id,
+          fromStatus: "DRAFT" as const,
+          toStatus: "SUBMITTED" as const,
+          changedBy: devUser!.id,
+          changedAt: daysAgo(sub.daysBack),
+        },
+      ];
+
+      if (!["SUBMITTED", "DRAFT"].includes(sub.status)) {
+        histories.push({
+          submissionId: s!.id,
+          fromStatus: "SUBMITTED" as const,
+          toStatus: "UNDER_REVIEW" as const,
+          changedBy: base.editorUser.id,
+          changedAt: daysAgo(sub.daysBack - 3),
+        });
+      }
+
+      if (
+        ["ACCEPTED", "REJECTED", "REVISE_AND_RESUBMIT"].includes(sub.status)
+      ) {
+        histories.push({
+          submissionId: s!.id,
+          fromStatus: "UNDER_REVIEW" as const,
+          toStatus: sub.status,
+          changedBy: base.adminUser.id,
+          changedAt: daysAgo(Math.max(1, sub.daysBack - 10)),
+          comment:
+            sub.status === "ACCEPTED"
+              ? "Accepted for publication."
+              : sub.status === "REJECTED"
+                ? "Thank you for submitting. Not the right fit for us."
+                : "Strong work — we'd love a revised version.",
+        });
+      }
+
+      await tx.insert(submissionHistory).values(histories);
+
+      // Correspondence on accepted submissions
+      if (sub.status === "ACCEPTED") {
+        await tx.insert(correspondence).values({
+          userId: devUser!.id,
+          submissionId: s!.id,
+          direction: "outbound",
+          channel: "email",
+          sentAt: daysAgo(Math.max(1, sub.daysBack - 12)),
+          subject: `Acceptance: ${sub.title}`,
+          body: `Dear writer, we are delighted to accept "${sub.title}" for publication in The Quarterly Review.`,
+          senderName: "The Quarterly Review",
+          senderEmail: "editor@quarterlyreview.org",
+          isPersonalized: true,
+          source: "auto",
+        });
+      }
+    }
+
+    // External submissions tracked by the dev user
+    const devExternalSubs = [
+      {
+        journal: "Granta",
+        status: "sent" as const,
+        daysBack: 10,
+      },
+      {
+        journal: "The Sewanee Review",
+        status: "rejected" as const,
+        daysBack: 85,
+      },
+      {
+        journal: "A Public Space",
+        status: "accepted" as const,
+        daysBack: 50,
+      },
+    ];
+
+    for (const ext of devExternalSubs) {
+      await tx.insert(externalSubmissions).values({
+        userId: devUser!.id,
+        journalName: ext.journal,
+        status: ext.status,
+        sentAt: daysAgo(ext.daysBack),
+        respondedAt: ["accepted", "rejected"].includes(ext.status)
+          ? daysAgo(ext.daysBack - randomInt(15, 40))
+          : null,
+        method: "Submittable",
+        notes: ext.status === "accepted" ? "Accepted for Spring issue." : null,
+      });
+    }
+
+    console.log(
+      `  Dev user: ${DEV_EMAIL} (ADMIN in org1, 6 submissions, 3 external)`,
+    );
+
     const allWriters = [
       base.writerUser,
       writer2!,
@@ -1353,7 +1595,48 @@ async function main() {
       });
     }
 
-    console.log("  Pipeline: 2 comments + 4 new items");
+    // Ensure pipeline items in copyedit-active stages have extracted content
+    // (bulk creation uses a distribution that leaves ~40% without content)
+    let contentFixups = 0;
+    for (let i = 0; i < Math.min(4, newAccepted.length); i++) {
+      const sub = newAccepted[i]!;
+      if (!sub.manuscriptVersionId) continue;
+
+      const [ver] = await tx
+        .select()
+        .from(manuscriptVersions)
+        .where(eq(manuscriptVersions.id, sub.manuscriptVersionId));
+
+      if (ver && ver.contentExtractionStatus !== "COMPLETE") {
+        const [ms] = await tx
+          .select()
+          .from(manuscripts)
+          .where(eq(manuscripts.id, ver.manuscriptId));
+
+        const genre =
+          (ms?.genre as { primary: string } | null)?.primary ?? "fiction";
+        const builder =
+          genre === "poetry"
+            ? poetryDoc
+            : genre === "creative_nonfiction"
+              ? creativeNonfictionDoc
+              : proseFictionDoc;
+
+        await tx
+          .update(manuscriptVersions)
+          .set({
+            content: builder(),
+            contentFormat: "prosemirror_v1",
+            contentExtractionStatus: "COMPLETE",
+          })
+          .where(eq(manuscriptVersions.id, ver.id));
+        contentFixups++;
+      }
+    }
+
+    console.log(
+      `  Pipeline: 2 comments + 4 new items (${contentFixups} content fix-ups)`,
+    );
 
     // -----------------------------------------------------------------------
     // Section F: Email templates
