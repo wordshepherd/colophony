@@ -21,6 +21,11 @@ import { db, pool } from "./client";
 import type { DrizzleDb } from "./context";
 import { seedBase, daysAgo } from "./seed";
 import {
+  proseFictionDoc,
+  poetryDoc,
+  creativeNonfictionDoc,
+} from "./seed-content";
+import {
   organizations,
   users,
   organizationMembers,
@@ -587,7 +592,7 @@ async function main() {
       },
     ];
 
-    for (const sub of e2eSubmissionData) {
+    for (const [subIdx, sub] of e2eSubmissionData.entries()) {
       const [s] = await tx
         .insert(submissions)
         .values({
@@ -602,17 +607,40 @@ async function main() {
         })
         .returning();
 
-      // Manuscript + version for each
+      // Manuscript + version for each — cycle genres and extraction statuses
+      const genreBuilders = [proseFictionDoc, poetryDoc, creativeNonfictionDoc];
+      const genreNames = ["fiction", "poetry", "creative_nonfiction"] as const;
+      const genreIdx = subIdx % genreBuilders.length;
       const [ms] = await tx
         .insert(manuscripts)
-        .values({ ownerId: e2eUser!.id, title: sub.title })
+        .values({
+          ownerId: e2eUser!.id,
+          title: sub.title,
+          genre: { primary: genreNames[genreIdx], sub: null, hybrid: [] },
+        })
         .returning();
+      // ~70% COMPLETE, ~15% PENDING, ~15% FAILED
+      const extractionStatus =
+        subIdx % 7 === 0
+          ? ("FAILED" as const)
+          : subIdx % 7 === 3
+            ? ("PENDING" as const)
+            : ("COMPLETE" as const);
+      const doc =
+        extractionStatus === "COMPLETE" ? genreBuilders[genreIdx]() : undefined;
       const [ver] = await tx
         .insert(manuscriptVersions)
         .values({
           manuscriptId: ms!.id,
           versionNumber: 1,
           label: "Submitted version",
+          ...(doc
+            ? {
+                content: doc,
+                contentFormat: "prosemirror_v1",
+                contentExtractionStatus: "COMPLETE",
+              }
+            : { contentExtractionStatus: extractionStatus }),
         })
         .returning();
       await tx
@@ -1077,14 +1105,41 @@ async function main() {
 
         // Create manuscript + version + file for non-draft submissions
         if (status !== "DRAFT") {
+          const bulkGenreBuilders = [
+            proseFictionDoc,
+            poetryDoc,
+            creativeNonfictionDoc,
+          ];
+          const bulkGenreNames = [
+            "fiction",
+            "poetry",
+            "creative_nonfiction",
+          ] as const;
+          const gIdx = titleIdx % bulkGenreBuilders.length;
+
           const [ms] = await tx
             .insert(manuscripts)
             .values({
               ownerId: writer.id,
               title,
               description: `Manuscript for "${title}".`,
+              genre: { primary: bulkGenreNames[gIdx], sub: null, hybrid: [] },
             })
             .returning();
+
+          // ~60% COMPLETE, ~20% PENDING, ~10% FAILED, ~10% EXTRACTING
+          const bulkExtractionStatus =
+            titleIdx % 10 === 0
+              ? ("FAILED" as const)
+              : titleIdx % 10 === 5
+                ? ("EXTRACTING" as const)
+                : titleIdx % 5 === 0
+                  ? ("PENDING" as const)
+                  : ("COMPLETE" as const);
+          const bulkDoc =
+            bulkExtractionStatus === "COMPLETE"
+              ? bulkGenreBuilders[gIdx]()
+              : undefined;
 
           const [ver] = await tx
             .insert(manuscriptVersions)
@@ -1092,6 +1147,13 @@ async function main() {
               manuscriptId: ms!.id,
               versionNumber: 1,
               label: "Submitted version",
+              ...(bulkDoc
+                ? {
+                    content: bulkDoc,
+                    contentFormat: "prosemirror_v1",
+                    contentExtractionStatus: "COMPLETE",
+                  }
+                : { contentExtractionStatus: bulkExtractionStatus }),
             })
             .returning();
 

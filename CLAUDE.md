@@ -109,6 +109,9 @@ Per-directory CLAUDE.md files contain domain-specific details:
 | **Layout shells**          | `apps/web/src/app/(dashboard)/{editor,slate,federation,webhooks,organizations}/layout.tsx` |
 | **Split pane**             | `apps/web/src/components/editor/editorial-split-pane.tsx` (triage/deep-read orchestrator)  |
 | **ManuscriptRenderer**     | `apps/web/src/components/manuscripts/manuscript-renderer.tsx` (genre-aware typography)     |
+| **ManuscriptEditor**       | `apps/web/src/components/manuscripts/manuscript-editor.tsx` (TipTap copyedit editor)       |
+| **ManuscriptDiff**         | `apps/web/src/components/manuscripts/manuscript-diff.tsx` (word-level diff view)           |
+| **TipTap manuscript ext**  | `apps/web/src/lib/tiptap-manuscript-extensions.ts` (custom nodes/marks + converters)       |
 | **Keyboard shortcuts**     | `apps/web/src/hooks/use-shortcuts.ts` (shell-scoped shortcut hook)                         |
 | **ProseMirror types**      | `packages/types/src/prosemirror.ts` (shared), `apps/web/src/lib/manuscript.ts` (converter) |
 | **Content converters**     | `apps/api/src/converters/` (text, docx, smart-typography, format router)                   |
