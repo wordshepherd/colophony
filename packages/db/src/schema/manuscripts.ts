@@ -107,6 +107,20 @@ export const manuscriptVersions = pgTable(
         AND s.status != 'DRAFT'
       )`,
     }),
+    // Copyedit: org editors can INSERT new versions for manuscripts in their pipeline.
+    // Uses SECURITY DEFINER function to avoid RLS recursion on manuscript_versions.
+    pgPolicy("manuscript_versions_copyedit_insert", {
+      for: "insert",
+      to: "app_user",
+      withCheck: sql`manuscript_id IN (SELECT manuscript_ids_in_copyedit(current_org_id()))`,
+    }),
+    // Copyedit: org editors can UPDATE versions for manuscripts in their pipeline
+    pgPolicy("manuscript_versions_copyedit_update", {
+      for: "update",
+      to: "app_user",
+      using: sql`manuscript_id IN (SELECT manuscript_ids_in_copyedit(current_org_id()))`,
+      withCheck: sql`manuscript_id IN (SELECT manuscript_ids_in_copyedit(current_org_id()))`,
+    }),
   ],
 ).enableRLS();
 

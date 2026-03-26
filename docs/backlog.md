@@ -481,7 +481,7 @@
 - [x] [P2] Author name in CMS publish payload — `CmsPiecePayload.author` is always `null`; fetch submitter name from user record — (codebase audit 2026-02-27; done 2026-03-03)
 - [x] [P2] CMS external ID tracking — store `externalId`/`externalUrl` returned from CMS publish back on the issue/items — (codebase audit 2026-02-27; done 2026-03-03)
 - [ ] [P3] Additional CMS adapters — Substack, Contentful, or other targets based on early adopter needs — (codebase audit 2026-02-27)
-- [ ] [P3] In-browser copyediting or diff view between manuscript versions — (persona gap analysis 2026-02-27)
+- [x] [P3] In-browser copyediting or diff view between manuscript versions — (persona gap analysis 2026-02-27; done 2026-03-26 PR pending)
 - [x] [P3] READER role enforcement — define what READER can and cannot do distinct from EDITOR; currently decorative — (persona gap analysis 2026-02-27; done 2026-03-03)
 - [ ] [P3] Email invitation workflow — invite by email link/token instead of requiring pre-existing Zitadel account — (persona gap analysis 2026-02-27)
 - [ ] [P3] Custom org roles beyond ADMIN/EDITOR/READER — named roles with configurable permission scopes — (persona gap analysis 2026-02-27)

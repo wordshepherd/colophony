@@ -5,12 +5,14 @@ import {
   submissions,
   publications,
   users,
+  manuscripts,
+  manuscriptVersions,
   eq,
   and,
   sql,
   type DrizzleDb,
 } from '@colophony/db';
-import { desc, inArray, count, getTableColumns } from 'drizzle-orm';
+import { desc, inArray, count, getTableColumns, asc } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 import type {
   CreatePipelineItemInput,
@@ -19,6 +21,7 @@ import type {
   AddPipelineCommentInput,
   ListPipelineItemsInput,
   PipelineStage,
+  SaveCopyeditInput,
 } from '@colophony/types';
 import {
   AuditActions,
@@ -544,4 +547,243 @@ export const pipelineService = {
       .orderBy(desc(pipelineHistory.changedAt))
       .limit(1000);
   },
+
+  // -------------------------------------------------------------------------
+  // Copyedit
+  // -------------------------------------------------------------------------
+
+  async getCopyeditContent(
+    tx: DrizzleDb,
+    pipelineItemId: string,
+    orgId: string,
+  ) {
+    const item = await pipelineService.getById(tx, pipelineItemId, orgId);
+    if (!item) throw new PipelineItemNotFoundError(pipelineItemId);
+
+    // Get submission with explicit orgId filter (defense-in-depth)
+    const [sub] = await tx
+      .select({
+        manuscriptVersionId: submissions.manuscriptVersionId,
+      })
+      .from(submissions)
+      .innerJoin(pipelineItems, eq(submissions.id, pipelineItems.submissionId))
+      .where(
+        and(
+          eq(pipelineItems.id, pipelineItemId),
+          eq(submissions.organizationId, orgId),
+        ),
+      )
+      .limit(1);
+
+    if (!sub?.manuscriptVersionId) {
+      return {
+        content: null,
+        previousContent: null,
+        contentExtractionStatus: 'PENDING' as const,
+        genreHint: null,
+        versions: [],
+      };
+    }
+
+    // Get current version content
+    const [version] = await tx
+      .select({
+        content: manuscriptVersions.content,
+        contentExtractionStatus: manuscriptVersions.contentExtractionStatus,
+        manuscriptId: manuscriptVersions.manuscriptId,
+      })
+      .from(manuscriptVersions)
+      .where(eq(manuscriptVersions.id, sub.manuscriptVersionId))
+      .limit(1);
+
+    if (!version) {
+      return {
+        content: null,
+        previousContent: null,
+        contentExtractionStatus: 'PENDING' as const,
+        genreHint: null,
+        versions: [],
+      };
+    }
+
+    // Get genre hint from manuscript
+    const [manuscript] = await tx
+      .select({ genre: manuscripts.genre })
+      .from(manuscripts)
+      .where(eq(manuscripts.id, version.manuscriptId))
+      .limit(1);
+
+    // Get all versions for this manuscript (for diff view)
+    const versions = await tx
+      .select({
+        id: manuscriptVersions.id,
+        versionNumber: manuscriptVersions.versionNumber,
+        label: manuscriptVersions.label,
+        createdAt: manuscriptVersions.createdAt,
+      })
+      .from(manuscriptVersions)
+      .where(eq(manuscriptVersions.manuscriptId, version.manuscriptId))
+      .orderBy(asc(manuscriptVersions.versionNumber));
+
+    // Get previous version content for diff view (if > 1 version exists)
+    let previousContent: unknown = null;
+    if (versions.length > 1) {
+      const prevVersionId = versions[versions.length - 2].id;
+      const [prev] = await tx
+        .select({ content: manuscriptVersions.content })
+        .from(manuscriptVersions)
+        .where(eq(manuscriptVersions.id, prevVersionId))
+        .limit(1);
+      previousContent = prev?.content ?? null;
+    }
+
+    const genreHint =
+      (manuscript?.genre as { primary?: string } | null)?.primary ?? null;
+
+    return {
+      content: version.content,
+      previousContent,
+      contentExtractionStatus: version.contentExtractionStatus,
+      genreHint,
+      versions,
+    };
+  },
+
+  async saveCopyedit(
+    tx: DrizzleDb,
+    pipelineItemId: string,
+    input: SaveCopyeditInput,
+    orgId: string,
+  ) {
+    // 1. Verify pipeline item exists + org filter
+    const item = await pipelineService.getById(tx, pipelineItemId, orgId);
+    if (!item) throw new PipelineItemNotFoundError(pipelineItemId);
+
+    // 2. Verify stage allows copyediting
+    if (
+      item.stage !== 'COPYEDIT_IN_PROGRESS' &&
+      item.stage !== 'AUTHOR_REVIEW'
+    ) {
+      throw new InvalidPipelineTransitionError(
+        item.stage,
+        'Cannot save copyedit in this stage',
+      );
+    }
+
+    // 3. Get submission with explicit orgId filter
+    const [sub] = await tx
+      .select({
+        id: submissions.id,
+        manuscriptVersionId: submissions.manuscriptVersionId,
+      })
+      .from(submissions)
+      .where(
+        and(
+          eq(submissions.id, item.submissionId),
+          eq(submissions.organizationId, orgId),
+        ),
+      )
+      .limit(1);
+
+    if (!sub?.manuscriptVersionId) {
+      throw new Error('Submission has no manuscript version');
+    }
+
+    // Get the manuscript ID from the current version
+    const [currentVersion] = await tx
+      .select({ manuscriptId: manuscriptVersions.manuscriptId })
+      .from(manuscriptVersions)
+      .where(eq(manuscriptVersions.id, sub.manuscriptVersionId))
+      .limit(1);
+
+    if (!currentVersion) {
+      throw new Error('Current manuscript version not found');
+    }
+
+    // 4. Create new version — retry once on unique constraint violation
+    let newVersion: typeof manuscriptVersions.$inferSelect;
+    try {
+      newVersion = await createCopyeditVersion(
+        tx,
+        currentVersion.manuscriptId,
+        input,
+      );
+    } catch (err: unknown) {
+      // Retry once on unique constraint violation (concurrent saves)
+      if (err instanceof Error && err.message.includes('unique constraint')) {
+        newVersion = await createCopyeditVersion(
+          tx,
+          currentVersion.manuscriptId,
+          input,
+        );
+      } else {
+        throw err;
+      }
+    }
+
+    // 6. Update submission to point to new version (defense-in-depth orgId)
+    await tx
+      .update(submissions)
+      .set({ manuscriptVersionId: newVersion.id })
+      .where(
+        and(eq(submissions.id, sub.id), eq(submissions.organizationId, orgId)),
+      );
+
+    return newVersion;
+  },
+
+  async saveCopyeditWithAudit(
+    ctx: ServiceContext,
+    pipelineItemId: string,
+    input: SaveCopyeditInput,
+  ) {
+    assertEditorOrAdmin(ctx.actor.role);
+    const version = await pipelineService.saveCopyedit(
+      ctx.tx,
+      pipelineItemId,
+      input,
+      ctx.actor.orgId,
+    );
+    await ctx.audit({
+      action: AuditActions.PIPELINE_COPYEDIT_SAVED,
+      resource: AuditResources.PIPELINE_ITEM,
+      resourceId: pipelineItemId,
+      newValue: {
+        manuscriptVersionId: version.id,
+        versionNumber: version.versionNumber,
+      },
+    });
+    return version;
+  },
 };
+
+/** Internal helper: create a new manuscript version with copyedited content. */
+async function createCopyeditVersion(
+  tx: DrizzleDb,
+  manuscriptId: string,
+  input: SaveCopyeditInput,
+) {
+  // Get next version number
+  const [maxResult] = await tx
+    .select({
+      maxVersion: sql<number>`coalesce(max(${manuscriptVersions.versionNumber}), 0)`,
+    })
+    .from(manuscriptVersions)
+    .where(eq(manuscriptVersions.manuscriptId, manuscriptId));
+
+  const nextVersion = (maxResult?.maxVersion ?? 0) + 1;
+
+  const [version] = await tx
+    .insert(manuscriptVersions)
+    .values({
+      manuscriptId,
+      versionNumber: nextVersion,
+      label: input.label ?? 'Copyedit',
+      content: input.content,
+      contentFormat: 'prosemirror_v1',
+      contentExtractionStatus: 'COMPLETE',
+    })
+    .returning();
+
+  return version;
+}
