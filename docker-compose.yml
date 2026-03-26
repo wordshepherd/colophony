@@ -82,7 +82,8 @@ services:
 
   # Garage S3-compatible object storage
   garage:
-    image: dxflrs/garage:v2.2.0
+    build: ./docker/garage
+    image: colophony-garage:local
     container_name: colophony-garage
     ports:
       - '3900:3900'

@@ -181,6 +181,24 @@ Read `docs/backlog.md` and update it:
 
 Search the codebase for any `TODO(CLAUDE.md)` comments added during this session using the Grep tool (not bash) to search for `TODO(CLAUDE.md)` in `*.ts`, `*.tsx`, and `*.js` files.
 
+**Check for unresolved RTK bypass entries:**
+
+```bash
+grep '^# UNRESOLVED' ~/.claude/hooks/rtk-bypass.conf 2>/dev/null
+```
+
+If any `# UNRESOLVED` entries exist, present them to the user:
+
+```
+RTK bypass: N unresolved failure(s) logged this session:
+1. [command summary] — [timestamp]
+
+For each: investigate the root cause (new format flag? RTK bug? transient error?)
+and either add a bypass pattern or remove the comment if it was a one-off.
+```
+
+After the user decides, clean up the resolved `# UNRESOLVED` and `# Command:` comment lines from `~/.claude/hooks/rtk-bypass.conf`.
+
 Also review the session for any new patterns, quirks, or constraints discovered. Check whether any of these CLAUDE.md files need updates:
 
 - `CLAUDE.md` (root) — Known Quirks, Security Status checklist, Version Pins, Key File Locations

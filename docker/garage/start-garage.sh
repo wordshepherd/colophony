@@ -17,11 +17,12 @@ until /garage status > /dev/null 2>&1; do
 done
 echo "Garage RPC ready."
 
-# Check if layout needs to be applied
-LAYOUT_VER=$(/garage layout show 2>/dev/null | grep -c "NO ROLE ASSIGNED" || true)
-if [ "$LAYOUT_VER" -gt 0 ]; then
+# Check if layout needs to be applied (version 0 = never applied)
+LAYOUT_VER=$(/garage layout show 2>/dev/null | sed -n 's/.*layout version: \([0-9]*\)/\1/p' | head -1)
+LAYOUT_VER=${LAYOUT_VER:-0}
+if [ "$LAYOUT_VER" -eq 0 ]; then
   echo "Applying initial layout..."
-  NODE_ID=$(/garage status 2>/dev/null | grep -oP '^\s*\K[0-9a-f]{16}' | head -1)
+  NODE_ID=$(/garage status 2>/dev/null | awk '/^[[:space:]]*[0-9a-f]{16}/ { print $1; exit }')
   /garage layout assign -z dc1 -c "${GARAGE_CAPACITY:-1G}" "$NODE_ID" 2>/dev/null
   /garage layout apply --version 1 2>/dev/null
   echo "Layout applied."

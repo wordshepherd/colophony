@@ -47,6 +47,13 @@ export const manuscripts = pgTable(
       for: "all",
       using: sql`owner_id = current_user_id()`,
     }),
+    // Org read: editors can see manuscript metadata for non-draft submissions in their org.
+    // Uses SECURITY DEFINER function to avoid infinite recursion — manuscript_versions RLS
+    // references manuscripts, so a direct subquery on manuscript_versions would recurse.
+    pgPolicy("manuscripts_org_read", {
+      for: "select",
+      using: sql`id IN (SELECT manuscript_ids_for_org(current_org_id()))`,
+    }),
   ],
 ).enableRLS();
 
@@ -89,6 +96,16 @@ export const manuscriptVersions = pgTable(
     pgPolicy("manuscript_versions_owner", {
       for: "all",
       using: sql`manuscript_id IN (SELECT id FROM manuscripts WHERE owner_id = current_user_id())`,
+    }),
+    // Org read: editors can see version content for non-draft submissions in their org
+    pgPolicy("manuscript_versions_org_read", {
+      for: "select",
+      using: sql`id IN (
+        SELECT s.manuscript_version_id FROM submissions s
+        WHERE s.organization_id = current_org_id()
+        AND s.manuscript_version_id IS NOT NULL
+        AND s.status != 'DRAFT'
+      )`,
     }),
   ],
 ).enableRLS();
