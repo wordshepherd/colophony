@@ -174,6 +174,7 @@ Domain-specific quirks are in per-directory CLAUDE.md files. Cross-cutting quirk
 | **Caddy `DOMAIN` env var controls TLS**               | Caddy auto-provisions HTTPS (LetsEncrypt) when `DOMAIN` is a real domain. When `DOMAIN=localhost` (or unset), Caddy uses self-signed certs. Set `DOMAIN` in `.env.staging`/`.env.prod`                                                                                                                                                                                                                                            |
 | **Zitadel Actions v2 payload format**                 | Zitadel sends `event_type` (not `eventType`), `created_at` (not `creationDate`), `aggregateID:sequence` for idempotency (no `eventId`), and user data in `event_payload` (not `user`). Signature header is `ZITADEL-Signature` with format `t=<ts>,v1=<hmac>` where HMAC is over `<ts>.<body>`. Handler maps `user.human.*` event names to internal `user.*` names via alias table                                                |
 | **GitHub: secrets don't trim whitespace**             | GitHub Actions secret values are stored verbatim — leading/trailing spaces are not trimmed. A pasted secret with a leading space will silently cause auth failures. GitHub masks the value in logs, making this invisible. Verify with `echo "Length: ${#VAR} chars"` in the workflow                                                                                                                                             |
+| **Garage admin API `UpdateClusterLayout` broken**     | Garage v2.2.0's admin API `POST /v2/UpdateClusterLayout` silently accepts requests but doesn't stage changes. Use CLI (`/garage layout assign`) via RPC instead. `start-garage.sh` handles this. Admin API works correctly for `ImportKey`, `CreateBucket`, `AllowBucketKey`. Key IDs must be `GK` + 24 hex chars                                                                                                                 |
 
 **Version pin (cross-cutting):**
 
@@ -209,10 +210,10 @@ Application security controls (rate limiting, auth, RLS, audit, input validation
 
 ### Git Hooks (husky)
 
-| Hook           | Checks                                                                                                                                                                            |
-| -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Pre-commit** | Secret scanning (`scripts/check-secrets.sh`), lint-staged (Prettier on `.ts`/`.tsx`/`.json`/`.md`, ESLint `--max-warnings 0` on `.ts`/`.tsx` via `scripts/lint-staged-eslint.sh`) |
-| **Pre-push**   | `pnpm type-check` (tsc --noEmit, scoped to `db` + `api` packages), `pnpm lint` (ESLint). Full workspace type-check runs in CI.                                                    |
+| Hook           | Checks                                                                                                                                                                                                                                                           |
+| -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Pre-commit** | Secret scanning (`scripts/check-secrets.sh`), lint-staged (Prettier on `.ts`/`.tsx`/`.json`/`.md`, ESLint `--max-warnings 0` on `.ts`/`.tsx` via `scripts/lint-staged-eslint.sh`)                                                                                |
+| **Pre-push**   | `pnpm type-check` (tsc --noEmit, scoped to `db` + `api` packages), `pnpm lint` (ESLint), Docker Compose validation (if compose files changed), shell syntax check (if `.sh` changed), garage.toml validation (if changed). Full workspace type-check runs in CI. |
 
 ### CI Pipeline (GitHub Actions)
 
@@ -256,6 +257,11 @@ Application security controls (rate limiting, auth, RLS, audit, input validation
 /new-migration <name> # Add Drizzle schema + generate migration + RLS policy
 /stripe-webhook <evt> # Add Stripe webhook handler with idempotency
 /test-rls             # Run RLS integration tests
+
+# Infrastructure
+/smoke-test           # Validate infra locally (compose, Garage S3, shell scripts)
+/smoke-test compose   # Fast: compose + config only (no Docker daemon needed)
+/smoke-test garage    # Garage S3 round-trip only (requires Docker)
 
 # Frontend
 /new-page <name>      # Scaffold Next.js page (auth, dashboard, or public)
