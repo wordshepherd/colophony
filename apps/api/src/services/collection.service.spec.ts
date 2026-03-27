@@ -365,7 +365,7 @@ describe('collectionService', () => {
       });
 
       expect(result).toEqual(fakeCollection);
-      expect(assertEditorOrAdmin).toHaveBeenCalledWith('EDITOR');
+      expect(assertEditorOrAdmin).toHaveBeenCalledWith(['EDITOR']);
       expect(ctx.audit).toHaveBeenCalledWith({
         action: 'COLLECTION_CREATED',
         resource: 'collection',
@@ -619,7 +619,7 @@ describe('collectionService', () => {
       );
 
       expect(result).toEqual(fakeItem);
-      expect(assertEditorOrAdmin).toHaveBeenCalledWith('EDITOR');
+      expect(assertEditorOrAdmin).toHaveBeenCalledWith(['EDITOR']);
       expect(ctx.audit).toHaveBeenCalledWith({
         action: 'COLLECTION_ITEM_ADDED',
         resource: 'collection',
@@ -684,7 +684,7 @@ describe('collectionService', () => {
       );
 
       expect(result).toEqual(updatedItem);
-      expect(assertEditorOrAdmin).toHaveBeenCalledWith('EDITOR');
+      expect(assertEditorOrAdmin).toHaveBeenCalledWith(['EDITOR']);
       expect(ctx.audit).toHaveBeenCalledWith({
         action: 'COLLECTION_ITEM_UPDATED',
         resource: 'collection',

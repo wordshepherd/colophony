@@ -13,6 +13,7 @@ vi.mock('../adapters/cms/index.js', () => ({
 
 vi.mock('./errors.js', () => ({
   assertEditorOrAdmin: vi.fn(),
+  assertEditorOrProductionOrAdmin: vi.fn(),
 }));
 
 vi.mock('@colophony/db', () => ({
