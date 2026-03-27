@@ -26,9 +26,9 @@ export interface UserContext extends RestContext {
   dbTx: DrizzleDb;
 }
 
-/** Context after requireOrgContext middleware narrows orgId, role, and dbTx. */
+/** Context after requireOrgContext middleware narrows orgId, roles, and dbTx. */
 export interface OrgContext extends RestContext {
-  authContext: AuthContext & { orgId: string; role: Role };
+  authContext: AuthContext & { orgId: string; roles: Role[] };
   dbTx: DrizzleDb;
 }
 
@@ -81,7 +81,7 @@ export const requireOrgContext = restBase.middleware(
         message: 'Not authenticated',
       });
     }
-    if (!context.authContext.orgId || !context.authContext.role) {
+    if (!context.authContext.orgId || !context.authContext.roles?.length) {
       throw new ORPCError('BAD_REQUEST', {
         message: 'X-Organization-Id header is required',
       });
@@ -95,13 +95,18 @@ export const requireOrgContext = restBase.middleware(
       context: {
         authContext: context.authContext as AuthContext & {
           orgId: string;
-          role: Role;
+          roles: Role[];
         },
         dbTx: context.dbTx,
       },
     });
   },
 );
+
+/** Helper: check if roles array includes any of the required roles. */
+function hasRole(roles: readonly string[], ...required: string[]): boolean {
+  return required.some((r) => roles.includes(r));
+}
 
 /** Requires ADMIN role within the current org context. */
 export const requireAdmin = restBase.middleware(async ({ context, next }) => {
@@ -110,12 +115,12 @@ export const requireAdmin = restBase.middleware(async ({ context, next }) => {
       message: 'Not authenticated',
     });
   }
-  if (!context.authContext.orgId || !context.authContext.role) {
+  if (!context.authContext.orgId || !context.authContext.roles?.length) {
     throw new ORPCError('BAD_REQUEST', {
       message: 'X-Organization-Id header is required',
     });
   }
-  if (context.authContext.role !== 'ADMIN') {
+  if (!hasRole(context.authContext.roles, 'ADMIN')) {
     throw new ORPCError('FORBIDDEN', {
       message: 'Admin role required',
     });
@@ -129,12 +134,80 @@ export const requireAdmin = restBase.middleware(async ({ context, next }) => {
     context: {
       authContext: context.authContext as AuthContext & {
         orgId: string;
-        role: Role;
+        roles: Role[];
       },
       dbTx: context.dbTx,
     },
   });
 });
+
+/** Requires EDITOR or ADMIN role. */
+export const requireEditor = restBase.middleware(async ({ context, next }) => {
+  if (!context.authContext) {
+    throw new ORPCError('UNAUTHORIZED', {
+      message: 'Not authenticated',
+    });
+  }
+  if (!context.authContext.orgId || !context.authContext.roles?.length) {
+    throw new ORPCError('BAD_REQUEST', {
+      message: 'X-Organization-Id header is required',
+    });
+  }
+  if (!hasRole(context.authContext.roles, 'EDITOR', 'ADMIN')) {
+    throw new ORPCError('FORBIDDEN', {
+      message: 'Editor or Admin role required',
+    });
+  }
+  if (!context.dbTx) {
+    throw new ORPCError('INTERNAL_SERVER_ERROR', {
+      message: 'Database transaction not available',
+    });
+  }
+  return next({
+    context: {
+      authContext: context.authContext as AuthContext & {
+        orgId: string;
+        roles: Role[];
+      },
+      dbTx: context.dbTx,
+    },
+  });
+});
+
+/** Requires PRODUCTION, EDITOR, or ADMIN role. */
+export const requireProduction = restBase.middleware(
+  async ({ context, next }) => {
+    if (!context.authContext) {
+      throw new ORPCError('UNAUTHORIZED', {
+        message: 'Not authenticated',
+      });
+    }
+    if (!context.authContext.orgId || !context.authContext.roles?.length) {
+      throw new ORPCError('BAD_REQUEST', {
+        message: 'X-Organization-Id header is required',
+      });
+    }
+    if (!hasRole(context.authContext.roles, 'PRODUCTION', 'EDITOR', 'ADMIN')) {
+      throw new ORPCError('FORBIDDEN', {
+        message: 'Production, Editor, or Admin role required',
+      });
+    }
+    if (!context.dbTx) {
+      throw new ORPCError('INTERNAL_SERVER_ERROR', {
+        message: 'Database transaction not available',
+      });
+    }
+    return next({
+      context: {
+        authContext: context.authContext as AuthContext & {
+          orgId: string;
+          roles: Role[];
+        },
+        dbTx: context.dbTx,
+      },
+    });
+  },
+);
 
 /**
  * Factory: returns oRPC middleware that enforces API key scopes.
@@ -171,8 +244,10 @@ export function requireScopes(...scopes: ApiKeyScope[]) {
   });
 }
 
-// Procedure builders (analogous to tRPC's authedProcedure, orgProcedure, adminProcedure)
+// Procedure builders (analogous to tRPC procedure builders)
 export const authedProcedure = restBase.use(requireAuth);
 export const userProcedure = restBase.use(requireUserContext);
 export const orgProcedure = restBase.use(requireOrgContext);
+export const editorProcedure = restBase.use(requireEditor);
+export const productionProcedure = restBase.use(requireProduction);
 export const adminProcedure = restBase.use(requireAdmin);

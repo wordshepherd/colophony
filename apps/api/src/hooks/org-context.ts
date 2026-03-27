@@ -1,6 +1,7 @@
 import fp from 'fastify-plugin';
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { pool } from '@colophony/db';
+import type { AuthContext } from '@colophony/types';
 
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -22,7 +23,7 @@ export default fp(
           request.authContext.authMethod === 'apikey'
         ) {
           const client = await pool.connect();
-          let role: string | undefined;
+          let roles: string[] | undefined;
           try {
             await client.query('BEGIN READ ONLY');
             await client.query('SELECT set_config($1, $2, true)', [
@@ -33,12 +34,12 @@ export default fp(
               'app.user_id',
               request.authContext.userId,
             ]);
-            const memberResult = await client.query<{ role: string }>(
-              'SELECT role FROM organization_members WHERE organization_id = $1 AND user_id = $2',
+            const memberResult = await client.query<{ roles: string[] }>(
+              'SELECT roles FROM organization_members WHERE organization_id = $1 AND user_id = $2',
               [request.authContext.orgId, request.authContext.userId],
             );
             if (memberResult.rows.length > 0) {
-              role = memberResult.rows[0].role;
+              roles = memberResult.rows[0].roles;
             }
             await client.query('COMMIT');
           } catch (err) {
@@ -48,14 +49,14 @@ export default fp(
             client.release();
           }
 
-          if (!role) {
+          if (!roles?.length) {
             return reply.status(403).send({
               error: 'not_a_member',
               message:
                 'API key creator is no longer a member of this organization',
             });
           }
-          request.authContext.role = role as 'ADMIN' | 'EDITOR' | 'READER';
+          request.authContext.roles = roles as AuthContext['roles'];
           return;
         }
 
@@ -98,7 +99,7 @@ export default fp(
         // authorized request. This is the same class of race as token
         // revocation mid-request and is acceptable.
         const client = await pool.connect();
-        let role: string | undefined;
+        let roles: string[] | undefined;
         try {
           await client.query('BEGIN READ ONLY');
           await client.query('SELECT set_config($1, $2, true)', [
@@ -109,12 +110,12 @@ export default fp(
             'app.user_id',
             request.authContext.userId,
           ]);
-          const memberResult = await client.query<{ role: string }>(
-            'SELECT role FROM organization_members WHERE organization_id = $1 AND user_id = $2',
+          const memberResult = await client.query<{ roles: string[] }>(
+            'SELECT roles FROM organization_members WHERE organization_id = $1 AND user_id = $2',
             [orgIdHeader, request.authContext.userId],
           );
           if (memberResult.rows.length > 0) {
-            role = memberResult.rows[0].role;
+            roles = memberResult.rows[0].roles;
           }
           await client.query('COMMIT');
         } catch (err) {
@@ -125,7 +126,7 @@ export default fp(
           client.release();
         }
 
-        if (!role) {
+        if (!roles?.length) {
           return reply.status(403).send({
             error: 'not_a_member',
             message: 'You are not a member of this organization',
@@ -133,7 +134,7 @@ export default fp(
         }
 
         request.authContext.orgId = orgIdHeader;
-        request.authContext.role = role as 'ADMIN' | 'EDITOR' | 'READER';
+        request.authContext.roles = roles as AuthContext['roles'];
       },
     );
   },
