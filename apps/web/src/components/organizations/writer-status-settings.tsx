@@ -9,6 +9,7 @@ import {
   WRITER_STATUS_DESCRIPTIONS,
   writerStatusSchema,
   type WriterStatus,
+  type UpdateOrganizationInput,
 } from "@colophony/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -74,27 +75,22 @@ export function WriterStatusSettings() {
       }
     }
 
-    const currentSettings = (org?.settings as Record<string, unknown>) ?? {};
-    updateMutation.mutate({
-      settings: {
-        ...currentSettings,
-        writerStatusLabels:
-          Object.keys(overrides).length > 0 ? overrides : null,
-      },
-    });
+    const { writerStatusLabels: _, ...rest } =
+      (org?.settings as UpdateOrganizationInput["settings"]) ?? {};
+    const settings =
+      Object.keys(overrides).length > 0
+        ? { ...rest, writerStatusLabels: overrides }
+        : rest;
+    updateMutation.mutate({ settings });
   };
 
   const handleReset = () => {
     form.reset(
       Object.fromEntries(WRITER_STATUSES.map((s) => [s, ""])) as FormData,
     );
-    const currentSettings = (org?.settings as Record<string, unknown>) ?? {};
-    updateMutation.mutate({
-      settings: {
-        ...currentSettings,
-        writerStatusLabels: null,
-      },
-    });
+    const { writerStatusLabels: _, ...rest } =
+      (org?.settings as UpdateOrganizationInput["settings"]) ?? {};
+    updateMutation.mutate({ settings: rest });
   };
 
   if (!isAdmin) return null;

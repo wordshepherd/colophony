@@ -43,6 +43,7 @@ export function ReviseAndResubmitCard({
     onSuccess: () => {
       toast.success("Submission resubmitted successfully");
       utils.submissions.getById.invalidate({ id: submissionId });
+      utils.submissions.mySubmissionDetail.invalidate({ id: submissionId });
       utils.submissions.getHistory.invalidate({ submissionId });
       utils.submissions.list.invalidate();
       onResubmitSuccess?.();
