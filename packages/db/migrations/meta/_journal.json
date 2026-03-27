@@ -414,6 +414,13 @@
       "when": 1780800000000,
       "tag": "0058_manuscript_versions_copyedit_policies",
       "breakpoints": true
+    },
+    {
+      "idx": 59,
+      "version": "7",
+      "when": 1781000000000,
+      "tag": "0059_workspace_collections",
+      "breakpoints": true
     }
   ]
 }

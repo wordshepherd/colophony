@@ -256,6 +256,14 @@ export const AuditActions = {
 
   // Audit access
   AUDIT_ACCESSED: "AUDIT_ACCESSED",
+
+  // Collection lifecycle
+  COLLECTION_CREATED: "COLLECTION_CREATED",
+  COLLECTION_UPDATED: "COLLECTION_UPDATED",
+  COLLECTION_DELETED: "COLLECTION_DELETED",
+  COLLECTION_ITEM_ADDED: "COLLECTION_ITEM_ADDED",
+  COLLECTION_ITEM_REMOVED: "COLLECTION_ITEM_REMOVED",
+  COLLECTION_ITEM_UPDATED: "COLLECTION_ITEM_UPDATED",
 } as const;
 
 export type AuditAction = (typeof AuditActions)[keyof typeof AuditActions];
@@ -295,6 +303,7 @@ export const AuditResources = {
   EMAIL_TEMPLATE: "email_template",
   CSR: "csr",
   AUDIT: "audit",
+  COLLECTION: "collection",
 } as const;
 
 export type AuditResource =
@@ -660,6 +669,17 @@ export interface SystemAuditParams extends BaseAuditParams {
     | typeof AuditActions.S3_CLEANUP_FAILED;
 }
 
+export interface CollectionAuditParams extends BaseAuditParams {
+  resource: typeof AuditResources.COLLECTION;
+  action:
+    | typeof AuditActions.COLLECTION_CREATED
+    | typeof AuditActions.COLLECTION_UPDATED
+    | typeof AuditActions.COLLECTION_DELETED
+    | typeof AuditActions.COLLECTION_ITEM_ADDED
+    | typeof AuditActions.COLLECTION_ITEM_REMOVED
+    | typeof AuditActions.COLLECTION_ITEM_UPDATED;
+}
+
 /** Union of all resource-specific param types. */
 export type AuditLogParams =
   | UserAuditParams
@@ -695,7 +715,8 @@ export type AuditLogParams =
   | EmailTemplateAuditParams
   | CSRAuditParams
   | AuditAccessAuditParams
-  | SystemAuditParams;
+  | SystemAuditParams
+  | CollectionAuditParams;
 
 // ---------------------------------------------------------------------------
 // Query/response schemas for audit endpoints

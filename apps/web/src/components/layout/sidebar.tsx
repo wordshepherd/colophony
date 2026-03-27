@@ -15,6 +15,7 @@ import {
   ClipboardList,
   FileSignature,
   FileText,
+  FolderOpen,
   GitBranch,
   Globe,
   Inbox,
@@ -55,6 +56,7 @@ const editorialNavigation: NavItem[] = [
   { name: "Editor Dashboard", href: "/editor", icon: LayoutDashboard },
   { name: "Reading Queue", href: "/editor/queue", icon: BookOpen },
   { name: "All Submissions", href: "/editor/submissions", icon: Inbox },
+  { name: "Collections", href: "/editor/collections", icon: FolderOpen },
   { name: "Forms", href: "/editor/forms", icon: ClipboardList },
   { name: "Periods", href: "/editor/periods", icon: Calendar },
 ];

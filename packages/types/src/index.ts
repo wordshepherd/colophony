@@ -39,3 +39,4 @@ export * from "./voting";
 export * from "./blind-review";
 export * from "./queue-preset";
 export * from "./prosemirror";
+export * from "./workspace-collection";
