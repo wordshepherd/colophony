@@ -9,6 +9,7 @@ import {
   issueSchema,
   issueSectionSchema,
   issueItemSchema,
+  activeIssueSchema,
   idParamSchema,
   paginatedResponseSchema,
 } from '@colophony/types';
@@ -220,5 +221,13 @@ export const issuesRouter = createRouter({
         input.sectionId,
         ctx.authContext.orgId,
       );
+    }),
+
+  /** List non-terminal issues for the production dashboard issue selector. */
+  activeIssues: orgProcedure
+    .use(requireScopes('issues:read'))
+    .output(z.array(activeIssueSchema))
+    .query(async ({ ctx }) => {
+      return issueService.listActive(ctx.dbTx, ctx.authContext.orgId);
     }),
 });

@@ -10,9 +10,10 @@ import {
   desc,
   gte,
   lte,
+  sql,
   type DrizzleDb,
 } from '@colophony/db';
-import { ilike, count, getTableColumns } from 'drizzle-orm';
+import { ilike, count, getTableColumns, not, inArray } from 'drizzle-orm';
 import type {
   CreateIssueInput,
   UpdateIssueInput,
@@ -97,6 +98,25 @@ export const issueService = {
       limit,
       totalPages: Math.ceil(total / limit),
     };
+  },
+
+  async listActive(tx: DrizzleDb, orgId: string) {
+    return tx
+      .select({
+        id: issues.id,
+        title: issues.title,
+        status: issues.status,
+        publicationDate: issues.publicationDate,
+      })
+      .from(issues)
+      .where(
+        and(
+          eq(issues.organizationId, orgId),
+          not(inArray(issues.status, ['PUBLISHED', 'ARCHIVED'])),
+        ),
+      )
+      .orderBy(sql`${issues.publicationDate} ASC NULLS LAST`)
+      .limit(50);
   },
 
   async getById(tx: DrizzleDb, id: string, orgId?: string) {
