@@ -27,9 +27,9 @@ export const organizationInvitations = pgTable(
     tokenHash: varchar("token_hash", { length: 128 }).notNull().unique(),
     tokenPrefix: varchar("token_prefix", { length: 16 }).notNull(),
     status: invitationStatusEnum("status").notNull().default("PENDING"),
-    invitedBy: uuid("invited_by")
-      .notNull()
-      .references(() => users.id, { onDelete: "set null" }),
+    invitedBy: uuid("invited_by").references(() => users.id, {
+      onDelete: "set null",
+    }),
     acceptedBy: uuid("accepted_by").references(() => users.id, {
       onDelete: "set null",
     }),

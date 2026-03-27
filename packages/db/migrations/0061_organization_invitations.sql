@@ -13,7 +13,7 @@ CREATE TABLE "organization_invitations" (
   "token_hash" varchar(128) NOT NULL UNIQUE,
   "token_prefix" varchar(16) NOT NULL,
   "status" "InvitationStatus" NOT NULL DEFAULT 'PENDING',
-  "invited_by" uuid NOT NULL REFERENCES "users"("id") ON DELETE SET NULL,
+  "invited_by" uuid REFERENCES "users"("id") ON DELETE SET NULL,
   "accepted_by" uuid REFERENCES "users"("id") ON DELETE SET NULL,
   "expires_at" timestamptz NOT NULL,
   "accepted_at" timestamptz,

@@ -188,7 +188,13 @@ export const organizationInvitationSchema = z.object({
   roles: rolesSchema,
   status: invitationStatusSchema,
   tokenPrefix: z.string().describe("Token prefix for identification"),
-  invitedBy: z.string().uuid().describe("ID of the user who sent the invite"),
+  invitedBy: z
+    .string()
+    .uuid()
+    .nullable()
+    .describe(
+      "ID of the user who sent the invite (null if inviter was deleted)",
+    ),
   expiresAt: z.date().describe("When the invitation expires"),
   createdAt: z.date().describe("When the invitation was created"),
 });

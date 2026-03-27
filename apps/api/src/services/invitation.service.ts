@@ -445,7 +445,9 @@ export const invitationService = {
 
     const orgName = org?.name ?? 'an organization';
     const inviterName = inviter?.email ?? 'An admin';
-    const inviteUrl = `${env.CORS_ORIGIN}/invite/accept/${plainTextToken}`;
+    // CORS_ORIGIN may be comma-separated for multi-origin deployments; use the first origin
+    const webOrigin = env.CORS_ORIGIN.split(',')[0].trim();
+    const inviteUrl = `${webOrigin}/invite/accept/${plainTextToken}`;
     const roleNames = invitation.roles
       .map((r) => ROLE_DISPLAY_DEFAULTS[r] ?? r)
       .join(', ');

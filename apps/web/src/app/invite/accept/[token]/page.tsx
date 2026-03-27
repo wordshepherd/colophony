@@ -24,10 +24,16 @@ export default function AcceptInvitationPage({
   const router = useRouter();
   const { isAuthenticated, isLoading: authLoading, login } = useAuth();
   const [attempted, setAttempted] = useState(false);
+  const utils = trpc.useUtils();
 
   const acceptMutation = trpc.organizations.invitations.accept.useMutation({
-    onSuccess: (result) => {
+    onSuccess: async (result) => {
       setCurrentOrgId(result.organizationId);
+      // Invalidate cached org list + user profile so dashboard sees the new org
+      await Promise.all([
+        utils.organizations.list.invalidate(),
+        utils.users.me.invalidate(),
+      ]);
       // Brief delay so the user sees the success state
       setTimeout(() => router.replace("/"), 1500);
     },
