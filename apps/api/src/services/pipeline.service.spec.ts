@@ -105,4 +105,37 @@ describe('pipeline.service', () => {
       getByIdSpy.mockRestore();
     });
   });
+
+  // ---------------------------------------------------------------------------
+  // Production dashboard
+  // ---------------------------------------------------------------------------
+
+  describe('dashboard', () => {
+    it('requires orgId parameter (3 args: tx, input, orgId)', () => {
+      expect(pipelineService.dashboard.length).toBe(3);
+    });
+
+    it('returns null when no active issues exist', async () => {
+      // Create a mock tx that returns empty results for the issue query
+      const mockTx = {
+        select: vi.fn().mockReturnValue({
+          from: vi.fn().mockReturnValue({
+            where: vi.fn().mockReturnValue({
+              orderBy: vi.fn().mockReturnValue({
+                limit: vi.fn().mockResolvedValue([]),
+              }),
+            }),
+          }),
+        }),
+      };
+
+      const result = await pipelineService.dashboard(
+        mockTx as unknown as ServiceContext['tx'],
+        {},
+        'org-1',
+      );
+
+      expect(result).toBeNull();
+    });
+  });
 });

@@ -1,5 +1,5 @@
-import { SlateDashboard } from "@/components/slate/slate-dashboard";
+import { ProductionDashboard } from "@/components/slate/production-dashboard";
 
 export default function SlatePage() {
-  return <SlateDashboard />;
+  return <ProductionDashboard />;
 }

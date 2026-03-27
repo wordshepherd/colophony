@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { issueStatusSchema } from "./issue";
 
 // ---------------------------------------------------------------------------
 // Pipeline stage
@@ -225,3 +226,77 @@ export const copyeditContentSchema = z.object({
 });
 
 export type CopyeditContent = z.infer<typeof copyeditContentSchema>;
+
+// ---------------------------------------------------------------------------
+// Production dashboard
+// ---------------------------------------------------------------------------
+
+export const productionDashboardInputSchema = z.object({
+  issueId: z
+    .string()
+    .uuid()
+    .optional()
+    .describe(
+      "Issue to show. If omitted, auto-selects the first non-terminal issue",
+    ),
+});
+
+export type ProductionDashboardInput = z.infer<
+  typeof productionDashboardInputSchema
+>;
+
+export const productionDashboardItemSchema = z.object({
+  pipelineItemId: z.string().uuid(),
+  stage: pipelineStageSchema,
+  submissionId: z.string().uuid(),
+  submissionTitle: z.string().nullable(),
+  issueId: z.string().uuid(),
+  issueTitle: z.string(),
+  issueSectionTitle: z.string().nullable(),
+  sortOrder: z.number().int().nullable(),
+  publicationDate: z.coerce.date().nullable(),
+  assignedCopyeditorEmail: z.string().nullable(),
+  assignedProofreaderEmail: z.string().nullable(),
+  copyeditDueAt: z.coerce.date().nullable(),
+  proofreadDueAt: z.coerce.date().nullable(),
+  authorReviewDueAt: z.coerce.date().nullable(),
+  daysInStage: z.number().int(),
+  lastStageChangeAt: z.coerce.date(),
+  contractStatus: z.string().nullable(),
+});
+
+export type ProductionDashboardItem = z.infer<
+  typeof productionDashboardItemSchema
+>;
+
+export const productionDashboardSummarySchema = z.object({
+  total: z.number().int(),
+  onTrack: z.number().int(),
+  atRisk: z.number().int(),
+  overdue: z.number().int(),
+  waiting: z.number().int(),
+});
+
+export type ProductionDashboardSummary = z.infer<
+  typeof productionDashboardSummarySchema
+>;
+
+export const productionDashboardSchema = z.object({
+  issueId: z.string().uuid(),
+  issueTitle: z.string(),
+  issueStatus: issueStatusSchema,
+  publicationDate: z.coerce.date().nullable(),
+  items: z.array(productionDashboardItemSchema),
+  summary: productionDashboardSummarySchema,
+});
+
+export type ProductionDashboard = z.infer<typeof productionDashboardSchema>;
+
+export const activeIssueSchema = z.object({
+  id: z.string().uuid(),
+  title: z.string(),
+  status: issueStatusSchema,
+  publicationDate: z.coerce.date().nullable(),
+});
+
+export type ActiveIssue = z.infer<typeof activeIssueSchema>;
