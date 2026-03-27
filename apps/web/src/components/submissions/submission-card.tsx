@@ -3,14 +3,15 @@
 import Link from "next/link";
 import { formatDistanceToNow } from "date-fns";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { StatusBadge } from "./status-badge";
-import type { SubmissionStatus } from "@colophony/types";
+import { WriterStatusBadge } from "./writer-status-badge";
+import type { WriterStatus } from "@colophony/types";
 
 interface SubmissionCardProps {
   submission: {
     id: string;
     title: string | null;
-    status: SubmissionStatus;
+    writerStatus: WriterStatus;
+    writerStatusLabel: string;
     createdAt: Date | string;
     submittedAt: Date | string | null;
   };
@@ -27,7 +28,10 @@ export function SubmissionCard({ submission }: SubmissionCardProps) {
             <CardTitle className="text-base line-clamp-2">
               {submission.title ?? "Untitled"}
             </CardTitle>
-            <StatusBadge status={submission.status} />
+            <WriterStatusBadge
+              status={submission.writerStatus}
+              label={submission.writerStatusLabel}
+            />
           </div>
         </CardHeader>
         <CardContent>

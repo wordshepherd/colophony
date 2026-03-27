@@ -8,23 +8,21 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SubmissionCard } from "./submission-card";
 import { Plus, FileText } from "lucide-react";
-import type { SubmissionStatus } from "@colophony/types";
+import type { WriterStatus } from "@colophony/types";
 
 const SKELETON_ITEMS = Array.from({ length: 6 });
 
-const statusTabs: Array<{ value: SubmissionStatus | "ALL"; label: string }> = [
+const statusTabs: Array<{ value: WriterStatus | "ALL"; label: string }> = [
   { value: "ALL", label: "All" },
   { value: "DRAFT", label: "Drafts" },
-  { value: "SUBMITTED", label: "Submitted" },
-  { value: "UNDER_REVIEW", label: "Under Review" },
+  { value: "RECEIVED", label: "Received" },
+  { value: "IN_REVIEW", label: "In Review" },
   { value: "ACCEPTED", label: "Accepted" },
-  { value: "REJECTED", label: "Rejected" },
+  { value: "DECISION_SENT", label: "Decision Sent" },
 ];
 
 export function SubmissionList() {
-  const [statusFilter, setStatusFilter] = useState<SubmissionStatus | "ALL">(
-    "ALL",
-  );
+  const [statusFilter, setStatusFilter] = useState<WriterStatus | "ALL">("ALL");
   const [page, setPage] = useState(1);
   const limit = 10;
 
@@ -33,7 +31,7 @@ export function SubmissionList() {
     isPending: isLoading,
     error,
   } = trpc.submissions.mySubmissions.useQuery({
-    status: statusFilter === "ALL" ? undefined : statusFilter,
+    writerStatus: statusFilter === "ALL" ? undefined : statusFilter,
     page,
     limit,
   });
@@ -70,7 +68,7 @@ export function SubmissionList() {
       <Tabs
         value={statusFilter}
         onValueChange={(v) => {
-          setStatusFilter(v as SubmissionStatus | "ALL");
+          setStatusFilter(v as WriterStatus | "ALL");
           setPage(1);
         }}
       >
@@ -100,7 +98,7 @@ export function SubmissionList() {
           <p className="text-muted-foreground">
             {statusFilter === "ALL"
               ? "You haven't created any submissions yet."
-              : `You don't have any ${statusFilter.toLowerCase().replace("_", " ")} submissions.`}
+              : `No submissions with this status.`}
           </p>
           {statusFilter === "ALL" && (
             <Link href="/submissions/new">

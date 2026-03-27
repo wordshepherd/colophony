@@ -4,12 +4,15 @@ import {
   updateSubmissionSchema,
   updateSubmissionStatusSchema,
   listSubmissionsSchema,
+  listWriterSubmissionsSchema,
   resubmitSchema,
   idParamSchema,
   submissionIdParamSchema,
   submissionSchema,
   submissionListItemSchema,
   submissionDetailSchema,
+  writerSubmissionSchema,
+  writerSubmissionDetailSchema,
   submissionStatusChangeResponseSchema,
   submissionHistorySchema,
   successResponseSchema,
@@ -57,6 +60,8 @@ import {
   requireScopes,
 } from '../init.js';
 import { submissionService } from '../../services/submission.service.js';
+import { organizationService } from '../../services/organization.service.js';
+import { writerProjectionService } from '../../services/writer-projection.service.js';
 import { submissionReviewerService } from '../../services/submission-reviewer.service.js';
 import { submissionDiscussionService } from '../../services/submission-discussion.service.js';
 import { submissionVoteService } from '../../services/submission-vote.service.js';
@@ -70,17 +75,63 @@ import { mapServiceError } from '../error-mapper.js';
 import { validateEnv } from '../../config/env.js';
 
 export const submissionsRouter = createRouter({
-  /** Submitter's own submissions (any org member). */
+  /** Submitter's own submissions — writer-projected statuses. */
   mySubmissions: orgProcedure
     .use(requireScopes('submissions:read'))
-    .input(listSubmissionsSchema)
-    .output(paginatedResponseSchema(submissionSchema))
+    .input(listWriterSubmissionsSchema)
+    .output(paginatedResponseSchema(writerSubmissionSchema))
     .query(async ({ ctx, input }) => {
-      return submissionService.listBySubmitter(
+      const result = await submissionService.listBySubmitter(
         ctx.dbTx,
         ctx.authContext.userId,
+        ctx.authContext.orgId,
         input,
       );
+      const org = await organizationService.getById(
+        ctx.dbTx,
+        ctx.authContext.orgId,
+      );
+      const orgSettings = (org.settings ?? {}) as Record<string, unknown>;
+      return {
+        ...result,
+        items: result.items.map((item) => {
+          const { status, ...rest } = item;
+          const projected = writerProjectionService.project(
+            status,
+            orgSettings,
+          );
+          return { ...rest, ...projected };
+        }),
+      };
+    }),
+
+  /** Writer-facing submission detail — projected status. */
+  mySubmissionDetail: orgProcedure
+    .use(requireScopes('submissions:read'))
+    .input(idParamSchema)
+    .output(writerSubmissionDetailSchema)
+    .query(async ({ ctx, input }) => {
+      try {
+        const sub = await submissionService.getByIdAsOwner(
+          ctx.dbTx,
+          input.id,
+          ctx.authContext.userId,
+        );
+        const org = await organizationService.getById(
+          ctx.dbTx,
+          ctx.authContext.orgId,
+        );
+        const orgSettings = (org.settings ?? {}) as Record<string, unknown>;
+        const projected = writerProjectionService.project(
+          sub.status,
+          orgSettings,
+        );
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars -- destructure to omit status from response
+        const { status, ...rest } = sub;
+        return { ...rest, ...projected };
+      } catch (e) {
+        mapServiceError(e);
+      }
     }),
 
   /** Editor/admin view of all submissions in the org. */

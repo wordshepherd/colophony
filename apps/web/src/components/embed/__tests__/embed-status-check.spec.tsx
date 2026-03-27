@@ -37,6 +37,7 @@ describe("EmbedStatusCheck", () => {
     mockFetch.mockResolvedValue({
       title: "My Poem",
       status: "Under Review",
+      writerStatus: "IN_REVIEW",
       submittedAt: "2026-02-15T00:00:00.000Z",
       organizationName: "Test Journal",
       periodName: "Spring 2026",

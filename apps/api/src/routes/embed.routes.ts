@@ -568,6 +568,7 @@ export async function registerEmbedRoutes(
       return {
         title: result.title,
         status: result.status,
+        writerStatus: result.writerStatus,
         submittedAt: result.submittedAt?.toISOString() ?? null,
         organizationName: result.organizationName,
         periodName: result.periodName,

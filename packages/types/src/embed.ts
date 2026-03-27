@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { scanStatusSchema } from "./file";
+import { writerStatusSchema } from "./writer-status";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -171,6 +172,9 @@ export type EmbedSubmitResponse = z.infer<typeof embedSubmitResponseSchema>;
 export const embedStatusCheckResponseSchema = z.object({
   title: z.string().nullable().describe("Submission title"),
   status: z.string().describe("User-friendly submission status"),
+  writerStatus: writerStatusSchema.describe(
+    "Machine-readable writer status for icon/color mapping",
+  ),
   submittedAt: z
     .string()
     .nullable()

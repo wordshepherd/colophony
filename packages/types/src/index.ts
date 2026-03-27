@@ -31,6 +31,7 @@ export * from "./csr";
 export * from "./csv-import";
 export * from "./writer-analytics";
 export * from "./status-mapping";
+export * from "./writer-status";
 export * from "./email-templates";
 export * from "./discussion";
 export * from "./analytics";

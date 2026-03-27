@@ -20,16 +20,16 @@ test.describe("Submission List (/submissions)", () => {
     await expect(authedPage.getByRole("tab", { name: "All" })).toBeVisible();
     await expect(authedPage.getByRole("tab", { name: "Drafts" })).toBeVisible();
     await expect(
-      authedPage.getByRole("tab", { name: "Submitted" }),
+      authedPage.getByRole("tab", { name: "Received" }),
     ).toBeVisible();
     await expect(
-      authedPage.getByRole("tab", { name: "Under Review" }),
+      authedPage.getByRole("tab", { name: "In Review" }),
     ).toBeVisible();
     await expect(
       authedPage.getByRole("tab", { name: "Accepted" }),
     ).toBeVisible();
     await expect(
-      authedPage.getByRole("tab", { name: "Rejected" }),
+      authedPage.getByRole("tab", { name: "Decision Sent" }),
     ).toBeVisible();
   });
 
@@ -56,7 +56,7 @@ test.describe("Submission List (/submissions)", () => {
     await expect(authedPage).toHaveURL(/\/submissions\/new/);
   });
 
-  test("filter by Submitted tab shows only submitted items", async ({
+  test("filter by Received tab shows only submitted items", async ({
     authedPage,
   }) => {
     await authedPage.goto("/submissions");
@@ -66,8 +66,8 @@ test.describe("Submission List (/submissions)", () => {
       authedPage.getByText("The Weight of Small Things"),
     ).toBeVisible({ timeout: 10_000 });
 
-    // Click Submitted tab
-    await authedPage.getByRole("tab", { name: "Submitted" }).click();
+    // Click Received tab (writer-projected name for SUBMITTED)
+    await authedPage.getByRole("tab", { name: "Received" }).click();
 
     // "The Weight of Small Things" is SUBMITTED — should be visible
     await expect(
@@ -83,7 +83,9 @@ test.describe("Submission List (/submissions)", () => {
     ).not.toBeVisible();
   });
 
-  test("filter by Rejected tab shows empty state", async ({ authedPage }) => {
+  test("filter by Decision Sent tab shows empty state", async ({
+    authedPage,
+  }) => {
     await authedPage.goto("/submissions");
 
     // Wait for list to load first
@@ -91,10 +93,12 @@ test.describe("Submission List (/submissions)", () => {
       authedPage.getByText("The Weight of Small Things"),
     ).toBeVisible({ timeout: 10_000 });
 
-    // Click Rejected tab
-    await authedPage.getByRole("tab", { name: "Rejected" }).click();
+    // Click Decision Sent tab (writer-projected name for REJECTED)
+    await authedPage.getByRole("tab", { name: "Decision Sent" }).click();
 
     // Should show empty state message
-    await expect(authedPage.getByText("No submissions")).toBeVisible();
+    await expect(
+      authedPage.getByRole("heading", { name: "No submissions" }),
+    ).toBeVisible();
   });
 });

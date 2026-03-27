@@ -27,6 +27,7 @@ import type {
   CreateSubmissionInput,
   UpdateSubmissionInput,
   ListSubmissionsInput,
+  ListWriterSubmissionsInput,
   SubmissionStatus,
   BatchStatusChangeInput,
   BatchStatusChangeResponse,
@@ -39,6 +40,7 @@ import {
   isEditorAllowedTransition,
   AuditActions,
   AuditResources,
+  WRITER_TO_INTERNAL_STATUSES,
 } from '@colophony/types';
 import { enqueueOutboxEvent } from './outbox.js';
 import type { ServiceContext } from './types.js';
@@ -156,19 +158,35 @@ async function assertNotMigrated(submitterId: string): Promise<void> {
 
 export const submissionService = {
   /**
-   * List submissions for a specific submitter (their own view).
-   * RLS handles org filtering; we add submitterId filter.
+   * List submissions for a specific submitter (writer view).
+   * Defense-in-depth: explicit orgId filter alongside RLS.
    */
   async listBySubmitter(
     tx: DrizzleDb,
     submitterId: string,
-    input: ListSubmissionsInput,
+    orgId: string,
+    input: ListWriterSubmissionsInput,
   ) {
-    const { status, submissionPeriodId, search, page, limit } = input;
+    const { status, writerStatus, submissionPeriodId, search, page, limit } =
+      input;
     const offset = (page - 1) * limit;
 
-    const conditions = [eq(submissions.submitterId, submitterId)];
-    if (status) conditions.push(eq(submissions.status, status));
+    const conditions = [
+      eq(submissions.submitterId, submitterId),
+      eq(submissions.organizationId, orgId),
+    ];
+
+    // Writer status filter expands to internal statuses
+    if (writerStatus) {
+      const internalStatuses = WRITER_TO_INTERNAL_STATUSES[writerStatus] as [
+        SubmissionStatus,
+        ...SubmissionStatus[],
+      ];
+      conditions.push(inArray(submissions.status, internalStatuses));
+    } else if (status) {
+      conditions.push(eq(submissions.status, status));
+    }
+
     if (submissionPeriodId)
       conditions.push(eq(submissions.submissionPeriodId, submissionPeriodId));
     if (search) {
@@ -775,6 +793,19 @@ export const submissionService = {
       return applySubmitterBlinding(submission, blindMode, svc.actor.role);
     }
 
+    return submission;
+  },
+
+  /**
+   * Get submission by ID — owner only (writer view).
+   * Throws NotFoundError if not found or not owned by the caller.
+   */
+  async getByIdAsOwner(tx: DrizzleDb, id: string, userId: string) {
+    const submission = await submissionService.getById(tx, id);
+    if (!submission) throw new SubmissionNotFoundError(id);
+    if (submission.submitterId !== userId) {
+      throw new NotFoundError(`Submission ${id} not found`);
+    }
     return submission;
   },
 

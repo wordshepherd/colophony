@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { writerStatusSchema } from "./writer-status";
 
 export const organizationSchema = z.object({
   id: z.string().uuid().describe("Unique identifier for the organization"),
@@ -50,7 +51,13 @@ export const updateOrganizationSchema = z.object({
   settings: z
     .record(
       z.string().max(100),
-      z.union([z.string().max(10_000), z.number(), z.boolean(), z.null()]),
+      z.union([
+        z.string().max(10_000),
+        z.number(),
+        z.boolean(),
+        z.null(),
+        z.record(z.string().max(100), z.string().max(100)),
+      ]),
     )
     .refine((obj) => Object.keys(obj).length <= 50, {
       message: "Settings limited to 50 keys",
@@ -146,5 +153,9 @@ export type UpdateMemberRoleInput = z.infer<typeof updateMemberRoleSchema>;
 export const orgSettingsSchema = z.object({
   responseReminderEnabled: z.boolean().default(false),
   responseReminderDays: z.number().int().min(1).max(365).default(30),
+  writerStatusLabels: z
+    .record(writerStatusSchema, z.string().min(1).max(100))
+    .optional()
+    .describe("Custom writer-facing status display names"),
 });
 export type OrgSettings = z.infer<typeof orgSettingsSchema>;
