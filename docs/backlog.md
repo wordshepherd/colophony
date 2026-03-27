@@ -489,10 +489,10 @@
 - [x] [P1] Documenso webhook: defense-in-depth org filter — mutation phase uses `withRls()` on appPool + explicit `orgId` on `updateStatus`; Codex review caught `set_config` on superuser pool doesn't enforce RLS — (Codex review 2026-03-22; done 2026-03-22)
 - [x] [P2] Documenso webhook: Zod schema validation — `documensoWebhookPayloadSchema` validates payload structure before processing — (Codex review 2026-03-22; done 2026-03-22)
 - [x] [P2] Documenso webhook: audit logging for contract status changes — `CONTRACT_SIGNED` and `CONTRACT_COMPLETED` audit actions logged via `auditService.log()` inside `withRls` — (Codex review 2026-03-22; done 2026-03-22)
-- [ ] [P3] Test `mySubmissions` projected response shape — assert `writerStatus`/`writerStatusLabel` fields in tRPC router test — (Codex branch review 2026-03-26)
-- [ ] [P3] Test `mySubmissionDetail` procedure + writer-context routing in `submission-detail.tsx` — (Codex branch review 2026-03-26)
-- [ ] [P3] Service test for `getByIdAsOwner` ownership check and error types — (Codex branch review 2026-03-26)
-- [ ] [P2] Collection service unit tests — 19 planned test cases (CRUD, visibility filtering, cross-tenant validation, reorder, item cap) in `collection.service.spec.ts` — (Codex branch review 2026-03-26)
+- [x] [P3] Test `mySubmissions` projected response shape — assert `writerStatus`/`writerStatusLabel` fields in tRPC router test — (Codex branch review 2026-03-26; done 2026-03-27)
+- [x] [P3] Test `mySubmissionDetail` procedure + writer-context routing in `submission-detail.tsx` — (Codex branch review 2026-03-26; done 2026-03-27)
+- [x] [P3] Service test for `getByIdAsOwner` ownership check and error types — (Codex branch review 2026-03-26; done 2026-03-27)
+- [x] [P2] Collection service unit tests — 24 tests (CRUD, visibility filtering, cross-tenant validation, audit logging, reorder) in `collection.service.spec.ts` — (Codex branch review 2026-03-26; done 2026-03-27)
 
 ---
 
