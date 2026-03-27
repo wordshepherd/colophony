@@ -36,7 +36,7 @@ function adminContext(overrides: Partial<TRPCContext> = {}): TRPCContext {
       emailVerified: true,
       authMethod: 'test',
       orgId: 'org-1',
-      role: 'ADMIN',
+      roles: ['ADMIN'],
     },
     dbTx: mockTx,
     audit: vi.fn(),
@@ -46,7 +46,7 @@ function adminContext(overrides: Partial<TRPCContext> = {}): TRPCContext {
 
 function apiKeyContext(
   scopes: string[],
-  role: 'ADMIN' | 'EDITOR' | 'READER' = 'ADMIN',
+  roles: ('ADMIN' | 'EDITOR' | 'READER')[] = ['ADMIN'],
 ): TRPCContext {
   return makeContext({
     authContext: {
@@ -57,7 +57,7 @@ function apiKeyContext(
       apiKeyId: 'k0000000-0000-4000-a000-000000000001',
       apiKeyScopes: scopes as any,
       orgId: 'org-1',
-      role,
+      roles,
     },
     dbTx: {} as never,
     audit: vi.fn(),
@@ -153,7 +153,7 @@ describe('audit router', () => {
           emailVerified: true,
           authMethod: 'test',
           orgId: 'org-1',
-          role: 'READER',
+          roles: ['READER'],
         },
         dbTx: {} as never,
         audit: vi.fn(),
@@ -216,7 +216,7 @@ describe('audit router', () => {
           emailVerified: true,
           authMethod: 'test',
           orgId: 'org-1',
-          role: 'EDITOR',
+          roles: ['EDITOR'],
         },
         dbTx: {} as never,
         audit: vi.fn(),

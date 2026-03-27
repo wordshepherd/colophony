@@ -7,7 +7,7 @@ import type {
 } from '@colophony/types';
 import { AuditActions, AuditResources } from '@colophony/types';
 import type { ServiceContext } from './types.js';
-import { assertEditorOrAdmin } from './errors.js';
+import { assertEditorOrProductionOrAdmin } from './errors.js';
 import { getCmsAdapter } from '../adapters/cms/index.js';
 
 // ---------------------------------------------------------------------------
@@ -102,7 +102,7 @@ export const cmsConnectionService = {
   },
 
   async createWithAudit(ctx: ServiceContext, input: CreateCmsConnectionInput) {
-    assertEditorOrAdmin(ctx.actor.role);
+    assertEditorOrProductionOrAdmin(ctx.actor.roles);
     const connection = await cmsConnectionService.create(
       ctx.tx,
       input,
@@ -149,7 +149,7 @@ export const cmsConnectionService = {
     id: string,
     input: UpdateCmsConnectionInput,
   ) {
-    assertEditorOrAdmin(ctx.actor.role);
+    assertEditorOrProductionOrAdmin(ctx.actor.roles);
     const updated = await cmsConnectionService.update(
       ctx.tx,
       id,
@@ -187,7 +187,7 @@ export const cmsConnectionService = {
   },
 
   async deleteWithAudit(ctx: ServiceContext, id: string) {
-    assertEditorOrAdmin(ctx.actor.role);
+    assertEditorOrProductionOrAdmin(ctx.actor.roles);
     const deleted = await cmsConnectionService.delete(
       ctx.tx,
       id,

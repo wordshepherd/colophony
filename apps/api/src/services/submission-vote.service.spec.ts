@@ -185,7 +185,7 @@ const ORG_ROW_VOTING_OFF = {
 };
 
 function makeSvc(
-  role: string,
+  roles: string[],
   userId: string,
   selectResults: unknown[][],
 ): ServiceContext {
@@ -194,7 +194,7 @@ function makeSvc(
     actor: {
       userId,
       orgId: 'org-1',
-      role: role as 'ADMIN' | 'EDITOR' | 'READER',
+      roles: roles as ('ADMIN' | 'EDITOR' | 'READER')[],
     },
     audit: vi.fn(),
   };
@@ -212,7 +212,7 @@ describe('submissionVoteService', () => {
   describe('castVoteWithAudit', () => {
     it('cast vote succeeds for EDITOR', async () => {
       // Call sequence: getSubmission, resolveVotingConfig, existingVote(select), returnVote
-      const svc = makeSvc('EDITOR', 'user-editor', [
+      const svc = makeSvc(['EDITOR'], 'user-editor', [
         [SUB_ROW], // getSubmissionOrThrow
         [ORG_ROW_VOTING_ON], // resolveVotingConfig
         [], // upsert: check existing vote
@@ -241,7 +241,7 @@ describe('submissionVoteService', () => {
     });
 
     it('cast vote succeeds for assigned READER', async () => {
-      const svc = makeSvc('READER', 'user-reader', [
+      const svc = makeSvc(['READER'], 'user-reader', [
         [SUB_ROW], // getSubmissionOrThrow
         [{ id: 'reviewer-1' }], // assertEditorAdminOrReviewer: reviewer lookup
         [ORG_ROW_VOTING_ON], // resolveVotingConfig
@@ -258,7 +258,7 @@ describe('submissionVoteService', () => {
     });
 
     it('cast vote rejected for non-assigned READER', async () => {
-      const svc = makeSvc('READER', 'user-reader', [
+      const svc = makeSvc(['READER'], 'user-reader', [
         [SUB_ROW], // getSubmissionOrThrow
         [], // assertEditorAdminOrReviewer: reviewer lookup (empty)
       ]);
@@ -272,7 +272,7 @@ describe('submissionVoteService', () => {
     });
 
     it('cast vote rejected for submitter', async () => {
-      const svc = makeSvc('EDITOR', 'user-submitter', [
+      const svc = makeSvc(['EDITOR'], 'user-submitter', [
         [SUB_ROW], // getSubmissionOrThrow
       ]);
 
@@ -285,7 +285,7 @@ describe('submissionVoteService', () => {
     });
 
     it('cast vote rejected when voting disabled', async () => {
-      const svc = makeSvc('EDITOR', 'user-editor', [
+      const svc = makeSvc(['EDITOR'], 'user-editor', [
         [SUB_ROW], // getSubmissionOrThrow
         [ORG_ROW_VOTING_OFF], // resolveVotingConfig
       ]);
@@ -299,7 +299,7 @@ describe('submissionVoteService', () => {
     });
 
     it('cast vote rejected on ACCEPTED submission', async () => {
-      const svc = makeSvc('EDITOR', 'user-editor', [
+      const svc = makeSvc(['EDITOR'], 'user-editor', [
         [{ ...SUB_ROW, status: 'ACCEPTED' }],
       ]);
 
@@ -312,7 +312,7 @@ describe('submissionVoteService', () => {
     });
 
     it('cast vote rejected on REJECTED submission', async () => {
-      const svc = makeSvc('EDITOR', 'user-editor', [
+      const svc = makeSvc(['EDITOR'], 'user-editor', [
         [{ ...SUB_ROW, status: 'REJECTED' }],
       ]);
 
@@ -325,7 +325,7 @@ describe('submissionVoteService', () => {
     });
 
     it('cast vote rejected on WITHDRAWN submission', async () => {
-      const svc = makeSvc('EDITOR', 'user-editor', [
+      const svc = makeSvc(['EDITOR'], 'user-editor', [
         [{ ...SUB_ROW, status: 'WITHDRAWN' }],
       ]);
 
@@ -338,7 +338,7 @@ describe('submissionVoteService', () => {
     });
 
     it('upsert updates existing vote, audits UPDATED', async () => {
-      const svc = makeSvc('EDITOR', 'user-editor', [
+      const svc = makeSvc(['EDITOR'], 'user-editor', [
         [SUB_ROW], // getSubmissionOrThrow
         [ORG_ROW_VOTING_ON], // resolveVotingConfig
         [{ id: 'existing-vote-1' }], // upsert: check existing vote (found)
@@ -359,7 +359,7 @@ describe('submissionVoteService', () => {
     });
 
     it('score rejected when out of range', async () => {
-      const svc = makeSvc('EDITOR', 'user-editor', [
+      const svc = makeSvc(['EDITOR'], 'user-editor', [
         [SUB_ROW], // getSubmissionOrThrow
         [ORG_ROW_SCORING_ON], // resolveVotingConfig
       ]);
@@ -374,7 +374,7 @@ describe('submissionVoteService', () => {
     });
 
     it('score ignored when scoring disabled', async () => {
-      const svc = makeSvc('EDITOR', 'user-editor', [
+      const svc = makeSvc(['EDITOR'], 'user-editor', [
         [SUB_ROW], // getSubmissionOrThrow
         [ORG_ROW_VOTING_ON], // resolveVotingConfig (scoringEnabled: false)
         [], // upsert: no existing vote
@@ -391,7 +391,7 @@ describe('submissionVoteService', () => {
     });
 
     it('score accepted within range', async () => {
-      const svc = makeSvc('EDITOR', 'user-editor', [
+      const svc = makeSvc(['EDITOR'], 'user-editor', [
         [SUB_ROW], // getSubmissionOrThrow
         [ORG_ROW_SCORING_ON], // resolveVotingConfig
         [], // upsert: no existing vote
@@ -417,7 +417,7 @@ describe('submissionVoteService', () => {
         },
       };
       const VOTE_WITH_ZERO_SCORE = { ...VOTE_ROW, score: '0' };
-      const svc = makeSvc('EDITOR', 'user-editor', [
+      const svc = makeSvc(['EDITOR'], 'user-editor', [
         [SUB_ROW], // getSubmissionOrThrow
         [ORG_SCORE_MIN_ZERO], // resolveVotingConfig
         [], // upsert: no existing vote
@@ -437,7 +437,7 @@ describe('submissionVoteService', () => {
 
   describe('deleteVoteWithAudit', () => {
     it('delete vote succeeds for own vote', async () => {
-      const svc = makeSvc('EDITOR', 'user-editor', [
+      const svc = makeSvc(['EDITOR'], 'user-editor', [
         [SUB_ROW], // getSubmissionOrThrow
       ]);
 
@@ -463,7 +463,7 @@ describe('submissionVoteService', () => {
     });
 
     it('delete vote fails when no vote exists', async () => {
-      const svc = makeSvc('EDITOR', 'user-editor', [
+      const svc = makeSvc(['EDITOR'], 'user-editor', [
         [SUB_ROW], // getSubmissionOrThrow
       ]);
 
@@ -482,7 +482,7 @@ describe('submissionVoteService', () => {
 
   describe('getVoteSummaryWithAccess', () => {
     it('vote summary rejected for READER', async () => {
-      const svc = makeSvc('READER', 'user-reader', []);
+      const svc = makeSvc(['READER'], 'user-reader', []);
 
       await expect(
         submissionVoteService.getVoteSummaryWithAccess(svc, 'sub-1'),

@@ -197,7 +197,7 @@ function authedContext(overrides: Partial<TRPCContext> = {}): TRPCContext {
 }
 
 function orgContext(
-  role: 'ADMIN' | 'EDITOR' | 'READER' = 'READER',
+  roles: ('ADMIN' | 'EDITOR' | 'READER')[] = ['READER'],
   overrides: Partial<TRPCContext> = {},
 ): TRPCContext {
   const mockTx = {} as never;
@@ -209,7 +209,7 @@ function orgContext(
       emailVerified: true,
       authMethod: 'test',
       orgId: ORG_ID,
-      role,
+      roles,
     },
     dbTx: mockTx,
     audit: vi.fn(),
@@ -218,7 +218,7 @@ function orgContext(
 }
 
 function editorContext(overrides: Partial<TRPCContext> = {}): TRPCContext {
-  return orgContext('EDITOR', overrides);
+  return orgContext(['EDITOR'], overrides);
 }
 
 const createCaller = (appRouter as any).createCaller as (
@@ -301,7 +301,7 @@ describe('submissions tRPC router', () => {
     });
 
     it('list requires EDITOR or ADMIN role', async () => {
-      const caller = createCaller(orgContext('READER'));
+      const caller = createCaller(orgContext(['READER']));
       await expect(
         caller.submissions.list({ page: 1, limit: 20 }),
       ).rejects.toThrow('Editor or admin role required');
@@ -324,7 +324,7 @@ describe('submissions tRPC router', () => {
       mockService.updateStatusAsEditor.mockRejectedValueOnce(
         new ForbiddenError('Editor or admin role required'),
       );
-      const caller = createCaller(orgContext('READER'));
+      const caller = createCaller(orgContext(['READER']));
       await expect(
         caller.submissions.updateStatus({
           id: SUBMISSION_ID,
@@ -376,7 +376,7 @@ describe('submissions tRPC router', () => {
     it('getById allows owner to view', async () => {
       const sub = makeDraftSubmission(USER_ID);
       mockService.getByIdWithAccess.mockResolvedValueOnce(sub as never);
-      const caller = createCaller(orgContext('READER'));
+      const caller = createCaller(orgContext(['READER']));
       const result = await caller.submissions.getById({ id: SUBMISSION_ID });
       expect(result.id).toBe(SUBMISSION_ID);
     });
@@ -393,7 +393,7 @@ describe('submissions tRPC router', () => {
       mockService.getByIdWithAccess.mockRejectedValueOnce(
         new ForbiddenError('You do not have access to this submission'),
       );
-      const caller = createCaller(orgContext('READER'));
+      const caller = createCaller(orgContext(['READER']));
       await expect(
         caller.submissions.getById({ id: SUBMISSION_ID }),
       ).rejects.toThrow('do not have access');
@@ -502,7 +502,7 @@ describe('submissions tRPC router', () => {
       };
       mockService.listAll.mockResolvedValueOnce(response as never);
 
-      const caller = createCaller(orgContext('ADMIN'));
+      const caller = createCaller(orgContext(['ADMIN']));
       await caller.submissions.list({ page: 1, limit: 20 });
       // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(mockService.listAll).toHaveBeenCalled();
@@ -598,7 +598,7 @@ describe('submissions tRPC router', () => {
         new ForbiddenError('You do not have access to this submission'),
       );
 
-      const caller = createCaller(orgContext('READER'));
+      const caller = createCaller(orgContext(['READER']));
       await expect(
         caller.submissions.getHistory({ submissionId: SUBMISSION_ID }),
       ).rejects.toThrow('do not have access');
@@ -889,7 +889,7 @@ describe('submissions tRPC router', () => {
         }),
       } as never);
 
-      const caller = createCaller(orgContext('ADMIN'));
+      const caller = createCaller(orgContext(['ADMIN']));
       await caller.submissions.updateStatus({
         id: SUBMISSION_ID,
         status: 'REJECTED',

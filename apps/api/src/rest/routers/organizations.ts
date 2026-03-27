@@ -5,7 +5,7 @@ import {
   updateOrganizationSchema,
   checkSlugSchema,
   inviteMemberSchema,
-  roleSchema,
+  rolesSchema,
   organizationMemberSchema,
   userOrganizationSchema,
   organizationMemberMutationResponseSchema,
@@ -69,7 +69,7 @@ const createOrgOutputSchema = z.object({
       id: z.string().uuid(),
       organizationId: z.string().uuid(),
       userId: z.string().uuid(),
-      role: roleSchema,
+      roles: rolesSchema,
       createdAt: z.date(),
       updatedAt: z.date(),
     })
@@ -134,7 +134,7 @@ const membersAdd = adminProcedure
       return await organizationService.addMemberWithAudit(
         toServiceContext(context),
         input.email,
-        input.role,
+        input.roles,
       );
     } catch (e) {
       mapServiceError(e);
@@ -165,26 +165,26 @@ const membersRemove = adminProcedure
     }
   });
 
-const membersUpdateRole = adminProcedure
+const membersUpdateRoles = adminProcedure
   .use(requireScopes('organizations:write'))
   .route({
     method: 'PATCH',
     path: '/organizations/{orgId}/members/{memberId}',
-    summary: 'Update member role',
+    summary: 'Update member roles',
     description:
-      "Change a member's role within the organization. Requires ADMIN role.",
-    operationId: 'updateOrganizationMemberRole',
+      "Change a member's roles within the organization. Requires ADMIN role.",
+    operationId: 'updateOrganizationMemberRoles',
     tags: ['Organizations'],
   })
-  .input(memberIdParam.merge(z.object({ role: roleSchema })))
+  .input(memberIdParam.merge(z.object({ roles: rolesSchema })))
   .output(organizationMemberMutationResponseSchema)
   .handler(async ({ context, input }) => {
     assertOrgIdMatch(input.orgId, context.authContext.orgId);
     try {
-      return await organizationService.updateMemberRoleWithAudit(
+      return await organizationService.updateMemberRolesWithAudit(
         toServiceContext(context),
         input.memberId,
-        input.role,
+        input.roles,
       );
     } catch (e) {
       mapServiceError(e);
@@ -359,6 +359,6 @@ export const organizationsRouter = {
     list: membersList,
     add: membersAdd,
     remove: membersRemove,
-    updateRole: membersUpdateRole,
+    updateRoles: membersUpdateRoles,
   },
 };

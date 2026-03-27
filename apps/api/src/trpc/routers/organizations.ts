@@ -4,7 +4,7 @@ import {
   createOrganizationSchema,
   updateOrganizationSchema,
   inviteMemberSchema,
-  updateMemberRoleSchema,
+  updateMemberRolesSchema,
   paginationSchema,
   checkSlugSchema,
   memberIdParamSchema,
@@ -53,7 +53,7 @@ const membersRouter = createRouter({
         return await organizationService.addMemberWithAudit(
           toServiceContext(ctx),
           input.email,
-          input.role,
+          input.roles,
         );
       } catch (e) {
         mapServiceError(e);
@@ -75,16 +75,16 @@ const membersRouter = createRouter({
       }
     }),
 
-  updateRole: adminProcedure
+  updateRoles: adminProcedure
     .use(requireScopes('organizations:write'))
-    .input(updateMemberRoleSchema)
+    .input(updateMemberRolesSchema)
     .output(organizationMemberMutationResponseSchema)
     .mutation(async ({ ctx, input }) => {
       try {
-        return await organizationService.updateMemberRoleWithAudit(
+        return await organizationService.updateMemberRolesWithAudit(
           toServiceContext(ctx),
           input.memberId,
-          input.role,
+          input.roles,
         );
       } catch (e) {
         mapServiceError(e);

@@ -74,7 +74,7 @@ describe('migration-admin.routes', () => {
         userId: testUserId,
         authMethod: 'oidc' as const,
         orgId: validUuid2,
-        role: 'ADMIN' as const,
+        roles: ['ADMIN'] as const,
         email: 'admin@local.example.com',
         emailVerified: true,
       };

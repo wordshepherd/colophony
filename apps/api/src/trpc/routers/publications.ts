@@ -8,7 +8,7 @@ import {
 } from '@colophony/types';
 import {
   orgProcedure,
-  adminProcedure,
+  productionProcedure,
   createRouter,
   requireScopes,
 } from '../init.js';
@@ -48,7 +48,7 @@ export const publicationsRouter = createRouter({
     }),
 
   /** Create a new publication (admin only). */
-  create: adminProcedure
+  create: productionProcedure
     .use(requireScopes('publications:write'))
     .input(createPublicationSchema)
     .output(publicationSchema)
@@ -64,7 +64,7 @@ export const publicationsRouter = createRouter({
     }),
 
   /** Update a publication (admin only). */
-  update: adminProcedure
+  update: productionProcedure
     .use(requireScopes('publications:write'))
     .input(idParamSchema.merge(updatePublicationSchema))
     .output(publicationSchema)
@@ -82,7 +82,7 @@ export const publicationsRouter = createRouter({
     }),
 
   /** Archive a publication (admin only). */
-  archive: adminProcedure
+  archive: productionProcedure
     .use(requireScopes('publications:write'))
     .input(idParamSchema)
     .output(publicationSchema)

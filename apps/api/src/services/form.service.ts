@@ -217,7 +217,7 @@ export const formService = {
   },
 
   async createWithAudit(svc: ServiceContext, input: CreateFormDefinitionInput) {
-    assertEditorOrAdmin(svc.actor.role);
+    assertEditorOrAdmin(svc.actor.roles);
     const form = await formService.create(
       svc.tx,
       input,
@@ -256,7 +256,7 @@ export const formService = {
     id: string,
     input: UpdateFormDefinitionInput,
   ) {
-    assertEditorOrAdmin(svc.actor.role);
+    assertEditorOrAdmin(svc.actor.roles);
     const updated = await formService.update(svc.tx, id, input);
     if (!updated) throw new FormNotFoundError(id);
     await svc.audit({
@@ -340,7 +340,7 @@ export const formService = {
   },
 
   async publishWithAudit(svc: ServiceContext, id: string) {
-    assertEditorOrAdmin(svc.actor.role);
+    assertEditorOrAdmin(svc.actor.roles);
     const published = await formService.publish(svc.tx, id);
     await svc.audit({
       action: AuditActions.FORM_PUBLISHED,
@@ -369,7 +369,7 @@ export const formService = {
   },
 
   async archiveWithAudit(svc: ServiceContext, id: string) {
-    assertEditorOrAdmin(svc.actor.role);
+    assertEditorOrAdmin(svc.actor.roles);
     const archived = await formService.archive(svc.tx, id);
     await svc.audit({
       action: AuditActions.FORM_ARCHIVED,
@@ -473,7 +473,7 @@ export const formService = {
   },
 
   async duplicateWithAudit(svc: ServiceContext, id: string) {
-    assertEditorOrAdmin(svc.actor.role);
+    assertEditorOrAdmin(svc.actor.roles);
     const duplicated = await formService.duplicate(
       svc.tx,
       id,
@@ -525,7 +525,7 @@ export const formService = {
   },
 
   async deleteWithAudit(svc: ServiceContext, id: string) {
-    assertEditorOrAdmin(svc.actor.role);
+    assertEditorOrAdmin(svc.actor.roles);
     const deleted = await formService.delete(svc.tx, id);
     if (!deleted) throw new FormNotFoundError(id);
     await svc.audit({
@@ -591,7 +591,7 @@ export const formService = {
     formId: string,
     input: CreateFormFieldInput,
   ) {
-    assertEditorOrAdmin(svc.actor.role);
+    assertEditorOrAdmin(svc.actor.roles);
     try {
       const field = await formService.addField(svc.tx, formId, input);
       await svc.audit({
@@ -681,7 +681,7 @@ export const formService = {
     fieldId: string,
     input: UpdateFormFieldInput,
   ) {
-    assertEditorOrAdmin(svc.actor.role);
+    assertEditorOrAdmin(svc.actor.roles);
     const updated = await formService.updateField(
       svc.tx,
       formId,
@@ -743,7 +743,7 @@ export const formService = {
     formId: string,
     fieldId: string,
   ) {
-    assertEditorOrAdmin(svc.actor.role);
+    assertEditorOrAdmin(svc.actor.roles);
     const removed = await formService.removeField(svc.tx, formId, fieldId);
     await svc.audit({
       action: AuditActions.FORM_FIELD_REMOVED,
@@ -792,7 +792,7 @@ export const formService = {
     formId: string,
     input: ReorderFormFieldsInput,
   ) {
-    assertEditorOrAdmin(svc.actor.role);
+    assertEditorOrAdmin(svc.actor.roles);
     const fields = await formService.reorderFields(svc.tx, formId, input);
     await svc.audit({
       action: AuditActions.FORM_FIELDS_REORDERED,
@@ -900,7 +900,7 @@ export const formService = {
     formId: string,
     input: CreateFormPageInput,
   ) {
-    assertEditorOrAdmin(svc.actor.role);
+    assertEditorOrAdmin(svc.actor.roles);
     const page = await formService.addPage(svc.tx, formId, input);
     await svc.audit({
       action: AuditActions.FORM_PAGE_ADDED,
@@ -953,7 +953,7 @@ export const formService = {
     pageId: string,
     input: UpdateFormPageInput,
   ) {
-    assertEditorOrAdmin(svc.actor.role);
+    assertEditorOrAdmin(svc.actor.roles);
     const updated = await formService.updatePage(svc.tx, formId, pageId, input);
     if (!updated) throw new FormPageNotFoundError(pageId);
     await svc.audit({
@@ -984,7 +984,7 @@ export const formService = {
     formId: string,
     pageId: string,
   ) {
-    assertEditorOrAdmin(svc.actor.role);
+    assertEditorOrAdmin(svc.actor.roles);
     const removed = await formService.removePage(svc.tx, formId, pageId);
     await svc.audit({
       action: AuditActions.FORM_PAGE_REMOVED,
@@ -1031,7 +1031,7 @@ export const formService = {
     formId: string,
     input: ReorderFormPagesInput,
   ) {
-    assertEditorOrAdmin(svc.actor.role);
+    assertEditorOrAdmin(svc.actor.roles);
     const pages = await formService.reorderPages(svc.tx, formId, input);
     await svc.audit({
       action: AuditActions.FORM_PAGES_REORDERED,

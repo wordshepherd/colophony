@@ -14,7 +14,7 @@ import {
 } from '../../services/period.service.js';
 import { toServiceContext } from '../../services/context.js';
 import { mapServiceError } from '../error-mapper.js';
-import { orgProcedure, requireScopes } from '../context.js';
+import { orgProcedure, editorProcedure, requireScopes } from '../context.js';
 
 // ---------------------------------------------------------------------------
 // Query schemas — override page/limit with z.coerce for REST query strings
@@ -47,7 +47,7 @@ const list = orgProcedure
     return periodService.list(context.dbTx, input);
   });
 
-const create = orgProcedure
+const create = editorProcedure
   .use(requireScopes('periods:write'))
   .route({
     method: 'POST',
@@ -94,7 +94,7 @@ const get = orgProcedure
     }
   });
 
-const update = orgProcedure
+const update = editorProcedure
   .use(requireScopes('periods:write'))
   .route({
     method: 'PATCH',
@@ -119,7 +119,7 @@ const update = orgProcedure
     }
   });
 
-const del = orgProcedure
+const del = editorProcedure
   .use(requireScopes('periods:write'))
   .route({
     method: 'DELETE',

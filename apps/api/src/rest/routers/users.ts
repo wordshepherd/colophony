@@ -1,6 +1,6 @@
 import { ORPCError } from '@orpc/server';
 import { z } from 'zod';
-import { roleSchema } from '@colophony/types';
+import { rolesSchema } from '@colophony/types';
 import { userService } from '../../services/user.service.js';
 import { authedProcedure, requireScopes } from '../context.js';
 
@@ -18,7 +18,7 @@ const userProfileOutputSchema = z.object({
       id: z.string().uuid(),
       name: z.string(),
       slug: z.string(),
-      role: roleSchema,
+      roles: rolesSchema,
     }),
   ),
 });

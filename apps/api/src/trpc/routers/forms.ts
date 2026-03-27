@@ -17,7 +17,12 @@ import {
   successResponseSchema,
   paginatedResponseSchema,
 } from '@colophony/types';
-import { orgProcedure, createRouter, requireScopes } from '../init.js';
+import {
+  orgProcedure,
+  editorProcedure,
+  createRouter,
+  requireScopes,
+} from '../init.js';
 import { formService } from '../../services/form.service.js';
 import { toServiceContext } from '../../services/context.js';
 import { mapServiceError } from '../error-mapper.js';
@@ -62,7 +67,7 @@ export const formsRouter = createRouter({
     }),
 
   /** Create a new DRAFT form definition. */
-  create: orgProcedure
+  create: editorProcedure
     .use(requireScopes('forms:write'))
     .input(createFormDefinitionSchema)
     .output(formDefinitionSchema)
@@ -75,7 +80,7 @@ export const formsRouter = createRouter({
     }),
 
   /** Update a DRAFT form definition. */
-  update: orgProcedure
+  update: editorProcedure
     .use(requireScopes('forms:write'))
     .input(idParamSchema.merge(updateFormDefinitionSchema))
     .output(formDefinitionSchema)
@@ -93,7 +98,7 @@ export const formsRouter = createRouter({
     }),
 
   /** Publish a DRAFT form (DRAFT → PUBLISHED). */
-  publish: orgProcedure
+  publish: editorProcedure
     .use(requireScopes('forms:write'))
     .input(idParamSchema)
     .output(formDefinitionSchema)
@@ -109,7 +114,7 @@ export const formsRouter = createRouter({
     }),
 
   /** Archive a PUBLISHED form (PUBLISHED → ARCHIVED). */
-  archive: orgProcedure
+  archive: editorProcedure
     .use(requireScopes('forms:write'))
     .input(idParamSchema)
     .output(formDefinitionSchema)
@@ -125,7 +130,7 @@ export const formsRouter = createRouter({
     }),
 
   /** Duplicate a form as a new DRAFT. */
-  duplicate: orgProcedure
+  duplicate: editorProcedure
     .use(requireScopes('forms:write'))
     .input(idParamSchema)
     .output(formDefinitionDetailSchema)
@@ -142,7 +147,7 @@ export const formsRouter = createRouter({
     }),
 
   /** Delete a DRAFT form. */
-  delete: orgProcedure
+  delete: editorProcedure
     .use(requireScopes('forms:write'))
     .input(idParamSchema)
     .output(successResponseSchema)
@@ -158,7 +163,7 @@ export const formsRouter = createRouter({
     }),
 
   /** Add a field to a DRAFT form. */
-  addField: orgProcedure
+  addField: editorProcedure
     .use(requireScopes('forms:write'))
     .input(idParamSchema.merge(createFormFieldSchema))
     .output(formFieldSchema)
@@ -176,7 +181,7 @@ export const formsRouter = createRouter({
     }),
 
   /** Update a field in a DRAFT form. */
-  updateField: orgProcedure
+  updateField: editorProcedure
     .use(requireScopes('forms:write'))
     .input(formIdFieldIdSchema.merge(updateFormFieldSchema))
     .output(formFieldSchema)
@@ -195,7 +200,7 @@ export const formsRouter = createRouter({
     }),
 
   /** Remove a field from a DRAFT form. */
-  removeField: orgProcedure
+  removeField: editorProcedure
     .use(requireScopes('forms:write'))
     .input(formIdFieldIdSchema)
     .output(formFieldSchema)
@@ -212,7 +217,7 @@ export const formsRouter = createRouter({
     }),
 
   /** Reorder fields in a DRAFT form. */
-  reorderFields: orgProcedure
+  reorderFields: editorProcedure
     .use(requireScopes('forms:write'))
     .input(idParamSchema.merge(reorderFormFieldsSchema))
     .output(z.array(formFieldSchema))
@@ -230,7 +235,7 @@ export const formsRouter = createRouter({
     }),
 
   /** Add a page to a DRAFT form. */
-  addPage: orgProcedure
+  addPage: editorProcedure
     .use(requireScopes('forms:write'))
     .input(idParamSchema.merge(createFormPageSchema))
     .output(formPageSchema)
@@ -248,7 +253,7 @@ export const formsRouter = createRouter({
     }),
 
   /** Update a page in a DRAFT form. */
-  updatePage: orgProcedure
+  updatePage: editorProcedure
     .use(requireScopes('forms:write'))
     .input(formIdPageIdSchema.merge(updateFormPageSchema))
     .output(formPageSchema)
@@ -267,7 +272,7 @@ export const formsRouter = createRouter({
     }),
 
   /** Remove a page from a DRAFT form. */
-  removePage: orgProcedure
+  removePage: editorProcedure
     .use(requireScopes('forms:write'))
     .input(formIdPageIdSchema)
     .output(formPageSchema)
@@ -284,7 +289,7 @@ export const formsRouter = createRouter({
     }),
 
   /** Reorder pages in a DRAFT form. */
-  reorderPages: orgProcedure
+  reorderPages: editorProcedure
     .use(requireScopes('forms:write'))
     .input(idParamSchema.merge(reorderFormPagesSchema))
     .output(z.array(formPageSchema))

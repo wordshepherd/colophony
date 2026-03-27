@@ -171,7 +171,7 @@ describe('gdprService.deleteOrganization', () => {
   it('deletes organization when user is admin', async () => {
     mockClient.query
       .mockResolvedValueOnce({ rows: [] }) // BEGIN
-      .mockResolvedValueOnce({ rows: [{ role: 'ADMIN' }] }) // SELECT member
+      .mockResolvedValueOnce({ rows: [{ roles: ['ADMIN'] }] }) // SELECT member
       .mockResolvedValueOnce({ rows: [] }) // UPDATE audit_events (scrub)
       .mockResolvedValueOnce({ rows: [] }) // SELECT insert_audit_event
       .mockResolvedValueOnce({ rows: [] }) // DELETE organization
@@ -188,7 +188,7 @@ describe('gdprService.deleteOrganization', () => {
   it('throws OrgNotDeletableError when user is not admin', async () => {
     mockClient.query
       .mockResolvedValueOnce({ rows: [] }) // BEGIN
-      .mockResolvedValueOnce({ rows: [{ role: 'EDITOR' }] }); // SELECT member
+      .mockResolvedValueOnce({ rows: [{ roles: ['EDITOR'] }] }); // SELECT member
 
     await expect(
       gdprService.deleteOrganization(ORG_ID, USER_ID, fakeEnv),
@@ -209,7 +209,7 @@ describe('gdprService.deleteOrganization', () => {
   it('scrubs audit events for the organization', async () => {
     mockClient.query
       .mockResolvedValueOnce({ rows: [] }) // BEGIN
-      .mockResolvedValueOnce({ rows: [{ role: 'ADMIN' }] }) // SELECT member
+      .mockResolvedValueOnce({ rows: [{ roles: ['ADMIN'] }] }) // SELECT member
       .mockResolvedValueOnce({ rows: [] }) // UPDATE audit_events
       .mockResolvedValueOnce({ rows: [] }) // SELECT insert_audit_event
       .mockResolvedValueOnce({ rows: [] }) // DELETE organization

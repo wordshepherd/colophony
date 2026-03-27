@@ -21,7 +21,10 @@ export const organizationMembers = pgTable(
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
-    role: roleEnum("role").notNull().default("READER"),
+    roles: roleEnum("roles")
+      .array()
+      .notNull()
+      .default(sql`ARRAY['READER']::"Role"[]`),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),

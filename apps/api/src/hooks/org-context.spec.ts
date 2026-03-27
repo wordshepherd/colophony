@@ -185,7 +185,7 @@ describe('org-context plugin', () => {
       .mockResolvedValueOnce({}) // BEGIN READ ONLY
       .mockResolvedValueOnce({}) // set_config app.current_org
       .mockResolvedValueOnce({}) // set_config app.user_id
-      .mockResolvedValueOnce({ rows: [{ role: 'EDITOR' }] }) // membership found
+      .mockResolvedValueOnce({ rows: [{ roles: ['EDITOR'] }] }) // membership found
       .mockResolvedValueOnce({}); // COMMIT
 
     const response = await app.inject({
@@ -199,7 +199,7 @@ describe('org-context plugin', () => {
     expect(response.statusCode).toBe(200);
     const body = response.json();
     expect(body.authContext.orgId).toBe(VALID_ORG_ID);
-    expect(body.authContext.role).toBe('EDITOR');
+    expect(body.authContext.roles).toEqual(['EDITOR']);
     expect(mockClientRelease).toHaveBeenCalled();
   });
 

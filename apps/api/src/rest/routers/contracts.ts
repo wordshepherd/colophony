@@ -13,7 +13,11 @@ import {
 } from '../../services/contract.service.js';
 import { toServiceContext } from '../../services/context.js';
 import { mapServiceError } from '../error-mapper.js';
-import { orgProcedure, requireScopes } from '../context.js';
+import {
+  orgProcedure,
+  productionProcedure,
+  requireScopes,
+} from '../context.js';
 
 // ---------------------------------------------------------------------------
 // Query schemas — override page/limit with z.coerce for REST query strings
@@ -86,7 +90,7 @@ const listByPipelineItem = orgProcedure
     );
   });
 
-const generate = orgProcedure
+const generate = productionProcedure
   .use(requireScopes('contracts:write'))
   .route({
     method: 'POST',
@@ -110,7 +114,7 @@ const generate = orgProcedure
     }
   });
 
-const send = orgProcedure
+const send = productionProcedure
   .use(requireScopes('contracts:write'))
   .route({
     method: 'POST',
@@ -133,7 +137,7 @@ const send = orgProcedure
     }
   });
 
-const voidContract = orgProcedure
+const voidContract = productionProcedure
   .use(requireScopes('contracts:write'))
   .route({
     method: 'POST',

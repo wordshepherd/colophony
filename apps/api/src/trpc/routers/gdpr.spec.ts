@@ -29,12 +29,12 @@ vi.mock('../../services/organization.service.js', () => ({
     listMembers: vi.fn(),
     addMember: vi.fn(),
     removeMember: vi.fn(),
-    updateMemberRole: vi.fn(),
+    updateMemberRoles: vi.fn(),
     createWithAudit: vi.fn(),
     updateWithAudit: vi.fn(),
     addMemberWithAudit: vi.fn(),
     removeMemberWithAudit: vi.fn(),
-    updateMemberRoleWithAudit: vi.fn(),
+    updateMemberRolesWithAudit: vi.fn(),
   },
   UserNotFoundError: class UserNotFoundError extends Error {
     name = 'UserNotFoundError';
@@ -104,7 +104,7 @@ function adminOrgContext(): TRPCContext {
       emailVerified: true,
       authMethod: 'test',
       orgId: ORG_ID,
-      role: 'ADMIN',
+      roles: ['ADMIN'],
     },
     dbTx: {} as TRPCContext['dbTx'],
   });
@@ -149,7 +149,7 @@ describe('gdpr tRPC router', () => {
           emailVerified: true,
           authMethod: 'test',
           orgId: ORG_ID,
-          role: 'EDITOR',
+          roles: ['EDITOR'],
         },
         dbTx: {} as TRPCContext['dbTx'],
       });

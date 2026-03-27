@@ -11,7 +11,7 @@ import type { AuditFn, ServiceContext, UserServiceContext } from './types.js';
  */
 export function toServiceContext(ctx: {
   dbTx: DrizzleDb;
-  authContext: { userId: string; orgId: string; role: Role };
+  authContext: { userId: string; orgId: string; roles: Role[] };
   audit: AuditFn;
 }): ServiceContext {
   return {
@@ -19,7 +19,7 @@ export function toServiceContext(ctx: {
     actor: {
       userId: ctx.authContext.userId,
       orgId: ctx.authContext.orgId,
-      role: ctx.authContext.role,
+      roles: ctx.authContext.roles,
     },
     audit: ctx.audit,
   };

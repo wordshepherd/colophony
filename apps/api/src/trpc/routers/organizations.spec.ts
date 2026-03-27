@@ -12,11 +12,11 @@ vi.mock('../../services/organization.service.js', () => ({
     listMembers: vi.fn(),
     addMember: vi.fn(),
     removeMember: vi.fn(),
-    updateMemberRole: vi.fn(),
+    updateMemberRoles: vi.fn(),
     // Access-aware methods (PR 2)
     addMemberWithAudit: vi.fn(),
     removeMemberWithAudit: vi.fn(),
-    updateMemberRoleWithAudit: vi.fn(),
+    updateMemberRolesWithAudit: vi.fn(),
     updateWithAudit: vi.fn(),
     createWithAudit: vi.fn(),
   },
@@ -87,7 +87,7 @@ function authedContext(overrides: Partial<TRPCContext> = {}): TRPCContext {
 }
 
 function orgContext(
-  role: 'ADMIN' | 'EDITOR' | 'READER' = 'ADMIN',
+  roles: ('ADMIN' | 'EDITOR' | 'READER')[] = ['ADMIN'],
   overrides: Partial<TRPCContext> = {},
 ): TRPCContext {
   const mockTx = {} as never;
@@ -99,7 +99,7 @@ function orgContext(
       emailVerified: true,
       authMethod: 'test',
       orgId: ORG_ID,
-      role,
+      roles,
     },
     dbTx: mockTx,
     audit: vi.fn(),
@@ -129,7 +129,7 @@ describe('organizations tRPC router', () => {
       const orgs = [
         {
           organizationId: ORG_ID,
-          role: 'ADMIN',
+          roles: ['ADMIN'],
           name: 'Org 1',
           slug: 'org-1',
         },
@@ -166,7 +166,7 @@ describe('organizations tRPC router', () => {
           id: MEMBER_ID,
           organizationId: ORG_NEW_ID,
           userId: USER_ID,
-          role: 'ADMIN',
+          roles: ['ADMIN'],
           createdAt: NOW,
           updatedAt: NOW,
         },
@@ -245,7 +245,7 @@ describe('organizations tRPC router', () => {
 
   describe('organizations.update', () => {
     it('requires admin role', async () => {
-      const caller = createCaller(orgContext('EDITOR'));
+      const caller = createCaller(orgContext(['EDITOR']));
       await expect(
         caller.organizations.update({ name: 'New Name' }),
       ).rejects.toThrow('Admin role required');
@@ -262,7 +262,7 @@ describe('organizations tRPC router', () => {
       };
       mockService.updateWithAudit.mockResolvedValueOnce(updated as never);
 
-      const ctx = orgContext('ADMIN');
+      const ctx = orgContext(['ADMIN']);
       const caller = createCaller(ctx);
       const result = await caller.organizations.update({ name: 'New' });
       expect(result).toEqual(updated);
@@ -273,7 +273,7 @@ describe('organizations tRPC router', () => {
         new NotFoundError('Organization not found'),
       );
 
-      const caller = createCaller(orgContext('ADMIN'));
+      const caller = createCaller(orgContext(['ADMIN']));
       await expect(
         caller.organizations.update({ name: 'New' }),
       ).rejects.toThrow('not found');
@@ -313,7 +313,7 @@ describe('organizations tRPC router', () => {
           {
             id: MEMBER_ID,
             userId: USER_ID,
-            role: 'ADMIN',
+            roles: ['ADMIN'],
             email: 'admin@example.com',
             createdAt: NOW,
           },
@@ -336,11 +336,11 @@ describe('organizations tRPC router', () => {
 
   describe('organizations.members.add', () => {
     it('requires admin role', async () => {
-      const caller = createCaller(orgContext('READER'));
+      const caller = createCaller(orgContext(['READER']));
       await expect(
         caller.organizations.members.add({
           email: 'new@example.com',
-          role: 'READER',
+          roles: ['READER'],
         }),
       ).rejects.toThrow('Admin role required');
     });
@@ -350,17 +350,17 @@ describe('organizations tRPC router', () => {
         id: MEMBER_NEW_ID,
         organizationId: ORG_ID,
         userId: USER_2_ID,
-        role: 'READER',
+        roles: ['READER'],
         createdAt: NOW,
         updatedAt: NOW,
       };
       mockService.addMemberWithAudit.mockResolvedValueOnce(member as never);
 
-      const ctx = orgContext('ADMIN');
+      const ctx = orgContext(['ADMIN']);
       const caller = createCaller(ctx);
       const result = await caller.organizations.members.add({
         email: 'new@example.com',
-        role: 'READER',
+        roles: ['READER'],
       });
       expect(result).toEqual(member);
     });
@@ -372,11 +372,11 @@ describe('organizations tRPC router', () => {
         new UserNotFoundError('nobody@example.com'),
       );
 
-      const caller = createCaller(orgContext('ADMIN'));
+      const caller = createCaller(orgContext(['ADMIN']));
       await expect(
         caller.organizations.members.add({
           email: 'nobody@example.com',
-          role: 'READER',
+          roles: ['READER'],
         }),
       ).rejects.toThrow(TRPCError);
     });
@@ -386,11 +386,11 @@ describe('organizations tRPC router', () => {
       (pgError as unknown as { code: string }).code = '23505';
       mockService.addMemberWithAudit.mockRejectedValueOnce(pgError);
 
-      const caller = createCaller(orgContext('ADMIN'));
+      const caller = createCaller(orgContext(['ADMIN']));
       await expect(
         caller.organizations.members.add({
           email: 'dup@example.com',
-          role: 'READER',
+          roles: ['READER'],
         }),
       ).rejects.toThrow('already exists');
     });
@@ -402,7 +402,7 @@ describe('organizations tRPC router', () => {
         success: true,
       } as never);
 
-      const ctx = orgContext('ADMIN');
+      const ctx = orgContext(['ADMIN']);
       const caller = createCaller(ctx);
       const result = await caller.organizations.members.remove({
         memberId: 'a1111111-1111-1111-a111-111111111111',
@@ -415,7 +415,7 @@ describe('organizations tRPC router', () => {
         new NotFoundError('Member not found'),
       );
 
-      const caller = createCaller(orgContext('ADMIN'));
+      const caller = createCaller(orgContext(['ADMIN']));
       await expect(
         caller.organizations.members.remove({
           memberId: 'a1111111-1111-1111-a111-111111111111',
@@ -430,7 +430,7 @@ describe('organizations tRPC router', () => {
         new LastAdminError(),
       );
 
-      const caller = createCaller(orgContext('ADMIN'));
+      const caller = createCaller(orgContext(['ADMIN']));
       await expect(
         caller.organizations.members.remove({
           memberId: 'a1111111-1111-1111-a111-111111111111',
@@ -439,38 +439,38 @@ describe('organizations tRPC router', () => {
     });
   });
 
-  describe('organizations.members.updateRole', () => {
-    it('updates role via updateMemberRoleWithAudit', async () => {
-      mockService.updateMemberRoleWithAudit.mockResolvedValueOnce({
+  describe('organizations.members.updateRoles', () => {
+    it('updates roles via updateMemberRolesWithAudit', async () => {
+      mockService.updateMemberRolesWithAudit.mockResolvedValueOnce({
         id: MEMBER_ID,
         organizationId: ORG_ID,
         userId: USER_ID,
-        role: 'EDITOR',
+        roles: ['EDITOR'],
         createdAt: NOW,
         updatedAt: NOW,
       } as never);
 
-      const ctx = orgContext('ADMIN');
+      const ctx = orgContext(['ADMIN']);
       const caller = createCaller(ctx);
-      const result = await caller.organizations.members.updateRole({
+      const result = await caller.organizations.members.updateRoles({
         memberId: 'a1111111-1111-1111-a111-111111111111',
-        role: 'EDITOR',
+        roles: ['EDITOR'],
       });
-      expect(result.role).toBe('EDITOR');
+      expect(result.roles).toEqual(['EDITOR']);
     });
 
     it('maps LastAdminError to BAD_REQUEST', async () => {
       const { LastAdminError } =
         await import('../../services/organization.service.js');
-      mockService.updateMemberRoleWithAudit.mockRejectedValueOnce(
+      mockService.updateMemberRolesWithAudit.mockRejectedValueOnce(
         new LastAdminError(),
       );
 
-      const caller = createCaller(orgContext('ADMIN'));
+      const caller = createCaller(orgContext(['ADMIN']));
       await expect(
-        caller.organizations.members.updateRole({
+        caller.organizations.members.updateRoles({
           memberId: 'a1111111-1111-1111-a111-111111111111',
-          role: 'READER',
+          roles: ['READER'],
         }),
       ).rejects.toThrow('last admin');
     });

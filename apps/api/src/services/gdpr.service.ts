@@ -160,13 +160,13 @@ export const gdprService = {
       await client.query('BEGIN');
 
       // Step 1: Verify ADMIN role
-      const memberResult = await client.query<{ role: string }>(
-        'SELECT role FROM organization_members WHERE organization_id = $1 AND user_id = $2',
+      const memberResult = await client.query<{ roles: string[] }>(
+        'SELECT roles::text[] FROM organization_members WHERE organization_id = $1 AND user_id = $2',
         [orgId, actorUserId],
       );
       if (
         memberResult.rows.length === 0 ||
-        memberResult.rows[0].role !== 'ADMIN'
+        !memberResult.rows[0].roles.includes('ADMIN')
       ) {
         throw new OrgNotDeletableError(
           'Only organization admins can delete an organization',

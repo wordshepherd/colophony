@@ -7,7 +7,7 @@ import type {
 } from '@colophony/types';
 import { AuditActions, AuditResources } from '@colophony/types';
 import type { ServiceContext } from './types.js';
-import { assertEditorOrAdmin } from './errors.js';
+import { assertEditorOrProductionOrAdmin } from './errors.js';
 import { enqueueOutboxEvent } from './outbox.js';
 import {
   contractTemplateService,
@@ -140,7 +140,7 @@ export const contractService = {
     input: GenerateContractInput,
     mergeDataOverrides?: Record<string, string>,
   ) {
-    assertEditorOrAdmin(ctx.actor.role);
+    assertEditorOrProductionOrAdmin(ctx.actor.roles);
     const contract = await contractService.generate(
       ctx.tx,
       input,
@@ -215,7 +215,7 @@ export const contractService = {
   },
 
   async sendWithAudit(ctx: ServiceContext, id: string) {
-    assertEditorOrAdmin(ctx.actor.role);
+    assertEditorOrProductionOrAdmin(ctx.actor.roles);
     const contract = await contractService.getById(ctx.tx, id);
     if (!contract) throw new ContractNotFoundError(id);
     if (contract.status !== 'DRAFT') {
@@ -236,7 +236,7 @@ export const contractService = {
   },
 
   async voidWithAudit(ctx: ServiceContext, id: string) {
-    assertEditorOrAdmin(ctx.actor.role);
+    assertEditorOrProductionOrAdmin(ctx.actor.roles);
     const contract = await contractService.getById(ctx.tx, id);
     if (!contract) throw new ContractNotFoundError(id);
     const updated = await contractService.updateStatus(ctx.tx, id, 'VOIDED');

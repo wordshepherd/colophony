@@ -12,7 +12,7 @@ vi.mock('../../services/organization.service.js', () => ({
     listMembers: vi.fn(),
     addMember: vi.fn(),
     removeMember: vi.fn(),
-    updateMemberRole: vi.fn(),
+    updateMemberRoles: vi.fn(),
   },
   UserNotFoundError: class UserNotFoundError extends Error {
     name = 'UserNotFoundError';
@@ -103,7 +103,13 @@ describe('users tRPC router', () => {
       const orgs = [
         {
           organizationId: ORG_ID,
-          role: 'ADMIN' as const,
+          roles: ['ADMIN'] as (
+            | 'ADMIN'
+            | 'EDITOR'
+            | 'READER'
+            | 'PRODUCTION'
+            | 'BUSINESS_OPS'
+          )[],
           name: 'Test Org',
           slug: 'test-org',
         },
@@ -123,7 +129,7 @@ describe('users tRPC router', () => {
             id: ORG_ID,
             name: 'Test Org',
             slug: 'test-org',
-            role: 'ADMIN',
+            roles: ['ADMIN'],
           },
         ],
       });

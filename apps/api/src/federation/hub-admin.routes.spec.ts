@@ -100,7 +100,7 @@ describe('hub-admin.routes', () => {
       const handler = app.getHandler('GET', '/federation/hub/instances');
       const reply = mockReply();
       await handler(
-        { query: {}, authContext: { role: 'ADMIN', userId: 'user' } },
+        { query: {}, authContext: { roles: ['ADMIN'], userId: 'user' } },
         reply,
       );
 
@@ -122,7 +122,7 @@ describe('hub-admin.routes', () => {
       await handler(
         {
           params: { id: 'a0000000-0000-4000-8000-000000000001' },
-          authContext: { role: 'ADMIN', userId: 'admin-user' },
+          authContext: { roles: ['ADMIN'], userId: 'admin-user' },
         },
         reply,
       );
@@ -145,7 +145,7 @@ describe('hub-admin.routes', () => {
       await handler(
         {
           params: { id: 'a0000000-0000-4000-8000-000000000001' },
-          authContext: { role: 'ADMIN', userId: 'admin-user' },
+          authContext: { roles: ['ADMIN'], userId: 'admin-user' },
         },
         reply,
       );
@@ -163,7 +163,7 @@ describe('hub-admin.routes', () => {
       const handler = app.getHandler('GET', '/federation/hub/instances');
       const reply = mockReply();
       await handler(
-        { query: {}, authContext: { role: 'ADMIN', userId: 'user' } },
+        { query: {}, authContext: { roles: ['ADMIN'], userId: 'user' } },
         reply,
       );
 

@@ -68,7 +68,7 @@ describe('RLS Write Prevention', () => {
             tx.insert(organizationMembers).values({
               organizationId: scenario.orgB.id,
               userId: extraUser.id,
-              role: 'READER',
+              roles: ['READER'],
             }),
         ),
       ).rejects.toMatchObject({ cause: { code: '42501' } });

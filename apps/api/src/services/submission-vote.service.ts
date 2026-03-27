@@ -85,7 +85,7 @@ async function getSubmissionOrThrow(tx: DrizzleDb, submissionId: string) {
 
 async function assertEditorAdminOrReviewer(
   tx: DrizzleDb,
-  actorRole: string,
+  actorRoles: readonly string[],
   actorUserId: string,
   submissionId: string,
   submitterId: string | null,
@@ -94,9 +94,9 @@ async function assertEditorAdminOrReviewer(
     throw new ForbiddenError('Submitters cannot vote on their own submissions');
   }
 
-  if (actorRole === 'ADMIN' || actorRole === 'EDITOR') return;
+  if (actorRoles.includes('ADMIN') || actorRoles.includes('EDITOR')) return;
 
-  if (actorRole === 'READER') {
+  if (actorRoles.includes('READER')) {
     const [reviewer] = await tx
       .select({ id: submissionReviewers.id })
       .from(submissionReviewers)
@@ -272,7 +272,7 @@ async function castVoteWithAudit(
   // Access check
   await assertEditorAdminOrReviewer(
     svc.tx,
-    svc.actor.role,
+    svc.actor.roles,
     svc.actor.userId,
     params.submissionId,
     submission.submitterId,
@@ -350,7 +350,7 @@ async function castVoteWithAudit(
     svc.tx,
     submission.submissionPeriodId,
   );
-  return applyVoterBlinding(castResult, blindMode, svc.actor.role);
+  return applyVoterBlinding(castResult, blindMode, svc.actor.roles);
 }
 
 async function listVotesWithAccess(
@@ -360,7 +360,7 @@ async function listVotesWithAccess(
   const submission = await getSubmissionOrThrow(svc.tx, submissionId);
   await assertEditorAdminOrReviewer(
     svc.tx,
-    svc.actor.role,
+    svc.actor.roles,
     svc.actor.userId,
     submissionId,
     submission.submitterId,
@@ -371,14 +371,14 @@ async function listVotesWithAccess(
     svc.tx,
     submission.submissionPeriodId,
   );
-  return votes.map((v) => applyVoterBlinding(v, blindMode, svc.actor.role));
+  return votes.map((v) => applyVoterBlinding(v, blindMode, svc.actor.roles));
 }
 
 async function getVoteSummaryWithAccess(
   svc: ServiceContext,
   submissionId: string,
 ): Promise<VoteSummary> {
-  assertEditorOrAdmin(svc.actor.role);
+  assertEditorOrAdmin(svc.actor.roles);
   await getSubmissionOrThrow(svc.tx, submissionId);
   return getSummary(svc.tx, submissionId);
 }

@@ -4,7 +4,7 @@ export const ANONYMOUS_LABEL = "[Anonymous]";
 
 export interface BlindContext {
   blindMode: BlindReviewMode;
-  callerRole: "ADMIN" | "EDITOR" | "READER";
+  callerRoles: readonly string[];
 }
 
 /**
@@ -13,7 +13,7 @@ export interface BlindContext {
  * Only admins can see submitter identity when blinding is active.
  */
 export function shouldBlindSubmitter(ctx: BlindContext): boolean {
-  return ctx.blindMode !== "none" && ctx.callerRole !== "ADMIN";
+  return ctx.blindMode !== "none" && !ctx.callerRoles.includes("ADMIN");
 }
 
 /**
@@ -21,5 +21,5 @@ export function shouldBlindSubmitter(ctx: BlindContext): boolean {
  * Only in double_blind mode, and only for non-admins.
  */
 export function shouldBlindPeerIdentity(ctx: BlindContext): boolean {
-  return ctx.blindMode === "double_blind" && ctx.callerRole !== "ADMIN";
+  return ctx.blindMode === "double_blind" && !ctx.callerRoles.includes("ADMIN");
 }

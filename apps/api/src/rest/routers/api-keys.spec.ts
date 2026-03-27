@@ -49,7 +49,7 @@ function authedContext(): RestContext {
 }
 
 function orgContext(
-  role: 'ADMIN' | 'EDITOR' | 'READER' = 'ADMIN',
+  roles: ('ADMIN' | 'EDITOR' | 'READER')[] = ['ADMIN'],
 ): RestContext {
   return {
     authContext: {
@@ -59,7 +59,7 @@ function orgContext(
       emailVerified: true,
       authMethod: 'test',
       orgId: ORG_ID,
-      role,
+      roles,
     },
     dbTx: {} as never,
     audit: vi.fn(),
@@ -68,7 +68,7 @@ function orgContext(
 
 function apiKeyContext(
   scopes: string[],
-  role: 'ADMIN' | 'EDITOR' | 'READER' = 'ADMIN',
+  roles: ('ADMIN' | 'EDITOR' | 'READER')[] = ['ADMIN'],
 ): RestContext {
   return {
     authContext: {
@@ -79,7 +79,7 @@ function apiKeyContext(
       apiKeyId: 'k0000000-0000-4000-a000-000000000001',
       apiKeyScopes: scopes as any,
       orgId: ORG_ID,
-      role,
+      roles,
     },
     dbTx: {} as never,
     audit: vi.fn(),
@@ -131,7 +131,7 @@ describe('api-keys REST router', () => {
       };
       mockService.list.mockResolvedValueOnce(response as never);
 
-      const call = client(apiKeysRouter.list, orgContext('READER'));
+      const call = client(apiKeysRouter.list, orgContext(['READER']));
       const result = await call({ page: 1, limit: 20 });
       expect(result.items).toHaveLength(1);
     });
@@ -143,7 +143,7 @@ describe('api-keys REST router', () => {
 
   describe('POST /api-keys (create)', () => {
     it('requires admin role', async () => {
-      const call = client(apiKeysRouter.create, orgContext('EDITOR'));
+      const call = client(apiKeysRouter.create, orgContext(['EDITOR']));
       await expect(
         call({ name: 'Test', scopes: ['submissions:read'] }),
       ).rejects.toThrow('Admin role required');
@@ -163,7 +163,7 @@ describe('api-keys REST router', () => {
       };
       mockService.create.mockResolvedValueOnce(result as never);
 
-      const ctx = orgContext('ADMIN');
+      const ctx = orgContext(['ADMIN']);
       const call = client(apiKeysRouter.create, ctx);
       const response = await call({
         name: 'Test Key',
@@ -197,7 +197,7 @@ describe('api-keys REST router', () => {
 
   describe('POST /api-keys/{keyId}/revoke', () => {
     it('requires admin role', async () => {
-      const call = client(apiKeysRouter.revoke, orgContext('READER'));
+      const call = client(apiKeysRouter.revoke, orgContext(['READER']));
       await expect(call({ keyId: KEY_ID })).rejects.toThrow(
         'Admin role required',
       );
@@ -211,7 +211,7 @@ describe('api-keys REST router', () => {
       };
       mockService.revoke.mockResolvedValueOnce(revoked as never);
 
-      const ctx = orgContext('ADMIN');
+      const ctx = orgContext(['ADMIN']);
       const call = client(apiKeysRouter.revoke, ctx);
       const result = await call({ keyId: KEY_ID });
 
@@ -227,7 +227,7 @@ describe('api-keys REST router', () => {
     it('throws NOT_FOUND when key does not exist', async () => {
       mockService.revoke.mockResolvedValueOnce(null as never);
 
-      const call = client(apiKeysRouter.revoke, orgContext('ADMIN'));
+      const call = client(apiKeysRouter.revoke, orgContext(['ADMIN']));
       await expect(call({ keyId: KEY_ID })).rejects.toThrow(
         'API key not found',
       );
@@ -240,7 +240,7 @@ describe('api-keys REST router', () => {
 
   describe('DELETE /api-keys/{keyId}', () => {
     it('requires admin role', async () => {
-      const call = client(apiKeysRouter.delete, orgContext('EDITOR'));
+      const call = client(apiKeysRouter.delete, orgContext(['EDITOR']));
       await expect(call({ keyId: KEY_ID })).rejects.toThrow(
         'Admin role required',
       );
@@ -250,7 +250,7 @@ describe('api-keys REST router', () => {
       const deleted = { id: KEY_ID, name: 'Test Key' };
       mockService.delete.mockResolvedValueOnce(deleted as never);
 
-      const ctx = orgContext('ADMIN');
+      const ctx = orgContext(['ADMIN']);
       const call = client(apiKeysRouter.delete, ctx);
       const result = await call({ keyId: KEY_ID });
 
@@ -266,7 +266,7 @@ describe('api-keys REST router', () => {
     it('throws NOT_FOUND when key does not exist', async () => {
       mockService.delete.mockResolvedValueOnce(null as never);
 
-      const call = client(apiKeysRouter.delete, orgContext('ADMIN'));
+      const call = client(apiKeysRouter.delete, orgContext(['ADMIN']));
       await expect(call({ keyId: KEY_ID })).rejects.toThrow(
         'API key not found',
       );

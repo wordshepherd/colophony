@@ -5,6 +5,7 @@ import {
   organizationMembers,
   users,
   eq,
+  and,
   sql,
   type DrizzleDb,
 } from '@colophony/db';
@@ -47,13 +48,13 @@ export const organizationService = {
   async listUserOrganizations(userId: string) {
     const result = await pool.query<{
       organization_id: string;
-      role: string;
+      roles: string[];
       organization_name: string;
       slug: string;
     }>('SELECT * FROM list_user_organizations($1)', [userId]);
     return result.rows.map((row) => ({
       organizationId: row.organization_id,
-      role: row.role as Role,
+      roles: row.roles as Role[],
       name: row.organization_name,
       slug: row.slug,
     }));
@@ -91,7 +92,7 @@ export const organizationService = {
         .values({
           organizationId: org.id,
           userId: creatorUserId,
-          role: 'ADMIN',
+          roles: ['ADMIN'],
         })
         .returning();
 
@@ -158,7 +159,7 @@ export const organizationService = {
         .select({
           id: organizationMembers.id,
           userId: organizationMembers.userId,
-          role: organizationMembers.role,
+          roles: organizationMembers.roles,
           email: users.email,
           createdAt: organizationMembers.createdAt,
         })
@@ -186,7 +187,7 @@ export const organizationService = {
   /**
    * Add a member to the organization. User must already exist (Zitadel sync).
    */
-  async addMember(tx: DrizzleDb, orgId: string, email: string, role: Role) {
+  async addMember(tx: DrizzleDb, orgId: string, email: string, roles: Role[]) {
     // users table has no RLS — lookup by email works in any context
     const [user] = await tx
       .select({ id: users.id })
@@ -200,7 +201,7 @@ export const organizationService = {
 
     const [member] = await tx
       .insert(organizationMembers)
-      .values({ organizationId: orgId, userId: user.id, role })
+      .values({ organizationId: orgId, userId: user.id, roles })
       .returning();
 
     return member;
@@ -215,22 +216,27 @@ export const organizationService = {
    * last-admin removal attempts within the same org, preventing both from
    * seeing count=2 and proceeding.
    */
-  async removeMember(tx: DrizzleDb, memberId: string) {
+  async removeMember(tx: DrizzleDb, orgId: string, memberId: string) {
     // First, fetch the member to check if they're an admin
     const [member] = await tx
       .select()
       .from(organizationMembers)
-      .where(eq(organizationMembers.id, memberId))
+      .where(
+        and(
+          eq(organizationMembers.id, memberId),
+          eq(organizationMembers.organizationId, orgId),
+        ),
+      )
       .limit(1);
 
     if (!member) return null;
 
-    if (member.role === 'ADMIN') {
+    if (member.roles.includes('ADMIN')) {
       // Lock all admin rows in this org with FOR UPDATE and count them.
       // FOR UPDATE cannot be used with aggregates, so we select individual
       // rows and count in application code.
       const adminRows = await tx.execute<{ id: string }>(
-        sql`SELECT id FROM organization_members WHERE organization_id = ${member.organizationId} AND role = 'ADMIN' FOR UPDATE`,
+        sql`SELECT id FROM organization_members WHERE organization_id = ${orgId} AND 'ADMIN' = ANY(roles) FOR UPDATE`,
       );
       if (adminRows.rows.length <= 1) {
         throw new LastAdminError();
@@ -239,7 +245,12 @@ export const organizationService = {
 
     const [deleted] = await tx
       .delete(organizationMembers)
-      .where(eq(organizationMembers.id, memberId))
+      .where(
+        and(
+          eq(organizationMembers.id, memberId),
+          eq(organizationMembers.organizationId, orgId),
+        ),
+      )
       .returning();
     return deleted ?? null;
   },
@@ -247,18 +258,28 @@ export const organizationService = {
   /**
    * Update a member's role.
    */
-  async updateMemberRole(tx: DrizzleDb, memberId: string, role: Role) {
-    // If demoting an admin, check they aren't the last one
-    if (role !== 'ADMIN') {
+  async updateMemberRoles(
+    tx: DrizzleDb,
+    orgId: string,
+    memberId: string,
+    roles: Role[],
+  ) {
+    // If removing ADMIN from the new roles, check they aren't the last admin
+    if (!roles.includes('ADMIN')) {
       const [member] = await tx
         .select()
         .from(organizationMembers)
-        .where(eq(organizationMembers.id, memberId))
+        .where(
+          and(
+            eq(organizationMembers.id, memberId),
+            eq(organizationMembers.organizationId, orgId),
+          ),
+        )
         .limit(1);
 
-      if (member?.role === 'ADMIN') {
+      if (member?.roles.includes('ADMIN')) {
         const adminRows = await tx.execute<{ id: string }>(
-          sql`SELECT id FROM organization_members WHERE organization_id = ${member.organizationId} AND role = 'ADMIN' FOR UPDATE`,
+          sql`SELECT id FROM organization_members WHERE organization_id = ${orgId} AND 'ADMIN' = ANY(roles) FOR UPDATE`,
         );
         if (adminRows.rows.length <= 1) {
           throw new LastAdminError();
@@ -268,8 +289,13 @@ export const organizationService = {
 
     const [updated] = await tx
       .update(organizationMembers)
-      .set({ role, updatedAt: new Date() })
-      .where(eq(organizationMembers.id, memberId))
+      .set({ roles, updatedAt: new Date() })
+      .where(
+        and(
+          eq(organizationMembers.id, memberId),
+          eq(organizationMembers.organizationId, orgId),
+        ),
+      )
       .returning();
     return updated ?? null;
   },
@@ -281,18 +307,18 @@ export const organizationService = {
   /**
    * Add a member with audit logging. Admin role enforced by tRPC middleware.
    */
-  async addMemberWithAudit(svc: ServiceContext, email: string, role: Role) {
+  async addMemberWithAudit(svc: ServiceContext, email: string, roles: Role[]) {
     const member = await organizationService.addMember(
       svc.tx,
       svc.actor.orgId,
       email,
-      role,
+      roles,
     );
     await svc.audit({
       action: AuditActions.ORG_MEMBER_ADDED,
       resource: AuditResources.ORGANIZATION,
       resourceId: member.id,
-      newValue: { email, role },
+      newValue: { email, roles },
     });
     return member;
   },
@@ -301,13 +327,17 @@ export const organizationService = {
    * Remove a member with audit logging. Admin role enforced by tRPC middleware.
    */
   async removeMemberWithAudit(svc: ServiceContext, memberId: string) {
-    const deleted = await organizationService.removeMember(svc.tx, memberId);
+    const deleted = await organizationService.removeMember(
+      svc.tx,
+      svc.actor.orgId,
+      memberId,
+    );
     if (!deleted) throw new NotFoundError('Member not found');
     await svc.audit({
       action: AuditActions.ORG_MEMBER_REMOVED,
       resource: AuditResources.ORGANIZATION,
       resourceId: deleted.id,
-      oldValue: { userId: deleted.userId, role: deleted.role },
+      oldValue: { userId: deleted.userId, roles: deleted.roles },
     });
     return { success: true as const };
   },
@@ -315,22 +345,23 @@ export const organizationService = {
   /**
    * Update a member's role with audit logging. Admin role enforced by tRPC middleware.
    */
-  async updateMemberRoleWithAudit(
+  async updateMemberRolesWithAudit(
     svc: ServiceContext,
     memberId: string,
-    role: Role,
+    roles: Role[],
   ) {
-    const updated = await organizationService.updateMemberRole(
+    const updated = await organizationService.updateMemberRoles(
       svc.tx,
+      svc.actor.orgId,
       memberId,
-      role,
+      roles,
     );
     if (!updated) throw new NotFoundError('Member not found');
     await svc.audit({
       action: AuditActions.ORG_MEMBER_ROLE_CHANGED,
       resource: AuditResources.ORGANIZATION,
       resourceId: updated.id,
-      newValue: { role },
+      newValue: { roles },
     });
     return updated;
   },

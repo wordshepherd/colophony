@@ -73,7 +73,7 @@ function NavGroup({
 
 export function Sidebar() {
   const pathname = usePathname();
-  const { isEditor, isAdmin } = useOrganization();
+  const { isEditor, isProduction, isAdmin } = useOrganization();
 
   return (
     <div className="flex flex-col h-full bg-background">
@@ -101,7 +101,7 @@ export function Sidebar() {
           />
         )}
 
-        {isEditor && (
+        {isProduction && (
           <NavGroup
             label="Production"
             items={productionNavigation}

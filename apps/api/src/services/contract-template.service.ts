@@ -103,7 +103,7 @@ export const contractTemplateService = {
     ctx: ServiceContext,
     input: CreateContractTemplateInput,
   ) {
-    assertEditorOrAdmin(ctx.actor.role);
+    assertEditorOrAdmin(ctx.actor.roles);
     const template = await contractTemplateService.create(
       ctx.tx,
       input,
@@ -142,7 +142,7 @@ export const contractTemplateService = {
     id: string,
     input: UpdateContractTemplateInput,
   ) {
-    assertEditorOrAdmin(ctx.actor.role);
+    assertEditorOrAdmin(ctx.actor.roles);
     const updated = await contractTemplateService.update(ctx.tx, id, input);
     if (!updated) throw new ContractTemplateNotFoundError(id);
     await ctx.audit({
@@ -164,7 +164,7 @@ export const contractTemplateService = {
   },
 
   async deleteWithAudit(ctx: ServiceContext, id: string) {
-    assertEditorOrAdmin(ctx.actor.role);
+    assertEditorOrAdmin(ctx.actor.roles);
     const deleted = await contractTemplateService.delete(ctx.tx, id);
     if (!deleted) throw new ContractTemplateNotFoundError(id);
     await ctx.audit({

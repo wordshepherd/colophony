@@ -22,7 +22,7 @@ export interface ServiceContext {
   /** RLS-scoped Drizzle transaction from the dbContext hook. */
   tx: DrizzleDb;
   /** Authenticated actor identity from the auth + orgContext hooks. */
-  actor: { userId: string; orgId: string; role: Role };
+  actor: { userId: string; orgId: string; roles: Role[] };
   /** Request-scoped audit function from the audit hook. */
   audit: AuditFn;
 }

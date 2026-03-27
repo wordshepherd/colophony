@@ -29,9 +29,12 @@ export const userProfileSchema = z.object({
         id: z.string().uuid().describe("Organization ID"),
         name: z.string().describe("Organization name"),
         slug: z.string().describe("Organization slug"),
-        role: z
-          .enum(["ADMIN", "EDITOR", "READER"])
-          .describe("User's role in this organization"),
+        roles: z
+          .array(
+            z.enum(["ADMIN", "EDITOR", "READER", "PRODUCTION", "BUSINESS_OPS"]),
+          )
+          .min(1)
+          .describe("User's roles in this organization"),
       }),
     )
     .describe("Organizations the user belongs to"),

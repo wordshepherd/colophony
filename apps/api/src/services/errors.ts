@@ -32,13 +32,12 @@ export class NotFoundError extends Error {
  */
 export function assertOwnerOrEditor(
   actorUserId: string,
-  actorRole: string,
+  actorRoles: readonly string[],
   resourceOwnerId: string | null,
 ): void {
   if (
     resourceOwnerId !== actorUserId &&
-    actorRole !== 'ADMIN' &&
-    actorRole !== 'EDITOR'
+    !actorRoles.some((r) => ['ADMIN', 'EDITOR'].includes(r))
   ) {
     throw new ForbiddenError('You do not have access to this submission');
   }
@@ -46,10 +45,22 @@ export function assertOwnerOrEditor(
 
 /**
  * Assert the caller has EDITOR or ADMIN role.
- * Throws {@link ForbiddenError} if the role is insufficient.
+ * Throws {@link ForbiddenError} if the roles are insufficient.
  */
-export function assertEditorOrAdmin(role: string): void {
-  if (role !== 'ADMIN' && role !== 'EDITOR') {
+export function assertEditorOrAdmin(roles: readonly string[]): void {
+  if (!roles.some((r) => ['EDITOR', 'ADMIN'].includes(r))) {
     throw new ForbiddenError('Editor or admin role required');
+  }
+}
+
+/**
+ * Assert the caller has EDITOR, PRODUCTION, or ADMIN role.
+ * Throws {@link ForbiddenError} if the roles are insufficient.
+ */
+export function assertEditorOrProductionOrAdmin(
+  roles: readonly string[],
+): void {
+  if (!roles.some((r) => ['EDITOR', 'PRODUCTION', 'ADMIN'].includes(r))) {
+    throw new ForbiddenError('Editor, production, or admin role required');
   }
 }

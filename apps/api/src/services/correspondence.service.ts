@@ -68,7 +68,7 @@ export const correspondenceService = {
   },
 
   async listBySubmission(svc: ServiceContext, submissionId: string) {
-    assertEditorOrAdmin(svc.actor.role);
+    assertEditorOrAdmin(svc.actor.roles);
 
     const rows = await svc.tx
       .select()
@@ -151,7 +151,7 @@ export const correspondenceService = {
     svc: ServiceContext,
     input: SendEditorMessageInput,
   ): Promise<{ correspondenceId: string }> {
-    assertEditorOrAdmin(svc.actor.role);
+    assertEditorOrAdmin(svc.actor.roles);
 
     // Fetch the submission (RLS-scoped)
     const submission = await submissionService.getById(

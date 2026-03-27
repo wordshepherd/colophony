@@ -47,10 +47,10 @@ vi.mock("@/hooks/use-organization", () => ({
       id: "org-1",
       name: "Test Org",
       slug: "test-org",
-      role: "ADMIN",
+      roles: ["ADMIN"],
     },
     organizations: [
-      { id: "org-1", name: "Test Org", slug: "test-org", role: "ADMIN" },
+      { id: "org-1", name: "Test Org", slug: "test-org", roles: ["ADMIN"] },
     ],
     switchOrganization: vi.fn(),
     isAdmin: true,

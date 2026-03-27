@@ -230,8 +230,8 @@ async function seedInstanceA(
 
   // Ensure membership in the org
   await pool.query(
-    `INSERT INTO organization_members (organization_id, user_id, role)
-     VALUES ($1, $2, 'READER')
+    `INSERT INTO organization_members (organization_id, user_id, roles)
+     VALUES ($1, $2, ARRAY['READER']::"Role"[])
      ON CONFLICT (organization_id, user_id) DO NOTHING`,
     [orgId, userId],
   );
@@ -388,14 +388,14 @@ async function seedInstanceB(pool: Pool): Promise<SeedIds> {
 
   // Memberships
   await pool.query(
-    `INSERT INTO organization_members (organization_id, user_id, role)
-     VALUES ($1, $2, 'ADMIN')
+    `INSERT INTO organization_members (organization_id, user_id, roles)
+     VALUES ($1, $2, ARRAY['ADMIN']::"Role"[])
      ON CONFLICT (organization_id, user_id) DO NOTHING`,
     [orgId, adminUserId],
   );
   await pool.query(
-    `INSERT INTO organization_members (organization_id, user_id, role)
-     VALUES ($1, $2, 'READER')
+    `INSERT INTO organization_members (organization_id, user_id, roles)
+     VALUES ($1, $2, ARRAY['READER']::"Role"[])
      ON CONFLICT (organization_id, user_id) DO NOTHING`,
     [orgId, userId],
   );

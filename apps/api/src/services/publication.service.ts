@@ -7,7 +7,7 @@ import type {
 } from '@colophony/types';
 import { AuditActions, AuditResources } from '@colophony/types';
 import type { ServiceContext } from './types.js';
-import { assertEditorOrAdmin } from './errors.js';
+import { assertEditorOrProductionOrAdmin } from './errors.js';
 
 // ---------------------------------------------------------------------------
 // Error classes
@@ -111,7 +111,7 @@ export const publicationService = {
   },
 
   async createWithAudit(ctx: ServiceContext, input: CreatePublicationInput) {
-    assertEditorOrAdmin(ctx.actor.role);
+    assertEditorOrProductionOrAdmin(ctx.actor.roles);
     const publication = await publicationService.create(
       ctx.tx,
       input,
@@ -155,7 +155,7 @@ export const publicationService = {
     id: string,
     input: UpdatePublicationInput,
   ) {
-    assertEditorOrAdmin(ctx.actor.role);
+    assertEditorOrProductionOrAdmin(ctx.actor.roles);
     const updated = await publicationService.update(ctx.tx, id, input);
     if (!updated) throw new PublicationNotFoundError(id);
     await ctx.audit({
@@ -178,7 +178,7 @@ export const publicationService = {
   },
 
   async archiveWithAudit(ctx: ServiceContext, id: string) {
-    assertEditorOrAdmin(ctx.actor.role);
+    assertEditorOrProductionOrAdmin(ctx.actor.roles);
     const archived = await publicationService.archive(ctx.tx, id);
     if (!archived) throw new PublicationNotFoundError(id);
     await ctx.audit({

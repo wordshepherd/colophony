@@ -15,7 +15,7 @@ export interface UserProfile {
     id: string;
     name: string;
     slug: string;
-    role: "ADMIN" | "EDITOR" | "READER";
+    roles: Array<"ADMIN" | "EDITOR" | "READER" | "PRODUCTION" | "BUSINESS_OPS">;
   }>;
 }
 

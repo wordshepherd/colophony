@@ -78,8 +78,8 @@ describe('organization service — integration', () => {
       const org = await createOrganization();
       const user1 = await createUser();
       const user2 = await createUser();
-      await createOrgMember(org.id, user1.id, { role: 'ADMIN' });
-      await createOrgMember(org.id, user2.id, { role: 'EDITOR' });
+      await createOrgMember(org.id, user1.id, { roles: ['ADMIN'] });
+      await createOrgMember(org.id, user2.id, { roles: ['EDITOR'] });
 
       const members = await withTestRls({ orgId: org.id }, async (tx) => {
         return tx
@@ -95,10 +95,10 @@ describe('organization service — integration', () => {
       const org = await createOrganization();
       const user = await createUser();
       const member = await createOrgMember(org.id, user.id, {
-        role: 'EDITOR',
+        roles: ['EDITOR'],
       });
 
-      expect(member.role).toBe('EDITOR');
+      expect(member.roles).toEqual(['EDITOR']);
       expect(member.organizationId).toBe(org.id);
       expect(member.userId).toBe(user.id);
     });
@@ -128,8 +128,8 @@ describe('organization service — integration', () => {
       const org2 = await createOrganization({ name: 'Org Two' });
       const user = await createUser();
 
-      await createOrgMember(org1.id, user.id, { role: 'ADMIN' });
-      await createOrgMember(org2.id, user.id, { role: 'EDITOR' });
+      await createOrgMember(org1.id, user.id, { roles: ['ADMIN'] });
+      await createOrgMember(org2.id, user.id, { roles: ['EDITOR'] });
 
       // User can see org1 members in org1 context
       const org1Members = await withTestRls({ orgId: org1.id }, async (tx) => {
@@ -151,8 +151,8 @@ describe('organization service — integration', () => {
       const org2 = await createOrganization();
       const user = await createUser();
 
-      await createOrgMember(org1.id, user.id, { role: 'ADMIN' });
-      await createOrgMember(org2.id, user.id, { role: 'READER' });
+      await createOrgMember(org1.id, user.id, { roles: ['ADMIN'] });
+      await createOrgMember(org2.id, user.id, { roles: ['READER'] });
 
       const org1Member = await withTestRls({ orgId: org1.id }, async (tx) => {
         const [m] = await tx
@@ -182,8 +182,8 @@ describe('organization service — integration', () => {
         return m;
       });
 
-      expect(org1Member.role).toBe('ADMIN');
-      expect(org2Member.role).toBe('READER');
+      expect(org1Member.roles).toEqual(['ADMIN']);
+      expect(org2Member.roles).toEqual(['READER']);
     });
   });
 });

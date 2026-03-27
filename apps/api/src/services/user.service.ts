@@ -34,7 +34,7 @@ export const userService = {
         id: o.organizationId,
         name: o.name,
         slug: o.slug,
-        role: o.role,
+        roles: o.roles,
       })),
     };
   },

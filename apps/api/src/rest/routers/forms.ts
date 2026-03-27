@@ -21,7 +21,7 @@ import { restPaginationQuery } from '@colophony/api-contracts';
 import { formService, FormNotFoundError } from '../../services/form.service.js';
 import { toServiceContext } from '../../services/context.js';
 import { mapServiceError } from '../error-mapper.js';
-import { orgProcedure, requireScopes } from '../context.js';
+import { orgProcedure, editorProcedure, requireScopes } from '../context.js';
 
 // ---------------------------------------------------------------------------
 // Query schemas — override page/limit with z.coerce for REST query strings
@@ -68,7 +68,7 @@ const list = orgProcedure
     return formService.list(context.dbTx, input);
   });
 
-const create = orgProcedure
+const create = editorProcedure
   .use(requireScopes('forms:write'))
   .route({
     method: 'POST',
@@ -115,7 +115,7 @@ const get = orgProcedure
     }
   });
 
-const update = orgProcedure
+const update = editorProcedure
   .use(requireScopes('forms:write'))
   .route({
     method: 'PATCH',
@@ -140,7 +140,7 @@ const update = orgProcedure
     }
   });
 
-const publish = orgProcedure
+const publish = editorProcedure
   .use(requireScopes('forms:write'))
   .route({
     method: 'POST',
@@ -164,7 +164,7 @@ const publish = orgProcedure
     }
   });
 
-const archive = orgProcedure
+const archive = editorProcedure
   .use(requireScopes('forms:write'))
   .route({
     method: 'POST',
@@ -187,7 +187,7 @@ const archive = orgProcedure
     }
   });
 
-const duplicate = orgProcedure
+const duplicate = editorProcedure
   .use(requireScopes('forms:write'))
   .route({
     method: 'POST',
@@ -213,7 +213,7 @@ const duplicate = orgProcedure
     }
   });
 
-const del = orgProcedure
+const del = editorProcedure
   .use(requireScopes('forms:write'))
   .route({
     method: 'DELETE',
@@ -237,7 +237,7 @@ const del = orgProcedure
     }
   });
 
-const addField = orgProcedure
+const addField = editorProcedure
   .use(requireScopes('forms:write'))
   .route({
     method: 'POST',
@@ -263,7 +263,7 @@ const addField = orgProcedure
     }
   });
 
-const updateField = orgProcedure
+const updateField = editorProcedure
   .use(requireScopes('forms:write'))
   .route({
     method: 'PATCH',
@@ -289,7 +289,7 @@ const updateField = orgProcedure
     }
   });
 
-const removeField = orgProcedure
+const removeField = editorProcedure
   .use(requireScopes('forms:write'))
   .route({
     method: 'DELETE',
@@ -313,7 +313,7 @@ const removeField = orgProcedure
     }
   });
 
-const reorderFields = orgProcedure
+const reorderFields = editorProcedure
   .use(requireScopes('forms:write'))
   .route({
     method: 'PUT',
@@ -342,7 +342,7 @@ const reorderFields = orgProcedure
 // Page routes
 // ---------------------------------------------------------------------------
 
-const addPage = orgProcedure
+const addPage = editorProcedure
   .use(requireScopes('forms:write'))
   .route({
     method: 'POST',
@@ -368,7 +368,7 @@ const addPage = orgProcedure
     }
   });
 
-const updatePage = orgProcedure
+const updatePage = editorProcedure
   .use(requireScopes('forms:write'))
   .route({
     method: 'PATCH',
@@ -394,7 +394,7 @@ const updatePage = orgProcedure
     }
   });
 
-const removePage = orgProcedure
+const removePage = editorProcedure
   .use(requireScopes('forms:write'))
   .route({
     method: 'DELETE',
@@ -418,7 +418,7 @@ const removePage = orgProcedure
     }
   });
 
-const reorderPages = orgProcedure
+const reorderPages = editorProcedure
   .use(requireScopes('forms:write'))
   .route({
     method: 'PUT',

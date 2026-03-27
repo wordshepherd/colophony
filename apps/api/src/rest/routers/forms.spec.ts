@@ -119,7 +119,7 @@ function authedContext(): RestContext {
 }
 
 function orgContext(
-  role: 'ADMIN' | 'EDITOR' | 'READER' = 'EDITOR',
+  roles: ('ADMIN' | 'EDITOR' | 'READER')[] = ['EDITOR'],
 ): RestContext {
   return {
     authContext: {
@@ -129,7 +129,7 @@ function orgContext(
       emailVerified: true,
       authMethod: 'test',
       orgId: ORG_ID,
-      role,
+      roles,
     },
     dbTx: {} as never,
     audit: vi.fn(),
@@ -138,7 +138,7 @@ function orgContext(
 
 function apiKeyContext(
   scopes: string[],
-  role: 'ADMIN' | 'EDITOR' | 'READER' = 'EDITOR',
+  roles: ('ADMIN' | 'EDITOR' | 'READER')[] = ['EDITOR'],
 ): RestContext {
   return {
     authContext: {
@@ -149,7 +149,7 @@ function apiKeyContext(
       apiKeyId: 'k0000000-0000-4000-a000-000000000001',
       apiKeyScopes: scopes as any,
       orgId: ORG_ID,
-      role,
+      roles,
     },
     dbTx: {} as never,
     audit: vi.fn(),

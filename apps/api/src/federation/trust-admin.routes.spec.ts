@@ -154,7 +154,7 @@ describe('trust-admin.routes', () => {
         emailVerified: true,
         authMethod: 'test',
         orgId: testOrgId,
-        role: 'ADMIN',
+        roles: ['ADMIN'],
       } as any;
     });
 
