@@ -17,14 +17,14 @@ export async function getMemberByEmail(
 ): Promise<{
   id: string;
   userId: string;
-  role: string;
+  roles: string[];
 } | null> {
   const db = getDb();
   const [row] = await db
     .select({
       id: organizationMembers.id,
       userId: organizationMembers.userId,
-      role: organizationMembers.role,
+      roles: organizationMembers.roles,
     })
     .from(organizationMembers)
     .innerJoin(users, eq(users.id, organizationMembers.userId))
@@ -56,14 +56,16 @@ export async function removeMember(memberId: string): Promise<void> {
  */
 export async function getMembers(
   orgId: string,
-): Promise<Array<{ id: string; userId: string; email: string; role: string }>> {
+): Promise<
+  Array<{ id: string; userId: string; email: string; roles: string[] }>
+> {
   const db = getDb();
   return db
     .select({
       id: organizationMembers.id,
       userId: organizationMembers.userId,
       email: users.email,
-      role: organizationMembers.role,
+      roles: organizationMembers.roles,
     })
     .from(organizationMembers)
     .innerJoin(users, eq(users.id, organizationMembers.userId))
