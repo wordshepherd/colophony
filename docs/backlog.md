@@ -278,7 +278,7 @@
 
 - [x] Add soft 500-line guideline to CLAUDE.md — flag files over 500 lines for review during `/codex-review`; not a hard gate, just a review trigger — (dev workflow session 2026-02-20; done 2026-02-20)
 - [x] Extract `validateFormData` and per-type validators from `form.service.ts` (912 lines) into `form-validation.service.ts` — natural seam between CRUD operations and validation logic — (dev workflow session 2026-02-20; done 2026-02-20)
-- [ ] [P3] Consolidate API test file locations — 49 spec files are co-located (`services/*.spec.ts`), 4 are in `services/__tests__/`. Move the 4 `__tests__/` files to co-located pattern for consistency. `queue-preset` has complementary tests in both locations that should be merged into one file. — (2026-03-26)
+- [x] [P3] Consolidate API test file locations — 49 spec files are co-located (`services/*.spec.ts`), 4 are in `services/__tests__/`. Move the 4 `__tests__/` files to co-located pattern for consistency. `queue-preset` has complementary tests in both locations that should be merged into one file. — (2026-03-26; done 2026-03-27)
 
 ### Defense-in-Depth (Codex Review Findings 2026-03-03)
 

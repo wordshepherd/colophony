@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { writerProjectionService } from '../writer-projection.service.js';
+import { writerProjectionService } from './writer-projection.service.js';
 
 describe('writerProjectionService', () => {
   describe('project', () => {
