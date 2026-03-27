@@ -317,8 +317,8 @@ export async function ensureColophonyUser(
 
     if (memberExists.rows.length === 0) {
       await pool.query(
-        "INSERT INTO organization_members (organization_id, user_id, role) VALUES ($1, $2, $3)",
-        [orgId, userId, "ADMIN"],
+        "INSERT INTO organization_members (organization_id, user_id, roles) VALUES ($1, $2, $3)",
+        [orgId, userId, ["ADMIN"]],
       );
       console.log(`Added user to org ${orgId} as ADMIN`);
     }
