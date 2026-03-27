@@ -77,7 +77,7 @@ test.describe("Embed Status Check (/embed/status/:token)", () => {
       timeout: 10_000,
     });
     await expect(page.getByText("Status Page E2E Test")).toBeVisible();
-    await expect(page.getByText("In Review")).toBeVisible();
+    await expect(page.getByText("Received")).toBeVisible();
     await expect(page.getByText(embedData.periodName)).toBeVisible();
   });
 
