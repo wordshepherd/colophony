@@ -9,6 +9,7 @@ import type {
   DiscussionCommentTemplateData,
   EmbedSubmissionConfirmationData,
   ResponseReminderTemplateData,
+  OrganizationInvitationData,
 } from './types.js';
 import { wrapInLayout } from './layout.js';
 
@@ -360,6 +361,33 @@ function submissionResponseReminder(
   };
 }
 
+function organizationInvitation(data: Record<string, unknown>): TemplateResult {
+  const d = data as unknown as OrganizationInvitationData;
+  return {
+    subject: `You've been invited to join ${d.orgName}`,
+    mjml: wrapInLayout(
+      `<mj-text>
+        <p>${escapeHtml(d.inviterName)} has invited you to join <strong>${escapeHtml(d.orgName)}</strong> as <strong>${escapeHtml(d.roleName)}</strong>.</p>
+      </mj-text>
+      <mj-button href="${escapeHtml(d.inviteUrl)}" background-color="#2563eb" color="#ffffff" font-size="14px" padding="16px 0">
+        Accept Invitation
+      </mj-button>
+      <mj-text font-size="12px" color="#6b7280">
+        <p>This invitation expires on ${escapeHtml(d.expiresAt)}.</p>
+        <p>Or copy this link: ${escapeHtml(d.inviteUrl)}</p>
+      </mj-text>`,
+      d.orgName,
+    ),
+    text: [
+      `${d.inviterName} has invited you to join ${d.orgName} as ${d.roleName}.`,
+      '',
+      `Accept the invitation: ${d.inviteUrl}`,
+      '',
+      `This invitation expires on ${d.expiresAt}.`,
+    ].join('\n'),
+  };
+}
+
 export const templates: Record<TemplateName, TemplateRenderer> = {
   'submission-received': submissionReceived,
   'submission-accepted': submissionAccepted,
@@ -373,6 +401,7 @@ export const templates: Record<TemplateName, TemplateRenderer> = {
   'discussion-comment': discussionComment,
   'embed-submission-confirmation': embedSubmissionConfirmation,
   'submission-response-reminder': submissionResponseReminder,
+  'organization-invitation': organizationInvitation,
 };
 
 function stripHtml(html: string): string {

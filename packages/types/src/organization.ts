@@ -170,6 +170,77 @@ export const updateMemberRolesSchema = z.object({
 
 export type UpdateMemberRolesInput = z.infer<typeof updateMemberRolesSchema>;
 
+// ---------------------------------------------------------------------------
+// Invitations
+// ---------------------------------------------------------------------------
+
+export const INVITATION_TOKEN_PREFIX = "col_inv_";
+
+export const invitationStatusSchema = z
+  .enum(["PENDING", "ACCEPTED", "REVOKED", "EXPIRED"])
+  .describe("Lifecycle status of an organization invitation");
+export type InvitationStatus = z.infer<typeof invitationStatusSchema>;
+
+export const organizationInvitationSchema = z.object({
+  id: z.string().uuid().describe("Invitation record ID"),
+  organizationId: z.string().uuid().describe("ID of the organization"),
+  email: z.string().email().describe("Invitee email address"),
+  roles: rolesSchema,
+  status: invitationStatusSchema,
+  tokenPrefix: z.string().describe("Token prefix for identification"),
+  invitedBy: z.string().uuid().describe("ID of the user who sent the invite"),
+  expiresAt: z.date().describe("When the invitation expires"),
+  createdAt: z.date().describe("When the invitation was created"),
+});
+export type OrganizationInvitation = z.infer<
+  typeof organizationInvitationSchema
+>;
+
+export const createInvitationSchema = z.object({
+  email: z.string().email().describe("Email address to invite"),
+  roles: rolesSchema.describe("Roles to assign on acceptance"),
+  expiresInDays: z
+    .number()
+    .int()
+    .min(1)
+    .max(30)
+    .default(7)
+    .optional()
+    .describe("Days until invitation expires (1-30, default 7)"),
+});
+export type CreateInvitationInput = z.infer<typeof createInvitationSchema>;
+
+export const acceptInvitationSchema = z.object({
+  token: z.string().min(1).describe("Plain-text invitation token"),
+});
+export type AcceptInvitationInput = z.infer<typeof acceptInvitationSchema>;
+
+export const acceptInvitationResultSchema = z.object({
+  invitationId: z.string().uuid(),
+  organizationId: z.string().uuid(),
+  memberId: z.string().uuid(),
+  roles: rolesSchema,
+});
+export type AcceptInvitationResult = z.infer<
+  typeof acceptInvitationResultSchema
+>;
+
+export const inviteOrAddResultSchema = z.discriminatedUnion("type", [
+  z.object({
+    type: z.literal("member_added"),
+    member: organizationMemberMutationResponseSchema,
+  }),
+  z.object({
+    type: z.literal("invitation_sent"),
+    invitation: organizationInvitationSchema,
+  }),
+]);
+export type InviteOrAddResult = z.infer<typeof inviteOrAddResultSchema>;
+
+// ---------------------------------------------------------------------------
+// Org Settings
+// ---------------------------------------------------------------------------
+
 export const orgSettingsSchema = z.object({
   responseReminderEnabled: z.boolean().default(false),
   responseReminderDays: z.number().int().min(1).max(365).default(30),

@@ -12,6 +12,7 @@ export const templateNameValues = [
   "contract-ready",
   "copyeditor-assigned",
   "editor-message",
+  "organization-invitation",
 ] as const;
 
 export const templateNameSchema = z.enum(templateNameValues);
@@ -65,6 +66,13 @@ export const TEMPLATE_MERGE_FIELDS: Record<
     "editorName",
     "messageSubject",
     "messageBody",
+  ],
+  "organization-invitation": [
+    "orgName",
+    "inviterName",
+    "inviteUrl",
+    "roleName",
+    "expiresAt",
   ],
 };
 
@@ -124,6 +132,13 @@ export const TEMPLATE_SAMPLE_DATA: Record<
     messageSubject: "A note about your submission",
     messageBody: "<p>We have a few questions about your piece.</p>",
   },
+  "organization-invitation": {
+    orgName: "The Paris Review",
+    inviterName: "George Plimpton",
+    inviteUrl: "https://example.com/invite/accept/col_inv_abc123",
+    roleName: "Editor",
+    expiresAt: "April 3, 2026",
+  },
 };
 
 // ---------------------------------------------------------------------------
@@ -162,6 +177,11 @@ export const TEMPLATE_LABELS: Record<
   "editor-message": {
     label: "Editor Message",
     description: "Wrapper for personalized messages from editors to writers.",
+  },
+  "organization-invitation": {
+    label: "Organization Invitation",
+    description:
+      "Sent to an invitee when an admin invites them to join the organization.",
   },
 };
 

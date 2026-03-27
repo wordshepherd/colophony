@@ -82,6 +82,12 @@ import {
   ScoreOutOfRangeError,
 } from '../services/submission-vote.service.js';
 import { CSRImportError } from '../services/csr.service.js';
+import {
+  InvitationNotFoundError,
+  InvitationExpiredError,
+  InvitationAlreadyAcceptedError,
+  InvitationEmailMismatchError,
+} from '../services/invitation.service.js';
 
 type ORPCErrorCode = ConstructorParameters<typeof ORPCError>[0];
 
@@ -161,6 +167,11 @@ const errorCodeMap: [new (...args: never[]) => Error, ORPCErrorCode][] = [
   [CSRImportError, 'BAD_REQUEST'],
   // Precondition
   [FileNotCleanError, 'BAD_REQUEST'],
+  // Invitation errors
+  [InvitationNotFoundError, 'NOT_FOUND'],
+  [InvitationExpiredError, 'NOT_FOUND'],
+  [InvitationAlreadyAcceptedError, 'CONFLICT'],
+  [InvitationEmailMismatchError, 'FORBIDDEN'],
 ];
 
 /**
