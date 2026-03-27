@@ -18,7 +18,11 @@ import {
 } from '../../services/pipeline.service.js';
 import { toServiceContext } from '../../services/context.js';
 import { mapServiceError } from '../error-mapper.js';
-import { orgProcedure, requireScopes } from '../context.js';
+import {
+  orgProcedure,
+  productionProcedure,
+  requireScopes,
+} from '../context.js';
 
 // ---------------------------------------------------------------------------
 // Query schemas — override page/limit with z.coerce for REST query strings
@@ -51,7 +55,7 @@ const list = orgProcedure
     return pipelineService.list(context.dbTx, input, context.authContext.orgId);
   });
 
-const create = orgProcedure
+const create = productionProcedure
   .use(requireScopes('pipeline:write'))
   .route({
     method: 'POST',
@@ -101,7 +105,7 @@ const get = orgProcedure
     }
   });
 
-const updateStage = orgProcedure
+const updateStage = productionProcedure
   .use(requireScopes('pipeline:write'))
   .route({
     method: 'PATCH',
@@ -126,7 +130,7 @@ const updateStage = orgProcedure
     }
   });
 
-const assignCopyeditor = orgProcedure
+const assignCopyeditor = productionProcedure
   .use(requireScopes('pipeline:write'))
   .route({
     method: 'PUT',
@@ -151,7 +155,7 @@ const assignCopyeditor = orgProcedure
     }
   });
 
-const assignProofreader = orgProcedure
+const assignProofreader = productionProcedure
   .use(requireScopes('pipeline:write'))
   .route({
     method: 'PUT',
@@ -176,7 +180,7 @@ const assignProofreader = orgProcedure
     }
   });
 
-const addComment = orgProcedure
+const addComment = productionProcedure
   .use(requireScopes('pipeline:write'))
   .route({
     method: 'POST',

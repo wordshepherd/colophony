@@ -141,7 +141,7 @@ export const issuesRouter = createRouter({
     }),
 
   /** Add an item to an issue. */
-  addItem: orgProcedure
+  addItem: productionProcedure
     .use(requireScopes('issues:write'))
     .input(idParamSchema.merge(addIssueItemSchema))
     .output(issueItemSchema)
@@ -159,7 +159,7 @@ export const issuesRouter = createRouter({
     }),
 
   /** Remove an item from an issue. */
-  removeItem: orgProcedure
+  removeItem: productionProcedure
     .use(requireScopes('issues:write'))
     .input(z.object({ id: z.string().uuid(), itemId: z.string().uuid() }))
     .output(issueItemSchema.nullable())

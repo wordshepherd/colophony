@@ -18,7 +18,7 @@ import {
 } from '../../services/collection.service.js';
 import { toServiceContext } from '../../services/context.js';
 import { mapServiceError } from '../error-mapper.js';
-import { orgProcedure, requireScopes } from '../context.js';
+import { orgProcedure, editorProcedure, requireScopes } from '../context.js';
 
 // ---------------------------------------------------------------------------
 // Query schemas
@@ -107,7 +107,7 @@ const getItems = orgProcedure
     );
   });
 
-const create = orgProcedure
+const create = editorProcedure
   .use(requireScopes('collections:write'))
   .route({
     method: 'POST',
@@ -131,7 +131,7 @@ const create = orgProcedure
     }
   });
 
-const update = orgProcedure
+const update = editorProcedure
   .use(requireScopes('collections:write'))
   .route({
     method: 'PATCH',
@@ -156,7 +156,7 @@ const update = orgProcedure
     }
   });
 
-const del = orgProcedure
+const del = editorProcedure
   .use(requireScopes('collections:write'))
   .route({
     method: 'DELETE',
@@ -179,7 +179,7 @@ const del = orgProcedure
     }
   });
 
-const addItem = orgProcedure
+const addItem = editorProcedure
   .use(requireScopes('collections:write'))
   .route({
     method: 'POST',
@@ -205,7 +205,7 @@ const addItem = orgProcedure
     }
   });
 
-const updateItem = orgProcedure
+const updateItem = editorProcedure
   .use(requireScopes('collections:write'))
   .route({
     method: 'PATCH',
@@ -231,7 +231,7 @@ const updateItem = orgProcedure
     }
   });
 
-const removeItem = orgProcedure
+const removeItem = editorProcedure
   .use(requireScopes('collections:write'))
   .route({
     method: 'DELETE',
@@ -255,7 +255,7 @@ const removeItem = orgProcedure
     }
   });
 
-const reorderItems = orgProcedure
+const reorderItems = editorProcedure
   .use(requireScopes('collections:write'))
   .route({
     method: 'PUT',

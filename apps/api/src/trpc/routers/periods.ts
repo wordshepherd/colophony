@@ -7,7 +7,12 @@ import {
   successResponseSchema,
   paginatedResponseSchema,
 } from '@colophony/types';
-import { orgProcedure, createRouter, requireScopes } from '../init.js';
+import {
+  orgProcedure,
+  editorProcedure,
+  createRouter,
+  requireScopes,
+} from '../init.js';
 import { periodService } from '../../services/period.service.js';
 import { PeriodNotFoundError } from '../../services/period.service.js';
 import { toServiceContext } from '../../services/context.js';
@@ -39,7 +44,7 @@ export const periodsRouter = createRouter({
     }),
 
   /** Create a new submission period. */
-  create: orgProcedure
+  create: editorProcedure
     .use(requireScopes('periods:write'))
     .input(createSubmissionPeriodSchema)
     .output(submissionPeriodSchema)
@@ -55,7 +60,7 @@ export const periodsRouter = createRouter({
     }),
 
   /** Update a submission period. */
-  update: orgProcedure
+  update: editorProcedure
     .use(requireScopes('periods:write'))
     .input(idParamSchema.merge(updateSubmissionPeriodSchema))
     .output(submissionPeriodSchema)
@@ -73,7 +78,7 @@ export const periodsRouter = createRouter({
     }),
 
   /** Delete a submission period. */
-  delete: orgProcedure
+  delete: editorProcedure
     .use(requireScopes('periods:write'))
     .input(idParamSchema)
     .output(successResponseSchema)

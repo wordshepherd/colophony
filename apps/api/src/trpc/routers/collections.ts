@@ -11,7 +11,12 @@ import {
   idParamSchema,
   paginatedResponseSchema,
 } from '@colophony/types';
-import { orgProcedure, createRouter, requireScopes } from '../init.js';
+import {
+  orgProcedure,
+  editorProcedure,
+  createRouter,
+  requireScopes,
+} from '../init.js';
 import {
   collectionService,
   CollectionNotFoundError,
@@ -74,7 +79,7 @@ export const collectionsRouter = createRouter({
     }),
 
   /** Create a collection. */
-  create: orgProcedure
+  create: editorProcedure
     .use(requireScopes('collections:write'))
     .input(createCollectionSchema)
     .output(workspaceCollectionSchema)
@@ -90,7 +95,7 @@ export const collectionsRouter = createRouter({
     }),
 
   /** Update a collection. */
-  update: orgProcedure
+  update: editorProcedure
     .use(requireScopes('collections:write'))
     .input(idParamSchema.merge(updateCollectionSchema))
     .output(workspaceCollectionSchema)
@@ -108,7 +113,7 @@ export const collectionsRouter = createRouter({
     }),
 
   /** Delete a collection. */
-  delete: orgProcedure
+  delete: editorProcedure
     .use(requireScopes('collections:write'))
     .input(idParamSchema)
     .output(workspaceCollectionSchema)
@@ -124,7 +129,7 @@ export const collectionsRouter = createRouter({
     }),
 
   /** Add a submission to a collection. */
-  addItem: orgProcedure
+  addItem: editorProcedure
     .use(requireScopes('collections:write'))
     .input(idParamSchema.merge(addCollectionItemSchema))
     .output(workspaceItemSchema)
@@ -142,7 +147,7 @@ export const collectionsRouter = createRouter({
     }),
 
   /** Update item notes/color/icon. */
-  updateItem: orgProcedure
+  updateItem: editorProcedure
     .use(requireScopes('collections:write'))
     .input(itemIdParam.merge(updateCollectionItemSchema))
     .output(workspaceItemSchema)
@@ -161,7 +166,7 @@ export const collectionsRouter = createRouter({
     }),
 
   /** Remove an item from a collection. */
-  removeItem: orgProcedure
+  removeItem: editorProcedure
     .use(requireScopes('collections:write'))
     .input(itemIdParam)
     .output(workspaceItemSchema.nullable())
@@ -178,7 +183,7 @@ export const collectionsRouter = createRouter({
     }),
 
   /** Reorder items within a collection. */
-  reorderItems: orgProcedure
+  reorderItems: editorProcedure
     .use(requireScopes('collections:write'))
     .input(idParamSchema.merge(reorderCollectionItemsSchema))
     .output(z.array(workspaceItemSchema))

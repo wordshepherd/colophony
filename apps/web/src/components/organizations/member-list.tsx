@@ -150,12 +150,18 @@ export function MemberList() {
                     {isAdmin ? (
                       <Select
                         value={member.roles[0]}
-                        onValueChange={(role: Role) =>
+                        onValueChange={(role: Role) => {
+                          // Preserve additional roles; replace only the primary (first) role
+                          const otherRoles = member.roles.slice(1);
+                          const newRoles = [
+                            role,
+                            ...otherRoles.filter((r) => r !== role),
+                          ];
                           updateRolesMutation.mutate({
                             memberId: member.id,
-                            roles: [role],
-                          })
-                        }
+                            roles: newRoles,
+                          });
+                        }}
                       >
                         <SelectTrigger className="w-[140px]">
                           <SelectValue />
