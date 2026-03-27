@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { sql, eq, gte, lt, and, count } from 'drizzle-orm';
+import { sql, eq, gte, lt, and, count, isNotNull } from 'drizzle-orm';
 import { db, submissions } from '@colophony/db';
 import { adminProcedure, createRouter } from '../init.js';
 import { validateEnv } from '../../config/env.js';
@@ -172,13 +172,16 @@ export const opsRouter = createRouter({
       const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
       const orgId = ctx.authContext.orgId;
 
+      // Use submittedAt (not createdAt) to exclude drafts and attribute
+      // submissions to the month they were actually submitted.
       const [thisMonthResult] = await ctx.dbTx
         .select({ value: count() })
         .from(submissions)
         .where(
           and(
             eq(submissions.organizationId, orgId),
-            gte(submissions.createdAt, thisMonthStart),
+            isNotNull(submissions.submittedAt),
+            gte(submissions.submittedAt, thisMonthStart),
           ),
         );
 
@@ -188,8 +191,9 @@ export const opsRouter = createRouter({
         .where(
           and(
             eq(submissions.organizationId, orgId),
-            gte(submissions.createdAt, lastMonthStart),
-            lt(submissions.createdAt, thisMonthStart),
+            isNotNull(submissions.submittedAt),
+            gte(submissions.submittedAt, lastMonthStart),
+            lt(submissions.submittedAt, thisMonthStart),
           ),
         );
 

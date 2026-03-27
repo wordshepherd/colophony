@@ -82,8 +82,10 @@ function deriveWebhookStatus(
   );
 
   let status: HealthStatus = "healthy";
-  if (unknown.length > 0) status = "unhealthy";
-  else if (stale.length > 0) status = "degraded";
+  if (stale.length > 0) status = "degraded";
+  // Never-seen providers are expected on fresh installs / optional integrations
+  if (unknown.length > 0 && healthy === 0 && stale.length === 0)
+    status = "unknown";
 
   const staleNames = stale.map((p) => p.provider).join(", ");
 
