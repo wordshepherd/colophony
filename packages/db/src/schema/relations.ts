@@ -26,6 +26,7 @@ import {
   writerProfiles,
 } from "./writer-workspace";
 import { savedQueuePresets } from "./saved-queue-presets";
+import { workspaceCollections, workspaceItems } from "./workspace-collections";
 
 // --- organizations ---
 
@@ -47,6 +48,7 @@ export const organizationsRelations = relations(organizations, ({ many }) => ({
   cmsConnections: many(cmsConnections),
   trustedPeers: many(trustedPeers),
   savedQueuePresets: many(savedQueuePresets),
+  workspaceCollections: many(workspaceCollections),
 }));
 
 // --- users ---
@@ -64,6 +66,7 @@ export const usersRelations = relations(users, ({ many }) => ({
   correspondence: many(correspondence),
   writerProfiles: many(writerProfiles),
   savedQueuePresets: many(savedQueuePresets),
+  workspaceCollections: many(workspaceCollections),
 }));
 
 // --- organization_members ---
@@ -207,6 +210,7 @@ export const submissionsRelations = relations(submissions, ({ one, many }) => ({
   payments: many(payments),
   pipelineItems: many(pipelineItems),
   correspondence: many(correspondence),
+  workspaceItems: many(workspaceItems),
 }));
 
 // --- submission_history ---
@@ -524,5 +528,35 @@ export const writerProfilesRelations = relations(writerProfiles, ({ one }) => ({
   user: one(users, {
     fields: [writerProfiles.userId],
     references: [users.id],
+  }),
+}));
+
+// --- workspace_collections ---
+
+export const workspaceCollectionsRelations = relations(
+  workspaceCollections,
+  ({ one, many }) => ({
+    organization: one(organizations, {
+      fields: [workspaceCollections.organizationId],
+      references: [organizations.id],
+    }),
+    owner: one(users, {
+      fields: [workspaceCollections.ownerId],
+      references: [users.id],
+    }),
+    items: many(workspaceItems),
+  }),
+);
+
+// --- workspace_items ---
+
+export const workspaceItemsRelations = relations(workspaceItems, ({ one }) => ({
+  collection: one(workspaceCollections, {
+    fields: [workspaceItems.collectionId],
+    references: [workspaceCollections.id],
+  }),
+  submission: one(submissions, {
+    fields: [workspaceItems.submissionId],
+    references: [submissions.id],
   }),
 }));

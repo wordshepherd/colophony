@@ -32,6 +32,10 @@ import type {
   correspondence,
   writerProfiles,
 } from "./schema/writer-workspace";
+import type {
+  workspaceCollections,
+  workspaceItems,
+} from "./schema/workspace-collections";
 
 // --- Select types (what you get back from queries) ---
 
@@ -68,6 +72,8 @@ export type JournalDirectoryEntry = InferSelectModel<typeof journalDirectory>;
 export type ExternalSubmission = InferSelectModel<typeof externalSubmissions>;
 export type CorrespondenceRecord = InferSelectModel<typeof correspondence>;
 export type WriterProfile = InferSelectModel<typeof writerProfiles>;
+export type WorkspaceCollection = InferSelectModel<typeof workspaceCollections>;
+export type WorkspaceItem = InferSelectModel<typeof workspaceItems>;
 
 /** @deprecated Use File instead — submission_files has been replaced by the files table */
 export type SubmissionFile = File;
@@ -119,6 +125,10 @@ export type NewExternalSubmission = InferInsertModel<
 >;
 export type NewCorrespondenceRecord = InferInsertModel<typeof correspondence>;
 export type NewWriterProfile = InferInsertModel<typeof writerProfiles>;
+export type NewWorkspaceCollection = InferInsertModel<
+  typeof workspaceCollections
+>;
+export type NewWorkspaceItem = InferInsertModel<typeof workspaceItems>;
 
 /** @deprecated Use NewFile instead */
 export type NewSubmissionFile = NewFile;

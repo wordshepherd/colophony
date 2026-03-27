@@ -274,3 +274,21 @@ export const correspondenceChannelEnum = pgEnum("CorrespondenceChannel", [
   "in_app",
   "other",
 ]);
+
+// ---------------------------------------------------------------------------
+// Editor Workspace — Collections
+// ---------------------------------------------------------------------------
+
+export const collectionVisibilityEnum = pgEnum("CollectionVisibility", [
+  "private",
+  "team",
+  "collaborators",
+]);
+
+export const collectionTypeHintEnum = pgEnum("CollectionTypeHint", [
+  "holds",
+  "reading_list",
+  "comparison",
+  "issue_planning",
+  "custom",
+]);

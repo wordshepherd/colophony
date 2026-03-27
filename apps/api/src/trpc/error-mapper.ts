@@ -106,6 +106,12 @@ import {
   HubInstanceNotFoundError,
   HubInstanceSuspendedError,
 } from '../services/hub.service.js';
+import {
+  CollectionNotFoundError,
+  CollectionItemAlreadyExistsError,
+  CollectionItemNotFoundError,
+  SubmissionNotInOrgError,
+} from '../services/collection.service.js';
 
 type TRPCErrorCode = ConstructorParameters<typeof TRPCError>[0]['code'];
 
@@ -204,6 +210,11 @@ const errorCodeMap: [new (...args: never[]) => Error, TRPCErrorCode][] = [
   [HubInstanceSuspendedError, 'FORBIDDEN'],
   // Precondition
   [FileNotCleanError, 'PRECONDITION_FAILED'],
+  // Collections
+  [CollectionNotFoundError, 'NOT_FOUND'],
+  [CollectionItemNotFoundError, 'NOT_FOUND'],
+  [CollectionItemAlreadyExistsError, 'CONFLICT'],
+  [SubmissionNotInOrgError, 'NOT_FOUND'],
 ];
 
 /**
