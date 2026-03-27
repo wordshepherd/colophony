@@ -117,15 +117,15 @@ function createSelectChain(rows: unknown[]) {
   const offset = vi.fn().mockResolvedValue(rows);
   const limit = vi.fn().mockImplementation(() => {
     const p = Promise.resolve(rows);
-    (p as Record<string, unknown>).offset = offset;
+    (p as unknown as Record<string, unknown>).offset = offset;
     return p;
   });
   const orderBy = vi.fn().mockReturnValue({ limit });
   // where() returns a thenable (for short chains like count) with orderBy/limit
   const where = vi.fn().mockImplementation(() => {
     const p = Promise.resolve(rows);
-    (p as Record<string, unknown>).orderBy = orderBy;
-    (p as Record<string, unknown>).limit = limit;
+    (p as unknown as Record<string, unknown>).orderBy = orderBy;
+    (p as unknown as Record<string, unknown>).limit = limit;
     return p;
   });
   const leftJoin = vi.fn().mockReturnValue({ where });
