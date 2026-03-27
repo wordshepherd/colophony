@@ -11,6 +11,8 @@ export interface ShortcutBinding {
   description: string;
   /** Whether this binding is active (default true) */
   enabled?: boolean;
+  /** Modifier keys required (e.g., ["meta"] for Cmd+K). When omitted, binding requires NO meta/ctrl/alt modifiers. */
+  modifiers?: Array<"meta" | "ctrl" | "alt" | "shift">;
 }
 
 const IGNORED_ELEMENTS = new Set(["INPUT", "TEXTAREA", "SELECT"]);
@@ -42,12 +44,24 @@ export function useShortcuts(bindings: ShortcutBinding[]): void {
       }
     }
 
-    // Ignore modified keypresses (Ctrl+R, Cmd+K, etc.)
-    if (event.metaKey || event.ctrlKey || event.altKey) return;
-
     for (const binding of bindingsRef.current) {
       if (binding.enabled === false) continue;
-      if (event.key === binding.key) {
+      if (event.key !== binding.key) continue;
+
+      const requiredMods = binding.modifiers ?? [];
+      const hasExplicitMods = requiredMods.length > 0;
+
+      // For modifier bindings: check all declared modifiers exactly
+      // For non-modifier bindings: require no meta/ctrl/alt but ignore shift
+      //   (allows "?" = Shift+/ and other shifted characters)
+      const modMatch = hasExplicitMods
+        ? requiredMods.includes("meta") === event.metaKey &&
+          requiredMods.includes("ctrl") === event.ctrlKey &&
+          requiredMods.includes("alt") === event.altKey &&
+          requiredMods.includes("shift") === event.shiftKey
+        : !event.metaKey && !event.ctrlKey && !event.altKey;
+
+      if (modMatch) {
         event.preventDefault();
         binding.handler();
         return;

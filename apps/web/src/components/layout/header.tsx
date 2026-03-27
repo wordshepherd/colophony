@@ -13,9 +13,11 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { Menu } from "lucide-react";
+import { Menu, Search } from "lucide-react";
 import { Sidebar } from "./sidebar";
 import { NotificationBell } from "@/components/notifications/notification-bell";
+import { useCommandPalette } from "@/components/command-palette/command-palette";
+import { modifierSymbol } from "@/lib/platform";
 
 /** Keyed by pathname — remounts on navigation to auto-close the sheet. */
 function MobileMenu() {
@@ -34,6 +36,21 @@ function MobileMenu() {
         <Sidebar />
       </SheetContent>
     </Sheet>
+  );
+}
+
+function CommandPaletteTrigger() {
+  const { setOpen } = useCommandPalette();
+  return (
+    <Button
+      variant="outline"
+      size="sm"
+      className="hidden md:flex items-center gap-2 text-muted-foreground"
+      onClick={() => setOpen(true)}
+    >
+      <Search className="h-4 w-4" />
+      <span className="text-xs">{modifierSymbol()}K</span>
+    </Button>
   );
 }
 
@@ -58,6 +75,7 @@ export function Header() {
         {/* Right side */}
         {isAuthenticated ? (
           <div className="flex items-center space-x-4">
+            <CommandPaletteTrigger />
             <OrgSwitcher />
             <NotificationBell />
             <UserMenu />
