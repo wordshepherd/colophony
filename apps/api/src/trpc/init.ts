@@ -35,12 +35,18 @@ const isAuthed = t.middleware(({ ctx, next }) => {
   return next({ ctx: { ...ctx, authContext: ctx.authContext } });
 });
 
+/** Type for auth context with org + roles narrowed to non-optional. */
+type OrgAuthContext = Required<
+  Pick<NonNullable<TRPCContext['authContext']>, 'orgId' | 'roles'>
+> &
+  NonNullable<TRPCContext['authContext']>;
+
 /** Requires org context (X-Organization-Id resolved by org-context hook). */
 const hasOrgContext = t.middleware(({ ctx, next }) => {
   if (!ctx.authContext) {
     throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Not authenticated' });
   }
-  if (!ctx.authContext.orgId || !ctx.authContext.role) {
+  if (!ctx.authContext.orgId || !ctx.authContext.roles?.length) {
     throw new TRPCError({
       code: 'BAD_REQUEST',
       message: 'X-Organization-Id header is required',
@@ -55,27 +61,29 @@ const hasOrgContext = t.middleware(({ ctx, next }) => {
   return next({
     ctx: {
       ...ctx,
-      authContext: ctx.authContext as Required<
-        Pick<NonNullable<typeof ctx.authContext>, 'orgId' | 'role'>
-      > &
-        NonNullable<typeof ctx.authContext>,
+      authContext: ctx.authContext as OrgAuthContext,
       dbTx: ctx.dbTx,
     },
   });
 });
+
+/** Helper: check if roles array includes any of the required roles. */
+function hasRole(roles: readonly string[], ...required: string[]): boolean {
+  return required.some((r) => roles.includes(r));
+}
 
 /** Requires ADMIN role within the current org context. */
 const isAdmin = t.middleware(({ ctx, next }) => {
   if (!ctx.authContext) {
     throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Not authenticated' });
   }
-  if (!ctx.authContext.orgId || !ctx.authContext.role) {
+  if (!ctx.authContext.orgId || !ctx.authContext.roles?.length) {
     throw new TRPCError({
       code: 'BAD_REQUEST',
       message: 'X-Organization-Id header is required',
     });
   }
-  if (ctx.authContext.role !== 'ADMIN') {
+  if (!hasRole(ctx.authContext.roles, 'ADMIN')) {
     throw new TRPCError({
       code: 'FORBIDDEN',
       message: 'Admin role required',
@@ -90,10 +98,71 @@ const isAdmin = t.middleware(({ ctx, next }) => {
   return next({
     ctx: {
       ...ctx,
-      authContext: ctx.authContext as Required<
-        Pick<NonNullable<typeof ctx.authContext>, 'orgId' | 'role'>
-      > &
-        NonNullable<typeof ctx.authContext>,
+      authContext: ctx.authContext as OrgAuthContext,
+      dbTx: ctx.dbTx,
+    },
+  });
+});
+
+/** Requires EDITOR or ADMIN role. */
+const isEditor = t.middleware(({ ctx, next }) => {
+  if (!ctx.authContext) {
+    throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Not authenticated' });
+  }
+  if (!ctx.authContext.orgId || !ctx.authContext.roles?.length) {
+    throw new TRPCError({
+      code: 'BAD_REQUEST',
+      message: 'X-Organization-Id header is required',
+    });
+  }
+  if (!hasRole(ctx.authContext.roles, 'EDITOR', 'ADMIN')) {
+    throw new TRPCError({
+      code: 'FORBIDDEN',
+      message: 'Editor or Admin role required',
+    });
+  }
+  if (!ctx.dbTx) {
+    throw new TRPCError({
+      code: 'INTERNAL_SERVER_ERROR',
+      message: 'Database transaction not available',
+    });
+  }
+  return next({
+    ctx: {
+      ...ctx,
+      authContext: ctx.authContext as OrgAuthContext,
+      dbTx: ctx.dbTx,
+    },
+  });
+});
+
+/** Requires PRODUCTION, EDITOR, or ADMIN role. */
+const isProduction = t.middleware(({ ctx, next }) => {
+  if (!ctx.authContext) {
+    throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Not authenticated' });
+  }
+  if (!ctx.authContext.orgId || !ctx.authContext.roles?.length) {
+    throw new TRPCError({
+      code: 'BAD_REQUEST',
+      message: 'X-Organization-Id header is required',
+    });
+  }
+  if (!hasRole(ctx.authContext.roles, 'PRODUCTION', 'EDITOR', 'ADMIN')) {
+    throw new TRPCError({
+      code: 'FORBIDDEN',
+      message: 'Production, Editor, or Admin role required',
+    });
+  }
+  if (!ctx.dbTx) {
+    throw new TRPCError({
+      code: 'INTERNAL_SERVER_ERROR',
+      message: 'Database transaction not available',
+    });
+  }
+  return next({
+    ctx: {
+      ...ctx,
+      authContext: ctx.authContext as OrgAuthContext,
       dbTx: ctx.dbTx,
     },
   });
@@ -155,6 +224,8 @@ export const publicProcedure = t.procedure;
 export const authedProcedure = t.procedure.use(isAuthed);
 export const userProcedure = t.procedure.use(hasUserContext);
 export const orgProcedure = t.procedure.use(hasOrgContext);
+export const editorProcedure = t.procedure.use(isEditor);
+export const productionProcedure = t.procedure.use(isProduction);
 export const adminProcedure = t.procedure.use(isAdmin);
 export const createRouter = t.router;
 export const mergeRouters = t.mergeRouters;

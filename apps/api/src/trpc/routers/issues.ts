@@ -15,7 +15,7 @@ import {
 } from '@colophony/types';
 import {
   orgProcedure,
-  adminProcedure,
+  productionProcedure,
   createRouter,
   requireScopes,
 } from '../init.js';
@@ -78,7 +78,7 @@ export const issuesRouter = createRouter({
     }),
 
   /** Create an issue (admin only). */
-  create: adminProcedure
+  create: productionProcedure
     .use(requireScopes('issues:write'))
     .input(createIssueSchema)
     .output(issueSchema)
@@ -91,7 +91,7 @@ export const issuesRouter = createRouter({
     }),
 
   /** Update an issue (admin only). */
-  update: adminProcedure
+  update: productionProcedure
     .use(requireScopes('issues:write'))
     .input(idParamSchema.merge(updateIssueSchema))
     .output(issueSchema)
@@ -109,7 +109,7 @@ export const issuesRouter = createRouter({
     }),
 
   /** Publish an issue (admin only). */
-  publish: adminProcedure
+  publish: productionProcedure
     .use(requireScopes('issues:write'))
     .input(idParamSchema)
     .output(issueSchema)
@@ -125,7 +125,7 @@ export const issuesRouter = createRouter({
     }),
 
   /** Archive an issue (admin only). */
-  archive: adminProcedure
+  archive: productionProcedure
     .use(requireScopes('issues:write'))
     .input(idParamSchema)
     .output(issueSchema)
@@ -141,7 +141,7 @@ export const issuesRouter = createRouter({
     }),
 
   /** Add an item to an issue. */
-  addItem: orgProcedure
+  addItem: productionProcedure
     .use(requireScopes('issues:write'))
     .input(idParamSchema.merge(addIssueItemSchema))
     .output(issueItemSchema)
@@ -159,7 +159,7 @@ export const issuesRouter = createRouter({
     }),
 
   /** Remove an item from an issue. */
-  removeItem: orgProcedure
+  removeItem: productionProcedure
     .use(requireScopes('issues:write'))
     .input(z.object({ id: z.string().uuid(), itemId: z.string().uuid() }))
     .output(issueItemSchema.nullable())
@@ -176,7 +176,7 @@ export const issuesRouter = createRouter({
     }),
 
   /** Reorder items in an issue. */
-  reorderItems: adminProcedure
+  reorderItems: productionProcedure
     .use(requireScopes('issues:write'))
     .input(idParamSchema.merge(reorderItemsSchema))
     .output(z.array(issueItemSchema))
@@ -191,7 +191,7 @@ export const issuesRouter = createRouter({
     }),
 
   /** Add a section to an issue. */
-  addSection: adminProcedure
+  addSection: productionProcedure
     .use(requireScopes('issues:write'))
     .input(idParamSchema.merge(addIssueSectionSchema))
     .output(issueSectionSchema)
@@ -210,7 +210,7 @@ export const issuesRouter = createRouter({
     }),
 
   /** Remove a section from an issue. */
-  removeSection: adminProcedure
+  removeSection: productionProcedure
     .use(requireScopes('issues:write'))
     .input(z.object({ id: z.string().uuid(), sectionId: z.string().uuid() }))
     .output(issueSectionSchema.nullable())

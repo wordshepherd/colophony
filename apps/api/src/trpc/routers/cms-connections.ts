@@ -9,7 +9,7 @@ import {
 import { z } from 'zod';
 import {
   orgProcedure,
-  adminProcedure,
+  productionProcedure,
   createRouter,
   requireScopes,
 } from '../init.js';
@@ -50,7 +50,7 @@ export const cmsConnectionsRouter = createRouter({
     }),
 
   /** Create a new CMS connection (admin only). */
-  create: adminProcedure
+  create: productionProcedure
     .use(requireScopes('cms:write'))
     .input(createCmsConnectionSchema)
     .output(cmsConnectionSchema)
@@ -66,7 +66,7 @@ export const cmsConnectionsRouter = createRouter({
     }),
 
   /** Update a CMS connection (admin only). */
-  update: adminProcedure
+  update: productionProcedure
     .use(requireScopes('cms:write'))
     .input(idParamSchema.merge(updateCmsConnectionSchema))
     .output(cmsConnectionSchema)
@@ -84,7 +84,7 @@ export const cmsConnectionsRouter = createRouter({
     }),
 
   /** Delete a CMS connection (admin only). */
-  delete: adminProcedure
+  delete: productionProcedure
     .use(requireScopes('cms:write'))
     .input(idParamSchema)
     .output(cmsConnectionSchema)

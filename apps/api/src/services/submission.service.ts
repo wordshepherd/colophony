@@ -223,7 +223,7 @@ export const submissionService = {
   async listAll(
     tx: DrizzleDb,
     input: ListSubmissionsInput,
-    callerRole?: import('@colophony/types').Role,
+    callerRoles?: readonly string[],
   ) {
     const { status, submissionPeriodId, search, page, limit } = input;
     const offset = (page - 1) * limit;
@@ -293,7 +293,7 @@ export const submissionService = {
 
     // Apply blind review: batch-fetch blind modes for all distinct periods
     let blindedItems = items;
-    if (callerRole && callerRole !== 'ADMIN') {
+    if (callerRoles && !callerRoles.includes('ADMIN')) {
       const periodIds = [
         ...new Set(
           items
@@ -321,7 +321,7 @@ export const submissionService = {
           const mode = item.submissionPeriodId
             ? (blindModes.get(item.submissionPeriodId) ?? 'none')
             : 'none';
-          return applySubmitterBlinding(item, mode, callerRole);
+          return applySubmitterBlinding(item, mode, callerRoles);
         });
       }
     }
@@ -343,7 +343,7 @@ export const submissionService = {
   async exportAll(
     tx: DrizzleDb,
     input: ExportSubmissionsInput,
-    callerRole?: import('@colophony/types').Role,
+    callerRoles?: readonly string[],
   ) {
     const MAX_EXPORT_ROWS = 10000;
 
@@ -395,7 +395,7 @@ export const submissionService = {
       .limit(MAX_EXPORT_ROWS);
 
     // Apply blind review
-    if (callerRole && callerRole !== 'ADMIN') {
+    if (callerRoles && !callerRoles.includes('ADMIN')) {
       const periodIds = [
         ...new Set(
           items
@@ -423,7 +423,7 @@ export const submissionService = {
           const mode = item.submissionPeriodId
             ? (blindModes.get(item.submissionPeriodId) ?? 'none')
             : 'none';
-          return applySubmitterBlinding(item, mode, callerRole);
+          return applySubmitterBlinding(item, mode, callerRoles);
         });
       }
     }
@@ -780,7 +780,7 @@ export const submissionService = {
     if (!submission) throw new SubmissionNotFoundError(id);
     assertOwnerOrEditor(
       svc.actor.userId,
-      svc.actor.role,
+      svc.actor.roles,
       submission.submitterId,
     );
 
@@ -790,7 +790,7 @@ export const submissionService = {
         svc.tx,
         submission.submissionPeriodId,
       );
-      return applySubmitterBlinding(submission, blindMode, svc.actor.role);
+      return applySubmitterBlinding(submission, blindMode, svc.actor.roles);
     }
 
     return submission;
@@ -944,7 +944,7 @@ export const submissionService = {
     status: SubmissionStatus,
     comment: string | undefined,
   ) {
-    assertEditorOrAdmin(svc.actor.role);
+    assertEditorOrAdmin(svc.actor.roles);
 
     // R&R requires revision notes
     if (status === 'REVISE_AND_RESUBMIT' && !comment?.trim()) {
@@ -1097,7 +1097,7 @@ export const submissionService = {
     if (!submission) throw new SubmissionNotFoundError(submissionId);
     assertOwnerOrEditor(
       svc.actor.userId,
-      svc.actor.role,
+      svc.actor.roles,
       submission.submitterId,
     );
     return submissionService.getHistory(svc.tx, submissionId);
@@ -1116,7 +1116,7 @@ export const submissionService = {
     svc: ServiceContext,
     input: BatchStatusChangeInput,
   ): Promise<BatchStatusChangeResponse> {
-    assertEditorOrAdmin(svc.actor.role);
+    assertEditorOrAdmin(svc.actor.roles);
 
     const { submissionIds, status, comment } = input;
 
@@ -1234,7 +1234,7 @@ export const submissionService = {
     svc: ServiceContext,
     input: BatchAssignReviewersInput,
   ): Promise<BatchAssignReviewersResponse> {
-    assertEditorOrAdmin(svc.actor.role);
+    assertEditorOrAdmin(svc.actor.roles);
 
     const { submissionIds, reviewerUserIds } = input;
 

@@ -102,11 +102,11 @@ const list = orgProcedure
   .output(paginatedSubmissionsSchema)
   .handler(async ({ input, context }) => {
     try {
-      assertEditorOrAdmin(context.authContext.role);
+      assertEditorOrAdmin(context.authContext.roles);
       return await submissionService.listAll(
         context.dbTx,
         input,
-        context.authContext.role,
+        context.authContext.roles,
       );
     } catch (e) {
       mapServiceError(e);
@@ -653,7 +653,7 @@ const analyticsOverview = orgProcedure
   .output(submissionOverviewStatsSchema)
   .handler(async ({ input, context }) => {
     try {
-      assertEditorOrAdmin(context.authContext.role);
+      assertEditorOrAdmin(context.authContext.roles);
       return await submissionAnalyticsService.getOverviewStats(
         context.dbTx,
         input,
@@ -677,7 +677,7 @@ const analyticsStatusBreakdown = orgProcedure
   .output(submissionStatusBreakdownSchema)
   .handler(async ({ input, context }) => {
     try {
-      assertEditorOrAdmin(context.authContext.role);
+      assertEditorOrAdmin(context.authContext.roles);
       return await submissionAnalyticsService.getStatusBreakdown(
         context.dbTx,
         input,
@@ -702,7 +702,7 @@ const analyticsFunnel = orgProcedure
   .output(submissionFunnelSchema)
   .handler(async ({ input, context }) => {
     try {
-      assertEditorOrAdmin(context.authContext.role);
+      assertEditorOrAdmin(context.authContext.roles);
       return await submissionAnalyticsService.getFunnel(context.dbTx, input);
     } catch (e) {
       mapServiceError(e);
@@ -724,7 +724,7 @@ const analyticsTimeSeries = orgProcedure
   .output(submissionTimeSeriesSchema)
   .handler(async ({ input, context }) => {
     try {
-      assertEditorOrAdmin(context.authContext.role);
+      assertEditorOrAdmin(context.authContext.roles);
       return await submissionAnalyticsService.getTimeSeries(
         context.dbTx,
         input,
@@ -749,7 +749,7 @@ const analyticsResponseTime = orgProcedure
   .output(responseTimeDistributionSchema)
   .handler(async ({ input, context }) => {
     try {
-      assertEditorOrAdmin(context.authContext.role);
+      assertEditorOrAdmin(context.authContext.roles);
       return await submissionAnalyticsService.getResponseTimeDistribution(
         context.dbTx,
         input,
@@ -774,7 +774,7 @@ const analyticsAging = orgProcedure
   .output(agingSubmissionsSchema)
   .handler(async ({ input, context }) => {
     try {
-      assertEditorOrAdmin(context.authContext.role);
+      assertEditorOrAdmin(context.authContext.roles);
       return await submissionAnalyticsService.getAgingSubmissions(
         context.dbTx,
         input,

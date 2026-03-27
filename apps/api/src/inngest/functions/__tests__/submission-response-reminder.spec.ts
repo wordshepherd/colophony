@@ -22,7 +22,7 @@ vi.mock('@colophony/db', () => ({
   organizationMembers: {
     userId: 'userId',
     organizationId: 'organizationId',
-    role: 'role',
+    roles: 'roles',
   },
   users: { id: 'id', email: 'email' },
   eq: vi.fn(),

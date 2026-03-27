@@ -157,19 +157,20 @@ export default function SettingsPage() {
                   <div className="flex items-center gap-2">
                     <Badge
                       variant={
-                        org.role === "ADMIN"
+                        org.roles.includes("ADMIN")
                           ? "default"
-                          : org.role === "EDITOR"
+                          : org.roles.includes("EDITOR")
                             ? "secondary"
                             : "outline"
                       }
                     >
-                      {org.role.toLowerCase()}
+                      {org.roles[0].toLowerCase()}
+                      {org.roles.length > 1 && ` +${org.roles.length - 1}`}
                     </Badge>
                     {currentOrg?.id === org.id && (
                       <Badge variant="outline">Current</Badge>
                     )}
-                    {org.role === "ADMIN" && (
+                    {org.roles.includes("ADMIN") && (
                       <Button
                         variant="ghost"
                         size="sm"

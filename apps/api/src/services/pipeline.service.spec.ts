@@ -3,13 +3,13 @@ import { pipelineService } from './pipeline.service.js';
 import { ForbiddenError } from './errors.js';
 import type { ServiceContext } from './types.js';
 
-function makeCtx(role: string): ServiceContext {
+function makeCtx(roles: string[]): ServiceContext {
   return {
     tx: {} as ServiceContext['tx'],
     actor: {
       userId: 'user-1',
       orgId: 'org-1',
-      role: role as ServiceContext['actor']['role'],
+      roles: roles as ServiceContext['actor']['roles'],
     },
     audit: vi.fn(),
   };
@@ -18,7 +18,7 @@ function makeCtx(role: string): ServiceContext {
 describe('pipeline.service', () => {
   describe('addCommentWithAudit', () => {
     it('rejects READER role', async () => {
-      const ctx = makeCtx('READER');
+      const ctx = makeCtx(['READER']);
       await expect(
         pipelineService.addCommentWithAudit(ctx, 'item-1', {
           content: 'test comment',
@@ -27,7 +27,7 @@ describe('pipeline.service', () => {
     });
 
     it('allows EDITOR role', async () => {
-      const ctx = makeCtx('EDITOR');
+      const ctx = makeCtx(['EDITOR']);
       // Will fail with a different error (not ForbiddenError) because the
       // mock tx has no query capabilities — but it should NOT throw ForbiddenError
       await expect(
@@ -38,7 +38,7 @@ describe('pipeline.service', () => {
     });
 
     it('allows ADMIN role', async () => {
-      const ctx = makeCtx('ADMIN');
+      const ctx = makeCtx(['ADMIN']);
       await expect(
         pipelineService.addCommentWithAudit(ctx, 'item-1', {
           content: 'test comment',
@@ -76,7 +76,7 @@ describe('pipeline.service', () => {
     });
 
     it('addCommentWithAudit passes actor orgId to getById', async () => {
-      const ctx = makeCtx('EDITOR');
+      const ctx = makeCtx(['EDITOR']);
       // getById will call tx.select().from().leftJoin()...where(and(eq(id), eq(orgId)))
       // It will fail on the mock tx, but we can verify the call pattern
       const getByIdSpy = vi.spyOn(pipelineService, 'getById');
@@ -92,7 +92,7 @@ describe('pipeline.service', () => {
     });
 
     it('updateStageWithAudit passes actor orgId to getById and updateStage', async () => {
-      const ctx = makeCtx('EDITOR');
+      const ctx = makeCtx(['EDITOR']);
       const getByIdSpy = vi.spyOn(pipelineService, 'getById');
       try {
         await pipelineService.updateStageWithAudit(ctx, 'item-1', {

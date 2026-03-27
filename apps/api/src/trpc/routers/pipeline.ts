@@ -18,7 +18,7 @@ import {
 import { z } from 'zod';
 import {
   orgProcedure,
-  adminProcedure,
+  productionProcedure,
   createRouter,
   requireScopes,
 } from '../init.js';
@@ -59,7 +59,7 @@ export const pipelineRouter = createRouter({
     }),
 
   /** Create a pipeline item (editor/admin). */
-  create: adminProcedure
+  create: productionProcedure
     .use(requireScopes('pipeline:write'))
     .input(createPipelineItemSchema)
     .output(pipelineItemSchema)
@@ -75,7 +75,7 @@ export const pipelineRouter = createRouter({
     }),
 
   /** Advance/change pipeline stage (editor/admin). */
-  updateStage: adminProcedure
+  updateStage: productionProcedure
     .use(requireScopes('pipeline:write'))
     .input(idParamSchema.merge(updatePipelineStageSchema))
     .output(pipelineItemSchema)
@@ -93,7 +93,7 @@ export const pipelineRouter = createRouter({
     }),
 
   /** Assign a copyeditor (editor/admin). */
-  assignCopyeditor: adminProcedure
+  assignCopyeditor: productionProcedure
     .use(requireScopes('pipeline:write'))
     .input(idParamSchema.merge(assignPipelineRoleSchema))
     .output(pipelineItemSchema)
@@ -111,7 +111,7 @@ export const pipelineRouter = createRouter({
     }),
 
   /** Assign a proofreader (editor/admin). */
-  assignProofreader: adminProcedure
+  assignProofreader: productionProcedure
     .use(requireScopes('pipeline:write'))
     .input(idParamSchema.merge(assignPipelineRoleSchema))
     .output(pipelineItemSchema)

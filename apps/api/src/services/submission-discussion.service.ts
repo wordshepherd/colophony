@@ -94,7 +94,7 @@ async function getSubmissionOrThrow(tx: DrizzleDb, submissionId: string) {
  */
 async function assertEditorAdminOrReviewer(
   tx: DrizzleDb,
-  actorRole: string,
+  actorRoles: readonly string[],
   actorUserId: string,
   submissionId: string,
   submitterId: string | null,
@@ -106,9 +106,9 @@ async function assertEditorAdminOrReviewer(
     );
   }
 
-  if (actorRole === 'ADMIN' || actorRole === 'EDITOR') return;
+  if (actorRoles.includes('ADMIN') || actorRoles.includes('EDITOR')) return;
 
-  if (actorRole === 'READER') {
+  if (actorRoles.includes('READER')) {
     const [reviewer] = await tx
       .select({ id: submissionReviewers.id })
       .from(submissionReviewers)
@@ -212,7 +212,7 @@ async function listWithAccess(
   const submission = await getSubmissionOrThrow(svc.tx, submissionId);
   await assertEditorAdminOrReviewer(
     svc.tx,
-    svc.actor.role,
+    svc.actor.roles,
     svc.actor.userId,
     submissionId,
     submission.submitterId,
@@ -223,7 +223,9 @@ async function listWithAccess(
     svc.tx,
     submission.submissionPeriodId,
   );
-  return comments.map((c) => applyAuthorBlinding(c, blindMode, svc.actor.role));
+  return comments.map((c) =>
+    applyAuthorBlinding(c, blindMode, svc.actor.roles),
+  );
 }
 
 async function createWithAudit(
@@ -233,7 +235,7 @@ async function createWithAudit(
   const submission = await getSubmissionOrThrow(svc.tx, params.submissionId);
   await assertEditorAdminOrReviewer(
     svc.tx,
-    svc.actor.role,
+    svc.actor.roles,
     svc.actor.userId,
     params.submissionId,
     submission.submitterId,
@@ -315,7 +317,7 @@ async function createWithAudit(
     svc.tx,
     submission.submissionPeriodId,
   );
-  return applyAuthorBlinding(comment, blindMode, svc.actor.role);
+  return applyAuthorBlinding(comment, blindMode, svc.actor.roles);
 }
 
 // ---------------------------------------------------------------------------

@@ -4,7 +4,7 @@ import { shouldBlindSubmitter, shouldBlindPeerIdentity } from "../blind-review";
 describe("shouldBlindSubmitter", () => {
   it("returns false for mode=none", () => {
     expect(
-      shouldBlindSubmitter({ blindMode: "none", callerRole: "EDITOR" }),
+      shouldBlindSubmitter({ blindMode: "none", callerRoles: ["EDITOR"] }),
     ).toBe(false);
   });
 
@@ -12,7 +12,7 @@ describe("shouldBlindSubmitter", () => {
     expect(
       shouldBlindSubmitter({
         blindMode: "single_blind",
-        callerRole: "EDITOR",
+        callerRoles: ["EDITOR"],
       }),
     ).toBe(true);
   });
@@ -21,14 +21,17 @@ describe("shouldBlindSubmitter", () => {
     expect(
       shouldBlindSubmitter({
         blindMode: "single_blind",
-        callerRole: "READER",
+        callerRoles: ["READER"],
       }),
     ).toBe(true);
   });
 
   it("returns false for single_blind + ADMIN", () => {
     expect(
-      shouldBlindSubmitter({ blindMode: "single_blind", callerRole: "ADMIN" }),
+      shouldBlindSubmitter({
+        blindMode: "single_blind",
+        callerRoles: ["ADMIN"],
+      }),
     ).toBe(false);
   });
 
@@ -36,7 +39,7 @@ describe("shouldBlindSubmitter", () => {
     expect(
       shouldBlindSubmitter({
         blindMode: "double_blind",
-        callerRole: "EDITOR",
+        callerRoles: ["EDITOR"],
       }),
     ).toBe(true);
   });
@@ -47,7 +50,7 @@ describe("shouldBlindPeerIdentity", () => {
     expect(
       shouldBlindPeerIdentity({
         blindMode: "single_blind",
-        callerRole: "EDITOR",
+        callerRoles: ["EDITOR"],
       }),
     ).toBe(false);
   });
@@ -56,7 +59,7 @@ describe("shouldBlindPeerIdentity", () => {
     expect(
       shouldBlindPeerIdentity({
         blindMode: "double_blind",
-        callerRole: "EDITOR",
+        callerRoles: ["EDITOR"],
       }),
     ).toBe(true);
   });
@@ -65,7 +68,7 @@ describe("shouldBlindPeerIdentity", () => {
     expect(
       shouldBlindPeerIdentity({
         blindMode: "double_blind",
-        callerRole: "READER",
+        callerRoles: ["READER"],
       }),
     ).toBe(true);
   });
@@ -74,7 +77,7 @@ describe("shouldBlindPeerIdentity", () => {
     expect(
       shouldBlindPeerIdentity({
         blindMode: "double_blind",
-        callerRole: "ADMIN",
+        callerRoles: ["ADMIN"],
       }),
     ).toBe(false);
   });

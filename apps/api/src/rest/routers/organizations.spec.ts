@@ -12,10 +12,10 @@ vi.mock('../../services/organization.service.js', () => ({
     listMembers: vi.fn(),
     addMember: vi.fn(),
     removeMember: vi.fn(),
-    updateMemberRole: vi.fn(),
+    updateMemberRoles: vi.fn(),
     addMemberWithAudit: vi.fn(),
     removeMemberWithAudit: vi.fn(),
-    updateMemberRoleWithAudit: vi.fn(),
+    updateMemberRolesWithAudit: vi.fn(),
     updateWithAudit: vi.fn(),
     createWithAudit: vi.fn(),
   },
@@ -84,7 +84,7 @@ function authedContext(): RestContext {
 }
 
 function orgContext(
-  role: 'ADMIN' | 'EDITOR' | 'READER' = 'ADMIN',
+  roles: ('ADMIN' | 'EDITOR' | 'READER')[] = ['ADMIN'],
 ): RestContext {
   return {
     authContext: {
@@ -94,7 +94,7 @@ function orgContext(
       emailVerified: true,
       authMethod: 'test',
       orgId: ORG_ID,
-      role,
+      roles,
     },
     dbTx: {} as never,
     audit: vi.fn(),
@@ -103,7 +103,7 @@ function orgContext(
 
 function apiKeyContext(
   scopes: string[],
-  role: 'ADMIN' | 'EDITOR' | 'READER' = 'ADMIN',
+  roles: ('ADMIN' | 'EDITOR' | 'READER')[] = ['ADMIN'],
 ): RestContext {
   return {
     authContext: {
@@ -114,7 +114,7 @@ function apiKeyContext(
       apiKeyId: 'k0000000-0000-4000-a000-000000000001',
       apiKeyScopes: scopes as any,
       orgId: ORG_ID,
-      role,
+      roles,
     },
     dbTx: {} as never,
     audit: vi.fn(),
@@ -163,7 +163,7 @@ describe('organizations REST router', () => {
       const orgs = [
         {
           organizationId: ORG_ID,
-          role: 'ADMIN',
+          roles: ['ADMIN'],
           name: 'Org 1',
           slug: 'org-1',
         },
@@ -200,7 +200,7 @@ describe('organizations REST router', () => {
           id: MEMBER_ID,
           organizationId: ORG_ID,
           userId: USER_ID,
-          role: 'ADMIN',
+          roles: ['ADMIN'],
           createdAt: new Date(),
           updatedAt: new Date(),
         },
@@ -296,7 +296,7 @@ describe('organizations REST router', () => {
 
   describe('PATCH /organizations/{orgId} (update)', () => {
     it('requires admin role', async () => {
-      const call = client(organizationsRouter.update, orgContext('EDITOR'));
+      const call = client(organizationsRouter.update, orgContext(['EDITOR']));
       await expect(call({ orgId: ORG_ID, name: 'New Name' })).rejects.toThrow(
         'Admin role required',
       );
@@ -313,7 +313,7 @@ describe('organizations REST router', () => {
       };
       mockService.updateWithAudit.mockResolvedValueOnce(updated as never);
 
-      const call = client(organizationsRouter.update, orgContext('ADMIN'));
+      const call = client(organizationsRouter.update, orgContext(['ADMIN']));
       const result = await call({ orgId: ORG_ID, name: 'New' });
       expect(result.name).toBe('New');
     });
@@ -323,7 +323,7 @@ describe('organizations REST router', () => {
         new NotFoundError('Organization not found'),
       );
 
-      const call = client(organizationsRouter.update, orgContext('ADMIN'));
+      const call = client(organizationsRouter.update, orgContext(['ADMIN']));
       await expect(call({ orgId: ORG_ID, name: 'New' })).rejects.toThrow(
         'not found',
       );
@@ -345,7 +345,7 @@ describe('organizations REST router', () => {
             id: MEMBER_ID,
             userId: USER_ID,
             email: 'test@example.com',
-            role: 'ADMIN',
+            roles: ['ADMIN'],
             createdAt: new Date(),
           },
         ],
@@ -366,13 +366,13 @@ describe('organizations REST router', () => {
     it('requires admin role', async () => {
       const call = client(
         organizationsRouter.members.add,
-        orgContext('READER'),
+        orgContext(['READER']),
       );
       await expect(
         call({
           orgId: ORG_ID,
           email: 'new@example.com',
-          role: 'READER',
+          roles: ['READER'],
         }),
       ).rejects.toThrow('Admin role required');
     });
@@ -382,17 +382,20 @@ describe('organizations REST router', () => {
         id: MEMBER_ID,
         organizationId: ORG_ID,
         userId: USER_ID,
-        role: 'READER',
+        roles: ['READER'],
         createdAt: new Date(),
         updatedAt: new Date(),
       };
       mockService.addMemberWithAudit.mockResolvedValueOnce(member as never);
 
-      const call = client(organizationsRouter.members.add, orgContext('ADMIN'));
+      const call = client(
+        organizationsRouter.members.add,
+        orgContext(['ADMIN']),
+      );
       const result = await call({
         orgId: ORG_ID,
         email: 'new@example.com',
-        role: 'READER',
+        roles: ['READER'],
       });
       expect(result).toEqual(member);
     });
@@ -404,12 +407,15 @@ describe('organizations REST router', () => {
         new UserNotFoundError('nobody@example.com'),
       );
 
-      const call = client(organizationsRouter.members.add, orgContext('ADMIN'));
+      const call = client(
+        organizationsRouter.members.add,
+        orgContext(['ADMIN']),
+      );
       await expect(
         call({
           orgId: ORG_ID,
           email: 'nobody@example.com',
-          role: 'READER',
+          roles: ['READER'],
         }),
       ).rejects.toThrow(ORPCError);
     });
@@ -423,7 +429,7 @@ describe('organizations REST router', () => {
 
       const call = client(
         organizationsRouter.members.remove,
-        orgContext('ADMIN'),
+        orgContext(['ADMIN']),
       );
       const result = await call({
         orgId: ORG_ID,
@@ -441,7 +447,7 @@ describe('organizations REST router', () => {
 
       const call = client(
         organizationsRouter.members.remove,
-        orgContext('ADMIN'),
+        orgContext(['ADMIN']),
       );
       await expect(
         call({
@@ -452,45 +458,45 @@ describe('organizations REST router', () => {
     });
   });
 
-  describe('PATCH /organizations/{orgId}/members/{memberId} (updateRole)', () => {
-    it('updates role via updateMemberRoleWithAudit', async () => {
-      mockService.updateMemberRoleWithAudit.mockResolvedValueOnce({
+  describe('PATCH /organizations/{orgId}/members/{memberId} (updateRoles)', () => {
+    it('updates roles via updateMemberRolesWithAudit', async () => {
+      mockService.updateMemberRolesWithAudit.mockResolvedValueOnce({
         id: MEMBER_ID,
         organizationId: ORG_ID,
         userId: USER_ID,
-        role: 'EDITOR',
+        roles: ['EDITOR'],
         createdAt: new Date(),
         updatedAt: new Date(),
       } as never);
 
       const call = client(
-        organizationsRouter.members.updateRole,
-        orgContext('ADMIN'),
+        organizationsRouter.members.updateRoles,
+        orgContext(['ADMIN']),
       );
       const result = await call({
         orgId: ORG_ID,
         memberId: MEMBER_ID,
-        role: 'EDITOR',
+        roles: ['EDITOR'],
       });
-      expect(result.role).toBe('EDITOR');
+      expect(result.roles).toEqual(['EDITOR']);
     });
 
     it('maps LastAdminError to BAD_REQUEST', async () => {
       const { LastAdminError } =
         await import('../../services/organization.service.js');
-      mockService.updateMemberRoleWithAudit.mockRejectedValueOnce(
+      mockService.updateMemberRolesWithAudit.mockRejectedValueOnce(
         new LastAdminError(),
       );
 
       const call = client(
-        organizationsRouter.members.updateRole,
-        orgContext('ADMIN'),
+        organizationsRouter.members.updateRoles,
+        orgContext(['ADMIN']),
       );
       await expect(
         call({
           orgId: ORG_ID,
           memberId: MEMBER_ID,
-          role: 'READER',
+          roles: ['READER'],
         }),
       ).rejects.toThrow('last admin');
     });

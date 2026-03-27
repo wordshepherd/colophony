@@ -118,7 +118,7 @@ test.describe("Member Management (Members tab)", () => {
     await authedPage.getByRole("option", { name: "Editor" }).click();
 
     // Assert success toast
-    await expect(authedPage.getByText("Role updated")).toBeVisible();
+    await expect(authedPage.getByText("Roles updated")).toBeVisible();
 
     // Cleanup: remove the member via DB
     const member = await getMemberByEmail(seedOrg.id, inviteTarget.email);

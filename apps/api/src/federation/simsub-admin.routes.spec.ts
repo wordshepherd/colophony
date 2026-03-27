@@ -138,7 +138,7 @@ describe('simsub-admin.routes', () => {
         request.authContext = {
           userId: 'admin-user',
           orgId: 'org-1',
-          role: 'ADMIN',
+          roles: ['ADMIN'],
           authMethod: 'oidc',
         } as any;
       });
@@ -178,7 +178,7 @@ describe('simsub-admin.routes', () => {
         request.authContext = {
           userId: 'admin-user',
           orgId: 'org-1',
-          role: 'ADMIN',
+          roles: ['ADMIN'],
           authMethod: 'oidc',
         } as any;
       });

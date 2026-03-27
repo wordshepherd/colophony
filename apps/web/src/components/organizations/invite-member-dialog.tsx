@@ -34,7 +34,7 @@ import { Loader2 } from "lucide-react";
 
 const formSchema = z.object({
   email: z.string().email("Invalid email address"),
-  role: z.enum(["ADMIN", "EDITOR", "READER"]),
+  role: z.enum(["ADMIN", "EDITOR", "READER", "PRODUCTION", "BUSINESS_OPS"]),
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -74,7 +74,7 @@ export function InviteMemberDialog({
   });
 
   const onSubmit = (data: FormData) => {
-    addMutation.mutate(data);
+    addMutation.mutate({ email: data.email, roles: [data.role] });
   };
 
   return (
@@ -117,6 +117,8 @@ export function InviteMemberDialog({
                     <SelectContent>
                       <SelectItem value="READER">Reader</SelectItem>
                       <SelectItem value="EDITOR">Editor</SelectItem>
+                      <SelectItem value="PRODUCTION">Production</SelectItem>
+                      <SelectItem value="BUSINESS_OPS">Business Ops</SelectItem>
                       <SelectItem value="ADMIN">Admin</SelectItem>
                     </SelectContent>
                   </Select>

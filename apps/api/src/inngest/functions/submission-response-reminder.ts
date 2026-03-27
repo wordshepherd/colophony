@@ -7,7 +7,7 @@ import {
   users,
   eq,
   and,
-  inArray,
+  sql,
 } from '@colophony/db';
 import { orgSettingsSchema } from '@colophony/types';
 import { inngest } from '../client.js';
@@ -94,7 +94,7 @@ export const submissionResponseReminderCron: InngestFunction.Any =
               .where(
                 and(
                   eq(organizationMembers.organizationId, org.id),
-                  inArray(organizationMembers.role, ['ADMIN', 'EDITOR']),
+                  sql`${organizationMembers.roles} && ARRAY['ADMIN', 'EDITOR']::"Role"[]`,
                 ),
               );
           });

@@ -42,12 +42,14 @@ export function useCommandPalette() {
 }
 
 function roleCheck(
-  role: "editor" | "admin" | null,
+  role: "editor" | "production" | "admin" | null,
   isEditor: boolean,
+  isProduction: boolean,
   isAdmin: boolean,
 ): boolean {
   if (role === null) return true;
   if (role === "editor") return isEditor;
+  if (role === "production") return isProduction;
   if (role === "admin") return isAdmin;
   return false;
 }
@@ -60,7 +62,7 @@ export function CommandPaletteProvider({
   const [open, setOpen] = useState(false);
   const [overlayOpen, setOverlayOpen] = useState(false);
   const router = useRouter();
-  const { isEditor, isAdmin } = useOrganization();
+  const { isEditor, isProduction, isAdmin } = useOrganization();
 
   const mod = modifierKey();
 
@@ -110,7 +112,7 @@ export function CommandPaletteProvider({
         <CommandList>
           <CommandEmpty>No results found.</CommandEmpty>
           {navGroups
-            .filter((g) => roleCheck(g.role, isEditor, isAdmin))
+            .filter((g) => roleCheck(g.role, isEditor, isProduction, isAdmin))
             .map((group) => (
               <CommandGroup key={group.label} heading={group.label}>
                 {group.items.map((item: NavItem) => (

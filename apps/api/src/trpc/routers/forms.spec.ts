@@ -121,7 +121,7 @@ function makeContext(overrides: Partial<TRPCContext> = {}): TRPCContext {
 }
 
 function orgContext(
-  role: 'ADMIN' | 'EDITOR' | 'READER' = 'EDITOR',
+  roles: ('ADMIN' | 'EDITOR' | 'READER')[] = ['EDITOR'],
   overrides: Partial<TRPCContext> = {},
 ): TRPCContext {
   const mockTx = {} as never;
@@ -133,7 +133,7 @@ function orgContext(
       emailVerified: true,
       authMethod: 'test',
       orgId: ORG_ID,
-      role,
+      roles,
     },
     dbTx: mockTx,
     audit: vi.fn(),

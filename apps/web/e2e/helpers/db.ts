@@ -80,13 +80,13 @@ export async function createOrg(data?: {
 export async function addMember(
   orgId: string,
   userId: string,
-  role: "ADMIN" | "EDITOR" | "READER",
+  role: "ADMIN" | "EDITOR" | "READER" | "PRODUCTION" | "BUSINESS_OPS",
 ): Promise<void> {
   const db = getDb();
   await db.insert(organizationMembers).values({
     organizationId: orgId,
     userId: userId,
-    role,
+    roles: [role],
   });
 }
 

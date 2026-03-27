@@ -8,7 +8,7 @@ let mockAssignMutate: Mock;
 let mockIsPending: boolean;
 let mockAssignIsPending: boolean;
 let mockMembersData:
-  | { items: Array<{ userId: string; email: string; role: string }> }
+  | { items: Array<{ userId: string; email: string; roles: string[] }> }
   | undefined;
 
 function resetMocks() {

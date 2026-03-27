@@ -29,7 +29,7 @@ function makeContext(overrides: Partial<TRPCContext> = {}): TRPCContext {
 }
 
 function orgContext(
-  role: 'ADMIN' | 'EDITOR' | 'READER' = 'ADMIN',
+  roles: ('ADMIN' | 'EDITOR' | 'READER')[] = ['ADMIN'],
   overrides: Partial<TRPCContext> = {},
 ): TRPCContext {
   const mockTx = {} as never;
@@ -41,7 +41,7 @@ function orgContext(
       emailVerified: true,
       authMethod: 'test',
       orgId: 'org-1',
-      role,
+      roles,
     },
     dbTx: mockTx,
     audit: vi.fn(),
@@ -80,7 +80,7 @@ describe('apiKeys router', () => {
       };
       mockApiKeyService.list.mockResolvedValueOnce(keys);
 
-      const caller = createCaller(orgContext('READER'));
+      const caller = createCaller(orgContext(['READER']));
       const result = await caller.apiKeys.list({ page: 1, limit: 20 });
 
       expect(result).toEqual(keys);
@@ -120,7 +120,7 @@ describe('apiKeys router', () => {
       };
       mockApiKeyService.create.mockResolvedValueOnce(created);
 
-      const ctx = orgContext('ADMIN');
+      const ctx = orgContext(['ADMIN']);
       const caller = createCaller(ctx);
       const result = await caller.apiKeys.create({
         name: 'My Key',
@@ -144,7 +144,7 @@ describe('apiKeys router', () => {
     });
 
     it('rejects non-admin users', async () => {
-      const caller = createCaller(orgContext('READER'));
+      const caller = createCaller(orgContext(['READER']));
       await expect(
         caller.apiKeys.create({
           name: 'My Key',
@@ -154,7 +154,7 @@ describe('apiKeys router', () => {
     });
 
     it('rejects EDITOR users', async () => {
-      const caller = createCaller(orgContext('EDITOR'));
+      const caller = createCaller(orgContext(['EDITOR']));
       await expect(
         caller.apiKeys.create({
           name: 'My Key',
@@ -172,7 +172,7 @@ describe('apiKeys router', () => {
         revokedAt: new Date(),
       });
 
-      const ctx = orgContext('ADMIN');
+      const ctx = orgContext(['ADMIN']);
       const caller = createCaller(ctx);
       const result = await caller.apiKeys.revoke({
         keyId: 'a1111111-1111-1111-a111-111111111111',
@@ -191,7 +191,7 @@ describe('apiKeys router', () => {
     it('throws NOT_FOUND when key does not exist', async () => {
       mockApiKeyService.revoke.mockResolvedValueOnce(null);
 
-      const caller = createCaller(orgContext('ADMIN'));
+      const caller = createCaller(orgContext(['ADMIN']));
       await expect(
         caller.apiKeys.revoke({
           keyId: 'b2222222-2222-2222-a222-222222222222',
@@ -200,7 +200,7 @@ describe('apiKeys router', () => {
     });
 
     it('rejects non-admin users', async () => {
-      const caller = createCaller(orgContext('READER'));
+      const caller = createCaller(orgContext(['READER']));
       await expect(
         caller.apiKeys.revoke({
           keyId: 'a1111111-1111-1111-a111-111111111111',
@@ -215,7 +215,7 @@ describe('apiKeys router', () => {
         id: 'a1111111-1111-1111-a111-111111111111',
       });
 
-      const ctx = orgContext('ADMIN');
+      const ctx = orgContext(['ADMIN']);
       const caller = createCaller(ctx);
       const result = await caller.apiKeys.delete({
         keyId: 'a1111111-1111-1111-a111-111111111111',
@@ -234,7 +234,7 @@ describe('apiKeys router', () => {
     it('throws NOT_FOUND when key does not exist', async () => {
       mockApiKeyService.delete.mockResolvedValueOnce(null);
 
-      const caller = createCaller(orgContext('ADMIN'));
+      const caller = createCaller(orgContext(['ADMIN']));
       await expect(
         caller.apiKeys.delete({
           keyId: 'b2222222-2222-2222-a222-222222222222',
@@ -243,7 +243,7 @@ describe('apiKeys router', () => {
     });
 
     it('rejects non-admin users', async () => {
-      const caller = createCaller(orgContext('EDITOR'));
+      const caller = createCaller(orgContext(['EDITOR']));
       await expect(
         caller.apiKeys.delete({
           keyId: 'a1111111-1111-1111-a111-111111111111',

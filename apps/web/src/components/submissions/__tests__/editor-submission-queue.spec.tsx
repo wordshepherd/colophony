@@ -34,7 +34,7 @@ vi.mock("@/hooks/use-organization", () => ({
     currentOrg: {
       id: "org-1",
       name: "Test Org",
-      role: mockIsAdmin ? "ADMIN" : "EDITOR",
+      roles: mockIsAdmin ? ["ADMIN"] : ["EDITOR"],
     },
   }),
 }));

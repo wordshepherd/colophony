@@ -99,7 +99,7 @@ function makeTx() {
 }
 
 function makeSvc(
-  role: string = 'EDITOR',
+  roles: string[] = ['EDITOR'],
   userId: string = 'user-editor',
 ): ServiceContext {
   return {
@@ -107,7 +107,7 @@ function makeSvc(
     actor: {
       userId,
       orgId: 'org-1',
-      role: role as 'ADMIN' | 'EDITOR' | 'READER',
+      roles: roles as ('ADMIN' | 'EDITOR' | 'READER')[],
     },
     audit: vi.fn(),
   };
@@ -178,7 +178,7 @@ describe('submissionDiscussionService', () => {
 
   describe('createWithAudit', () => {
     it('rejects READER not assigned as reviewer', async () => {
-      const svc = makeSvc('READER', 'user-reader');
+      const svc = makeSvc(['READER'], 'user-reader');
       // Mock submission exists with a different submitter
       mockLimit
         .mockReturnValueOnce([
@@ -200,7 +200,7 @@ describe('submissionDiscussionService', () => {
     });
 
     it('allows assigned READER reviewer', async () => {
-      const svc = makeSvc('READER', 'user-reviewer');
+      const svc = makeSvc(['READER'], 'user-reviewer');
       // Mock submission exists
       mockLimit
         .mockReturnValueOnce([
@@ -244,7 +244,7 @@ describe('submissionDiscussionService', () => {
     });
 
     it('allows EDITOR', async () => {
-      const svc = makeSvc('EDITOR', 'user-editor');
+      const svc = makeSvc(['EDITOR'], 'user-editor');
       // Mock submission exists
       mockLimit.mockReturnValueOnce([
         {
@@ -279,7 +279,7 @@ describe('submissionDiscussionService', () => {
     });
 
     it('allows ADMIN', async () => {
-      const svc = makeSvc('ADMIN', 'user-admin');
+      const svc = makeSvc(['ADMIN'], 'user-admin');
       mockLimit.mockReturnValueOnce([
         {
           id: 'sub-1',
@@ -311,7 +311,7 @@ describe('submissionDiscussionService', () => {
     });
 
     it('rejects nonexistent parentId', async () => {
-      const svc = makeSvc('EDITOR', 'user-editor');
+      const svc = makeSvc(['EDITOR'], 'user-editor');
       // Mock submission exists
       mockLimit
         .mockReturnValueOnce([
@@ -334,7 +334,7 @@ describe('submissionDiscussionService', () => {
     });
 
     it('collapses depth > 1 replies to root parent', async () => {
-      const svc = makeSvc('EDITOR', 'user-editor');
+      const svc = makeSvc(['EDITOR'], 'user-editor');
       // Mock submission exists
       mockLimit
         .mockReturnValueOnce([
@@ -381,7 +381,7 @@ describe('submissionDiscussionService', () => {
     });
 
     it('rejects submitter even if they have an org role', async () => {
-      const svc = makeSvc('EDITOR', 'user-submitter');
+      const svc = makeSvc(['EDITOR'], 'user-submitter');
       mockLimit.mockReturnValueOnce([
         {
           id: 'sub-1',

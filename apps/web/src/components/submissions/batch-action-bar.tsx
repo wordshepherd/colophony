@@ -229,7 +229,7 @@ export function BatchActionBar({
                         {member.email}
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        {member.role}
+                        {member.roles[0]}
                       </p>
                     </div>
                   </label>

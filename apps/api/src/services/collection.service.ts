@@ -198,7 +198,7 @@ export const collectionService = {
   },
 
   async createWithAudit(ctx: ServiceContext, input: CreateCollectionInput) {
-    assertEditorOrAdmin(ctx.actor.role);
+    assertEditorOrAdmin(ctx.actor.roles);
     const collection = await collectionService.create(
       ctx.tx,
       input,
@@ -245,7 +245,7 @@ export const collectionService = {
     id: string,
     input: UpdateCollectionInput,
   ) {
-    assertEditorOrAdmin(ctx.actor.role);
+    assertEditorOrAdmin(ctx.actor.roles);
     // Visibility check: private collections only editable by owner
     const existing = await collectionService.getById(
       ctx.tx,
@@ -285,7 +285,7 @@ export const collectionService = {
   },
 
   async deleteWithAudit(ctx: ServiceContext, id: string) {
-    assertEditorOrAdmin(ctx.actor.role);
+    assertEditorOrAdmin(ctx.actor.roles);
     // Visibility check: private collections only deletable by owner
     const existing = await collectionService.getById(
       ctx.tx,
@@ -383,7 +383,7 @@ export const collectionService = {
     collectionId: string,
     input: AddCollectionItemInput,
   ) {
-    assertEditorOrAdmin(ctx.actor.role);
+    assertEditorOrAdmin(ctx.actor.roles);
     const item = await collectionService.addItem(
       ctx.tx,
       collectionId,
@@ -442,7 +442,7 @@ export const collectionService = {
     itemId: string,
     input: UpdateCollectionItemInput,
   ) {
-    assertEditorOrAdmin(ctx.actor.role);
+    assertEditorOrAdmin(ctx.actor.roles);
     const updated = await collectionService.updateItem(
       ctx.tx,
       collectionId,
@@ -495,7 +495,7 @@ export const collectionService = {
     collectionId: string,
     itemId: string,
   ) {
-    assertEditorOrAdmin(ctx.actor.role);
+    assertEditorOrAdmin(ctx.actor.roles);
     const removed = await collectionService.removeItem(
       ctx.tx,
       collectionId,

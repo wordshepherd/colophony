@@ -162,7 +162,7 @@ function createDeleteChain(rows: unknown[]) {
 function makeCtx(overrides?: Partial<ServiceContext>): ServiceContext {
   return {
     tx: {} as never,
-    actor: { userId: USER_ID, orgId: ORG_ID, role: 'EDITOR' },
+    actor: { userId: USER_ID, orgId: ORG_ID, roles: ['EDITOR'] },
     audit: vi.fn().mockResolvedValue(undefined),
     ...overrides,
   };
@@ -365,7 +365,7 @@ describe('collectionService', () => {
       });
 
       expect(result).toEqual(fakeCollection);
-      expect(assertEditorOrAdmin).toHaveBeenCalledWith('EDITOR');
+      expect(assertEditorOrAdmin).toHaveBeenCalledWith(['EDITOR']);
       expect(ctx.audit).toHaveBeenCalledWith({
         action: 'COLLECTION_CREATED',
         resource: 'collection',
@@ -380,7 +380,7 @@ describe('collectionService', () => {
       });
 
       const ctx = makeCtx({
-        actor: { userId: USER_ID, orgId: ORG_ID, role: 'READER' },
+        actor: { userId: USER_ID, orgId: ORG_ID, roles: ['READER'] },
       });
 
       await expect(
@@ -619,7 +619,7 @@ describe('collectionService', () => {
       );
 
       expect(result).toEqual(fakeItem);
-      expect(assertEditorOrAdmin).toHaveBeenCalledWith('EDITOR');
+      expect(assertEditorOrAdmin).toHaveBeenCalledWith(['EDITOR']);
       expect(ctx.audit).toHaveBeenCalledWith({
         action: 'COLLECTION_ITEM_ADDED',
         resource: 'collection',
@@ -684,7 +684,7 @@ describe('collectionService', () => {
       );
 
       expect(result).toEqual(updatedItem);
-      expect(assertEditorOrAdmin).toHaveBeenCalledWith('EDITOR');
+      expect(assertEditorOrAdmin).toHaveBeenCalledWith(['EDITOR']);
       expect(ctx.audit).toHaveBeenCalledWith({
         action: 'COLLECTION_ITEM_UPDATED',
         resource: 'collection',

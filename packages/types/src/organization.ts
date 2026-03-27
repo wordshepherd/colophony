@@ -69,15 +69,35 @@ export const updateOrganizationSchema = z.object({
 export type UpdateOrganizationInput = z.infer<typeof updateOrganizationSchema>;
 
 export const roleSchema = z
-  .enum(["ADMIN", "EDITOR", "READER"])
+  .enum(["ADMIN", "EDITOR", "READER", "PRODUCTION", "BUSINESS_OPS"])
   .describe("Member role within an organization");
 export type Role = z.infer<typeof roleSchema>;
+
+export const rolesSchema = z
+  .array(roleSchema)
+  .min(1)
+  .describe("Roles assigned to an organization member");
+
+/** Default display names for roles. Orgs can override via settings. */
+export const ROLE_DISPLAY_DEFAULTS: Record<Role, string> = {
+  ADMIN: "Administrator",
+  EDITOR: "Editor",
+  READER: "First Reader",
+  PRODUCTION: "Production Editor",
+  BUSINESS_OPS: "Business Operations",
+};
+
+/** Schema for org-configurable role display names. */
+export const roleDisplayNamesSchema = z
+  .record(roleSchema, z.string().min(1).max(100))
+  .optional()
+  .describe("Custom display names for roles");
 
 export const organizationMemberSchema = z.object({
   id: z.string().uuid().describe("Membership record ID"),
   userId: z.string().uuid().describe("ID of the member user"),
   email: z.string().email().describe("Email address of the member"),
-  role: roleSchema,
+  roles: rolesSchema,
   createdAt: z.date().describe("When the member was added"),
 });
 
@@ -88,7 +108,7 @@ export const userOrganizationSchema = z.object({
   organizationId: z.string().uuid().describe("ID of the organization"),
   name: z.string().describe("Display name of the organization"),
   slug: z.string().describe("URL-friendly identifier"),
-  role: roleSchema,
+  roles: rolesSchema,
 });
 
 export type UserOrganization = z.infer<typeof userOrganizationSchema>;
@@ -108,7 +128,7 @@ export const createOrganizationResponseSchema = z.object({
       id: z.string().uuid().describe("Membership record ID"),
       organizationId: z.string().uuid().describe("ID of the organization"),
       userId: z.string().uuid().describe("ID of the creator user"),
-      role: roleSchema,
+      roles: rolesSchema,
       createdAt: z.date().describe("When the membership was created"),
       updatedAt: z.date().describe("When the membership was last updated"),
     })
@@ -127,7 +147,7 @@ export const organizationMemberMutationResponseSchema = z.object({
   id: z.string().uuid().describe("Membership record ID"),
   organizationId: z.string().uuid().describe("ID of the organization"),
   userId: z.string().uuid().describe("ID of the member user"),
-  role: roleSchema,
+  roles: rolesSchema,
   createdAt: z.date().describe("When the membership was created"),
   updatedAt: z.date().describe("When the membership was last updated"),
 });
@@ -138,17 +158,17 @@ export type OrganizationMemberMutationResponse = z.infer<
 
 export const inviteMemberSchema = z.object({
   email: z.string().email().describe("Email address of the user to invite"),
-  role: roleSchema.describe("Role to assign to the new member"),
+  roles: rolesSchema.describe("Roles to assign to the new member"),
 });
 
 export type InviteMemberInput = z.infer<typeof inviteMemberSchema>;
 
-export const updateMemberRoleSchema = z.object({
+export const updateMemberRolesSchema = z.object({
   memberId: z.string().uuid().describe("ID of the membership record to update"),
-  role: roleSchema.describe("New role for the member"),
+  roles: rolesSchema.describe("New roles for the member"),
 });
 
-export type UpdateMemberRoleInput = z.infer<typeof updateMemberRoleSchema>;
+export type UpdateMemberRolesInput = z.infer<typeof updateMemberRolesSchema>;
 
 export const orgSettingsSchema = z.object({
   responseReminderEnabled: z.boolean().default(false),
@@ -157,5 +177,6 @@ export const orgSettingsSchema = z.object({
     .record(writerStatusSchema, z.string().min(1).max(100))
     .optional()
     .describe("Custom writer-facing status display names"),
+  roleDisplayNames: roleDisplayNamesSchema,
 });
 export type OrgSettings = z.infer<typeof orgSettingsSchema>;

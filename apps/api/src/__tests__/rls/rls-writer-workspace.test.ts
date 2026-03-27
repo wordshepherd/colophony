@@ -228,7 +228,7 @@ describe('RLS Writer Workspace', () => {
       // userB (editor in orgY) cannot see it, but let's create a member in orgX
       // to test positive case — use a third user who is member of orgX
       const editorUser = await createUser();
-      await createOrgMember(orgX.id, editorUser.id, { role: 'EDITOR' });
+      await createOrgMember(orgX.id, editorUser.id, { roles: ['EDITOR'] });
 
       const rows = await withTestRls(
         { userId: editorUser.id, orgId: orgX.id },
@@ -248,7 +248,7 @@ describe('RLS Writer Workspace', () => {
       });
 
       const editorUser = await createUser();
-      await createOrgMember(orgX.id, editorUser.id, { role: 'EDITOR' });
+      await createOrgMember(orgX.id, editorUser.id, { roles: ['EDITOR'] });
 
       // Editor in orgX should NOT see this — it's linked to external submission, not org submission
       const rows = await withTestRls(

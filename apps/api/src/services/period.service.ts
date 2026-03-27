@@ -151,7 +151,7 @@ export const periodService = {
     ctx: ServiceContext,
     input: CreateSubmissionPeriodInput,
   ): Promise<SubmissionPeriod> {
-    assertEditorOrAdmin(ctx.actor.role);
+    assertEditorOrAdmin(ctx.actor.roles);
     const period = await periodService.create(ctx.tx, input, ctx.actor.orgId);
     await ctx.audit({
       action: AuditActions.PERIOD_CREATED,
@@ -196,7 +196,7 @@ export const periodService = {
     id: string,
     input: UpdateSubmissionPeriodInput,
   ): Promise<SubmissionPeriod> {
-    assertEditorOrAdmin(ctx.actor.role);
+    assertEditorOrAdmin(ctx.actor.roles);
     const updated = await periodService.update(ctx.tx, id, input);
     if (!updated) throw new PeriodNotFoundError(id);
     await ctx.audit({
@@ -229,7 +229,7 @@ export const periodService = {
     ctx: ServiceContext,
     id: string,
   ): Promise<{ success: true }> {
-    assertEditorOrAdmin(ctx.actor.role);
+    assertEditorOrAdmin(ctx.actor.roles);
     const deleted = await periodService.delete(ctx.tx, id);
     if (!deleted) throw new PeriodNotFoundError(id);
     await ctx.audit({

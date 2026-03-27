@@ -140,7 +140,7 @@ function makeSvc(
   const tx = makeTx();
   return {
     tx: tx as never,
-    actor: { userId: 'user-1', orgId: 'org-1', role: 'EDITOR' },
+    actor: { userId: 'user-1', orgId: 'org-1', roles: ['EDITOR'] },
     audit: vi.fn(),
     ...overrides,
   } as ServiceContext & { tx: ReturnType<typeof makeTx> };
@@ -156,7 +156,7 @@ describe('submissionService batch operations', () => {
   describe('batchUpdateStatusAsEditor', () => {
     it('rejects non-editor role', async () => {
       const svc = makeSvc({
-        actor: { userId: 'user-1', orgId: 'org-1', role: 'READER' },
+        actor: { userId: 'user-1', orgId: 'org-1', roles: ['READER'] },
       });
 
       await expect(
@@ -304,7 +304,7 @@ describe('submissionService batch operations', () => {
   describe('batchAssignReviewersAsEditor', () => {
     it('rejects non-editor role', async () => {
       const svc = makeSvc({
-        actor: { userId: 'user-1', orgId: 'org-1', role: 'READER' },
+        actor: { userId: 'user-1', orgId: 'org-1', roles: ['READER'] },
       });
 
       await expect(

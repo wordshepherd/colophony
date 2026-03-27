@@ -87,7 +87,7 @@ import {
 function makeSvc(overrides: Partial<ServiceContext> = {}): ServiceContext {
   return {
     tx: {} as never,
-    actor: { userId: 'user-1', orgId: 'org-1', role: 'READER' },
+    actor: { userId: 'user-1', orgId: 'org-1', roles: ['READER'] },
     audit: vi.fn(),
     ...overrides,
   };
@@ -151,7 +151,7 @@ describe('submissionService access-aware methods', () => {
       vi.mocked(submissionService.getById).mockResolvedValueOnce(sub as never);
 
       const svc = makeSvc({
-        actor: { userId: 'user-1', orgId: 'org-1', role: 'EDITOR' },
+        actor: { userId: 'user-1', orgId: 'org-1', roles: ['EDITOR'] },
       });
       const result = await submissionService.getByIdWithAccess(
         svc,
@@ -345,7 +345,7 @@ describe('submissionService access-aware methods', () => {
       } as never);
 
       const svc = makeSvc({
-        actor: { userId: 'user-1', orgId: 'org-1', role: 'EDITOR' },
+        actor: { userId: 'user-1', orgId: 'org-1', roles: ['EDITOR'] },
       });
       const result = await submissionService.updateStatusAsEditor(
         svc,
@@ -379,7 +379,7 @@ describe('submissionService access-aware methods', () => {
         await import('./submission.service.js');
 
       const svc = makeSvc({
-        actor: { userId: 'user-1', orgId: 'org-1', role: 'EDITOR' },
+        actor: { userId: 'user-1', orgId: 'org-1', roles: ['EDITOR'] },
       });
       await expect(
         submissionService.updateStatusAsEditor(
@@ -396,7 +396,7 @@ describe('submissionService access-aware methods', () => {
         await import('./submission.service.js');
 
       const svc = makeSvc({
-        actor: { userId: 'user-1', orgId: 'org-1', role: 'EDITOR' },
+        actor: { userId: 'user-1', orgId: 'org-1', roles: ['EDITOR'] },
       });
       await expect(
         submissionService.updateStatusAsEditor(
@@ -419,7 +419,7 @@ describe('submissionService access-aware methods', () => {
       } as never);
 
       const svc = makeSvc({
-        actor: { userId: 'user-1', orgId: 'org-1', role: 'EDITOR' },
+        actor: { userId: 'user-1', orgId: 'org-1', roles: ['EDITOR'] },
       });
       const result = await submissionService.updateStatusAsEditor(
         svc,

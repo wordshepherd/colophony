@@ -164,17 +164,17 @@ export async function seedBase(tx: DrizzleDb): Promise<SeedResult> {
     {
       organizationId: org1!.id,
       userId: adminUser!.id,
-      role: "ADMIN",
+      roles: ["ADMIN"],
     },
     {
       organizationId: org1!.id,
       userId: editorUser!.id,
-      role: "EDITOR",
+      roles: ["EDITOR"],
     },
     {
       organizationId: org1!.id,
       userId: writerUser!.id,
-      role: "READER",
+      roles: ["READER"],
     },
   ]);
 
@@ -183,12 +183,12 @@ export async function seedBase(tx: DrizzleDb): Promise<SeedResult> {
     {
       organizationId: org2!.id,
       userId: inkwellAdmin!.id,
-      role: "ADMIN",
+      roles: ["ADMIN"],
     },
     {
       organizationId: org2!.id,
       userId: writerUser!.id,
-      role: "READER",
+      roles: ["READER"],
     },
   ]);
 

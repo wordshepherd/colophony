@@ -52,13 +52,15 @@ function makePeriodRow(overrides: Record<string, unknown> = {}) {
   };
 }
 
-function makeServiceContext(roleOverride = 'EDITOR'): ServiceContext {
+function makeServiceContext(
+  rolesOverride: string[] = ['EDITOR'],
+): ServiceContext {
   return {
     tx: {} as DrizzleDb,
     actor: {
       userId: 'user-1',
       orgId: 'org-1',
-      role: roleOverride as 'EDITOR' | 'ADMIN' | 'READER',
+      roles: rolesOverride as ('EDITOR' | 'ADMIN' | 'READER')[],
     },
     audit: vi.fn().mockResolvedValue(undefined),
   };
@@ -200,7 +202,7 @@ describe('periodService', () => {
     });
 
     it('throws ForbiddenError for MEMBER role', async () => {
-      const ctx = makeServiceContext('READER');
+      const ctx = makeServiceContext(['READER']);
 
       await expect(
         periodService.createWithAudit(ctx, {

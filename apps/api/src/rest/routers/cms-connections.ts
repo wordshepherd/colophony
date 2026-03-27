@@ -14,7 +14,11 @@ import {
 } from '../../services/cms-connection.service.js';
 import { toServiceContext } from '../../services/context.js';
 import { mapServiceError } from '../error-mapper.js';
-import { orgProcedure, requireScopes } from '../context.js';
+import {
+  orgProcedure,
+  productionProcedure,
+  requireScopes,
+} from '../context.js';
 
 // ---------------------------------------------------------------------------
 // Query schemas — override page/limit with z.coerce for REST query strings
@@ -56,7 +60,7 @@ const list = orgProcedure
     );
   });
 
-const create = orgProcedure
+const create = productionProcedure
   .use(requireScopes('cms:write'))
   .route({
     method: 'POST',
@@ -107,7 +111,7 @@ const get = orgProcedure
     }
   });
 
-const update = orgProcedure
+const update = productionProcedure
   .use(requireScopes('cms:write'))
   .route({
     method: 'PATCH',
@@ -132,7 +136,7 @@ const update = orgProcedure
     }
   });
 
-const del = orgProcedure
+const del = productionProcedure
   .use(requireScopes('cms:write'))
   .route({
     method: 'DELETE',
@@ -155,7 +159,7 @@ const del = orgProcedure
     }
   });
 
-const test = orgProcedure
+const test = productionProcedure
   .use(requireScopes('cms:read'))
   .route({
     method: 'POST',

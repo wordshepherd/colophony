@@ -13,6 +13,7 @@ vi.mock('../adapters/cms/index.js', () => ({
 
 vi.mock('./errors.js', () => ({
   assertEditorOrAdmin: vi.fn(),
+  assertEditorOrProductionOrAdmin: vi.fn(),
 }));
 
 vi.mock('@colophony/db', () => ({
@@ -46,7 +47,7 @@ function makeServiceContext(
 ): ServiceContext {
   return {
     tx: makeTx(),
-    actor: { userId: 'user-1', orgId: 'org-1', role: 'ADMIN' },
+    actor: { userId: 'user-1', orgId: 'org-1', roles: ['ADMIN'] },
     audit: vi.fn().mockResolvedValue(undefined),
     ...overrides,
   };

@@ -135,7 +135,7 @@ function makeContext(overrides: Partial<TRPCContext> = {}): TRPCContext {
 }
 
 function orgContext(
-  role: 'ADMIN' | 'EDITOR' | 'READER' = 'READER',
+  roles: ('ADMIN' | 'EDITOR' | 'READER')[] = ['READER'],
   overrides: Partial<TRPCContext> = {},
 ): TRPCContext {
   const mockTx = {} as never;
@@ -147,7 +147,7 @@ function orgContext(
       emailVerified: true,
       authMethod: 'test',
       orgId: 'org-1',
-      role,
+      roles,
     },
     dbTx: mockTx,
     audit: vi.fn(),
@@ -205,7 +205,7 @@ describe('files tRPC router', () => {
       mockFileService.listByManuscriptVersionWithAccess.mockRejectedValueOnce(
         new ForbiddenError('You do not have access to this submission'),
       );
-      const caller = createCaller(orgContext('READER'));
+      const caller = createCaller(orgContext(['READER']));
       await expect(
         caller.files.listByManuscriptVersion({
           manuscriptVersionId: MANUSCRIPT_VERSION_ID,
@@ -217,7 +217,7 @@ describe('files tRPC router', () => {
       mockFileService.listByManuscriptVersionWithAccess.mockResolvedValueOnce(
         [] as never,
       );
-      const caller = createCaller(orgContext('EDITOR'));
+      const caller = createCaller(orgContext(['EDITOR']));
       const result = await caller.files.listByManuscriptVersion({
         manuscriptVersionId: MANUSCRIPT_VERSION_ID,
       });
@@ -228,7 +228,7 @@ describe('files tRPC router', () => {
       mockFileService.deleteAsOwner.mockRejectedValueOnce(
         new ForbiddenError('Only the submitter can delete files'),
       );
-      const caller = createCaller(orgContext('READER'));
+      const caller = createCaller(orgContext(['READER']));
       await expect(caller.files.delete({ fileId: FILE_ID })).rejects.toThrow(
         'Only the submitter',
       );

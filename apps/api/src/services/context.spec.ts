@@ -9,21 +9,41 @@ describe('toServiceContext', () => {
     const audit: AuditFn = vi.fn();
     const ctx = {
       dbTx: tx,
-      authContext: { userId: 'u1', orgId: 'o1', role: 'ADMIN' as const },
+      authContext: {
+        userId: 'u1',
+        orgId: 'o1',
+        roles: ['ADMIN'] as (
+          | 'ADMIN'
+          | 'EDITOR'
+          | 'READER'
+          | 'PRODUCTION'
+          | 'BUSINESS_OPS'
+        )[],
+      },
       audit,
     };
 
     const svc = toServiceContext(ctx);
 
     expect(svc.tx).toBe(tx);
-    expect(svc.actor).toEqual({ userId: 'u1', orgId: 'o1', role: 'ADMIN' });
+    expect(svc.actor).toEqual({ userId: 'u1', orgId: 'o1', roles: ['ADMIN'] });
     expect(svc.audit).toBe(audit);
   });
 
   it('copies actor fields by value (not reference to authContext)', () => {
     const ctx = {
       dbTx: {} as DrizzleDb,
-      authContext: { userId: 'u2', orgId: 'o2', role: 'EDITOR' as const },
+      authContext: {
+        userId: 'u2',
+        orgId: 'o2',
+        roles: ['EDITOR'] as (
+          | 'ADMIN'
+          | 'EDITOR'
+          | 'READER'
+          | 'PRODUCTION'
+          | 'BUSINESS_OPS'
+        )[],
+      },
       audit: vi.fn() as AuditFn,
     };
 
@@ -32,6 +52,6 @@ describe('toServiceContext', () => {
     expect(svc.actor).not.toBe(ctx.authContext);
     expect(svc.actor.userId).toBe('u2');
     expect(svc.actor.orgId).toBe('o2');
-    expect(svc.actor.role).toBe('EDITOR');
+    expect(svc.actor.roles).toEqual(['EDITOR']);
   });
 });

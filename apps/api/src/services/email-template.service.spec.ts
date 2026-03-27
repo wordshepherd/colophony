@@ -63,11 +63,11 @@ function makeTx() {
   } as unknown as Parameters<typeof emailTemplateService.list>[0];
 }
 
-function makeCtx(role = 'ADMIN') {
+function makeCtx(roles: string[] = ['ADMIN']) {
   const tx = makeTx();
   return {
     tx,
-    actor: { userId: 'user-1', orgId: 'org-1', role },
+    actor: { userId: 'user-1', orgId: 'org-1', roles },
     audit: vi.fn(),
   } as unknown as Parameters<typeof emailTemplateService.upsertWithAudit>[0];
 }

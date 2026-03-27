@@ -36,7 +36,7 @@ export interface AuthContext {
   /** API key scopes — set for API key auth only. */
   apiKeyScopes?: ApiKeyScope[];
   orgId?: string;
-  role?: "ADMIN" | "EDITOR" | "READER";
+  roles?: ("ADMIN" | "EDITOR" | "READER" | "PRODUCTION" | "BUSINESS_OPS")[];
 }
 
 /** Standardized auth error response. */

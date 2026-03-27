@@ -1,5 +1,5 @@
 import { submissionPeriods, eq, type DrizzleDb } from '@colophony/db';
-import type { BlindReviewMode, Role } from '@colophony/types';
+import type { BlindReviewMode } from '@colophony/types';
 import {
   shouldBlindSubmitter,
   shouldBlindPeerIdentity,
@@ -29,8 +29,8 @@ export async function resolveBlindMode(
  */
 export function applySubmitterBlinding<
   T extends { submitterEmail: string | null },
->(item: T, blindMode: BlindReviewMode, callerRole: Role): T {
-  if (shouldBlindSubmitter({ blindMode, callerRole })) {
+>(item: T, blindMode: BlindReviewMode, callerRoles: readonly string[]): T {
+  if (shouldBlindSubmitter({ blindMode, callerRoles })) {
     return { ...item, submitterEmail: null };
   }
   return item;
@@ -42,9 +42,9 @@ export function applySubmitterBlinding<
 export function applyVoterBlinding<T extends { voterEmail: string | null }>(
   item: T,
   blindMode: BlindReviewMode,
-  callerRole: Role,
+  callerRoles: readonly string[],
 ): T {
-  if (shouldBlindPeerIdentity({ blindMode, callerRole })) {
+  if (shouldBlindPeerIdentity({ blindMode, callerRoles })) {
     return { ...item, voterEmail: null };
   }
   return item;
@@ -56,9 +56,9 @@ export function applyVoterBlinding<T extends { voterEmail: string | null }>(
 export function applyAuthorBlinding<T extends { authorEmail: string | null }>(
   item: T,
   blindMode: BlindReviewMode,
-  callerRole: Role,
+  callerRoles: readonly string[],
 ): T {
-  if (shouldBlindPeerIdentity({ blindMode, callerRole })) {
+  if (shouldBlindPeerIdentity({ blindMode, callerRoles })) {
     return { ...item, authorEmail: null };
   }
   return item;
@@ -69,8 +69,8 @@ export function applyAuthorBlinding<T extends { authorEmail: string | null }>(
  */
 export function applyReviewerBlinding<
   T extends { reviewerEmail: string | null },
->(item: T, blindMode: BlindReviewMode, callerRole: Role): T {
-  if (shouldBlindPeerIdentity({ blindMode, callerRole })) {
+>(item: T, blindMode: BlindReviewMode, callerRoles: readonly string[]): T {
+  if (shouldBlindPeerIdentity({ blindMode, callerRoles })) {
     return { ...item, reviewerEmail: null };
   }
   return item;

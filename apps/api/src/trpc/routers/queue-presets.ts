@@ -7,7 +7,12 @@ import {
   deleteQueuePresetSchema,
   type QueuePreset,
 } from '@colophony/types';
-import { orgProcedure, createRouter, requireScopes } from '../init.js';
+import {
+  orgProcedure,
+  editorProcedure,
+  createRouter,
+  requireScopes,
+} from '../init.js';
 import { queuePresetService } from '../../services/queue-preset.service.js';
 import { mapServiceError } from '../error-mapper.js';
 
@@ -38,7 +43,7 @@ export const queuePresetsRouter = createRouter({
       }
     }),
 
-  create: orgProcedure
+  create: editorProcedure
     .use(requireScopes('submissions:read'))
     .input(createQueuePresetSchema)
     .output(queuePresetSchema)
@@ -56,7 +61,7 @@ export const queuePresetsRouter = createRouter({
       }
     }),
 
-  update: orgProcedure
+  update: editorProcedure
     .use(requireScopes('submissions:read'))
     .input(updateQueuePresetSchema)
     .output(queuePresetSchema)
@@ -74,7 +79,7 @@ export const queuePresetsRouter = createRouter({
       }
     }),
 
-  delete: orgProcedure
+  delete: editorProcedure
     .use(requireScopes('submissions:read'))
     .input(deleteQueuePresetSchema)
     .output(z.object({ deleted: z.boolean() }))
