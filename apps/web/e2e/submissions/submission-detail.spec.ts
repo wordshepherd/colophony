@@ -173,11 +173,11 @@ test.describe("Submission Detail & Edit", () => {
     // page may show cached DRAFT data after client-side navigation)
     await authedPage.reload();
 
-    // Status badge should now show "Submitted" (exact match avoids
-    // colliding with "SUBMITTED" in the history badges)
-    await expect(
-      authedPage.getByText("Submitted", { exact: true }),
-    ).toBeVisible({ timeout: 10_000 });
+    // Status badge should now show "Received" (writer-projected status;
+    // exact match avoids colliding with history badges)
+    await expect(authedPage.getByText("Received", { exact: true })).toBeVisible(
+      { timeout: 10_000 },
+    );
   });
 
   test("SUBMITTED submission shows Withdraw button, no Edit button", async ({

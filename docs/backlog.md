@@ -278,6 +278,7 @@
 
 - [x] Add soft 500-line guideline to CLAUDE.md — flag files over 500 lines for review during `/codex-review`; not a hard gate, just a review trigger — (dev workflow session 2026-02-20; done 2026-02-20)
 - [x] Extract `validateFormData` and per-type validators from `form.service.ts` (912 lines) into `form-validation.service.ts` — natural seam between CRUD operations and validation logic — (dev workflow session 2026-02-20; done 2026-02-20)
+- [ ] [P3] Consolidate API test file locations — 49 spec files are co-located (`services/*.spec.ts`), 4 are in `services/__tests__/`. Move the 4 `__tests__/` files to co-located pattern for consistency. `queue-preset` has complementary tests in both locations that should be merged into one file. — (2026-03-26)
 
 ### Defense-in-Depth (Codex Review Findings 2026-03-03)
 
@@ -488,6 +489,9 @@
 - [x] [P1] Documenso webhook: defense-in-depth org filter — mutation phase uses `withRls()` on appPool + explicit `orgId` on `updateStatus`; Codex review caught `set_config` on superuser pool doesn't enforce RLS — (Codex review 2026-03-22; done 2026-03-22)
 - [x] [P2] Documenso webhook: Zod schema validation — `documensoWebhookPayloadSchema` validates payload structure before processing — (Codex review 2026-03-22; done 2026-03-22)
 - [x] [P2] Documenso webhook: audit logging for contract status changes — `CONTRACT_SIGNED` and `CONTRACT_COMPLETED` audit actions logged via `auditService.log()` inside `withRls` — (Codex review 2026-03-22; done 2026-03-22)
+- [ ] [P3] Test `mySubmissions` projected response shape — assert `writerStatus`/`writerStatusLabel` fields in tRPC router test — (Codex branch review 2026-03-26)
+- [ ] [P3] Test `mySubmissionDetail` procedure + writer-context routing in `submission-detail.tsx` — (Codex branch review 2026-03-26)
+- [ ] [P3] Service test for `getByIdAsOwner` ownership check and error types — (Codex branch review 2026-03-26)
 
 ---
 

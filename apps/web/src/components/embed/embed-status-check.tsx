@@ -2,30 +2,44 @@
 
 import { useState, useEffect } from "react";
 import { fetchSubmissionStatus, type EmbedApiError } from "@/lib/embed-api";
-import type { EmbedStatusCheckResponse } from "@colophony/types";
+import type { EmbedStatusCheckResponse, WriterStatus } from "@colophony/types";
 import {
   Loader2,
   CheckCircle,
-  XCircle,
   Clock,
   AlertCircle,
   RefreshCw,
+  Ban,
+  Eye,
+  FileEdit,
+  MessageCircle,
+  RotateCcw,
+  Send,
 } from "lucide-react";
 
 type ViewState = "loading" | "loaded" | "not_found" | "token_expired" | "error";
 
-const STATUS_ICONS: Record<string, typeof CheckCircle> = {
-  Accepted: CheckCircle,
-  "Not Accepted": XCircle,
-  Withdrawn: AlertCircle,
+const WRITER_STATUS_ICONS: Record<
+  WriterStatus,
+  React.ComponentType<{ className?: string }>
+> = {
+  DRAFT: FileEdit,
+  RECEIVED: Send,
+  IN_REVIEW: Eye,
+  REVISION_REQUESTED: RotateCcw,
+  ACCEPTED: CheckCircle,
+  DECISION_SENT: MessageCircle,
+  WITHDRAWN: Ban,
 };
 
-const STATUS_COLORS: Record<string, string> = {
-  "Under Review": "bg-yellow-100 text-yellow-800",
-  Accepted: "bg-green-100 text-green-800",
-  "Not Accepted": "bg-red-100 text-red-800",
-  Withdrawn: "bg-gray-100 text-gray-800",
-  "Revision Requested": "bg-blue-100 text-blue-800",
+const WRITER_STATUS_COLORS: Record<WriterStatus, string> = {
+  DRAFT: "bg-gray-100 text-gray-800",
+  RECEIVED: "bg-blue-100 text-blue-800",
+  IN_REVIEW: "bg-yellow-100 text-yellow-800",
+  REVISION_REQUESTED: "bg-amber-100 text-amber-800",
+  ACCEPTED: "bg-green-100 text-green-800",
+  DECISION_SENT: "bg-slate-100 text-slate-600",
+  WITHDRAWN: "bg-gray-100 text-gray-800",
 };
 
 interface EmbedStatusCheckProps {
@@ -116,9 +130,9 @@ export function EmbedStatusCheck({
 
   if (!data) return null;
 
-  const StatusIcon = STATUS_ICONS[data.status] ?? Clock;
+  const StatusIcon = WRITER_STATUS_ICONS[data.writerStatus] ?? Clock;
   const statusColor =
-    STATUS_COLORS[data.status] ?? "bg-yellow-100 text-yellow-800";
+    WRITER_STATUS_COLORS[data.writerStatus] ?? "bg-yellow-100 text-yellow-800";
 
   return (
     <div className="max-w-md mx-auto py-12 px-4">
@@ -179,7 +193,7 @@ export function EmbedStatusCheck({
           )}
         </div>
 
-        {data.status === "Revision Requested" && (
+        {data.writerStatus === "REVISION_REQUESTED" && (
           <div className="border-t pt-4">
             <p className="text-sm text-muted-foreground mb-3">
               The editors have requested revisions to your submission. You can
