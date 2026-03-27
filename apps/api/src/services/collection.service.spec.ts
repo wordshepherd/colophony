@@ -665,6 +665,34 @@ describe('collectionService', () => {
   // -----------------------------------------------------------------------
 
   describe('updateItemWithAudit()', () => {
+    it('updates item and logs COLLECTION_ITEM_UPDATED audit', async () => {
+      const getByIdChain = createSelectChain([fakeCollection]);
+      const updatedItem = { ...fakeItem, notes: 'Excellent' };
+      const updateChain = createUpdateChain([updatedItem]);
+
+      const tx = {
+        select: getByIdChain.select,
+        update: updateChain.update,
+      } as never;
+      const ctx = makeCtx({ tx });
+
+      const result = await collectionService.updateItemWithAudit(
+        ctx,
+        COLLECTION_ID,
+        ITEM_ID,
+        { notes: 'Excellent' },
+      );
+
+      expect(result).toEqual(updatedItem);
+      expect(assertEditorOrAdmin).toHaveBeenCalledWith('EDITOR');
+      expect(ctx.audit).toHaveBeenCalledWith({
+        action: 'COLLECTION_ITEM_UPDATED',
+        resource: 'collection',
+        resourceId: COLLECTION_ID,
+        newValue: { itemId: ITEM_ID, notes: 'Excellent' },
+      });
+    });
+
     it('throws CollectionItemNotFoundError when updateItem returns null', async () => {
       // getById returns collection but update returns nothing
       const getByIdChain = createSelectChain([fakeCollection]);
