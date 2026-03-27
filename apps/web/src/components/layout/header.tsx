@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/hooks/use-auth";
@@ -39,8 +39,15 @@ function MobileMenu() {
   );
 }
 
+// SSR-safe platform detection via useSyncExternalStore
+const subscribe = () => () => {};
+const getSnapshot = () => modifierSymbol();
+const getServerSnapshot = () => "Ctrl";
+
 function CommandPaletteTrigger() {
   const { setOpen } = useCommandPalette();
+  const mod = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+
   return (
     <Button
       variant="outline"
@@ -49,7 +56,7 @@ function CommandPaletteTrigger() {
       onClick={() => setOpen(true)}
     >
       <Search className="h-4 w-4" />
-      <span className="text-xs">{modifierSymbol()}K</span>
+      <span className="text-xs">{mod}K</span>
     </Button>
   );
 }

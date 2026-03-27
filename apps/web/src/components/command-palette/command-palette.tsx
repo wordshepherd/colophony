@@ -1,6 +1,12 @@
 "use client";
 
-import { createContext, useContext, useState, useCallback } from "react";
+import {
+  createContext,
+  useContext,
+  useState,
+  useCallback,
+  useEffect,
+} from "react";
 import { useRouter } from "next/navigation";
 import { useOrganization } from "@/hooks/use-organization";
 import { useShortcuts } from "@/hooks/use-shortcuts";
@@ -58,12 +64,15 @@ export function CommandPaletteProvider({
 
   const mod = modifierKey();
 
+  // useShortcuts opens the palette (ignored when focus is on INPUT elements).
+  // A separate document-level listener handles Cmd/Ctrl+K while the palette
+  // is open (cmdk autofocuses its <input>, which useShortcuts skips).
   useShortcuts([
     {
       key: "k",
       modifiers: [mod],
-      handler: () => setOpen((o) => !o),
-      description: "Toggle command palette",
+      handler: () => setOpen(true),
+      description: "Open command palette",
     },
     {
       key: "?",
@@ -71,6 +80,19 @@ export function CommandPaletteProvider({
       description: "Show keyboard shortcuts",
     },
   ]);
+
+  useEffect(() => {
+    if (!open) return;
+    const modKey = mod === "meta" ? "metaKey" : "ctrlKey";
+    const handleClose = (e: KeyboardEvent) => {
+      if (e.key === "k" && e[modKey]) {
+        e.preventDefault();
+        setOpen(false);
+      }
+    };
+    document.addEventListener("keydown", handleClose);
+    return () => document.removeEventListener("keydown", handleClose);
+  }, [open, mod]);
 
   const handleSelect = useCallback(
     (href: string) => {

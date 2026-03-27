@@ -128,4 +128,24 @@ describe("CommandPaletteProvider", () => {
 
     expect(screen.getByText("Forms")).toBeInTheDocument();
   });
+
+  it("closes on Cmd+K when open", () => {
+    renderPalette();
+    openPalette();
+
+    expect(screen.getByPlaceholderText("Jump to...")).toBeInTheDocument();
+
+    // Second Cmd+K should close via the document-level listener
+    act(() => {
+      document.dispatchEvent(
+        new KeyboardEvent("keydown", {
+          key: "k",
+          metaKey: true,
+          bubbles: true,
+        }),
+      );
+    });
+
+    expect(screen.queryByPlaceholderText("Jump to...")).not.toBeInTheDocument();
+  });
 });
