@@ -25,7 +25,7 @@ import type {
 } from '@colophony/types';
 import { AuditActions, AuditResources } from '@colophony/types';
 import type { ServiceContext } from './types.js';
-import { assertEditorOrAdmin } from './errors.js';
+import { assertEditorOrProductionOrAdmin } from './errors.js';
 import { enqueueOutboxEvent } from './outbox.js';
 
 // ---------------------------------------------------------------------------
@@ -187,7 +187,7 @@ export const issueService = {
   },
 
   async createWithAudit(ctx: ServiceContext, input: CreateIssueInput) {
-    assertEditorOrAdmin(ctx.actor.role);
+    assertEditorOrProductionOrAdmin(ctx.actor.roles);
     const issue = await issueService.create(ctx.tx, input, ctx.actor.orgId);
     await ctx.audit({
       action: AuditActions.ISSUE_CREATED,
@@ -232,7 +232,7 @@ export const issueService = {
     id: string,
     input: UpdateIssueInput,
   ) {
-    assertEditorOrAdmin(ctx.actor.role);
+    assertEditorOrProductionOrAdmin(ctx.actor.roles);
     const updated = await issueService.update(
       ctx.tx,
       id,
@@ -275,7 +275,7 @@ export const issueService = {
   },
 
   async publishWithAudit(ctx: ServiceContext, id: string) {
-    assertEditorOrAdmin(ctx.actor.role);
+    assertEditorOrProductionOrAdmin(ctx.actor.roles);
     const issue = await issueService.getById(ctx.tx, id, ctx.actor.orgId);
     if (!issue) throw new IssueNotFoundError(id);
     const updated = await issueService.updateStatus(
@@ -304,7 +304,7 @@ export const issueService = {
   },
 
   async archiveWithAudit(ctx: ServiceContext, id: string) {
-    assertEditorOrAdmin(ctx.actor.role);
+    assertEditorOrProductionOrAdmin(ctx.actor.roles);
     const issue = await issueService.getById(ctx.tx, id, ctx.actor.orgId);
     if (!issue) throw new IssueNotFoundError(id);
     const updated = await issueService.updateStatus(
@@ -416,7 +416,7 @@ export const issueService = {
     issueId: string,
     input: AddIssueItemInput,
   ) {
-    assertEditorOrAdmin(ctx.actor.role);
+    assertEditorOrProductionOrAdmin(ctx.actor.roles);
     try {
       const item = await issueService.addItem(
         ctx.tx,
@@ -468,7 +468,7 @@ export const issueService = {
     issueId: string,
     itemId: string,
   ) {
-    assertEditorOrAdmin(ctx.actor.role);
+    assertEditorOrProductionOrAdmin(ctx.actor.roles);
     const removed = await issueService.removeItem(
       ctx.tx,
       issueId,

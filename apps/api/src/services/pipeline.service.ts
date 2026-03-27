@@ -35,7 +35,7 @@ import {
   isValidPipelineTransition,
 } from '@colophony/types';
 import type { ServiceContext } from './types.js';
-import { assertEditorOrAdmin } from './errors.js';
+import { assertEditorOrProductionOrAdmin } from './errors.js';
 import { enqueueOutboxEvent } from './outbox.js';
 
 // ---------------------------------------------------------------------------
@@ -284,7 +284,7 @@ export const pipelineService = {
   },
 
   async createWithAudit(ctx: ServiceContext, input: CreatePipelineItemInput) {
-    assertEditorOrAdmin(ctx.actor.role);
+    assertEditorOrProductionOrAdmin(ctx.actor.roles);
     const item = await pipelineService.create(ctx.tx, input, ctx.actor.orgId);
     await ctx.audit({
       action: AuditActions.PIPELINE_ITEM_CREATED,
@@ -339,7 +339,7 @@ export const pipelineService = {
     id: string,
     input: UpdatePipelineStageInput,
   ) {
-    assertEditorOrAdmin(ctx.actor.role);
+    assertEditorOrProductionOrAdmin(ctx.actor.roles);
     // Capture the previous stage before the update for the audit trail
     const current = await pipelineService.getById(ctx.tx, id, ctx.actor.orgId);
     if (!current) throw new PipelineItemNotFoundError(id);
@@ -408,7 +408,7 @@ export const pipelineService = {
     id: string,
     input: AssignPipelineRoleInput,
   ) {
-    assertEditorOrAdmin(ctx.actor.role);
+    assertEditorOrProductionOrAdmin(ctx.actor.roles);
     const updated = await pipelineService.assignCopyeditor(ctx.tx, id, input);
     if (!updated) throw new PipelineItemNotFoundError(id);
     await ctx.audit({
@@ -447,7 +447,7 @@ export const pipelineService = {
     id: string,
     input: AssignPipelineRoleInput,
   ) {
-    assertEditorOrAdmin(ctx.actor.role);
+    assertEditorOrProductionOrAdmin(ctx.actor.roles);
     const updated = await pipelineService.assignProofreader(ctx.tx, id, input);
     if (!updated) throw new PipelineItemNotFoundError(id);
     await ctx.audit({
@@ -488,7 +488,7 @@ export const pipelineService = {
     pipelineItemId: string,
     input: AddPipelineCommentInput,
   ) {
-    assertEditorOrAdmin(ctx.actor.role);
+    assertEditorOrProductionOrAdmin(ctx.actor.roles);
     const item = await pipelineService.getById(
       ctx.tx,
       pipelineItemId,
@@ -743,7 +743,7 @@ export const pipelineService = {
     pipelineItemId: string,
     input: SaveCopyeditInput,
   ) {
-    assertEditorOrAdmin(ctx.actor.role);
+    assertEditorOrProductionOrAdmin(ctx.actor.roles);
     const version = await pipelineService.saveCopyedit(
       ctx.tx,
       pipelineItemId,

@@ -112,7 +112,7 @@ async function listBySubmission(
       submissionId: submissionReviewers.submissionId,
       reviewerUserId: submissionReviewers.reviewerUserId,
       reviewerEmail: users.email,
-      reviewerRole: organizationMembers.role,
+      reviewerRole: organizationMembers.roles,
       assignedBy: submissionReviewers.assignedBy,
       assignedAt: submissionReviewers.assignedAt,
       readAt: submissionReviewers.readAt,
@@ -131,7 +131,13 @@ async function listBySubmission(
     )
     .where(eq(submissionReviewers.submissionId, submissionId));
 
-  return rows;
+  // Map roles array to single reviewerRole for type compatibility
+  // (SubmissionReviewer type still uses singular reviewerRole)
+  return rows.map((r) => ({
+    ...r,
+    reviewerRole: (r.reviewerRole[0] ??
+      'READER') as SubmissionReviewer['reviewerRole'],
+  }));
 }
 
 async function markRead(
@@ -206,7 +212,7 @@ async function assignWithAudit(
   submissionId: string,
   reviewerUserIds: string[],
 ): Promise<SubmissionReviewer[]> {
-  assertEditorOrAdmin(svc.actor.role);
+  assertEditorOrAdmin(svc.actor.roles);
 
   await getSubmissionOrThrow(svc.tx, submissionId);
   await validateOrgMembership(svc.tx, svc.actor.orgId, reviewerUserIds);
@@ -257,7 +263,7 @@ async function unassignWithAudit(
   submissionId: string,
   reviewerUserId: string,
 ): Promise<void> {
-  assertEditorOrAdmin(svc.actor.role);
+  assertEditorOrAdmin(svc.actor.roles);
   await getSubmissionOrThrow(svc.tx, submissionId);
   await unassign(svc.tx, submissionId, reviewerUserId);
 
@@ -274,7 +280,11 @@ async function listBySubmissionWithAccess(
   submissionId: string,
 ): Promise<SubmissionReviewer[]> {
   const submission = await getSubmissionOrThrow(svc.tx, submissionId);
-  assertOwnerOrEditor(svc.actor.userId, svc.actor.role, submission.submitterId);
+  assertOwnerOrEditor(
+    svc.actor.userId,
+    svc.actor.roles,
+    submission.submitterId,
+  );
   const reviewers = await listBySubmission(svc.tx, submissionId);
 
   const blindMode = await resolveBlindMode(
@@ -282,7 +292,7 @@ async function listBySubmissionWithAccess(
     submission.submissionPeriodId,
   );
   return reviewers.map((r) =>
-    applyReviewerBlinding(r, blindMode, svc.actor.role),
+    applyReviewerBlinding(r, blindMode, svc.actor.roles),
   );
 }
 
