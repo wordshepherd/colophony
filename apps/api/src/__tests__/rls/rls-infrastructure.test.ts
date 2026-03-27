@@ -60,6 +60,9 @@ const RLS_TABLES = [
   'saved_queue_presets',
   // User keys (DID document)
   'user_keys',
+  // Editor workspace collections
+  'workspace_collections',
+  'workspace_items',
 ];
 
 /** RLS tables where app_user has full DML (excludes audit_events which is SELECT-only + function, journal_directory which is SELECT-only).

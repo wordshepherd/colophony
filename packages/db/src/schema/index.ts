@@ -30,4 +30,5 @@ export * from "./webhook-endpoints";
 export * from "./writer-workspace";
 export * from "./email-templates";
 export * from "./saved-queue-presets";
+export * from "./workspace-collections";
 export * from "./relations";

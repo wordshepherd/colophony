@@ -18,6 +18,7 @@ import { contractsRouter } from './routers/contracts.js';
 import { issuesRouter } from './routers/issues.js';
 import { cmsConnectionsRouter } from './routers/cms-connections.js';
 import { csrRouter } from './routers/csr.js';
+import { collectionsRouter } from './routers/collections.js';
 import type { RestContext } from './context.js';
 
 const restRouter = {
@@ -37,6 +38,7 @@ const restRouter = {
   issues: issuesRouter,
   cmsConnections: cmsConnectionsRouter,
   csr: csrRouter,
+  collections: collectionsRouter,
 };
 
 const openApiHandler = new OpenAPIHandler<RestContext>(restRouter, {
