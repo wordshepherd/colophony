@@ -67,6 +67,11 @@ export const productionNavigation: NavItem[] = [
 
 export const operationsNavigation: NavItem[] = [
   {
+    name: "Dashboard",
+    href: "/operations",
+    icon: LayoutDashboard,
+  },
+  {
     name: "Organization",
     href: "/organizations/settings",
     icon: Building2,
