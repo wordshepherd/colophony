@@ -21,10 +21,9 @@ export function ProductionDashboard() {
     data,
     isPending: isLoading,
     error,
-  } = trpc.pipeline.dashboard.useQuery(
-    { issueId: selectedIssueId ?? undefined },
-    { enabled: selectedIssueId !== null },
-  );
+  } = trpc.pipeline.dashboard.useQuery({
+    issueId: selectedIssueId ?? undefined,
+  });
 
   return (
     <div className="p-4 space-y-4">
