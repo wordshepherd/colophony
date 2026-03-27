@@ -5,7 +5,7 @@ const mockGetResubmitContext = vi.fn();
 const mockGenerateAndStore = vi.fn();
 const mockVerifyToken = vi.fn();
 
-vi.mock('../status-token.service.js', () => ({
+vi.mock('./status-token.service.js', () => ({
   statusTokenService: {
     getResubmitContext: (...args: unknown[]) => mockGetResubmitContext(...args),
     generateAndStore: (...args: unknown[]) => mockGenerateAndStore(...args),
@@ -17,7 +17,7 @@ const mockSubmissionCreate = vi.fn();
 const mockSubmissionUpdateStatus = vi.fn();
 const mockSubmissionGetById = vi.fn();
 
-vi.mock('../submission.service.js', () => ({
+vi.mock('./submission.service.js', () => ({
   submissionService: {
     create: (...args: unknown[]) => mockSubmissionCreate(...args),
     updateStatus: (...args: unknown[]) => mockSubmissionUpdateStatus(...args),
@@ -45,7 +45,7 @@ vi.mock('../submission.service.js', () => ({
 
 const mockAuditLog = vi.fn();
 const mockAuditLogDirect = vi.fn();
-vi.mock('../audit.service.js', () => ({
+vi.mock('./audit.service.js', () => ({
   auditService: {
     log: (...args: unknown[]) => mockAuditLog(...args),
     logDirect: (...args: unknown[]) => mockAuditLogDirect(...args),
@@ -53,7 +53,7 @@ vi.mock('../audit.service.js', () => ({
 }));
 
 const mockFileServiceListByMV = vi.fn();
-vi.mock('../file.service.js', () => ({
+vi.mock('./file.service.js', () => ({
   fileService: {
     listByManuscriptVersion: (...args: unknown[]) =>
       mockFileServiceListByMV(...args),
@@ -61,11 +61,11 @@ vi.mock('../file.service.js', () => ({
 }));
 
 const mockEnqueueOutboxEvent = vi.fn();
-vi.mock('../outbox.js', () => ({
+vi.mock('./outbox.js', () => ({
   enqueueOutboxEvent: (...args: unknown[]) => mockEnqueueOutboxEvent(...args),
 }));
 
-vi.mock('../../config/env.js', () => ({
+vi.mock('../config/env.js', () => ({
   validateEnv: () => ({
     STATUS_TOKEN_TTL_DAYS: 30,
     TUS_ENDPOINT: 'http://localhost:1080/files/',
@@ -157,7 +157,7 @@ vi.mock('@colophony/types', async () => {
   return actual;
 });
 
-import { embedSubmissionService } from '../embed-submission.service.js';
+import { embedSubmissionService } from './embed-submission.service.js';
 
 describe('embedSubmissionService — resubmit flow', () => {
   const baseCtx = {

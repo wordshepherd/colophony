@@ -51,34 +51,34 @@ vi.mock('drizzle-orm', async (importOriginal) => {
 });
 
 // Mock other service imports that submission.service.ts imports
-vi.mock('../outbox.js', () => ({
+vi.mock('./outbox.js', () => ({
   enqueueOutboxEvent: vi.fn(),
 }));
-vi.mock('../errors.js', () => ({
+vi.mock('./errors.js', () => ({
   ForbiddenError: class extends Error {},
   NotFoundError: class extends Error {},
   assertOwnerOrEditor: vi.fn(),
   assertEditorOrAdmin: vi.fn(),
 }));
-vi.mock('../blind-review.helper.js', () => ({
+vi.mock('./blind-review.helper.js', () => ({
   resolveBlindMode: vi.fn(),
   applySubmitterBlinding: vi.fn(),
 }));
-vi.mock('../form.service.js', () => ({
+vi.mock('./form.service.js', () => ({
   formService: {},
   FormNotFoundError: class extends Error {},
   FormNotPublishedError: class extends Error {},
   InvalidFormDataError: class extends Error {},
 }));
-vi.mock('../migration.service.js', () => ({
+vi.mock('./migration.service.js', () => ({
   MigrationInvalidStateError: class extends Error {},
 }));
-vi.mock('../submission-reviewer.service.js', () => ({
+vi.mock('./submission-reviewer.service.js', () => ({
   submissionReviewerService: {},
   ReviewerAlreadyAssignedError: class extends Error {},
 }));
 
-import { submissionService } from '../submission.service.js';
+import { submissionService } from './submission.service.js';
 
 // Pin time to noon on 2026-03-15 to avoid midnight boundary flakiness
 const FIXED_NOW = new Date('2026-03-15T12:00:00.000Z');

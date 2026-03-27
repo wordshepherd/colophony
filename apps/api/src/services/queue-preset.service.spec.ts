@@ -18,10 +18,21 @@ vi.mock('@colophony/db', () => {
   };
 });
 
+vi.mock('drizzle-orm', async (importOriginal) => {
+  const mod = await importOriginal<typeof import('drizzle-orm')>();
+  return {
+    ...mod,
+    asc: vi.fn(),
+    count: vi.fn(),
+    ne: vi.fn(),
+  };
+});
+
 import {
   queuePresetService,
   PresetLimitExceededError,
   PresetDefaultConflictError,
+  PresetNotFoundError,
 } from './queue-preset.service.js';
 
 function createChainMock(terminalValue: unknown) {
@@ -34,6 +45,27 @@ function createChainMock(terminalValue: unknown) {
 describe('queuePresetService', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+  });
+
+  describe('list()', () => {
+    it('returns user presets ordered by name', async () => {
+      const presets = [
+        { id: 'p-1', name: 'Alpha' },
+        { id: 'p-2', name: 'Beta' },
+      ];
+      const mockLimit = vi.fn().mockResolvedValue(presets);
+      const selectFn = vi.fn().mockReturnValue({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            orderBy: vi.fn().mockReturnValue({ limit: mockLimit }),
+          }),
+        }),
+      });
+      const tx = { select: selectFn } as never;
+
+      const result = await queuePresetService.list(tx, 'user-1', 'org-1');
+      expect(result).toEqual(presets);
+    });
   });
 
   describe('create()', () => {
@@ -109,7 +141,38 @@ describe('queuePresetService', () => {
     });
   });
 
+  describe('delete()', () => {
+    it('throws for missing row', async () => {
+      const selectFn = vi.fn().mockReturnValue({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockResolvedValue([]),
+        }),
+      });
+      const tx = { select: selectFn, delete: vi.fn() } as never;
+
+      await expect(
+        queuePresetService.delete(tx, 'user-1', 'org-1', 'p-missing'),
+      ).rejects.toThrow(PresetNotFoundError);
+    });
+  });
+
   describe('update()', () => {
+    it('throws for missing row', async () => {
+      const selectFn = vi.fn().mockReturnValue({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockResolvedValue([]),
+        }),
+      });
+      const tx = { select: selectFn, update: vi.fn() } as never;
+
+      await expect(
+        queuePresetService.update(tx, 'user-1', 'org-1', {
+          id: 'p-missing',
+          name: 'New name',
+        }),
+      ).rejects.toThrow(PresetNotFoundError);
+    });
+
     it('handles unique violation on concurrent default set', async () => {
       // Select chain for ownership check
       const selectWhere = vi.fn().mockResolvedValue([{ id: 'preset-1' }]);
