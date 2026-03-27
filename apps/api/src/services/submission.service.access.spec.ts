@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { ServiceContext } from './types.js';
-import { ForbiddenError } from './errors.js';
+import { ForbiddenError, NotFoundError } from './errors.js';
 
 // We need to spy on the "inner" methods (getById, create, etc.) that the
 // "outer" access-aware methods delegate to. Vitest's vi.mock auto-mocks
@@ -494,6 +494,40 @@ describe('submissionService access-aware methods', () => {
           SUBMISSION_ID,
           MANUSCRIPT_VERSION_ID,
         ),
+      ).rejects.toThrow(SubmissionNotFoundError);
+    });
+  });
+
+  describe('getByIdAsOwner', () => {
+    it('returns submission when caller is the owner', async () => {
+      const sub = makeSubmission('user-1');
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      vi.mocked(submissionService.getById).mockResolvedValueOnce(sub as never);
+
+      const result = await submissionService.getByIdAsOwner(
+        {} as never,
+        SUBMISSION_ID,
+        'user-1',
+      );
+      expect(result).toEqual(sub);
+    });
+
+    it('throws NotFoundError when caller is not the owner', async () => {
+      const sub = makeSubmission('other-user');
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      vi.mocked(submissionService.getById).mockResolvedValueOnce(sub as never);
+
+      await expect(
+        submissionService.getByIdAsOwner({} as never, SUBMISSION_ID, 'user-1'),
+      ).rejects.toThrow(NotFoundError);
+    });
+
+    it('throws SubmissionNotFoundError when submission does not exist', async () => {
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      vi.mocked(submissionService.getById).mockResolvedValueOnce(null as never);
+
+      await expect(
+        submissionService.getByIdAsOwner({} as never, SUBMISSION_ID, 'user-1'),
       ).rejects.toThrow(SubmissionNotFoundError);
     });
   });

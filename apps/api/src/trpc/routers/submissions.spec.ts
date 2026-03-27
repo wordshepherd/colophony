@@ -22,6 +22,7 @@ vi.mock('../../services/submission.service.js', () => ({
     updateStatusAsEditor: vi.fn(),
     resubmitAsOwner: vi.fn(),
     getHistoryWithAccess: vi.fn(),
+    getByIdAsOwner: vi.fn(),
   },
   SubmissionNotFoundError: class SubmissionNotFoundError extends Error {
     name = 'SubmissionNotFoundError';
@@ -423,6 +424,70 @@ describe('submissions tRPC router', () => {
         ORG_ID,
         { page: 1, limit: 20, sortBy: 'createdAt', sortOrder: 'desc' },
       );
+    });
+
+    it('projects writerStatus and writerStatusLabel onto response items', async () => {
+      const response = {
+        items: [
+          {
+            ...makeSubmissionBase(),
+            status: 'SUBMITTED',
+            submitterEmail: 'test@example.com',
+          },
+        ],
+        total: 1,
+        page: 1,
+        limit: 20,
+        totalPages: 1,
+      };
+      mockService.listBySubmitter.mockResolvedValueOnce(response as never);
+
+      const caller = createCaller(orgContext());
+      const result = await caller.submissions.mySubmissions({
+        page: 1,
+        limit: 20,
+      });
+
+      // The projected response should have writerStatus/writerStatusLabel
+      // instead of the internal status field
+      expect(result.items[0]).toHaveProperty('writerStatus', 'DRAFT');
+      expect(result.items[0]).toHaveProperty('writerStatusLabel', 'Draft');
+      expect(result.items[0]).not.toHaveProperty('status');
+    });
+  });
+
+  describe('mySubmissionDetail', () => {
+    it('returns projected submission for owner', async () => {
+      const sub = makeDraftSubmission();
+      mockService.getByIdAsOwner.mockResolvedValueOnce(sub as never);
+
+      const caller = createCaller(orgContext());
+      const result = await caller.submissions.mySubmissionDetail({
+        id: SUBMISSION_ID,
+      });
+
+      expect(result).toHaveProperty('writerStatus', 'DRAFT');
+      expect(result).toHaveProperty('writerStatusLabel', 'Draft');
+      expect(result).not.toHaveProperty('status');
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(mockService.getByIdAsOwner).toHaveBeenCalledWith(
+        expect.anything(),
+        SUBMISSION_ID,
+        USER_ID,
+      );
+    });
+
+    it('maps SubmissionNotFoundError to NOT_FOUND', async () => {
+      const { SubmissionNotFoundError } =
+        await import('../../services/submission.service.js');
+      mockService.getByIdAsOwner.mockRejectedValueOnce(
+        new SubmissionNotFoundError(SUBMISSION_ID),
+      );
+
+      const caller = createCaller(orgContext());
+      await expect(
+        caller.submissions.mySubmissionDetail({ id: SUBMISSION_ID }),
+      ).rejects.toThrow(TRPCError);
     });
   });
 
