@@ -252,7 +252,9 @@ export default function CollectionDetailPage({
         }}
       />
 
+      {/* key forces remount so form state syncs with loaded collection */}
       <CollectionForm
+        key={collection.id}
         open={showEditForm}
         onOpenChange={setShowEditForm}
         title="Edit Collection"

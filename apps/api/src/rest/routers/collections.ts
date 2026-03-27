@@ -77,6 +77,7 @@ const get = orgProcedure
         context.dbTx,
         input.id,
         context.authContext.orgId,
+        context.authContext.userId,
       );
       if (!collection) throw new CollectionNotFoundError(input.id);
       return collection;
@@ -102,6 +103,7 @@ const getItems = orgProcedure
       context.dbTx,
       input.id,
       context.authContext.orgId,
+      context.authContext.userId,
     );
   });
 
@@ -273,6 +275,7 @@ const reorderItems = orgProcedure
         id,
         data,
         context.authContext.orgId,
+        context.authContext.userId,
       );
     } catch (e) {
       mapServiceError(e);

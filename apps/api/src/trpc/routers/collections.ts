@@ -50,6 +50,7 @@ export const collectionsRouter = createRouter({
           ctx.dbTx,
           input.id,
           ctx.authContext.orgId,
+          ctx.authContext.userId,
         );
         if (!collection) throw new CollectionNotFoundError(input.id);
         return collection;
@@ -68,6 +69,7 @@ export const collectionsRouter = createRouter({
         ctx.dbTx,
         input.id,
         ctx.authContext.orgId,
+        ctx.authContext.userId,
       );
     }),
 
@@ -188,6 +190,7 @@ export const collectionsRouter = createRouter({
           id,
           data,
           ctx.authContext.orgId,
+          ctx.authContext.userId,
         );
       } catch (e) {
         mapServiceError(e);

@@ -116,24 +116,48 @@ export const collectionService = {
     };
   },
 
-  async getById(tx: DrizzleDb, id: string, orgId: string) {
+  async getById(tx: DrizzleDb, id: string, orgId: string, userId?: string) {
+    const conditions = [
+      eq(workspaceCollections.id, id),
+      eq(workspaceCollections.organizationId, orgId),
+    ];
+
+    // Enforce visibility: private collections only visible to their owner
+    if (userId) {
+      conditions.push(
+        or(
+          eq(workspaceCollections.visibility, 'team'),
+          eq(workspaceCollections.visibility, 'collaborators'),
+          and(
+            eq(workspaceCollections.visibility, 'private'),
+            eq(workspaceCollections.ownerId, userId),
+          ),
+        )!,
+      );
+    }
+
     const [row] = await tx
       .select()
       .from(workspaceCollections)
-      .where(
-        and(
-          eq(workspaceCollections.id, id),
-          eq(workspaceCollections.organizationId, orgId),
-        ),
-      )
+      .where(and(...conditions))
       .limit(1);
 
     return row ?? null;
   },
 
-  async getItems(tx: DrizzleDb, collectionId: string, orgId: string) {
-    // Verify collection belongs to org (defense-in-depth)
-    const collection = await collectionService.getById(tx, collectionId, orgId);
+  async getItems(
+    tx: DrizzleDb,
+    collectionId: string,
+    orgId: string,
+    userId?: string,
+  ) {
+    // Verify collection belongs to org + visibility check
+    const collection = await collectionService.getById(
+      tx,
+      collectionId,
+      orgId,
+      userId,
+    );
     if (!collection) return [];
 
     return tx
@@ -222,6 +246,14 @@ export const collectionService = {
     input: UpdateCollectionInput,
   ) {
     assertEditorOrAdmin(ctx.actor.role);
+    // Visibility check: private collections only editable by owner
+    const existing = await collectionService.getById(
+      ctx.tx,
+      id,
+      ctx.actor.orgId,
+      ctx.actor.userId,
+    );
+    if (!existing) throw new CollectionNotFoundError(id);
     const updated = await collectionService.update(
       ctx.tx,
       id,
@@ -254,6 +286,14 @@ export const collectionService = {
 
   async deleteWithAudit(ctx: ServiceContext, id: string) {
     assertEditorOrAdmin(ctx.actor.role);
+    // Visibility check: private collections only deletable by owner
+    const existing = await collectionService.getById(
+      ctx.tx,
+      id,
+      ctx.actor.orgId,
+      ctx.actor.userId,
+    );
+    if (!existing) throw new CollectionNotFoundError(id);
     const deleted = await collectionService.delete(ctx.tx, id, ctx.actor.orgId);
     if (!deleted) throw new CollectionNotFoundError(id);
     await ctx.audit({
@@ -274,9 +314,15 @@ export const collectionService = {
     collectionId: string,
     input: AddCollectionItemInput,
     orgId: string,
+    userId?: string,
   ) {
-    // Verify collection exists and belongs to org
-    const collection = await collectionService.getById(tx, collectionId, orgId);
+    // Verify collection exists, belongs to org, and is visible to user
+    const collection = await collectionService.getById(
+      tx,
+      collectionId,
+      orgId,
+      userId,
+    );
     if (!collection) throw new CollectionNotFoundError(collectionId);
 
     // Cross-tenant validation: verify submission belongs to the same org
@@ -343,6 +389,7 @@ export const collectionService = {
       collectionId,
       input,
       ctx.actor.orgId,
+      ctx.actor.userId,
     );
     await ctx.audit({
       action: AuditActions.COLLECTION_ITEM_ADDED,
@@ -359,9 +406,15 @@ export const collectionService = {
     itemId: string,
     input: UpdateCollectionItemInput,
     orgId: string,
+    userId?: string,
   ) {
-    // Verify collection belongs to org
-    const collection = await collectionService.getById(tx, collectionId, orgId);
+    // Verify collection belongs to org + visibility
+    const collection = await collectionService.getById(
+      tx,
+      collectionId,
+      orgId,
+      userId,
+    );
     if (!collection) return null;
 
     const values: Record<string, unknown> = { touchedAt: new Date() };
@@ -396,6 +449,7 @@ export const collectionService = {
       itemId,
       input,
       ctx.actor.orgId,
+      ctx.actor.userId,
     );
     if (!updated) throw new CollectionItemNotFoundError(itemId);
     await ctx.audit({
@@ -412,9 +466,15 @@ export const collectionService = {
     collectionId: string,
     itemId: string,
     orgId: string,
+    userId?: string,
   ) {
-    // Verify collection belongs to org
-    const collection = await collectionService.getById(tx, collectionId, orgId);
+    // Verify collection belongs to org + visibility
+    const collection = await collectionService.getById(
+      tx,
+      collectionId,
+      orgId,
+      userId,
+    );
     if (!collection) return null;
 
     const [row] = await tx
@@ -441,6 +501,7 @@ export const collectionService = {
       collectionId,
       itemId,
       ctx.actor.orgId,
+      ctx.actor.userId,
     );
     if (removed) {
       await ctx.audit({
@@ -458,9 +519,15 @@ export const collectionService = {
     collectionId: string,
     input: ReorderCollectionItemsInput,
     orgId: string,
+    userId?: string,
   ) {
-    // Verify collection belongs to org
-    const collection = await collectionService.getById(tx, collectionId, orgId);
+    // Verify collection belongs to org + visibility
+    const collection = await collectionService.getById(
+      tx,
+      collectionId,
+      orgId,
+      userId,
+    );
     if (!collection) throw new CollectionNotFoundError(collectionId);
 
     // Update all item positions
