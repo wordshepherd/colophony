@@ -61,6 +61,17 @@ vi.mock("@/components/notifications/notification-bell", () => ({
   NotificationBell: () => <div data-testid="notification-bell">Bell</div>,
 }));
 
+const mockSetOpen = vi.fn();
+vi.mock("@/components/command-palette/command-palette", () => ({
+  useCommandPalette: () => ({ open: false, setOpen: mockSetOpen }),
+}));
+
+vi.mock("@/lib/platform", () => ({
+  modifierSymbol: () => "⌘",
+  modifierKey: () => "meta",
+  isMac: () => true,
+}));
+
 describe("Header", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -137,5 +148,21 @@ describe("Header", () => {
 
     expect(screen.getByText("Test Org")).toBeInTheDocument();
     expect(screen.getByTestId("notification-bell")).toBeInTheDocument();
+  });
+
+  it("renders command palette trigger button when authenticated", () => {
+    render(<Header />);
+
+    expect(screen.getByText("⌘K")).toBeInTheDocument();
+  });
+
+  it("opens command palette on trigger click", async () => {
+    const user = userEvent.setup();
+    render(<Header />);
+
+    const trigger = screen.getByText("⌘K").closest("button")!;
+    await user.click(trigger);
+
+    expect(mockSetOpen).toHaveBeenCalledWith(true);
   });
 });

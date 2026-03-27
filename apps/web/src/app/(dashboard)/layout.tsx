@@ -5,6 +5,7 @@ import { Header } from "@/components/layout/header";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Toaster } from "@/components/ui/sonner";
 import { DensityProvider } from "@/hooks/use-density";
+import { CommandPaletteProvider } from "@/components/command-palette/command-palette";
 
 export default function DashboardLayout({
   children,
@@ -14,21 +15,23 @@ export default function DashboardLayout({
   return (
     <ProtectedRoute>
       <DensityProvider density="comfortable">
-        <div className="min-h-screen flex flex-col">
-          <Header />
-          <div className="flex-1 flex">
-            {/* Sidebar - hidden on mobile */}
-            <aside className="hidden md:flex w-64 flex-col border-r">
-              <Sidebar />
-            </aside>
+        <CommandPaletteProvider>
+          <div className="min-h-screen flex flex-col">
+            <Header />
+            <div className="flex-1 flex">
+              {/* Sidebar - hidden on mobile */}
+              <aside className="hidden md:flex w-64 flex-col border-r">
+                <Sidebar />
+              </aside>
 
-            {/* Main content */}
-            <main className="flex-1 overflow-auto">
-              <div className="container py-6">{children}</div>
-            </main>
+              {/* Main content */}
+              <main className="flex-1 overflow-auto">
+                <div className="container py-6">{children}</div>
+              </main>
+            </div>
+            <Toaster />
           </div>
-          <Toaster />
-        </div>
+        </CommandPaletteProvider>
       </DensityProvider>
     </ProtectedRoute>
   );

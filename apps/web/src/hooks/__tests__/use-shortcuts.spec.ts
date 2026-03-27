@@ -3,14 +3,26 @@ import { renderHook } from "@testing-library/react";
 import { useShortcuts } from "../use-shortcuts";
 import type { ShortcutBinding } from "../use-shortcuts";
 
-function fireKey(key: string, target?: HTMLElement) {
+function fireKey(
+  key: string,
+  target?: HTMLElement,
+  mods?: {
+    metaKey?: boolean;
+    ctrlKey?: boolean;
+    altKey?: boolean;
+    shiftKey?: boolean;
+  },
+) {
   const event = new KeyboardEvent("keydown", {
     key,
     bubbles: true,
     cancelable: true,
+    metaKey: mods?.metaKey ?? false,
+    ctrlKey: mods?.ctrlKey ?? false,
+    altKey: mods?.altKey ?? false,
+    shiftKey: mods?.shiftKey ?? false,
   });
   if (target) {
-    // Override event.target by dispatching from the element
     target.dispatchEvent(event);
   } else {
     document.dispatchEvent(event);
@@ -141,5 +153,84 @@ describe("useShortcuts", () => {
     fireKey("Escape");
 
     expect(handler).toHaveBeenCalledOnce();
+  });
+
+  describe("modifier keys", () => {
+    it("fires binding with matching modifier", () => {
+      const handler = vi.fn();
+      const bindings: ShortcutBinding[] = [
+        { key: "k", modifiers: ["meta"], handler, description: "palette" },
+      ];
+
+      renderHook(() => useShortcuts(bindings));
+      fireKey("k", undefined, { metaKey: true });
+
+      expect(handler).toHaveBeenCalledOnce();
+    });
+
+    it("does NOT fire when wrong modifier is pressed", () => {
+      const handler = vi.fn();
+      const bindings: ShortcutBinding[] = [
+        { key: "k", modifiers: ["meta"], handler, description: "palette" },
+      ];
+
+      renderHook(() => useShortcuts(bindings));
+      fireKey("k", undefined, { ctrlKey: true });
+
+      expect(handler).not.toHaveBeenCalled();
+    });
+
+    it("does NOT fire unmodified binding when a modifier is pressed", () => {
+      const handler = vi.fn();
+      const bindings: ShortcutBinding[] = [
+        { key: "j", handler, description: "next" },
+      ];
+
+      renderHook(() => useShortcuts(bindings));
+      fireKey("j", undefined, { metaKey: true });
+
+      expect(handler).not.toHaveBeenCalled();
+    });
+
+    it("matches multiple modifiers", () => {
+      const handler = vi.fn();
+      const bindings: ShortcutBinding[] = [
+        {
+          key: "s",
+          modifiers: ["meta", "shift"],
+          handler,
+          description: "save all",
+        },
+      ];
+
+      renderHook(() => useShortcuts(bindings));
+      fireKey("s", undefined, { metaKey: true, shiftKey: true });
+
+      expect(handler).toHaveBeenCalledOnce();
+    });
+
+    it("allows shift for unmodified bindings (? = Shift+/)", () => {
+      const handler = vi.fn();
+      const bindings: ShortcutBinding[] = [
+        { key: "?", handler, description: "help" },
+      ];
+
+      renderHook(() => useShortcuts(bindings));
+      fireKey("?", undefined, { shiftKey: true });
+
+      expect(handler).toHaveBeenCalledOnce();
+    });
+
+    it("blocks extra shift on modifier bindings", () => {
+      const handler = vi.fn();
+      const bindings: ShortcutBinding[] = [
+        { key: "k", modifiers: ["meta"], handler, description: "palette" },
+      ];
+
+      renderHook(() => useShortcuts(bindings));
+      fireKey("k", undefined, { metaKey: true, shiftKey: true });
+
+      expect(handler).not.toHaveBeenCalled();
+    });
   });
 });
