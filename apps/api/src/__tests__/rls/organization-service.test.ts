@@ -152,7 +152,7 @@ describe('Organization Service RLS Integration', () => {
           user.id,
         ]);
         const result = await client.query<{ roles: string[] }>(
-          'SELECT roles FROM organization_members WHERE organization_id = $1 AND user_id = $2',
+          'SELECT roles::text[] FROM organization_members WHERE organization_id = $1 AND user_id = $2',
           [org.id, user.id],
         );
         await client.query('COMMIT');
@@ -181,7 +181,7 @@ describe('Organization Service RLS Integration', () => {
           user.id,
         ]);
         const result = await client.query(
-          'SELECT roles FROM organization_members WHERE organization_id = $1 AND user_id = $2',
+          'SELECT roles::text[] FROM organization_members WHERE organization_id = $1 AND user_id = $2',
           [org.id, user.id],
         );
         await client.query('COMMIT');

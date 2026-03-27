@@ -161,7 +161,7 @@ export const gdprService = {
 
       // Step 1: Verify ADMIN role
       const memberResult = await client.query<{ roles: string[] }>(
-        'SELECT roles FROM organization_members WHERE organization_id = $1 AND user_id = $2',
+        'SELECT roles::text[] FROM organization_members WHERE organization_id = $1 AND user_id = $2',
         [orgId, actorUserId],
       );
       if (

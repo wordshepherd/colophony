@@ -35,7 +35,7 @@ export default fp(
               request.authContext.userId,
             ]);
             const memberResult = await client.query<{ roles: string[] }>(
-              'SELECT roles FROM organization_members WHERE organization_id = $1 AND user_id = $2',
+              'SELECT roles::text[] FROM organization_members WHERE organization_id = $1 AND user_id = $2',
               [request.authContext.orgId, request.authContext.userId],
             );
             if (memberResult.rows.length > 0) {
@@ -111,7 +111,7 @@ export default fp(
             request.authContext.userId,
           ]);
           const memberResult = await client.query<{ roles: string[] }>(
-            'SELECT roles FROM organization_members WHERE organization_id = $1 AND user_id = $2',
+            'SELECT roles::text[] FROM organization_members WHERE organization_id = $1 AND user_id = $2',
             [orgIdHeader, request.authContext.userId],
           );
           if (memberResult.rows.length > 0) {

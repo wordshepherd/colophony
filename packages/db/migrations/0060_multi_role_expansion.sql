@@ -27,12 +27,17 @@ ALTER TABLE "organization_members" DROP COLUMN "role";
 
 --> statement-breakpoint
 
--- Step 3: Replace SECURITY DEFINER function to return roles array instead of single role
+-- Step 3: Recreate SECURITY DEFINER function with new return type (roles text[])
+-- PostgreSQL cannot change return type with CREATE OR REPLACE — must DROP first.
 -- Same hardening as original (0005_membership_helpers.sql):
 --   - SET search_path prevents hijacking
 --   - REVOKE FROM PUBLIC + explicit GRANT to app_user
 --   - STABLE volatility (read-only)
-CREATE OR REPLACE FUNCTION list_user_organizations(p_user_id uuid)
+DROP FUNCTION IF EXISTS list_user_organizations(uuid);
+
+--> statement-breakpoint
+
+CREATE FUNCTION list_user_organizations(p_user_id uuid)
 RETURNS TABLE(organization_id uuid, roles text[], organization_name varchar, slug varchar)
 AS $$
   SELECT om.organization_id,
