@@ -492,6 +492,7 @@
 - [ ] [P3] Test `mySubmissions` projected response shape — assert `writerStatus`/`writerStatusLabel` fields in tRPC router test — (Codex branch review 2026-03-26)
 - [ ] [P3] Test `mySubmissionDetail` procedure + writer-context routing in `submission-detail.tsx` — (Codex branch review 2026-03-26)
 - [ ] [P3] Service test for `getByIdAsOwner` ownership check and error types — (Codex branch review 2026-03-26)
+- [ ] [P2] Collection service unit tests — 19 planned test cases (CRUD, visibility filtering, cross-tenant validation, reorder, item cap) in `collection.service.spec.ts` — (Codex branch review 2026-03-26)
 
 ---
 
