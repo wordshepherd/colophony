@@ -97,7 +97,7 @@ function baseContext(): RestContext {
 }
 
 function orgContext(
-  role: 'ADMIN' | 'EDITOR' | 'READER' = 'ADMIN',
+  roles: ('ADMIN' | 'EDITOR' | 'READER')[] = ['ADMIN'],
 ): RestContext {
   return {
     authContext: {
@@ -107,7 +107,7 @@ function orgContext(
       emailVerified: true,
       authMethod: 'test',
       orgId: ORG_ID,
-      role,
+      roles,
     },
     dbTx: {} as never,
     audit: vi.fn(),
@@ -116,7 +116,7 @@ function orgContext(
 
 function apiKeyContext(
   scopes: string[],
-  role: 'ADMIN' | 'EDITOR' | 'READER' = 'ADMIN',
+  roles: ('ADMIN' | 'EDITOR' | 'READER')[] = ['ADMIN'],
 ): RestContext {
   return {
     authContext: {
@@ -127,7 +127,7 @@ function apiKeyContext(
       apiKeyId: 'k0000000-0000-4000-a000-000000000001',
       apiKeyScopes: scopes as any,
       orgId: ORG_ID,
-      role,
+      roles,
     },
     dbTx: {} as never,
     audit: vi.fn(),
@@ -173,7 +173,7 @@ describe('files REST router', () => {
         files as never,
       );
 
-      const call = client(filesRouter.list, orgContext('READER'));
+      const call = client(filesRouter.list, orgContext(['READER']));
       const result = await call({ manuscriptVersionId: MANUSCRIPT_VERSION_ID });
       expect(result).toHaveLength(1);
     });
@@ -183,7 +183,7 @@ describe('files REST router', () => {
         new ForbiddenError('No access'),
       );
 
-      const call = client(filesRouter.list, orgContext('READER'));
+      const call = client(filesRouter.list, orgContext(['READER']));
       await expect(
         call({ manuscriptVersionId: MANUSCRIPT_VERSION_ID }),
       ).rejects.toThrow('No access');
@@ -210,7 +210,7 @@ describe('files REST router', () => {
         downloadInfo as never,
       );
 
-      const call = client(filesRouter.download, orgContext('READER'));
+      const call = client(filesRouter.download, orgContext(['READER']));
       const result = await call({ fileId: FILE_ID });
       expect(result.url).toBe('https://s3.example.com/file');
       expect(result.filename).toBe('test.pdf');
@@ -223,7 +223,7 @@ describe('files REST router', () => {
         new FileNotFoundError(FILE_ID),
       );
 
-      const call = client(filesRouter.download, orgContext('READER'));
+      const call = client(filesRouter.download, orgContext(['READER']));
       await expect(call({ fileId: FILE_ID })).rejects.toThrow(ORPCError);
     });
 
@@ -234,7 +234,7 @@ describe('files REST router', () => {
         new FileNotCleanError(FILE_ID, 'INFECTED'),
       );
 
-      const call = client(filesRouter.download, orgContext('READER'));
+      const call = client(filesRouter.download, orgContext(['READER']));
       await expect(call({ fileId: FILE_ID })).rejects.toThrow('INFECTED');
     });
   });
@@ -254,7 +254,7 @@ describe('files REST router', () => {
         success: true,
       } as never);
 
-      const call = client(filesRouter.delete, orgContext('READER'));
+      const call = client(filesRouter.delete, orgContext(['READER']));
       const result = await call({ fileId: FILE_ID });
       expect(result).toEqual({ success: true });
     });
@@ -264,7 +264,7 @@ describe('files REST router', () => {
         await import('../../services/submission.service.js');
       mockFileService.deleteAsOwner.mockRejectedValueOnce(new NotDraftError());
 
-      const call = client(filesRouter.delete, orgContext('READER'));
+      const call = client(filesRouter.delete, orgContext(['READER']));
       await expect(call({ fileId: FILE_ID })).rejects.toThrow('DRAFT');
     });
 
@@ -275,7 +275,7 @@ describe('files REST router', () => {
         new FileNotFoundError(FILE_ID),
       );
 
-      const call = client(filesRouter.delete, orgContext('READER'));
+      const call = client(filesRouter.delete, orgContext(['READER']));
       await expect(call({ fileId: FILE_ID })).rejects.toThrow(ORPCError);
     });
   });

@@ -8,13 +8,13 @@ let mockCurrentOrg: {
   id: string;
   name: string;
   slug: string;
-  role: string;
+  roles: string[];
 } | null;
 let mockOrganizations: Array<{
   id: string;
   name: string;
   slug: string;
-  role: string;
+  roles: string[];
 }>;
 const mockSwitchOrganization = vi.fn();
 let mockIsAdmin = false;
@@ -29,9 +29,9 @@ vi.mock("@/hooks/use-organization", () => ({
 }));
 
 const orgs = [
-  { id: "org-1", name: "Org One", slug: "org-one", role: "ADMIN" },
-  { id: "org-2", name: "Org Two", slug: "org-two", role: "EDITOR" },
-  { id: "org-3", name: "Org Three", slug: "org-three", role: "READER" },
+  { id: "org-1", name: "Org One", slug: "org-one", roles: ["ADMIN"] },
+  { id: "org-2", name: "Org Two", slug: "org-two", roles: ["EDITOR"] },
+  { id: "org-3", name: "Org Three", slug: "org-three", roles: ["READER"] },
 ];
 
 describe("OrgSwitcher", () => {

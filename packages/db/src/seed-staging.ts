@@ -513,8 +513,8 @@ async function main() {
 
     // Add new editors to org1
     await tx.insert(organizationMembers).values([
-      { organizationId: base.org1.id, userId: editor2!.id, role: "EDITOR" },
-      { organizationId: base.org1.id, userId: editor3!.id, role: "EDITOR" },
+      { organizationId: base.org1.id, userId: editor2!.id, roles: ["EDITOR"] },
+      { organizationId: base.org1.id, userId: editor3!.id, roles: ["EDITOR"] },
     ]);
 
     // -----------------------------------------------------------------------
@@ -558,7 +558,7 @@ async function main() {
         await tx.insert(organizationMembers).values({
           organizationId: org.id,
           userId: e2eUser!.id,
-          role: "ADMIN",
+          roles: ["ADMIN"],
         });
       }
     }
@@ -810,7 +810,7 @@ async function main() {
       await tx.insert(organizationMembers).values({
         organizationId: base.org1.id,
         userId: devUser!.id,
-        role: "ADMIN",
+        roles: ["ADMIN"],
       });
     }
 

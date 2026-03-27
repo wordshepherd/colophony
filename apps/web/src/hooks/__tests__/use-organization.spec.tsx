@@ -13,19 +13,19 @@ const mockUser = {
       id: "org-1",
       name: "Org One",
       slug: "org-one",
-      role: "ADMIN" as const,
+      roles: ["ADMIN"] as const,
     },
     {
       id: "org-2",
       name: "Org Two",
       slug: "org-two",
-      role: "EDITOR" as const,
+      roles: ["EDITOR"] as const,
     },
     {
       id: "org-3",
       name: "Org Three",
       slug: "org-three",
-      role: "READER" as const,
+      roles: ["READER"] as const,
     },
   ],
 };
@@ -68,9 +68,14 @@ describe("useOrganization", () => {
       const { result } = renderHook(() => useOrganization());
 
       expect(result.current.organizations).toEqual([
-        { id: "org-1", name: "Org One", slug: "org-one", role: "ADMIN" },
-        { id: "org-2", name: "Org Two", slug: "org-two", role: "EDITOR" },
-        { id: "org-3", name: "Org Three", slug: "org-three", role: "READER" },
+        { id: "org-1", name: "Org One", slug: "org-one", roles: ["ADMIN"] },
+        { id: "org-2", name: "Org Two", slug: "org-two", roles: ["EDITOR"] },
+        {
+          id: "org-3",
+          name: "Org Three",
+          slug: "org-three",
+          roles: ["READER"],
+        },
       ]);
     });
 

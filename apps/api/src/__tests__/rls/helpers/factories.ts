@@ -81,7 +81,7 @@ export async function createOrgMember(
     .values({
       organizationId,
       userId,
-      role: 'ADMIN',
+      roles: ['ADMIN'],
       ...overrides,
     })
     .returning();

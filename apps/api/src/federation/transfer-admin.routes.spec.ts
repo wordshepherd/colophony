@@ -100,14 +100,14 @@ describe('transfer-admin.routes', () => {
   const adminAuthContext = {
     userId: validUuid,
     orgId: validUuid,
-    role: 'ADMIN' as const,
+    roles: ['ADMIN'] as const,
     authMethod: 'oidc' as const,
   };
 
   const readerAuthContext = {
     userId: validUuid,
     orgId: validUuid,
-    role: 'READER' as const,
+    roles: ['READER'] as const,
     authMethod: 'oidc' as const,
   };
 

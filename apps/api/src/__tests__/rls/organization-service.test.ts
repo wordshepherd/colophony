@@ -26,14 +26,14 @@ describe('Organization Service RLS Integration', () => {
       const orgA = await createOrganization({ name: 'Org Alpha' });
       const orgB = await createOrganization({ name: 'Org Beta' });
       const user = await createUser();
-      await createOrgMember(orgA.id, user.id, { role: 'ADMIN' });
-      await createOrgMember(orgB.id, user.id, { role: 'READER' });
+      await createOrgMember(orgA.id, user.id, { roles: ['ADMIN'] });
+      await createOrgMember(orgB.id, user.id, { roles: ['READER'] });
 
       // Call as app_user (subject to RLS) — SECURITY DEFINER should bypass
       const appPool = getAppPool();
       const result = await appPool.query<{
         organization_id: string;
-        role: string;
+        roles: string[];
         organization_name: string;
         slug: string;
       }>('SELECT * FROM list_user_organizations($1)', [user.id]);
@@ -46,11 +46,11 @@ describe('Organization Service RLS Integration', () => {
       const alphaRow = result.rows.find(
         (r) => r.organization_name === 'Org Alpha',
       );
-      expect(alphaRow?.role).toBe('ADMIN');
+      expect(alphaRow?.roles).toEqual(['ADMIN']);
       const betaRow = result.rows.find(
         (r) => r.organization_name === 'Org Beta',
       );
-      expect(betaRow?.role).toBe('READER');
+      expect(betaRow?.roles).toEqual(['READER']);
     });
 
     it('returns empty array for user with no memberships', async () => {
@@ -96,7 +96,7 @@ describe('Organization Service RLS Integration', () => {
           .values({
             organizationId: org.id,
             userId: user.id,
-            role: 'ADMIN',
+            roles: ['ADMIN'],
           })
           .returning();
 
@@ -104,7 +104,7 @@ describe('Organization Service RLS Integration', () => {
 
         expect(org.id).toBeDefined();
         expect(member.organizationId).toBe(org.id);
-        expect(member.role).toBe('ADMIN');
+        expect(member.roles).toEqual(['ADMIN']);
 
         // Verify via admin pool
         const adminDb = drizzle(getAdminPool());
@@ -136,7 +136,7 @@ describe('Organization Service RLS Integration', () => {
     it('temporary read-only tx correctly resolves membership', async () => {
       const org = await createOrganization();
       const user = await createUser();
-      await createOrgMember(org.id, user.id, { role: 'EDITOR' });
+      await createOrgMember(org.id, user.id, { roles: ['EDITOR'] });
 
       // Simulate the org-context hook's bootstrap pattern
       const appPool = getAppPool();
@@ -151,14 +151,14 @@ describe('Organization Service RLS Integration', () => {
           'app.user_id',
           user.id,
         ]);
-        const result = await client.query<{ role: string }>(
-          'SELECT role FROM organization_members WHERE organization_id = $1 AND user_id = $2',
+        const result = await client.query<{ roles: string[] }>(
+          'SELECT roles FROM organization_members WHERE organization_id = $1 AND user_id = $2',
           [org.id, user.id],
         );
         await client.query('COMMIT');
 
         expect(result.rows).toHaveLength(1);
-        expect(result.rows[0].role).toBe('EDITOR');
+        expect(result.rows[0].roles).toEqual(['EDITOR']);
       } finally {
         client.release();
       }
@@ -181,7 +181,7 @@ describe('Organization Service RLS Integration', () => {
           user.id,
         ]);
         const result = await client.query(
-          'SELECT role FROM organization_members WHERE organization_id = $1 AND user_id = $2',
+          'SELECT roles FROM organization_members WHERE organization_id = $1 AND user_id = $2',
           [org.id, user.id],
         );
         await client.query('COMMIT');
@@ -227,11 +227,11 @@ describe('Organization Service RLS Integration', () => {
       const userA = await createUser();
       const userB = await createUser();
       const userNew = await createUser();
-      await createOrgMember(orgA.id, userA.id, { role: 'ADMIN' });
-      await createOrgMember(orgB.id, userB.id, { role: 'ADMIN' });
+      await createOrgMember(orgA.id, userA.id, { roles: ['ADMIN'] });
+      await createOrgMember(orgB.id, userB.id, { roles: ['ADMIN'] });
 
       // Add new user to org A via admin pool (bypasses RLS for setup)
-      await createOrgMember(orgA.id, userNew.id, { role: 'READER' });
+      await createOrgMember(orgA.id, userNew.id, { roles: ['READER'] });
 
       // Visible from org A
       const membersA = await withTestRls(
@@ -257,7 +257,7 @@ describe('Organization Service RLS Integration', () => {
       const org = await createOrganization();
       const admin = await createUser();
       const member = await createOrgMember(org.id, admin.id, {
-        role: 'READER',
+        roles: ['READER'],
       });
 
       const updated = await withTestRls(
@@ -265,14 +265,14 @@ describe('Organization Service RLS Integration', () => {
         async (tx) => {
           const [result] = await tx
             .update(organizationMembers)
-            .set({ role: 'EDITOR' })
+            .set({ roles: ['EDITOR'] })
             .where(eq(organizationMembers.id, member.id))
             .returning();
           return result;
         },
       );
 
-      expect(updated.role).toBe('EDITOR');
+      expect(updated.roles).toEqual(['EDITOR']);
     });
   });
 
@@ -302,7 +302,7 @@ describe('Organization Service RLS Integration', () => {
         async (tx) => {
           const rows = await tx
             .update(organizationMembers)
-            .set({ role: 'ADMIN' })
+            .set({ roles: ['ADMIN'] })
             .where(eq(organizationMembers.id, memberA.id))
             .returning();
           return rows;
@@ -316,7 +316,7 @@ describe('Organization Service RLS Integration', () => {
         .select()
         .from(organizationMembers)
         .where(eq(organizationMembers.id, memberA.id));
-      expect(verified.role).toBe('ADMIN'); // unchanged from factory default
+      expect(verified.roles).toEqual(['ADMIN']); // unchanged from factory default
     });
   });
 });

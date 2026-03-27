@@ -41,7 +41,7 @@ describe('userService.getProfile', () => {
         organizationId: 'o1',
         name: 'Test Org',
         slug: 'test-org',
-        role: 'ADMIN',
+        roles: ['ADMIN'],
       },
     ]);
 
@@ -57,7 +57,7 @@ describe('userService.getProfile', () => {
           id: 'o1',
           name: 'Test Org',
           slug: 'test-org',
-          role: 'ADMIN',
+          roles: ['ADMIN'],
         },
       ],
     });

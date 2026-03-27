@@ -70,7 +70,7 @@ vi.mock('@colophony/db', () => ({
     id: 'id',
     organizationId: 'organization_id',
     userId: 'user_id',
-    role: 'role',
+    roles: 'roles',
     createdAt: 'created_at',
     updatedAt: 'updated_at',
   },
@@ -111,13 +111,13 @@ describe('organizationService', () => {
         rows: [
           {
             organization_id: 'org-1',
-            role: 'ADMIN',
+            roles: ['ADMIN'],
             organization_name: 'Org One',
             slug: 'org-one',
           },
           {
             organization_id: 'org-2',
-            role: 'READER',
+            roles: ['READER'],
             organization_name: 'Org Two',
             slug: 'org-two',
           },
@@ -132,13 +132,13 @@ describe('organizationService', () => {
       expect(result).toEqual([
         {
           organizationId: 'org-1',
-          role: 'ADMIN',
+          roles: ['ADMIN'],
           name: 'Org One',
           slug: 'org-one',
         },
         {
           organizationId: 'org-2',
-          role: 'READER',
+          roles: ['READER'],
           name: 'Org Two',
           slug: 'org-two',
         },
@@ -160,7 +160,7 @@ describe('organizationService', () => {
         id: 'member-1',
         organizationId: 'org-new',
         userId: 'user-1',
-        role: 'ADMIN',
+        roles: ['ADMIN'],
       };
 
       // First insert returns org, second returns member
@@ -243,12 +243,9 @@ describe('organizationService', () => {
       } as never;
 
       await expect(
-        organizationService.addMember(
-          mockTx,
-          'org-1',
-          'nobody@example.com',
+        organizationService.addMember(mockTx, 'org-1', 'nobody@example.com', [
           'READER',
-        ),
+        ]),
       ).rejects.toThrow(UserNotFoundError);
     });
   });

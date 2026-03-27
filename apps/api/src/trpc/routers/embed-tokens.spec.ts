@@ -26,7 +26,7 @@ function makeContext(overrides: Partial<TRPCContext> = {}): TRPCContext {
 }
 
 function orgContext(
-  role: 'ADMIN' | 'EDITOR' | 'READER' = 'ADMIN',
+  roles: ('ADMIN' | 'EDITOR' | 'READER')[] = ['ADMIN'],
   overrides: Partial<TRPCContext> = {},
 ): TRPCContext {
   const mockTx = {} as never;
@@ -38,7 +38,7 @@ function orgContext(
       emailVerified: true,
       authMethod: 'test',
       orgId: 'org-1',
-      role,
+      roles,
     },
     dbTx: mockTx,
     audit: vi.fn(),
@@ -70,7 +70,7 @@ describe('embedTokens router', () => {
       };
       mockEmbedTokenService.create.mockResolvedValueOnce(created);
 
-      const ctx = orgContext('ADMIN');
+      const ctx = orgContext(['ADMIN']);
       const caller = createCaller(ctx);
       const result = await caller.embedTokens.create({
         submissionPeriodId: 'b2222222-2222-2222-a222-222222222222',
@@ -97,7 +97,7 @@ describe('embedTokens router', () => {
     });
 
     it('rejects non-admin roles', async () => {
-      const caller = createCaller(orgContext('EDITOR'));
+      const caller = createCaller(orgContext(['EDITOR']));
       await expect(
         caller.embedTokens.create({
           submissionPeriodId: 'b2222222-2222-2222-a222-222222222222',
@@ -122,7 +122,7 @@ describe('embedTokens router', () => {
       ];
       mockEmbedTokenService.list.mockResolvedValueOnce(tokens);
 
-      const caller = createCaller(orgContext('READER'));
+      const caller = createCaller(orgContext(['READER']));
       const result = await caller.embedTokens.listByPeriod({
         submissionPeriodId: 'b2222222-2222-2222-a222-222222222222',
       });
@@ -142,7 +142,7 @@ describe('embedTokens router', () => {
         active: false,
       });
 
-      const ctx = orgContext('ADMIN');
+      const ctx = orgContext(['ADMIN']);
       const caller = createCaller(ctx);
       const result = await caller.embedTokens.revoke({
         tokenId: 'a1111111-1111-1111-a111-111111111111',
@@ -161,7 +161,7 @@ describe('embedTokens router', () => {
     it('throws NOT_FOUND when token does not exist', async () => {
       mockEmbedTokenService.revoke.mockResolvedValueOnce(null);
 
-      const caller = createCaller(orgContext('ADMIN'));
+      const caller = createCaller(orgContext(['ADMIN']));
       await expect(
         caller.embedTokens.revoke({
           tokenId: 'b2222222-2222-2222-a222-222222222222',
@@ -170,7 +170,7 @@ describe('embedTokens router', () => {
     });
 
     it('rejects non-admin users', async () => {
-      const caller = createCaller(orgContext('EDITOR'));
+      const caller = createCaller(orgContext(['EDITOR']));
       await expect(
         caller.embedTokens.revoke({
           tokenId: 'a1111111-1111-1111-a111-111111111111',

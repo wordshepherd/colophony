@@ -162,7 +162,7 @@ function createDeleteChain(rows: unknown[]) {
 function makeCtx(overrides?: Partial<ServiceContext>): ServiceContext {
   return {
     tx: {} as never,
-    actor: { userId: USER_ID, orgId: ORG_ID, role: 'EDITOR' },
+    actor: { userId: USER_ID, orgId: ORG_ID, roles: ['EDITOR'] },
     audit: vi.fn().mockResolvedValue(undefined),
     ...overrides,
   };
@@ -380,7 +380,7 @@ describe('collectionService', () => {
       });
 
       const ctx = makeCtx({
-        actor: { userId: USER_ID, orgId: ORG_ID, role: 'READER' },
+        actor: { userId: USER_ID, orgId: ORG_ID, roles: ['READER'] },
       });
 
       await expect(

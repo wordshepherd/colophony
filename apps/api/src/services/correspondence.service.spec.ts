@@ -88,11 +88,11 @@ function makeTx() {
   } as unknown as Parameters<typeof correspondenceService.create>[0];
 }
 
-function makeSvc(role = 'EDITOR') {
+function makeSvc(roles: string[] = ['EDITOR']) {
   const tx = makeTx();
   return {
     tx,
-    actor: { userId: 'editor-1', orgId: 'org-1', role },
+    actor: { userId: 'editor-1', orgId: 'org-1', roles },
     audit: vi.fn(),
   } as unknown as Parameters<typeof correspondenceService.sendEditorMessage>[0];
 }
@@ -134,7 +134,7 @@ describe('correspondenceService', () => {
         { id: 'c1', sentAt: new Date('2026-01-02') },
         { id: 'c2', sentAt: new Date('2026-01-01') },
       ];
-      const svc = makeSvc('EDITOR');
+      const svc = makeSvc(['EDITOR']);
       // Override the chain for list: select().from().where().orderBy().limit()
       const localLimit = vi.fn().mockReturnValue(rows);
       const localOrderBy = vi.fn().mockReturnValue({ limit: localLimit });
@@ -150,7 +150,7 @@ describe('correspondenceService', () => {
     });
 
     it('throws ForbiddenError for non-editor', async () => {
-      const svc = makeSvc('READER');
+      const svc = makeSvc(['READER']);
 
       await expect(
         correspondenceService.listBySubmission(svc, 'sub-1'),
@@ -258,7 +258,7 @@ describe('correspondenceService', () => {
     });
 
     it('throws ForbiddenError for non-editor', async () => {
-      const svc = makeSvc('READER');
+      const svc = makeSvc(['READER']);
 
       await expect(
         correspondenceService.sendEditorMessage(svc, {

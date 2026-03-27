@@ -35,7 +35,7 @@ function resetAuth() {
 
 function resetOrg() {
   mockOrgReturn = {
-    currentOrg: { id: "org-1", name: "Org 1", slug: "org-1", role: "ADMIN" },
+    currentOrg: { id: "org-1", name: "Org 1", slug: "org-1", roles: ["ADMIN"] },
     isEditor: true,
     isAdmin: true,
     hasOrganizations: true,

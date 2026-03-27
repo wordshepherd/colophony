@@ -46,7 +46,7 @@ function makeServiceContext(
 ): ServiceContext {
   return {
     tx: makeTx(),
-    actor: { userId: 'user-1', orgId: 'org-1', role: 'ADMIN' },
+    actor: { userId: 'user-1', orgId: 'org-1', roles: ['ADMIN'] },
     audit: vi.fn().mockResolvedValue(undefined),
     ...overrides,
   };

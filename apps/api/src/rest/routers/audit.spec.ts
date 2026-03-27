@@ -45,7 +45,7 @@ function adminContext(): RestContext {
       emailVerified: true,
       authMethod: 'test',
       orgId: ORG_ID,
-      role: 'ADMIN',
+      roles: ['ADMIN'],
     },
     dbTx: {} as never,
     audit: vi.fn(),
@@ -54,7 +54,7 @@ function adminContext(): RestContext {
 
 function apiKeyContext(
   scopes: string[],
-  role: 'ADMIN' | 'EDITOR' | 'READER' = 'ADMIN',
+  roles: ('ADMIN' | 'EDITOR' | 'READER')[] = ['ADMIN'],
 ): RestContext {
   return {
     authContext: {
@@ -65,7 +65,7 @@ function apiKeyContext(
       apiKeyId: 'k0000000-0000-4000-a000-000000000001',
       apiKeyScopes: scopes as any,
       orgId: ORG_ID,
-      role,
+      roles,
     },
     dbTx: {} as never,
     audit: vi.fn(),
@@ -100,7 +100,7 @@ describe('audit REST router', () => {
           emailVerified: true,
           authMethod: 'test',
           orgId: ORG_ID,
-          role: 'READER',
+          roles: ['READER'],
         },
         dbTx: {} as never,
         audit: vi.fn(),
@@ -232,7 +232,7 @@ describe('audit REST router', () => {
           emailVerified: true,
           authMethod: 'test',
           orgId: ORG_ID,
-          role: 'EDITOR',
+          roles: ['EDITOR'],
         },
         dbTx: {} as never,
         audit: vi.fn(),
