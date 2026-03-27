@@ -38,6 +38,10 @@ import type { Role } from "@colophony/types";
 const roleColors: Record<string, string> = {
   ADMIN: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200",
   EDITOR: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
+  PRODUCTION:
+    "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200",
+  BUSINESS_OPS:
+    "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200",
   READER: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200",
 };
 
@@ -61,16 +65,17 @@ export function MemberList() {
     limit,
   });
 
-  const updateRoleMutation = trpc.organizations.members.updateRole.useMutation({
-    onSuccess: () => {
-      utils.organizations.members.list.invalidate();
-      utils.users.me.invalidate();
-      toast.success("Role updated");
-    },
-    onError: (err) => {
-      toast.error(err.message);
-    },
-  });
+  const updateRolesMutation =
+    trpc.organizations.members.updateRoles.useMutation({
+      onSuccess: () => {
+        utils.organizations.members.list.invalidate();
+        utils.users.me.invalidate();
+        toast.success("Roles updated");
+      },
+      onError: (err) => {
+        toast.error(err.message);
+      },
+    });
 
   const removeMutation = trpc.organizations.members.remove.useMutation({
     onSuccess: () => {
@@ -121,7 +126,7 @@ export function MemberList() {
         <TableHeader>
           <TableRow>
             <TableHead>Email</TableHead>
-            <TableHead>Role</TableHead>
+            <TableHead>Roles</TableHead>
             <TableHead>Joined</TableHead>
             {isAdmin && <TableHead className="w-[100px]">Actions</TableHead>}
           </TableRow>
@@ -141,33 +146,46 @@ export function MemberList() {
               <TableRow key={member.id}>
                 <TableCell>{member.email}</TableCell>
                 <TableCell>
-                  {isAdmin ? (
-                    <Select
-                      value={member.role}
-                      onValueChange={(role: Role) =>
-                        updateRoleMutation.mutate({
-                          memberId: member.id,
-                          role,
-                        })
-                      }
-                    >
-                      <SelectTrigger className="w-[120px]">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="READER">Reader</SelectItem>
-                        <SelectItem value="EDITOR">Editor</SelectItem>
-                        <SelectItem value="ADMIN">Admin</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  ) : (
-                    <Badge
-                      variant="secondary"
-                      className={roleColors[member.role]}
-                    >
-                      {member.role.toLowerCase()}
-                    </Badge>
-                  )}
+                  <div className="flex items-center gap-1 flex-wrap">
+                    {isAdmin ? (
+                      <Select
+                        value={member.roles[0]}
+                        onValueChange={(role: Role) =>
+                          updateRolesMutation.mutate({
+                            memberId: member.id,
+                            roles: [role],
+                          })
+                        }
+                      >
+                        <SelectTrigger className="w-[140px]">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="READER">Reader</SelectItem>
+                          <SelectItem value="EDITOR">Editor</SelectItem>
+                          <SelectItem value="PRODUCTION">Production</SelectItem>
+                          <SelectItem value="BUSINESS_OPS">
+                            Business Ops
+                          </SelectItem>
+                          <SelectItem value="ADMIN">Admin</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      <>
+                        <Badge
+                          variant="secondary"
+                          className={roleColors[member.roles[0]]}
+                        >
+                          {member.roles[0].toLowerCase()}
+                        </Badge>
+                        {member.roles.length > 1 && (
+                          <span className="text-xs text-muted-foreground">
+                            +{member.roles.length - 1} more
+                          </span>
+                        )}
+                      </>
+                    )}
+                  </div>
                 </TableCell>
                 <TableCell>
                   {format(new Date(member.createdAt), "PPP")}

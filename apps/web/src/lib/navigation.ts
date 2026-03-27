@@ -95,7 +95,7 @@ export const navGroups = [
   {
     label: "Production",
     items: productionNavigation,
-    role: "editor" as const,
+    role: "production" as const,
   },
   {
     label: "Operations",

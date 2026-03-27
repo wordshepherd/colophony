@@ -4,13 +4,18 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { getCurrentOrgId, setCurrentOrgId, trpc } from "@/lib/trpc";
 import { useAuth } from "./use-auth";
 
-export type OrgRole = "ADMIN" | "EDITOR" | "READER";
+export type OrgRole =
+  | "ADMIN"
+  | "EDITOR"
+  | "READER"
+  | "PRODUCTION"
+  | "BUSINESS_OPS";
 
 export interface Organization {
   id: string;
   name: string;
   slug: string;
-  role: OrgRole;
+  roles: OrgRole[];
 }
 
 export function useOrganization() {
@@ -24,7 +29,7 @@ export function useOrganization() {
         id: m.id,
         name: m.name,
         slug: m.slug,
-        role: m.role,
+        roles: m.roles,
       })) ?? [],
     [user?.organizations],
   );
@@ -95,11 +100,14 @@ export function useOrganization() {
   );
 
   // Role checks
-  const isAdmin = currentOrg?.role === "ADMIN";
-  const isEditor =
-    currentOrg?.role === "EDITOR" || currentOrg?.role === "ADMIN";
-  const isReader = currentOrg?.role === "READER";
-  const canWrite = !!currentOrg && currentOrg.role !== "READER";
+  const roles = currentOrg?.roles ?? [];
+  const isAdmin = roles.includes("ADMIN");
+  const isEditor = roles.includes("EDITOR") || isAdmin;
+  const isProduction = roles.includes("PRODUCTION") || isEditor;
+  const isBusinessOps = roles.includes("BUSINESS_OPS") || isAdmin;
+  const isReader = roles.includes("READER");
+  const canWrite =
+    !!currentOrg && roles.length > 0 && !roles.every((r) => r === "READER");
 
   return {
     user,
@@ -108,6 +116,8 @@ export function useOrganization() {
     switchOrganization,
     isAdmin,
     isEditor,
+    isProduction,
+    isBusinessOps,
     isReader,
     canWrite,
     hasOrganizations: organizations.length > 0,

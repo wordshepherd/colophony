@@ -106,7 +106,7 @@ export function ReviewerPicker({
                     <span className="text-sm truncate">{member.email}</span>
                   </div>
                   <Badge variant="outline" className="text-xs ml-2">
-                    {member.role}
+                    {member.roles[0]}
                   </Badge>
                 </CommandItem>
               ))}
