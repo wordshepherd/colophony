@@ -85,6 +85,9 @@ Per-directory CLAUDE.md files contain domain-specific details:
 | **Metrics plugin**         | `apps/api/src/hooks/metrics.ts` (Fastify plugin — HTTP request instrumentation)             |
 | **Instrumented worker**    | `apps/api/src/config/instrumented-worker.ts` (BullMQ wrapper with metrics)                  |
 | **Webhook health**         | `apps/api/src/webhooks/webhook-health.route.ts`                                             |
+| **Ops tRPC router**        | `apps/api/src/trpc/routers/ops.ts` (queueHealth, webhookProviderHealth, submissionTrend)    |
+| **Ops dashboard**          | `apps/web/src/components/operations/ops-dashboard.tsx` (health card grid + quick links)     |
+| **Health card grid**       | `apps/web/src/components/operations/health-card-grid.tsx` (4-card status derivation)        |
 | **Alert rules**            | `docker/prometheus/alert-rules.yml`                                                         |
 | **AlertManager config**    | `docker/alertmanager/alertmanager.yml`                                                      |
 | **Loki config**            | `docker/loki/loki-config.yml` (dev), `loki-config.prod.yml` (prod)                          |
