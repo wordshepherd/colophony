@@ -113,6 +113,10 @@ Per-directory CLAUDE.md files contain domain-specific details:
 | **ManuscriptDiff**         | `apps/web/src/components/manuscripts/manuscript-diff.tsx` (word-level diff view)           |
 | **TipTap manuscript ext**  | `apps/web/src/lib/tiptap-manuscript-extensions.ts` (custom nodes/marks + converters)       |
 | **Keyboard shortcuts**     | `apps/web/src/hooks/use-shortcuts.ts` (shell-scoped shortcut hook)                         |
+| **Command palette**        | `apps/web/src/components/command-palette/command-palette.tsx` (Cmd+K global nav)           |
+| **Shortcut overlay**       | `apps/web/src/components/command-palette/shortcut-overlay.tsx` (? key help dialog)         |
+| **Shared navigation**      | `apps/web/src/lib/navigation.ts` (nav items + groups, shared by sidebar + palette)         |
+| **Platform utilities**     | `apps/web/src/lib/platform.ts` (isMac, modifierKey, modifierSymbol)                        |
 | **ProseMirror types**      | `packages/types/src/prosemirror.ts` (shared), `apps/web/src/lib/manuscript.ts` (converter) |
 | **Content converters**     | `apps/api/src/converters/` (text, docx, smart-typography, format router)                   |
 | **Content extract queue**  | `apps/api/src/queues/content-extract.queue.ts`                                             |
