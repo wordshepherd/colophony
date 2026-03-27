@@ -34,6 +34,7 @@ import { transferRouter } from './routers/transfer.js';
 import { migrationRouter } from './routers/migration.js';
 import { hubRouter } from './routers/hub.js';
 import { collectionsRouter } from './routers/collections.js';
+import { opsRouter } from './routers/ops.js';
 
 // Re-export procedure builders for convenience
 export {
@@ -89,6 +90,7 @@ export const appRouter = t.router({
   migrations: migrationRouter,
   hub: hubRouter,
   collections: collectionsRouter,
+  ops: opsRouter,
   retention: t.router({}),
 });
 
