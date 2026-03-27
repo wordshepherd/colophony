@@ -8,7 +8,7 @@ import {
 } from '@colophony/types';
 import {
   orgProcedure,
-  adminProcedure,
+  productionProcedure,
   createRouter,
   requireScopes,
 } from '../init.js';
@@ -48,7 +48,7 @@ export const contractTemplatesRouter = createRouter({
     }),
 
   /** Create a contract template (admin only). */
-  create: adminProcedure
+  create: productionProcedure
     .use(requireScopes('contracts:write'))
     .input(createContractTemplateSchema)
     .output(contractTemplateSchema)
@@ -64,7 +64,7 @@ export const contractTemplatesRouter = createRouter({
     }),
 
   /** Update a contract template (admin only). */
-  update: adminProcedure
+  update: productionProcedure
     .use(requireScopes('contracts:write'))
     .input(idParamSchema.merge(updateContractTemplateSchema))
     .output(contractTemplateSchema)
@@ -82,7 +82,7 @@ export const contractTemplatesRouter = createRouter({
     }),
 
   /** Delete a contract template (admin only). */
-  delete: adminProcedure
+  delete: productionProcedure
     .use(requireScopes('contracts:write'))
     .input(idParamSchema)
     .output(contractTemplateSchema)

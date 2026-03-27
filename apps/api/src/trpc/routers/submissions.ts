@@ -54,7 +54,7 @@ import {
 } from '@colophony/types';
 import {
   orgProcedure,
-  adminProcedure,
+  editorProcedure,
   userProcedure,
   createRouter,
   requireScopes,
@@ -141,19 +141,19 @@ export const submissionsRouter = createRouter({
     .output(paginatedResponseSchema(submissionListItemSchema))
     .query(async ({ ctx, input }) => {
       try {
-        assertEditorOrAdmin(ctx.authContext.role);
+        assertEditorOrAdmin(ctx.authContext.roles);
         return await submissionService.listAll(
           ctx.dbTx,
           input,
-          ctx.authContext.role,
+          ctx.authContext.roles,
         );
       } catch (e) {
         mapServiceError(e);
       }
     }),
 
-  /** Export submissions (admin only) — no pagination, safety-capped at 10k rows. */
-  export: adminProcedure
+  /** Export submissions (editor/admin) — no pagination, safety-capped at 10k rows. */
+  export: editorProcedure
     .use(requireScopes('submissions:read'))
     .input(exportSubmissionsSchema)
     .output(z.array(submissionExportItemSchema))
@@ -162,7 +162,7 @@ export const submissionsRouter = createRouter({
         const result = await submissionService.exportAll(
           ctx.dbTx,
           input,
-          ctx.authContext.role,
+          ctx.authContext.roles,
         );
         await ctx.audit({
           action: AuditActions.SUBMISSION_EXPORTED,
@@ -665,7 +665,7 @@ export const submissionsRouter = createRouter({
     .output(submissionOverviewStatsSchema)
     .query(async ({ ctx, input }) => {
       try {
-        assertEditorOrAdmin(ctx.authContext.role);
+        assertEditorOrAdmin(ctx.authContext.roles);
         return await submissionAnalyticsService.getOverviewStats(
           ctx.dbTx,
           input,
@@ -682,7 +682,7 @@ export const submissionsRouter = createRouter({
     .output(submissionStatusBreakdownSchema)
     .query(async ({ ctx, input }) => {
       try {
-        assertEditorOrAdmin(ctx.authContext.role);
+        assertEditorOrAdmin(ctx.authContext.roles);
         return await submissionAnalyticsService.getStatusBreakdown(
           ctx.dbTx,
           input,
@@ -699,7 +699,7 @@ export const submissionsRouter = createRouter({
     .output(submissionFunnelSchema)
     .query(async ({ ctx, input }) => {
       try {
-        assertEditorOrAdmin(ctx.authContext.role);
+        assertEditorOrAdmin(ctx.authContext.roles);
         return await submissionAnalyticsService.getFunnel(ctx.dbTx, input);
       } catch (e) {
         mapServiceError(e);
@@ -713,7 +713,7 @@ export const submissionsRouter = createRouter({
     .output(submissionTimeSeriesSchema)
     .query(async ({ ctx, input }) => {
       try {
-        assertEditorOrAdmin(ctx.authContext.role);
+        assertEditorOrAdmin(ctx.authContext.roles);
         return await submissionAnalyticsService.getTimeSeries(ctx.dbTx, input);
       } catch (e) {
         mapServiceError(e);
@@ -727,7 +727,7 @@ export const submissionsRouter = createRouter({
     .output(responseTimeDistributionSchema)
     .query(async ({ ctx, input }) => {
       try {
-        assertEditorOrAdmin(ctx.authContext.role);
+        assertEditorOrAdmin(ctx.authContext.roles);
         return await submissionAnalyticsService.getResponseTimeDistribution(
           ctx.dbTx,
           input,
@@ -744,7 +744,7 @@ export const submissionsRouter = createRouter({
     .output(agingSubmissionsSchema)
     .query(async ({ ctx, input }) => {
       try {
-        assertEditorOrAdmin(ctx.authContext.role);
+        assertEditorOrAdmin(ctx.authContext.roles);
         return await submissionAnalyticsService.getAgingSubmissions(
           ctx.dbTx,
           input,

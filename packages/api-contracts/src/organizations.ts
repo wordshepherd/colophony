@@ -7,8 +7,8 @@ import {
   checkSlugSchema,
   organizationMemberSchema,
   inviteMemberSchema,
-  updateMemberRoleSchema,
-  roleSchema,
+  updateMemberRolesSchema,
+  rolesSchema,
 } from "@colophony/types";
 
 /**
@@ -20,7 +20,7 @@ const memberMutationResponseSchema = z.object({
   id: z.string().uuid(),
   organizationId: z.string().uuid(),
   userId: z.string().uuid(),
-  role: roleSchema,
+  roles: rolesSchema,
   createdAt: z.date(),
   updatedAt: z.date(),
 });
@@ -32,7 +32,7 @@ import { restPaginationQuery } from "./shared.js";
 
 const orgListItemSchema = z.object({
   organizationId: z.string().uuid(),
-  role: roleSchema,
+  roles: rolesSchema,
   name: z.string(),
   slug: z.string(),
 });
@@ -43,7 +43,7 @@ const createOrgResponseSchema = z.object({
     id: z.string().uuid(),
     organizationId: z.string().uuid(),
     userId: z.string().uuid(),
-    role: roleSchema,
+    roles: rolesSchema,
     createdAt: z.date(),
     updatedAt: z.date(),
   }),
@@ -123,17 +123,19 @@ export const organizationMembersContract = {
     .input(memberIdParam)
     .output(memberRemovedSchema),
 
-  updateRole: oc
+  updateRoles: oc
     .route({
       method: "PATCH",
       path: "/organizations/{orgId}/members/{memberId}",
-      summary: "Update member role",
+      summary: "Update member roles",
       description:
-        "Change a member's role within the organization. Requires ADMIN role.",
-      operationId: "updateOrganizationMemberRole",
+        "Change a member's roles within the organization. Requires ADMIN role.",
+      operationId: "updateOrganizationMemberRoles",
       tags: ["Organizations"],
     })
-    .input(memberIdParam.merge(updateMemberRoleSchema.omit({ memberId: true })))
+    .input(
+      memberIdParam.merge(updateMemberRolesSchema.omit({ memberId: true })),
+    )
     .output(memberMutationResponseSchema),
 };
 

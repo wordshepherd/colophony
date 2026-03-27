@@ -18,7 +18,7 @@ export async function registerTransferAdminRoutes(
 ): Promise<void> {
   // preHandler: require ADMIN role
   app.addHook('preHandler', async (request, reply) => {
-    if (!request.authContext?.role || request.authContext.role !== 'ADMIN') {
+    if (!request.authContext?.roles?.includes('ADMIN')) {
       return reply.status(403).send({
         error: 'forbidden',
         message: 'ADMIN role required',
