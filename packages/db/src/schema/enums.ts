@@ -298,3 +298,14 @@ export const collectionTypeHintEnum = pgEnum("CollectionTypeHint", [
   "issue_planning",
   "custom",
 ]);
+
+// ---------------------------------------------------------------------------
+// Organization — Invitations
+// ---------------------------------------------------------------------------
+
+export const invitationStatusEnum = pgEnum("InvitationStatus", [
+  "PENDING",
+  "ACCEPTED",
+  "REVOKED",
+  "EXPIRED",
+]);

@@ -10,7 +10,8 @@ export type TemplateName =
   | 'reviewer-assigned'
   | 'discussion-comment'
   | 'embed-submission-confirmation'
-  | 'submission-response-reminder';
+  | 'submission-response-reminder'
+  | 'organization-invitation';
 
 export interface SubmissionTemplateData {
   submissionTitle: string;
@@ -77,6 +78,14 @@ export interface ResponseReminderTemplateData {
   queueUrl?: string;
 }
 
+export interface OrganizationInvitationData {
+  orgName: string;
+  inviterName: string;
+  inviteUrl: string;
+  roleName: string;
+  expiresAt: string;
+}
+
 export type TemplateData =
   | SubmissionTemplateData
   | ContractTemplateData
@@ -85,4 +94,5 @@ export type TemplateData =
   | ReviewerAssignedTemplateData
   | DiscussionCommentTemplateData
   | EmbedSubmissionConfirmationData
-  | ResponseReminderTemplateData;
+  | ResponseReminderTemplateData
+  | OrganizationInvitationData;

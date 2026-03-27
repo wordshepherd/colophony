@@ -9,6 +9,7 @@ import {
   organizationMemberSchema,
   userOrganizationSchema,
   organizationMemberMutationResponseSchema,
+  inviteOrAddResultSchema,
   paginatedResponseSchema,
   successResponseSchema,
 } from '@colophony/types';
@@ -120,19 +121,21 @@ const membersAdd = adminProcedure
     method: 'POST',
     path: '/organizations/{orgId}/members',
     successStatus: 201,
-    summary: 'Add a member',
+    summary: 'Add or invite a member',
     description:
-      'Invite a user to the organization by email. The user must already have an account. Requires ADMIN role.',
+      'Add a user to the organization by email. If the user does not have an account, sends an invitation email. Requires ADMIN role.',
     operationId: 'addOrganizationMember',
     tags: ['Organizations'],
   })
   .input(orgIdParam.merge(inviteMemberSchema))
-  .output(organizationMemberMutationResponseSchema)
+  .output(inviteOrAddResultSchema)
   .handler(async ({ input, context }) => {
     assertOrgIdMatch(input.orgId, context.authContext.orgId);
+    const env = validateEnv();
     try {
-      return await organizationService.addMemberWithAudit(
+      return await organizationService.inviteOrAddMemberWithAudit(
         toServiceContext(context),
+        env,
         input.email,
         input.roles,
       );

@@ -112,6 +112,12 @@ import {
   CollectionItemNotFoundError,
   SubmissionNotInOrgError,
 } from '../services/collection.service.js';
+import {
+  InvitationNotFoundError,
+  InvitationExpiredError,
+  InvitationAlreadyAcceptedError,
+  InvitationEmailMismatchError,
+} from '../services/invitation.service.js';
 
 type TRPCErrorCode = ConstructorParameters<typeof TRPCError>[0]['code'];
 
@@ -215,6 +221,11 @@ const errorCodeMap: [new (...args: never[]) => Error, TRPCErrorCode][] = [
   [CollectionItemNotFoundError, 'NOT_FOUND'],
   [CollectionItemAlreadyExistsError, 'CONFLICT'],
   [SubmissionNotInOrgError, 'NOT_FOUND'],
+  // Invitation errors
+  [InvitationNotFoundError, 'NOT_FOUND'],
+  [InvitationExpiredError, 'NOT_FOUND'],
+  [InvitationAlreadyAcceptedError, 'CONFLICT'],
+  [InvitationEmailMismatchError, 'FORBIDDEN'],
 ];
 
 /**

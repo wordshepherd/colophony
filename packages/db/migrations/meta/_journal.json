@@ -428,6 +428,13 @@
       "when": 1781200000000,
       "tag": "0060_multi_role_expansion",
       "breakpoints": true
+    },
+    {
+      "idx": 61,
+      "version": "7",
+      "when": 1781400000000,
+      "tag": "0061_organization_invitations",
+      "breakpoints": true
     }
   ]
 }
