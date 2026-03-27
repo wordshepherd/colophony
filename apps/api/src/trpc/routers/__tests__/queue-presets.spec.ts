@@ -45,6 +45,7 @@ vi.mock('../../init.js', () => {
   };
   return {
     orgProcedure: noopMiddleware,
+    editorProcedure: noopMiddleware,
     createRouter: (routes: Record<string, unknown>) => routes,
     requireScopes: () => vi.fn(),
   };

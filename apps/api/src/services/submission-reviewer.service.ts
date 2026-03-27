@@ -132,11 +132,9 @@ async function listBySubmission(
     .where(eq(submissionReviewers.submissionId, submissionId));
 
   // Map roles array to single reviewerRole for type compatibility
-  // (SubmissionReviewer type still uses singular reviewerRole)
   return rows.map((r) => ({
     ...r,
-    reviewerRole: (r.reviewerRole[0] ??
-      'READER') as SubmissionReviewer['reviewerRole'],
+    reviewerRole: r.reviewerRole[0] ?? 'READER',
   }));
 }
 
