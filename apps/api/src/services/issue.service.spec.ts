@@ -20,6 +20,7 @@ vi.mock('@colophony/db', () => ({
   desc: vi.fn(),
   gte: vi.fn(),
   lte: vi.fn(),
+  sql: vi.fn(),
 }));
 
 // Re-export needed for the ilike/count import
@@ -27,6 +28,8 @@ vi.mock('drizzle-orm', () => ({
   ilike: vi.fn(),
   count: vi.fn(),
   getTableColumns: vi.fn(() => ({})),
+  not: vi.fn((v: unknown) => v),
+  inArray: vi.fn((_col: unknown, vals: unknown) => vals),
 }));
 
 import { issueService } from './issue.service.js';
@@ -240,5 +243,74 @@ describe('issueService defense-in-depth org filtering', () => {
     const tx = makeTxNoRows();
     const result = await issueService.getSections(tx, 'issue-1', 'wrong-org');
     expect(result).toEqual([]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// listActive
+// ---------------------------------------------------------------------------
+
+describe('issueService.listActive', () => {
+  it('requires orgId parameter (2 args: tx, orgId)', () => {
+    expect(issueService.listActive.length).toBe(2);
+  });
+
+  it('returns empty array when no active issues exist', async () => {
+    const mockTx = {
+      select: vi.fn().mockReturnValue({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            orderBy: vi.fn().mockReturnValue({
+              limit: vi.fn().mockResolvedValue([]),
+            }),
+          }),
+        }),
+      }),
+    };
+
+    const result = await issueService.listActive(
+      mockTx as unknown as Parameters<typeof issueService.listActive>[0],
+      'org-1',
+    );
+
+    expect(result).toEqual([]);
+  });
+
+  it('returns active issues in expected shape', async () => {
+    const activeIssues = [
+      {
+        id: 'iss-1',
+        title: 'Spring 2026',
+        status: 'PLANNING',
+        publicationDate: new Date('2026-04-01'),
+      },
+      {
+        id: 'iss-2',
+        title: 'Summer 2026',
+        status: 'ASSEMBLING',
+        publicationDate: new Date('2026-07-01'),
+      },
+    ];
+
+    const mockTx = {
+      select: vi.fn().mockReturnValue({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            orderBy: vi.fn().mockReturnValue({
+              limit: vi.fn().mockResolvedValue(activeIssues),
+            }),
+          }),
+        }),
+      }),
+    };
+
+    const result = await issueService.listActive(
+      mockTx as unknown as Parameters<typeof issueService.listActive>[0],
+      'org-1',
+    );
+
+    expect(result).toHaveLength(2);
+    expect(result[0].title).toBe('Spring 2026');
+    expect(result[1].title).toBe('Summer 2026');
   });
 });

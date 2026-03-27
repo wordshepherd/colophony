@@ -9,6 +9,8 @@ import {
   pipelineCommentSchema,
   saveCopyeditInputSchema,
   copyeditContentSchema,
+  productionDashboardInputSchema,
+  productionDashboardSchema,
   idParamSchema,
   paginatedResponseSchema,
   manuscriptVersionSchema,
@@ -199,5 +201,14 @@ export const pipelineRouter = createRouter({
       } catch (e) {
         mapServiceError(e);
       }
+    }),
+
+  /** Production dashboard: issue-centric pipeline overview. */
+  dashboard: orgProcedure
+    .use(requireScopes('pipeline:read'))
+    .input(productionDashboardInputSchema)
+    .output(productionDashboardSchema.nullable())
+    .query(async ({ ctx, input }) => {
+      return pipelineService.dashboard(ctx.dbTx, input, ctx.authContext.orgId);
     }),
 });

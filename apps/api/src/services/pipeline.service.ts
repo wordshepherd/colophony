@@ -7,8 +7,13 @@ import {
   users,
   manuscripts,
   manuscriptVersions,
+  issues,
+  issueItems,
+  issueSections,
+  contracts,
   eq,
   and,
+  not,
   sql,
   type DrizzleDb,
 } from '@colophony/db';
@@ -22,6 +27,7 @@ import type {
   ListPipelineItemsInput,
   PipelineStage,
   SaveCopyeditInput,
+  ProductionDashboardInput,
 } from '@colophony/types';
 import {
   AuditActions,
@@ -755,6 +761,201 @@ export const pipelineService = {
     });
     return version;
   },
+
+  // -------------------------------------------------------------------------
+  // Production dashboard
+  // -------------------------------------------------------------------------
+
+  async dashboard(
+    tx: DrizzleDb,
+    input: ProductionDashboardInput,
+    orgId: string,
+  ) {
+    // Find the target issue
+    let issueId = input.issueId;
+    if (!issueId) {
+      const [firstActive] = await tx
+        .select({ id: issues.id })
+        .from(issues)
+        .where(
+          and(
+            eq(issues.organizationId, orgId),
+            not(inArray(issues.status, ['PUBLISHED', 'ARCHIVED'])),
+          ),
+        )
+        .orderBy(sql`${issues.publicationDate} ASC NULLS LAST`)
+        .limit(1);
+
+      if (!firstActive) return null;
+      issueId = firstActive.id;
+    }
+
+    // Fetch the issue itself
+    const [issue] = await tx
+      .select({
+        id: issues.id,
+        title: issues.title,
+        status: issues.status,
+        publicationDate: issues.publicationDate,
+      })
+      .from(issues)
+      .where(and(eq(issues.id, issueId), eq(issues.organizationId, orgId)))
+      .limit(1);
+
+    if (!issue) return null;
+
+    // Fetch items with all joins via raw SQL for lateral subqueries
+    const copyeditors = alias(users, 'copyeditors');
+    const proofreaders = alias(users, 'proofreaders');
+
+    const rows = await tx
+      .select({
+        pipelineItemId: pipelineItems.id,
+        stage: pipelineItems.stage,
+        submissionId: pipelineItems.submissionId,
+        submissionTitle: submissions.title,
+        issueSectionTitle: issueSections.title,
+        sortOrder: issueItems.sortOrder,
+        copyeditDueAt: pipelineItems.copyeditDueAt,
+        proofreadDueAt: pipelineItems.proofreadDueAt,
+        authorReviewDueAt: pipelineItems.authorReviewDueAt,
+        assignedCopyeditorEmail: copyeditors.email,
+        assignedProofreaderEmail: proofreaders.email,
+      })
+      .from(issueItems)
+      .innerJoin(
+        pipelineItems,
+        and(
+          eq(issueItems.pipelineItemId, pipelineItems.id),
+          eq(pipelineItems.organizationId, orgId),
+        ),
+      )
+      .leftJoin(submissions, eq(pipelineItems.submissionId, submissions.id))
+      .leftJoin(issueSections, eq(issueItems.issueSectionId, issueSections.id))
+      .leftJoin(
+        copyeditors,
+        eq(pipelineItems.assignedCopyeditorId, copyeditors.id),
+      )
+      .leftJoin(
+        proofreaders,
+        eq(pipelineItems.assignedProofreaderId, proofreaders.id),
+      )
+      .where(eq(issueItems.issueId, issueId))
+      .orderBy(asc(issueItems.sortOrder))
+      .limit(200);
+
+    // Fetch latest history entry per pipeline item (for elapsed time)
+    const pipelineItemIds = rows.map((r) => r.pipelineItemId);
+    const historyMap = new Map<string, Date>();
+    if (pipelineItemIds.length > 0) {
+      const historyRows = await tx
+        .select({
+          pipelineItemId: pipelineHistory.pipelineItemId,
+          changedAt: pipelineHistory.changedAt,
+        })
+        .from(pipelineHistory)
+        .where(inArray(pipelineHistory.pipelineItemId, pipelineItemIds))
+        .orderBy(desc(pipelineHistory.changedAt));
+
+      // Keep only the most recent per pipeline item
+      for (const h of historyRows) {
+        if (!historyMap.has(h.pipelineItemId)) {
+          historyMap.set(h.pipelineItemId, h.changedAt);
+        }
+      }
+    }
+
+    // Fetch latest contract per pipeline item
+    const contractMap = new Map<string, string>();
+    if (pipelineItemIds.length > 0) {
+      const contractRows = await tx
+        .select({
+          pipelineItemId: contracts.pipelineItemId,
+          status: contracts.status,
+          createdAt: contracts.createdAt,
+        })
+        .from(contracts)
+        .where(inArray(contracts.pipelineItemId, pipelineItemIds))
+        .orderBy(desc(contracts.createdAt));
+
+      // Keep only the most recent per pipeline item
+      for (const c of contractRows) {
+        if (!contractMap.has(c.pipelineItemId)) {
+          contractMap.set(c.pipelineItemId, c.status);
+        }
+      }
+    }
+
+    const now = Date.now();
+    const items = rows.map((row) => {
+      const lastChange = historyMap.get(row.pipelineItemId) ?? new Date();
+      const daysInStage = Math.floor(
+        (now - lastChange.getTime()) / (1000 * 60 * 60 * 24),
+      );
+
+      return {
+        pipelineItemId: row.pipelineItemId,
+        stage: row.stage,
+        submissionId: row.submissionId,
+        submissionTitle: row.submissionTitle,
+        issueId: issue.id,
+        issueTitle: issue.title,
+        issueSectionTitle: row.issueSectionTitle,
+        sortOrder: row.sortOrder,
+        publicationDate: issue.publicationDate,
+        assignedCopyeditorEmail: row.assignedCopyeditorEmail,
+        assignedProofreaderEmail: row.assignedProofreaderEmail,
+        copyeditDueAt: row.copyeditDueAt,
+        proofreadDueAt: row.proofreadDueAt,
+        authorReviewDueAt: row.authorReviewDueAt,
+        daysInStage,
+        lastStageChangeAt: lastChange,
+        contractStatus: contractMap.get(row.pipelineItemId) ?? null,
+      };
+    });
+
+    // Compute summary
+    let onTrack = 0;
+    let atRisk = 0;
+    let overdue = 0;
+    let waiting = 0;
+
+    for (const item of items) {
+      if (item.stage === 'AUTHOR_REVIEW') {
+        waiting++;
+      }
+
+      const dueAt = getDeadlineForStage(item);
+      if (dueAt) {
+        const daysUntilDue = Math.floor(
+          (dueAt.getTime() - now) / (1000 * 60 * 60 * 24),
+        );
+        if (daysUntilDue < 0) overdue++;
+        else if (daysUntilDue <= 3) atRisk++;
+        else onTrack++;
+      } else {
+        // No deadline — use fixed thresholds
+        if (item.daysInStage > 10) overdue++;
+        else if (item.daysInStage >= 5) atRisk++;
+        else onTrack++;
+      }
+    }
+
+    return {
+      issueId: issue.id,
+      issueTitle: issue.title,
+      issueStatus: issue.status,
+      publicationDate: issue.publicationDate,
+      items,
+      summary: {
+        total: items.length,
+        onTrack,
+        atRisk,
+        overdue,
+        waiting,
+      },
+    };
+  },
 };
 
 /** Internal helper: create a new manuscript version with copyedited content. */
@@ -786,4 +987,24 @@ async function createCopyeditVersion(
     .returning();
 
   return version;
+}
+
+/** Pick the relevant due date for the item's current pipeline stage. */
+function getDeadlineForStage(item: {
+  stage: string;
+  copyeditDueAt: Date | null;
+  proofreadDueAt: Date | null;
+  authorReviewDueAt: Date | null;
+}): Date | null {
+  switch (item.stage) {
+    case 'COPYEDIT_PENDING':
+    case 'COPYEDIT_IN_PROGRESS':
+      return item.copyeditDueAt;
+    case 'AUTHOR_REVIEW':
+      return item.authorReviewDueAt;
+    case 'PROOFREAD':
+      return item.proofreadDueAt;
+    default:
+      return null;
+  }
 }
