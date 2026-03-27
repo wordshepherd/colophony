@@ -151,13 +151,15 @@ All surfaces share the same service layer and Zod schemas from `@colophony/types
 
 ## tRPC Procedure Builders (`src/trpc/init.ts`)
 
-| Builder           | Middleware chain | Guarantees                                    |
-| ----------------- | ---------------- | --------------------------------------------- |
-| `publicProcedure` | none             | No auth required                              |
-| `authedProcedure` | `isAuthed`       | `ctx.authContext` is non-null                 |
-| `orgProcedure`    | `hasOrgContext`  | `ctx.authContext.orgId/role` + `ctx.dbTx` set |
-| `userProcedure`   | `hasUserContext` | `ctx.authContext` + `ctx.dbTx` (no org)       |
-| `adminProcedure`  | `isAdmin`        | `orgProcedure` + `role === 'ADMIN'`           |
+| Builder               | Middleware chain | Guarantees                                                   |
+| --------------------- | ---------------- | ------------------------------------------------------------ |
+| `publicProcedure`     | none             | No auth required                                             |
+| `authedProcedure`     | `isAuthed`       | `ctx.authContext` is non-null                                |
+| `orgProcedure`        | `hasOrgContext`  | `ctx.authContext.orgId/roles` + `ctx.dbTx` set               |
+| `userProcedure`       | `hasUserContext` | `ctx.authContext` + `ctx.dbTx` (no org)                      |
+| `editorProcedure`     | `isEditor`       | `orgProcedure` + roles includes EDITOR or ADMIN              |
+| `productionProcedure` | `isProduction`   | `orgProcedure` + roles includes PRODUCTION, EDITOR, or ADMIN |
+| `adminProcedure`      | `isAdmin`        | `orgProcedure` + roles includes ADMIN                        |
 
 Also exported: `createRouter`, `mergeRouters`.
 
