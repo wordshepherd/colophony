@@ -56,16 +56,19 @@ export function InviteMemberDialog({
   });
 
   const addMutation = trpc.organizations.members.add.useMutation({
-    onSuccess: () => {
+    onSuccess: (result) => {
       utils.organizations.members.list.invalidate();
-      toast.success("Member added");
+      utils.organizations.invitations.list.invalidate();
+      if (result.type === "member_added") {
+        toast.success("Member added");
+      } else {
+        toast.success(`Invitation sent to ${form.getValues("email")}`);
+      }
       form.reset();
       onOpenChange(false);
     },
     onError: (err) => {
-      if (err.data?.code === "NOT_FOUND") {
-        toast.error("No user found with that email address");
-      } else if (err.data?.code === "CONFLICT") {
+      if (err.data?.code === "CONFLICT") {
         toast.error("This user is already a member");
       } else {
         toast.error(err.message);

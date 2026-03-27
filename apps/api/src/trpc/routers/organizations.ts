@@ -10,29 +10,39 @@ import {
   memberIdParamSchema,
   organizationSchema,
   organizationMemberSchema,
+  organizationInvitationSchema,
   userOrganizationSchema,
   slugAvailabilitySchema,
   createOrganizationResponseSchema,
+  inviteOrAddResultSchema,
+  acceptInvitationSchema,
+  acceptInvitationResultSchema,
   organizationMemberMutationResponseSchema,
   successResponseSchema,
   paginatedResponseSchema,
   type Organization,
   type CreateOrganizationResponse,
+  type Role,
 } from '@colophony/types';
 import {
   authedProcedure,
   orgProcedure,
   adminProcedure,
+  userProcedure,
   createRouter,
   requireScopes,
 } from '../init.js';
 import { organizationService } from '../../services/organization.service.js';
+import { invitationService } from '../../services/invitation.service.js';
 import {
   gdprService,
   OrgNotDeletableError,
 } from '../../services/gdpr.service.js';
 import { validateEnv } from '../../config/env.js';
-import { toServiceContext } from '../../services/context.js';
+import {
+  toServiceContext,
+  toUserServiceContext,
+} from '../../services/context.js';
 import { mapServiceError } from '../error-mapper.js';
 
 const membersRouter = createRouter({
@@ -47,11 +57,13 @@ const membersRouter = createRouter({
   add: adminProcedure
     .use(requireScopes('organizations:write'))
     .input(inviteMemberSchema)
-    .output(organizationMemberMutationResponseSchema)
+    .output(inviteOrAddResultSchema)
     .mutation(async ({ ctx, input }) => {
+      const env = validateEnv();
       try {
-        return await organizationService.addMemberWithAudit(
+        return await organizationService.inviteOrAddMemberWithAudit(
           toServiceContext(ctx),
+          env,
           input.email,
           input.roles,
         );
@@ -85,6 +97,71 @@ const membersRouter = createRouter({
           toServiceContext(ctx),
           input.memberId,
           input.roles,
+        );
+      } catch (e) {
+        mapServiceError(e);
+      }
+    }),
+});
+
+const invitationsRouter = createRouter({
+  list: adminProcedure
+    .use(requireScopes('organizations:read'))
+    .output(z.array(organizationInvitationSchema))
+    .query(async ({ ctx }) => {
+      const items = await invitationService.listPending(
+        ctx.dbTx,
+        ctx.authContext.orgId,
+      );
+      // Strip inviterEmail (not in output schema) and cast roles
+      return items.map(({ inviterEmail: _, ...rest }) => ({
+        ...rest,
+        roles: rest.roles as typeof rest.roles & Role[],
+      }));
+    }),
+
+  revoke: adminProcedure
+    .use(requireScopes('organizations:write'))
+    .input(z.object({ invitationId: z.string().uuid() }))
+    .output(successResponseSchema)
+    .mutation(async ({ ctx, input }) => {
+      try {
+        await invitationService.revokeWithAudit(
+          toServiceContext(ctx),
+          input.invitationId,
+        );
+        return { success: true as const };
+      } catch (e) {
+        mapServiceError(e);
+      }
+    }),
+
+  resend: adminProcedure
+    .use(requireScopes('organizations:write'))
+    .input(z.object({ invitationId: z.string().uuid() }))
+    .output(organizationInvitationSchema)
+    .mutation(async ({ ctx, input }) => {
+      const env = validateEnv();
+      try {
+        const invitation = await invitationService.resendWithAudit(
+          toServiceContext(ctx),
+          input.invitationId,
+          env,
+        );
+        return invitation;
+      } catch (e) {
+        mapServiceError(e);
+      }
+    }),
+
+  accept: userProcedure
+    .input(acceptInvitationSchema)
+    .output(acceptInvitationResultSchema)
+    .mutation(async ({ ctx, input }) => {
+      try {
+        return await invitationService.acceptWithAudit(
+          toUserServiceContext(ctx),
+          input.token,
         );
       } catch (e) {
         mapServiceError(e);
@@ -193,4 +270,5 @@ export const organizationsRouter = createRouter({
     }),
 
   members: membersRouter,
+  invitations: invitationsRouter,
 });

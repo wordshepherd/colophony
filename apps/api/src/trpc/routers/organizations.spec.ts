@@ -15,6 +15,7 @@ vi.mock('../../services/organization.service.js', () => ({
     updateMemberRoles: vi.fn(),
     // Access-aware methods (PR 2)
     addMemberWithAudit: vi.fn(),
+    inviteOrAddMemberWithAudit: vi.fn(),
     removeMemberWithAudit: vi.fn(),
     updateMemberRolesWithAudit: vi.fn(),
     updateWithAudit: vi.fn(),
@@ -44,6 +45,34 @@ vi.mock('@colophony/db', () => ({
   eq: vi.fn(),
   and: vi.fn(),
   sql: vi.fn(),
+}));
+
+vi.mock('../../config/env.js', () => ({
+  validateEnv: () => ({
+    CORS_ORIGIN: 'http://localhost:3000',
+    SMTP_FROM: 'test@example.com',
+  }),
+}));
+
+vi.mock('../../services/invitation.service.js', () => ({
+  invitationService: {
+    listPending: vi.fn().mockResolvedValue([]),
+    revokeWithAudit: vi.fn().mockResolvedValue({}),
+    resendWithAudit: vi.fn().mockResolvedValue({}),
+    acceptWithAudit: vi.fn().mockResolvedValue({}),
+  },
+  InvitationNotFoundError: class InvitationNotFoundError extends Error {
+    name = 'InvitationNotFoundError';
+  },
+  InvitationExpiredError: class InvitationExpiredError extends Error {
+    name = 'InvitationExpiredError';
+  },
+  InvitationAlreadyAcceptedError: class InvitationAlreadyAcceptedError extends Error {
+    name = 'InvitationAlreadyAcceptedError';
+  },
+  InvitationEmailMismatchError: class InvitationEmailMismatchError extends Error {
+    name = 'InvitationEmailMismatchError';
+  },
 }));
 
 import { organizationService } from '../../services/organization.service.js';
@@ -345,7 +374,7 @@ describe('organizations tRPC router', () => {
       ).rejects.toThrow('Admin role required');
     });
 
-    it('adds member via addMemberWithAudit', async () => {
+    it('adds member via inviteOrAddMemberWithAudit (fast path)', async () => {
       const member = {
         id: MEMBER_NEW_ID,
         organizationId: ORG_ID,
@@ -354,7 +383,10 @@ describe('organizations tRPC router', () => {
         createdAt: NOW,
         updatedAt: NOW,
       };
-      mockService.addMemberWithAudit.mockResolvedValueOnce(member as never);
+      mockService.inviteOrAddMemberWithAudit.mockResolvedValueOnce({
+        type: 'member_added',
+        member,
+      } as never);
 
       const ctx = orgContext(['ADMIN']);
       const caller = createCaller(ctx);
@@ -362,29 +394,38 @@ describe('organizations tRPC router', () => {
         email: 'new@example.com',
         roles: ['READER'],
       });
-      expect(result).toEqual(member);
+      expect(result).toEqual({ type: 'member_added', member });
     });
 
-    it('maps UserNotFoundError to NOT_FOUND', async () => {
-      const { UserNotFoundError } =
-        await import('../../services/organization.service.js');
-      mockService.addMemberWithAudit.mockRejectedValueOnce(
-        new UserNotFoundError('nobody@example.com'),
-      );
+    it('sends invitation for unknown user', async () => {
+      const invitation = {
+        id: 'c0000000-0000-4000-a000-000000000001',
+        organizationId: ORG_ID,
+        email: 'nobody@example.com',
+        roles: ['READER'],
+        status: 'PENDING',
+        tokenPrefix: 'col_inv_',
+        invitedBy: USER_ID,
+        expiresAt: new Date('2026-04-03'),
+        createdAt: NOW,
+      };
+      mockService.inviteOrAddMemberWithAudit.mockResolvedValueOnce({
+        type: 'invitation_sent',
+        invitation,
+      } as never);
 
       const caller = createCaller(orgContext(['ADMIN']));
-      await expect(
-        caller.organizations.members.add({
-          email: 'nobody@example.com',
-          roles: ['READER'],
-        }),
-      ).rejects.toThrow(TRPCError);
+      const result = await caller.organizations.members.add({
+        email: 'nobody@example.com',
+        roles: ['READER'],
+      });
+      expect(result).toEqual({ type: 'invitation_sent', invitation });
     });
 
     it('maps 23505 to CONFLICT', async () => {
       const pgError = new Error('duplicate key');
       (pgError as unknown as { code: string }).code = '23505';
-      mockService.addMemberWithAudit.mockRejectedValueOnce(pgError);
+      mockService.inviteOrAddMemberWithAudit.mockRejectedValueOnce(pgError);
 
       const caller = createCaller(orgContext(['ADMIN']));
       await expect(

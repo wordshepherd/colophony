@@ -4,6 +4,7 @@ import { useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { useOrganization } from "@/hooks/use-organization";
 import { InviteMemberDialog } from "./invite-member-dialog";
+import { PendingInvitations } from "./pending-invitations";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -241,6 +242,8 @@ export function MemberList() {
           </Button>
         </div>
       )}
+
+      {isAdmin && <PendingInvitations />}
 
       <InviteMemberDialog open={showInvite} onOpenChange={setShowInvite} />
 

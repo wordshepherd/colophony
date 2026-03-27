@@ -68,6 +68,16 @@ describe('renderEmailTemplate', () => {
         orgName: 'Test Lit Mag',
       },
     },
+    {
+      name: 'organization-invitation',
+      data: {
+        orgName: 'Test Lit Mag',
+        inviterName: 'admin@example.com',
+        inviteUrl: 'https://example.com/invite/accept/col_inv_abc123',
+        roleName: 'Editor',
+        expiresAt: 'April 3, 2026',
+      },
+    },
   ];
 
   for (const { name, data } of templates) {

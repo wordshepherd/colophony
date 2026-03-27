@@ -484,7 +484,7 @@
 - [ ] [P3] Additional CMS adapters — Substack, Contentful, or other targets based on early adopter needs — (codebase audit 2026-02-27)
 - [x] [P3] In-browser copyediting or diff view between manuscript versions — (persona gap analysis 2026-02-27; done 2026-03-26 PR pending)
 - [x] [P3] READER role enforcement — define what READER can and cannot do distinct from EDITOR; currently decorative — (persona gap analysis 2026-02-27; done 2026-03-03)
-- [ ] [P3] Email invitation workflow — invite by email link/token instead of requiring pre-existing Zitadel account — (persona gap analysis 2026-02-27)
+- [x] [P3] Email invitation workflow — invite by email link/token instead of requiring pre-existing Zitadel account — (persona gap analysis 2026-02-27; done 2026-03-27 PR pending)
 - [x] [P3] Custom org roles — expanded enum to 5 roles (ADMIN/EDITOR/READER/PRODUCTION/BUSINESS_OPS) with multi-role array, productionProcedure/editorProcedure middleware, role display names in org settings — (persona gap analysis 2026-02-27; done 2026-03-27 PR #369)
 - [x] [P1] Documenso webhook: defense-in-depth org filter — mutation phase uses `withRls()` on appPool + explicit `orgId` on `updateStatus`; Codex review caught `set_config` on superuser pool doesn't enforce RLS — (Codex review 2026-03-22; done 2026-03-22)
 - [x] [P2] Documenso webhook: Zod schema validation — `documensoWebhookPayloadSchema` validates payload structure before processing — (Codex review 2026-03-22; done 2026-03-22)

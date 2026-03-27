@@ -14,10 +14,13 @@ import type {
   UpdateOrganizationInput,
   PaginationInput,
   Role,
+  InviteOrAddResult,
 } from '@colophony/types';
 import { AuditActions, AuditResources } from '@colophony/types';
 import type { ServiceContext, AuditFn } from './types.js';
 import { NotFoundError } from './errors.js';
+import { invitationService } from './invitation.service.js';
+import type { Env } from '../config/env.js';
 
 export class UserNotFoundError extends Error {
   constructor(email: string) {
@@ -321,6 +324,62 @@ export const organizationService = {
       newValue: { email, roles },
     });
     return member;
+  },
+
+  /**
+   * Try to add member directly (fast path). If user doesn't exist, create an
+   * invitation with a token and send an email. Returns a discriminated union.
+   */
+  async inviteOrAddMemberWithAudit(
+    svc: ServiceContext,
+    env: Env,
+    email: string,
+    roles: Role[],
+    expiresInDays?: number,
+  ): Promise<InviteOrAddResult> {
+    try {
+      const member = await organizationService.addMember(
+        svc.tx,
+        svc.actor.orgId,
+        email,
+        roles,
+      );
+      await svc.audit({
+        action: AuditActions.ORG_MEMBER_ADDED,
+        resource: AuditResources.ORGANIZATION,
+        resourceId: member.id,
+        newValue: { email, roles },
+      });
+      return { type: 'member_added', member };
+    } catch (e) {
+      if (!(e instanceof UserNotFoundError)) throw e;
+    }
+
+    // User doesn't exist — create invitation and send email
+    const { invitation, plainTextToken } =
+      await invitationService.createWithAudit(svc, email, roles, expiresInDays);
+
+    await invitationService.sendInvitationEmail(
+      svc,
+      env,
+      invitation,
+      plainTextToken,
+    );
+
+    return {
+      type: 'invitation_sent',
+      invitation: {
+        id: invitation.id,
+        organizationId: invitation.organizationId,
+        email: invitation.email,
+        roles: invitation.roles,
+        status: invitation.status,
+        tokenPrefix: invitation.tokenPrefix,
+        invitedBy: invitation.invitedBy,
+        expiresAt: invitation.expiresAt,
+        createdAt: invitation.createdAt,
+      },
+    };
   },
 
   /**

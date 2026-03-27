@@ -257,6 +257,12 @@ export const AuditActions = {
   // Audit access
   AUDIT_ACCESSED: "AUDIT_ACCESSED",
 
+  // Invitation lifecycle
+  INVITATION_CREATED: "INVITATION_CREATED",
+  INVITATION_REVOKED: "INVITATION_REVOKED",
+  INVITATION_ACCEPTED: "INVITATION_ACCEPTED",
+  INVITATION_RESENT: "INVITATION_RESENT",
+
   // Collection lifecycle
   COLLECTION_CREATED: "COLLECTION_CREATED",
   COLLECTION_UPDATED: "COLLECTION_UPDATED",
@@ -304,6 +310,7 @@ export const AuditResources = {
   CSR: "csr",
   AUDIT: "audit",
   COLLECTION: "collection",
+  INVITATION: "invitation",
 } as const;
 
 export type AuditResource =
@@ -680,6 +687,15 @@ export interface CollectionAuditParams extends BaseAuditParams {
     | typeof AuditActions.COLLECTION_ITEM_UPDATED;
 }
 
+export interface InvitationAuditParams extends BaseAuditParams {
+  resource: typeof AuditResources.INVITATION;
+  action:
+    | typeof AuditActions.INVITATION_CREATED
+    | typeof AuditActions.INVITATION_REVOKED
+    | typeof AuditActions.INVITATION_ACCEPTED
+    | typeof AuditActions.INVITATION_RESENT;
+}
+
 /** Union of all resource-specific param types. */
 export type AuditLogParams =
   | UserAuditParams
@@ -716,7 +732,8 @@ export type AuditLogParams =
   | CSRAuditParams
   | AuditAccessAuditParams
   | SystemAuditParams
-  | CollectionAuditParams;
+  | CollectionAuditParams
+  | InvitationAuditParams;
 
 // ---------------------------------------------------------------------------
 // Query/response schemas for audit endpoints
