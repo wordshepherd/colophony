@@ -40,12 +40,10 @@ export function ManuscriptRenderer({
   const containerRef = useRef<HTMLDivElement>(null);
   const anchorTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastReportedIndex = useRef<number>(-1);
-  const restoredRef = useRef(false);
 
-  // Restore scroll position on mount when initialAnchor is provided
+  // Restore scroll position when initialAnchor changes (including on item switch)
   useEffect(() => {
-    if (!initialAnchor || restoredRef.current) return;
-    restoredRef.current = true;
+    if (!initialAnchor) return;
     // Defer to next frame so DOM nodes are rendered
     requestAnimationFrame(() => {
       const el = containerRef.current?.querySelector(
@@ -53,7 +51,8 @@ export function ManuscriptRenderer({
       );
       el?.scrollIntoView({ block: "start" });
     });
-  }, [initialAnchor]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentionally depend on nodeIndex only, not the full object reference
+  }, [initialAnchor?.nodeIndex]);
 
   // Track topmost visible node via IntersectionObserver
   useEffect(() => {

@@ -81,7 +81,15 @@ function DeepReadView({
     id: submissionId,
   });
 
-  const updateItemMutation = trpc.collections.updateItem.useMutation();
+  const utils = trpc.useUtils();
+  const updateItemMutation = trpc.collections.updateItem.useMutation({
+    onSuccess: (_data, variables) => {
+      // Only invalidate when anchor was updated, so Manage view shows fresh data
+      if (variables.readingAnchor !== undefined) {
+        utils.collections.getItems.invalidate({ id: variables.id });
+      }
+    },
+  });
 
   const handleAnchorChange = useCallback(
     (anchor: { nodeIndex: number }) => {

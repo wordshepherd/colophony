@@ -313,7 +313,17 @@ export default function CollectionDetailPage({
                   {items.map((item) => (
                     <div
                       key={item.id}
-                      onClick={() => handleItemClick(item.id)}
+                      onClick={(e) => {
+                        // Only enter reading mode if clicking the card body,
+                        // not action buttons (notes, remove, drag handle)
+                        if (
+                          (e.target as HTMLElement).closest(
+                            "button, [role='button']",
+                          )
+                        )
+                          return;
+                        handleItemClick(item.id);
+                      }}
                       className="cursor-pointer"
                     >
                       <SortableCollectionItem
