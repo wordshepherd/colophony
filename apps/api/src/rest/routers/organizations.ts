@@ -11,6 +11,7 @@ import {
   organizationMemberMutationResponseSchema,
   inviteOrAddResultSchema,
   organizationInvitationSchema,
+  createInvitationSchema,
   acceptInvitationSchema,
   acceptInvitationResultSchema,
   paginatedResponseSchema,
@@ -288,6 +289,47 @@ const invitationsResend = adminProcedure
     }
   });
 
+const invitationsCreate = adminProcedure
+  .use(requireScopes('organizations:write'))
+  .route({
+    method: 'POST',
+    path: '/organizations/{orgId}/invitations',
+    successStatus: 201,
+    summary: 'Create an invitation',
+    description:
+      'Create and send an email invitation to join the organization. Revokes any existing pending invitation for the same email. Requires ADMIN role.',
+    operationId: 'createOrganizationInvitation',
+    tags: ['Invitations'],
+  })
+  .input(orgIdParam.merge(createInvitationSchema))
+  .output(organizationInvitationSchema)
+  .handler(async ({ input, context }) => {
+    assertOrgIdMatch(input.orgId, context.authContext.orgId);
+    const env = validateEnv();
+    try {
+      const svc = toServiceContext(context);
+      const { invitation, plainTextToken } =
+        await invitationService.createWithAudit(
+          svc,
+          input.email,
+          input.roles,
+          input.expiresInDays,
+        );
+      await invitationService.sendInvitationEmail(
+        svc,
+        env,
+        invitation,
+        plainTextToken,
+      );
+      return {
+        ...invitation,
+        roles: invitation.roles,
+      };
+    } catch (e) {
+      mapServiceError(e);
+    }
+  });
+
 const invitationsAccept = userProcedure
   .route({
     method: 'POST',
@@ -483,6 +525,7 @@ export const organizationsRouter = {
   },
   invitations: {
     list: invitationsList,
+    create: invitationsCreate,
     revoke: invitationsRevoke,
     resend: invitationsResend,
     accept: invitationsAccept,
