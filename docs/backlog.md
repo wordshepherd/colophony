@@ -326,6 +326,7 @@
 - [x] [P3] Flakiness and determinism CI checks — run unit tests with retries disabled and `--sequence.shuffle` on at least one CI lane; add quarantine convention (`.flaky.test.ts` suffix or skip marker) and fail PRs that introduce new flaky markers — (Codex feedback 2026-03-03; done 2026-03-04)
 - [x] [P3] Risk-based test matrix — audit coverage per domain (pipeline, federation, workspace, forms) and document minimum test layers per domain (unit + service integration + API route + E2E happy path) in `docs/testing.md`; identify high-risk low-coverage hotspots — (Codex feedback 2026-03-03; done 2026-03-04)
 - [ ] [P3] ESLint 9 → 10 upgrade — blocked by `eslint-plugin-react`, `eslint-plugin-react-hooks`, `eslint-plugin-jsx-a11y` (transitive via `eslint-config-next`); Dependabot canary will signal when unblocked; tracking issue #273 — (2026-03-16); canary verified 2026-03-22 (Dependabot PR #269 failed CI as expected, still blocked by eslint-plugin-react)
+- [ ] [P2] Diagnostic: Codex plan review step dropped from workflow — `/codex-review plan` was not triggered automatically before presenting plan for approval. Likely regressed during CLAUDE.md file consolidation sessions (~2026-03-25). Investigate whether the "Plan Review: Codex Integration" instruction in root CLAUDE.md is still being followed by the model; verify skill/instruction wording hasn't drifted — (2026-03-28, user-reported)
 - [x] [P3] Skill update: /codex-review should auto-add actionable out-of-scope findings to backlog — during both plan review and branch/diff review, any Important+ findings outside the current task scope should be appended to docs/backlog.md automatically — (workflow improvement 2026-03-03; done 2026-03-22 — enhanced /end-session Step 4b with systematic review finding extraction)
 - [x] [P4] Ephemeral DB/queue per test worker — standardize `TestContext` factory for isolated schemas per worker; replace ad-hoc Redis db 1 patching in `vitest-setup.ts`; add explicit contract tests around external boundaries (webhooks, auth, adapters) with fixture replay — (Codex feedback 2026-03-03; closed 2026-03-22 — current isolation via truncateAllTables, Redis db 1, singleFork is adequate)
 - [x] [P4] Manual QA tracking — establish lightweight QA log (structured markdown or checklist) for pre-release smoke tests, exploratory testing sessions, and regression checks; track what was tested, time spent, and issues found — (Codex feedback 2026-03-03; done 2026-03-03)
@@ -483,6 +484,7 @@
 - [x] [P2] CMS external ID tracking — store `externalId`/`externalUrl` returned from CMS publish back on the issue/items — (codebase audit 2026-02-27; done 2026-03-03)
 - [ ] [P3] Additional CMS adapters — Substack, Contentful, or other targets based on early adopter needs — (codebase audit 2026-02-27)
 - [x] [P3] In-browser copyediting or diff view between manuscript versions — (persona gap analysis 2026-02-27; done 2026-03-26 PR pending)
+- [ ] [P2] Copyedit stage manual round-trip — .docx export from ProseMirror JSON, editor shares externally, upload final version back, track stage status + elapsed time. Protocol defined in DESIGN_SYSTEM.md Section 9 — (design system session 2026-03-28)
 - [x] [P3] READER role enforcement — define what READER can and cannot do distinct from EDITOR; currently decorative — (persona gap analysis 2026-02-27; done 2026-03-03)
 - [x] [P3] Email invitation workflow — invite by email link/token instead of requiring pre-existing Zitadel account — (persona gap analysis 2026-02-27; done 2026-03-27 PR pending)
 - [x] [P3] Custom org roles — expanded enum to 5 roles (ADMIN/EDITOR/READER/PRODUCTION/BUSINESS_OPS) with multi-role array, productionProcedure/editorProcedure middleware, role display names in org settings — (persona gap analysis 2026-02-27; done 2026-03-27 PR #369)
@@ -493,6 +495,44 @@
 - [x] [P3] Test `mySubmissionDetail` procedure + writer-context routing in `submission-detail.tsx` — (Codex branch review 2026-03-26; done 2026-03-27)
 - [x] [P3] Service test for `getByIdAsOwner` ownership check and error types — (Codex branch review 2026-03-26; done 2026-03-27)
 - [x] [P2] Collection service unit tests — 24 tests (CRUD, visibility filtering, cross-tenant validation, audit logging, reorder) in `collection.service.spec.ts` — (Codex branch review 2026-03-26; done 2026-03-27)
+- [x] [P2] Reading anchor wiring — ManuscriptRenderer IntersectionObserver tracking, collection detail reading mode, updateCollectionItemSchema + service whitelist, defense-in-depth fix for getItems() submissions join — (design system session 2026-03-28; done 2026-03-28)
+- [ ] [P3] Reading anchor test coverage — unit tests for: readingAnchor persistence in updateItem, org-scoped join predicate in getItems, ManuscriptRenderer anchor restore/callback, collection reading mode UI, scope guard (queue context = no anchor) — (Codex branch review drift 2026-03-28)
+
+---
+
+## Track 13 — Business Operations (Post-Launch)
+
+> **Status:** Planned. Contributor record is the foundational entity; all other items depend on it.
+
+### Code
+
+- [ ] [P1] `contributors` + `contributor_publications` schema — org-scoped contributor entity linking submissions, publications, payments, rights. Columns: display_name, bio, pronouns, website, mailing_address (encrypted), notes — (design system session 2026-03-28)
+- [ ] [P1] `rights_agreements` schema — per-published-piece IP ownership lifecycle (first_north_american_serial, electronic, anthology, audio, translation, custom). Status: draft → sent → signed → active → reverted. Reversion date tracking. Separate from Documenso `contracts` table — (design system session 2026-03-28)
+- [ ] [P1] `payment_transactions` schema — unified payment table with type discriminator (submission_fee, contest_fee, contributor_payment). Extends beyond current submission-fee-only `payments` table — (design system session 2026-03-28)
+- [ ] [P1] `businessOpsProcedure` middleware — BUSINESS_OPS or ADMIN role check, following existing procedure pattern in `apps/api/src/trpc/init.ts` — (design system session 2026-03-28)
+- [ ] [P1] Business Ops nav group + sidebar rendering — new "Business" activity group visible to BUSINESS_OPS/ADMIN with compact density `BusinessLayout` — (design system session 2026-03-28)
+- [ ] [P1] Contributor service + tRPC router — CRUD, link to submissions/users, publication history, detail view with all submissions/publications/payments/rights/correspondence — (design system session 2026-03-28)
+- [ ] [P1] Rights service — lifecycle management, reversion alerts ("3 rights agreements reverting in 30 days"), integration with production pipeline — (design system session 2026-03-28)
+- [ ] [P1] Revenue service — submission fees (existing Stripe), contributor payments, contest prizes, revenue reporting — (design system session 2026-03-28)
+- [ ] [P2] Business Ops dashboard — health card grid pattern with contributor count, outstanding payments, upcoming reversions, revenue summary — (design system session 2026-03-28)
+- [ ] [P2] Editorial analytics dashboard — acceptance rate (overall + by genre/period), response time (avg/median/p90 + trend), pipeline health, genre distribution, contributor diversity, reader alignment — (design system session 2026-03-28)
+- [ ] [P2] Contest management — contest-type submission periods with rounds (`contestGroupId` + `contestRound`), judge assignments, anonymous judging, prize disbursement. Period-scoped guest editor roles deferred — (design system session 2026-03-28)
+
+---
+
+## Track 14 — Writer Platform Enhancements (Post-Launch)
+
+> **Status:** Planned. Some features depend on Track 13 contributor infrastructure (portfolio entries link to `contributor_publications`).
+
+### Code
+
+- [ ] [P1] `simultaneous_submission_groups` schema — user-scoped sim-sub groupings linking native + external submissions of same work. Auto-withdraw prompt on acceptance — (design system session 2026-03-28)
+- [ ] [P1] `portfolio_entries` schema — three types: `colophony_verified` (from contributor_publications), `federation_verified` (future federation sync), `external` (manual). Forward-declares `federation_source_instance` + `federation_entry_id` columns — (design system session 2026-03-28)
+- [ ] [P1] `reader_feedback` schema — org-configurable tags (JSONB), short comment (280 chars), forwardable boolean. Opt-in per org. Anonymous reader identity on forwarded feedback — (design system session 2026-03-28)
+- [ ] [P2] Sim-sub management UI — group creation, linked submission view, auto-withdraw on acceptance at any Colophony magazine, manual withdraw reminder for external submissions — (design system session 2026-03-28)
+- [ ] [P2] Response time transparency — aggregation query over local submission records, displayed on magazine public profile + submission form. `source` field (local vs federated) for future federation data. Org opt-out available — (design system session 2026-03-28)
+- [ ] [P2] Feedback on rejection flow — reader tags/comments during scoring, editor inclusion of anonymized feedback in rejection notice, org-level feature toggle (default off) — (design system session 2026-03-28)
+- [ ] [P3] Writer sidebar updates — Sim-Sub Groups nav item, Portfolio badges (verified/federated/external), Analytics personal response time stats — (design system session 2026-03-28)
 
 ---
 

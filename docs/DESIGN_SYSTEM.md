@@ -41,15 +41,15 @@ Five roles, defined by activity rather than permission level. A single user may 
 
 ### Role-to-permission mapping
 
-Roles map to the existing permission model but reframe the UI:
+Roles map to the five-role permission model (`ADMIN`, `EDITOR`, `READER`, `PRODUCTION`, `BUSINESS_OPS`) with dedicated procedure middleware:
 
-| Role              | Current permission gate         | Notes                               |
-| ----------------- | ------------------------------- | ----------------------------------- |
-| Writer            | Always (any authenticated user) | Absorbs current "Submitter" section |
-| Manuscript Reader | `isEditor` or `isReader`        | First readers / slush readers       |
-| Text Editor       | `isEditor`                      | Full editorial authority            |
-| Production Editor | `isEditor`                      | Slate pipeline access               |
-| Operations Editor | `isAdmin`                       | Org settings, federation, webhooks  |
+| Role              | Permission gate                    | Procedure builder     | Notes                               |
+| ----------------- | ---------------------------------- | --------------------- | ----------------------------------- |
+| Writer            | Always (any authenticated user)    | `authedProcedure`     | Absorbs current "Submitter" section |
+| Manuscript Reader | `EDITOR`, `READER`, or `ADMIN`     | `editorProcedure`     | First readers / slush readers       |
+| Text Editor       | `EDITOR` or `ADMIN`                | `editorProcedure`     | Full editorial authority            |
+| Production Editor | `PRODUCTION`, `EDITOR`, or `ADMIN` | `productionProcedure` | Slate pipeline access               |
+| Operations Editor | `ADMIN`                            | `adminProcedure`      | Org settings, federation, webhooks  |
 
 ### Information architecture per role
 
@@ -123,43 +123,48 @@ The `ManuscriptRenderer` component **ignores density context entirely.** It alwa
 The sidebar is a single, coherent navigation organized by activity group. Groups appear based on the user's role assignments. Clicking a nav item implicitly loads the appropriate layout shell — no explicit mode switching.
 
 ```
-[Recents / Cmd+K jump-to]
-─────────────────────────
+[Cmd+K command palette / jump-to]
+──────────────────────────────────
 
-Writing                          (Writer)
+Writing                          (any authenticated user)
+  Dashboard
+  Manuscripts
   My Submissions
-  Drafts
+  External Subs
   Correspondence
-
-Reading                          (Manuscript Reader)
-  Queue
-  My Reviews
-  Statistics
-
-Editing                          (Text Editor)
-  Desk
-  Recommendations
-  Decisions
-  Correspondence
-
-Production                       (Production Editor)
-  Current Issue
-  Pipeline
-  Assets
-  Author Proofs
-
-Operations                       (Operations Editor)
-  System Health
-  Federation
-  Users & Roles
+  Portfolio
+  Analytics
+  Import
   Settings
-  Logs
+
+Editorial                        (EDITOR / READER / ADMIN)
+  Editor Dashboard
+  Reading Queue
+  All Submissions
+  Collections
+  Forms
+  Periods
+
+Production                       (PRODUCTION / EDITOR / ADMIN)
+  Production Dashboard
+  Publications
+  Pipeline
+  Issues
+  Calendar
+  Contracts
+  CMS
+
+Operations                       (ADMIN)
+  Dashboard
+  Organization
+  Webhooks
+  Federation
 ```
 
 ### Navigation principles
 
 - **Groups are chapters, not applications.** Visual distinction between groups uses subtle spacing and muted labels — not heavy separators. The sidebar should read as one coherent navigation.
-- **Self-configuring.** A writer who is not an editor sees only Writing. An editor who also submits sees Writing + Reading + Editing. No configuration required.
+- **Self-configuring.** A writer who is not an editor sees only Writing. An editor who also submits sees Writing + Editorial. No configuration required. Groups appear based on the user's role assignments (`navGroups` in `navigation.ts`).
 - **URL-driven.** Each nav item is a route. Browser back/forward works naturally. Bookmarkable. Linkable.
 - **Implicit shell transition.** Navigating from a Writing page to a Reading page changes the layout shell (and therefore density context) via the route's layout component — a Next.js layout boundary, not a mode toggle.
 
@@ -357,7 +362,7 @@ Render manuscripts like literature. Editors at literary magazines have strong op
 
 | Property        | Prose                                                  | Poetry                                          | Creative Nonfiction               |
 | --------------- | ------------------------------------------------------ | ----------------------------------------------- | --------------------------------- |
-| **Typeface**    | High-quality serif (Literata, Source Serif, or Lora)   | Same serif family                               | Same serif family                 |
+| **Typeface**    | Literata                                               | Literata                                        | Literata                          |
 | **Line height** | 1.6-1.7                                                | 1.5-1.6                                         | 1.6-1.7                           |
 | **Measure**     | Max 65ch                                               | Tighter (poems rarely reach 65ch)               | Max 65ch                          |
 | **Margins**     | Optical margins, generous                              | Extra breathing room around the poem            | Optical margins                   |
@@ -401,15 +406,32 @@ Editors cannot adjust:
 
 The reading experience should have a strong house opinion. If every editor configures a completely different environment, the platform loses its identity and creates a support surface where rendering bugs entangle with personal configuration.
 
-### Manuscript intermediate format
+### Manuscript intermediate format: ProseMirror JSON with custom nodes
 
-Writers submit in various formats (.doc, .docx, .pdf, .rtf, plain text). The conversion pipeline must:
+TipTap/ProseMirror is already in the stack. Rather than inventing a new format, the intermediate representation is ProseMirror JSON extended with custom node types that encode literary semantics.
+
+**Nodes:**
+
+- `paragraph` (with indent behavior), `section_break`, `block_quote` — prose structure
+- `poem_line`, `stanza_break`, `preserved_indent` (with indent depth attribute), `caesura` — poetry structure
+
+**Marks:**
+
+- `emphasis`, `strong`, `small_caps` — inline formatting
+- `smart_text` (with `original` attribute, enabling the "show as submitted" toggle)
+
+**Document-level attributes:**
+
+- `genre_hint` — prose, poetry, hybrid, or creative_nonfiction
+- `submission_metadata` — carries original filename and format
+
+The conversion pipeline (.docx, .rtf, .pdf, plain text) targets this schema. The `ManuscriptRenderer` only ever consumes ProseMirror JSON — it has no plain-text code path. The client-side `textToProseMirrorDoc()` shim converts legacy plain-text content into basic ProseMirror structure so existing submissions get typography improvements immediately.
+
+Writers submit in various formats. The conversion pipeline must:
 
 1. Preserve authorial intent (especially for poetry — tab-based and space-based indentation must produce identical output)
-2. Normalize into a **structured intermediate format** (constrained HTML subset or custom AST)
+2. Normalize into ProseMirror JSON using the node and mark types above
 3. Give the renderer a stable input regardless of source format
-
-This intermediate format is one of the hardest technical problems in the platform and should be designed carefully before implementation.
 
 ---
 
@@ -464,6 +486,24 @@ Current Issue: [Issue name] — [Publication date] — [N pieces, M on track, K 
 | Memory Palace   | Copyedit           |             2 | Mar 30    | ON TRACK  |          |
 | After the Rain  | Layout             |             0 | Apr 2     | BLOCKED   | Art      |
 ```
+
+### Copyedit stage protocol
+
+**Colophony owns the manuscript lifecycle but doesn't mandate the tools used at every stage.**
+
+The copyedit phase is defined as a **protocol, not an implementation:**
+
+- **Entry point:** Export from ProseMirror JSON to the editorial team's preferred format (.docx is the expected default). The export must preserve structural semantics — especially poetry line breaks, indentation, and section breaks.
+- **Exit point:** Import back from the edited document to ProseMirror JSON. The import must handle track-changes artifacts gracefully (accept all changes on import, or preserve change history as annotations — decide during implementation).
+- **The middle is the editorial team's choice.** The platform tracks the copyedit stage status (assigned, in progress, awaiting author review, complete) and who the document was sent to, but does not prescribe the editing tool.
+
+**Implementation tiers (build in order):**
+
+1. **Manual round-trip (build now):** Editor clicks "Send to copyedit." Platform exports .docx, editor shares it however they want (email, Google Drive, etc.), then uploads the final version back. Platform tracks stage status and elapsed time.
+2. **Google Docs integration (future, optional connector):** Platform creates a Google Doc from the export, shares it with the author, monitors for completion, imports the final version back automatically.
+3. **Built-in TipTap editor (future, optional):** For magazines that want the fully integrated experience. Collaborative editing via ProseMirror's collaboration framework. Only build if demonstrated demand.
+
+**Architectural constraint:** ProseMirror JSON is the canonical format at every stage. External tools borrow the content for editing; the platform always holds the source of truth.
 
 ---
 
@@ -596,43 +636,46 @@ Visual emphasis on elapsed time. Color-coding:
 
 ---
 
-## 13. Migration Path from Current Architecture
+## 13. Implementation Status
 
-### Current state -> Target state
+All design system features have been implemented. This section tracks what was built and where it lives.
 
-| Current                                                                       | Target                                                                | Migration                                                       |
-| ----------------------------------------------------------------------------- | --------------------------------------------------------------------- | --------------------------------------------------------------- |
-| 5 sidebar sections (My Writing, Submissions & Settings, Editor, Slate, Admin) | 5 activity groups (Writing, Reading, Editing, Production, Operations) | Reorganize sidebar; merge Submissions into Writing              |
-| `isEditor` / `isAdmin` binary gates                                           | Same permission gates, reframed as role-hat membership                | No backend changes needed initially                             |
-| Single page layout for all views                                              | Per-group layout shells with DensityProvider                          | Introduce layout shell components; wrap existing pages          |
-| Monolithic editor queue                                                       | Split pane with triage/deep-read modes                                | Major refactor of `editor-submission-queue.tsx`                 |
-| Status badges with full internal state                                        | Role-filtered projections                                             | Add projection layer; backend API returns role-appropriate data |
-| Table-based Slate pipeline                                                    | Issue-centric production dashboard                                    | New dashboard design (prototype first)                          |
-| Basic admin pages                                                             | Ops dashboard with health indicators                                  | New dashboard design                                            |
-| No editor workspace                                                           | Collections primitive (workspace_collections + workspace_items)       | New schema + service + UI                                       |
-| No manuscript rendering strategy                                              | Genre-aware ManuscriptRenderer with intermediate format               | New component + conversion pipeline                             |
-| No keyboard shortcuts                                                         | Shell-scoped shortcut system                                          | New keyboard hook + per-shell bindings                          |
-| No density system                                                             | DensityProvider + useDensity() + component variants                   | New context + incremental component updates                     |
+| Feature                                                                 | Status | Key files                                                                                                |
+| ----------------------------------------------------------------------- | ------ | -------------------------------------------------------------------------------------------------------- |
+| Sidebar: 4 activity groups (Writing, Editorial, Production, Operations) | Done   | `src/lib/navigation.ts`, `src/components/layout/sidebar.tsx`                                             |
+| 5-role permission model (ADMIN/EDITOR/READER/PRODUCTION/BUSINESS_OPS)   | Done   | `packages/types/src/organization.ts`, `apps/api/src/trpc/init.ts`                                        |
+| DensityProvider + useDensity()                                          | Done   | `src/hooks/use-density.tsx`                                                                              |
+| Per-group layout shells with density                                    | Done   | `src/app/(dashboard)/*/layout.tsx`                                                                       |
+| Editorial split pane (triage + deep-read)                               | Done   | `src/components/editor/editorial-split-pane.tsx`, `triage-list.tsx`, `queue-rail.tsx`, `detail-pane.tsx` |
+| ManuscriptRenderer (genre-aware, Literata font)                         | Done   | `src/components/manuscripts/manuscript-renderer.tsx`                                                     |
+| Smart typography pipeline (curly quotes, em dashes, ellipses)           | Done   | `apps/api/src/converters/smart-typography.ts`                                                            |
+| Content conversion (DOCX/text to ProseMirror JSON)                      | Done   | `apps/api/src/converters/`                                                                               |
+| Writer state projection + org-configurable labels                       | Done   | `packages/types/src/writer-status.ts`                                                                    |
+| Editor/writer status badges (density-responsive)                        | Done   | `src/components/submissions/status-badge.tsx`, `writer-status-badge.tsx`                                 |
+| Collections primitive (workspace_collections + items)                   | Done   | `packages/db/src/schema/workspace-collections.ts`, `src/components/editor/collections/`                  |
+| Keyboard shortcuts (shell-scoped, j/k/r/Esc)                            | Done   | `src/hooks/use-shortcuts.ts`                                                                             |
+| Command palette (Cmd+K) + shortcut overlay (?)                          | Done   | `src/components/command-palette/`                                                                        |
+| Issue-centric production dashboard                                      | Done   | `src/app/(dashboard)/slate/`                                                                             |
+| Ops dashboard (health card grid)                                        | Done   | `src/app/(dashboard)/operations/`                                                                        |
+| Manuscript diff (word-level version comparison)                         | Done   | `src/components/manuscripts/manuscript-diff.tsx`                                                         |
+| Mobile navigation (hamburger menu for writer views)                     | Done   | `src/components/layout/`                                                                                 |
 
-### Suggested implementation order
+| Content-anchored reading position (`reading_anchor`) | Done | `workspace_items.readingAnchor`, `ManuscriptRenderer` IntersectionObserver, collection detail reading mode |
+| Collection reading mode | Done | `/editor/collections/[id]` click-to-read with item rail + detail pane |
 
-**Step 0 (parallel foundations):**
+### Planned features
 
-- **0a. DensityProvider + useDensity()** — UI foundation. No visible change, but enables everything else.
-- **0b. Manuscript intermediate format design** — Data foundation. Design the structured format (constrained HTML or AST), prototype the conversion pipeline for at least .docx and plain text. This is a prerequisite for the editorial split pane (step 2) — if you build the split pane first with raw manuscript display, you'll retrofit the renderer later and touch every integration point twice.
-
-These are independent workstreams that can happen in parallel.
-
-**Sequential steps:**
-
-1. **Layout shells** — Wrap existing pages in role-appropriate shells. Sidebar reorganization.
-2. **Editorial split pane + ManuscriptRenderer** — Triage/deep-read modes. Genre-aware typography. Depends on both 0a (density) and 0b (intermediate format).
-3. **State projections** — Role-filtered status display. Org-configurable writer names.
-4. **Collections primitive** — Editor workspace/desk. Schema + service + UI.
-5. **Keyboard shortcuts** — Shell-scoped bindings.
-6. **Production data model + dashboard** — Schema design first, then issue-centric view. Prototype before committing to a layout.
-7. **Ops dashboard** — Health card grid. Federation views.
-8. **Command palette** — Cmd+K jump-to across all sections.
+| Feature                                         | Status  | Notes                                                                  |
+| ----------------------------------------------- | ------- | ---------------------------------------------------------------------- |
+| Business Ops sidebar group + contributor record | Planned | BUSINESS_OPS role exists; contributor, rights, revenue tables + UI     |
+| Copyedit stage protocol (manual round-trip)     | Planned | .docx export/import, stage status tracking                             |
+| Contest and special issue management            | Planned | Contest-type submission periods with rounds, anonymous judging, prizes |
+| Editorial analytics dashboard                   | Planned | Acceptance rate, response time, pipeline health, genre distribution    |
+| Writer sim-sub management                       | Planned | Sim-sub groups, auto-withdraw on acceptance                            |
+| Reader feedback on rejection (opt-in)           | Planned | Org-configurable tags, forwardable comments                            |
+| Publication portfolio entries table             | Planned | `colophony_verified`, `federation_verified`, `external` types          |
+| Response time transparency                      | Planned | Aggregation queries, public display, `source` field for federation     |
+| Federation-native writer data sync              | Planned | Three-source model documented in Section 15                            |
 
 ---
 
@@ -661,19 +704,61 @@ However, **writers absolutely check submission status on mobile.** The writer ex
 
 ---
 
+## 15. Federation-Native Writer Data
+
+Writer-facing features — submission tracking, publication portfolio, response time transparency — are not designed around any specific external integration. They are **federation-native**, built on Colophony's existing federation architecture.
+
+### Three-source model
+
+All writer-facing data has three first-class sources:
+
+| Source                  | Origin                          | Provenance                                                                         | Example                                             |
+| ----------------------- | ------------------------------- | ---------------------------------------------------------------------------------- | --------------------------------------------------- |
+| **Local**               | Writer's own Colophony instance | Auto-tracked from submissions and publications                                     | Submission to Magazine A (native Colophony org)     |
+| **Federation-reported** | Federated peer instances        | Carries `federation_source_instance` + `federation_entry_id` for dedup/attribution | Publication credit reported by a federated peer hub |
+| **Manual**              | Entered by the writer           | No provenance metadata                                                             | External submission logged by the writer            |
+
+### Hub architecture
+
+Any managed Colophony instance can serve as a **hub** — an instance that aggregates data from federated peers. The first hub will be the managed Colophony-as-a-service offering. External directories (e.g., Chill Subs) would connect as federated hub peers, bringing their existing magazine directory and response time data into the network as a peer, not as a privileged integration.
+
+**There is no special external API.** When an external directory connects, it's a federated peer that happens to have a large magazine directory. Data flows through the same federation protocol as any other peer. Any hub can aggregate. Multiple hubs can coexist.
+
+### Forward declarations in schema
+
+To avoid migrations when federation sync arrives, the following are present in the schema before the federation sync protocol is implemented:
+
+- **Portfolio entries:** `federation_verified` type alongside `colophony_verified` and `external`. The `federation_source_instance` and `federation_entry_id` columns exist but no code writes to them yet.
+- **Response time data:** API response shapes include a `source` field (local vs federated) so the frontend can distinguish data origins when federation data arrives.
+- **Submission tracker:** The `external_submissions` table is for manual entries only. Federation-reported submissions will arrive through a separate federation sync path with provenance metadata that manual entries don't carry.
+
+### Impact on writer features
+
+| Feature                   | Local                                                        | Manual                        | Federation (future)                                         |
+| ------------------------- | ------------------------------------------------------------ | ----------------------------- | ----------------------------------------------------------- |
+| **Submission tracker**    | Auto-tracked from native submissions                         | `external_submissions` table  | Federation sync (separate path, not `external_submissions`) |
+| **Publication portfolio** | `colophony_verified` entries from `contributor_publications` | `external` entries (no badge) | `federation_verified` entries (federated badge)             |
+| **Response time**         | Aggregation query over local submission records              | N/A                           | Peer-reported stats with `source: "federated"`              |
+
+### Design principle
+
+> There is no Chill Subs-specific code path — there is federation, and Chill Subs is a participant.
+
+---
+
 ## Appendix A: Design Decision Log
 
 | Decision               | Choice                                                      | Rationale                                                                                                                                                                           |
 | ---------------------- | ----------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Density mechanism      | Layout shells with DensityProvider context                  | Shell -> context -> component gets dependency direction right. Role determines density, not per-component props.                                                                    |
-| Navigation model       | Unified sidebar grouped by activity                         | Roles are hats worn simultaneously, not modes. Avoids ceremony of mode-switching. Route-driven shell transitions.                                                                   |
+| Navigation model       | Unified sidebar with 4 activity groups                      | Reading + Editing merged into "Editorial" — split wasn't justified by distinct nav items. Route-driven shell transitions.                                                           |
 | Editor UX model        | Split pane with collapsible list + deep-read mode           | Editors read literature, not emails. The reading pane needs room to breathe. Triage and deep-read are different cognitive modes.                                                    |
 | State visibility       | Role-filtered projections                                   | Writers must not see internal editorial states. Each role sees only states relevant to their decision authority.                                                                    |
 | Writer-facing statuses | Org-configurable names                                      | Different magazines have different transparency cultures. Editorial voice decision, not software decision.                                                                          |
 | Editor workspace       | Generic collection primitive                                | One primitive (named, ordered, annotated collection) replaces holds, bookmarks, comparison sets, reading lists. Let editorial culture determine usage.                              |
 | Typography             | Genre-aware with strong house opinion                       | Render literature like literature. Constrained editor preferences (size, theme, line-height) around exceptional defaults.                                                           |
 | Production view        | Issue-centric with time-visible pipeline                    | Production thinks in issues and deadlines, not submissions. Time pressure must be visible. Prototype multiple approaches.                                                           |
-| Manuscript storage     | Structured intermediate format (constrained HTML or AST)    | Decouple rendering from source format (.docx, .pdf). Preserve authorial intent. Hardest technical problem — design carefully.                                                       |
+| Manuscript storage     | ProseMirror JSON with custom literary nodes and marks       | Decouple rendering from source format (.docx, .pdf). Preserve authorial intent. TipTap/ProseMirror already in the stack — extend rather than invent.                                |
 | Private notes          | Always invisible to writers, no toggle                      | An editor's desk reasoning is never submitter-facing. Making it configurable invites mistakes.                                                                                      |
 | Reading position       | Content-anchored (paragraph/char offset), not scroll offset | Scroll offsets break on any layout change (font size, resize, browser update). Content anchors are stable across rendering contexts.                                                |
 | Smart typography       | On by default, bypass per submission, store both forms      | Some writers use straight quotes or double hyphens intentionally. Storing both normalized and original in the intermediate format makes normalization reversible without data loss. |
