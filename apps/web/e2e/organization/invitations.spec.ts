@@ -19,7 +19,6 @@ test.describe("Email Invitations — Admin Side", () => {
   test("invite non-existing user shows 'Invitation sent' toast", async ({
     authedPage,
     seedOrg,
-    seedAdmin,
   }) => {
     const email = `nobody-${Date.now()}@test.example.com`;
 
@@ -72,11 +71,6 @@ test.describe("Email Invitations — Admin Side", () => {
       authedPage.getByRole("heading", { name: "Pending Invitations" }),
     ).toBeVisible();
 
-    // Check column headers
-    const pendingSection = authedPage.locator("section").filter({
-      has: authedPage.getByRole("heading", { name: "Pending Invitations" }),
-    });
-
     // Verify the row data
     const row = authedPage.getByRole("row").filter({ hasText: email });
     await expect(row).toBeVisible();
@@ -126,7 +120,7 @@ test.describe("Email Invitations — Admin Side", () => {
     seedAdmin,
   }) => {
     const email = `resend-target-${Date.now()}@test.example.com`;
-    const { id: invitationId } = await createInvitation({
+    await createInvitation({
       orgId: seedOrg.id,
       email,
       roles: ["READER"],
@@ -156,7 +150,7 @@ test.describe("Email Invitations — Admin Side", () => {
     seedAdmin,
   }) => {
     const email = `reinvite-target-${Date.now()}@test.example.com`;
-    const { id: invitationId } = await createInvitation({
+    await createInvitation({
       orgId: seedOrg.id,
       email,
       roles: ["READER"],
