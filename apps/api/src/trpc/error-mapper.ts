@@ -229,6 +229,29 @@ const errorCodeMap: [new (...args: never[]) => Error, TRPCErrorCode][] = [
 ];
 
 /**
+ * Extract a PostgreSQL error from a raw PG error or a Drizzle-wrapped error.
+ * Drizzle ORM wraps PG errors in a plain Error with the original in `.cause`.
+ */
+function extractPgError(
+  error: unknown,
+): { code: string; detail?: string } | null {
+  if (
+    typeof error === 'object' &&
+    error !== null &&
+    'code' in error &&
+    typeof (error as { code: unknown }).code === 'string'
+  ) {
+    const e = error as { code: string; detail?: string };
+    if (/^\d{5}$/.test(e.code)) return e;
+  }
+  // Drizzle wraps PG errors in .cause
+  if (error instanceof Error && error.cause) {
+    return extractPgError(error.cause);
+  }
+  return null;
+}
+
+/**
  * Map a domain error thrown by a service method to a {@link TRPCError}.
  *
  * - Known domain errors → appropriate tRPC code with the original message.
@@ -269,18 +292,12 @@ export function mapServiceError(error: unknown): never {
     }
   }
 
-  // PostgreSQL unique violation
-  if (
-    typeof error === 'object' &&
-    error !== null &&
-    'code' in error &&
-    (error as { code: string }).code === '23505'
-  ) {
+  // PostgreSQL unique violation (direct PG error or Drizzle-wrapped)
+  const pgError = extractPgError(error);
+  if (pgError?.code === '23505') {
     throw new TRPCError({
       code: 'CONFLICT',
-      message:
-        (error as { detail?: string }).detail ??
-        'A record with this value already exists',
+      message: pgError.detail ?? 'A record with this value already exists',
     });
   }
 
