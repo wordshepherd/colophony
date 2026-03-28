@@ -435,6 +435,13 @@
       "when": 1781400000000,
       "tag": "0061_organization_invitations",
       "breakpoints": true
+    },
+    {
+      "idx": 62,
+      "version": "7",
+      "when": 1781600000000,
+      "tag": "0062_fix_accept_invitation_ambiguous_column",
+      "breakpoints": true
     }
   ]
 }

@@ -222,6 +222,14 @@ If updates are warranted, propose them:
 
 Ask the user if they want to apply the suggestions before proceeding.
 
+### Step 5.5: Pre-flight validation
+
+Run `/pre-pr` to catch type errors, lint violations, and test failures before the PR. This runs type-check, lint, and unit tests, fixing any issues found.
+
+- If `/pre-pr` applies fixes, those fixes become part of the doc commit (Step 6) or get their own commit if they touch code files.
+- If `/pre-pr` reports blocking issues that can't be auto-fixed, stop and ask the user before proceeding.
+- **Skip this step** if the session had no code changes (doc-only update) or the user explicitly says to skip validation.
+
 ### Step 6: Commit doc updates
 
 This is the **final commit** on the branch. Stage all doc changes:

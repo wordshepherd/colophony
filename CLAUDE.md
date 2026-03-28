@@ -20,7 +20,7 @@ API layer and plugin system use the `@colophony/` prefix directly.
 
 ---
 
-## Quick Reference: Key File Locations
+## Key File Locations
 
 Per-directory CLAUDE.md files contain domain-specific details:
 
@@ -28,110 +28,7 @@ Per-directory CLAUDE.md files contain domain-specific details:
 - **`apps/api/CLAUDE.md`** — Hook registration, tRPC procedures, auth, webhooks
 - **`apps/web/CLAUDE.md`** — tRPC client, providers, auth utilities, conventions
 
-| What                       | Path                                                                                        |
-| -------------------------- | ------------------------------------------------------------------------------------------- |
-| **Drizzle schema**         | `packages/db/src/schema/` (one file per table group)                                        |
-| **Drizzle migrations**     | `packages/db/migrations/`                                                                   |
-| **Drizzle client**         | `packages/db/src/client.ts`                                                                 |
-| **RLS context**            | `packages/db/src/context.ts` (`withRls()`)                                                  |
-| **Shared Zod schemas**     | `packages/types/src/`                                                                       |
-| **Zitadel auth client**    | `packages/auth-client/src/`                                                                 |
-| **Fastify app entry**      | `apps/api/src/main.ts`                                                                      |
-| **Fastify hooks**          | `apps/api/src/hooks/` (auth, rate-limit, org-context, db-context, audit)                    |
-| **Service layer**          | `apps/api/src/services/`                                                                    |
-| **tRPC (internal)**        | `apps/api/src/trpc/`                                                                        |
-| **Zitadel webhook**        | `apps/api/src/webhooks/zitadel.webhook.ts`                                                  |
-| **Stripe webhook**         | `apps/api/src/webhooks/stripe.webhook.ts`                                                   |
-| **Documenso webhook**      | `apps/api/src/webhooks/documenso.webhook.ts`                                                |
-| **Inngest functions**      | `apps/api/src/inngest/`                                                                     |
-| **Adapter registry**       | `apps/api/src/adapters/registry-accessor.ts` (module-level singleton)                       |
-| **Config builder**         | `apps/api/src/colophony.config.ts` (maps env → adapter init)                                |
-| **SDK adapters**           | `apps/api/src/adapters/{email,storage,payment}/` (SDK-compatible)                           |
-| **CMS adapters**           | `apps/api/src/adapters/cms/`                                                                |
-| **Federation discovery**   | `apps/api/src/federation/discovery.routes.ts`                                               |
-| **Federation DID**         | `apps/api/src/federation/did.routes.ts`                                                     |
-| **Federation service**     | `apps/api/src/services/federation.service.ts`                                               |
-| **Federation trust**       | `apps/api/src/federation/trust.routes.ts` (S2S), `trust-admin.routes.ts`                    |
-| **Trust service**          | `apps/api/src/services/trust.service.ts`                                                    |
-| **HTTP signatures**        | `apps/api/src/federation/http-signatures.ts`                                                |
-| **Federation auth**        | `apps/api/src/federation/federation-auth.ts` (S2S signature middleware)                     |
-| **Sim-sub (BSAP)**         | `apps/api/src/federation/simsub.routes.ts` (S2S), `simsub-admin.routes.ts`                  |
-| **Sim-sub service**        | `apps/api/src/services/simsub.service.ts`                                                   |
-| **Fingerprint service**    | `apps/api/src/services/fingerprint.service.ts`                                              |
-| **Transfer routes**        | `apps/api/src/federation/transfer.routes.ts` (S2S), `transfer-admin.routes.ts`              |
-| **Transfer service**       | `apps/api/src/services/transfer.service.ts`                                                 |
-| **Migration routes**       | `apps/api/src/federation/migration.routes.ts` (S2S), `migration-admin.routes.ts`            |
-| **Migration service**      | `apps/api/src/services/migration.service.ts`, `migration-bundle.service.ts`                 |
-| **Hub routes**             | `apps/api/src/federation/hub.routes.ts` (S2S), `hub-admin.routes.ts`                        |
-| **Hub auth**               | `apps/api/src/federation/hub-auth.ts` (S2S hub auth middleware)                             |
-| **Hub service**            | `apps/api/src/services/hub.service.ts`                                                      |
-| **Hub client service**     | `apps/api/src/services/hub-client.service.ts`                                               |
-| **Analytics service**      | `apps/api/src/services/submission-analytics.service.ts`                                     |
-| **Analytics components**   | `apps/web/src/components/analytics/` (charts, filters, dashboard page)                      |
-| **Portfolio service**      | `apps/api/src/services/portfolio.service.ts` (cross-org UNION ALL, status maps)             |
-| **Writer analytics svc**   | `apps/api/src/services/writer-analytics.service.ts` (personal stats/charts)                 |
-| **Writer analytics UI**    | `apps/web/src/components/workspace/writer-*` (analytics page + chart components)            |
-| **Next.js frontend**       | `apps/web/`                                                                                 |
-| **tRPC client**            | `apps/web/src/lib/trpc.ts`                                                                  |
-| **Env config (Zod)**       | `apps/api/src/config/env.ts`                                                                |
-| **Plugin SDK**             | `packages/plugin-sdk/src/` (adapters, hooks, config, plugin-base, testing)                  |
-| **OpenAPI spec**           | `sdks/openapi.json` (exported from running API, 67 paths, 15 tag groups)                    |
-| **TypeScript SDK**         | `sdks/typescript/` (`@colophony/sdk` — openapi-fetch + generated types)                     |
-| **Python SDK**             | `sdks/python/` (`colophony` — openapi-python-client generated)                              |
-| **SDK generation**         | `scripts/generate-sdks.ts` (regenerate both SDKs from committed spec)                       |
-| **SSRF validation**        | `apps/api/src/lib/url-validation.ts` (validateOutboundUrl, isPrivateIPv4/v6)                |
-| **Sentry config**          | `apps/api/src/config/sentry.ts` (init, captureException, isSentryEnabled)                   |
-| **Metrics registry**       | `apps/api/src/config/metrics.ts` (Prometheus counters, histograms, gauges)                  |
-| **Metrics plugin**         | `apps/api/src/hooks/metrics.ts` (Fastify plugin — HTTP request instrumentation)             |
-| **Instrumented worker**    | `apps/api/src/config/instrumented-worker.ts` (BullMQ wrapper with metrics)                  |
-| **Webhook health**         | `apps/api/src/webhooks/webhook-health.route.ts`                                             |
-| **Ops tRPC router**        | `apps/api/src/trpc/routers/ops.ts` (queueHealth, webhookProviderHealth, submissionTrend)    |
-| **Ops dashboard**          | `apps/web/src/components/operations/ops-dashboard.tsx` (health card grid + quick links)     |
-| **Health card grid**       | `apps/web/src/components/operations/health-card-grid.tsx` (4-card status derivation)        |
-| **Alert rules**            | `docker/prometheus/alert-rules.yml`                                                         |
-| **AlertManager config**    | `docker/alertmanager/alertmanager.yml`                                                      |
-| **Loki config**            | `docker/loki/loki-config.yml` (dev), `loki-config.prod.yml` (prod)                          |
-| **Promtail config**        | `docker/promtail/promtail-config.yml`                                                       |
-| **Grafana dashboards**     | `docker/grafana/dashboards/` (API metrics + logs exploration)                               |
-| **CLI: webhook health**    | `scripts/webhook-health.sh` (query `/webhooks/health`, formatted status)                    |
-| **CLI: log query**         | `scripts/grafana-query.sh` (Loki logs + AlertManager alerts)                                |
-| **CLI: container logs**    | `scripts/server-logs.sh` (tail/search Docker logs, local or SSH)                            |
-| **CLI: Sentry issues**     | `scripts/sentry-issues.sh` (list Sentry issues via API)                                     |
-| **CLI: Zitadel admin**     | `scripts/zitadel-admin.sh` (users, orgs, sessions, health)                                  |
-| **Gateway config**         | `gateway/Caddyfile` (Caddy reverse proxy — routing, security headers, maintenance page)     |
-| **Gateway Dockerfile**     | `gateway/Dockerfile`                                                                        |
-| **Uptime workflow**        | `.github/workflows/uptime.yml` (cron health checks, issue-based alerting)                   |
-| **Writer workspace**       | `packages/db/src/schema/writer-workspace.ts`                                                |
-| **CSR types**              | `packages/types/src/csr.ts`                                                                 |
-| **CSR service**            | `apps/api/src/services/csr.service.ts` (export/import for data portability)                 |
-| **CSR format spec**        | `docs/csr-format.md`                                                                        |
-| **Backlog**                | `docs/backlog.md` (track-organized, drives session focus)                                   |
-| **Design system**          | `docs/DESIGN_SYSTEM.md` (roles, density, navigation, typography, migration path)            |
-| **Manuscript format**      | `docs/manuscript-format.md` (ProseMirror JSON schema, conversion pipeline)                  |
-| **Density provider**       | `apps/web/src/hooks/use-density.tsx` (DensityProvider + useDensity hook)                    |
-| **Layout shells**          | `apps/web/src/app/(dashboard)/{editor,slate,federation,webhooks,organizations}/layout.tsx`  |
-| **Split pane**             | `apps/web/src/components/editor/editorial-split-pane.tsx` (triage/deep-read orchestrator)   |
-| **ManuscriptRenderer**     | `apps/web/src/components/manuscripts/manuscript-renderer.tsx` (genre-aware typography)      |
-| **ManuscriptEditor**       | `apps/web/src/components/manuscripts/manuscript-editor.tsx` (TipTap copyedit editor)        |
-| **ManuscriptDiff**         | `apps/web/src/components/manuscripts/manuscript-diff.tsx` (word-level diff view)            |
-| **TipTap manuscript ext**  | `apps/web/src/lib/tiptap-manuscript-extensions.ts` (custom nodes/marks + converters)        |
-| **Production dashboard**   | `apps/web/src/components/slate/production-dashboard.tsx` (issue-centric pipeline overview)  |
-| **Production aging**       | `apps/web/src/components/slate/production-aging.ts` (aging status, deadline, handoff utils) |
-| **Keyboard shortcuts**     | `apps/web/src/hooks/use-shortcuts.ts` (shell-scoped shortcut hook)                          |
-| **Command palette**        | `apps/web/src/components/command-palette/command-palette.tsx` (Cmd+K global nav)            |
-| **Shortcut overlay**       | `apps/web/src/components/command-palette/shortcut-overlay.tsx` (? key help dialog)          |
-| **Shared navigation**      | `apps/web/src/lib/navigation.ts` (nav items + groups, shared by sidebar + palette)          |
-| **Platform utilities**     | `apps/web/src/lib/platform.ts` (isMac, modifierKey, modifierSymbol)                         |
-| **ProseMirror types**      | `packages/types/src/prosemirror.ts` (shared), `apps/web/src/lib/manuscript.ts` (converter)  |
-| **Content converters**     | `apps/api/src/converters/` (text, docx, smart-typography, format router)                    |
-| **Content extract queue**  | `apps/api/src/queues/content-extract.queue.ts`                                              |
-| **Content extract worker** | `apps/api/src/workers/content-extract.worker.ts` (4-phase extraction)                       |
-| **Content extract svc**    | `apps/api/src/services/content-extraction.service.ts`                                       |
-| **Literata font**          | `apps/web/src/lib/fonts.ts` (variable font with optical sizing)                             |
-| **QA log**                 | `docs/qa-log.md`                                                                            |
-| **Release checklist**      | `docs/release-checklist.md`                                                                 |
-
-Full project structure: [docs/architecture.md](docs/architecture.md)
+Full file index: [docs/file-index.md](docs/file-index.md) | Project structure: [docs/architecture.md](docs/architecture.md)
 
 ---
 
@@ -165,15 +62,13 @@ Summary: Zitadel handles all authentication. API validates tokens via Fastify `o
 
 ### 3. File Uploads (tusd)
 
-Client → tusd sidecar (chunked, resumable) → pre-create hook validates → post-finish hook creates record → BullMQ → ClamAV scan → clean/quarantine.
-
-Unchanged from v1. Uses tus-js-client on frontend, tusd sidecar in Docker Compose.
+Client → tusd sidecar (chunked, resumable) → pre-create hook validates → post-finish hook creates record → BullMQ → ClamAV scan → clean/quarantine. Uses tus-js-client on frontend, tusd sidecar in Docker Compose.
 
 ### 4. Payments (Stripe Checkout)
 
 **See `apps/api/CLAUDE.md`** for PCI NEVER list and webhook idempotency patterns.
 
-Summary: Stripe Checkout only (zero PCI scope). Webhook handler built with two-step idempotency (INSERT event, check `processed` status). PCI guardrails enforced: never log card numbers or store card data.
+Summary: Stripe Checkout only (zero PCI scope). Two-step idempotency (INSERT event, check `processed` status). Never log card numbers or store card data.
 
 ### 5. Frontend
 
@@ -185,41 +80,31 @@ Summary: Stripe Checkout only (zero PCI scope). Webhook handler built with two-s
 
 Domain-specific quirks are in per-directory CLAUDE.md files. Cross-cutting quirks below:
 
-| Quirk                                                 | Details                                                                                                                                                                                                                                                                                                                                                                                                                           |
-| ----------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Docker Compose env_file**                           | `env_file:` sets container env only. For YAML `${VAR}` substitution, use `--env-file .env` on CLI                                                                                                                                                                                                                                                                                                                                 |
-| **PostgreSQL init-db.sh**                             | Only runs on first DB creation. Must `docker compose down -v` to re-run after changes                                                                                                                                                                                                                                                                                                                                             |
-| **PgBouncer: migrations must bypass**                 | `drizzle-kit` and `pnpm db:migrate` use `DATABASE_URL` (direct port 5432). Only `DATABASE_APP_URL` routes through PgBouncer (port 6432). `SET LOCAL` is required (not `SET`) — transaction pooling reuses server connections                                                                                                                                                                                                      |
-| **WSL husky hooks need nvm PATH**                     | Husky v9 runs hooks under `sh`/`dash`; `nvm.sh` can't be sourced. Hooks add nvm node bin to PATH directly. `lint-staged` called without `npx`                                                                                                                                                                                                                                                                                     |
-| **CI: workspace deps need build before Vitest**       | Vitest resolves workspace packages via `exports` field (pointing to `dist/`). CI must build deps before running tests                                                                                                                                                                                                                                                                                                             |
-| **`drizzle-kit generate` TUI blocks automation**      | Interactive prompts (rename vs create) use a TUI that ignores piped stdin. Write manual migrations in non-interactive shells; snapshot files may need regeneration interactively                                                                                                                                                                                                                                                  |
-| **Playwright `webServer.env` replaces `process.env`** | `webServer.env` **replaces** (not merges) the child process environment. Must load `.env` files via `dotenv` and spread `...process.env` to ensure `DATABASE_URL` etc. reach dev servers                                                                                                                                                                                                                                          |
-| **Zitadel issuer ± trailing slash**                   | Zitadel v4.10.1 omits trailing slash in JWT `iss` claim. JWKS verifier uses array issuer `[base, base + "/"]` to match both. Don't normalize to one form                                                                                                                                                                                                                                                                          |
-| **hivemind for dev servers**                          | `pnpm dev` uses hivemind (single Go binary, no tmux). Install `hivemind`. Turbo stays for builds; hivemind replaces it for persistent dev servers only. Use `pnpm dev:clean` to kill orphans if hivemind crashes. No per-process `connect`/`restart` — use Ctrl+C to stop all, rely on hot-reload for changes. hivemind always injects a PORT env var (base 5000); `Procfile.dev` sets `PORT=` explicitly per process to override |
-| **Caddy `DOMAIN` env var controls TLS**               | Caddy auto-provisions HTTPS (LetsEncrypt) when `DOMAIN` is a real domain. When `DOMAIN=localhost` (or unset), Caddy uses self-signed certs. Set `DOMAIN` in `.env.staging`/`.env.prod`                                                                                                                                                                                                                                            |
-| **Zitadel Actions v2 payload format**                 | Zitadel sends `event_type` (not `eventType`), `created_at` (not `creationDate`), `aggregateID:sequence` for idempotency (no `eventId`), and user data in `event_payload` (not `user`). Signature header is `ZITADEL-Signature` with format `t=<ts>,v1=<hmac>` where HMAC is over `<ts>.<body>`. Handler maps `user.human.*` event names to internal `user.*` names via alias table                                                |
-| **GitHub: secrets don't trim whitespace**             | GitHub Actions secret values are stored verbatim — leading/trailing spaces are not trimmed. A pasted secret with a leading space will silently cause auth failures. GitHub masks the value in logs, making this invisible. Verify with `echo "Length: ${#VAR} chars"` in the workflow                                                                                                                                             |
-| **Garage admin API `UpdateClusterLayout` broken**     | Garage v2.2.0's admin API `POST /v2/UpdateClusterLayout` silently accepts requests but doesn't stage changes. Use CLI (`/garage layout assign`) via RPC instead. `start-garage.sh` handles this. Admin API works correctly for `ImportKey`, `CreateBucket`, `AllowBucketKey`. Key IDs must be `GK` + 24 hex chars                                                                                                                 |
+| Quirk                                                 | Details                                                                                                                                                                              |
+| ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Docker Compose env_file**                           | `env_file:` sets container env only. For YAML `${VAR}` substitution, use `--env-file .env` on CLI                                                                                    |
+| **PostgreSQL init-db.sh**                             | Only runs on first DB creation. `docker compose down -v` to re-run                                                                                                                   |
+| **PgBouncer: migrations must bypass**                 | `DATABASE_URL` (port 5432) for migrations. `DATABASE_APP_URL` (port 6432) through PgBouncer. Use `SET LOCAL` (not `SET`) — transaction pooling reuses connections                    |
+| **WSL husky hooks need nvm PATH**                     | Husky v9 runs under `sh`/`dash`; hooks add nvm node bin to PATH directly                                                                                                             |
+| **CI: workspace deps need build before Vitest**       | Vitest resolves workspace packages via `exports` → `dist/`. CI must build deps first                                                                                                 |
+| **`drizzle-kit generate` TUI blocks automation**      | Write manual migrations in non-interactive shells; snapshot files may need regeneration interactively                                                                                |
+| **Playwright `webServer.env` replaces `process.env`** | Must spread `...process.env` in `webServer.env` to ensure env vars reach dev servers                                                                                                 |
+| **Zitadel issuer ± trailing slash**                   | JWKS verifier uses array issuer `[base, base + "/"]` to match both. Don't normalize                                                                                                  |
+| **hivemind for dev servers**                          | `pnpm dev` uses hivemind. Use `pnpm dev:clean` to kill orphans. `Procfile.dev` sets `PORT=` explicitly per process to override hivemind's default                                    |
+| **Caddy `DOMAIN` env var controls TLS**               | Real domain → LetsEncrypt. `localhost` → self-signed. Set in `.env.staging`/`.env.prod`                                                                                              |
+| **Zitadel Actions v2 payload format**                 | `event_type`/`created_at`/`event_payload` (not camelCase). `ZITADEL-Signature` header: `t=<ts>,v1=<hmac>` over `<ts>.<body>`. Handler maps `user.human.*` → `user.*` via alias table |
+| **GitHub: secrets don't trim whitespace**             | Verify with `echo "Length: ${#VAR} chars"` in workflow                                                                                                                               |
+| **Garage admin API `UpdateClusterLayout` broken**     | Use CLI (`/garage layout assign`) via RPC. `start-garage.sh` handles this                                                                                                            |
+| **Test fixtures must match DB constraints**           | Valid UUIDs, valid enum values, all non-nullable fields. Invalid fixtures pass type-check but fail at runtime                                                                        |
+| **PostgreSQL migration behaviors**                    | `CREATE OR REPLACE FUNCTION` silently overwrites. RLS policies can cause infinite recursion across tables — test with `SET app.current_org_id` in psql                               |
 
-**Version pin (cross-cutting):**
-
-| Package     | Pinned        | Notes                                        |
-| ----------- | ------------- | -------------------------------------------- |
-| Drizzle ORM | latest stable | Schema API evolving; pin after initial setup |
-
-All other version pins are in their respective per-directory CLAUDE.md files.
+**Version pin:** Drizzle ORM latest stable (schema API evolving). Other pins in per-directory CLAUDE.md files.
 
 ---
 
 ## Security Status
 
-Application security controls (rate limiting, auth, RLS, audit, input validation, webhook verification, etc.) are all in place. See `docs/release-checklist.md` for the full checklist.
-
-**Remaining production TODOs:**
-
-- [x] Backups (WAL-G to S3) — `docker/postgres/` (WAL-G image), `scripts/backup-db.sh`, `scripts/verify-backup.sh`, `scripts/restore-backup.sh`
-- [x] Rotate credentials quarterly — `scripts/rotate-secrets.sh` + `docs/credential-rotation.md`
-- [x] Verify RLS in production — `scripts/verify-rls.sh` (structural + behavioral, integrated into deploy via `init-prod.sh`)
+All security controls in place (rate limiting, auth, RLS, audit, input validation, webhook verification). All production TODOs complete (backups, credential rotation, RLS verification). See `docs/release-checklist.md`.
 
 ---
 
@@ -228,78 +113,26 @@ Application security controls (rate limiting, auth, RLS, audit, input validation
 **NEVER push directly to `main`.** Protected branch — requires PR + CI + senior dev review. The `pre-push-branch.js` hook blocks direct pushes.
 
 - **Branching:** `feat/<topic>`, `fix/<topic>`, `chore/<topic>` from `main`. Squash merge.
-- **Commits:** [Conventional Commits](https://www.conventionalcommits.org/) — scope with component name when specific (e.g., `feat(hopper): ...`).
+- **Commits:** [Conventional Commits](https://www.conventionalcommits.org/) — scope with component name (e.g., `feat(hopper): ...`).
 - **Commit cadence:** At stable checkpoints. Always before risky ops, ending a session, or switching context.
 - **Push cadence:** When you have a reviewable unit, are stepping away, or want CI feedback. Don't push broken states.
-- **Release tags:** semver `v{major}.{minor}.{patch}`. v1 MVP tagged `v1.0.0-mvp`.
 
 ### Git Hooks (husky)
 
-| Hook           | Checks                                                                                                                                                                                                                                                           |
-| -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Pre-commit** | Secret scanning (`scripts/check-secrets.sh`), lint-staged (Prettier on `.ts`/`.tsx`/`.json`/`.md`, ESLint `--max-warnings 0` on `.ts`/`.tsx` via `scripts/lint-staged-eslint.sh`)                                                                                |
-| **Pre-push**   | `pnpm type-check` (tsc --noEmit, scoped to `db` + `api` packages), `pnpm lint` (ESLint), Docker Compose validation (if compose files changed), shell syntax check (if `.sh` changed), garage.toml validation (if changed). Full workspace type-check runs in CI. |
+| Hook           | Checks                                                                                                                               |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| **Pre-commit** | Secret scanning (`scripts/check-secrets.sh`), lint-staged (Prettier + ESLint `--max-warnings 0`)                                     |
+| **Pre-push**   | `pnpm type-check` (tsc --noEmit, `db` + `api`), `pnpm lint`, Docker Compose validation (if changed), shell syntax check (if changed) |
 
 ### CI Pipeline (GitHub Actions)
 
-| Job                           | Checks                                                      |
-| ----------------------------- | ----------------------------------------------------------- |
-| **quality**                   | `format:check`, `lint`, `type-check`, `pnpm audit`          |
-| **unit-tests**                | `pnpm test`                                                 |
-| **rls-tests**                 | RLS tenant isolation integration tests                      |
-| **queue-tests**               | Queue/worker integration tests (19 tests, Redis + Postgres) |
-| **service-integration-tests** | Service integration tests (Postgres)                        |
-| **security-tests**            | Security tests (Postgres)                                   |
-| **webhook-tests**             | Webhook integration tests (Postgres)                        |
-| **python-sdk-tests**          | Python SDK smoke tests                                      |
-| **playwright-tests**          | Playwright E2E submissions project (20 tests)               |
-| **playwright-uploads**        | Playwright E2E uploads project (6 tests)                    |
-| **playwright-oidc**           | Playwright E2E OIDC project (6 tests)                       |
-| **playwright-embed**          | Playwright E2E embed project (10 tests)                     |
-| **playwright-slate**          | Playwright E2E Slate pipeline project (30 tests)            |
-| **playwright-workspace**      | Playwright E2E Writer Workspace project (21 tests)          |
-| **playwright-forms**          | Playwright E2E Form Builder project (16 tests)              |
-| **playwright-organization**   | Playwright E2E Organization & Settings project (14 tests)   |
-| **playwright-analytics**      | Playwright E2E Submission Analytics project (6 tests)       |
-| **playwright-federation**     | Playwright E2E Federation Admin project (16 tests)          |
-| **build**                     | `pnpm build` (API + Web production build)                   |
+Jobs: quality, unit-tests, rls-tests, queue-tests, service-integration-tests, security-tests, webhook-tests, python-sdk-tests, 9 Playwright suites, build. See `.github/workflows/ci.yml`.
 
-**Path filtering:** Playwright suites run selectively on PRs based on changed files (`.github/scripts/detect-changes.sh`). Shared paths (packages, API, shared hooks/lib/ui) trigger all suites. Suite-specific paths (e.g., `apps/web/e2e/slate/`, `apps/web/src/components/slate/`) trigger only that suite. Unknown paths fail-open (all suites run). Push to `main` always runs everything. Fast jobs (quality, unit-tests, rls-tests, queue-tests, service-integration-tests, security-tests, build) are unaffected — they always run on non-docs PRs.
+**Path filtering:** Playwright suites run selectively based on changed files (`.github/scripts/detect-changes.sh`). Shared paths trigger all suites. Push to `main` runs everything. Fast jobs always run on non-docs PRs.
 
 ---
 
 ## Development Workflow
-
-### Claude Code Skills
-
-```
-# Backend
-/db-reset             # Reset database and apply Drizzle migrations + RLS
-/db-reset --test      # Reset test database
-/new-route <name>     # Scaffold ts-rest route with Fastify handler + tests
-/new-service <name>   # Scaffold service class with Drizzle queries + tests
-/new-processor <name> # Scaffold BullMQ job processor
-/new-migration <name> # Add Drizzle schema + generate migration + RLS policy
-/stripe-webhook <evt> # Add Stripe webhook handler with idempotency
-/test-rls             # Run RLS integration tests
-
-# Infrastructure
-/smoke-test           # Validate infra locally (compose, Garage S3, shell scripts)
-/smoke-test compose   # Fast: compose + config only (no Docker daemon needed)
-/smoke-test garage    # Garage S3 round-trip only (requires Docker)
-
-# Frontend
-/new-page <name>      # Scaffold Next.js page (auth, dashboard, or public)
-/new-component <name> # Scaffold React component (form, list, dialog, or basic)
-/new-hook <name>      # Scaffold React hook (query, mutation, or state)
-/new-e2e <feature>    # Scaffold Playwright E2E test with helpers
-
-# Session
-/start-session        # Session briefing (DEVLOG context, git state, PRs, infra)
-/end-session          # End-of-session housekeeping (DEVLOG, git, PR, summary)
-/codex-review [type]  # Run Codex code review (plan, diff, branch; default: branch)
-/opencode-review [type] # Run OpenCode code review (plan, diff, branch; default: branch)
-```
 
 ### Claude Code Hooks (run automatically)
 
@@ -309,141 +142,57 @@ Application security controls (rate limiting, auth, RLS, audit, input validation
 
 ### Code Review Integration
 
-Two review tools available — use either:
-
-- `/codex-review [plan|diff|branch]` — Codex CLI review. Branch: `codex review --base origin/main`. Diff: `--uncommitted`. Plan: `codex exec -s read-only`.
-- `/opencode-review [plan|diff|branch]` — OpenCode CLI review. All modes use `opencode run` with a review prompt and `-f` to attach diffs/plans.
+- `/codex-review [plan|diff|branch]` — Codex CLI review
+- `/opencode-review [plan|diff|branch]` — OpenCode CLI review
 
 For interactive Codex in tmux: source nvm, `nvm use v22.22.0`, then `codex`. Use `codex resume` or `codex fork --last` for follow-up.
 
 ### Decision Surfacing in Plan Mode
 
-After exploring the codebase but **before writing the implementation plan**, enumerate any architectural gray areas discovered during exploration. Present each as a decision point:
-
-```
-## Design Decisions
-
-### [Decision Title]
-**Context:** [What was found during exploration that creates ambiguity]
-**Options:**
-  A. [Option] — [pro/con]
-  B. [Option] — [pro/con]
-**Recommendation:** [A or B] — [rationale]
-```
-
-Wait for user confirmation or redirection on each decision before proceeding to write the plan. This prevents wasted planning effort on an approach the user would reject.
-
-**Skip this step when:**
-
-- The task has no meaningful design choices (pure mechanical refactoring, typo fixes)
-- All decisions were already made in the requirements (backlog item specifies the approach)
-- The user explicitly says "just do it" or "use your judgment"
+Before writing the implementation plan, enumerate architectural gray areas as decision points with options and recommendations. Wait for user confirmation before proceeding. Skip for mechanical refactoring, fully-specified backlog items, or when user says "just do it."
 
 ### Plan Review: Codex Integration
 
-<!-- To switch to OpenCode: replace /codex-review with /opencode-review below -->
+Every non-trivial plan must be reviewed before presenting to the user:
 
-Every non-trivial plan **must be reviewed before presenting to the user for approval**. The workflow is:
+1. Write the plan → 2. Run `/codex-review plan` automatically → 3. Adjust for critical issues → 4. Present to user
 
-1. **Write the plan** (after decision surfacing, per above)
-2. **Run `/codex-review plan`** automatically — do not ask the user, just run it
-3. **Evaluate review findings** — adjust the plan for any critical or important issues; for dismissed suggestions, add a brief note (e.g., "Review suggested X; dismissed because Y")
-4. **Present the reviewed plan** to the user for approval
-
-The user sees a plan that has already been through one round of review. This replaces the previous pattern of creating blocking task list entries for review.
-
-**When to skip:** Trivial plans (typo fix, single config change, doc-only update). If in doubt, run the review.
+Skip for trivial plans (typo fix, single config change, doc-only update).
 
 ### Plan Specificity Standard
 
-Plans must be concrete enough to mechanically verify after implementation. Every non-trivial plan should include:
-
-- **Exact file paths** for all files to create or modify (absolute from repo root)
-- **Concrete type/interface names** for new exports (e.g., "export `FormFieldValidator` type from `form-validation.service.ts`")
-- **Function/method signatures** with parameter and return types
-- **Named test cases** with setup conditions and expected assertions (e.g., "Test 'rejects invalid email': setup field with `fieldType: 'email'`, pass value `'not-an-email'`, assert error message contains 'valid email'")
-- **Import changes** when moving code between files
-- **Files that should NOT change** when relevant (confirms scope boundaries)
-
-The goal: another developer (or Codex) could diff the implementation against the plan and flag unintentional divergences. When a plan item is too exploratory to specify concretely, mark it as `[exploratory]` and note what will be determined during implementation.
+Plans must include: exact file paths, concrete type/interface names, function signatures with types, named test cases with assertions, import changes, and files that should NOT change. Goal: another developer could diff implementation against the plan. Mark exploratory items as `[exploratory]`.
 
 ### Plan Override Log
 
-During implementation, when discoveries require deliberate divergence from the approved plan, log overrides immediately. Do not wait until the end.
+Log deliberate divergences from approved plans in a `## Plan Overrides` section of the PR description:
 
-**Where to log:** Add a `## Plan Overrides` section to the PR description body (created by `/end-session` or `gh pr create`). Use this table format:
+| File | Planned | Actual | Rationale |
 
-| File              | Planned               | Actual                                    | Rationale                                       |
-| ----------------- | --------------------- | ----------------------------------------- | ----------------------------------------------- |
-| `path/to/file.ts` | Export `FooValidator` | Export `validateFoo` (function, not type) | Function is simpler; no consumers need the type |
-
-**When to log:**
-
-- A file was created/modified that was not in the plan
-- A planned file was not created (scope reduced)
-- An export name, type, or signature differs from the plan
-- A test case was added, removed, or substantially changed
-
-**When NOT to log:**
-
-- Trivial formatting differences (import order, whitespace)
-- Bug fixes discovered during implementation that are clearly in-scope
-- Additional test cases that strengthen coverage beyond the plan
-
-Drift detection (in `/opencode-review branch` or `/codex-review branch`) reads this section and excludes acknowledged overrides from its findings.
+Log when: files added/removed vs plan, exports differ, test cases changed substantially. Skip for: formatting, in-scope bug fixes, additional test cases.
 
 ### File Size Guideline
 
-Soft limit of 500 lines per source file. Files exceeding 500 lines should be flagged during code review (`/opencode-review` or `/codex-review`) for potential extraction. This is a review trigger, not a hard gate — some files (e.g., schema definitions, test suites) naturally exceed this. When flagged, evaluate whether there is a natural seam for extraction (pure logic vs DB-dependent, CRUD vs validation, etc.).
+Soft limit of 500 lines per source file. Review trigger, not a hard gate.
 
-### MCP Servers (restart Claude Code to activate)
+### MCP Servers
 
-- **postgres**: Direct DB queries (`@modelcontextprotocol/server-postgres`)
-- **redis**: Job/session inspection (`@modelcontextprotocol/server-redis`)
-- **context7**: Library docs (`@upstash/context7-mcp`)
-- **stripe**: Stripe API/docs (`@stripe/mcp`)
-- **playwright**: E2E automation (`@anthropic/mcp-playwright`)
-- **docker**: Container inspection — logs, health, stats (`@modelcontextprotocol/server-docker`)
-
-Config template: `.claude/mcp-servers.example.json`
+postgres, redis, context7, stripe, playwright, docker. Config: `.claude/mcp-servers.example.json`.
 
 ### Starting Development
 
 ```bash
 pnpm docker:up                # Core infra + Zitadel (or --full for ClamAV, --core to skip Zitadel)
-pnpm install
-pnpm db:migrate               # Run Drizzle migrations
-pnpm db:seed                  # Seed dev data (orgs, submissions, Slate pipeline)
-pnpm db:seed:staging          # Rich staging/demo data (80 subs, forms, editorial, federation, etc.)
-pnpm zitadel:setup            # Provision Zitadel + patch .env files (after volume wipe)
-pnpm dev                      # hivemind: builds packages, then API: 4000, Web: 3000
+pnpm install && pnpm db:migrate && pnpm db:seed
+pnpm zitadel:setup            # After volume wipe
+pnpm dev                      # hivemind: API:4000, Web:3000
 ```
 
-**Optional monitoring stack** (Prometheus + Grafana + AlertManager + Loki):
+**Other commands:** `pnpm db:generate`, `pnpm db:reset`, `pnpm db:seed:staging`, `pnpm db:validate-migrations`, `pnpm db:add-migration <name>`, `pnpm sdk:export-spec`, `pnpm sdk:generate`
 
-```bash
-docker compose --profile monitoring up -d  # Prometheus:9090, Grafana:3001, AlertManager:9093, Loki:3100
-```
+**Monitoring:** `docker compose --profile monitoring up -d` (Prometheus:9090, Grafana:3001, AlertManager:9093, Loki:3100)
 
-**CLI tooling** (all scripts self-document with `--help`):
-
-```bash
-bash scripts/webhook-health.sh                                           # Check webhook provider freshness
-bash scripts/grafana-query.sh logs --query '{service="api"} |= "error"'  # Search Loki logs
-bash scripts/grafana-query.sh alerts                                     # List firing alerts
-bash scripts/server-logs.sh tail api -f                                  # Follow API container logs
-bash scripts/sentry-issues.sh                                            # Recent unresolved Sentry issues
-bash scripts/zitadel-admin.sh status                                     # Zitadel health check
-```
-
-**hivemind controls** (while `pnpm dev` is running):
-
-```bash
-Ctrl+C                         # Stop all dev servers (hivemind forwards signals)
-pnpm dev:clean                 # Kill orphaned processes + stale files (fallback)
-```
-
-Note: hivemind does not support per-process attach/restart. Both apps have hot-reload, so file changes trigger automatic restarts. Use `pnpm dev:clean && pnpm dev` for a full restart.
+**CLI scripts** (all self-document with `--help`): `scripts/webhook-health.sh`, `scripts/grafana-query.sh`, `scripts/server-logs.sh`, `scripts/sentry-issues.sh`, `scripts/zitadel-admin.sh`
 
 ### Running Tests
 
@@ -455,31 +204,12 @@ pnpm --filter @colophony/web test:e2e  # Playwright (needs dev servers)
 
 Full testing guide: [docs/testing.md](docs/testing.md)
 
-### Database Management
-
-```bash
-pnpm db:migrate               # Validate journal + run Drizzle migrations
-pnpm db:generate              # Generate migration from schema changes
-pnpm db:seed                  # Seed test data
-pnpm db:seed:staging          # Seed rich staging/demo data (all feature areas)
-pnpm db:reset                 # Drop and recreate with migrations + RLS
-pnpm db:validate-migrations   # Check SQL files ↔ journal consistency
-pnpm db:add-migration <name>  # Add journal entry for a manual migration
-```
-
-### SDK Management
-
-```bash
-pnpm sdk:export-spec          # Export OpenAPI spec from running dev server → sdks/openapi.json
-pnpm sdk:generate             # Regenerate TypeScript + Python SDKs from committed spec
-```
-
 ### Environment Variables
 
-Canonical definition with Zod validation: `apps/api/src/config/env.ts` (66 variables, all defaults and descriptions inline). Read that file for the full reference.
+Canonical definition with Zod validation: `apps/api/src/config/env.ts` (66 variables, all defaults and descriptions inline).
 
 ---
 
 ## Development Tracks
 
-All 10 tracks complete. Track 6 (Plugins) extracted to feature branch. See [docs/architecture.md Section 6](docs/architecture.md) for details.
+All 10 tracks complete. Track 6 (Plugins) extracted to feature branch. See [docs/architecture.md Section 6](docs/architecture.md).
