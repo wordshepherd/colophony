@@ -103,6 +103,7 @@ export function PendingInvitations() {
                         invitationId: invitation.id,
                       })
                     }
+                    aria-label="Resend invitation"
                     title="Resend invitation"
                   >
                     <RotateCw className="h-4 w-4" />
@@ -116,6 +117,7 @@ export function PendingInvitations() {
                         invitationId: invitation.id,
                       })
                     }
+                    aria-label="Revoke invitation"
                     title="Revoke invitation"
                   >
                     <X className="h-4 w-4" />

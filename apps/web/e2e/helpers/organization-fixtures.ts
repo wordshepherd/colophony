@@ -17,6 +17,9 @@ import {
   deleteApiKey,
   createUser,
   deleteUser,
+  createOrg,
+  deleteOrg,
+  addMember,
 } from "./db";
 
 /** Admin user profile (ADMIN role in quarterly-review org) */
@@ -60,6 +63,8 @@ export const test = base.extend<{
   testApiKey: TestApiKey;
   authedPage: Page;
   inviteTarget: InviteTarget;
+  inviteeOrg: SeedOrg;
+  inviteePage: Page;
 }>({
   seedOrg: async ({}, use) => {
     const org = await getOrgBySlug("quarterly-review");
@@ -126,6 +131,57 @@ export const test = base.extend<{
     await use({ id: user.id, email: user.email });
 
     await deleteUser(user.id);
+  },
+
+  /**
+   * Separate org for invitee API key auth.
+   *
+   * The org-context hook requires the API key creator to be a member of
+   * the key's org. The invitee isn't a member of the seed org, so we
+   * create a dedicated org where the invitee IS a member. The accept
+   * endpoint uses SECURITY DEFINER functions that operate cross-org.
+   */
+  inviteeOrg: async ({ inviteTarget }, use) => {
+    const org = await createOrg({
+      name: "Invitee Auth Org",
+      slug: `invitee-auth-${Date.now().toString(36)}`,
+    });
+    await addMember(org.id, inviteTarget.id, "READER");
+    await use(org);
+    await deleteOrg(org.id);
+  },
+
+  /**
+   * Playwright page authenticated as the inviteTarget user.
+   * Used for accept-side invitation tests.
+   */
+  inviteePage: async ({ browser, inviteeOrg, inviteTarget, baseURL }, use) => {
+    const apiKey = await createApiKey({
+      orgId: inviteeOrg.id,
+      userId: inviteTarget.id,
+      scopes: ["organizations:read", "users:read"],
+      name: `e2e-invitee-${Date.now()}`,
+    });
+
+    const inviteeProfile = {
+      sub: `e2e-zitadel-invite-${inviteTarget.id}`,
+      email: inviteTarget.email,
+      name: "Test Invitee",
+    };
+
+    const context = await browser.newContext({
+      ...devices["Desktop Chrome"],
+      baseURL: baseURL ?? undefined,
+      storageState: buildStorageState(inviteeOrg.id, inviteeProfile),
+    });
+
+    const page = await context.newPage();
+    await setupPageAuth(page, inviteeOrg.id, apiKey.plainKey, inviteeProfile);
+
+    await use(page);
+
+    await context.close();
+    await deleteApiKey(apiKey.id);
   },
 });
 
