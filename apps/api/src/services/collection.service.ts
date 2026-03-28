@@ -166,7 +166,13 @@ export const collectionService = {
         submissionTitle: submissions.title,
       })
       .from(workspaceItems)
-      .leftJoin(submissions, eq(workspaceItems.submissionId, submissions.id))
+      .leftJoin(
+        submissions,
+        and(
+          eq(workspaceItems.submissionId, submissions.id),
+          eq(submissions.organizationId, orgId),
+        ),
+      )
       .where(eq(workspaceItems.collectionId, collectionId))
       .orderBy(asc(workspaceItems.position))
       .limit(1000);
@@ -421,6 +427,8 @@ export const collectionService = {
     if (input.notes !== undefined) values.notes = input.notes;
     if (input.color !== undefined) values.color = input.color;
     if (input.icon !== undefined) values.icon = input.icon;
+    if (input.readingAnchor !== undefined)
+      values.readingAnchor = input.readingAnchor;
 
     const [row] = await tx
       .update(workspaceItems)

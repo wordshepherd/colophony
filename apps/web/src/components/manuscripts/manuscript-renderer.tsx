@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import { literata } from "@/lib/fonts";
 import { cn } from "@/lib/utils";
 import type {
@@ -8,10 +9,18 @@ import type {
   ProseMirrorMark,
 } from "@/lib/manuscript";
 
+interface ReadingAnchorPosition {
+  nodeIndex: number;
+}
+
 interface ManuscriptRendererProps {
   content: ProseMirrorDoc;
   showAsSubmitted?: boolean;
   className?: string;
+  /** Called when the topmost visible node changes (debounced). Collection context only. */
+  onAnchorChange?: (anchor: ReadingAnchorPosition) => void;
+  /** Restore scroll to this node on mount. Collection context only. */
+  initialAnchor?: ReadingAnchorPosition | null;
 }
 
 /**
@@ -24,11 +33,78 @@ export function ManuscriptRenderer({
   content,
   showAsSubmitted = false,
   className,
+  onAnchorChange,
+  initialAnchor,
 }: ManuscriptRendererProps) {
   const genre = content.attrs?.genre_hint ?? "prose";
+  const containerRef = useRef<HTMLDivElement>(null);
+  const anchorTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastReportedIndex = useRef<number>(-1);
+
+  // Restore scroll position when initialAnchor changes (including on item switch)
+  useEffect(() => {
+    if (!initialAnchor) return;
+    // Defer to next frame so DOM nodes are rendered
+    requestAnimationFrame(() => {
+      const el = containerRef.current?.querySelector(
+        `[data-node-index="${initialAnchor.nodeIndex}"]`,
+      );
+      el?.scrollIntoView({ block: "start" });
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentionally depend on nodeIndex only, not the full object reference
+  }, [initialAnchor?.nodeIndex]);
+
+  // Track topmost visible node via IntersectionObserver
+  useEffect(() => {
+    if (!onAnchorChange || !containerRef.current) return;
+
+    const nodes = containerRef.current.querySelectorAll("[data-node-index]");
+    if (nodes.length === 0) return;
+
+    const visibleIndices = new Set<number>();
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          const idx = Number((entry.target as HTMLElement).dataset.nodeIndex);
+          if (entry.isIntersecting) {
+            visibleIndices.add(idx);
+          } else {
+            visibleIndices.delete(idx);
+          }
+        }
+
+        // Find the smallest visible node index (topmost)
+        if (visibleIndices.size === 0) return;
+        const topIndex = Math.min(...visibleIndices);
+        if (topIndex === lastReportedIndex.current) return;
+
+        // Debounce: wait 2s after last change before reporting
+        if (anchorTimerRef.current) clearTimeout(anchorTimerRef.current);
+        anchorTimerRef.current = setTimeout(() => {
+          lastReportedIndex.current = topIndex;
+          onAnchorChange({ nodeIndex: topIndex });
+        }, 2000);
+      },
+      {
+        root: null,
+        threshold: 0,
+      },
+    );
+
+    nodes.forEach((node) => observer.observe(node));
+
+    return () => {
+      observer.disconnect();
+      if (anchorTimerRef.current) clearTimeout(anchorTimerRef.current);
+    };
+  }, [onAnchorChange, content]);
 
   return (
-    <div className={cn(literata.className, "text-foreground", className)}>
+    <div
+      ref={containerRef}
+      className={cn(literata.className, "text-foreground", className)}
+    >
       {genre === "poetry" ? (
         <PoetryRenderer
           nodes={content.content}
@@ -56,7 +132,9 @@ function ProseRenderer({
   return (
     <div className="manuscript-prose">
       {nodes.map((node, i) => (
-        <ProseNode key={i} node={node} showAsSubmitted={showAsSubmitted} />
+        <div key={i} data-node-index={i}>
+          <ProseNode node={node} showAsSubmitted={showAsSubmitted} />
+        </div>
       ))}
     </div>
   );
@@ -98,7 +176,9 @@ function PoetryRenderer({
   return (
     <div className="manuscript-poetry">
       {nodes.map((node, i) => (
-        <PoetryNode key={i} node={node} showAsSubmitted={showAsSubmitted} />
+        <div key={i} data-node-index={i}>
+          <PoetryNode node={node} showAsSubmitted={showAsSubmitted} />
+        </div>
       ))}
     </div>
   );

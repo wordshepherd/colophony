@@ -10,18 +10,30 @@ import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { BookOpen, Loader2, AlertCircle } from "lucide-react";
 import type { ProseMirrorDoc } from "@colophony/types";
-import { useState } from "react";
+import { useCallback, useState } from "react";
+
+export interface WorkspaceContext {
+  collectionId: string;
+  itemId: string;
+  readingAnchor?: { nodeIndex: number; charOffset: number } | null;
+}
 
 interface DetailPaneProps {
   submissionId: string | null;
   mode: "triage" | "deep-read";
+  /** When set, reading anchor persistence is active (collection context). */
+  workspaceContext?: WorkspaceContext;
 }
 
 /**
  * Right pane wrapper that renders submission detail (triage)
  * or ManuscriptRenderer (deep-read) based on mode.
  */
-export function DetailPane({ submissionId, mode }: DetailPaneProps) {
+export function DetailPane({
+  submissionId,
+  mode,
+  workspaceContext,
+}: DetailPaneProps) {
   if (!submissionId) {
     return (
       <div className="flex h-full items-center justify-center text-muted-foreground">
@@ -48,15 +60,48 @@ export function DetailPane({ submissionId, mode }: DetailPaneProps) {
     );
   }
 
-  return <DeepReadView submissionId={submissionId} />;
+  return (
+    <DeepReadView
+      submissionId={submissionId}
+      workspaceContext={workspaceContext}
+    />
+  );
 }
 
-function DeepReadView({ submissionId }: { submissionId: string }) {
+function DeepReadView({
+  submissionId,
+  workspaceContext,
+}: {
+  submissionId: string;
+  workspaceContext?: WorkspaceContext;
+}) {
   const [showAsSubmitted, setShowAsSubmitted] = useState(false);
 
   const { data: submission, isPending } = trpc.submissions.getById.useQuery({
     id: submissionId,
   });
+
+  const utils = trpc.useUtils();
+  const updateItemMutation = trpc.collections.updateItem.useMutation({
+    onSuccess: (_data, variables) => {
+      // Only invalidate when anchor was updated, so Manage view shows fresh data
+      if (variables.readingAnchor !== undefined) {
+        utils.collections.getItems.invalidate({ id: variables.id });
+      }
+    },
+  });
+
+  const handleAnchorChange = useCallback(
+    (anchor: { nodeIndex: number }) => {
+      if (!workspaceContext) return;
+      updateItemMutation.mutate({
+        id: workspaceContext.collectionId,
+        itemId: workspaceContext.itemId,
+        readingAnchor: { nodeIndex: anchor.nodeIndex, charOffset: 0 },
+      });
+    },
+    [workspaceContext, updateItemMutation],
+  );
 
   if (isPending) {
     return (
@@ -141,6 +186,12 @@ function DeepReadView({ submissionId }: { submissionId: string }) {
             <ManuscriptRenderer
               content={content}
               showAsSubmitted={showAsSubmitted}
+              onAnchorChange={workspaceContext ? handleAnchorChange : undefined}
+              initialAnchor={
+                workspaceContext?.readingAnchor
+                  ? { nodeIndex: workspaceContext.readingAnchor.nodeIndex }
+                  : undefined
+              }
             />
           ) : (
             <p className="text-muted-foreground text-sm">
