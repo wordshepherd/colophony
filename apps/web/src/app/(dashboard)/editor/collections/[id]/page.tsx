@@ -33,7 +33,20 @@ import {
 import { SortableCollectionItem } from "@/components/collections/sortable-collection-item";
 import { AddSubmissionDialog } from "@/components/collections/add-submission-dialog";
 import { CollectionForm } from "@/components/collections/collection-form";
-import { ArrowLeft, EyeOff, Pencil, Plus, Trash2, Users } from "lucide-react";
+import {
+  DetailPane,
+  type WorkspaceContext,
+} from "@/components/editor/detail-pane";
+import {
+  ArrowLeft,
+  BookOpen,
+  EyeOff,
+  List,
+  Pencil,
+  Plus,
+  Trash2,
+  Users,
+} from "lucide-react";
 
 export default function CollectionDetailPage({
   params,
@@ -47,6 +60,7 @@ export default function CollectionDetailPage({
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [showEditForm, setShowEditForm] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
 
   const { data: collection, isPending: isLoadingCollection } =
     trpc.collections.getById.useQuery({ id });
@@ -118,9 +132,28 @@ export default function CollectionDetailPage({
   const handleRemoveItem = useCallback(
     (itemId: string) => {
       removeItemMutation.mutate({ id, itemId });
+      if (selectedItemId === itemId) setSelectedItemId(null);
     },
-    [id, removeItemMutation],
+    [id, removeItemMutation, selectedItemId],
   );
+
+  const handleItemClick = useCallback((itemId: string) => {
+    setSelectedItemId((prev) => (prev === itemId ? null : itemId));
+  }, []);
+
+  const selectedItem = items.find((i) => i.id === selectedItemId);
+  const isReadingMode = selectedItem != null;
+
+  const workspaceContext: WorkspaceContext | undefined = selectedItem
+    ? {
+        collectionId: id,
+        itemId: selectedItem.id,
+        readingAnchor: selectedItem.readingAnchor as {
+          nodeIndex: number;
+          charOffset: number;
+        } | null,
+      }
+    : undefined;
 
   const existingIds = new Set(items.map((i) => i.submissionId));
 
@@ -142,105 +175,159 @@ export default function CollectionDetailPage({
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center gap-3">
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => router.push("/editor/collections")}
-        >
-          <ArrowLeft className="h-4 w-4" />
-        </Button>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold tracking-tight truncate">
-              {collection.name}
-            </h1>
-            {collection.visibility === "private" ? (
-              <EyeOff className="h-4 w-4 text-muted-foreground shrink-0" />
-            ) : (
-              <Users className="h-4 w-4 text-muted-foreground shrink-0" />
+    <div className="h-full flex flex-col">
+      {/* Header */}
+      <div className="shrink-0 space-y-4 pb-4">
+        <div className="flex items-center gap-3">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => router.push("/editor/collections")}
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2">
+              <h1 className="text-2xl font-bold tracking-tight truncate">
+                {collection.name}
+              </h1>
+              {collection.visibility === "private" ? (
+                <EyeOff className="h-4 w-4 text-muted-foreground shrink-0" />
+              ) : (
+                <Users className="h-4 w-4 text-muted-foreground shrink-0" />
+              )}
+              <Badge variant="secondary" className="shrink-0">
+                {collection.typeHint.replace("_", " ")}
+              </Badge>
+            </div>
+            {collection.description && (
+              <p className="text-sm text-muted-foreground mt-1">
+                {collection.description}
+              </p>
             )}
-            <Badge variant="secondary" className="shrink-0">
-              {collection.typeHint.replace("_", " ")}
-            </Badge>
           </div>
-          {collection.description && (
-            <p className="text-sm text-muted-foreground mt-1">
-              {collection.description}
-            </p>
-          )}
-        </div>
-        <div className="flex items-center gap-2 shrink-0">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setShowEditForm(true)}
-          >
-            <Pencil className="mr-1.5 h-3.5 w-3.5" />
-            Edit
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            className="text-destructive hover:text-destructive"
-            onClick={() => setShowDeleteConfirm(true)}
-          >
-            <Trash2 className="mr-1.5 h-3.5 w-3.5" />
-            Delete
-          </Button>
+          <div className="flex items-center gap-2 shrink-0">
+            {isReadingMode && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setSelectedItemId(null)}
+              >
+                <List className="mr-1.5 h-3.5 w-3.5" />
+                Manage
+              </Button>
+            )}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowEditForm(true)}
+            >
+              <Pencil className="mr-1.5 h-3.5 w-3.5" />
+              Edit
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-destructive hover:text-destructive"
+              onClick={() => setShowDeleteConfirm(true)}
+            >
+              <Trash2 className="mr-1.5 h-3.5 w-3.5" />
+              Delete
+            </Button>
+          </div>
         </div>
       </div>
 
-      <div className="flex items-center justify-between">
-        <p className="text-sm text-muted-foreground">
-          {items.length} item{items.length !== 1 ? "s" : ""}
-        </p>
-        <Button
-          size="sm"
-          onClick={() => setShowAddDialog(true)}
-          data-testid="add-submission-btn"
-        >
-          <Plus className="mr-1.5 h-3.5 w-3.5" />
-          Add Submission
-        </Button>
-      </div>
+      {/* Content area: management mode or reading mode */}
+      {isReadingMode && selectedItem ? (
+        <div className="flex-1 flex gap-4 min-h-0">
+          {/* Item rail */}
+          <div className="w-64 shrink-0 overflow-y-auto border rounded-lg p-2 space-y-1">
+            {items.map((item) => (
+              <button
+                key={item.id}
+                onClick={() => handleItemClick(item.id)}
+                className={`w-full text-left px-3 py-2 rounded-md text-sm truncate transition-colors ${
+                  item.id === selectedItemId
+                    ? "bg-primary/10 text-primary font-medium"
+                    : "text-muted-foreground hover:bg-muted"
+                }`}
+              >
+                {item.readingAnchor ? (
+                  <BookOpen className="inline h-3 w-3 mr-1.5 opacity-60" />
+                ) : null}
+                {item.submissionTitle ?? "Untitled"}
+              </button>
+            ))}
+          </div>
 
-      {isLoadingItems ? (
-        <div className="space-y-2">
-          {Array.from({ length: 3 }, (_, i) => (
-            <div
-              key={i}
-              className="h-16 rounded-md border bg-muted animate-pulse"
+          {/* Reading pane */}
+          <div className="flex-1 min-w-0 border rounded-lg overflow-hidden">
+            <DetailPane
+              submissionId={selectedItem.submissionId}
+              mode="deep-read"
+              workspaceContext={workspaceContext}
             />
-          ))}
-        </div>
-      ) : items.length === 0 ? (
-        <div className="text-center py-12 text-muted-foreground border rounded-lg">
-          No submissions in this collection yet.
+          </div>
         </div>
       ) : (
-        <DndContext
-          sensors={sensors}
-          collisionDetection={closestCenter}
-          onDragEnd={handleDragEnd}
-        >
-          <SortableContext
-            items={items.map((i) => i.id)}
-            strategy={verticalListSortingStrategy}
-          >
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-muted-foreground">
+              {items.length} item{items.length !== 1 ? "s" : ""}
+            </p>
+            <Button
+              size="sm"
+              onClick={() => setShowAddDialog(true)}
+              data-testid="add-submission-btn"
+            >
+              <Plus className="mr-1.5 h-3.5 w-3.5" />
+              Add Submission
+            </Button>
+          </div>
+
+          {isLoadingItems ? (
             <div className="space-y-2">
-              {items.map((item) => (
-                <SortableCollectionItem
-                  key={item.id}
-                  item={item}
-                  onUpdateNotes={handleUpdateNotes}
-                  onRemove={handleRemoveItem}
+              {Array.from({ length: 3 }, (_, i) => (
+                <div
+                  key={i}
+                  className="h-16 rounded-md border bg-muted animate-pulse"
                 />
               ))}
             </div>
-          </SortableContext>
-        </DndContext>
+          ) : items.length === 0 ? (
+            <div className="text-center py-12 text-muted-foreground border rounded-lg">
+              No submissions in this collection yet.
+            </div>
+          ) : (
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragEnd={handleDragEnd}
+            >
+              <SortableContext
+                items={items.map((i) => i.id)}
+                strategy={verticalListSortingStrategy}
+              >
+                <div className="space-y-2">
+                  {items.map((item) => (
+                    <div
+                      key={item.id}
+                      onClick={() => handleItemClick(item.id)}
+                      className="cursor-pointer"
+                    >
+                      <SortableCollectionItem
+                        item={item}
+                        onUpdateNotes={handleUpdateNotes}
+                        onRemove={handleRemoveItem}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </SortableContext>
+            </DndContext>
+          )}
+        </div>
       )}
 
       <AddSubmissionDialog

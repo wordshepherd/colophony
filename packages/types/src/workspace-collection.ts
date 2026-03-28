@@ -105,10 +105,21 @@ export const addCollectionItemSchema = z.object({
 
 export type AddCollectionItemInput = z.infer<typeof addCollectionItemSchema>;
 
+export const readingAnchorSchema = z
+  .object({
+    nodeIndex: z.number().int().min(0),
+    charOffset: z.number().int().min(0),
+  })
+  .describe("Content-anchored reading position in ProseMirror document");
+
 export const updateCollectionItemSchema = z.object({
   notes: z.string().max(5000).nullable().optional().describe("Private notes"),
   color: z.string().max(50).nullable().optional().describe("Label color"),
   icon: z.string().max(50).nullable().optional().describe("Item icon"),
+  readingAnchor: readingAnchorSchema
+    .nullable()
+    .optional()
+    .describe("Reading position anchor — persisted only in collection context"),
 });
 
 export type UpdateCollectionItemInput = z.infer<
