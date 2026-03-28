@@ -10,22 +10,31 @@ import {
   userOrganizationSchema,
   organizationMemberMutationResponseSchema,
   inviteOrAddResultSchema,
+  organizationInvitationSchema,
+  acceptInvitationSchema,
+  acceptInvitationResultSchema,
   paginatedResponseSchema,
   successResponseSchema,
+  type Role,
 } from '@colophony/types';
 import { restPaginationQuery } from '@colophony/api-contracts';
 import { organizationService } from '../../services/organization.service.js';
+import { invitationService } from '../../services/invitation.service.js';
 import {
   gdprService,
   OrgNotDeletableError,
 } from '../../services/gdpr.service.js';
 import { validateEnv } from '../../config/env.js';
-import { toServiceContext } from '../../services/context.js';
+import {
+  toServiceContext,
+  toUserServiceContext,
+} from '../../services/context.js';
 import { mapServiceError } from '../error-mapper.js';
 import {
   authedProcedure,
   orgProcedure,
   adminProcedure,
+  userProcedure,
   requireScopes,
 } from '../context.js';
 
@@ -37,6 +46,10 @@ const orgIdParam = z.object({ orgId: z.string().uuid() });
 const memberIdParam = z.object({
   orgId: z.string().uuid(),
   memberId: z.string().uuid(),
+});
+const invitationIdParam = z.object({
+  orgId: z.string().uuid(),
+  invitationId: z.string().uuid(),
 });
 
 /**
@@ -188,6 +201,110 @@ const membersUpdateRoles = adminProcedure
         toServiceContext(context),
         input.memberId,
         input.roles,
+      );
+    } catch (e) {
+      mapServiceError(e);
+    }
+  });
+
+// ---------------------------------------------------------------------------
+// Invitation routes
+// ---------------------------------------------------------------------------
+
+const invitationsList = adminProcedure
+  .use(requireScopes('organizations:read'))
+  .route({
+    method: 'GET',
+    path: '/organizations/{orgId}/invitations',
+    summary: 'List pending invitations',
+    description:
+      'Returns pending invitations for the specified organization. Requires ADMIN role.',
+    operationId: 'listOrganizationInvitations',
+    tags: ['Invitations'],
+  })
+  .input(orgIdParam)
+  .output(z.array(organizationInvitationSchema))
+  .handler(async ({ input, context }) => {
+    assertOrgIdMatch(input.orgId, context.authContext.orgId);
+    const items = await invitationService.listPending(
+      context.dbTx,
+      context.authContext.orgId,
+    );
+    return items.map(({ inviterEmail: _, ...rest }) => ({
+      ...rest,
+      roles: rest.roles as typeof rest.roles & Role[],
+    }));
+  });
+
+const invitationsRevoke = adminProcedure
+  .use(requireScopes('organizations:write'))
+  .route({
+    method: 'DELETE',
+    path: '/organizations/{orgId}/invitations/{invitationId}',
+    summary: 'Revoke an invitation',
+    description: 'Revoke a pending invitation. Requires ADMIN role.',
+    operationId: 'revokeOrganizationInvitation',
+    tags: ['Invitations'],
+  })
+  .input(invitationIdParam)
+  .output(successResponseSchema)
+  .handler(async ({ input, context }) => {
+    assertOrgIdMatch(input.orgId, context.authContext.orgId);
+    try {
+      await invitationService.revokeWithAudit(
+        toServiceContext(context),
+        input.invitationId,
+      );
+      return { success: true as const };
+    } catch (e) {
+      mapServiceError(e);
+    }
+  });
+
+const invitationsResend = adminProcedure
+  .use(requireScopes('organizations:write'))
+  .route({
+    method: 'POST',
+    path: '/organizations/{orgId}/invitations/{invitationId}/resend',
+    summary: 'Resend an invitation',
+    description:
+      'Revoke the existing invitation and send a new one with a fresh token and expiry. Requires ADMIN role.',
+    operationId: 'resendOrganizationInvitation',
+    tags: ['Invitations'],
+  })
+  .input(invitationIdParam)
+  .output(organizationInvitationSchema)
+  .handler(async ({ input, context }) => {
+    assertOrgIdMatch(input.orgId, context.authContext.orgId);
+    const env = validateEnv();
+    try {
+      return await invitationService.resendWithAudit(
+        toServiceContext(context),
+        input.invitationId,
+        env,
+      );
+    } catch (e) {
+      mapServiceError(e);
+    }
+  });
+
+const invitationsAccept = userProcedure
+  .route({
+    method: 'POST',
+    path: '/invitations/accept',
+    summary: 'Accept an invitation',
+    description:
+      'Accept a pending invitation using the token from the invitation email. Adds the authenticated user as a member of the inviting organization.',
+    operationId: 'acceptInvitation',
+    tags: ['Invitations'],
+  })
+  .input(acceptInvitationSchema)
+  .output(acceptInvitationResultSchema)
+  .handler(async ({ input, context }) => {
+    try {
+      return await invitationService.acceptWithAudit(
+        toUserServiceContext(context),
+        input.token,
       );
     } catch (e) {
       mapServiceError(e);
@@ -363,5 +480,11 @@ export const organizationsRouter = {
     add: membersAdd,
     remove: membersRemove,
     updateRoles: membersUpdateRoles,
+  },
+  invitations: {
+    list: invitationsList,
+    revoke: invitationsRevoke,
+    resend: invitationsResend,
+    accept: invitationsAccept,
   },
 };
