@@ -75,6 +75,11 @@ const openApiHandler = new OpenAPIHandler<RestContext>(restRouter, {
               'Manage organizations and their members. Organizations are the top-level tenant in Colophony.',
           },
           {
+            name: 'Invitations',
+            description:
+              'Manage organization membership invitations — list pending, revoke, resend, and accept.',
+          },
+          {
             name: 'Manuscripts',
             description:
               'Manage manuscripts — personal library of creative works with versioning.',
