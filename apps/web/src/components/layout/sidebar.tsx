@@ -8,6 +8,7 @@ import {
   writingNavigation,
   editorialNavigation,
   productionNavigation,
+  businessNavigation,
   operationsNavigation,
   type NavItem,
 } from "@/lib/navigation";
@@ -73,7 +74,7 @@ function NavGroup({
 
 export function Sidebar() {
   const pathname = usePathname();
-  const { isEditor, isProduction, isAdmin } = useOrganization();
+  const { isEditor, isProduction, isBusinessOps, isAdmin } = useOrganization();
 
   return (
     <div className="flex flex-col h-full bg-background">
@@ -105,6 +106,14 @@ export function Sidebar() {
           <NavGroup
             label="Production"
             items={productionNavigation}
+            pathname={pathname}
+          />
+        )}
+
+        {isBusinessOps && (
+          <NavGroup
+            label="Business"
+            items={businessNavigation}
             pathname={pathname}
           />
         )}

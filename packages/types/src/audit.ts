@@ -272,6 +272,29 @@ export const AuditActions = {
   COLLECTION_ITEM_ADDED: "COLLECTION_ITEM_ADDED",
   COLLECTION_ITEM_REMOVED: "COLLECTION_ITEM_REMOVED",
   COLLECTION_ITEM_UPDATED: "COLLECTION_ITEM_UPDATED",
+
+  // Contributor lifecycle
+  CONTRIBUTOR_CREATED: "CONTRIBUTOR_CREATED",
+  CONTRIBUTOR_UPDATED: "CONTRIBUTOR_UPDATED",
+  CONTRIBUTOR_DELETED: "CONTRIBUTOR_DELETED",
+  CONTRIBUTOR_LINKED: "CONTRIBUTOR_LINKED",
+  CONTRIBUTOR_UNLINKED: "CONTRIBUTOR_UNLINKED",
+  CONTRIBUTOR_PUBLICATION_ADDED: "CONTRIBUTOR_PUBLICATION_ADDED",
+  CONTRIBUTOR_PUBLICATION_REMOVED: "CONTRIBUTOR_PUBLICATION_REMOVED",
+
+  // Rights agreement lifecycle
+  RIGHTS_AGREEMENT_CREATED: "RIGHTS_AGREEMENT_CREATED",
+  RIGHTS_AGREEMENT_UPDATED: "RIGHTS_AGREEMENT_UPDATED",
+  RIGHTS_AGREEMENT_SENT: "RIGHTS_AGREEMENT_SENT",
+  RIGHTS_AGREEMENT_SIGNED: "RIGHTS_AGREEMENT_SIGNED",
+  RIGHTS_AGREEMENT_ACTIVATED: "RIGHTS_AGREEMENT_ACTIVATED",
+  RIGHTS_AGREEMENT_REVERTED: "RIGHTS_AGREEMENT_REVERTED",
+  RIGHTS_AGREEMENT_DELETED: "RIGHTS_AGREEMENT_DELETED",
+
+  // Payment transaction lifecycle
+  PAYMENT_TRANSACTION_CREATED: "PAYMENT_TRANSACTION_CREATED",
+  PAYMENT_TRANSACTION_UPDATED: "PAYMENT_TRANSACTION_UPDATED",
+  PAYMENT_TRANSACTION_STATUS_CHANGED: "PAYMENT_TRANSACTION_STATUS_CHANGED",
 } as const;
 
 export type AuditAction = (typeof AuditActions)[keyof typeof AuditActions];
@@ -313,6 +336,10 @@ export const AuditResources = {
   AUDIT: "audit",
   COLLECTION: "collection",
   INVITATION: "invitation",
+  CONTRIBUTOR: "contributor",
+  CONTRIBUTOR_PUBLICATION: "contributor_publication",
+  RIGHTS_AGREEMENT: "rights_agreement",
+  PAYMENT_TRANSACTION: "payment_transaction",
 } as const;
 
 export type AuditResource =
@@ -700,6 +727,38 @@ export interface InvitationAuditParams extends BaseAuditParams {
     | typeof AuditActions.INVITATION_RESENT;
 }
 
+export interface ContributorAuditParams extends BaseAuditParams {
+  resource: typeof AuditResources.CONTRIBUTOR;
+  action:
+    | typeof AuditActions.CONTRIBUTOR_CREATED
+    | typeof AuditActions.CONTRIBUTOR_UPDATED
+    | typeof AuditActions.CONTRIBUTOR_DELETED
+    | typeof AuditActions.CONTRIBUTOR_LINKED
+    | typeof AuditActions.CONTRIBUTOR_UNLINKED
+    | typeof AuditActions.CONTRIBUTOR_PUBLICATION_ADDED
+    | typeof AuditActions.CONTRIBUTOR_PUBLICATION_REMOVED;
+}
+
+export interface RightsAgreementAuditParams extends BaseAuditParams {
+  resource: typeof AuditResources.RIGHTS_AGREEMENT;
+  action:
+    | typeof AuditActions.RIGHTS_AGREEMENT_CREATED
+    | typeof AuditActions.RIGHTS_AGREEMENT_UPDATED
+    | typeof AuditActions.RIGHTS_AGREEMENT_SENT
+    | typeof AuditActions.RIGHTS_AGREEMENT_SIGNED
+    | typeof AuditActions.RIGHTS_AGREEMENT_ACTIVATED
+    | typeof AuditActions.RIGHTS_AGREEMENT_REVERTED
+    | typeof AuditActions.RIGHTS_AGREEMENT_DELETED;
+}
+
+export interface PaymentTransactionAuditParams extends BaseAuditParams {
+  resource: typeof AuditResources.PAYMENT_TRANSACTION;
+  action:
+    | typeof AuditActions.PAYMENT_TRANSACTION_CREATED
+    | typeof AuditActions.PAYMENT_TRANSACTION_UPDATED
+    | typeof AuditActions.PAYMENT_TRANSACTION_STATUS_CHANGED;
+}
+
 /** Union of all resource-specific param types. */
 export type AuditLogParams =
   | UserAuditParams
@@ -737,7 +796,10 @@ export type AuditLogParams =
   | AuditAccessAuditParams
   | SystemAuditParams
   | CollectionAuditParams
-  | InvitationAuditParams;
+  | InvitationAuditParams
+  | ContributorAuditParams
+  | RightsAgreementAuditParams
+  | PaymentTransactionAuditParams;
 
 // ---------------------------------------------------------------------------
 // Query/response schemas for audit endpoints

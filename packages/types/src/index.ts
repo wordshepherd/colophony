@@ -40,3 +40,6 @@ export * from "./blind-review";
 export * from "./queue-preset";
 export * from "./prosemirror";
 export * from "./workspace-collection";
+export * from "./contributor";
+export * from "./rights-agreement";
+export * from "./payment-transaction";

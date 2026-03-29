@@ -35,6 +35,7 @@ import { migrationRouter } from './routers/migration.js';
 import { hubRouter } from './routers/hub.js';
 import { collectionsRouter } from './routers/collections.js';
 import { opsRouter } from './routers/ops.js';
+import { contributorsRouter } from './routers/contributors.js';
 
 // Re-export procedure builders for convenience
 export {
@@ -42,6 +43,7 @@ export {
   authedProcedure,
   orgProcedure,
   adminProcedure,
+  businessOpsProcedure,
   createRouter,
   mergeRouters,
 } from './init.js';
@@ -91,6 +93,7 @@ export const appRouter = t.router({
   hub: hubRouter,
   collections: collectionsRouter,
   ops: opsRouter,
+  contributors: contributorsRouter,
   retention: t.router({}),
 });
 
