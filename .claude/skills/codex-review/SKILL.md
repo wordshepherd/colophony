@@ -207,6 +207,16 @@ Then ask the user which findings (if any) they want to address:
 Which findings would you like me to address? (Enter numbers, "all", or "none")
 ```
 
+### Step 6: Create review marker (plan review only)
+
+For **plan review** only, create a marker file so the `ExitPlanMode` hook knows the review was completed:
+
+```bash
+touch /tmp/.colophony-plan-reviewed
+```
+
+Skip this step for branch and diff reviews.
+
 ## Important notes
 
 - `codex review` runs non-interactively — no tmux session management needed
