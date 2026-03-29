@@ -10,19 +10,14 @@ import {
   idParamSchema,
   paginatedResponseSchema,
 } from '@colophony/types';
-import {
-  orgProcedure,
-  businessOpsProcedure,
-  createRouter,
-  requireScopes,
-} from '../init.js';
+import { businessOpsProcedure, createRouter, requireScopes } from '../init.js';
 import { contributorService } from '../../services/contributor.service.js';
 import { toServiceContext } from '../../services/context.js';
 import { mapServiceError } from '../error-mapper.js';
 
 export const contributorsRouter = createRouter({
   /** List contributors for the current org. */
-  list: orgProcedure
+  list: businessOpsProcedure
     .use(requireScopes('contributors:read'))
     .input(listContributorsSchema)
     .output(paginatedResponseSchema(contributorSchema))
@@ -31,7 +26,7 @@ export const contributorsRouter = createRouter({
     }),
 
   /** Get a contributor by ID. */
-  getById: orgProcedure
+  getById: businessOpsProcedure
     .use(requireScopes('contributors:read'))
     .input(idParamSchema)
     .output(contributorSchema)
@@ -134,7 +129,7 @@ export const contributorsRouter = createRouter({
     }),
 
   /** List publication credits for a contributor. */
-  listPublications: orgProcedure
+  listPublications: businessOpsProcedure
     .use(requireScopes('contributors:read'))
     .input(z.object({ contributorId: z.string().uuid() }))
     .output(z.array(contributorPublicationSchema))

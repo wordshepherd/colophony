@@ -27,6 +27,10 @@ vi.mock('@colophony/db', () => ({
     displayOrder: 'cp.display_order',
     createdAt: 'cp.created_at',
   },
+  pipelineItems: {
+    id: 'pi.id',
+    organizationId: 'pi.org_id',
+  },
   eq: vi.fn(),
   and: vi.fn(),
 }));
@@ -335,6 +339,12 @@ describe('contributorService', () => {
 
   describe('addPublicationWithAudit', () => {
     it('inserts publication link and emits audit', async () => {
+      // Pipeline item org validation
+      mockTx.select = vi.fn(() => {
+        const c = makeChain();
+        c.limit.mockResolvedValueOnce([{ id: 'pi-1' }]);
+        return c;
+      });
       mockTx.insert = vi.fn(() => {
         const c = makeChain();
         c.returning.mockResolvedValueOnce([fakePub]);
@@ -359,6 +369,11 @@ describe('contributorService', () => {
     });
 
     it('throws ContributorPublicationDuplicateError on unique violation', async () => {
+      mockTx.select = vi.fn(() => {
+        const c = makeChain();
+        c.limit.mockResolvedValueOnce([{ id: 'pi-1' }]);
+        return c;
+      });
       mockTx.insert = vi.fn(() => {
         const c = makeChain();
         c.returning.mockRejectedValueOnce(
@@ -434,6 +449,11 @@ describe('contributorService', () => {
     });
 
     it('addPublicationWithAudit calls assertBusinessOpsOrAdmin', async () => {
+      mockTx.select = vi.fn(() => {
+        const c = makeChain();
+        c.limit.mockResolvedValueOnce([{ id: 'pi-1' }]);
+        return c;
+      });
       mockTx.insert = vi.fn(() => {
         const c = makeChain();
         c.returning.mockResolvedValueOnce([fakePub]);

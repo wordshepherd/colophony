@@ -122,6 +122,7 @@ import {
   ContributorNotFoundError,
   ContributorAlreadyLinkedError,
   ContributorPublicationDuplicateError,
+  PipelineItemNotInOrgError,
 } from '../services/contributor.service.js';
 
 type TRPCErrorCode = ConstructorParameters<typeof TRPCError>[0]['code'];
@@ -235,6 +236,7 @@ const errorCodeMap: [new (...args: never[]) => Error, TRPCErrorCode][] = [
   [ContributorNotFoundError, 'NOT_FOUND'],
   [ContributorAlreadyLinkedError, 'CONFLICT'],
   [ContributorPublicationDuplicateError, 'CONFLICT'],
+  [PipelineItemNotInOrgError, 'NOT_FOUND'],
 ];
 
 /**

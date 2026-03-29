@@ -1,6 +1,7 @@
 import {
   contributors,
   contributorPublications,
+  pipelineItems,
   eq,
   and,
   type DrizzleDb,
@@ -39,6 +40,15 @@ export class ContributorPublicationDuplicateError extends Error {
   constructor() {
     super('This contributor already has this role on this publication');
     this.name = 'ContributorPublicationDuplicateError';
+  }
+}
+
+export class PipelineItemNotInOrgError extends Error {
+  constructor(pipelineItemId: string) {
+    super(
+      `Pipeline item "${pipelineItemId}" does not belong to this organization`,
+    );
+    this.name = 'PipelineItemNotInOrgError';
   }
 }
 
@@ -269,6 +279,19 @@ export const contributorService = {
     input: AddContributorPublicationInput,
   ) {
     assertBusinessOpsOrAdmin(ctx.actor.roles);
+
+    // Defense-in-depth: verify pipeline item belongs to current org
+    const [item] = await ctx.tx
+      .select({ id: pipelineItems.id })
+      .from(pipelineItems)
+      .where(
+        and(
+          eq(pipelineItems.id, input.pipelineItemId),
+          eq(pipelineItems.organizationId, ctx.actor.orgId),
+        ),
+      )
+      .limit(1);
+    if (!item) throw new PipelineItemNotInOrgError(input.pipelineItemId);
 
     try {
       const [pub] = await ctx.tx
