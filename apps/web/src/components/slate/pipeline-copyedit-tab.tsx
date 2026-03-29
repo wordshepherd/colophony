@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import { trpc } from "@/lib/trpc";
 import { ManuscriptEditor } from "@/components/manuscripts/manuscript-editor";
 import { ManuscriptDiff } from "@/components/manuscripts/manuscript-diff";
@@ -8,18 +8,21 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Save, Loader2, AlertCircle } from "lucide-react";
+import { Save, Loader2, AlertCircle, Download, Upload } from "lucide-react";
 import type { ProseMirrorDoc, GenreHint } from "@colophony/types";
 
 interface PipelineCopyeditTabProps {
   pipelineItemId: string;
+  stage: string;
 }
 
 export function PipelineCopyeditTab({
   pipelineItemId,
+  stage,
 }: PipelineCopyeditTabProps) {
   const [editedDoc, setEditedDoc] = useState<ProseMirrorDoc | null>(null);
   const [activeTab, setActiveTab] = useState("edit");
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const {
     data: copyeditData,
@@ -33,6 +36,34 @@ export function PipelineCopyeditTab({
     onSuccess: () => {
       toast.success("Copyedit saved as new version");
       setEditedDoc(null); // Clear dirty state to prevent duplicate saves
+      utils.pipeline.getCopyeditContent.invalidate({ id: pipelineItemId });
+      setActiveTab("diff");
+    },
+    onError: (err) => {
+      toast.error(err.message);
+    },
+  });
+
+  const exportMutation = trpc.pipeline.exportCopyeditDocx.useMutation({
+    onSuccess: (data) => {
+      // Trigger browser download via temporary anchor
+      const a = document.createElement("a");
+      a.href = data.downloadUrl;
+      a.download = data.filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      toast.success(`Exported as ${data.filename}`);
+    },
+    onError: (err) => {
+      toast.error(err.message);
+    },
+  });
+
+  const importMutation = trpc.pipeline.importCopyeditDocx.useMutation({
+    onSuccess: (data) => {
+      toast.success(`Imported as version ${data.versionNumber}`);
+      setEditedDoc(null);
       utils.pipeline.getCopyeditContent.invalidate({ id: pipelineItemId });
       setActiveTab("diff");
     },
@@ -57,6 +88,40 @@ export function PipelineCopyeditTab({
       label: "Copyedit",
     });
   };
+
+  const handleExport = () => {
+    exportMutation.mutate({ id: pipelineItemId });
+  };
+
+  const handleImportClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileSelected = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const base64 = (reader.result as string).split(",")[1];
+      if (!base64) {
+        toast.error("Failed to read file");
+        return;
+      }
+      importMutation.mutate({
+        id: pipelineItemId,
+        fileBase64: base64,
+        filename: file.name,
+      });
+    };
+    reader.readAsDataURL(file);
+
+    // Reset so the same file can be re-selected
+    e.target.value = "";
+  };
+
+  const isEditable =
+    stage === "COPYEDIT_IN_PROGRESS" || stage === "AUTHOR_REVIEW";
 
   if (isLoading) {
     return (
@@ -108,25 +173,60 @@ export function PipelineCopyeditTab({
 
   return (
     <div className="space-y-4">
-      {/* Save bar */}
+      {/* Action bar */}
       <div className="flex items-center justify-between">
         <p className="text-sm text-muted-foreground">
           {copyeditData.versions.length > 1
             ? `Version ${copyeditData.versions.length} of ${copyeditData.versions.length}`
             : "Original version"}
         </p>
-        <Button
-          onClick={handleSave}
-          disabled={!isDirty || saveMutation.isPending}
-          size="sm"
-        >
-          {saveMutation.isPending ? (
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-          ) : (
-            <Save className="mr-2 h-4 w-4" />
-          )}
-          Save as new version
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            onClick={handleExport}
+            disabled={exportMutation.isPending}
+            size="sm"
+            variant="outline"
+          >
+            {exportMutation.isPending ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Download className="mr-2 h-4 w-4" />
+            )}
+            Export .docx
+          </Button>
+          <Button
+            onClick={handleImportClick}
+            disabled={!isEditable || importMutation.isPending}
+            size="sm"
+            variant="outline"
+          >
+            {importMutation.isPending ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Upload className="mr-2 h-4 w-4" />
+            )}
+            Import .docx
+          </Button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".docx"
+            className="hidden"
+            onChange={handleFileSelected}
+          />
+          <Button
+            onClick={handleSave}
+            disabled={!isDirty || saveMutation.isPending}
+            size="sm"
+          >
+            {saveMutation.isPending ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Save className="mr-2 h-4 w-4" />
+            )}
+            Save as new version
+          </Button>
+        </div>
       </div>
 
       {/* Edit / Diff tabs */}

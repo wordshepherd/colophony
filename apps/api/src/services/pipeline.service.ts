@@ -37,6 +37,10 @@ import {
 import type { ServiceContext } from './types.js';
 import { assertEditorOrProductionOrAdmin } from './errors.js';
 import { enqueueOutboxEvent } from './outbox.js';
+import type { S3StorageAdapter } from '../adapters/storage/index.js';
+import { convertProseMirrorToDocx } from '../converters/prosemirror-to-docx.js';
+import { convertFile } from '../converters/index.js';
+import type { ProseMirrorDoc } from '@colophony/types';
 
 // ---------------------------------------------------------------------------
 // Error classes
@@ -760,6 +764,194 @@ export const pipelineService = {
       },
     });
     return version;
+  },
+
+  // -------------------------------------------------------------------------
+  // Copyedit round-trip (export / import .docx)
+  // -------------------------------------------------------------------------
+
+  async exportCopyeditDocx(
+    tx: DrizzleDb,
+    pipelineItemId: string,
+    orgId: string,
+    storage: S3StorageAdapter,
+  ): Promise<{ downloadUrl: string; filename: string }> {
+    // 1. Get current content (defense-in-depth orgId filter already in getCopyeditContent)
+    const data = await pipelineService.getCopyeditContent(
+      tx,
+      pipelineItemId,
+      orgId,
+    );
+    if (data.contentExtractionStatus !== 'COMPLETE' || data.content == null) {
+      throw new Error('Manuscript content is not available for export');
+    }
+
+    // 2. Get submission title for filename (defense-in-depth orgId filter)
+    const [sub] = await tx
+      .select({ title: submissions.title })
+      .from(submissions)
+      .innerJoin(pipelineItems, eq(submissions.id, pipelineItems.submissionId))
+      .where(
+        and(
+          eq(pipelineItems.id, pipelineItemId),
+          eq(submissions.organizationId, orgId),
+        ),
+      )
+      .limit(1);
+
+    const versionCount = data.versions.length;
+    const sanitizedTitle = (sub?.title ?? 'manuscript')
+      .replace(/[^a-zA-Z0-9\s-]/g, '')
+      .replace(/\s+/g, '-')
+      .toLowerCase()
+      .slice(0, 80);
+    const filename = `${sanitizedTitle}-copyedit-v${versionCount}.docx`;
+
+    // 3. Convert ProseMirror → .docx
+    const buffer = await convertProseMirrorToDocx(
+      data.content as ProseMirrorDoc,
+    );
+
+    // 4. Upload to S3
+    const storageKey = `copyedit-exports/${orgId}/${pipelineItemId}/${Date.now()}.docx`;
+    await storage.uploadToBucket(
+      storage.defaultBucket,
+      storageKey,
+      buffer,
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    );
+
+    // 5. Generate presigned URL (15 min)
+    const downloadUrl = await storage.getSignedUrlFromBucket(
+      storage.defaultBucket,
+      storageKey,
+      900,
+    );
+
+    return { downloadUrl, filename };
+  },
+
+  async exportCopyeditDocxWithAudit(
+    ctx: ServiceContext,
+    pipelineItemId: string,
+    storage: S3StorageAdapter,
+  ): Promise<{ downloadUrl: string; filename: string }> {
+    assertEditorOrProductionOrAdmin(ctx.actor.roles);
+    const result = await pipelineService.exportCopyeditDocx(
+      ctx.tx,
+      pipelineItemId,
+      ctx.actor.orgId,
+      storage,
+    );
+    await ctx.audit({
+      action: AuditActions.PIPELINE_COPYEDIT_EXPORTED,
+      resource: AuditResources.PIPELINE_ITEM,
+      resourceId: pipelineItemId,
+      newValue: { filename: result.filename },
+    });
+    return result;
+  },
+
+  async importCopyeditDocx(
+    tx: DrizzleDb,
+    pipelineItemId: string,
+    fileBuffer: Buffer,
+    filename: string,
+    orgId: string,
+  ): Promise<{
+    versionId: string;
+    versionNumber: number;
+    content: ProseMirrorDoc;
+  }> {
+    // 1. Verify pipeline item exists + stage allows editing
+    const item = await pipelineService.getById(tx, pipelineItemId, orgId);
+    if (!item) throw new PipelineItemNotFoundError(pipelineItemId);
+
+    if (
+      item.stage !== 'COPYEDIT_IN_PROGRESS' &&
+      item.stage !== 'AUTHOR_REVIEW'
+    ) {
+      throw new InvalidPipelineTransitionError(
+        item.stage,
+        'Cannot import copyedit in this stage',
+      );
+    }
+
+    // 2. Get genre hint from manuscript
+    const copyeditData = await pipelineService.getCopyeditContent(
+      tx,
+      pipelineItemId,
+      orgId,
+    );
+    const genreHint =
+      (copyeditData.genreHint as
+        | 'prose'
+        | 'poetry'
+        | 'hybrid'
+        | 'creative_nonfiction') ?? undefined;
+
+    // 3. Convert .docx → ProseMirror via shared convertFile (includes size check, smart typography, metadata)
+    const DOCX_MIME =
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+    const result = await convertFile(
+      fileBuffer,
+      DOCX_MIME,
+      filename,
+      genreHint,
+    );
+
+    if (result.status !== 'success') {
+      throw new Error(`Failed to convert ${filename}: ${result.mimeType}`);
+    }
+
+    // 4. Save as new version via existing saveCopyedit
+    const version = await pipelineService.saveCopyedit(
+      tx,
+      pipelineItemId,
+      {
+        content: result.doc as { type: 'doc'; content: unknown[] },
+        label: `Imported: ${filename}`,
+      },
+      orgId,
+    );
+
+    return {
+      versionId: version.id,
+      versionNumber: version.versionNumber,
+      content: result.doc,
+    };
+  },
+
+  async importCopyeditDocxWithAudit(
+    ctx: ServiceContext,
+    pipelineItemId: string,
+    fileBuffer: Buffer,
+    filename: string,
+  ): Promise<{
+    versionId: string;
+    versionNumber: number;
+    content: ProseMirrorDoc;
+  }> {
+    assertEditorOrProductionOrAdmin(ctx.actor.roles);
+    const result = await pipelineService.importCopyeditDocx(
+      ctx.tx,
+      pipelineItemId,
+      fileBuffer,
+      filename,
+      ctx.actor.orgId,
+    );
+    await ctx.audit({
+      action: AuditActions.PIPELINE_COPYEDIT_IMPORTED,
+      resource: AuditResources.PIPELINE_ITEM,
+      resourceId: pipelineItemId,
+      newValue: {
+        filename,
+        versionId: result.versionId,
+        versionNumber: result.versionNumber,
+        trackChangesAccepted: true,
+      },
+    });
+    return result;
   },
 
   // -------------------------------------------------------------------------

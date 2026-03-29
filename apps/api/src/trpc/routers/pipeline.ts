@@ -9,6 +9,9 @@ import {
   pipelineCommentSchema,
   saveCopyeditInputSchema,
   copyeditContentSchema,
+  exportCopyeditResponseSchema,
+  importCopyeditInputSchema,
+  importCopyeditResponseSchema,
   productionDashboardInputSchema,
   productionDashboardSchema,
   idParamSchema,
@@ -28,6 +31,12 @@ import {
 } from '../../services/pipeline.service.js';
 import { toServiceContext } from '../../services/context.js';
 import { mapServiceError } from '../error-mapper.js';
+import { getGlobalRegistry } from '../../adapters/registry-accessor.js';
+import type { S3StorageAdapter } from '../../adapters/storage/index.js';
+
+function getStorage(): S3StorageAdapter {
+  return getGlobalRegistry().resolve<S3StorageAdapter>('storage');
+}
 
 export const pipelineRouter = createRouter({
   /** List pipeline items in the org. */
@@ -198,6 +207,49 @@ export const pipelineRouter = createRouter({
           id,
           data,
         );
+      } catch (e) {
+        mapServiceError(e);
+      }
+    }),
+
+  /** Export copyedit manuscript as .docx — returns presigned download URL. */
+  exportCopyeditDocx: orgProcedure
+    .use(requireScopes('pipeline:read'))
+    .input(idParamSchema)
+    .output(exportCopyeditResponseSchema)
+    .mutation(async ({ ctx, input }) => {
+      try {
+        return await pipelineService.exportCopyeditDocxWithAudit(
+          toServiceContext(ctx),
+          input.id,
+          getStorage(),
+        );
+      } catch (e) {
+        mapServiceError(e);
+      }
+    }),
+
+  /** Import edited .docx back as a new manuscript version. */
+  importCopyeditDocx: orgProcedure
+    .use(requireScopes('pipeline:write'))
+    .input(importCopyeditInputSchema)
+    .output(importCopyeditResponseSchema)
+    .mutation(async ({ ctx, input }) => {
+      try {
+        const buffer = Buffer.from(input.fileBase64, 'base64');
+        const result = await pipelineService.importCopyeditDocxWithAudit(
+          toServiceContext(ctx),
+          input.id,
+          buffer,
+          input.filename,
+        );
+        // Cast ProseMirrorDoc to match Zod .passthrough() output shape
+        return {
+          ...result,
+          content: result.content as unknown as z.infer<
+            typeof importCopyeditResponseSchema
+          >['content'],
+        };
       } catch (e) {
         mapServiceError(e);
       }
