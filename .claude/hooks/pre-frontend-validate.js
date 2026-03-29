@@ -12,9 +12,8 @@
 
 const fs = require('fs');
 
-// Read the file content from stdin or the file path argument
-const filePath = process.argv[2];
-const newContent = process.argv[3] || '';
+const filePath = process.env.CLAUDE_TOOL_ARGS_file_path || '';
+const newContent = process.env.CLAUDE_TOOL_ARGS_new_str || process.env.CLAUDE_TOOL_ARGS_content || '';
 
 // Check if this is a component file
 const isComponent = filePath.includes('/components/') && filePath.endsWith('.tsx');

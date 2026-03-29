@@ -5,7 +5,7 @@
  * Warns if sensitive operations are missing audit logging.
  */
 
-const newContent = process.env.CLAUDE_TOOL_ARGS_new_str || '';
+const newContent = process.env.CLAUDE_TOOL_ARGS_new_str || process.env.CLAUDE_TOOL_ARGS_content || '';
 const filePath = process.env.CLAUDE_TOOL_ARGS_file_path || '';
 
 // Only check route files (Fastify routes and ts-rest handlers)
