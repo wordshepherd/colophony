@@ -169,19 +169,27 @@ export const rightsAgreementService = {
     const now = new Date();
     const deadline = new Date(now.getTime() + withinDays * 86_400_000);
 
-    return tx
-      .select()
-      .from(rightsAgreements)
-      .where(
-        and(
-          eq(rightsAgreements.organizationId, orgId),
-          eq(rightsAgreements.status, 'ACTIVE'),
-          not(isNull(rightsAgreements.expiresAt)),
-          gte(rightsAgreements.expiresAt, now),
-          lte(rightsAgreements.expiresAt, deadline),
-        ),
-      )
-      .orderBy(rightsAgreements.expiresAt);
+    return (
+      tx
+        .select()
+        .from(rightsAgreements)
+        .where(
+          and(
+            eq(rightsAgreements.organizationId, orgId),
+            eq(rightsAgreements.status, 'ACTIVE'),
+            not(isNull(rightsAgreements.expiresAt)),
+            gte(rightsAgreements.expiresAt, now),
+            lte(rightsAgreements.expiresAt, deadline),
+          ),
+        )
+        .orderBy(rightsAgreements.expiresAt)
+        // Cap at 250 rows — dashboard derives count from .length.
+        // 250 reverting within a single window is well beyond any
+        // realistic literary magazine workload; if exceeded, the
+        // dashboard will undercount (acceptable vs. adding a separate
+        // count endpoint for this edge case).
+        .limit(250)
+    );
   },
 
   // -------------------------------------------------------------------------
