@@ -33,3 +33,17 @@ export const CHART_COLORS = [
   "#A855F7",
   "#6B7280",
 ] as const;
+
+/** Hex color map for primary genre values */
+export const GENRE_COLORS: Record<string, string> = {
+  poetry: "#8B5CF6", // violet-500
+  fiction: "#3B82F6", // blue-500
+  creative_nonfiction: "#10B981", // emerald-500
+  nonfiction: "#6366F1", // indigo-500
+  drama: "#F59E0B", // amber-500
+  translation: "#EC4899", // pink-500
+  visual_art: "#14B8A6", // teal-500
+  comics: "#F97316", // orange-500
+  audio: "#06B6D4", // cyan-500
+  other: "#6B7280", // gray-500
+};

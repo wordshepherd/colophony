@@ -22,6 +22,7 @@ import {
   Network,
   Send,
   Settings,
+  TrendingUp,
   Upload,
   Users,
   Webhook,
@@ -56,6 +57,12 @@ export const editorialNavigation: NavItem[] = [
   { name: "Collections", href: "/editor/collections", icon: FolderOpen },
   { name: "Forms", href: "/editor/forms", icon: ClipboardList },
   { name: "Periods", href: "/editor/periods", icon: Calendar },
+  { name: "Submission Analytics", href: "/editor/analytics", icon: BarChart3 },
+  {
+    name: "Editorial Analytics",
+    href: "/editor/editorial-analytics",
+    icon: TrendingUp,
+  },
 ];
 
 export const productionNavigation: NavItem[] = [
