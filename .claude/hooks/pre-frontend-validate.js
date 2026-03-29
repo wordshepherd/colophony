@@ -13,7 +13,7 @@
 const fs = require('fs');
 
 const filePath = process.env.CLAUDE_TOOL_ARGS_file_path || '';
-const newContent = process.env.CLAUDE_TOOL_ARGS_new_str || '';
+const newContent = process.env.CLAUDE_TOOL_ARGS_new_str || process.env.CLAUDE_TOOL_ARGS_content || '';
 
 // Check if this is a component file
 const isComponent = filePath.includes('/components/') && filePath.endsWith('.tsx');
