@@ -120,6 +120,37 @@ describe('convertProseMirrorToDocx', () => {
     expect(buffer.length).toBeGreaterThan(0);
   });
 
+  it('should handle mixed inline formatting (TipTap content children)', async () => {
+    // TipTap stores mixed formatting as content children, not flat text+marks
+    const doc = makeDoc([
+      {
+        type: 'paragraph',
+        attrs: { indent: false },
+        content: [
+          { type: 'paragraph', text: 'plain text ' },
+          {
+            type: 'paragraph',
+            text: 'italic word',
+            marks: [{ type: 'emphasis' }],
+          },
+          { type: 'paragraph', text: ' more plain' },
+        ],
+      },
+    ]);
+    const buffer = await convertProseMirrorToDocx(doc);
+    expect(buffer.length).toBeGreaterThan(0);
+
+    // Round-trip: verify all text survives
+    const imported = await convertDocxToProseMirror(buffer, 'prose');
+    const allText = simplify(imported)
+      .map((n) => n.text)
+      .filter(Boolean)
+      .join(' ');
+    expect(allText).toContain('plain text');
+    expect(allText).toContain('italic word');
+    expect(allText).toContain('more plain');
+  });
+
   it('should handle caesura and preserved_whitespace', async () => {
     const doc = makeDoc([
       { type: 'caesura' },

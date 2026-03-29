@@ -60,20 +60,48 @@ function marksToRunOptions(marks?: ProseMirrorMark[]): Record<string, boolean> {
 // Text extraction helpers
 // ---------------------------------------------------------------------------
 
-/** Extract text from a node that may have inline content children or a text field. */
+/** Extract plain text from a node (ignoring formatting). */
 function getNodeText(node: ProseMirrorNode): string {
   if (node.text != null) return node.text;
   if (node.content) {
-    return node.content
-      .map((child) => (child.text != null ? child.text : ''))
-      .join('');
+    return node.content.map((c) => c.text ?? '').join('');
   }
   return '';
 }
 
-/** Build TextRun array from a node. */
+/**
+ * Build TextRun array from a node, preserving per-segment inline formatting.
+ *
+ * TipTap stores mixed formatting as `node.content` children, each with their
+ * own `text` and `marks`. A flat `node.text` + `node.marks` is the simple case
+ * (single-format paragraph). We handle both.
+ */
 function buildTextRuns(node: ProseMirrorNode): TextRun[] {
-  const text = getNodeText(node);
+  // Case 1: node has inline content children (mixed formatting from TipTap)
+  if (node.content && node.content.length > 0) {
+    const runs: TextRun[] = [];
+    for (const child of node.content) {
+      const text = child.text ?? '';
+      if (!text) continue;
+      // Merge parent marks with child marks
+      const allMarks = [...(node.marks ?? []), ...(child.marks ?? [])];
+      const markOpts = marksToRunOptions(
+        allMarks.length > 0 ? allMarks : undefined,
+      );
+      runs.push(
+        new TextRun({
+          text,
+          font: FONT_NAME,
+          size: FONT_SIZE_PT * 2,
+          ...markOpts,
+        }),
+      );
+    }
+    return runs;
+  }
+
+  // Case 2: flat text + marks (simple paragraph)
+  const text = node.text ?? '';
   if (!text) return [];
 
   const markOpts = marksToRunOptions(node.marks);
@@ -142,17 +170,45 @@ function convertBlockQuote(
   isPoetry: boolean,
 ): Paragraph[] {
   if (!node.content) return [];
-  return node.content.map((child) => {
-    const runs = buildTextRuns(child);
-    return new Paragraph({
-      children: runs,
-      spacing: { line: isPoetry ? LINE_SPACING_POETRY : LINE_SPACING_PROSE },
-      indent: {
-        left: BLOCKQUOTE_INDENT_TWIP,
-        right: BLOCKQUOTE_INDENT_TWIP,
-      },
-    });
-  });
+  const paragraphs: Paragraph[] = [];
+  for (const child of node.content) {
+    // Recursively convert each child node type, preserving structure
+    // (section_break, stanza_break, preserved_indent, etc.)
+    switch (child.type) {
+      case 'section_break':
+        paragraphs.push(convertSectionBreak());
+        break;
+      case 'stanza_break':
+        paragraphs.push(convertStanzaBreak());
+        break;
+      case 'caesura':
+        paragraphs.push(convertCaesura());
+        break;
+      default: {
+        // Text-bearing nodes get blockquote indentation
+        const indent = (child.attrs as { indent?: boolean } | undefined)
+          ?.indent;
+        const depth = (child.attrs as { depth?: number } | undefined)?.depth;
+        const leftIndent =
+          BLOCKQUOTE_INDENT_TWIP + (depth ? depth * INDENT_PER_DEPTH_TWIP : 0);
+        paragraphs.push(
+          new Paragraph({
+            children: buildTextRuns(child),
+            spacing: {
+              line: isPoetry ? LINE_SPACING_POETRY : LINE_SPACING_PROSE,
+            },
+            indent: {
+              left: leftIndent,
+              right: BLOCKQUOTE_INDENT_TWIP,
+              firstLine: indent ? FIRST_LINE_INDENT_TWIP : undefined,
+            },
+          }),
+        );
+        break;
+      }
+    }
+  }
+  return paragraphs;
 }
 
 function convertCaesura(): Paragraph {
