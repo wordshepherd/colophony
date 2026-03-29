@@ -124,6 +124,11 @@ import {
   ContributorPublicationDuplicateError,
   PipelineItemNotInOrgError,
 } from '../services/contributor.service.js';
+import {
+  RightsAgreementNotFoundError,
+  InvalidRightsStatusTransitionError,
+  ContributorNotInOrgError,
+} from '../services/rights-agreement.service.js';
 
 type TRPCErrorCode = ConstructorParameters<typeof TRPCError>[0]['code'];
 
@@ -237,6 +242,10 @@ const errorCodeMap: [new (...args: never[]) => Error, TRPCErrorCode][] = [
   [ContributorAlreadyLinkedError, 'CONFLICT'],
   [ContributorPublicationDuplicateError, 'CONFLICT'],
   [PipelineItemNotInOrgError, 'NOT_FOUND'],
+  // Rights agreement errors
+  [RightsAgreementNotFoundError, 'NOT_FOUND'],
+  [InvalidRightsStatusTransitionError, 'BAD_REQUEST'],
+  [ContributorNotInOrgError, 'NOT_FOUND'],
 ];
 
 /**
