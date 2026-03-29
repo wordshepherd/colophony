@@ -24,6 +24,22 @@ export const rightsAgreementStatusSchema = z
 export type RightsAgreementStatus = z.infer<typeof rightsAgreementStatusSchema>;
 
 // ---------------------------------------------------------------------------
+// Status transitions
+// ---------------------------------------------------------------------------
+
+/** Allowed status transitions for rights agreements. */
+export const VALID_RIGHTS_STATUS_TRANSITIONS: Record<
+  RightsAgreementStatus,
+  RightsAgreementStatus[]
+> = {
+  DRAFT: ["SENT", "SIGNED", "ACTIVE"],
+  SENT: ["SIGNED", "ACTIVE"],
+  SIGNED: ["ACTIVE"],
+  ACTIVE: ["REVERTED"],
+  REVERTED: [],
+};
+
+// ---------------------------------------------------------------------------
 // Response
 // ---------------------------------------------------------------------------
 
@@ -87,3 +103,52 @@ export const updateRightsAgreementSchema = z.object({
 export type UpdateRightsAgreementInput = z.infer<
   typeof updateRightsAgreementSchema
 >;
+
+// ---------------------------------------------------------------------------
+// Transition
+// ---------------------------------------------------------------------------
+
+export const transitionRightsAgreementStatusSchema = z.object({
+  id: z.string().uuid().describe("Rights agreement ID"),
+  status: rightsAgreementStatusSchema.describe("Target status"),
+});
+
+export type TransitionRightsAgreementStatusInput = z.infer<
+  typeof transitionRightsAgreementStatusSchema
+>;
+
+// ---------------------------------------------------------------------------
+// List (with joined names)
+// ---------------------------------------------------------------------------
+
+export const listRightsAgreementsSchema = z.object({
+  contributorId: z.string().uuid().optional().describe("Filter by contributor"),
+  pipelineItemId: z
+    .string()
+    .uuid()
+    .optional()
+    .describe("Filter by pipeline item"),
+  status: rightsAgreementStatusSchema.optional().describe("Filter by status"),
+  rightsType: rightsTypeSchema.optional().describe("Filter by rights type"),
+  page: z.number().int().min(1).default(1).describe("Page number (1-based)"),
+  limit: z
+    .number()
+    .int()
+    .min(1)
+    .max(100)
+    .default(20)
+    .describe("Items per page"),
+});
+
+export type ListRightsAgreementsInput = z.infer<
+  typeof listRightsAgreementsSchema
+>;
+
+/** Extended response schema for list queries with joined display names. */
+export const rightsAgreementListItemSchema = rightsAgreementSchema.extend({
+  contributorName: z.string().describe("Contributor display name"),
+  pipelineItemTitle: z
+    .string()
+    .nullable()
+    .describe("Pipeline item title, if linked"),
+});

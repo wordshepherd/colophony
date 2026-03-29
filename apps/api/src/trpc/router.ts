@@ -36,6 +36,7 @@ import { hubRouter } from './routers/hub.js';
 import { collectionsRouter } from './routers/collections.js';
 import { opsRouter } from './routers/ops.js';
 import { contributorsRouter } from './routers/contributors.js';
+import { rightsAgreementsRouter } from './routers/rights-agreements.js';
 
 // Re-export procedure builders for convenience
 export {
@@ -94,6 +95,7 @@ export const appRouter = t.router({
   collections: collectionsRouter,
   ops: opsRouter,
   contributors: contributorsRouter,
+  rightsAgreements: rightsAgreementsRouter,
   retention: t.router({}),
 });
 
