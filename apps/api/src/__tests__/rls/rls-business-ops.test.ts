@@ -6,7 +6,7 @@ import { withTestRls } from './helpers/rls-context';
 import {
   createOrganization,
   createUser,
-  createMember,
+  createOrgMember,
 } from './helpers/factories';
 import {
   contributors,
@@ -46,8 +46,8 @@ describe('RLS Business Operations Tables', () => {
     orgB = await createOrganization({ name: 'Org B' });
     userA = await createUser();
     userB = await createUser();
-    await createMember(orgA.id, userA.id);
-    await createMember(orgB.id, userB.id);
+    await createOrgMember(orgA.id, userA.id);
+    await createOrgMember(orgB.id, userB.id);
 
     // Create contributors in each org
     [contributorA] = await db
