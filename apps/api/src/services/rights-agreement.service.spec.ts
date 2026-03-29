@@ -210,7 +210,7 @@ describe('rightsAgreementService', () => {
       };
       mockTx.select = vi.fn(() => {
         const c = makeChain();
-        c.orderBy.mockResolvedValueOnce([expiring]);
+        c.limit.mockResolvedValueOnce([expiring]);
         return c;
       });
 

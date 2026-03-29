@@ -514,7 +514,7 @@
 - [x] [P1] Contributor service + tRPC router — CRUD, link to submissions/users, publication add/remove, 8 procedures with audit + scope enforcement. Detail view deferred to next PR — (design system session 2026-03-28; done 2026-03-28)
 - [x] [P1] Rights service — lifecycle management, reversion alerts ("3 rights agreements reverting in 30 days"), integration with production pipeline — (design system session 2026-03-28; done 2026-03-28)
 - [x] [P1] Revenue service — submission fees (existing Stripe), contributor payments, contest prizes, revenue reporting — (design system session 2026-03-28; done 2026-03-29)
-- [ ] [P2] Business Ops dashboard — health card grid pattern with contributor count, outstanding payments, upcoming reversions, revenue summary — (design system session 2026-03-28)
+- [x] [P2] Business Ops dashboard — health card grid pattern with contributor count, outstanding payments, upcoming reversions, revenue summary — (design system session 2026-03-28; done 2026-03-29)
 - [ ] [P2] Editorial analytics dashboard — acceptance rate (overall + by genre/period), response time (avg/median/p90 + trend), pipeline health, genre distribution, contributor diversity, reader alignment — (design system session 2026-03-28)
 - [ ] [P2] Contest management — contest-type submission periods with rounds (`contestGroupId` + `contestRound`), judge assignments, anonymous judging, prize disbursement. Period-scoped guest editor roles deferred — (design system session 2026-03-28)
 
@@ -605,6 +605,7 @@
 - [x] [P2] Evaluate MinIO replacement — MinIO repo archived Feb 2026; no future security patches. Evaluate alternatives (LocalStack, SeaweedFS, direct S3/R2) for dev/CI/self-hosted object storage. Not urgent while no CVEs exist, but blocked from upstream fixes if one surfaces — (2026-03-25, CI image pin session; done 2026-03-25 — migrated to Garage v2.2.0)
 - [x] [P2] Replace Overmind with hivemind or concurrently — Overmind solves signal handling but tmux dependency, `dev:clean` escape hatch, and WSL quirks are operational drag. hivemind (Go binary, no tmux, proper signal handling) preferred; concurrently as fallback. Test on macOS, Linux, WSL before standardizing. Keep `dev:clean` as escape hatch, not normal workflow. Turbo `--watch` only if shutdown behavior verified in this repo — (architecture review 2026-03-16; code changes done 2026-03-16; validated on WSL/Linux 2026-03-22, macOS deferred — not in team environment)
 - [x] [P3] Remove `packages/eslint-config` — unused v1 legacy configs (`base.js`, `nextjs.js`, `nestjs.js`), neither app imports from it. Moved `eslint` and `eslint-config-next` to direct app devDependencies — (architecture review 2026-03-16; done 2026-03-16)
+- [ ] [P1] Migrate project hooks from `.claude/hooks/hooks.json` to `.claude/settings.json` — hooks.json uses wrong schema (`event`+`script` keys) and wrong file location; Claude Code only reads hooks from settings.json files with `matcher`+`hooks[{type,command}]` format. ALL project hooks (pre-edit-validate, pre-payment-validate, pre-frontend-validate, pre-router-audit, pre-push-branch, pre-exit-plan-review, post-edit-lint, post-schema, post-email-template, post-migration-validate, post-commit-devlog, post-test-file) are affected. Requires Claude Code restart after fix — (diagnosed 2026-03-29, ExitPlanMode hook failed to block)
 
 ### Testing & CI
 
