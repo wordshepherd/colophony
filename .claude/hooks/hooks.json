@@ -52,6 +52,10 @@
       {
         "event": "Bash(git push*)",
         "script": ".claude/hooks/pre-push-branch.js"
+      },
+      {
+        "event": "ExitPlanMode",
+        "script": ".claude/hooks/pre-exit-plan-review.js"
       }
     ],
     "PostToolUse": [
