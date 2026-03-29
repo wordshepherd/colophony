@@ -64,3 +64,13 @@ export function assertEditorOrProductionOrAdmin(
     throw new ForbiddenError('Editor, production, or admin role required');
   }
 }
+
+/**
+ * Assert the caller has BUSINESS_OPS or ADMIN role.
+ * Throws {@link ForbiddenError} if the roles are insufficient.
+ */
+export function assertBusinessOpsOrAdmin(roles: readonly string[]): void {
+  if (!roles.some((r) => ['BUSINESS_OPS', 'ADMIN'].includes(r))) {
+    throw new ForbiddenError('Business Operations or admin role required');
+  }
+}

@@ -168,6 +168,38 @@ const isProduction = t.middleware(({ ctx, next }) => {
   });
 });
 
+/** Requires BUSINESS_OPS or ADMIN role. */
+const isBusinessOps = t.middleware(({ ctx, next }) => {
+  if (!ctx.authContext) {
+    throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Not authenticated' });
+  }
+  if (!ctx.authContext.orgId || !ctx.authContext.roles?.length) {
+    throw new TRPCError({
+      code: 'BAD_REQUEST',
+      message: 'X-Organization-Id header is required',
+    });
+  }
+  if (!hasRole(ctx.authContext.roles, 'BUSINESS_OPS', 'ADMIN')) {
+    throw new TRPCError({
+      code: 'FORBIDDEN',
+      message: 'Business Operations or Admin role required',
+    });
+  }
+  if (!ctx.dbTx) {
+    throw new TRPCError({
+      code: 'INTERNAL_SERVER_ERROR',
+      message: 'Database transaction not available',
+    });
+  }
+  return next({
+    ctx: {
+      ...ctx,
+      authContext: ctx.authContext as OrgAuthContext,
+      dbTx: ctx.dbTx,
+    },
+  });
+});
+
 /**
  * Factory: returns tRPC middleware that enforces API key scopes.
  * OIDC/test auth bypasses the check (scopes are API-key-only).
@@ -227,5 +259,6 @@ export const orgProcedure = t.procedure.use(hasOrgContext);
 export const editorProcedure = t.procedure.use(isEditor);
 export const productionProcedure = t.procedure.use(isProduction);
 export const adminProcedure = t.procedure.use(isAdmin);
+export const businessOpsProcedure = t.procedure.use(isBusinessOps);
 export const createRouter = t.router;
 export const mergeRouters = t.mergeRouters;
