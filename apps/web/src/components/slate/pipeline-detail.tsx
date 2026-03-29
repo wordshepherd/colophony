@@ -249,7 +249,10 @@ export function PipelineDetail({ pipelineItemId }: PipelineDetailProps) {
         {(item.stage === "COPYEDIT_IN_PROGRESS" ||
           item.stage === "AUTHOR_REVIEW") && (
           <TabsContent value="copyedit">
-            <PipelineCopyeditTab pipelineItemId={pipelineItemId} />
+            <PipelineCopyeditTab
+              pipelineItemId={pipelineItemId}
+              stage={item.stage}
+            />
           </TabsContent>
         )}
       </Tabs>
