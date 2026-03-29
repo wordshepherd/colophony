@@ -69,7 +69,7 @@ describe('RLS Business Operations Tables', () => {
     // Create pipeline item prereqs for contributor_publications
     const [pubA] = await db
       .insert(publications)
-      .values({ organizationId: orgA.id, name: 'Pub A' })
+      .values({ organizationId: orgA.id, name: 'Pub A', slug: 'pub-a' })
       .returning();
 
     const [manuscript] = await db
@@ -88,6 +88,8 @@ describe('RLS Business Operations Tables', () => {
         organizationId: orgA.id,
         name: 'Period A',
         publicationId: pubA.id,
+        opensAt: new Date('2026-01-01'),
+        closesAt: new Date('2026-12-31'),
       })
       .returning();
 
@@ -108,7 +110,6 @@ describe('RLS Business Operations Tables', () => {
         organizationId: orgA.id,
         submissionId: submission.id,
         publicationId: pubA.id,
-        title: 'Pipeline Item A',
       })
       .returning();
 
