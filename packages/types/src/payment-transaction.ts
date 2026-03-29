@@ -109,3 +109,66 @@ export const listPaymentTransactionsSchema = z.object({
 export type ListPaymentTransactionsInput = z.infer<
   typeof listPaymentTransactionsSchema
 >;
+
+// ---------------------------------------------------------------------------
+// Status transitions
+// ---------------------------------------------------------------------------
+
+export const VALID_PAYMENT_STATUS_TRANSITIONS: Record<
+  PaymentTransactionStatus,
+  PaymentTransactionStatus[]
+> = {
+  PENDING: ["PROCESSING", "SUCCEEDED", "FAILED"],
+  PROCESSING: ["SUCCEEDED", "FAILED"],
+  SUCCEEDED: ["REFUNDED"],
+  FAILED: ["PENDING"], // retry
+  REFUNDED: [], // terminal
+};
+
+// ---------------------------------------------------------------------------
+// Update & transition schemas
+// ---------------------------------------------------------------------------
+
+export const updatePaymentTransactionSchema = z
+  .object({
+    id: z.string().uuid(),
+    description: z.string().max(1000).nullable().optional(),
+    metadata: z.record(z.string(), z.unknown()).nullable().optional(),
+  })
+  .refine(
+    (data) => data.description !== undefined || data.metadata !== undefined,
+    { message: "At least one field to update is required" },
+  );
+
+export type UpdatePaymentTransactionInput = z.infer<
+  typeof updatePaymentTransactionSchema
+>;
+
+export const transitionPaymentTransactionStatusSchema = z.object({
+  id: z.string().uuid(),
+  status: paymentTransactionStatusSchema,
+});
+
+export type TransitionPaymentTransactionStatusInput = z.infer<
+  typeof transitionPaymentTransactionStatusSchema
+>;
+
+// ---------------------------------------------------------------------------
+// Response schemas
+// ---------------------------------------------------------------------------
+
+export const paymentTransactionListItemSchema = paymentTransactionSchema.extend(
+  {
+    contributorName: z.string().nullable(),
+  },
+);
+
+export const revenueSummarySchema = z.object({
+  totalInbound: z.number().int(),
+  totalOutbound: z.number().int(),
+  net: z.number().int(),
+  countByType: z.record(z.string(), z.number().int()),
+  countByStatus: z.record(z.string(), z.number().int()),
+});
+
+export type RevenueSummary = z.infer<typeof revenueSummarySchema>;
