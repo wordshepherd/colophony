@@ -92,13 +92,22 @@ export type CreateRightsAgreementInput = z.infer<
 // Update
 // ---------------------------------------------------------------------------
 
-export const updateRightsAgreementSchema = z.object({
-  id: z.string().uuid().describe("Rights agreement ID"),
-  rightsType: rightsTypeSchema.optional(),
-  customDescription: z.string().max(5000).nullable().optional(),
-  expiresAt: z.coerce.date().nullable().optional(),
-  notes: z.string().max(10000).nullable().optional(),
-});
+export const updateRightsAgreementSchema = z
+  .object({
+    id: z.string().uuid().describe("Rights agreement ID"),
+    rightsType: rightsTypeSchema.optional(),
+    customDescription: z.string().max(5000).nullable().optional(),
+    expiresAt: z.coerce.date().nullable().optional(),
+    notes: z.string().max(10000).nullable().optional(),
+  })
+  .refine(
+    (data) =>
+      data.rightsType !== undefined ||
+      data.customDescription !== undefined ||
+      data.expiresAt !== undefined ||
+      data.notes !== undefined,
+    { message: "At least one field to update is required" },
+  );
 
 export type UpdateRightsAgreementInput = z.infer<
   typeof updateRightsAgreementSchema

@@ -573,6 +573,28 @@ describe('rightsAgreementService', () => {
       expect(assertBusinessOpsOrAdmin).toHaveBeenCalledWith(['BUSINESS_OPS']);
     });
 
+    it('updateWithAudit calls assertBusinessOpsOrAdmin', async () => {
+      mockTx.select = vi.fn(() => {
+        const c = makeChain();
+        c.limit.mockResolvedValueOnce([fakeAgreement]);
+        return c;
+      });
+      mockTx.update = vi.fn(() => {
+        const c = makeChain();
+        c.returning.mockResolvedValueOnce([
+          { ...fakeAgreement, rightsType: 'electronic' },
+        ]);
+        return c;
+      });
+      const ctx = makeServiceContext(mockTx);
+
+      await rightsAgreementService.updateWithAudit(ctx, {
+        id: RIGHTS_ID,
+        rightsType: 'electronic',
+      });
+      expect(assertBusinessOpsOrAdmin).toHaveBeenCalledWith(['BUSINESS_OPS']);
+    });
+
     it('transitionStatusWithAudit calls assertBusinessOpsOrAdmin', async () => {
       mockTx.select = vi.fn(() => {
         const c = makeChain();
