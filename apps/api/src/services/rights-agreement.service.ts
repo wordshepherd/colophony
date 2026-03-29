@@ -181,7 +181,8 @@ export const rightsAgreementService = {
           lte(rightsAgreements.expiresAt, deadline),
         ),
       )
-      .orderBy(rightsAgreements.expiresAt);
+      .orderBy(rightsAgreements.expiresAt)
+      .limit(100);
   },
 
   // -------------------------------------------------------------------------
