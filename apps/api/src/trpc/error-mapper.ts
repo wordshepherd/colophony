@@ -129,6 +129,10 @@ import {
   InvalidRightsStatusTransitionError,
   ContributorNotInOrgError,
 } from '../services/rights-agreement.service.js';
+import {
+  PaymentTransactionNotFoundError,
+  InvalidPaymentStatusTransitionError,
+} from '../services/revenue.service.js';
 
 type TRPCErrorCode = ConstructorParameters<typeof TRPCError>[0]['code'];
 
@@ -246,6 +250,9 @@ const errorCodeMap: [new (...args: never[]) => Error, TRPCErrorCode][] = [
   [RightsAgreementNotFoundError, 'NOT_FOUND'],
   [InvalidRightsStatusTransitionError, 'BAD_REQUEST'],
   [ContributorNotInOrgError, 'NOT_FOUND'],
+  // Payment transaction errors
+  [PaymentTransactionNotFoundError, 'NOT_FOUND'],
+  [InvalidPaymentStatusTransitionError, 'BAD_REQUEST'],
 ];
 
 /**

@@ -295,6 +295,7 @@ export const AuditActions = {
   PAYMENT_TRANSACTION_CREATED: "PAYMENT_TRANSACTION_CREATED",
   PAYMENT_TRANSACTION_UPDATED: "PAYMENT_TRANSACTION_UPDATED",
   PAYMENT_TRANSACTION_STATUS_CHANGED: "PAYMENT_TRANSACTION_STATUS_CHANGED",
+  PAYMENT_TRANSACTION_DELETED: "PAYMENT_TRANSACTION_DELETED",
 } as const;
 
 export type AuditAction = (typeof AuditActions)[keyof typeof AuditActions];
@@ -756,7 +757,8 @@ export interface PaymentTransactionAuditParams extends BaseAuditParams {
   action:
     | typeof AuditActions.PAYMENT_TRANSACTION_CREATED
     | typeof AuditActions.PAYMENT_TRANSACTION_UPDATED
-    | typeof AuditActions.PAYMENT_TRANSACTION_STATUS_CHANGED;
+    | typeof AuditActions.PAYMENT_TRANSACTION_STATUS_CHANGED
+    | typeof AuditActions.PAYMENT_TRANSACTION_DELETED;
 }
 
 /** Union of all resource-specific param types. */

@@ -502,7 +502,7 @@
 
 ## Track 13 — Business Operations (Post-Launch)
 
-> **Status:** Foundation shipped. Schema, middleware, contributor service, and sidebar in PR. Rights/revenue services next.
+> **Status:** All P1 items complete. P2 items (dashboards, contest management) remain.
 
 ### Code
 
@@ -513,7 +513,7 @@
 - [x] [P1] Business Ops nav group + sidebar rendering — new "Business" activity group visible to BUSINESS_OPS/ADMIN, command palette updated — (design system session 2026-03-28; done 2026-03-28)
 - [x] [P1] Contributor service + tRPC router — CRUD, link to submissions/users, publication add/remove, 8 procedures with audit + scope enforcement. Detail view deferred to next PR — (design system session 2026-03-28; done 2026-03-28)
 - [x] [P1] Rights service — lifecycle management, reversion alerts ("3 rights agreements reverting in 30 days"), integration with production pipeline — (design system session 2026-03-28; done 2026-03-28)
-- [ ] [P1] Revenue service — submission fees (existing Stripe), contributor payments, contest prizes, revenue reporting — (design system session 2026-03-28)
+- [x] [P1] Revenue service — submission fees (existing Stripe), contributor payments, contest prizes, revenue reporting — (design system session 2026-03-28; done 2026-03-29)
 - [ ] [P2] Business Ops dashboard — health card grid pattern with contributor count, outstanding payments, upcoming reversions, revenue summary — (design system session 2026-03-28)
 - [ ] [P2] Editorial analytics dashboard — acceptance rate (overall + by genre/period), response time (avg/median/p90 + trend), pipeline health, genre distribution, contributor diversity, reader alignment — (design system session 2026-03-28)
 - [ ] [P2] Contest management — contest-type submission periods with rounds (`contestGroupId` + `contestRound`), judge assignments, anonymous judging, prize disbursement. Period-scoped guest editor roles deferred — (design system session 2026-03-28)

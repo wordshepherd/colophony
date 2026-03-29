@@ -181,7 +181,9 @@ export const paymentTransactions = pgTable(
     currency: varchar("currency", { length: 3 }).notNull().default("usd"),
     status: paymentStatusEnum("status").notNull().default("PENDING"),
     description: text("description"),
-    metadata: jsonb("metadata").default({}),
+    metadata: jsonb("metadata")
+      .$type<Record<string, unknown> | null>()
+      .default({}),
     processedAt: timestamp("processed_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
