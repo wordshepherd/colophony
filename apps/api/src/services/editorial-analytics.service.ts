@@ -40,21 +40,26 @@ function buildEditorialWhere(
       sql`${sql.raw(`${alias}.submission_period_id`)} = ${filter.submissionPeriodId}::uuid`,
     );
   }
-  if (filter.genre) {
-    parts.push(sql`${sql.raw(`${alias}.manuscript_version_id`)} IS NOT NULL`);
-  }
-
   return sql.join(parts, sql.raw(' AND '));
 }
 
 /**
+ * Build genre filter SQL fragment. When genre is set, requires a genre JOIN
+ * and filters by the specific genre value.
+ */
+function genreFilterSql(filter: EditorialAnalyticsFilter): SQL {
+  if (!filter.genre) return sql``;
+  return sql` AND m.genre->>'primary' = ${filter.genre}`;
+}
+
+/**
  * Genre JOIN fragment: submissions → manuscript_versions → manuscripts.
- * Returns the genre->>'primary' expression and required JOINs.
+ * Uses LEFT JOIN so submissions without manuscripts appear as "unknown" genre.
  */
 function genreJoin(alias = 's'): SQL {
   return sql.raw(
-    `JOIN manuscript_versions mv ON mv.id = ${alias}.manuscript_version_id ` +
-      `JOIN manuscripts m ON m.id = mv.manuscript_id`,
+    `LEFT JOIN manuscript_versions mv ON mv.id = ${alias}.manuscript_version_id ` +
+      `LEFT JOIN manuscripts m ON m.id = mv.manuscript_id`,
   );
 }
 
@@ -73,10 +78,6 @@ export const editorialAnalyticsService = {
   ): Promise<AcceptanceByGenre> {
     const where = buildEditorialWhere(organizationId, filter);
 
-    const genreFilter = filter.genre
-      ? sql` AND m.genre->>'primary' = ${filter.genre}`
-      : sql``;
-
     const result = await tx.execute(sql`
       SELECT
         COALESCE(m.genre->>'primary', 'unknown') AS genre,
@@ -92,7 +93,7 @@ export const editorialAnalyticsService = {
         )::float AS rate
       FROM submissions s
       ${genreJoin()}
-      WHERE ${where}${genreFilter}
+      WHERE ${where}${genreFilterSql(filter)}
       GROUP BY m.genre->>'primary'
       ORDER BY total DESC
       LIMIT 50
@@ -119,6 +120,8 @@ export const editorialAnalyticsService = {
   ): Promise<AcceptanceByPeriod> {
     const where = buildEditorialWhere(organizationId, filter);
 
+    const gJoin = filter.genre ? genreJoin() : sql``;
+
     const result = await tx.execute(sql`
       SELECT
         sp.id AS "periodId",
@@ -135,7 +138,8 @@ export const editorialAnalyticsService = {
         )::float AS rate
       FROM submissions s
       JOIN submission_periods sp ON sp.id = s.submission_period_id
-      WHERE ${where}
+      ${gJoin}
+      WHERE ${where}${genreFilterSql(filter)}
       GROUP BY sp.id, sp.name
       ORDER BY sp.closes_at DESC NULLS LAST
       LIMIT 50
@@ -190,6 +194,8 @@ export const editorialAnalyticsService = {
     const now = new Date();
     const sixMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 6, 1);
 
+    const trendWhere = buildEditorialWhere(organizationId, filter);
+
     const trendResult = await tx.execute(sql`
       WITH response_times AS (
         SELECT
@@ -202,8 +208,7 @@ export const editorialAnalyticsService = {
           WHERE sh.submission_id = s.id
             AND sh.to_status IN ('ACCEPTED', 'REJECTED')
         ) h ON h.changed_at IS NOT NULL
-        WHERE s.organization_id = ${organizationId}::uuid
-          AND s.status != 'DRAFT'
+        WHERE ${trendWhere}
           AND h.changed_at >= ${sixMonthsAgo}
       )
       SELECT
@@ -286,7 +291,7 @@ export const editorialAnalyticsService = {
         COUNT(*)::int AS count
       FROM submissions s
       ${genreJoin()}
-      WHERE ${where}
+      WHERE ${where}${genreFilterSql(filter)}
       GROUP BY m.genre->>'primary'
       ORDER BY count DESC
       LIMIT 50
@@ -309,10 +314,13 @@ export const editorialAnalyticsService = {
     organizationId: string,
     filter: EditorialAnalyticsFilter,
   ): Promise<ContributorDiversity> {
-    // Build optional date filter fragments
-    const dateFilter = [
+    // Build optional filter fragments
+    const extraFilters = [
       filter.startDate ? sql`AND s.submitted_at >= ${filter.startDate}` : sql``,
       filter.endDate ? sql`AND s.submitted_at <= ${filter.endDate}` : sql``,
+      filter.submissionPeriodId
+        ? sql`AND s.submission_period_id = ${filter.submissionPeriodId}::uuid`
+        : sql``,
     ];
 
     // New vs returning submitters per period
@@ -341,8 +349,9 @@ export const editorialAnalyticsService = {
         WHERE s.organization_id = ${organizationId}::uuid
           AND s.status != 'DRAFT'
           AND s.submitted_at IS NOT NULL
-          ${dateFilter[0]}
-          ${dateFilter[1]}
+          ${extraFilters[0]}
+          ${extraFilters[1]}
+          ${extraFilters[2]}
       )
       SELECT
         sp.name AS "periodName",
@@ -364,8 +373,10 @@ export const editorialAnalyticsService = {
       ${genreJoin()}
       WHERE s.organization_id = ${organizationId}::uuid
         AND s.status = 'ACCEPTED'
-        ${dateFilter[0]}
-        ${dateFilter[1]}
+        ${extraFilters[0]}
+        ${extraFilters[1]}
+        ${extraFilters[2]}
+        ${genreFilterSql(filter)}
       GROUP BY m.genre->>'primary'
       ORDER BY count DESC
       LIMIT 50
@@ -452,13 +463,12 @@ export const editorialAnalyticsService = {
     const totalWithVotes = rows.length;
     const consensusMatches = rows.filter((r) => r.matched).length;
 
-    // Get total decided count for context
+    // Get total decided count for context (using same filters)
     const decidedResult = await tx.execute(sql`
       SELECT COUNT(*)::int AS count
       FROM submissions s
-      WHERE s.organization_id = ${organizationId}::uuid
+      WHERE ${where}
         AND s.status IN ('ACCEPTED', 'REJECTED')
-        AND s.status != 'DRAFT'
     `);
 
     return {
