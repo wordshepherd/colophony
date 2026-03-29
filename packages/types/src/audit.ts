@@ -140,6 +140,8 @@ export const AuditActions = {
   PIPELINE_PROOFREADER_ASSIGNED: "PIPELINE_PROOFREADER_ASSIGNED",
   PIPELINE_COMMENT_ADDED: "PIPELINE_COMMENT_ADDED",
   PIPELINE_COPYEDIT_SAVED: "PIPELINE_COPYEDIT_SAVED",
+  PIPELINE_COPYEDIT_EXPORTED: "PIPELINE_COPYEDIT_EXPORTED",
+  PIPELINE_COPYEDIT_IMPORTED: "PIPELINE_COPYEDIT_IMPORTED",
 
   // CMS connection lifecycle
   CMS_CONNECTION_CREATED: "CMS_CONNECTION_CREATED",
@@ -479,7 +481,9 @@ export interface PipelineItemAuditParams extends BaseAuditParams {
     | typeof AuditActions.PIPELINE_COPYEDITOR_ASSIGNED
     | typeof AuditActions.PIPELINE_PROOFREADER_ASSIGNED
     | typeof AuditActions.PIPELINE_COMMENT_ADDED
-    | typeof AuditActions.PIPELINE_COPYEDIT_SAVED;
+    | typeof AuditActions.PIPELINE_COPYEDIT_SAVED
+    | typeof AuditActions.PIPELINE_COPYEDIT_EXPORTED
+    | typeof AuditActions.PIPELINE_COPYEDIT_IMPORTED;
 }
 
 export interface ContractTemplateAuditParams extends BaseAuditParams {

@@ -103,6 +103,22 @@ function parseHtmlToNodes(html: string, hint: GenreHint): ProseMirrorNode[] {
             return;
           }
 
+          // Round-trip markers: recognize section break text exported by
+          // prosemirror-to-docx.ts so the structure survives a Word round-trip.
+          if (
+            trimmed === '* * *' ||
+            trimmed === '***' ||
+            trimmed === '\u2042'
+          ) {
+            const breakNode: ProseMirrorNode = { type: 'section_break' };
+            if (state.inBlockquote) {
+              state.blockquoteContent.push(breakNode);
+            } else {
+              state.nodes.push(breakNode);
+            }
+            return;
+          }
+
           let node: ProseMirrorNode;
 
           if (hint === 'poetry') {

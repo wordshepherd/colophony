@@ -72,3 +72,4 @@ export async function convertFile(
 export { convertTextToProseMirror } from './text-converter.js';
 export { convertDocxToProseMirror } from './docx-converter.js';
 export { applySmartTypography, smartifyText } from './smart-typography.js';
+export { convertProseMirrorToDocx } from './prosemirror-to-docx.js';

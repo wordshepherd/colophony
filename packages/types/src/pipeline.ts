@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { issueStatusSchema } from "./issue";
+import { proseMirrorDocSchema } from "./prosemirror";
 
 // ---------------------------------------------------------------------------
 // Pipeline stage
@@ -226,6 +227,37 @@ export const copyeditContentSchema = z.object({
 });
 
 export type CopyeditContent = z.infer<typeof copyeditContentSchema>;
+
+// ---------------------------------------------------------------------------
+// Copyedit round-trip (export/import .docx)
+// ---------------------------------------------------------------------------
+
+export const exportCopyeditResponseSchema = z.object({
+  downloadUrl: z.string().describe("Presigned S3 URL for the exported .docx"),
+  filename: z.string().describe("Suggested filename for download"),
+});
+
+export type ExportCopyeditResponse = z.infer<
+  typeof exportCopyeditResponseSchema
+>;
+
+export const importCopyeditInputSchema = z.object({
+  id: z.string().uuid().describe("Pipeline item ID"),
+  fileBase64: z.string().describe("Base64-encoded .docx file"),
+  filename: z.string().max(255).describe("Original filename"),
+});
+
+export type ImportCopyeditInput = z.infer<typeof importCopyeditInputSchema>;
+
+export const importCopyeditResponseSchema = z.object({
+  versionId: z.string().uuid(),
+  versionNumber: z.number().int().positive(),
+  content: proseMirrorDocSchema,
+});
+
+export type ImportCopyeditResponse = z.infer<
+  typeof importCopyeditResponseSchema
+>;
 
 // ---------------------------------------------------------------------------
 // Production dashboard
