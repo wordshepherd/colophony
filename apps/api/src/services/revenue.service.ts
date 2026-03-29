@@ -136,8 +136,8 @@ export const revenueService = {
     const [[totals], typeCounts, statusCounts] = await Promise.all([
       tx
         .select({
-          totalInbound: sql<number>`COALESCE(SUM(CASE WHEN ${paymentTransactions.direction} = 'inbound' AND ${paymentTransactions.status} = 'SUCCEEDED' THEN ${paymentTransactions.amount} ELSE 0 END), 0)::int`,
-          totalOutbound: sql<number>`COALESCE(SUM(CASE WHEN ${paymentTransactions.direction} = 'outbound' AND ${paymentTransactions.status} = 'SUCCEEDED' THEN ${paymentTransactions.amount} ELSE 0 END), 0)::int`,
+          totalInbound: sql<string>`COALESCE(SUM(CASE WHEN ${paymentTransactions.direction} = 'inbound' AND ${paymentTransactions.status} = 'SUCCEEDED' THEN ${paymentTransactions.amount} ELSE 0 END), 0)`,
+          totalOutbound: sql<string>`COALESCE(SUM(CASE WHEN ${paymentTransactions.direction} = 'outbound' AND ${paymentTransactions.status} = 'SUCCEEDED' THEN ${paymentTransactions.amount} ELSE 0 END), 0)`,
         })
         .from(paymentTransactions)
         .where(orgCondition),
@@ -159,10 +159,14 @@ export const revenueService = {
         .groupBy(paymentTransactions.status),
     ]);
 
+    // SUM(integer) returns bigint in PostgreSQL; parse safely to avoid ::int overflow
+    const totalInbound = Number(totals.totalInbound);
+    const totalOutbound = Number(totals.totalOutbound);
+
     return {
-      totalInbound: totals.totalInbound,
-      totalOutbound: totals.totalOutbound,
-      net: totals.totalInbound - totals.totalOutbound,
+      totalInbound,
+      totalOutbound,
+      net: totalInbound - totalOutbound,
       countByType: Object.fromEntries(typeCounts.map((r) => [r.type, r.count])),
       countByStatus: Object.fromEntries(
         statusCounts.map((r) => [r.status, r.count]),
