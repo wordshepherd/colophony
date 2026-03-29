@@ -87,15 +87,16 @@ GraphQL extracted to feature branch — re-merge when demand materializes. All s
 
 ## tRPC Procedure Builders (`src/trpc/init.ts`)
 
-| Builder               | Guarantees                                    |
-| --------------------- | --------------------------------------------- |
-| `publicProcedure`     | No auth                                       |
-| `authedProcedure`     | `ctx.authContext` non-null                    |
-| `orgProcedure`        | `orgId/roles` + `dbTx` set                    |
-| `userProcedure`       | `authContext` + `dbTx` (no org)               |
-| `editorProcedure`     | `orgProcedure` + EDITOR or ADMIN              |
-| `productionProcedure` | `orgProcedure` + PRODUCTION, EDITOR, or ADMIN |
-| `adminProcedure`      | `orgProcedure` + ADMIN                        |
+| Builder                | Guarantees                                    |
+| ---------------------- | --------------------------------------------- |
+| `publicProcedure`      | No auth                                       |
+| `authedProcedure`      | `ctx.authContext` non-null                    |
+| `orgProcedure`         | `orgId/roles` + `dbTx` set                    |
+| `userProcedure`        | `authContext` + `dbTx` (no org)               |
+| `editorProcedure`      | `orgProcedure` + EDITOR or ADMIN              |
+| `productionProcedure`  | `orgProcedure` + PRODUCTION, EDITOR, or ADMIN |
+| `businessOpsProcedure` | `orgProcedure` + BUSINESS_OPS or ADMIN        |
+| `adminProcedure`       | `orgProcedure` + ADMIN                        |
 
 ---
 

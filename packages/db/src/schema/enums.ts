@@ -309,3 +309,40 @@ export const invitationStatusEnum = pgEnum("InvitationStatus", [
   "REVOKED",
   "EXPIRED",
 ]);
+
+// ---------------------------------------------------------------------------
+// Business Operations
+// ---------------------------------------------------------------------------
+
+export const contributorPublicationRoleEnum = pgEnum(
+  "ContributorPublicationRole",
+  ["author", "translator", "illustrator", "photographer", "editor"],
+);
+
+export const rightsTypeEnum = pgEnum("RightsType", [
+  "first_north_american_serial",
+  "electronic",
+  "anthology",
+  "audio",
+  "translation",
+  "custom",
+]);
+
+export const rightsAgreementStatusEnum = pgEnum("RightsAgreementStatus", [
+  "DRAFT",
+  "SENT",
+  "SIGNED",
+  "ACTIVE",
+  "REVERTED",
+]);
+
+export const paymentTransactionTypeEnum = pgEnum("PaymentTransactionType", [
+  "submission_fee",
+  "contest_fee",
+  "contributor_payment",
+]);
+
+export const paymentTransactionDirectionEnum = pgEnum(
+  "PaymentTransactionDirection",
+  ["inbound", "outbound"],
+);

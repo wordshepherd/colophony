@@ -502,16 +502,16 @@
 
 ## Track 13 — Business Operations (Post-Launch)
 
-> **Status:** Planned. Contributor record is the foundational entity; all other items depend on it.
+> **Status:** Foundation shipped. Schema, middleware, contributor service, and sidebar in PR. Rights/revenue services next.
 
 ### Code
 
-- [ ] [P1] `contributors` + `contributor_publications` schema — org-scoped contributor entity linking submissions, publications, payments, rights. Columns: display_name, bio, pronouns, website, mailing_address (encrypted), notes — (design system session 2026-03-28)
-- [ ] [P1] `rights_agreements` schema — per-published-piece IP ownership lifecycle (first_north_american_serial, electronic, anthology, audio, translation, custom). Status: draft → sent → signed → active → reverted. Reversion date tracking. Separate from Documenso `contracts` table — (design system session 2026-03-28)
-- [ ] [P1] `payment_transactions` schema — unified payment table with type discriminator (submission_fee, contest_fee, contributor_payment). Extends beyond current submission-fee-only `payments` table — (design system session 2026-03-28)
-- [ ] [P1] `businessOpsProcedure` middleware — BUSINESS_OPS or ADMIN role check, following existing procedure pattern in `apps/api/src/trpc/init.ts` — (design system session 2026-03-28)
-- [ ] [P1] Business Ops nav group + sidebar rendering — new "Business" activity group visible to BUSINESS_OPS/ADMIN with compact density `BusinessLayout` — (design system session 2026-03-28)
-- [ ] [P1] Contributor service + tRPC router — CRUD, link to submissions/users, publication history, detail view with all submissions/publications/payments/rights/correspondence — (design system session 2026-03-28)
+- [x] [P1] `contributors` + `contributor_publications` schema — org-scoped contributor entity linking submissions, publications, payments, rights. Columns: display_name, bio, pronouns, website, mailing_address (plain text, app-level encryption deferred), notes — (design system session 2026-03-28; done 2026-03-28)
+- [x] [P1] `rights_agreements` schema — per-published-piece IP ownership lifecycle (first_north_american_serial, electronic, anthology, audio, translation, custom). Status: draft → sent → signed → active → reverted. Reversion date tracking. Separate from Documenso `contracts` table — (design system session 2026-03-28; done 2026-03-28)
+- [x] [P1] `payment_transactions` schema — unified payment table with type discriminator (submission_fee, contest_fee, contributor_payment). New table, not extending existing `payments` — (design system session 2026-03-28; done 2026-03-28)
+- [x] [P1] `businessOpsProcedure` middleware — BUSINESS_OPS or ADMIN role check, following existing procedure pattern in `apps/api/src/trpc/init.ts` — (design system session 2026-03-28; done 2026-03-28)
+- [x] [P1] Business Ops nav group + sidebar rendering — new "Business" activity group visible to BUSINESS_OPS/ADMIN, command palette updated — (design system session 2026-03-28; done 2026-03-28)
+- [x] [P1] Contributor service + tRPC router — CRUD, link to submissions/users, publication add/remove, 8 procedures with audit + scope enforcement. Detail view deferred to next PR — (design system session 2026-03-28; done 2026-03-28)
 - [ ] [P1] Rights service — lifecycle management, reversion alerts ("3 rights agreements reverting in 30 days"), integration with production pipeline — (design system session 2026-03-28)
 - [ ] [P1] Revenue service — submission fees (existing Stripe), contributor payments, contest prizes, revenue reporting — (design system session 2026-03-28)
 - [ ] [P2] Business Ops dashboard — health card grid pattern with contributor count, outstanding payments, upcoming reversions, revenue summary — (design system session 2026-03-28)

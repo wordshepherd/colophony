@@ -7,6 +7,8 @@ import {
   Building2,
   Calendar,
   ClipboardList,
+  DollarSign,
+  FileCheck,
   FileSignature,
   FileText,
   FolderOpen,
@@ -21,6 +23,7 @@ import {
   Send,
   Settings,
   Upload,
+  Users,
   Webhook,
 } from "lucide-react";
 
@@ -65,6 +68,13 @@ export const productionNavigation: NavItem[] = [
   { name: "CMS", href: "/slate/cms", icon: Globe },
 ];
 
+export const businessNavigation: NavItem[] = [
+  { name: "Business Dashboard", href: "/business", icon: LayoutDashboard },
+  { name: "Contributors", href: "/business/contributors", icon: Users },
+  { name: "Rights", href: "/business/rights", icon: FileCheck },
+  { name: "Payments", href: "/business/payments", icon: DollarSign },
+];
+
 export const operationsNavigation: NavItem[] = [
   {
     name: "Dashboard",
@@ -96,6 +106,11 @@ export const navGroups = [
     label: "Production",
     items: productionNavigation,
     role: "production" as const,
+  },
+  {
+    label: "Business",
+    items: businessNavigation,
+    role: "business_ops" as const,
   },
   {
     label: "Operations",

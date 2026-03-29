@@ -47,6 +47,12 @@ export const apiKeyScopeSchema = z
     "audit:read",
     "collections:read",
     "collections:write",
+    "contributors:read",
+    "contributors:write",
+    "rights:read",
+    "rights:write",
+    "payment-transactions:read",
+    "payment-transactions:write",
   ])
   .describe("Permission scope for the API key");
 

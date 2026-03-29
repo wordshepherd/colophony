@@ -27,6 +27,12 @@ import {
 } from "./writer-workspace";
 import { savedQueuePresets } from "./saved-queue-presets";
 import { workspaceCollections, workspaceItems } from "./workspace-collections";
+import {
+  contributors,
+  contributorPublications,
+  rightsAgreements,
+  paymentTransactions,
+} from "./business-ops";
 
 // --- organizations ---
 
@@ -49,6 +55,9 @@ export const organizationsRelations = relations(organizations, ({ many }) => ({
   trustedPeers: many(trustedPeers),
   savedQueuePresets: many(savedQueuePresets),
   workspaceCollections: many(workspaceCollections),
+  contributors: many(contributors),
+  rightsAgreements: many(rightsAgreements),
+  paymentTransactions: many(paymentTransactions),
 }));
 
 // --- users ---
@@ -560,3 +569,82 @@ export const workspaceItemsRelations = relations(workspaceItems, ({ one }) => ({
     references: [submissions.id],
   }),
 }));
+
+// --- contributors ---
+
+export const contributorsRelations = relations(
+  contributors,
+  ({ one, many }) => ({
+    organization: one(organizations, {
+      fields: [contributors.organizationId],
+      references: [organizations.id],
+    }),
+    user: one(users, {
+      fields: [contributors.userId],
+      references: [users.id],
+    }),
+    publications: many(contributorPublications),
+    rightsAgreements: many(rightsAgreements),
+    paymentTransactions: many(paymentTransactions),
+  }),
+);
+
+// --- contributor_publications ---
+
+export const contributorPublicationsRelations = relations(
+  contributorPublications,
+  ({ one }) => ({
+    contributor: one(contributors, {
+      fields: [contributorPublications.contributorId],
+      references: [contributors.id],
+    }),
+    pipelineItem: one(pipelineItems, {
+      fields: [contributorPublications.pipelineItemId],
+      references: [pipelineItems.id],
+    }),
+  }),
+);
+
+// --- rights_agreements ---
+
+export const rightsAgreementsRelations = relations(
+  rightsAgreements,
+  ({ one }) => ({
+    organization: one(organizations, {
+      fields: [rightsAgreements.organizationId],
+      references: [organizations.id],
+    }),
+    contributor: one(contributors, {
+      fields: [rightsAgreements.contributorId],
+      references: [contributors.id],
+    }),
+    pipelineItem: one(pipelineItems, {
+      fields: [rightsAgreements.pipelineItemId],
+      references: [pipelineItems.id],
+    }),
+  }),
+);
+
+// --- payment_transactions ---
+
+export const paymentTransactionsRelations = relations(
+  paymentTransactions,
+  ({ one }) => ({
+    organization: one(organizations, {
+      fields: [paymentTransactions.organizationId],
+      references: [organizations.id],
+    }),
+    contributor: one(contributors, {
+      fields: [paymentTransactions.contributorId],
+      references: [contributors.id],
+    }),
+    submission: one(submissions, {
+      fields: [paymentTransactions.submissionId],
+      references: [submissions.id],
+    }),
+    payment: one(payments, {
+      fields: [paymentTransactions.paymentId],
+      references: [payments.id],
+    }),
+  }),
+);
