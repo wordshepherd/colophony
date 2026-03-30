@@ -33,7 +33,7 @@
   },
   "dependencies": {
     "@colophony/types": "workspace:^",
-    "drizzle-orm": "^0.45.1",
+    "drizzle-orm": "^0.45.2",
     "pg": "^8.20.0"
   },
   "devDependencies": {
@@ -43,6 +43,6 @@
     "drizzle-kit": "^0.31.10",
     "tsx": "^4.19.0",
     "typescript": "^5.7.2",
-    "vitest": "^4.1.0"
+    "vitest": "^4.1.2"
   }
 }
