@@ -9,7 +9,7 @@ import {
   desc,
   type DrizzleDb,
 } from '@colophony/db';
-import { count, isNotNull } from 'drizzle-orm';
+import { count, isNotNull, notInArray } from 'drizzle-orm';
 import { AuditActions, AuditResources } from '@colophony/types';
 import type {
   ListSimsubGroupsInput,
@@ -459,7 +459,12 @@ export const simsubGroupService = {
       .map((r) => r.submissionId)
       .filter(Boolean) as string[];
 
-    const rows = await ctx.tx
+    const conditions = [eq(submissions.submitterId, ctx.userId)];
+    if (excludeIds.length > 0) {
+      conditions.push(notInArray(submissions.id, excludeIds));
+    }
+
+    return ctx.tx
       .select({
         id: submissions.id,
         title: submissions.title,
@@ -467,11 +472,9 @@ export const simsubGroupService = {
         organizationId: submissions.organizationId,
       })
       .from(submissions)
-      .where(eq(submissions.submitterId, ctx.userId))
+      .where(and(...conditions))
       .orderBy(desc(submissions.createdAt))
       .limit(50);
-
-    return rows.filter((r) => !excludeIds.includes(r.id));
   },
 
   async availableExternalSubmissions(
@@ -500,7 +503,12 @@ export const simsubGroupService = {
       .map((r) => r.externalSubmissionId)
       .filter(Boolean) as string[];
 
-    const rows = await ctx.tx
+    const conditions = [eq(externalSubmissions.userId, ctx.userId)];
+    if (excludeIds.length > 0) {
+      conditions.push(notInArray(externalSubmissions.id, excludeIds));
+    }
+
+    return ctx.tx
       .select({
         id: externalSubmissions.id,
         journalName: externalSubmissions.journalName,
@@ -508,10 +516,8 @@ export const simsubGroupService = {
         sentAt: externalSubmissions.sentAt,
       })
       .from(externalSubmissions)
-      .where(eq(externalSubmissions.userId, ctx.userId))
+      .where(and(...conditions))
       .orderBy(desc(externalSubmissions.createdAt))
       .limit(50);
-
-    return rows.filter((r) => !excludeIds.includes(r.id));
   },
 };
