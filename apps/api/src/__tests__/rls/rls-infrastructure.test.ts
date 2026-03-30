@@ -72,6 +72,11 @@ const RLS_TABLES = [
   'contest_groups',
   'contest_judges',
   'contest_results',
+  // Writer Platform
+  'simsub_groups',
+  'simsub_group_submissions',
+  'portfolio_entries',
+  'reader_feedback',
 ];
 
 /** RLS tables where app_user has full DML (excludes audit_events which is SELECT-only + function, journal_directory which is SELECT-only).
@@ -370,7 +375,8 @@ describe('RLS Infrastructure', () => {
       // - Nullable org policies (tested separately): audit_events, retention_policies, user_consents
       // - User-scoped (current_user_id()): manuscripts, manuscript_versions, files,
       //   external_submissions, correspondence, writer_profiles, identity_migrations,
-      //   journal_directory, user_keys
+      //   journal_directory, user_keys, simsub_groups, simsub_group_submissions,
+      //   portfolio_entries
       // - Subquery-based: sim_sub_checks, piece_transfers
       const orgPolicyExceptions = new Set([
         'audit_events',
@@ -387,6 +393,9 @@ describe('RLS Infrastructure', () => {
         'sim_sub_checks',
         'piece_transfers',
         'user_keys',
+        'simsub_groups',
+        'simsub_group_submissions',
+        'portfolio_entries',
       ]);
 
       const orgScopedTables = RLS_TABLES.filter(
