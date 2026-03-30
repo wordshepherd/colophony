@@ -16,7 +16,7 @@ import { readerFeedbackService } from '../../services/reader-feedback.service.js
 import { mapServiceError } from '../error-mapper.js';
 
 export const readerFeedbackRouter = createRouter({
-  list: orgProcedure
+  list: editorProcedure
     .use(requireScopes('reader-feedback:read'))
     .input(listReaderFeedbackSchema)
     .query(async ({ ctx, input }) => {

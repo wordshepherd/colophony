@@ -19,6 +19,7 @@ import type { UserServiceContext } from './types.js';
 import { ForbiddenError } from './errors.js';
 import { submissionService } from './submission.service.js';
 import { externalSubmissionService } from './external-submission.service.js';
+import { manuscriptService } from './manuscript.service.js';
 
 // ---------------------------------------------------------------------------
 // Error classes
@@ -199,6 +200,17 @@ export const simsubGroupService = {
     ctx: UserServiceContext,
     input: CreateSimsubGroupInput,
   ) {
+    // Defense-in-depth: verify manuscript ownership if provided
+    if (input.manuscriptId) {
+      const manuscript = await manuscriptService.getById(
+        ctx.tx,
+        input.manuscriptId,
+      );
+      if (!manuscript || manuscript.ownerId !== ctx.userId) {
+        throw new ForbiddenError('You do not own the referenced manuscript');
+      }
+    }
+
     const group = await simsubGroupService.create(ctx.tx, ctx.userId, input);
 
     await ctx.audit({

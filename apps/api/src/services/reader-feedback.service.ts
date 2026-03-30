@@ -223,6 +223,7 @@ export const readerFeedbackService = {
         and(
           eq(readerFeedback.id, id),
           eq(readerFeedback.organizationId, orgId),
+          isNull(readerFeedback.forwardedAt),
         ),
       )
       .returning();
@@ -331,6 +332,12 @@ export const readerFeedbackService = {
       feedbackId,
       ctx.actor.userId,
     );
+
+    // Race-safe: if another editor forwarded between our read and update,
+    // the WHERE clause (forwarded_at IS NULL) causes zero rows updated.
+    if (!updated) {
+      throw new ReaderFeedbackAlreadyForwardedError();
+    }
 
     await ctx.audit({
       action: AuditActions.READER_FEEDBACK_FORWARDED,
