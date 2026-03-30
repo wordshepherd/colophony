@@ -98,6 +98,22 @@ async function assertEditorAdminOrReviewer(
 
   if (actorRoles.includes('ADMIN') || actorRoles.includes('EDITOR')) return;
 
+  // D4: Check contest judge assignment for the submission's period (any role)
+  if (submissionPeriodId) {
+    const [judge] = await tx
+      .select({ id: contestJudges.id })
+      .from(contestJudges)
+      .where(
+        and(
+          eq(contestJudges.submissionPeriodId, submissionPeriodId),
+          eq(contestJudges.userId, actorUserId),
+        ),
+      )
+      .limit(1);
+
+    if (judge) return;
+  }
+
   if (actorRoles.includes('READER')) {
     // Check submission-level reviewer assignment
     const [reviewer] = await tx
@@ -112,26 +128,10 @@ async function assertEditorAdminOrReviewer(
       .limit(1);
 
     if (reviewer) return;
-
-    // D4: Check contest judge assignment for the submission's period
-    if (submissionPeriodId) {
-      const [judge] = await tx
-        .select({ id: contestJudges.id })
-        .from(contestJudges)
-        .where(
-          and(
-            eq(contestJudges.submissionPeriodId, submissionPeriodId),
-            eq(contestJudges.userId, actorUserId),
-          ),
-        )
-        .limit(1);
-
-      if (judge) return;
-    }
   }
 
   throw new ForbiddenError(
-    'Only editors, admins, and assigned reviewers can vote',
+    'Only editors, admins, assigned reviewers, and contest judges can vote',
   );
 }
 

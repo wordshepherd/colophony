@@ -345,10 +345,11 @@ describe('contestService', () => {
         category: 'fiction',
         prizeAmount: 50000,
       };
-      // 1st call = period check, 2nd = duplicate check (empty), 3rd = insert
+      // 1st = period, 2nd = duplicate (empty), 3rd = sub-in-period, 4th = insert
       const tx = sequentialTx([
         [{ id: PERIOD_ID, isContest: true }], // assertPeriodIsContest
         [], // duplicate check (no existing)
+        [{ id: SUBMISSION_ID }], // submission belongs to period
         [fakeResult], // insert returning
       ]);
       const svc = makeSvc(tx);

@@ -446,6 +446,23 @@ export const contestService = {
         input.submissionPeriodId,
       );
 
+    // Verify submission belongs to this period
+    const [sub] = await tx
+      .select({ id: submissions.id })
+      .from(submissions)
+      .where(
+        and(
+          eq(submissions.id, input.submissionId),
+          eq(submissions.submissionPeriodId, input.submissionPeriodId),
+          eq(submissions.organizationId, orgId),
+        ),
+      )
+      .limit(1);
+    if (!sub)
+      throw new Error(
+        `Submission "${input.submissionId}" does not belong to period "${input.submissionPeriodId}"`,
+      );
+
     const [result] = await tx
       .insert(contestResults)
       .values({
@@ -468,6 +485,20 @@ export const contestService = {
     orgId: string,
     input: UpdateContestResultInput,
   ) {
+    // Block edits after disbursement
+    const [existing] = await tx
+      .select({ disbursementId: contestResults.disbursementId })
+      .from(contestResults)
+      .where(
+        and(
+          eq(contestResults.id, id),
+          eq(contestResults.organizationId, orgId),
+        ),
+      )
+      .limit(1);
+    if (!existing) throw new ContestResultNotFoundError(id);
+    if (existing.disbursementId) throw new PrizeAlreadyDisbursedError(id);
+
     const updateData: Record<string, unknown> = {};
     if (input.placement !== undefined) updateData.placement = input.placement;
     if (input.category !== undefined) updateData.category = input.category;
