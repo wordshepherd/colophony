@@ -43,3 +43,4 @@ export * from "./workspace-collection";
 export * from "./contributor";
 export * from "./rights-agreement";
 export * from "./payment-transaction";
+export * from "./contest";

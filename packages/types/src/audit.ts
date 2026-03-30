@@ -296,6 +296,19 @@ export const AuditActions = {
   PAYMENT_TRANSACTION_UPDATED: "PAYMENT_TRANSACTION_UPDATED",
   PAYMENT_TRANSACTION_STATUS_CHANGED: "PAYMENT_TRANSACTION_STATUS_CHANGED",
   PAYMENT_TRANSACTION_DELETED: "PAYMENT_TRANSACTION_DELETED",
+
+  // Contest lifecycle
+  CONTEST_GROUP_CREATED: "CONTEST_GROUP_CREATED",
+  CONTEST_GROUP_UPDATED: "CONTEST_GROUP_UPDATED",
+  CONTEST_GROUP_DELETED: "CONTEST_GROUP_DELETED",
+  CONTEST_JUDGE_ASSIGNED: "CONTEST_JUDGE_ASSIGNED",
+  CONTEST_JUDGE_UPDATED: "CONTEST_JUDGE_UPDATED",
+  CONTEST_JUDGE_REMOVED: "CONTEST_JUDGE_REMOVED",
+  CONTEST_RESULT_CREATED: "CONTEST_RESULT_CREATED",
+  CONTEST_RESULT_UPDATED: "CONTEST_RESULT_UPDATED",
+  CONTEST_RESULT_DELETED: "CONTEST_RESULT_DELETED",
+  CONTEST_WINNERS_ANNOUNCED: "CONTEST_WINNERS_ANNOUNCED",
+  CONTEST_PRIZE_DISBURSED: "CONTEST_PRIZE_DISBURSED",
 } as const;
 
 export type AuditAction = (typeof AuditActions)[keyof typeof AuditActions];
@@ -341,6 +354,8 @@ export const AuditResources = {
   CONTRIBUTOR_PUBLICATION: "contributor_publication",
   RIGHTS_AGREEMENT: "rights_agreement",
   PAYMENT_TRANSACTION: "payment_transaction",
+  CONTEST: "contest",
+  CONTEST_GROUP: "contest_group",
 } as const;
 
 export type AuditResource =
@@ -761,6 +776,27 @@ export interface PaymentTransactionAuditParams extends BaseAuditParams {
     | typeof AuditActions.PAYMENT_TRANSACTION_DELETED;
 }
 
+export interface ContestGroupAuditParams extends BaseAuditParams {
+  resource: typeof AuditResources.CONTEST_GROUP;
+  action:
+    | typeof AuditActions.CONTEST_GROUP_CREATED
+    | typeof AuditActions.CONTEST_GROUP_UPDATED
+    | typeof AuditActions.CONTEST_GROUP_DELETED;
+}
+
+export interface ContestAuditParams extends BaseAuditParams {
+  resource: typeof AuditResources.CONTEST;
+  action:
+    | typeof AuditActions.CONTEST_JUDGE_ASSIGNED
+    | typeof AuditActions.CONTEST_JUDGE_UPDATED
+    | typeof AuditActions.CONTEST_JUDGE_REMOVED
+    | typeof AuditActions.CONTEST_RESULT_CREATED
+    | typeof AuditActions.CONTEST_RESULT_UPDATED
+    | typeof AuditActions.CONTEST_RESULT_DELETED
+    | typeof AuditActions.CONTEST_WINNERS_ANNOUNCED
+    | typeof AuditActions.CONTEST_PRIZE_DISBURSED;
+}
+
 /** Union of all resource-specific param types. */
 export type AuditLogParams =
   | UserAuditParams
@@ -801,7 +837,9 @@ export type AuditLogParams =
   | InvitationAuditParams
   | ContributorAuditParams
   | RightsAgreementAuditParams
-  | PaymentTransactionAuditParams;
+  | PaymentTransactionAuditParams
+  | ContestGroupAuditParams
+  | ContestAuditParams;
 
 // ---------------------------------------------------------------------------
 // Query/response schemas for audit endpoints

@@ -22,6 +22,7 @@ import {
   Network,
   Send,
   Settings,
+  Trophy,
   TrendingUp,
   Upload,
   Users,
@@ -63,6 +64,7 @@ export const editorialNavigation: NavItem[] = [
     href: "/editor/editorial-analytics",
     icon: TrendingUp,
   },
+  { name: "Contests", href: "/editor/contests", icon: Trophy },
 ];
 
 export const productionNavigation: NavItem[] = [

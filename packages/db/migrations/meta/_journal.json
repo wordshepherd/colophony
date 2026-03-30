@@ -449,6 +449,13 @@
       "when": 1781800000000,
       "tag": "0063_business_ops_foundation",
       "breakpoints": true
+    },
+    {
+      "idx": 64,
+      "version": "7",
+      "when": 1782000000000,
+      "tag": "0064_contest_management",
+      "breakpoints": true
     }
   ]
 }
