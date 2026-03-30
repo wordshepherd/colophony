@@ -1,0 +1,235 @@
+import { describe, it, expect, beforeAll, afterEach } from 'vitest';
+import { globalSetup } from '../rls/helpers/db-setup.js';
+import { truncateAllTables } from '../rls/helpers/cleanup.js';
+import { withTestRls } from '../rls/helpers/rls-context.js';
+import {
+  createUser,
+  createOrganization,
+  createOrgMember,
+  createSubmission,
+} from '../rls/helpers/factories.js';
+import { readerFeedbackService } from '../../services/reader-feedback.service.js';
+
+beforeAll(async () => {
+  await globalSetup();
+});
+
+afterEach(async () => {
+  await truncateAllTables();
+});
+
+describe('readerFeedbackService — integration', () => {
+  async function setupOrgWithFeedback() {
+    const org = await createOrganization({
+      settings: {
+        readerFeedbackEnabled: true,
+        readerFeedbackTags: ['engaging', 'well-written', 'needs-work'],
+      },
+    });
+    const editor = await createUser();
+    const submitter = await createUser();
+    await createOrgMember(org.id, editor.id, { roles: ['EDITOR'] });
+    await createOrgMember(org.id, submitter.id);
+    const submission = await createSubmission(org.id, submitter.id);
+    return { org, editor, submitter, submission };
+  }
+
+  describe('CRUD with org context', () => {
+    it('creates feedback on a submission', async () => {
+      const { org, editor, submission } = await setupOrgWithFeedback();
+
+      const fb = await withTestRls({ orgId: org.id }, async (tx) => {
+        return readerFeedbackService.create(tx, org.id, {
+          submissionId: submission.id,
+          reviewerUserId: editor.id,
+          tags: ['engaging'],
+          comment: 'Great opening',
+          isForwardable: true,
+        });
+      });
+
+      expect(fb.organizationId).toBe(org.id);
+      expect(fb.submissionId).toBe(submission.id);
+      expect(fb.tags).toEqual(['engaging']);
+      expect(fb.comment).toBe('Great opening');
+      expect(fb.isForwardable).toBe(true);
+      expect(fb.forwardedAt).toBeNull();
+    });
+
+    it('lists feedback for a submission', async () => {
+      const { org, editor, submission } = await setupOrgWithFeedback();
+
+      await withTestRls({ orgId: org.id }, async (tx) => {
+        await readerFeedbackService.create(tx, org.id, {
+          submissionId: submission.id,
+          reviewerUserId: editor.id,
+          tags: ['engaging'],
+        });
+        await readerFeedbackService.create(tx, org.id, {
+          submissionId: submission.id,
+          reviewerUserId: editor.id,
+          tags: ['well-written'],
+        });
+      });
+
+      const listed = await withTestRls({ orgId: org.id }, async (tx) => {
+        return readerFeedbackService.list(tx, org.id, {
+          submissionId: submission.id,
+          page: 1,
+          limit: 20,
+        });
+      });
+
+      expect(listed.items).toHaveLength(2);
+      expect(listed.total).toBe(2);
+    });
+
+    it('gets feedback by ID with org filter', async () => {
+      const { org, editor, submission } = await setupOrgWithFeedback();
+
+      const fb = await withTestRls({ orgId: org.id }, async (tx) => {
+        return readerFeedbackService.create(tx, org.id, {
+          submissionId: submission.id,
+          reviewerUserId: editor.id,
+          tags: [],
+        });
+      });
+
+      const found = await withTestRls({ orgId: org.id }, async (tx) => {
+        return readerFeedbackService.getById(tx, org.id, fb.id);
+      });
+
+      expect(found).not.toBeNull();
+      expect(found.id).toBe(fb.id);
+    });
+
+    it('deletes feedback', async () => {
+      const { org, editor, submission } = await setupOrgWithFeedback();
+
+      const fb = await withTestRls({ orgId: org.id }, async (tx) => {
+        return readerFeedbackService.create(tx, org.id, {
+          submissionId: submission.id,
+          reviewerUserId: editor.id,
+          tags: [],
+        });
+      });
+
+      const deleted = await withTestRls({ orgId: org.id }, async (tx) => {
+        return readerFeedbackService.delete(tx, org.id, fb.id);
+      });
+
+      expect(deleted).not.toBeNull();
+    });
+  });
+
+  describe('forward flow', () => {
+    it('forwards forwardable feedback', async () => {
+      const { org, editor, submission } = await setupOrgWithFeedback();
+
+      const fb = await withTestRls({ orgId: org.id }, async (tx) => {
+        return readerFeedbackService.create(tx, org.id, {
+          submissionId: submission.id,
+          reviewerUserId: editor.id,
+          tags: ['engaging'],
+          isForwardable: true,
+        });
+      });
+
+      const forwarded = await withTestRls({ orgId: org.id }, async (tx) => {
+        return readerFeedbackService.forward(tx, org.id, fb.id, editor.id);
+      });
+
+      expect(forwarded).not.toBeNull();
+      expect(forwarded.forwardedAt).not.toBeNull();
+      expect(forwarded.forwardedBy).toBe(editor.id);
+    });
+  });
+
+  describe('RLS org isolation', () => {
+    it('org B cannot see org A feedback', async () => {
+      const { org: orgA, editor, submission } = await setupOrgWithFeedback();
+      const orgB = await createOrganization({
+        settings: { readerFeedbackEnabled: true, readerFeedbackTags: [] },
+      });
+
+      await withTestRls({ orgId: orgA.id }, async (tx) => {
+        await readerFeedbackService.create(tx, orgA.id, {
+          submissionId: submission.id,
+          reviewerUserId: editor.id,
+          tags: [],
+        });
+      });
+
+      const orgBList = await withTestRls({ orgId: orgB.id }, async (tx) => {
+        return readerFeedbackService.list(tx, orgB.id, {
+          submissionId: submission.id,
+          page: 1,
+          limit: 20,
+        });
+      });
+
+      expect(orgBList.items).toHaveLength(0);
+    });
+  });
+
+  describe('writer view (forwarded only)', () => {
+    it('returns only forwarded feedback for the submitter', async () => {
+      const { org, editor, submitter, submission } =
+        await setupOrgWithFeedback();
+
+      // Create two feedback items: one forwarded, one not
+      await withTestRls({ orgId: org.id }, async (tx) => {
+        await readerFeedbackService.create(tx, org.id, {
+          submissionId: submission.id,
+          reviewerUserId: editor.id,
+          tags: ['engaging'],
+          isForwardable: true,
+        });
+        await readerFeedbackService.create(tx, org.id, {
+          submissionId: submission.id,
+          reviewerUserId: editor.id,
+          tags: ['needs-work'],
+          isForwardable: false,
+        });
+      });
+
+      // Forward the first one
+      const allFb = await withTestRls({ orgId: org.id }, async (tx) => {
+        return readerFeedbackService.list(tx, org.id, {
+          submissionId: submission.id,
+          page: 1,
+          limit: 20,
+        });
+      });
+      const forwardable = allFb.items.find((f) => f.isForwardable);
+
+      await withTestRls({ orgId: org.id }, async (tx) => {
+        await readerFeedbackService.forward(
+          tx,
+          org.id,
+          forwardable!.id,
+          editor.id,
+        );
+      });
+
+      // Writer should see only forwarded feedback
+      const writerView = await withTestRls(
+        { userId: submitter.id },
+        async (tx) => {
+          return readerFeedbackService.listForWriter(
+            tx,
+            submitter.id,
+            submission.id,
+            1,
+            20,
+          );
+        },
+      );
+
+      expect(writerView.items).toHaveLength(1);
+      expect(writerView.items[0].tags).toEqual(['engaging']);
+      // Verify anonymization: no reviewerUserId field
+      expect('reviewerUserId' in writerView.items[0]).toBe(false);
+    });
+  });
+});

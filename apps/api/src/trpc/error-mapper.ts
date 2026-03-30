@@ -133,6 +133,23 @@ import {
   PaymentTransactionNotFoundError,
   InvalidPaymentStatusTransitionError,
 } from '../services/revenue.service.js';
+import {
+  SimsubGroupNotFoundError,
+  SimsubGroupSubmissionNotFoundError,
+  InvalidSimsubGroupStatusTransitionError,
+} from '../services/simsub-group.service.js';
+import {
+  PortfolioEntryNotFoundError,
+  PortfolioEntryTypeError,
+} from '../services/portfolio-entry.service.js';
+import {
+  ReaderFeedbackNotFoundError,
+  ReaderFeedbackNotEnabledError,
+  ReaderFeedbackNotForwardableError,
+  ReaderFeedbackAlreadyForwardedError,
+  InvalidFeedbackTagError,
+  CrossOrgSubmissionError,
+} from '../services/reader-feedback.service.js';
 
 type TRPCErrorCode = ConstructorParameters<typeof TRPCError>[0]['code'];
 
@@ -253,6 +270,20 @@ const errorCodeMap: [new (...args: never[]) => Error, TRPCErrorCode][] = [
   // Payment transaction errors
   [PaymentTransactionNotFoundError, 'NOT_FOUND'],
   [InvalidPaymentStatusTransitionError, 'BAD_REQUEST'],
+  // Sim-sub group errors
+  [SimsubGroupNotFoundError, 'NOT_FOUND'],
+  [SimsubGroupSubmissionNotFoundError, 'NOT_FOUND'],
+  [InvalidSimsubGroupStatusTransitionError, 'BAD_REQUEST'],
+  // Portfolio entry errors
+  [PortfolioEntryNotFoundError, 'NOT_FOUND'],
+  [PortfolioEntryTypeError, 'BAD_REQUEST'],
+  // Reader feedback errors
+  [ReaderFeedbackNotFoundError, 'NOT_FOUND'],
+  [ReaderFeedbackNotEnabledError, 'BAD_REQUEST'],
+  [ReaderFeedbackNotForwardableError, 'BAD_REQUEST'],
+  [ReaderFeedbackAlreadyForwardedError, 'CONFLICT'],
+  [InvalidFeedbackTagError, 'BAD_REQUEST'],
+  [CrossOrgSubmissionError, 'FORBIDDEN'],
 ];
 
 /**
