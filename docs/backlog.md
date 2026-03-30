@@ -522,17 +522,19 @@
 
 ## Track 14 — Writer Platform Enhancements (Post-Launch)
 
-> **Status:** Planned. Some features depend on Track 13 contributor infrastructure (portfolio entries link to `contributor_publications`).
+> **Status:** In progress. Schema foundation (P1) complete. Service layer and frontend pending.
 
 ### Code
 
-- [ ] [P1] `simultaneous_submission_groups` schema — user-scoped sim-sub groupings linking native + external submissions of same work. Auto-withdraw prompt on acceptance — (design system session 2026-03-28)
-- [ ] [P1] `portfolio_entries` schema — three types: `colophony_verified` (from contributor_publications), `federation_verified` (future federation sync), `external` (manual). Forward-declares `federation_source_instance` + `federation_entry_id` columns — (design system session 2026-03-28)
-- [ ] [P1] `reader_feedback` schema — org-configurable tags (JSONB), short comment (280 chars), forwardable boolean. Opt-in per org. Anonymous reader identity on forwarded feedback — (design system session 2026-03-28)
+- [x] [P1] `simultaneous_submission_groups` schema — user-scoped sim-sub groupings linking native + external submissions of same work. Auto-withdraw prompt on acceptance — (design system session 2026-03-28; done 2026-03-29)
+- [x] [P1] `portfolio_entries` schema — three types: `colophony_verified` (from contributor_publications), `federation_verified` (future federation sync), `external` (manual). Forward-declares `federation_source_instance` + `federation_entry_id` columns — (design system session 2026-03-28; done 2026-03-29)
+- [x] [P1] `reader_feedback` schema — org-configurable tags (JSONB), short comment (280 chars), forwardable boolean. Opt-in per org. Anonymous reader identity on forwarded feedback — (design system session 2026-03-28; done 2026-03-29)
 - [ ] [P2] Sim-sub management UI — group creation, linked submission view, auto-withdraw on acceptance at any Colophony magazine, manual withdraw reminder for external submissions — (design system session 2026-03-28)
 - [ ] [P2] Response time transparency — aggregation query over local submission records, displayed on magazine public profile + submission form. `source` field (local vs federated) for future federation data. Org opt-out available — (design system session 2026-03-28)
 - [ ] [P2] Feedback on rejection flow — reader tags/comments during scoring, editor inclusion of anonymized feedback in rejection notice, org-level feature toggle (default off) — (design system session 2026-03-28)
 - [ ] [P3] Writer sidebar updates — Sim-Sub Groups nav item, Portfolio badges (verified/federated/external), Analytics personal response time stats — (design system session 2026-03-28)
+- [ ] [P1] Reader feedback service: defense-in-depth org match on submission_id — service must verify `submission.organizationId === orgId` before insert to prevent cross-org feedback — (Codex branch review 2026-03-29)
+- [ ] [P2] Sim-sub junction service: ownership validation on referenced records — service must verify `simsubGroup.userId`, `submission.submitterId`, and `externalSubmission.userId` match the caller before insert — (Codex branch review 2026-03-29)
 
 ---
 
