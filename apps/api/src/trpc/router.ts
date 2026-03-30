@@ -39,6 +39,7 @@ import { contributorsRouter } from './routers/contributors.js';
 import { rightsAgreementsRouter } from './routers/rights-agreements.js';
 import { paymentTransactionsRouter } from './routers/payment-transactions.js';
 import { editorialAnalyticsRouter } from './routers/editorial-analytics.js';
+import { contestsRouter } from './routers/contests.js';
 
 // Re-export procedure builders for convenience
 export {
@@ -100,6 +101,7 @@ export const appRouter = t.router({
   rightsAgreements: rightsAgreementsRouter,
   paymentTransactions: paymentTransactionsRouter,
   editorialAnalytics: editorialAnalyticsRouter,
+  contests: contestsRouter,
   retention: t.router({}),
 });
 

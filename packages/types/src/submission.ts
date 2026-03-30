@@ -318,6 +318,16 @@ export const submissionPeriodSchema = z.object({
     .date()
     .nullable()
     .describe("When contest winners will be announced"),
+  contestGroupId: z
+    .string()
+    .uuid()
+    .nullable()
+    .describe("Contest group this period belongs to"),
+  contestRound: z
+    .number()
+    .int()
+    .nullable()
+    .describe("Round number within the contest group"),
   createdAt: z.date().describe("When the period was created"),
   updatedAt: z.date().describe("When the period was last updated"),
 });
@@ -374,6 +384,17 @@ export const createSubmissionPeriodSchema = z.object({
     .date()
     .optional()
     .describe("When contest winners will be announced (ISO-8601)"),
+  contestGroupId: z
+    .string()
+    .uuid()
+    .optional()
+    .describe("Contest group to associate with"),
+  contestRound: z
+    .number()
+    .int()
+    .min(1)
+    .optional()
+    .describe("Round number within the contest group"),
 });
 
 export type CreateSubmissionPeriodInput = z.infer<

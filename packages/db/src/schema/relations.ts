@@ -33,6 +33,7 @@ import {
   rightsAgreements,
   paymentTransactions,
 } from "./business-ops";
+import { contestGroups, contestJudges, contestResults } from "./contests";
 
 // --- organizations ---
 
@@ -58,6 +59,9 @@ export const organizationsRelations = relations(organizations, ({ many }) => ({
   contributors: many(contributors),
   rightsAgreements: many(rightsAgreements),
   paymentTransactions: many(paymentTransactions),
+  contestGroups: many(contestGroups),
+  contestJudges: many(contestJudges),
+  contestResults: many(contestResults),
 }));
 
 // --- users ---
@@ -188,7 +192,13 @@ export const submissionPeriodsRelations = relations(
       fields: [submissionPeriods.publicationId],
       references: [publications.id],
     }),
+    contestGroup: one(contestGroups, {
+      fields: [submissionPeriods.contestGroupId],
+      references: [contestGroups.id],
+    }),
     submissions: many(submissions),
+    contestJudges: many(contestJudges),
+    contestResults: many(contestResults),
   }),
 );
 
@@ -648,3 +658,60 @@ export const paymentTransactionsRelations = relations(
     }),
   }),
 );
+
+// --- contest_groups ---
+
+export const contestGroupsRelations = relations(
+  contestGroups,
+  ({ one, many }) => ({
+    organization: one(organizations, {
+      fields: [contestGroups.organizationId],
+      references: [organizations.id],
+    }),
+    rounds: many(submissionPeriods),
+  }),
+);
+
+// --- contest_judges ---
+
+export const contestJudgesRelations = relations(contestJudges, ({ one }) => ({
+  organization: one(organizations, {
+    fields: [contestJudges.organizationId],
+    references: [organizations.id],
+  }),
+  submissionPeriod: one(submissionPeriods, {
+    fields: [contestJudges.submissionPeriodId],
+    references: [submissionPeriods.id],
+  }),
+  user: one(users, {
+    fields: [contestJudges.userId],
+    references: [users.id],
+    relationName: "contestJudge",
+  }),
+  assignedByUser: one(users, {
+    fields: [contestJudges.assignedBy],
+    references: [users.id],
+    relationName: "contestJudgeAssigner",
+  }),
+}));
+
+// --- contest_results ---
+
+export const contestResultsRelations = relations(contestResults, ({ one }) => ({
+  organization: one(organizations, {
+    fields: [contestResults.organizationId],
+    references: [organizations.id],
+  }),
+  submissionPeriod: one(submissionPeriods, {
+    fields: [contestResults.submissionPeriodId],
+    references: [submissionPeriods.id],
+  }),
+  submission: one(submissions, {
+    fields: [contestResults.submissionId],
+    references: [submissions.id],
+  }),
+  disbursement: one(paymentTransactions, {
+    fields: [contestResults.disbursementId],
+    references: [paymentTransactions.id],
+  }),
+}));
