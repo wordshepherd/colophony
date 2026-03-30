@@ -53,6 +53,8 @@ export const apiKeyScopeSchema = z
     "rights:write",
     "payment-transactions:read",
     "payment-transactions:write",
+    "contests:read",
+    "contests:write",
   ])
   .describe("Permission scope for the API key");
 

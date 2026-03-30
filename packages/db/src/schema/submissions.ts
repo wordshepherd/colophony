@@ -25,6 +25,7 @@ import { users } from "./users";
 import { formDefinitions } from "./forms";
 import { manuscriptVersions } from "./manuscripts";
 import { publications } from "./publications";
+import { contestGroups } from "./contests";
 
 const tsvector = customType<{ data: string }>({
   dataType() {
@@ -76,6 +77,11 @@ export const submissionPeriods = pgTable(
     contestWinnersAnnouncedAt: timestamp("contest_winners_announced_at", {
       withTimezone: true,
     }),
+    contestGroupId: uuid("contest_group_id").references(
+      () => contestGroups.id,
+      { onDelete: "set null" },
+    ),
+    contestRound: integer("contest_round"),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
@@ -95,6 +101,7 @@ export const submissionPeriods = pgTable(
       table.formDefinitionId,
     ),
     index("submission_periods_publication_id_idx").on(table.publicationId),
+    index("submission_periods_contest_group_id_idx").on(table.contestGroupId),
     orgIsolationPolicy,
   ],
 ).enableRLS();

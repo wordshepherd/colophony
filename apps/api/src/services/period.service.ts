@@ -141,6 +141,11 @@ export const periodService = {
         maxSubmissions: input.maxSubmissions ?? null,
         formDefinitionId: input.formDefinitionId ?? null,
         blindReviewMode: input.blindReviewMode ?? 'none',
+        isContest: input.isContest ?? false,
+        contestPrize: input.contestPrize ?? null,
+        contestWinnersAnnouncedAt: input.contestWinnersAnnouncedAt ?? null,
+        contestGroupId: input.contestGroupId ?? null,
+        contestRound: input.contestRound ?? null,
       })
       .returning();
 
@@ -181,6 +186,16 @@ export const periodService = {
       values.formDefinitionId = input.formDefinitionId ?? null;
     if (input.blindReviewMode !== undefined)
       values.blindReviewMode = input.blindReviewMode;
+    if (input.isContest !== undefined) values.isContest = input.isContest;
+    if (input.contestPrize !== undefined)
+      values.contestPrize = input.contestPrize ?? null;
+    if (input.contestWinnersAnnouncedAt !== undefined)
+      values.contestWinnersAnnouncedAt =
+        input.contestWinnersAnnouncedAt ?? null;
+    if (input.contestGroupId !== undefined)
+      values.contestGroupId = input.contestGroupId ?? null;
+    if (input.contestRound !== undefined)
+      values.contestRound = input.contestRound ?? null;
 
     const [row] = await tx
       .update(submissionPeriods)

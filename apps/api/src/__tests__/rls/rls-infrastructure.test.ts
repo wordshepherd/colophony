@@ -63,6 +63,15 @@ const RLS_TABLES = [
   // Editor workspace collections
   'workspace_collections',
   'workspace_items',
+  // Business Operations
+  'contributors',
+  'contributor_publications',
+  'rights_agreements',
+  'payment_transactions',
+  // Contests
+  'contest_groups',
+  'contest_judges',
+  'contest_results',
 ];
 
 /** RLS tables where app_user has full DML (excludes audit_events which is SELECT-only + function, journal_directory which is SELECT-only).

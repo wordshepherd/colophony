@@ -1,6 +1,7 @@
 import {
   submissionVotes,
   submissionReviewers,
+  contestJudges,
   submissions,
   organizations,
   users,
@@ -89,6 +90,7 @@ async function assertEditorAdminOrReviewer(
   actorUserId: string,
   submissionId: string,
   submitterId: string | null,
+  submissionPeriodId?: string | null,
 ): Promise<void> {
   if (submitterId && actorUserId === submitterId) {
     throw new ForbiddenError('Submitters cannot vote on their own submissions');
@@ -96,7 +98,24 @@ async function assertEditorAdminOrReviewer(
 
   if (actorRoles.includes('ADMIN') || actorRoles.includes('EDITOR')) return;
 
+  // D4: Check contest judge assignment for the submission's period (any role)
+  if (submissionPeriodId) {
+    const [judge] = await tx
+      .select({ id: contestJudges.id })
+      .from(contestJudges)
+      .where(
+        and(
+          eq(contestJudges.submissionPeriodId, submissionPeriodId),
+          eq(contestJudges.userId, actorUserId),
+        ),
+      )
+      .limit(1);
+
+    if (judge) return;
+  }
+
   if (actorRoles.includes('READER')) {
+    // Check submission-level reviewer assignment
     const [reviewer] = await tx
       .select({ id: submissionReviewers.id })
       .from(submissionReviewers)
@@ -112,7 +131,7 @@ async function assertEditorAdminOrReviewer(
   }
 
   throw new ForbiddenError(
-    'Only editors, admins, and assigned reviewers can vote',
+    'Only editors, admins, assigned reviewers, and contest judges can vote',
   );
 }
 
@@ -276,6 +295,7 @@ async function castVoteWithAudit(
     svc.actor.userId,
     params.submissionId,
     submission.submitterId,
+    submission.submissionPeriodId,
   );
 
   // Terminal status check
@@ -364,6 +384,7 @@ async function listVotesWithAccess(
     svc.actor.userId,
     submissionId,
     submission.submitterId,
+    submission.submissionPeriodId,
   );
   const votes = await listBySubmission(svc.tx, submissionId);
 
