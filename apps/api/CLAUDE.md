@@ -197,9 +197,9 @@ File scan chains to content-extract on CLEAN. Webhook auto-disables endpoint aft
 
 ## Version Pins
 
-| Package | Pinned | Notes                                       |
-| ------- | ------ | ------------------------------------------- |
-| Fastify | 5.x    | Check plugin compat before upgrading        |
-| tRPC    | 11.x   | Internal only; upgraded from v10 with Zod 4 |
-| Stripe  | 20.4   | —                                           |
-| BullMQ  | 5      | —                                           |
+| Package | Pinned | Notes                                                        |
+| ------- | ------ | ------------------------------------------------------------ |
+| Fastify | 5.x    | Check plugin compat before upgrading                         |
+| tRPC    | 11.x   | Internal only; upgraded from v10 with Zod 4                  |
+| Stripe  | 21.0   | Upgraded from 20.4; decimal_string→Stripe.Decimal (not used) |
+| BullMQ  | 5      | —                                                            |
