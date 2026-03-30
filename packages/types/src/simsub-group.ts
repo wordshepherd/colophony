@@ -146,3 +146,48 @@ export const listSimsubGroupsSchema = z.object({
 });
 
 export type ListSimsubGroupsInput = z.infer<typeof listSimsubGroupsSchema>;
+
+// --- Enriched detail schemas (for UI display) ---
+
+export const enrichedSimsubGroupSubmissionSchema = z.object({
+  id: z.string().uuid().describe("Junction row ID"),
+  simsubGroupId: z.string().uuid().describe("Parent group ID"),
+  addedAt: z.date().describe("When added to the group"),
+  type: z
+    .enum(["colophony", "external"])
+    .describe("Whether this is a Colophony or external submission"),
+  // Colophony submission fields (null for external)
+  submissionId: z.string().uuid().nullable(),
+  submissionTitle: z.string().nullable(),
+  submissionStatus: z.string().nullable(),
+  magazineName: z.string().nullable(),
+  submittedAt: z.date().nullable(),
+  // External submission fields (null for colophony)
+  externalSubmissionId: z.string().uuid().nullable(),
+  journalName: z.string().nullable(),
+  externalStatus: z.string().nullable(),
+  sentAt: z.date().nullable(),
+});
+
+export type EnrichedSimsubGroupSubmission = z.infer<
+  typeof enrichedSimsubGroupSubmissionSchema
+>;
+
+export const enrichedSimsubGroupDetailSchema = simsubGroupSchema.extend({
+  submissions: z.array(enrichedSimsubGroupSubmissionSchema),
+  manuscriptTitle: z.string().nullable(),
+});
+
+export type EnrichedSimsubGroupDetail = z.infer<
+  typeof enrichedSimsubGroupDetailSchema
+>;
+
+// --- Picker input schema ---
+
+export const availableSimsubSubmissionsSchema = z.object({
+  groupId: z.string().uuid().describe("Group to check membership against"),
+});
+
+export type AvailableSimsubSubmissionsInput = z.infer<
+  typeof availableSimsubSubmissionsSchema
+>;

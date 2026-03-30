@@ -7,6 +7,7 @@ import {
   Building2,
   Calendar,
   ClipboardList,
+  Copy,
   DollarSign,
   FileCheck,
   FileSignature,
@@ -40,6 +41,7 @@ export const writingNavigation: NavItem[] = [
   { name: "Manuscripts", href: "/manuscripts", icon: BookOpen },
   { name: "My Submissions", href: "/submissions", icon: FileText },
   { name: "External Subs", href: "/workspace/external", icon: Send },
+  { name: "Sim-Sub Groups", href: "/workspace/sim-sub", icon: Copy },
   {
     name: "Correspondence",
     href: "/workspace/correspondence",
