@@ -5,6 +5,7 @@ import {
   addSimsubGroupSubmissionSchema,
   removeSimsubGroupSubmissionSchema,
   listSimsubGroupsSchema,
+  availableSimsubSubmissionsSchema,
 } from '@colophony/types';
 import { createRouter, userProcedure, requireScopes } from '../init.js';
 import { toUserServiceContext } from '../../services/context.js';
@@ -110,6 +111,34 @@ export const simsubGroupsRouter = createRouter({
           input,
         );
         return { success: true as const };
+      } catch (e) {
+        mapServiceError(e);
+      }
+    }),
+
+  availableSubmissions: userProcedure
+    .use(requireScopes('simsub-groups:read'))
+    .input(availableSimsubSubmissionsSchema)
+    .query(async ({ ctx, input }) => {
+      try {
+        return await simsubGroupService.availableSubmissions(
+          toUserServiceContext(ctx),
+          input,
+        );
+      } catch (e) {
+        mapServiceError(e);
+      }
+    }),
+
+  availableExternalSubmissions: userProcedure
+    .use(requireScopes('simsub-groups:read'))
+    .input(availableSimsubSubmissionsSchema)
+    .query(async ({ ctx, input }) => {
+      try {
+        return await simsubGroupService.availableExternalSubmissions(
+          toUserServiceContext(ctx),
+          input,
+        );
       } catch (e) {
         mapServiceError(e);
       }

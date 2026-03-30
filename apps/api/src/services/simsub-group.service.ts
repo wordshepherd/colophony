@@ -1,18 +1,22 @@
 import {
   simsubGroups,
   simsubGroupSubmissions,
+  submissions,
+  externalSubmissions,
+  organizations,
   eq,
   and,
   desc,
   type DrizzleDb,
 } from '@colophony/db';
-import { count } from 'drizzle-orm';
+import { count, isNotNull } from 'drizzle-orm';
 import { AuditActions, AuditResources } from '@colophony/types';
 import type {
   ListSimsubGroupsInput,
   CreateSimsubGroupInput,
   AddSimsubGroupSubmissionInput,
   RemoveSimsubGroupSubmissionInput,
+  AvailableSimsubSubmissionsInput,
   SimsubGroupStatus,
 } from '@colophony/types';
 import type { UserServiceContext } from './types.js';
@@ -99,13 +103,60 @@ export const simsubGroupService = {
     const group = await simsubGroupService.getById(tx, id);
     if (!group) return null;
 
-    const subs = await tx
-      .select()
-      .from(simsubGroupSubmissions)
-      .where(eq(simsubGroupSubmissions.simsubGroupId, id))
-      .orderBy(desc(simsubGroupSubmissions.addedAt));
+    // Fetch manuscript title if linked
+    let manuscriptTitle: string | null = null;
+    if (group.manuscriptId) {
+      const ms = await manuscriptService.getById(tx, group.manuscriptId);
+      manuscriptTitle = ms?.title ?? null;
+    }
 
-    return { ...group, submissions: subs };
+    // Fetch junction rows with enrichment via LEFT JOINs
+    const junctions = await tx
+      .select({
+        id: simsubGroupSubmissions.id,
+        simsubGroupId: simsubGroupSubmissions.simsubGroupId,
+        addedAt: simsubGroupSubmissions.addedAt,
+        submissionId: simsubGroupSubmissions.submissionId,
+        externalSubmissionId: simsubGroupSubmissions.externalSubmissionId,
+        submissionTitle: submissions.title,
+        submissionStatus: submissions.status,
+        organizationName: organizations.name,
+        submittedAt: submissions.submittedAt,
+        journalName: externalSubmissions.journalName,
+        externalStatus: externalSubmissions.status,
+        sentAt: externalSubmissions.sentAt,
+      })
+      .from(simsubGroupSubmissions)
+      .leftJoin(
+        submissions,
+        eq(simsubGroupSubmissions.submissionId, submissions.id),
+      )
+      .leftJoin(organizations, eq(submissions.organizationId, organizations.id))
+      .leftJoin(
+        externalSubmissions,
+        eq(simsubGroupSubmissions.externalSubmissionId, externalSubmissions.id),
+      )
+      .where(eq(simsubGroupSubmissions.simsubGroupId, id))
+      .orderBy(desc(simsubGroupSubmissions.addedAt))
+      .limit(100);
+
+    const enrichedSubs = junctions.map((j) => ({
+      id: j.id,
+      simsubGroupId: j.simsubGroupId,
+      addedAt: j.addedAt,
+      type: j.submissionId ? ('colophony' as const) : ('external' as const),
+      submissionId: j.submissionId,
+      submissionTitle: j.submissionTitle,
+      submissionStatus: j.submissionStatus,
+      magazineName: j.organizationName,
+      submittedAt: j.submittedAt,
+      externalSubmissionId: j.externalSubmissionId,
+      journalName: j.journalName,
+      externalStatus: j.externalStatus,
+      sentAt: j.sentAt,
+    }));
+
+    return { ...group, submissions: enrichedSubs, manuscriptTitle };
   },
 
   async create(tx: DrizzleDb, userId: string, input: CreateSimsubGroupInput) {
@@ -378,5 +429,89 @@ export const simsubGroupService = {
         externalSubmissionId: input.externalSubmissionId,
       },
     });
+  },
+
+  // -------------------------------------------------------------------------
+  // Picker queries (for add-submission dialog)
+  // -------------------------------------------------------------------------
+
+  async availableSubmissions(
+    ctx: UserServiceContext,
+    input: AvailableSimsubSubmissionsInput,
+  ) {
+    // Defense-in-depth: verify group ownership
+    const group = await simsubGroupService.getById(ctx.tx, input.groupId);
+    if (!group) throw new SimsubGroupNotFoundError(input.groupId);
+    if (group.userId !== ctx.userId) {
+      throw new ForbiddenError('You do not own this sim-sub group');
+    }
+
+    const existing = await ctx.tx
+      .select({ submissionId: simsubGroupSubmissions.submissionId })
+      .from(simsubGroupSubmissions)
+      .where(
+        and(
+          eq(simsubGroupSubmissions.simsubGroupId, input.groupId),
+          isNotNull(simsubGroupSubmissions.submissionId),
+        ),
+      );
+    const excludeIds = existing
+      .map((r) => r.submissionId)
+      .filter(Boolean) as string[];
+
+    const rows = await ctx.tx
+      .select({
+        id: submissions.id,
+        title: submissions.title,
+        status: submissions.status,
+        organizationId: submissions.organizationId,
+      })
+      .from(submissions)
+      .where(eq(submissions.submitterId, ctx.userId))
+      .orderBy(desc(submissions.createdAt))
+      .limit(50);
+
+    return rows.filter((r) => !excludeIds.includes(r.id));
+  },
+
+  async availableExternalSubmissions(
+    ctx: UserServiceContext,
+    input: AvailableSimsubSubmissionsInput,
+  ) {
+    // Defense-in-depth: verify group ownership
+    const group = await simsubGroupService.getById(ctx.tx, input.groupId);
+    if (!group) throw new SimsubGroupNotFoundError(input.groupId);
+    if (group.userId !== ctx.userId) {
+      throw new ForbiddenError('You do not own this sim-sub group');
+    }
+
+    const existing = await ctx.tx
+      .select({
+        externalSubmissionId: simsubGroupSubmissions.externalSubmissionId,
+      })
+      .from(simsubGroupSubmissions)
+      .where(
+        and(
+          eq(simsubGroupSubmissions.simsubGroupId, input.groupId),
+          isNotNull(simsubGroupSubmissions.externalSubmissionId),
+        ),
+      );
+    const excludeIds = existing
+      .map((r) => r.externalSubmissionId)
+      .filter(Boolean) as string[];
+
+    const rows = await ctx.tx
+      .select({
+        id: externalSubmissions.id,
+        journalName: externalSubmissions.journalName,
+        status: externalSubmissions.status,
+        sentAt: externalSubmissions.sentAt,
+      })
+      .from(externalSubmissions)
+      .where(eq(externalSubmissions.userId, ctx.userId))
+      .orderBy(desc(externalSubmissions.createdAt))
+      .limit(50);
+
+    return rows.filter((r) => !excludeIds.includes(r.id));
   },
 };
