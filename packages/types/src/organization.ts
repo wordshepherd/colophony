@@ -255,5 +255,14 @@ export const orgSettingsSchema = z.object({
     .optional()
     .describe("Custom writer-facing status display names"),
   roleDisplayNames: roleDisplayNamesSchema,
+  readerFeedbackEnabled: z
+    .boolean()
+    .default(false)
+    .describe("Whether reader feedback is enabled for this org"),
+  readerFeedbackTags: z
+    .array(z.string().max(50))
+    .max(20)
+    .default([])
+    .describe("Available feedback tags readers can select from"),
 });
 export type OrgSettings = z.infer<typeof orgSettingsSchema>;

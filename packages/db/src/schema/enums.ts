@@ -356,3 +356,19 @@ export const paymentTransactionDirectionEnum = pgEnum(
   "PaymentTransactionDirection",
   ["inbound", "outbound"],
 );
+
+// ---------------------------------------------------------------------------
+// Writer Platform
+// ---------------------------------------------------------------------------
+
+export const portfolioEntryTypeEnum = pgEnum("PortfolioEntryType", [
+  "colophony_verified",
+  "federation_verified",
+  "external",
+]);
+
+export const simsubGroupStatusEnum = pgEnum("SimsubGroupStatus", [
+  "ACTIVE",
+  "RESOLVED",
+  "WITHDRAWN",
+]);
