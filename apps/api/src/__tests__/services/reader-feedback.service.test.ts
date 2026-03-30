@@ -286,6 +286,7 @@ describe('readerFeedbackService — integration', () => {
           readerFeedbackService.createWithAudit(ctx, {
             submissionId: submissionB.id,
             tags: ['engaging'],
+            isForwardable: false,
           }),
         ).rejects.toThrow(CrossOrgSubmissionError);
       });
@@ -311,6 +312,8 @@ describe('readerFeedbackService — integration', () => {
         await expect(
           readerFeedbackService.createWithAudit(ctx, {
             submissionId: randomUUID(),
+            tags: [],
+            isForwardable: false,
           }),
         ).rejects.toThrow(ForbiddenError);
       });
@@ -334,6 +337,8 @@ describe('readerFeedbackService — integration', () => {
         await expect(
           readerFeedbackService.createWithAudit(ctx, {
             submissionId: submissionA.id,
+            tags: [],
+            isForwardable: false,
           }),
         ).rejects.toThrow(ReaderFeedbackNotEnabledError);
       });
