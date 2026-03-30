@@ -34,6 +34,12 @@ import {
   paymentTransactions,
 } from "./business-ops";
 import { contestGroups, contestJudges, contestResults } from "./contests";
+import {
+  simsubGroups,
+  simsubGroupSubmissions,
+  portfolioEntries,
+  readerFeedback,
+} from "./writer-platform";
 
 // --- organizations ---
 
@@ -62,6 +68,7 @@ export const organizationsRelations = relations(organizations, ({ many }) => ({
   contestGroups: many(contestGroups),
   contestJudges: many(contestJudges),
   contestResults: many(contestResults),
+  readerFeedback: many(readerFeedback),
 }));
 
 // --- users ---
@@ -80,6 +87,8 @@ export const usersRelations = relations(users, ({ many }) => ({
   writerProfiles: many(writerProfiles),
   savedQueuePresets: many(savedQueuePresets),
   workspaceCollections: many(workspaceCollections),
+  simsubGroups: many(simsubGroups),
+  portfolioEntries: many(portfolioEntries),
 }));
 
 // --- organization_members ---
@@ -150,6 +159,7 @@ export const manuscriptsRelations = relations(manuscripts, ({ one, many }) => ({
   }),
   versions: many(manuscriptVersions),
   externalSubmissions: many(externalSubmissions),
+  simsubGroups: many(simsubGroups),
 }));
 
 // --- manuscript_versions ---
@@ -230,6 +240,8 @@ export const submissionsRelations = relations(submissions, ({ one, many }) => ({
   pipelineItems: many(pipelineItems),
   correspondence: many(correspondence),
   workspaceItems: many(workspaceItems),
+  simsubGroupSubmissions: many(simsubGroupSubmissions),
+  readerFeedback: many(readerFeedback),
 }));
 
 // --- submission_history ---
@@ -521,6 +533,7 @@ export const externalSubmissionsRelations = relations(
       references: [journalDirectory.id],
     }),
     correspondence: many(correspondence),
+    simsubGroupSubmissions: many(simsubGroupSubmissions),
   }),
 );
 
@@ -713,5 +726,85 @@ export const contestResultsRelations = relations(contestResults, ({ one }) => ({
   disbursement: one(paymentTransactions, {
     fields: [contestResults.disbursementId],
     references: [paymentTransactions.id],
+  }),
+}));
+
+// --- simsub_groups ---
+
+export const simsubGroupsRelations = relations(
+  simsubGroups,
+  ({ one, many }) => ({
+    user: one(users, {
+      fields: [simsubGroups.userId],
+      references: [users.id],
+    }),
+    manuscript: one(manuscripts, {
+      fields: [simsubGroups.manuscriptId],
+      references: [manuscripts.id],
+    }),
+    submissions: many(simsubGroupSubmissions),
+  }),
+);
+
+// --- simsub_group_submissions ---
+
+export const simsubGroupSubmissionsRelations = relations(
+  simsubGroupSubmissions,
+  ({ one }) => ({
+    user: one(users, {
+      fields: [simsubGroupSubmissions.userId],
+      references: [users.id],
+    }),
+    group: one(simsubGroups, {
+      fields: [simsubGroupSubmissions.simsubGroupId],
+      references: [simsubGroups.id],
+    }),
+    submission: one(submissions, {
+      fields: [simsubGroupSubmissions.submissionId],
+      references: [submissions.id],
+    }),
+    externalSubmission: one(externalSubmissions, {
+      fields: [simsubGroupSubmissions.externalSubmissionId],
+      references: [externalSubmissions.id],
+    }),
+  }),
+);
+
+// --- portfolio_entries ---
+
+export const portfolioEntriesRelations = relations(
+  portfolioEntries,
+  ({ one }) => ({
+    user: one(users, {
+      fields: [portfolioEntries.userId],
+      references: [users.id],
+    }),
+    contributorPublication: one(contributorPublications, {
+      fields: [portfolioEntries.contributorPublicationId],
+      references: [contributorPublications.id],
+    }),
+  }),
+);
+
+// --- reader_feedback ---
+
+export const readerFeedbackRelations = relations(readerFeedback, ({ one }) => ({
+  organization: one(organizations, {
+    fields: [readerFeedback.organizationId],
+    references: [organizations.id],
+  }),
+  submission: one(submissions, {
+    fields: [readerFeedback.submissionId],
+    references: [submissions.id],
+  }),
+  reviewer: one(users, {
+    fields: [readerFeedback.reviewerUserId],
+    references: [users.id],
+    relationName: "readerFeedbackReviewer",
+  }),
+  forwarder: one(users, {
+    fields: [readerFeedback.forwardedBy],
+    references: [users.id],
+    relationName: "readerFeedbackForwarder",
   }),
 }));

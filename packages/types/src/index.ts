@@ -44,3 +44,6 @@ export * from "./contributor";
 export * from "./rights-agreement";
 export * from "./payment-transaction";
 export * from "./contest";
+export * from "./simsub-group";
+export * from "./portfolio-entry";
+export * from "./reader-feedback";

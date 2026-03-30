@@ -309,6 +309,23 @@ export const AuditActions = {
   CONTEST_RESULT_DELETED: "CONTEST_RESULT_DELETED",
   CONTEST_WINNERS_ANNOUNCED: "CONTEST_WINNERS_ANNOUNCED",
   CONTEST_PRIZE_DISBURSED: "CONTEST_PRIZE_DISBURSED",
+
+  // Sim-sub group lifecycle
+  SIMSUB_GROUP_CREATED: "SIMSUB_GROUP_CREATED",
+  SIMSUB_GROUP_UPDATED: "SIMSUB_GROUP_UPDATED",
+  SIMSUB_GROUP_DELETED: "SIMSUB_GROUP_DELETED",
+  SIMSUB_GROUP_SUBMISSION_ADDED: "SIMSUB_GROUP_SUBMISSION_ADDED",
+  SIMSUB_GROUP_SUBMISSION_REMOVED: "SIMSUB_GROUP_SUBMISSION_REMOVED",
+
+  // Portfolio entry lifecycle
+  PORTFOLIO_ENTRY_CREATED: "PORTFOLIO_ENTRY_CREATED",
+  PORTFOLIO_ENTRY_UPDATED: "PORTFOLIO_ENTRY_UPDATED",
+  PORTFOLIO_ENTRY_DELETED: "PORTFOLIO_ENTRY_DELETED",
+
+  // Reader feedback lifecycle
+  READER_FEEDBACK_CREATED: "READER_FEEDBACK_CREATED",
+  READER_FEEDBACK_FORWARDED: "READER_FEEDBACK_FORWARDED",
+  READER_FEEDBACK_DELETED: "READER_FEEDBACK_DELETED",
 } as const;
 
 export type AuditAction = (typeof AuditActions)[keyof typeof AuditActions];
@@ -356,6 +373,9 @@ export const AuditResources = {
   PAYMENT_TRANSACTION: "payment_transaction",
   CONTEST: "contest",
   CONTEST_GROUP: "contest_group",
+  SIMSUB_GROUP: "simsub_group",
+  PORTFOLIO_ENTRY: "portfolio_entry",
+  READER_FEEDBACK: "reader_feedback",
 } as const;
 
 export type AuditResource =
@@ -797,6 +817,32 @@ export interface ContestAuditParams extends BaseAuditParams {
     | typeof AuditActions.CONTEST_PRIZE_DISBURSED;
 }
 
+export interface SimsubGroupAuditParams extends BaseAuditParams {
+  resource: typeof AuditResources.SIMSUB_GROUP;
+  action:
+    | typeof AuditActions.SIMSUB_GROUP_CREATED
+    | typeof AuditActions.SIMSUB_GROUP_UPDATED
+    | typeof AuditActions.SIMSUB_GROUP_DELETED
+    | typeof AuditActions.SIMSUB_GROUP_SUBMISSION_ADDED
+    | typeof AuditActions.SIMSUB_GROUP_SUBMISSION_REMOVED;
+}
+
+export interface PortfolioEntryAuditParams extends BaseAuditParams {
+  resource: typeof AuditResources.PORTFOLIO_ENTRY;
+  action:
+    | typeof AuditActions.PORTFOLIO_ENTRY_CREATED
+    | typeof AuditActions.PORTFOLIO_ENTRY_UPDATED
+    | typeof AuditActions.PORTFOLIO_ENTRY_DELETED;
+}
+
+export interface ReaderFeedbackAuditParams extends BaseAuditParams {
+  resource: typeof AuditResources.READER_FEEDBACK;
+  action:
+    | typeof AuditActions.READER_FEEDBACK_CREATED
+    | typeof AuditActions.READER_FEEDBACK_FORWARDED
+    | typeof AuditActions.READER_FEEDBACK_DELETED;
+}
+
 /** Union of all resource-specific param types. */
 export type AuditLogParams =
   | UserAuditParams
@@ -839,7 +885,10 @@ export type AuditLogParams =
   | RightsAgreementAuditParams
   | PaymentTransactionAuditParams
   | ContestGroupAuditParams
-  | ContestAuditParams;
+  | ContestAuditParams
+  | SimsubGroupAuditParams
+  | PortfolioEntryAuditParams
+  | ReaderFeedbackAuditParams;
 
 // ---------------------------------------------------------------------------
 // Query/response schemas for audit endpoints
