@@ -1,5 +1,8 @@
-import { describe, it, expect, beforeAll, afterEach } from 'vitest';
-import { globalSetup } from '../rls/helpers/db-setup.js';
+import { describe, it, expect, beforeAll, afterEach, vi } from 'vitest';
+import { randomUUID } from 'node:crypto';
+import { drizzle } from 'drizzle-orm/node-postgres';
+import { globalSetup, getAdminPool } from '../rls/helpers/db-setup.js';
+import type { DrizzleDb } from '../rls/helpers/db-setup.js';
 import { truncateAllTables } from '../rls/helpers/cleanup.js';
 import { withTestRls } from '../rls/helpers/rls-context.js';
 import {
@@ -8,7 +11,31 @@ import {
   createOrgMember,
   createSubmission,
 } from '../rls/helpers/factories.js';
-import { readerFeedbackService } from '../../services/reader-feedback.service.js';
+import {
+  readerFeedbackService,
+  CrossOrgSubmissionError,
+  ReaderFeedbackNotEnabledError,
+} from '../../services/reader-feedback.service.js';
+import { ForbiddenError } from '../../services/errors.js';
+import { AuditActions, AuditResources } from '@colophony/types';
+import type { ServiceContext } from '../../services/types.js';
+
+async function withAdminTx<T>(fn: (tx: DrizzleDb) => Promise<T>): Promise<T> {
+  const pool = getAdminPool();
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const tx = drizzle(client) as DrizzleDb;
+    const result = await fn(tx);
+    await client.query('ROLLBACK');
+    return result;
+  } catch (e) {
+    await client.query('ROLLBACK');
+    throw e;
+  } finally {
+    client.release();
+  }
+}
 
 beforeAll(async () => {
   await globalSetup();
@@ -230,6 +257,126 @@ describe('readerFeedbackService — integration', () => {
       expect(writerView.items[0].tags).toEqual(['engaging']);
       // Verify anonymization: no reviewerUserId field
       expect('reviewerUserId' in writerView.items[0]).toBe(false);
+    });
+  });
+
+  describe('createWithAudit defense-in-depth', () => {
+    it('rejects cross-org submission', async () => {
+      const orgA = await createOrganization({
+        settings: {
+          readerFeedbackEnabled: true,
+          readerFeedbackTags: ['engaging'],
+        },
+      });
+      const orgB = await createOrganization();
+      const editorA = await createUser();
+      const submitterB = await createUser();
+      await createOrgMember(orgA.id, editorA.id, { roles: ['EDITOR'] });
+      await createOrgMember(orgB.id, submitterB.id);
+      const submissionB = await createSubmission(orgB.id, submitterB.id);
+
+      await withAdminTx(async (tx) => {
+        const ctx: ServiceContext = {
+          tx,
+          actor: { userId: editorA.id, orgId: orgA.id, roles: ['EDITOR'] },
+          audit: vi.fn().mockResolvedValue(undefined),
+        };
+
+        await expect(
+          readerFeedbackService.createWithAudit(ctx, {
+            submissionId: submissionB.id,
+            tags: ['engaging'],
+          }),
+        ).rejects.toThrow(CrossOrgSubmissionError);
+      });
+    });
+
+    it('rejects nonexistent submission', async () => {
+      const orgA = await createOrganization({
+        settings: {
+          readerFeedbackEnabled: true,
+          readerFeedbackTags: [],
+        },
+      });
+      const editorA = await createUser();
+      await createOrgMember(orgA.id, editorA.id, { roles: ['EDITOR'] });
+
+      await withAdminTx(async (tx) => {
+        const ctx: ServiceContext = {
+          tx,
+          actor: { userId: editorA.id, orgId: orgA.id, roles: ['EDITOR'] },
+          audit: vi.fn().mockResolvedValue(undefined),
+        };
+
+        await expect(
+          readerFeedbackService.createWithAudit(ctx, {
+            submissionId: randomUUID(),
+          }),
+        ).rejects.toThrow(ForbiddenError);
+      });
+    });
+
+    it('rejects when feedback is disabled', async () => {
+      const orgA = await createOrganization({
+        settings: { readerFeedbackEnabled: false },
+      });
+      const editorA = await createUser();
+      await createOrgMember(orgA.id, editorA.id, { roles: ['EDITOR'] });
+      const submissionA = await createSubmission(orgA.id, editorA.id);
+
+      await withAdminTx(async (tx) => {
+        const ctx: ServiceContext = {
+          tx,
+          actor: { userId: editorA.id, orgId: orgA.id, roles: ['EDITOR'] },
+          audit: vi.fn().mockResolvedValue(undefined),
+        };
+
+        await expect(
+          readerFeedbackService.createWithAudit(ctx, {
+            submissionId: submissionA.id,
+          }),
+        ).rejects.toThrow(ReaderFeedbackNotEnabledError);
+      });
+    });
+
+    it('succeeds for same-org submission and audits', async () => {
+      const orgA = await createOrganization({
+        settings: {
+          readerFeedbackEnabled: true,
+          readerFeedbackTags: ['engaging'],
+        },
+      });
+      const editorA = await createUser();
+      const submitterA = await createUser();
+      await createOrgMember(orgA.id, editorA.id, { roles: ['EDITOR'] });
+      await createOrgMember(orgA.id, submitterA.id);
+      const submissionA = await createSubmission(orgA.id, submitterA.id);
+
+      await withAdminTx(async (tx) => {
+        const auditFn = vi.fn().mockResolvedValue(undefined);
+        const ctx: ServiceContext = {
+          tx,
+          actor: { userId: editorA.id, orgId: orgA.id, roles: ['EDITOR'] },
+          audit: auditFn,
+        };
+
+        const fb = await readerFeedbackService.createWithAudit(ctx, {
+          submissionId: submissionA.id,
+          tags: ['engaging'],
+          isForwardable: true,
+        });
+
+        expect(fb.organizationId).toBe(orgA.id);
+        expect(fb.submissionId).toBe(submissionA.id);
+        expect(auditFn).toHaveBeenCalledOnce();
+        expect(auditFn).toHaveBeenCalledWith(
+          expect.objectContaining({
+            action: AuditActions.READER_FEEDBACK_CREATED,
+            resource: AuditResources.READER_FEEDBACK,
+            resourceId: fb.id,
+          }),
+        );
+      });
     });
   });
 });
