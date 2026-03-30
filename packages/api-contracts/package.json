@@ -23,6 +23,6 @@
   },
   "devDependencies": {
     "@colophony/typescript-config": "workspace:*",
-    "typescript": "^5.7.2"
+    "typescript": "^6.0.2"
   }
 }
