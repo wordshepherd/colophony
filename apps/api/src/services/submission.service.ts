@@ -41,6 +41,7 @@ import {
   AuditActions,
   AuditResources,
   WRITER_TO_INTERNAL_STATUSES,
+  orgSettingsSchema,
 } from '@colophony/types';
 import { enqueueOutboxEvent } from './outbox.js';
 import type { ServiceContext } from './types.js';
@@ -64,6 +65,7 @@ import { MigrationInvalidStateError } from './migration.service.js';
 import { submissionReviewerService } from './submission-reviewer.service.js';
 import { ReviewerAlreadyAssignedError } from './submission-reviewer.service.js';
 import { readerFeedbackService } from './reader-feedback.service.js';
+import { organizationService } from './organization.service.js';
 
 // ---------------------------------------------------------------------------
 // Error classes
@@ -982,8 +984,13 @@ export const submissionService = {
       });
     } else if (status === 'REJECTED') {
       // Auto-forward forwardable feedback when editor opts to include it
+      // Gate on org setting to prevent forwarding when feature is disabled
       if (includeFeedback) {
-        await readerFeedbackService.bulkForwardWithAudit(svc, id);
+        const org = await organizationService.getById(svc.tx, svc.actor.orgId);
+        const settings = orgSettingsSchema.safeParse(org?.settings ?? {});
+        if (settings.success && settings.data.feedbackOnRejectionEnabled) {
+          await readerFeedbackService.bulkForwardWithAudit(svc, id);
+        }
       }
       await enqueueOutboxEvent(svc.tx, 'hopper/submission.rejected', {
         orgId: svc.actor.orgId,

@@ -6,6 +6,7 @@ import {
   desc,
   isNull,
   not,
+  inArray,
   type DrizzleDb,
 } from '@colophony/db';
 import { count } from 'drizzle-orm';
@@ -292,16 +293,12 @@ export const readerFeedbackService = {
     submissionId: string,
     forwardedBy: string,
   ) {
-    // Forward all forwardable, not-yet-forwarded feedback for this submission
+    // Forward forwardable, not-yet-forwarded feedback for this submission
     // Defense-in-depth: explicit orgId filter
-    const now = new Date();
-    const rows = await tx
-      .update(readerFeedback)
-      .set({
-        forwardedAt: now,
-        forwardedBy,
-        updatedAt: now,
-      })
+    // Cap at 50 to stay consistent with listForwardedForSubmission/listIncludableForSubmission
+    const eligible = await tx
+      .select({ id: readerFeedback.id })
+      .from(readerFeedback)
       .where(
         and(
           eq(readerFeedback.organizationId, orgId),
@@ -310,6 +307,20 @@ export const readerFeedbackService = {
           isNull(readerFeedback.forwardedAt),
         ),
       )
+      .limit(50);
+
+    if (eligible.length === 0) return [];
+
+    const now = new Date();
+    const ids = eligible.map((r) => r.id);
+    const rows = await tx
+      .update(readerFeedback)
+      .set({
+        forwardedAt: now,
+        forwardedBy,
+        updatedAt: now,
+      })
+      .where(inArray(readerFeedback.id, ids))
       .returning();
     return rows;
   },
