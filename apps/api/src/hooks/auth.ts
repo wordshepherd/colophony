@@ -37,6 +37,7 @@ const PUBLIC_PREFIXES = [
   '/api/inngest',
   '/federation/trust',
   '/federation/v1/',
+  '/v1/public/',
 ];
 const PUBLIC_EXACT = [
   '/',

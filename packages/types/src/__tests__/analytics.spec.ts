@@ -5,6 +5,7 @@ import {
   timeSeriesFilterSchema,
   agingFilterSchema,
   responseTimeDistributionSchema,
+  publicResponseTimeStatsSchema,
 } from "../analytics";
 
 describe("analyticsFilterSchema", () => {
@@ -105,5 +106,100 @@ describe("responseTimeDistributionSchema", () => {
     };
     const result = responseTimeDistributionSchema.parse(data);
     expect(result.medianDays).toBeNull();
+  });
+});
+
+describe("publicResponseTimeStatsSchema", () => {
+  it("validates complete object", () => {
+    const data = {
+      medianDays: 18.5,
+      buckets: [
+        {
+          label: "Under 1 week",
+          count: 5,
+          percentage: 20,
+          minDays: 0,
+          maxDays: 7,
+        },
+        {
+          label: "Over 3 months",
+          count: 2,
+          percentage: 8,
+          minDays: 90,
+          maxDays: null,
+        },
+      ],
+      trend: [
+        { month: "2026-01", medianDays: 20.0 },
+        { month: "2026-02", medianDays: 17.5 },
+      ],
+      sampleSize: 25,
+      source: "local" as const,
+      updatedAt: "2026-03-30T12:00:00.000Z",
+    };
+    const result = publicResponseTimeStatsSchema.parse(data);
+    expect(result.medianDays).toBe(18.5);
+    expect(result.buckets).toHaveLength(2);
+    expect(result.trend).toHaveLength(2);
+    expect(result.source).toBe("local");
+  });
+
+  it("allows null medianDays", () => {
+    const data = {
+      medianDays: null,
+      buckets: [],
+      trend: [],
+      sampleSize: 0,
+      source: "local" as const,
+      updatedAt: "2026-03-30T12:00:00.000Z",
+    };
+    const result = publicResponseTimeStatsSchema.parse(data);
+    expect(result.medianDays).toBeNull();
+  });
+
+  it("allows null maxDays in buckets", () => {
+    const data = {
+      medianDays: 30,
+      buckets: [
+        {
+          label: "Over 3 months",
+          count: 5,
+          percentage: 100,
+          minDays: 90,
+          maxDays: null,
+        },
+      ],
+      trend: [],
+      sampleSize: 5,
+      source: "local" as const,
+      updatedAt: "2026-03-30T12:00:00.000Z",
+    };
+    const result = publicResponseTimeStatsSchema.parse(data);
+    expect(result.buckets[0].maxDays).toBeNull();
+  });
+
+  it("rejects invalid source", () => {
+    const result = publicResponseTimeStatsSchema.safeParse({
+      medianDays: 10,
+      buckets: [],
+      trend: [],
+      sampleSize: 10,
+      source: "invalid",
+      updatedAt: "2026-03-30T12:00:00.000Z",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("accepts federated source", () => {
+    const data = {
+      medianDays: 10,
+      buckets: [],
+      trend: [],
+      sampleSize: 10,
+      source: "federated" as const,
+      updatedAt: "2026-03-30T12:00:00.000Z",
+    };
+    const result = publicResponseTimeStatsSchema.parse(data);
+    expect(result.source).toBe("federated");
   });
 });

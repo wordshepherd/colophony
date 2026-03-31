@@ -147,6 +147,14 @@ export const organizationService = {
       })
       .where(eq(organizations.id, orgId))
       .returning();
+
+    // Invalidate response time cache when settings change
+    if (input.settings !== undefined) {
+      const { responseTimeTransparencyService } =
+        await import('./response-time-transparency.service.js');
+      responseTimeTransparencyService.invalidateCache(orgId);
+    }
+
     return updated ?? null;
   },
 

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { publicResponseTimeStatsSchema } from "./analytics";
 import { scanStatusSchema } from "./file";
 import { writerStatusSchema } from "./writer-status";
 
@@ -129,6 +130,11 @@ export const embedFormResponseSchema = z
       .describe("Form definition with fields and pages (null if no form)"),
     theme: embedThemeConfigSchema.nullable().describe("Theme configuration"),
     organizationId: z.string().uuid().describe("Organization ID"),
+    responseTimeStats: publicResponseTimeStatsSchema
+      .nullable()
+      .describe(
+        "Public response time stats (null if opted out or insufficient data)",
+      ),
   })
   .describe("Public embed form response");
 

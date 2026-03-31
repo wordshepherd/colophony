@@ -4,6 +4,7 @@ const {
   mockEmbedTokenService,
   mockEmbedSubmissionService,
   mockStatusTokenService,
+  mockResponseTimeTransparencyService,
 } = vi.hoisted(() => {
   const mockEmbedTokenService = {
     verifyToken: vi.fn(),
@@ -17,10 +18,15 @@ const {
   const mockStatusTokenService = {
     verifyToken: vi.fn(),
   };
+  const mockResponseTimeTransparencyService = {
+    getPublicStats: vi.fn().mockResolvedValue(null),
+    invalidateCache: vi.fn(),
+  };
   return {
     mockEmbedTokenService,
     mockEmbedSubmissionService,
     mockStatusTokenService,
+    mockResponseTimeTransparencyService,
   };
 });
 
@@ -40,6 +46,10 @@ vi.mock('../services/embed-submission.service.js', () => ({
       this.name = 'PeriodClosedError';
     }
   },
+}));
+
+vi.mock('../services/response-time-transparency.service.js', () => ({
+  responseTimeTransparencyService: mockResponseTimeTransparencyService,
 }));
 
 // Mock ioredis — must use `function` keyword for class-like constructors

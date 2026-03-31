@@ -48,6 +48,7 @@ const validFormResponse = {
   },
   theme: null,
   organizationId: "org-1",
+  responseTimeStats: null,
 };
 
 describe("EmbedForm", () => {
