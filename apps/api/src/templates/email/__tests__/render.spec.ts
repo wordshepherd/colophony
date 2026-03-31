@@ -95,4 +95,56 @@ describe('renderEmailTemplate', () => {
       renderEmailTemplate('nonexistent' as TemplateName, {}),
     ).toThrow('Unknown email template');
   });
+
+  describe('submission-rejected with reader feedback', () => {
+    const baseData = {
+      submissionTitle: 'My Poem',
+      submitterName: 'Alice',
+      submitterEmail: 'alice@example.com',
+      orgName: 'Test Lit Mag',
+    };
+
+    it('does not include feedback section when no feedback provided', () => {
+      const result = renderEmailTemplate('submission-rejected', baseData);
+      expect(result.text).not.toContain('Reader feedback');
+      expect(result.html).not.toContain('Reader feedback');
+    });
+
+    it('includes feedback section when readerFeedback is present', () => {
+      const result = renderEmailTemplate('submission-rejected', {
+        ...baseData,
+        readerFeedback: [
+          { tags: ['engaging', 'well-written'], comment: 'Great pacing' },
+          { tags: ['needs-work'], comment: null },
+        ],
+      });
+
+      // Check plaintext
+      expect(result.text).toContain('Reader feedback');
+      expect(result.text).toContain('engaging');
+      expect(result.text).toContain('Great pacing');
+      expect(result.text).toContain('needs-work');
+
+      // Check HTML
+      expect(result.html).toContain('Reader feedback');
+      expect(result.html).toContain('engaging');
+      expect(result.html).toContain('Great pacing');
+    });
+
+    it('escapes HTML in feedback tags and comments', () => {
+      const result = renderEmailTemplate('submission-rejected', {
+        ...baseData,
+        readerFeedback: [
+          {
+            tags: ['<script>alert("xss")</script>'],
+            comment: '<img onerror="alert(1)">',
+          },
+        ],
+      });
+
+      expect(result.html).not.toContain('<script>');
+      expect(result.html).not.toContain('<img onerror');
+      expect(result.html).toContain('&lt;script&gt;');
+    });
+  });
 });

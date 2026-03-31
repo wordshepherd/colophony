@@ -2,6 +2,7 @@ import {
   readerFeedback,
   eq,
   and,
+  or,
   desc,
   isNull,
   not,
@@ -230,6 +231,89 @@ export const readerFeedbackService = {
     return row ?? null;
   },
 
+  async listForwardedForSubmission(
+    tx: DrizzleDb,
+    orgId: string,
+    submissionId: string,
+  ): Promise<Array<{ tags: string[]; comment: string | null }>> {
+    // Defense-in-depth: explicit orgId filter + only forwarded feedback
+    // Strips reviewer identity at query level
+    return tx
+      .select({
+        tags: readerFeedback.tags,
+        comment: readerFeedback.comment,
+      })
+      .from(readerFeedback)
+      .where(
+        and(
+          eq(readerFeedback.organizationId, orgId),
+          eq(readerFeedback.submissionId, submissionId),
+          not(isNull(readerFeedback.forwardedAt)),
+        ),
+      )
+      .orderBy(desc(readerFeedback.createdAt))
+      .limit(50);
+  },
+
+  async listIncludableForSubmission(
+    tx: DrizzleDb,
+    orgId: string,
+    submissionId: string,
+  ) {
+    // Defense-in-depth: explicit orgId filter
+    // Returns forwardable (not yet forwarded) + already forwarded items
+    return tx
+      .select({
+        id: readerFeedback.id,
+        tags: readerFeedback.tags,
+        comment: readerFeedback.comment,
+        isForwardable: readerFeedback.isForwardable,
+        forwardedAt: readerFeedback.forwardedAt,
+      })
+      .from(readerFeedback)
+      .where(
+        and(
+          eq(readerFeedback.organizationId, orgId),
+          eq(readerFeedback.submissionId, submissionId),
+          // Only forwardable or already forwarded
+          or(
+            eq(readerFeedback.isForwardable, true),
+            not(isNull(readerFeedback.forwardedAt)),
+          ),
+        ),
+      )
+      .orderBy(desc(readerFeedback.createdAt))
+      .limit(50);
+  },
+
+  async bulkForwardForSubmission(
+    tx: DrizzleDb,
+    orgId: string,
+    submissionId: string,
+    forwardedBy: string,
+  ) {
+    // Forward all forwardable, not-yet-forwarded feedback for this submission
+    // Defense-in-depth: explicit orgId filter
+    const now = new Date();
+    const rows = await tx
+      .update(readerFeedback)
+      .set({
+        forwardedAt: now,
+        forwardedBy,
+        updatedAt: now,
+      })
+      .where(
+        and(
+          eq(readerFeedback.organizationId, orgId),
+          eq(readerFeedback.submissionId, submissionId),
+          eq(readerFeedback.isForwardable, true),
+          isNull(readerFeedback.forwardedAt),
+        ),
+      )
+      .returning();
+    return rows;
+  },
+
   async delete(tx: DrizzleDb, orgId: string, id: string) {
     // Defense-in-depth: explicit organizationId filter
     const [row] = await tx
@@ -347,6 +431,34 @@ export const readerFeedbackService = {
     });
 
     return updated;
+  },
+
+  async bulkForwardWithAudit(ctx: ServiceContext, submissionId: string) {
+    const orgId = ctx.actor.orgId;
+
+    assertEditorOrAdmin(ctx.actor.roles);
+
+    const forwarded = await readerFeedbackService.bulkForwardForSubmission(
+      ctx.tx,
+      orgId,
+      submissionId,
+      ctx.actor.userId,
+    );
+
+    if (forwarded.length > 0) {
+      await ctx.audit({
+        action: AuditActions.READER_FEEDBACK_BULK_FORWARDED,
+        resource: AuditResources.READER_FEEDBACK,
+        resourceId: submissionId,
+        newValue: {
+          submissionId,
+          count: forwarded.length,
+          feedbackIds: forwarded.map((r) => r.id),
+        },
+      });
+    }
+
+    return forwarded.length;
   },
 
   async deleteWithAudit(ctx: ServiceContext, id: string) {

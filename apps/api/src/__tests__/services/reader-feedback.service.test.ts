@@ -260,6 +260,268 @@ describe('readerFeedbackService — integration', () => {
     });
   });
 
+  describe('listForwardedForSubmission', () => {
+    it('returns only forwarded items with anonymized shape', async () => {
+      const { org, editor, submission } = await setupOrgWithFeedback();
+
+      // Create 3 feedback items: 2 forwarded, 1 not
+      await withTestRls({ orgId: org.id }, async (tx) => {
+        const fb1 = await readerFeedbackService.create(tx, org.id, {
+          submissionId: submission.id,
+          reviewerUserId: editor.id,
+          tags: ['engaging'],
+          comment: 'Good pacing',
+          isForwardable: true,
+        });
+        await readerFeedbackService.create(tx, org.id, {
+          submissionId: submission.id,
+          reviewerUserId: editor.id,
+          tags: ['needs-work'],
+          comment: 'Unclear ending',
+          isForwardable: true,
+        });
+        await readerFeedbackService.create(tx, org.id, {
+          submissionId: submission.id,
+          reviewerUserId: editor.id,
+          tags: ['well-written'],
+          isForwardable: false,
+        });
+
+        // Forward fb1
+        await readerFeedbackService.forward(tx, org.id, fb1.id, editor.id);
+      });
+
+      // Forward fb2
+      const allFb = await withTestRls({ orgId: org.id }, async (tx) => {
+        return readerFeedbackService.list(tx, org.id, {
+          submissionId: submission.id,
+          page: 1,
+          limit: 20,
+        });
+      });
+      const fb2 = allFb.items.find(
+        (f) => f.tags.includes('needs-work') && f.isForwardable,
+      );
+      if (fb2) {
+        await withTestRls({ orgId: org.id }, async (tx) => {
+          await readerFeedbackService.forward(tx, org.id, fb2.id, editor.id);
+        });
+      }
+
+      const forwarded = await withTestRls({ orgId: org.id }, async (tx) => {
+        return readerFeedbackService.listForwardedForSubmission(
+          tx,
+          org.id,
+          submission.id,
+        );
+      });
+
+      expect(forwarded).toHaveLength(2);
+      // Verify anonymized shape: only tags + comment
+      for (const item of forwarded) {
+        expect(item).toHaveProperty('tags');
+        expect(item).toHaveProperty('comment');
+        expect(item).not.toHaveProperty('reviewerUserId');
+        expect(item).not.toHaveProperty('id');
+        expect(item).not.toHaveProperty('forwardedBy');
+      }
+    });
+
+    it('returns empty array when no feedback exists', async () => {
+      const { org, submission } = await setupOrgWithFeedback();
+
+      const result = await withTestRls({ orgId: org.id }, async (tx) => {
+        return readerFeedbackService.listForwardedForSubmission(
+          tx,
+          org.id,
+          submission.id,
+        );
+      });
+
+      expect(result).toEqual([]);
+    });
+
+    it('filters by orgId (cross-org isolation)', async () => {
+      const { org: orgA, editor, submission } = await setupOrgWithFeedback();
+      const orgB = await createOrganization({
+        settings: { readerFeedbackEnabled: true, readerFeedbackTags: [] },
+      });
+
+      // Create and forward feedback in orgA
+      await withTestRls({ orgId: orgA.id }, async (tx) => {
+        const fb = await readerFeedbackService.create(tx, orgA.id, {
+          submissionId: submission.id,
+          reviewerUserId: editor.id,
+          tags: ['engaging'],
+          isForwardable: true,
+        });
+        await readerFeedbackService.forward(tx, orgA.id, fb.id, editor.id);
+      });
+
+      // orgB should not see orgA's feedback
+      const result = await withTestRls({ orgId: orgB.id }, async (tx) => {
+        return readerFeedbackService.listForwardedForSubmission(
+          tx,
+          orgB.id,
+          submission.id,
+        );
+      });
+
+      expect(result).toEqual([]);
+    });
+  });
+
+  describe('listIncludableForSubmission', () => {
+    it('includes forwardable + already forwarded items', async () => {
+      const { org, editor, submission } = await setupOrgWithFeedback();
+
+      await withTestRls({ orgId: org.id }, async (tx) => {
+        // Forwardable but not yet forwarded
+        await readerFeedbackService.create(tx, org.id, {
+          submissionId: submission.id,
+          reviewerUserId: editor.id,
+          tags: ['engaging'],
+          isForwardable: true,
+        });
+        // Already forwarded
+        const fb2 = await readerFeedbackService.create(tx, org.id, {
+          submissionId: submission.id,
+          reviewerUserId: editor.id,
+          tags: ['well-written'],
+          isForwardable: true,
+        });
+        await readerFeedbackService.forward(tx, org.id, fb2.id, editor.id);
+        // Not forwardable, not forwarded — should be excluded
+        await readerFeedbackService.create(tx, org.id, {
+          submissionId: submission.id,
+          reviewerUserId: editor.id,
+          tags: ['needs-work'],
+          isForwardable: false,
+        });
+      });
+
+      const result = await withTestRls({ orgId: org.id }, async (tx) => {
+        return readerFeedbackService.listIncludableForSubmission(
+          tx,
+          org.id,
+          submission.id,
+        );
+      });
+
+      expect(result).toHaveLength(2);
+      const tags = result.map((r) => r.tags).flat();
+      expect(tags).toContain('engaging');
+      expect(tags).toContain('well-written');
+      expect(tags).not.toContain('needs-work');
+    });
+  });
+
+  describe('bulkForwardForSubmission', () => {
+    it('forwards all forwardable unfowarded items', async () => {
+      const { org, editor, submission } = await setupOrgWithFeedback();
+
+      await withTestRls({ orgId: org.id }, async (tx) => {
+        await readerFeedbackService.create(tx, org.id, {
+          submissionId: submission.id,
+          reviewerUserId: editor.id,
+          tags: ['engaging'],
+          isForwardable: true,
+        });
+        await readerFeedbackService.create(tx, org.id, {
+          submissionId: submission.id,
+          reviewerUserId: editor.id,
+          tags: ['well-written'],
+          isForwardable: true,
+        });
+        await readerFeedbackService.create(tx, org.id, {
+          submissionId: submission.id,
+          reviewerUserId: editor.id,
+          tags: ['needs-work'],
+          isForwardable: false,
+        });
+      });
+
+      const forwarded = await withTestRls({ orgId: org.id }, async (tx) => {
+        return readerFeedbackService.bulkForwardForSubmission(
+          tx,
+          org.id,
+          submission.id,
+          editor.id,
+        );
+      });
+
+      expect(forwarded).toHaveLength(2);
+      for (const row of forwarded) {
+        expect(row.forwardedAt).not.toBeNull();
+        expect(row.forwardedBy).toBe(editor.id);
+      }
+    });
+
+    it('is idempotent — skips already forwarded items', async () => {
+      const { org, editor, submission } = await setupOrgWithFeedback();
+
+      await withTestRls({ orgId: org.id }, async (tx) => {
+        const fb = await readerFeedbackService.create(tx, org.id, {
+          submissionId: submission.id,
+          reviewerUserId: editor.id,
+          tags: ['engaging'],
+          isForwardable: true,
+        });
+        await readerFeedbackService.forward(tx, org.id, fb.id, editor.id);
+      });
+
+      const result = await withTestRls({ orgId: org.id }, async (tx) => {
+        return readerFeedbackService.bulkForwardForSubmission(
+          tx,
+          org.id,
+          submission.id,
+          editor.id,
+        );
+      });
+
+      expect(result).toHaveLength(0);
+    });
+  });
+
+  describe('bulkForwardWithAudit', () => {
+    it('logs audit event with count', async () => {
+      const { org, editor, submission } = await setupOrgWithFeedback();
+
+      await withTestRls({ orgId: org.id }, async (tx) => {
+        await readerFeedbackService.create(tx, org.id, {
+          submissionId: submission.id,
+          reviewerUserId: editor.id,
+          tags: ['engaging'],
+          isForwardable: true,
+        });
+      });
+
+      await withAdminTx(async (tx) => {
+        const auditFn = vi.fn().mockResolvedValue(undefined);
+        const ctx: ServiceContext = {
+          tx,
+          actor: { userId: editor.id, orgId: org.id, roles: ['EDITOR'] },
+          audit: auditFn,
+        };
+
+        const count = await readerFeedbackService.bulkForwardWithAudit(
+          ctx,
+          submission.id,
+        );
+
+        expect(count).toBe(1);
+        expect(auditFn).toHaveBeenCalledOnce();
+        expect(auditFn).toHaveBeenCalledWith(
+          expect.objectContaining({
+            action: AuditActions.READER_FEEDBACK_BULK_FORWARDED,
+            resource: AuditResources.READER_FEEDBACK,
+            resourceId: submission.id,
+          }),
+        );
+      });
+    });
+  });
+
   describe('createWithAudit defense-in-depth', () => {
     it('rejects cross-org submission', async () => {
       const orgA = await createOrganization({

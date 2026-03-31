@@ -20,6 +20,7 @@ export interface SubmissionTemplateData {
   orgName: string;
   submissionUrl?: string;
   editorComment?: string;
+  readerFeedback?: Array<{ tags: string[]; comment: string | null }>;
 }
 
 export interface ContractTemplateData {

@@ -225,6 +225,10 @@ export const updateSubmissionStatusSchema = z.object({
     .max(1000)
     .optional()
     .describe("Optional comment for the status change (max 1,000 chars)"),
+  includeFeedback: z
+    .boolean()
+    .optional()
+    .describe("Include forwarded reader feedback in the rejection email"),
 });
 
 export type UpdateSubmissionStatusInput = z.infer<

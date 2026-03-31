@@ -16,6 +16,7 @@ import { ReviewerList } from "./reviewer-list";
 import { ReviewerPicker } from "./reviewer-picker";
 import { DiscussionThread } from "./discussion-thread";
 import { VotingPanel } from "./voting-panel";
+import { ReaderFeedbackPanel } from "./reader-feedback-panel";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -461,6 +462,17 @@ export function SubmissionDetail({
             scoreMin={votingConfig.scoreMin}
             scoreMax={votingConfig.scoreMax}
           />
+        )}
+
+      {/* Reader Feedback — hidden in reading mode */}
+      {!isReadingMode &&
+        (isEditor ||
+          isAdmin ||
+          (reviewers ?? []).some((r) => r.reviewerUserId === user?.id)) &&
+        !isOwner &&
+        effectiveStatus !== "DRAFT" &&
+        effectiveWriterStatus !== "DRAFT" && (
+          <ReaderFeedbackPanel submissionId={submissionId} />
         )}
 
       {/* Content */}

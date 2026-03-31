@@ -63,6 +63,7 @@ import {
 import { MigrationInvalidStateError } from './migration.service.js';
 import { submissionReviewerService } from './submission-reviewer.service.js';
 import { ReviewerAlreadyAssignedError } from './submission-reviewer.service.js';
+import { readerFeedbackService } from './reader-feedback.service.js';
 
 // ---------------------------------------------------------------------------
 // Error classes
@@ -943,6 +944,7 @@ export const submissionService = {
     id: string,
     status: SubmissionStatus,
     comment: string | undefined,
+    includeFeedback?: boolean,
   ) {
     assertEditorOrAdmin(svc.actor.roles);
 
@@ -979,11 +981,16 @@ export const submissionService = {
         comment,
       });
     } else if (status === 'REJECTED') {
+      // Auto-forward forwardable feedback when editor opts to include it
+      if (includeFeedback) {
+        await readerFeedbackService.bulkForwardWithAudit(svc, id);
+      }
       await enqueueOutboxEvent(svc.tx, 'hopper/submission.rejected', {
         orgId: svc.actor.orgId,
         submissionId: id,
         submitterId: existing.submitterId,
         comment,
+        includeFeedback,
       });
     } else if (status === 'REVISE_AND_RESUBMIT') {
       await enqueueOutboxEvent(

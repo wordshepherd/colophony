@@ -3,6 +3,7 @@ import {
   createReaderFeedbackSchema,
   forwardReaderFeedbackSchema,
   listReaderFeedbackSchema,
+  listIncludableReaderFeedbackSchema,
 } from '@colophony/types';
 import {
   createRouter,
@@ -76,6 +77,21 @@ export const readerFeedbackRouter = createRouter({
         return await readerFeedbackService.forwardWithAudit(
           toServiceContext(ctx),
           input.feedbackId,
+        );
+      } catch (e) {
+        mapServiceError(e);
+      }
+    }),
+
+  listIncludable: editorProcedure
+    .use(requireScopes('reader-feedback:read'))
+    .input(listIncludableReaderFeedbackSchema)
+    .query(async ({ ctx, input }) => {
+      try {
+        return await readerFeedbackService.listIncludableForSubmission(
+          ctx.dbTx,
+          ctx.authContext.orgId,
+          input.submissionId,
         );
       } catch (e) {
         mapServiceError(e);
