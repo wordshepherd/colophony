@@ -32,8 +32,10 @@ import {
   emailTemplateService,
   EmailTemplateNotFoundError,
   InvalidMergeFieldError,
+  InvalidTemplateSyntaxError,
   sanitizeTemplateHtml,
   validateMergeFields,
+  validateSubjectMergeFields,
   interpolateMergeFields,
   interpolateMergeFieldsBody,
   interpolateBlockFields,
@@ -147,6 +149,44 @@ describe('validateMergeFields', () => {
     expect(() =>
       validateMergeFields('{{readerFeedback}}', 'submission-received'),
     ).toThrow(InvalidMergeFieldError);
+  });
+
+  it('rejects unclosed {{#each}} blocks', () => {
+    expect(() =>
+      validateMergeFields(
+        '{{#each readerFeedback}}<p>{{this.comment}}</p>',
+        'submission-rejected',
+      ),
+    ).toThrow(InvalidTemplateSyntaxError);
+  });
+
+  it('rejects mismatched {{#each}} and {{/each}} counts', () => {
+    expect(() =>
+      validateMergeFields(
+        '{{#each readerFeedback}}{{#each readerFeedback}}{{/each}}',
+        'submission-rejected',
+      ),
+    ).toThrow(InvalidTemplateSyntaxError);
+  });
+});
+
+describe('validateSubjectMergeFields', () => {
+  it('allows scalar merge fields in subject', () => {
+    expect(() =>
+      validateSubjectMergeFields(
+        '{{submissionTitle}} — {{orgName}}',
+        'submission-rejected',
+      ),
+    ).not.toThrow();
+  });
+
+  it('rejects {{#each}} blocks in subject', () => {
+    expect(() =>
+      validateSubjectMergeFields(
+        '{{#each readerFeedback}}{{this.comment}}{{/each}}',
+        'submission-rejected',
+      ),
+    ).toThrow(InvalidTemplateSyntaxError);
   });
 });
 

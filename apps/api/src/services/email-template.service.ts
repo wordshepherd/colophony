@@ -28,6 +28,13 @@ export class InvalidMergeFieldError extends Error {
   }
 }
 
+export class InvalidTemplateSyntaxError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'InvalidTemplateSyntaxError';
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -80,7 +87,8 @@ const MERGE_FIELD_RE = /\{\{(\w+)\}\}/g;
 /**
  * Validate that all `{{field}}` placeholders and `{{#each field}}` blocks in
  * `text` are allowed for the given template. Throws
- * {@link InvalidMergeFieldError} on the first invalid field.
+ * {@link InvalidMergeFieldError} on the first invalid field, or
+ * {@link InvalidTemplateSyntaxError} on malformed block syntax.
  *
  * `{{this.prop}}` inside blocks is not validated against the top-level list
  * (the dot prevents matching `\w+`).
@@ -90,6 +98,15 @@ export function validateMergeFields(
   templateName: EmailTemplateName,
 ): void {
   const allowed = TEMPLATE_MERGE_FIELDS[templateName];
+
+  // Detect unclosed {{#each}} blocks (opening without matching close)
+  const opens = text.match(/\{\{#each\s+\w+\}\}/g) ?? [];
+  const closes = text.match(/\{\{\/each\}\}/g) ?? [];
+  if (opens.length !== closes.length) {
+    throw new InvalidTemplateSyntaxError(
+      'Unclosed {{#each}} block — every {{#each field}} must have a matching {{/each}}',
+    );
+  }
 
   // Strip {{#each field}}...{{/each}} blocks, validating the block field name
   const withoutBlocks = text.replace(
@@ -110,6 +127,24 @@ export function validateMergeFields(
       throw new InvalidMergeFieldError(match[1], templateName);
     }
   }
+}
+
+/**
+ * Validate subject template — scalar `{{field}}` only, no `{{#each}}` blocks.
+ * Subjects are rendered with scalar-only interpolation; block syntax would
+ * appear as raw markup in outgoing email subject lines.
+ */
+export function validateSubjectMergeFields(
+  text: string,
+  templateName: EmailTemplateName,
+): void {
+  if (/\{\{#each\s/.test(text)) {
+    throw new InvalidTemplateSyntaxError(
+      '{{#each}} blocks are not allowed in subject templates — use scalar merge fields only',
+    );
+  }
+  // Delegate scalar validation to the standard validator
+  validateMergeFields(text, templateName);
 }
 
 /**
@@ -278,7 +313,7 @@ export const emailTemplateService = {
     const { templateName, subjectTemplate, bodyHtml } = input;
 
     // Validate merge fields in both subject and body
-    validateMergeFields(subjectTemplate, templateName);
+    validateSubjectMergeFields(subjectTemplate, templateName);
     validateMergeFields(bodyHtml, templateName);
 
     // Sanitize body HTML
