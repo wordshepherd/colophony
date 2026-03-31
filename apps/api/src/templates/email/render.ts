@@ -6,6 +6,7 @@ import { wrapInLayout } from './layout.js';
 import {
   sanitizeTemplateHtml,
   interpolateMergeFields,
+  interpolateMergeFieldsBody,
 } from '../../services/email-template.service.js';
 
 export interface RenderedEmail {
@@ -43,11 +44,11 @@ export function renderCustomTemplate(
   data: Record<string, unknown>,
   orgName: string,
 ): RenderedEmail {
-  // Interpolate merge fields in subject
+  // Interpolate merge fields in subject (scalar-only — no HTML blocks)
   const subject = interpolateMergeFields(customTemplate.subjectTemplate, data);
 
-  // Interpolate + sanitize body HTML
-  const interpolatedBody = interpolateMergeFields(
+  // Interpolate body HTML (supports {{#each}} blocks and array shorthand)
+  const interpolatedBody = interpolateMergeFieldsBody(
     customTemplate.bodyHtml,
     data,
   );
@@ -60,12 +61,17 @@ export function renderCustomTemplate(
   );
   const { html } = renderMjml(mjmlString);
 
-  // Generate plain text by stripping HTML
-  const text = sanitizeHtml(sanitizedBody, {
+  // Generate plain text: convert block elements to newlines before stripping
+  const textFriendly = sanitizedBody
+    .replace(/<\/div>/gi, '</div>\n')
+    .replace(/<\/p>/gi, '</p>\n')
+    .replace(/<br\s*\/?>/gi, '\n');
+  const text = sanitizeHtml(textFriendly, {
     allowedTags: [],
     allowedAttributes: {},
   })
     .replace(/&nbsp;/g, ' ')
+    .replace(/\n{3,}/g, '\n\n')
     .trim();
 
   return { html, text, subject };
