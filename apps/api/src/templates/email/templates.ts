@@ -1,4 +1,5 @@
 import sanitizeHtml from 'sanitize-html';
+import { escapeHtml } from './escape-html.js';
 import type {
   TemplateName,
   SubmissionTemplateData,
@@ -437,12 +438,4 @@ function stripHtml(html: string): string {
   return sanitizeHtml(html, { allowedTags: [], allowedAttributes: {} })
     .replace(/&nbsp;/g, ' ')
     .trim();
-}
-
-function escapeHtml(text: string): string {
-  return text
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
 }

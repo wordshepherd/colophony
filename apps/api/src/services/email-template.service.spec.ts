@@ -32,9 +32,14 @@ import {
   emailTemplateService,
   EmailTemplateNotFoundError,
   InvalidMergeFieldError,
+  InvalidTemplateSyntaxError,
   sanitizeTemplateHtml,
   validateMergeFields,
+  validateSubjectMergeFields,
   interpolateMergeFields,
+  interpolateMergeFieldsBody,
+  interpolateBlockFields,
+  renderDefaultArrayBlock,
 } from './email-template.service.js';
 
 // ---------------------------------------------------------------------------
@@ -115,6 +120,74 @@ describe('validateMergeFields', () => {
       validateMergeFields('<p>{{badField}}</p>', 'submission-accepted'),
     ).toThrow(InvalidMergeFieldError);
   });
+
+  it('allows {{readerFeedback}} for submission-rejected', () => {
+    expect(() =>
+      validateMergeFields('{{readerFeedback}}', 'submission-rejected'),
+    ).not.toThrow();
+  });
+
+  it('allows {{#each readerFeedback}} block for submission-rejected', () => {
+    expect(() =>
+      validateMergeFields(
+        '{{#each readerFeedback}}{{this.comment}}{{/each}}',
+        'submission-rejected',
+      ),
+    ).not.toThrow();
+  });
+
+  it('rejects {{#each}} with invalid field name', () => {
+    expect(() =>
+      validateMergeFields(
+        '{{#each invalidField}}{{this.x}}{{/each}}',
+        'submission-rejected',
+      ),
+    ).toThrow(InvalidMergeFieldError);
+  });
+
+  it('rejects {{readerFeedback}} for templates that do not allow it', () => {
+    expect(() =>
+      validateMergeFields('{{readerFeedback}}', 'submission-received'),
+    ).toThrow(InvalidMergeFieldError);
+  });
+
+  it('rejects unclosed {{#each}} blocks', () => {
+    expect(() =>
+      validateMergeFields(
+        '{{#each readerFeedback}}<p>{{this.comment}}</p>',
+        'submission-rejected',
+      ),
+    ).toThrow(InvalidTemplateSyntaxError);
+  });
+
+  it('rejects mismatched {{#each}} and {{/each}} counts', () => {
+    expect(() =>
+      validateMergeFields(
+        '{{#each readerFeedback}}{{#each readerFeedback}}{{/each}}',
+        'submission-rejected',
+      ),
+    ).toThrow(InvalidTemplateSyntaxError);
+  });
+});
+
+describe('validateSubjectMergeFields', () => {
+  it('allows scalar merge fields in subject', () => {
+    expect(() =>
+      validateSubjectMergeFields(
+        '{{submissionTitle}} — {{orgName}}',
+        'submission-rejected',
+      ),
+    ).not.toThrow();
+  });
+
+  it('rejects {{#each}} blocks in subject', () => {
+    expect(() =>
+      validateSubjectMergeFields(
+        '{{#each readerFeedback}}{{this.comment}}{{/each}}',
+        'submission-rejected',
+      ),
+    ).toThrow(InvalidTemplateSyntaxError);
+  });
 });
 
 describe('interpolateMergeFields', () => {
@@ -132,6 +205,139 @@ describe('interpolateMergeFields', () => {
   it('replaces missing fields with empty string', () => {
     const result = interpolateMergeFields('Hello {{name}}', {});
     expect(result).toBe('Hello ');
+  });
+
+  it('replaces array fields with empty string (scalar-only)', () => {
+    const result = interpolateMergeFields('Feedback: {{readerFeedback}}', {
+      readerFeedback: [{ tags: ['good'], comment: 'Nice' }],
+    });
+    expect(result).toBe('Feedback: ');
+  });
+});
+
+describe('interpolateBlockFields', () => {
+  const feedback = [
+    { tags: ['compelling voice', 'strong imagery'], comment: 'Great prose.' },
+    { tags: ['needs revision'], comment: null },
+  ];
+
+  it('expands {{#each}} blocks with item data', () => {
+    const result = interpolateBlockFields(
+      '{{#each items}}<li>{{this.tags}} - {{this.comment}}</li>{{/each}}',
+      { items: feedback },
+    );
+    expect(result).toContain('compelling voice, strong imagery - Great prose.');
+    expect(result).toContain('needs revision - ');
+  });
+
+  it('renders nothing for empty array', () => {
+    const result = interpolateBlockFields('{{#each items}}X{{/each}}', {
+      items: [],
+    });
+    expect(result).toBe('');
+  });
+
+  it('renders nothing for missing field', () => {
+    const result = interpolateBlockFields('{{#each items}}X{{/each}}', {});
+    expect(result).toBe('');
+  });
+
+  it('auto-joins array-of-primitives with commas', () => {
+    const result = interpolateBlockFields(
+      '{{#each items}}[{{this.tags}}]{{/each}}',
+      { items: [{ tags: ['a', 'b', 'c'] }] },
+    );
+    expect(result).toBe('[a, b, c]');
+  });
+
+  it('escapes HTML in {{this.comment}} to prevent XSS', () => {
+    const result = interpolateBlockFields(
+      '{{#each items}}{{this.comment}}{{/each}}',
+      { items: [{ comment: '<script>alert(1)</script>' }] },
+    );
+    expect(result).not.toContain('<script>');
+    expect(result).toContain('&lt;script&gt;');
+  });
+
+  it('escapes HTML in {{this.tags}} to prevent XSS', () => {
+    const result = interpolateBlockFields(
+      '{{#each items}}{{this.tags}}{{/each}}',
+      { items: [{ tags: ['<img onerror=alert(1)>'] }] },
+    );
+    expect(result).not.toContain('<img');
+    expect(result).toContain('&lt;img');
+  });
+});
+
+describe('renderDefaultArrayBlock', () => {
+  it('renders reader feedback with tags and comments', () => {
+    const result = renderDefaultArrayBlock(
+      [
+        { tags: ['voice', 'imagery'], comment: 'Nice work.' },
+        { tags: ['pacing'], comment: null },
+      ],
+      'readerFeedback',
+    );
+    expect(result).toContain('voice, imagery');
+    expect(result).toContain('Nice work.');
+    expect(result).toContain('pacing');
+    expect(result).toContain('border-left');
+  });
+
+  it('escapes HTML in feedback values', () => {
+    const result = renderDefaultArrayBlock(
+      [{ tags: ['<b>bold</b>'], comment: '<script>xss</script>' }],
+      'readerFeedback',
+    );
+    expect(result).not.toContain('<script>');
+    expect(result).not.toContain('<b>bold</b>');
+    expect(result).toContain('&lt;b&gt;');
+  });
+});
+
+describe('interpolateMergeFieldsBody', () => {
+  const feedback = [{ tags: ['voice'], comment: 'Great work.' }];
+
+  it('renders {{readerFeedback}} scalar tag as default block', () => {
+    const result = interpolateMergeFieldsBody(
+      '<p>Feedback:</p>{{readerFeedback}}',
+      { readerFeedback: feedback },
+    );
+    expect(result).toContain('voice');
+    expect(result).toContain('Great work.');
+    expect(result).toContain('border-left');
+  });
+
+  it('renders {{#each}} blocks with custom layout', () => {
+    const result = interpolateMergeFieldsBody(
+      '{{#each readerFeedback}}<div>{{this.comment}}</div>{{/each}}',
+      { readerFeedback: feedback },
+    );
+    expect(result).toContain('<div>Great work.</div>');
+  });
+
+  it('renders empty string for empty array', () => {
+    const result = interpolateMergeFieldsBody('Feedback: {{readerFeedback}}', {
+      readerFeedback: [],
+    });
+    expect(result).toBe('Feedback: ');
+  });
+
+  it('handles mixed scalar and block fields', () => {
+    const result = interpolateMergeFieldsBody(
+      'Hi {{name}}, {{#each items}}<li>{{this.comment}}</li>{{/each}}',
+      { name: 'Alice', items: [{ comment: 'Nice' }] },
+    );
+    expect(result).toContain('Hi Alice,');
+    expect(result).toContain('<li>Nice</li>');
+  });
+
+  it('does not break existing scalar interpolation', () => {
+    const result = interpolateMergeFieldsBody(
+      'Hello {{name}}, welcome to {{org}}',
+      { name: 'Alice', org: 'Acme' },
+    );
+    expect(result).toBe('Hello Alice, welcome to Acme');
   });
 });
 

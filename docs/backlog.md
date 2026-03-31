@@ -535,7 +535,9 @@
 - [ ] [P3] Writer sidebar updates — Sim-Sub Groups nav item, Portfolio badges (verified/federated/external), Analytics personal response time stats — (design system session 2026-03-28)
 - [x] [P1] Reader feedback service: defense-in-depth org match on submission_id — service must verify `submission.organizationId === orgId` before insert to prevent cross-org feedback — (Codex branch review 2026-03-29)
 - [x] [P2] Sim-sub junction service: ownership validation on referenced records — service must verify `simsubGroup.userId`, `submission.submitterId`, and `externalSubmission.userId` match the caller before insert — (Codex branch review 2026-03-29)
-- [ ] [P2] Custom rejection templates: reader feedback array support — `renderCustomTemplate()` only interpolates scalar merge fields; `readerFeedback` array is silently ignored for orgs with custom rejection email overrides. Need array/loop support in custom template renderer — (Codex branch review 2026-03-31)
+- [x] [P2] Custom rejection templates: reader feedback array support — `renderCustomTemplate()` only interpolates scalar merge fields; `readerFeedback` array is silently ignored for orgs with custom rejection email overrides. Need array/loop support in custom template renderer — (Codex branch review 2026-03-31; done 2026-03-31)
+- [ ] [P2] Defense-in-depth: `emailTemplateService.delete()` missing `organizationId` filter — deletes by `templateName` only (relies on RLS alone); should also filter on `organizationId` per defense-in-depth rule. Pre-existing issue in `apps/api/src/services/email-template.service.ts:209` — (Codex plan review 2026-03-31)
+- [ ] [P3] Custom template editor: surface `{{#each}}` syntax to editors — `TEMPLATE_ARRAY_FIELDS` metadata exported from `@colophony/types` but editor UI only consumes `mergeFields: string[]`; need data-path change to show array field documentation and `{{#each}}` syntax help — (Codex plan review 2026-03-31)
 
 ---
 
