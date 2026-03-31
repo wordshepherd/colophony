@@ -46,6 +46,7 @@ export const TEMPLATE_MERGE_FIELDS: Record<
     "submitterEmail",
     "orgName",
     "editorComment",
+    "readerFeedback",
   ],
   "submission-withdrawn": [
     "submissionTitle",
@@ -82,7 +83,7 @@ export const TEMPLATE_MERGE_FIELDS: Record<
 
 export const TEMPLATE_SAMPLE_DATA: Record<
   EmailTemplateName,
-  Record<string, string>
+  Record<string, unknown>
 > = {
   "submission-received": {
     submissionTitle: "The Garden of Forking Paths",
@@ -106,6 +107,13 @@ export const TEMPLATE_SAMPLE_DATA: Record<
     orgName: "The Paris Review",
     editorComment:
       "While we admired the craft, it wasn't the right fit for our current issue.",
+    readerFeedback: [
+      {
+        tags: ["compelling voice", "strong imagery"],
+        comment: "Beautiful prose, but the ending felt rushed.",
+      },
+      { tags: ["needs revision"], comment: null },
+    ],
   },
   "submission-withdrawn": {
     submissionTitle: "The Garden of Forking Paths",
@@ -239,3 +247,26 @@ export const emailTemplateListItemSchema = z.object({
   isCustomized: z.boolean(),
   mergeFields: z.array(z.string()),
 });
+
+// ---------------------------------------------------------------------------
+// Array field metadata — describes fields that support {{#each}} block syntax
+// ---------------------------------------------------------------------------
+
+export const TEMPLATE_ARRAY_FIELDS: Record<
+  string,
+  {
+    label: string;
+    description: string;
+    innerFields: Array<{ name: string; label: string }>;
+  }
+> = {
+  readerFeedback: {
+    label: "Reader Feedback",
+    description:
+      "Anonymous feedback from readers. Use {{readerFeedback}} for default formatting, or {{#each readerFeedback}}...{{/each}} for custom layout.",
+    innerFields: [
+      { name: "tags", label: "Tags (comma-separated)" },
+      { name: "comment", label: "Comment" },
+    ],
+  },
+};

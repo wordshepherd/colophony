@@ -1,3 +1,5 @@
+import { escapeHtml } from './escape-html.js';
+
 export function wrapInLayout(bodyMjml: string, orgName: string): string {
   return `
 <mjml>
@@ -29,12 +31,4 @@ export function wrapInLayout(bodyMjml: string, orgName: string): string {
     </mj-section>
   </mj-body>
 </mjml>`;
-}
-
-function escapeHtml(text: string): string {
-  return text
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
 }

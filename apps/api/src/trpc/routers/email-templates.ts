@@ -119,7 +119,7 @@ export const emailTemplatesRouter = createRouter({
           bodyHtml: input.bodyHtml,
         },
         sampleData,
-        sampleData.orgName ?? 'Your Magazine',
+        String(sampleData.orgName ?? 'Your Magazine'),
       );
 
       return {
