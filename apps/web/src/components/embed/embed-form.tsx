@@ -16,6 +16,7 @@ import { EmbedIdentityStep } from "./embed-identity-step";
 import { EmbedFormStep } from "./embed-form-step";
 import { EmbedSuccess } from "./embed-success";
 import { EmbedError } from "./embed-error";
+import { ResponseTimeDisplay } from "./response-time-display";
 import { Loader2 } from "lucide-react";
 
 type EmbedStep =
@@ -214,11 +215,14 @@ export function EmbedForm({ token, apiUrl }: EmbedFormProps) {
         )}
 
         {state.step === "identity" && state.formData && (
-          <EmbedIdentityStep
-            periodName={state.formData.period.name}
-            onContinue={handleIdentityContinue}
-            isLoading={identityLoading}
-          />
+          <>
+            <ResponseTimeDisplay stats={state.formData.responseTimeStats} />
+            <EmbedIdentityStep
+              periodName={state.formData.period.name}
+              onContinue={handleIdentityContinue}
+              isLoading={identityLoading}
+            />
+          </>
         )}
 
         {(state.step === "form" || state.step === "submitting") &&

@@ -271,6 +271,15 @@ describe('auth plugin', () => {
       expect(response.statusCode).toBe(404);
     });
 
+    it('skips auth for /v1/public/* paths', async () => {
+      const response = await app.inject({
+        method: 'GET',
+        url: '/v1/public/orgs/test-slug/response-time',
+      });
+      // 404 because no route registered, but auth hook didn't block
+      expect(response.statusCode).toBe(404);
+    });
+
     it('does not skip auth for /users/alice/profile', async () => {
       const response = await app.inject({
         method: 'GET',

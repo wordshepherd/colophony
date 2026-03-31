@@ -161,6 +161,42 @@ export const responseTimeStatsSchema = z.object({
 });
 export type ResponseTimeStats = z.infer<typeof responseTimeStatsSchema>;
 
+// ---------------------------------------------------------------------------
+// Public response time transparency
+// ---------------------------------------------------------------------------
+
+export const publicResponseTimeStatsSchema = z.object({
+  medianDays: z.number().nullable(),
+  buckets: z.array(
+    z.object({
+      label: z.string(),
+      count: z.number().int(),
+      percentage: z.number().min(0).max(100),
+      minDays: z.number(),
+      maxDays: z.number().nullable(),
+    }),
+  ),
+  trend: z.array(
+    z.object({
+      month: z.string(),
+      medianDays: z.number().nullable(),
+    }),
+  ),
+  sampleSize: z.number().int(),
+  source: z.enum(["local", "federated"]),
+  updatedAt: z.string().datetime(),
+});
+export type PublicResponseTimeStats = z.infer<
+  typeof publicResponseTimeStatsSchema
+>;
+
+export const publicResponseTimeResponseSchema = z.object({
+  responseTimeStats: publicResponseTimeStatsSchema.nullable(),
+});
+export type PublicResponseTimeResponse = z.infer<
+  typeof publicResponseTimeResponseSchema
+>;
+
 export const pipelineHealthSchema = z.object({
   stages: z.array(
     z.object({

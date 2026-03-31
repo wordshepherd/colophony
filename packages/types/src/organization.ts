@@ -264,5 +264,11 @@ export const orgSettingsSchema = z.object({
     .max(20)
     .default([])
     .describe("Available feedback tags readers can select from"),
+  responseTimeTransparencyEnabled: z
+    .boolean()
+    .default(true)
+    .describe(
+      "Whether public response time stats are shown on embed forms and public profile",
+    ),
 });
 export type OrgSettings = z.infer<typeof orgSettingsSchema>;
