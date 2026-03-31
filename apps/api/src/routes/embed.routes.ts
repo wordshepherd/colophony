@@ -153,9 +153,12 @@ export async function registerEmbedRoutes(
       );
 
       // Load form definition and response time stats in parallel
+      // Stats fetch degrades to null on error — must not break the embed form
       const [form, responseTimeStats] = await Promise.all([
         embedSubmissionService.loadFormForEmbed(token),
-        responseTimeTransparencyService.getPublicStats(token.organizationId),
+        responseTimeTransparencyService
+          .getPublicStats(token.organizationId)
+          .catch(() => null),
       ]);
 
       return {

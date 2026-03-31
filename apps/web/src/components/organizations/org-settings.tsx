@@ -90,7 +90,10 @@ function ResponseTimeTransparencyToggle({
           disabled={updateMutation.isPending}
           onCheckedChange={(checked) =>
             updateMutation.mutate({
-              settings: { responseTimeTransparencyEnabled: checked },
+              settings: {
+                ...(org.settings ?? {}),
+                responseTimeTransparencyEnabled: checked,
+              },
             })
           }
         />
