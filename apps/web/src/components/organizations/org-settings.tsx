@@ -102,6 +102,55 @@ function ResponseTimeTransparencyToggle({
   );
 }
 
+function FeedbackOnRejectionToggle({
+  org,
+}: {
+  org: { settings: Record<string, unknown> | null };
+}) {
+  const utils = trpc.useUtils();
+  const parsed = orgSettingsSchema.safeParse(org.settings ?? {});
+  const enabled = parsed.success
+    ? parsed.data.feedbackOnRejectionEnabled
+    : false;
+
+  const updateMutation = trpc.organizations.update.useMutation({
+    onSuccess: () => {
+      utils.organizations.get.invalidate();
+      toast.success("Feedback on rejection setting updated");
+    },
+    onError: (err) => {
+      toast.error(err.message);
+    },
+  });
+
+  return (
+    <>
+      <Separator className="my-6" />
+      <div className="flex items-center justify-between">
+        <div className="space-y-0.5">
+          <Label>Feedback on rejection</Label>
+          <p className="text-sm text-muted-foreground">
+            Allow editors to include anonymized reader feedback in rejection
+            emails. Requires reader feedback to be enabled.
+          </p>
+        </div>
+        <Switch
+          checked={enabled}
+          disabled={updateMutation.isPending}
+          onCheckedChange={(checked) =>
+            updateMutation.mutate({
+              settings: {
+                ...(org.settings ?? {}),
+                feedbackOnRejectionEnabled: checked,
+              },
+            })
+          }
+        />
+      </div>
+    </>
+  );
+}
+
 export function OrgSettings() {
   const { currentOrg, isAdmin } = useOrganization();
   const utils = trpc.useUtils();
@@ -261,6 +310,7 @@ export function OrgSettings() {
               )}
 
               {isAdmin && org && <ResponseTimeTransparencyToggle org={org} />}
+              {isAdmin && org && <FeedbackOnRejectionToggle org={org} />}
             </CardContent>
           </Card>
         </TabsContent>

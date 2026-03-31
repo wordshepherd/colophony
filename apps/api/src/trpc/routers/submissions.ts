@@ -309,13 +309,14 @@ export const submissionsRouter = createRouter({
     .input(idParamSchema.merge(updateSubmissionStatusSchema))
     .output(submissionStatusChangeResponseSchema)
     .mutation(async ({ ctx, input }) => {
-      const { id, status, comment } = input;
+      const { id, status, comment, includeFeedback } = input;
       try {
         return await submissionService.updateStatusAsEditor(
           toServiceContext(ctx),
           id,
           status,
           comment,
+          includeFeedback,
         );
       } catch (e) {
         mapServiceError(e);

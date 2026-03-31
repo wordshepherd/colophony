@@ -631,6 +631,7 @@ describe('submissions REST router', () => {
         SUBMISSION_ID,
         'REJECTED',
         'Not a fit',
+        undefined,
       );
     });
   });

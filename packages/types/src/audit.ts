@@ -325,6 +325,7 @@ export const AuditActions = {
   // Reader feedback lifecycle
   READER_FEEDBACK_CREATED: "READER_FEEDBACK_CREATED",
   READER_FEEDBACK_FORWARDED: "READER_FEEDBACK_FORWARDED",
+  READER_FEEDBACK_BULK_FORWARDED: "READER_FEEDBACK_BULK_FORWARDED",
   READER_FEEDBACK_DELETED: "READER_FEEDBACK_DELETED",
 } as const;
 
@@ -840,6 +841,7 @@ export interface ReaderFeedbackAuditParams extends BaseAuditParams {
   action:
     | typeof AuditActions.READER_FEEDBACK_CREATED
     | typeof AuditActions.READER_FEEDBACK_FORWARDED
+    | typeof AuditActions.READER_FEEDBACK_BULK_FORWARDED
     | typeof AuditActions.READER_FEEDBACK_DELETED;
 }
 

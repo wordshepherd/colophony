@@ -18,7 +18,9 @@ import type {
   HopperSubmissionWithdrawnEvent,
   HopperSubmissionReviseAndResubmitEvent,
 } from '../events.js';
+import { orgSettingsSchema } from '@colophony/types';
 import { correspondenceService } from '../../services/correspondence.service.js';
+import { readerFeedbackService } from '../../services/reader-feedback.service.js';
 import { queueInAppNotification } from '../helpers/queue-in-app-notification.js';
 import { queueEmailForRecipient } from '../helpers/queue-email-for-recipient.js';
 
@@ -226,7 +228,7 @@ export const submissionRejectedNotification: InngestFunction.Any =
       triggers: [{ event: 'hopper/submission.rejected' }],
     },
     async ({ event, step }) => {
-      const { orgId, submissionId, submitterId, comment } =
+      const { orgId, submissionId, submitterId, comment, includeFeedback } =
         event.data as HopperSubmissionRejectedEvent['data'];
 
       const { submission, orgName } = await step.run('resolve-data', async () =>
@@ -241,6 +243,36 @@ export const submissionRejectedNotification: InngestFunction.Any =
 
       if (!submitter) return { skipped: true, reason: 'submitter-not-found' };
 
+      // Fetch forwarded feedback if requested (defense-in-depth: verify org setting)
+      const feedbackItems = includeFeedback
+        ? await step.run('fetch-feedback', async () => {
+            const org = await withRls({ orgId }, async (tx) => {
+              const [row] = await tx
+                .select({ settings: organizations.settings })
+                .from(organizations)
+                .where(eq(organizations.id, orgId))
+                .limit(1);
+              return row;
+            });
+
+            const settings = orgSettingsSchema.safeParse(org?.settings ?? {});
+            if (
+              !settings.success ||
+              !settings.data.feedbackOnRejectionEnabled
+            ) {
+              return [];
+            }
+
+            return withRls({ orgId }, async (tx) =>
+              readerFeedbackService.listForwardedForSubmission(
+                tx,
+                orgId,
+                submissionId,
+              ),
+            );
+          })
+        : [];
+
       await step.run('queue-email', async () => {
         await queueEmailForRecipient({
           orgId,
@@ -254,6 +286,8 @@ export const submissionRejectedNotification: InngestFunction.Any =
             submitterEmail: submitter.email,
             orgName,
             editorComment: comment,
+            readerFeedback:
+              feedbackItems.length > 0 ? feedbackItems : undefined,
           },
           subject: `Update on your submission: ${submission.title}`,
         });
@@ -271,6 +305,16 @@ export const submissionRejectedNotification: InngestFunction.Any =
 
       await step.run('capture-correspondence', async () => {
         try {
+          const feedbackText =
+            feedbackItems.length > 0
+              ? `\n\nReader feedback:\n${feedbackItems
+                  .map((f: { tags: string[]; comment: string | null }) => {
+                    const parts = [...f.tags, f.comment].filter(Boolean);
+                    return `- ${parts.join(': ')}`;
+                  })
+                  .join('\n')}`
+              : '';
+
           await withRls({ orgId }, async (tx) => {
             await correspondenceService.create(tx, {
               userId: submitterId,
@@ -279,12 +323,14 @@ export const submissionRejectedNotification: InngestFunction.Any =
               channel: 'email',
               sentAt: new Date(),
               subject: `Update on your submission: ${submission.title}`,
-              body: comment
-                ? `Thank you for your submission. After careful review, we are unable to accept it at this time.\n\nNote from the editors:\n${comment}`
-                : 'Thank you for your submission. After careful review, we are unable to accept it at this time.',
+              body: `${
+                comment
+                  ? `Thank you for your submission. After careful review, we are unable to accept it at this time.\n\nNote from the editors:\n${comment}`
+                  : 'Thank you for your submission. After careful review, we are unable to accept it at this time.'
+              }${feedbackText}`,
               senderName: null,
               senderEmail: null,
-              isPersonalized: !!comment,
+              isPersonalized: !!comment || feedbackItems.length > 0,
               source: 'colophony',
             });
           });

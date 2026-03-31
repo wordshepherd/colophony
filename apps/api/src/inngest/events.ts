@@ -122,6 +122,7 @@ export interface HopperSubmissionRejectedEvent {
     submissionId: string;
     submitterId: string;
     comment?: string;
+    includeFeedback?: boolean;
   };
 }
 

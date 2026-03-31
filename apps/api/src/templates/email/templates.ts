@@ -95,6 +95,34 @@ function submissionAccepted(data: Record<string, unknown>): TemplateResult {
 
 function submissionRejected(data: Record<string, unknown>): TemplateResult {
   const d = data as unknown as SubmissionTemplateData;
+
+  // Build reader feedback sections (MJML and plaintext)
+  const feedbackMjml =
+    d.readerFeedback && d.readerFeedback.length > 0
+      ? `<mj-divider border-color="#e5e7eb" border-width="1px" padding="16px 0" /><mj-text><p><strong>Reader feedback:</strong></p>${d.readerFeedback
+          .map((f) => {
+            const tagLine =
+              f.tags.length > 0
+                ? `<p style="color:#6b7280;font-size:13px">${f.tags.map((t) => escapeHtml(t)).join(', ')}</p>`
+                : '';
+            const commentLine = f.comment
+              ? `<p>${escapeHtml(f.comment)}</p>`
+              : '';
+            return `<div style="margin-bottom:12px;padding-left:12px;border-left:3px solid #e5e7eb">${tagLine}${commentLine}</div>`;
+          })
+          .join('')}</mj-text>`
+      : '';
+
+  const feedbackText =
+    d.readerFeedback && d.readerFeedback.length > 0
+      ? `\nReader feedback:\n${d.readerFeedback
+          .map((f) => {
+            const parts = [...f.tags, f.comment].filter(Boolean);
+            return `- ${parts.join(': ')}`;
+          })
+          .join('\n')}`
+      : '';
+
   return {
     subject: `Update on your submission: ${d.submissionTitle}`,
     mjml: wrapInLayout(
@@ -102,7 +130,7 @@ function submissionRejected(data: Record<string, unknown>): TemplateResult {
         <p>Thank you for your submission. After careful review, we are unable to accept it at this time.</p>
         <p><strong>Title:</strong> ${escapeHtml(d.submissionTitle)}</p>
         <p>We appreciate your interest in ${escapeHtml(d.orgName)} and encourage future submissions.</p>
-      </mj-text>${d.editorComment ? `<mj-divider border-color="#e5e7eb" border-width="1px" padding="16px 0" /><mj-text><p><strong>Note from the editors:</strong></p><p>${escapeHtml(d.editorComment)}</p></mj-text>` : ''}`,
+      </mj-text>${d.editorComment ? `<mj-divider border-color="#e5e7eb" border-width="1px" padding="16px 0" /><mj-text><p><strong>Note from the editors:</strong></p><p>${escapeHtml(d.editorComment)}</p></mj-text>` : ''}${feedbackMjml}`,
       d.orgName,
     ),
     text: [
@@ -110,6 +138,7 @@ function submissionRejected(data: Record<string, unknown>): TemplateResult {
       `After careful review, we are unable to accept it at this time.`,
       `We appreciate your interest in ${d.orgName} and encourage future submissions.`,
       d.editorComment ? `\nNote from the editors:\n${d.editorComment}` : '',
+      feedbackText,
     ]
       .filter(Boolean)
       .join('\n'),

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -13,9 +13,13 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import {
   EDITOR_ALLOWED_TRANSITIONS,
+  orgSettingsSchema,
   type SubmissionStatus,
 } from "@colophony/types";
 
@@ -59,7 +63,27 @@ export function StatusTransition({
     null,
   );
   const [comment, setComment] = useState("");
+  const [includeFeedback, setIncludeFeedback] = useState(false);
   const utils = trpc.useUtils();
+
+  // Feedback-on-rejection: check org settings and fetch includable feedback
+  const { data: orgData } = trpc.organizations.get.useQuery(undefined, {
+    enabled: selectedStatus === "REJECTED",
+  });
+
+  const feedbackOnRejectionEnabled = useMemo(() => {
+    if (!orgData?.settings) return false;
+    const parsed = orgSettingsSchema.safeParse(orgData.settings);
+    return parsed.success ? parsed.data.feedbackOnRejectionEnabled : false;
+  }, [orgData]);
+
+  const { data: includableFeedback } =
+    trpc.readerFeedback.listIncludable.useQuery(
+      { submissionId },
+      {
+        enabled: selectedStatus === "REJECTED" && feedbackOnRejectionEnabled,
+      },
+    );
 
   const updateStatusMutation = trpc.submissions.updateStatus.useMutation({
     onSuccess: () => {
@@ -90,6 +114,8 @@ export function StatusTransition({
       id: submissionId,
       status: selectedStatus,
       comment: comment || undefined,
+      includeFeedback:
+        selectedStatus === "REJECTED" && includeFeedback ? true : undefined,
     });
   };
 
@@ -113,6 +139,7 @@ export function StatusTransition({
           if (!open) {
             setSelectedStatus(null);
             setComment("");
+            setIncludeFeedback(false);
           }
         }}
       >
@@ -158,6 +185,61 @@ export function StatusTransition({
                 onChange={(e) => setComment(e.target.value)}
               />
             </div>
+
+            {/* Feedback on rejection */}
+            {selectedStatus === "REJECTED" &&
+              feedbackOnRejectionEnabled &&
+              includableFeedback &&
+              includableFeedback.length > 0 && (
+                <div className="space-y-3">
+                  <Separator />
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label htmlFor="include-feedback">
+                        Include reader feedback
+                      </Label>
+                      <p className="text-xs text-muted-foreground">
+                        Anonymized feedback will be included in the rejection
+                        email.
+                      </p>
+                    </div>
+                    <Switch
+                      id="include-feedback"
+                      checked={includeFeedback}
+                      onCheckedChange={setIncludeFeedback}
+                    />
+                  </div>
+                  {includeFeedback && (
+                    <div className="space-y-2 rounded-md border p-3 bg-muted/50">
+                      <p className="text-xs font-medium text-muted-foreground">
+                        Preview (writer will see):
+                      </p>
+                      {includableFeedback.map((f) => (
+                        <div
+                          key={f.id}
+                          className="border-l-2 border-muted-foreground/30 pl-3 space-y-1"
+                        >
+                          {(f.tags as string[]).length > 0 && (
+                            <div className="flex gap-1 flex-wrap">
+                              {(f.tags as string[]).map((tag) => (
+                                <Badge key={tag} variant="secondary">
+                                  {tag}
+                                </Badge>
+                              ))}
+                            </div>
+                          )}
+                          {f.comment && <p className="text-sm">{f.comment}</p>}
+                          {!f.forwardedAt && (
+                            <p className="text-xs text-muted-foreground italic">
+                              Will be auto-forwarded
+                            </p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
           </div>
 
           <DialogFooter>
@@ -166,6 +248,7 @@ export function StatusTransition({
               onClick={() => {
                 setSelectedStatus(null);
                 setComment("");
+                setIncludeFeedback(false);
               }}
             >
               Cancel

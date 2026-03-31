@@ -117,3 +117,16 @@ export const listReaderFeedbackSchema = z.object({
 });
 
 export type ListReaderFeedbackInput = z.infer<typeof listReaderFeedbackSchema>;
+
+// --- List includable feedback (for rejection dialog) ---
+
+export const listIncludableReaderFeedbackSchema = z.object({
+  submissionId: z
+    .string()
+    .uuid()
+    .describe("Submission to list includable feedback for"),
+});
+
+export type ListIncludableReaderFeedbackInput = z.infer<
+  typeof listIncludableReaderFeedbackSchema
+>;

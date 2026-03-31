@@ -531,10 +531,11 @@
 - [x] [P1] `reader_feedback` schema — org-configurable tags (JSONB), short comment (280 chars), forwardable boolean. Opt-in per org. Anonymous reader identity on forwarded feedback — (design system session 2026-03-28; done 2026-03-29)
 - [x] [P2] Sim-sub management UI — group creation, linked submission view, status management. Auto-withdraw on acceptance deferred (separate backend feature) — (design system session 2026-03-28; done 2026-03-30)
 - [x] [P2] Response time transparency — aggregation query over local submission records, displayed on magazine public profile + submission form. `source` field (local vs federated) for future federation data. Org opt-out available — (design system session 2026-03-28; done 2026-03-30)
-- [ ] [P2] Feedback on rejection flow — reader tags/comments during scoring, editor inclusion of anonymized feedback in rejection notice, org-level feature toggle (default off) — (design system session 2026-03-28)
+- [x] [P2] Feedback on rejection flow — reader tags/comments during scoring, editor inclusion of anonymized feedback in rejection notice, org-level feature toggle (default off) — (design system session 2026-03-28; done 2026-03-31)
 - [ ] [P3] Writer sidebar updates — Sim-Sub Groups nav item, Portfolio badges (verified/federated/external), Analytics personal response time stats — (design system session 2026-03-28)
 - [x] [P1] Reader feedback service: defense-in-depth org match on submission_id — service must verify `submission.organizationId === orgId` before insert to prevent cross-org feedback — (Codex branch review 2026-03-29)
 - [x] [P2] Sim-sub junction service: ownership validation on referenced records — service must verify `simsubGroup.userId`, `submission.submitterId`, and `externalSubmission.userId` match the caller before insert — (Codex branch review 2026-03-29)
+- [ ] [P2] Custom rejection templates: reader feedback array support — `renderCustomTemplate()` only interpolates scalar merge fields; `readerFeedback` array is silently ignored for orgs with custom rejection email overrides. Need array/loop support in custom template renderer — (Codex branch review 2026-03-31)
 
 ---
 
