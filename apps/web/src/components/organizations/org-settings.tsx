@@ -37,17 +37,67 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { Loader2, Trash2 } from "lucide-react";
+import { orgSettingsSchema } from "@colophony/types";
 
 const nameFormSchema = z.object({
   name: z.string().min(1, "Name is required").max(255),
 });
 
 type NameFormData = z.infer<typeof nameFormSchema>;
+
+function ResponseTimeTransparencyToggle({
+  org,
+}: {
+  org: { settings: Record<string, unknown> | null };
+}) {
+  const utils = trpc.useUtils();
+  const parsed = orgSettingsSchema.safeParse(org.settings ?? {});
+  const enabled = parsed.success
+    ? parsed.data.responseTimeTransparencyEnabled
+    : true;
+
+  const updateMutation = trpc.organizations.update.useMutation({
+    onSuccess: () => {
+      utils.organizations.get.invalidate();
+      toast.success("Response time transparency updated");
+    },
+    onError: (err) => {
+      toast.error(err.message);
+    },
+  });
+
+  return (
+    <>
+      <Separator className="my-6" />
+      <div className="flex items-center justify-between">
+        <div className="space-y-0.5">
+          <Label>Response time transparency</Label>
+          <p className="text-sm text-muted-foreground">
+            Show aggregated response time statistics on your submission form and
+            public profile. Writers can see how long you typically take to
+            respond.
+          </p>
+        </div>
+        <Switch
+          checked={enabled}
+          disabled={updateMutation.isPending}
+          onCheckedChange={(checked) =>
+            updateMutation.mutate({
+              settings: { responseTimeTransparencyEnabled: checked },
+            })
+          }
+        />
+      </div>
+    </>
+  );
+}
 
 export function OrgSettings() {
   const { currentOrg, isAdmin } = useOrganization();
@@ -206,6 +256,8 @@ export function OrgSettings() {
                   </div>
                 </div>
               )}
+
+              {isAdmin && org && <ResponseTimeTransparencyToggle org={org} />}
             </CardContent>
           </Card>
         </TabsContent>

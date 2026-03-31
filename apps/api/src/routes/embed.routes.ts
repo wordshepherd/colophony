@@ -18,6 +18,7 @@ import {
   ManuscriptVersionOwnershipError,
   NoFilesUploadedError,
 } from '../services/embed-submission.service.js';
+import { responseTimeTransparencyService } from '../services/response-time-transparency.service.js';
 import {
   embedTokenService,
   type VerifiedEmbedToken,
@@ -151,8 +152,11 @@ export async function registerEmbedRoutes(
         `frame-ancestors ${origins}`,
       );
 
-      // Load form definition
-      const form = await embedSubmissionService.loadFormForEmbed(token);
+      // Load form definition and response time stats in parallel
+      const [form, responseTimeStats] = await Promise.all([
+        embedSubmissionService.loadFormForEmbed(token),
+        responseTimeTransparencyService.getPublicStats(token.organizationId),
+      ]);
 
       return {
         period: {
@@ -164,6 +168,7 @@ export async function registerEmbedRoutes(
         form,
         theme: token.themeConfig,
         organizationId: token.organizationId,
+        responseTimeStats,
       };
     },
   );

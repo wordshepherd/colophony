@@ -26,6 +26,7 @@ import { registerTusdWebhooks } from './webhooks/tusd.webhook.js';
 import { registerStripeWebhooks } from './webhooks/stripe.webhook.js';
 import { registerDocumensoWebhooks } from './webhooks/documenso.webhook.js';
 import { registerEmbedRoutes } from './routes/embed.routes.js';
+import { registerPublicRoutes } from './routes/public.routes.js';
 import { fastifyTRPCPlugin } from '@trpc/server/adapters/fastify';
 import { appRouter } from './trpc/router.js';
 import { createContext } from './trpc/context.js';
@@ -213,6 +214,11 @@ export async function buildApp(env: Env): Promise<FastifyInstance> {
   // Embed routes — isolated scope (own auth via token verification)
   await app.register(async (scope) => {
     await registerEmbedRoutes(scope, { env });
+  });
+
+  // Public routes — unauthenticated, rate-limited by IP
+  await app.register(async (scope) => {
+    await registerPublicRoutes(scope);
   });
 
   // Prometheus metrics endpoint — isolated scope (public, no auth/rate-limit)
