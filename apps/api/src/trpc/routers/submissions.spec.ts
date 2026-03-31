@@ -840,6 +840,7 @@ describe('submissions tRPC router', () => {
         SUBMISSION_ID,
         'UNDER_REVIEW',
         undefined,
+        undefined,
       );
     });
 
@@ -902,6 +903,7 @@ describe('submissions tRPC router', () => {
         SUBMISSION_ID,
         'REJECTED',
         'Not a good fit',
+        undefined,
       );
     });
   });

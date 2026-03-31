@@ -304,13 +304,14 @@ const updateStatus = orgProcedure
   .input(idParamSchema.merge(updateSubmissionStatusSchema))
   .output(statusUpdateResponseSchema)
   .handler(async ({ input, context }) => {
-    const { id, status, comment } = input;
+    const { id, status, comment, includeFeedback } = input;
     try {
       return await submissionService.updateStatusAsEditor(
         toServiceContext(context),
         id,
         status,
         comment,
+        includeFeedback,
       );
     } catch (e) {
       mapServiceError(e);

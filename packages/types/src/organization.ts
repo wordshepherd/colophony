@@ -270,5 +270,11 @@ export const orgSettingsSchema = z.object({
     .describe(
       "Whether public response time stats are shown on embed forms and public profile",
     ),
+  feedbackOnRejectionEnabled: z
+    .boolean()
+    .default(false)
+    .describe(
+      "Whether editors can include reader feedback in rejection emails",
+    ),
 });
 export type OrgSettings = z.infer<typeof orgSettingsSchema>;

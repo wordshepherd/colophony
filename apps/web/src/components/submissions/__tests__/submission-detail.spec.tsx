@@ -133,6 +133,10 @@ vi.mock("../discussion-thread", () => ({
   DiscussionThread: () => <div data-testid="discussion-thread" />,
 }));
 
+vi.mock("../reader-feedback-panel", () => ({
+  ReaderFeedbackPanel: () => <div data-testid="reader-feedback-panel" />,
+}));
+
 vi.mock("../voting-panel", () => ({
   VotingPanel: () => <div data-testid="voting-panel" />,
 }));
