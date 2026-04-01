@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/select";
 import { PortfolioItemCard } from "./portfolio-item-card";
 import { Layers, Search } from "lucide-react";
+import { InfoTooltip } from "@/components/ui/info-tooltip";
 import type {
   CSRStatus,
   PortfolioSource,
@@ -109,7 +110,9 @@ export function PortfolioList() {
           <h1 className="text-2xl font-bold">Portfolio</h1>
         </div>
         <p className="text-muted-foreground">
-          Unified view of all submissions across Colophony and external journals
+          Every submission you&apos;ve made — both through Colophony and
+          journals you track manually. Group by piece to see everywhere a single
+          work has been sent.
         </p>
       </div>
 
@@ -172,6 +175,7 @@ export function PortfolioList() {
           <Label htmlFor="group-by-piece" className="text-sm">
             Group by piece
           </Label>
+          <InfoTooltip content="Groups submissions by the manuscript they belong to, so you can see everywhere a single piece has been sent." />
         </div>
       </div>
 

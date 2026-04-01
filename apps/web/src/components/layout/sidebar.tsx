@@ -5,6 +5,12 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { useOrganization } from "@/hooks/use-organization";
 import { navGroups, type NavItem, type SubBrand } from "@/lib/navigation";
+import {
+  Tooltip,
+  TooltipTrigger,
+  TooltipContent,
+  TooltipProvider,
+} from "@/components/ui/tooltip";
 
 function isActiveLink(pathname: string, href: string): boolean {
   if (href === "/editor") return pathname === "/editor";
@@ -45,7 +51,7 @@ function NavGroup({
       </p>
       {items.map((item) => {
         const isActive = isActiveLink(pathname, item.href);
-        return (
+        const link = (
           <Link
             key={item.name}
             href={item.href}
@@ -60,6 +66,17 @@ function NavGroup({
             {item.name}
           </Link>
         );
+        if (item.description) {
+          return (
+            <Tooltip key={item.name}>
+              <TooltipTrigger asChild>{link}</TooltipTrigger>
+              <TooltipContent side="right" sideOffset={8}>
+                {item.description}
+              </TooltipContent>
+            </Tooltip>
+          );
+        }
+        return link;
       })}
     </>
   );
@@ -117,29 +134,31 @@ export function Sidebar() {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 space-y-1 p-2" aria-label="Main navigation">
-        {visibleGroups.map((group, index) => {
-          const showPreheader = preheaderFlags[index];
-          const isFirstGroup = index === 0;
+      <TooltipProvider delayDuration={450}>
+        <nav className="flex-1 space-y-1 p-2" aria-label="Main navigation">
+          {visibleGroups.map((group, index) => {
+            const showPreheader = preheaderFlags[index];
+            const isFirstGroup = index === 0;
 
-          return (
-            <div key={group.label}>
-              {showPreheader && (
-                <SubBrandPreheader
-                  name={group.subBrand}
-                  isFirst={isFirstGroup}
+            return (
+              <div key={group.label}>
+                {showPreheader && (
+                  <SubBrandPreheader
+                    name={group.subBrand}
+                    isFirst={isFirstGroup}
+                  />
+                )}
+                <NavGroup
+                  label={group.label}
+                  items={[...group.items]}
+                  pathname={pathname}
+                  showDivider={!showPreheader && !isFirstGroup}
                 />
-              )}
-              <NavGroup
-                label={group.label}
-                items={[...group.items]}
-                pathname={pathname}
-                showDivider={!showPreheader && !isFirstGroup}
-              />
-            </div>
-          );
-        })}
-      </nav>
+              </div>
+            );
+          })}
+        </nav>
+      </TooltipProvider>
     </div>
   );
 }

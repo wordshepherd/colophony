@@ -33,7 +33,8 @@ export default function EditorPage() {
                 <div>
                   <CardTitle className="text-base">Submissions</CardTitle>
                   <CardDescription>
-                    Review and manage incoming submissions
+                    Review and manage incoming submissions. New work appears
+                    here as it arrives.
                   </CardDescription>
                 </div>
               </div>
@@ -56,7 +57,7 @@ export default function EditorPage() {
                 <div>
                   <CardTitle className="text-base">Forms</CardTitle>
                   <CardDescription>
-                    Build and manage submission forms
+                    Build and manage the forms writers fill out when submitting.
                   </CardDescription>
                 </div>
               </div>
@@ -79,7 +80,8 @@ export default function EditorPage() {
                 <div>
                   <CardTitle className="text-base">Analytics</CardTitle>
                   <CardDescription>
-                    Submission trends and performance metrics
+                    Submission volume, response times, and acceptance rates over
+                    time.
                   </CardDescription>
                 </div>
               </div>

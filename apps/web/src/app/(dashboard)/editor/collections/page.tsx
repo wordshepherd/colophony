@@ -53,7 +53,8 @@ export default function CollectionsPage() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Collections</h1>
           <p className="text-muted-foreground">
-            Organize submissions into reading lists, holds, and working groups.
+            Organize submissions into named groups — holds, reading lists,
+            comparison sets, or whatever fits your workflow.
           </p>
         </div>
         <Button

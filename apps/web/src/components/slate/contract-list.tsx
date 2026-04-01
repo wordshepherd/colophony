@@ -42,7 +42,13 @@ export function ContractList() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Contracts</h1>
+        <div>
+          <h1 className="text-2xl font-bold">Contracts</h1>
+          <p className="text-muted-foreground">
+            Contributor agreements for accepted pieces. Contracts move from
+            draft to sent, then countersigned or voided.
+          </p>
+        </div>
         <Link href="/slate/contracts/templates">
           <Button variant="outline">
             <FileSignature className="mr-2 h-4 w-4" />
@@ -84,7 +90,10 @@ export function ContractList() {
             </div>
           ) : !data || data.items.length === 0 ? (
             <div className="text-center py-12">
-              <p className="text-muted-foreground">No contracts found</p>
+              <p className="text-muted-foreground">
+                No contracts match this filter. Contracts are created from
+                templates and attached to pipeline items.
+              </p>
             </div>
           ) : (
             <>

@@ -31,7 +31,8 @@ export function ProductionDashboard() {
         <div>
           <h1 className="text-xl font-bold">Production</h1>
           <p className="text-sm text-muted-foreground">
-            Issue-centric pipeline overview
+            Track accepted pieces through editing, copyediting, and publication.
+            Select an issue to see its pipeline.
           </p>
         </div>
         <ProductionIssueSelector

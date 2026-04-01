@@ -38,6 +38,10 @@ export function WebhookList() {
             <Webhook className="h-5 w-5 text-primary" />
           </div>
           <h1 className="text-2xl font-bold">Webhooks</h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Send real-time notifications to external services when events happen
+            — like a new submission arriving or a decision being made.
+          </p>
         </div>
         {isAdmin && (
           <Link href="/webhooks/new">
@@ -63,7 +67,8 @@ export function WebhookList() {
           ) : !data?.items.length ? (
             <div className="text-center py-12">
               <p className="text-muted-foreground">
-                No webhook endpoints configured
+                No webhook endpoints configured. Webhooks let external tools
+                (Slack, Zapier, custom apps) react to events automatically.
               </p>
               {isAdmin && (
                 <Link href="/webhooks/new">

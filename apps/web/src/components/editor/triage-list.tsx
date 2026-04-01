@@ -137,10 +137,36 @@ export function TriageList({
         )}
       </div>
 
-      {/* Count footer */}
+      {/* Count footer + keyboard hints */}
       {data && (
-        <div className="px-3 py-1.5 border-t text-xs text-muted-foreground">
-          {data.total} submission{data.total !== 1 ? "s" : ""}
+        <div className="flex items-center justify-between px-3 py-1.5 border-t text-xs text-muted-foreground">
+          <span>
+            {data.total} submission{data.total !== 1 ? "s" : ""}
+          </span>
+          <span className="flex items-center gap-3">
+            <span>
+              <kbd className="rounded border border-sidebar-border bg-sidebar-accent px-1 py-0.5 font-mono text-[11px] text-sidebar-foreground">
+                j
+              </kbd>
+              /
+              <kbd className="rounded border border-sidebar-border bg-sidebar-accent px-1 py-0.5 font-mono text-[11px] text-sidebar-foreground">
+                k
+              </kbd>{" "}
+              navigate
+            </span>
+            <span>
+              <kbd className="rounded border border-sidebar-border bg-sidebar-accent px-1 py-0.5 font-mono text-[11px] text-sidebar-foreground">
+                r
+              </kbd>{" "}
+              deep-read
+            </span>
+            <span>
+              <kbd className="rounded border border-sidebar-border bg-sidebar-accent px-1 py-0.5 font-mono text-[11px] text-sidebar-foreground">
+                ?
+              </kbd>{" "}
+              all shortcuts
+            </span>
+          </span>
         </div>
       )}
     </div>

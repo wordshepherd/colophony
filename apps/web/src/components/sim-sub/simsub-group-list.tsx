@@ -44,7 +44,8 @@ export function SimsubGroupList() {
         <div>
           <h1 className="text-2xl font-bold">Sim-Sub Groups</h1>
           <p className="text-muted-foreground">
-            Track simultaneous submissions of the same work
+            Track which journals are considering the same piece. Withdraw
+            promptly when one accepts.
           </p>
         </div>
         <Button onClick={() => setCreateOpen(true)}>
@@ -84,7 +85,8 @@ export function SimsubGroupList() {
           <Copy className="mx-auto h-12 w-12 text-muted-foreground" />
           <h3 className="mt-4 text-lg font-semibold">No sim-sub groups</h3>
           <p className="mt-1 text-sm text-muted-foreground">
-            Create a group to track where you&apos;ve submitted the same work.
+            When you submit the same piece to multiple journals, a sim-sub group
+            helps you keep track.
           </p>
           <Button className="mt-4" onClick={() => setCreateOpen(true)}>
             <Plus className="mr-2 h-4 w-4" />

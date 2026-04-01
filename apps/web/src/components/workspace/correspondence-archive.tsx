@@ -33,7 +33,11 @@ export function CorrespondenceArchive() {
       <div>
         <h1 className="text-2xl font-bold">Correspondence</h1>
         <p className="text-muted-foreground">
-          Messages related to your submissions
+          Decision letters, revision requests, and other messages related to
+          your submissions.
+        </p>
+        <p className="text-xs text-muted-foreground mt-1">
+          Arrows indicate direction: ↙ received, ↗ sent by you.
         </p>
       </div>
 
@@ -52,7 +56,8 @@ export function CorrespondenceArchive() {
           <Mail className="mx-auto h-12 w-12 text-muted-foreground" />
           <h3 className="mt-4 text-lg font-semibold">No correspondence</h3>
           <p className="text-muted-foreground">
-            Messages from journals will appear here.
+            When editors respond to your Colophony submissions, their messages
+            will appear here.
           </p>
         </div>
       )}

@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { WorkspaceStatsCards } from "./workspace-stats-cards";
 import { Plus, Send, Mail, Layers, BarChart3 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
+import { InfoTooltip } from "@/components/ui/info-tooltip";
 
 export function WorkspaceDashboard() {
   const {
@@ -21,7 +22,8 @@ export function WorkspaceDashboard() {
         <div>
           <h1 className="text-2xl font-bold">Writer Workspace</h1>
           <p className="text-muted-foreground">
-            Track your manuscripts, submissions, and correspondence
+            Your home base — see how your work is progressing across
+            submissions, responses, and publications.
           </p>
         </div>
         <Link href="/workspace/external/new">
@@ -46,11 +48,12 @@ export function WorkspaceDashboard() {
 
       {/* Acceptance rate */}
       {stats?.acceptanceRate != null && (
-        <div className="text-sm text-muted-foreground">
+        <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
           Acceptance rate:{" "}
           <span className="font-medium text-foreground">
             {(stats.acceptanceRate * 100).toFixed(1)}%
           </span>
+          <InfoTooltip content="Percentage of your submissions that received an acceptance, across all journals tracked in Colophony." />
         </div>
       )}
 
