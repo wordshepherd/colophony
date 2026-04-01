@@ -200,6 +200,7 @@ services:
       context: .
       dockerfile: apps/web/Dockerfile
       args:
+        NEXT_PUBLIC_APP_URL: https://${DOMAIN:-localhost}
         NEXT_PUBLIC_API_URL: https://${DOMAIN:-localhost}
         NEXT_PUBLIC_TUS_URL: https://${DOMAIN:-localhost}/upload/files/
         NEXT_PUBLIC_ZITADEL_AUTHORITY: ${NEXT_PUBLIC_ZITADEL_AUTHORITY:-}
