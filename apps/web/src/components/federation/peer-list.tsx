@@ -22,11 +22,11 @@ import { InitiateTrustDialog } from "./initiate-trust-dialog";
 import { formatDistanceToNow } from "date-fns";
 
 const PEER_STATUS_COLORS: Record<string, string> = {
-  active: "bg-green-500",
-  pending_outbound: "bg-yellow-500",
-  pending_inbound: "bg-amber-500",
-  rejected: "bg-red-500",
-  revoked: "bg-red-500",
+  active: "bg-status-success",
+  pending_outbound: "bg-status-warning",
+  pending_inbound: "bg-status-warning",
+  rejected: "bg-status-error",
+  revoked: "bg-status-error",
 };
 
 const STATUS_LABELS: Record<string, string> = {
@@ -142,7 +142,7 @@ export function PeerList() {
                       <TableCell>
                         <div className="flex items-center gap-2">
                           <span
-                            className={`inline-block h-2 w-2 rounded-full ${PEER_STATUS_COLORS[peer.status] ?? "bg-gray-400"}`}
+                            className={`inline-block h-2 w-2 rounded-full ${PEER_STATUS_COLORS[peer.status] ?? "bg-status-info"}`}
                           />
                           {STATUS_LABELS[peer.status] ?? peer.status}
                         </div>

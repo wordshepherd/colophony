@@ -22,16 +22,16 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 
 const STATUS_COLORS: Record<string, string> = {
-  PENDING: "border-yellow-500 text-yellow-700",
-  PENDING_APPROVAL: "border-orange-500 text-orange-700",
-  APPROVED: "border-blue-500 text-blue-700",
-  BUNDLE_SENT: "border-blue-500 text-blue-700",
-  PROCESSING: "border-blue-500 text-blue-700",
-  COMPLETED: "border-green-500 text-green-700",
-  REJECTED: "border-red-500 text-red-700",
-  FAILED: "border-red-500 text-red-700",
-  EXPIRED: "border-gray-400 text-gray-600",
-  CANCELLED: "border-gray-400 text-gray-600",
+  PENDING: "border-status-warning text-status-warning",
+  PENDING_APPROVAL: "border-status-held text-status-held",
+  APPROVED: "border-status-info text-status-info",
+  BUNDLE_SENT: "border-status-info text-status-info",
+  PROCESSING: "border-status-info text-status-info",
+  COMPLETED: "border-status-success text-status-success",
+  REJECTED: "border-status-error text-status-error",
+  FAILED: "border-status-error text-status-error",
+  EXPIRED: "border-status-info text-status-info",
+  CANCELLED: "border-status-info text-status-info",
 };
 
 const TERMINAL_STATUSES = new Set([

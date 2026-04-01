@@ -115,7 +115,7 @@ describe("HealthCardGrid", () => {
     expect(screen.getByText("3 active")).toBeInTheDocument();
     // The metric should have green styling (healthy)
     const metric = screen.getByText("3 active");
-    expect(metric.className).toContain("text-green-700");
+    expect(metric.className).toContain("text-status-success");
   });
 
   it("derives degraded federation status when peers pending", () => {
@@ -130,9 +130,9 @@ describe("HealthCardGrid", () => {
 
     expect(screen.getByText("1 active")).toBeInTheDocument();
     expect(screen.getByText("1 pending")).toBeInTheDocument();
-    // Degraded = yellow
+    // Degraded = warning
     const metric = screen.getByText("1 active");
-    expect(metric.className).toContain("text-yellow-700");
+    expect(metric.className).toContain("text-status-warning");
   });
 
   it("derives correct queue status from job counts", () => {
@@ -152,9 +152,9 @@ describe("HealthCardGrid", () => {
 
     expect(screen.getByText("15 waiting")).toBeInTheDocument();
     expect(screen.getByText("3 failed")).toBeInTheDocument();
-    // failed > 0 = degraded = yellow
+    // failed > 0 = degraded = warning
     const metric = screen.getByText("15 waiting");
-    expect(metric.className).toContain("text-yellow-700");
+    expect(metric.className).toContain("text-status-warning");
   });
 
   it("derives correct webhook status from provider health", () => {
@@ -187,9 +187,9 @@ describe("HealthCardGrid", () => {
 
     expect(screen.getByText("2/3 healthy")).toBeInTheDocument();
     expect(screen.getByText("Stale: stripe")).toBeInTheDocument();
-    // stale = degraded = yellow
+    // stale = degraded = warning
     const metric = screen.getByText("2/3 healthy");
-    expect(metric.className).toContain("text-yellow-700");
+    expect(metric.className).toContain("text-status-warning");
   });
 
   it("shows loading state while queries pending", () => {

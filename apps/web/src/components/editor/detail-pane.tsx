@@ -9,6 +9,7 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { BookOpen, Loader2, AlertCircle } from "lucide-react";
+import { ReadingThemeSelector } from "@/components/manuscripts/reading-theme-selector";
 import type { ProseMirrorDoc } from "@colophony/types";
 import { useCallback, useState } from "react";
 
@@ -150,21 +151,24 @@ function DeepReadView({
                 </p>
               )}
             </div>
-            {hasSmartTextMarks && (
-              <div className="flex items-center gap-2">
-                <Switch
-                  id="show-as-submitted"
-                  checked={showAsSubmitted}
-                  onCheckedChange={setShowAsSubmitted}
-                />
-                <Label
-                  htmlFor="show-as-submitted"
-                  className="text-xs text-muted-foreground"
-                >
-                  As submitted
-                </Label>
-              </div>
-            )}
+            <div className="flex items-center gap-4">
+              <ReadingThemeSelector />
+              {hasSmartTextMarks && (
+                <div className="flex items-center gap-2">
+                  <Switch
+                    id="show-as-submitted"
+                    checked={showAsSubmitted}
+                    onCheckedChange={setShowAsSubmitted}
+                  />
+                  <Label
+                    htmlFor="show-as-submitted"
+                    className="text-xs text-muted-foreground"
+                  >
+                    As submitted
+                  </Label>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Extraction status (transient states only) */}

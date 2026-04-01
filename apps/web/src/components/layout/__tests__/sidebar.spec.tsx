@@ -98,16 +98,12 @@ describe("Sidebar", () => {
     render(<Sidebar />);
 
     const submissionsLink = screen.getByText("My Submissions").closest("a");
-    // Active: has "bg-sidebar-accent" as a standalone class
-    expect(submissionsLink?.className).toMatch(
-      /(?:^|\s)bg-sidebar-accent(?:\s|$)/,
-    );
+    // Active: has copper border
+    expect(submissionsLink?.className).toMatch(/border-sidebar-primary/);
 
     const settingsLink = screen.getByText("Settings").closest("a");
-    // Inactive: should NOT have standalone "bg-sidebar-accent" (hover: is fine)
-    expect(settingsLink?.className).not.toMatch(
-      /(?:^|\s)bg-sidebar-accent(?:\s|$)/,
-    );
+    // Inactive: should NOT have copper border
+    expect(settingsLink?.className).not.toMatch(/border-sidebar-primary/);
   });
 
   it("should apply active class to settings when on settings path", () => {
@@ -115,9 +111,7 @@ describe("Sidebar", () => {
     render(<Sidebar />);
 
     const settingsLink = screen.getByText("Settings").closest("a");
-    expect(settingsLink?.className).toMatch(
-      /(?:^|\s)bg-sidebar-accent(?:\s|$)/,
-    );
+    expect(settingsLink?.className).toMatch(/border-sidebar-primary/);
   });
 
   it("should render Colophony brand link", () => {
@@ -153,13 +147,11 @@ describe("Sidebar", () => {
 
     const dashboardLink = screen.getByText("Editor Dashboard").closest("a");
     // /editor uses exact match — should NOT be active on /editor/forms
-    expect(dashboardLink?.className).not.toMatch(
-      /(?:^|\s)bg-sidebar-accent(?:\s|$)/,
-    );
+    expect(dashboardLink?.className).not.toMatch(/border-sidebar-primary/);
 
     const formsLink = screen.getByText("Forms").closest("a");
     // /editor/forms uses startsWith — should be active
-    expect(formsLink?.className).toMatch(/(?:^|\s)bg-sidebar-accent(?:\s|$)/);
+    expect(formsLink?.className).toMatch(/border-sidebar-primary/);
   });
 
   it("should highlight Editor Dashboard only on exact /editor path", () => {
@@ -168,9 +160,7 @@ describe("Sidebar", () => {
     render(<Sidebar />);
 
     const dashboardLink = screen.getByText("Editor Dashboard").closest("a");
-    expect(dashboardLink?.className).toMatch(
-      /(?:^|\s)bg-sidebar-accent(?:\s|$)/,
-    );
+    expect(dashboardLink?.className).toMatch(/border-sidebar-primary/);
   });
 
   it("should show Federation link in Operations section when isAdmin", () => {
@@ -200,12 +190,10 @@ describe("Sidebar", () => {
     render(<Sidebar />);
 
     const formsLink = screen.getByText("Forms").closest("a");
-    expect(formsLink?.className).toMatch(/(?:^|\s)bg-sidebar-accent(?:\s|$)/);
+    expect(formsLink?.className).toMatch(/border-sidebar-primary/);
 
     const dashboardLink = screen.getByText("Editor Dashboard").closest("a");
-    expect(dashboardLink?.className).not.toMatch(
-      /(?:^|\s)bg-sidebar-accent(?:\s|$)/,
-    );
+    expect(dashboardLink?.className).not.toMatch(/border-sidebar-primary/);
   });
 
   it("should highlight active group header", () => {
@@ -271,10 +259,10 @@ describe("Sidebar", () => {
     expect(sidebar?.className).toMatch(/bg-sidebar-background/);
   });
 
-  it("should apply copper color to active nav item", () => {
+  it("should apply copper border to active nav item", () => {
     mockPathname = "/workspace";
     render(<Sidebar />);
     const dashboardLink = screen.getByText("Dashboard").closest("a");
-    expect(dashboardLink?.className).toMatch(/text-sidebar-primary/);
+    expect(dashboardLink?.className).toMatch(/border-sidebar-primary/);
   });
 });

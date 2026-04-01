@@ -179,7 +179,7 @@ export function CmsConnectionList() {
                       </TableCell>
                       <TableCell>
                         <span
-                          className={`inline-block h-2 w-2 rounded-full ${connection.isActive ? "bg-green-500" : "bg-gray-300"}`}
+                          className={`inline-block h-2 w-2 rounded-full ${connection.isActive ? "bg-status-success" : "bg-status-info"}`}
                         />
                       </TableCell>
                       <TableCell className="text-muted-foreground">

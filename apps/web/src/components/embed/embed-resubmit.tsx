@@ -207,7 +207,7 @@ export function EmbedResubmit({ statusToken, apiUrl }: EmbedResubmitProps) {
   if (step === "success") {
     return (
       <div className="max-w-md mx-auto text-center py-16 px-4">
-        <CheckCircle className="h-12 w-12 text-green-600 mx-auto mb-4" />
+        <CheckCircle className="h-12 w-12 text-status-success mx-auto mb-4" />
         <h2 className="text-lg font-semibold">Resubmission Received</h2>
         <p className="text-sm text-muted-foreground mt-2">
           Your revised manuscript has been submitted successfully. A new
@@ -258,11 +258,11 @@ export function EmbedResubmit({ statusToken, apiUrl }: EmbedResubmitProps) {
 
         {/* Revision Notes */}
         {context?.revisionNotes && (
-          <div className="rounded-md bg-blue-50 p-4">
-            <p className="text-xs font-medium text-blue-800 uppercase tracking-wide mb-1">
+          <div className="rounded-md bg-status-info/5 p-4">
+            <p className="text-xs font-medium text-status-info uppercase tracking-wide mb-1">
               Editor&apos;s Revision Notes
             </p>
-            <p className="text-sm text-blue-900 whitespace-pre-wrap">
+            <p className="text-sm whitespace-pre-wrap">
               {context.revisionNotes}
             </p>
           </div>
@@ -331,7 +331,7 @@ export function EmbedResubmit({ statusToken, apiUrl }: EmbedResubmitProps) {
               {u.progress < 100 ? (
                 <Progress value={u.progress} className="w-20 h-2" />
               ) : (
-                <CheckCircle className="h-4 w-4 text-green-600 shrink-0" />
+                <CheckCircle className="h-4 w-4 text-status-success shrink-0" />
               )}
             </div>
           ))}
@@ -372,14 +372,20 @@ function ScanBadge({ status }: { status: string }) {
   switch (status) {
     case "CLEAN":
       return (
-        <Badge variant="outline" className="bg-green-100 text-green-800 gap-1">
+        <Badge
+          variant="outline"
+          className="bg-status-success/10 text-status-success gap-1"
+        >
           <CheckCircle className="h-3 w-3" />
           Clean
         </Badge>
       );
     case "INFECTED":
       return (
-        <Badge variant="outline" className="bg-red-100 text-red-800 gap-1">
+        <Badge
+          variant="outline"
+          className="bg-status-error/10 text-status-error gap-1"
+        >
           <AlertCircle className="h-3 w-3" />
           Infected
         </Badge>
@@ -388,7 +394,7 @@ function ScanBadge({ status }: { status: string }) {
       return (
         <Badge
           variant="outline"
-          className="bg-yellow-100 text-yellow-800 gap-1"
+          className="bg-status-info/10 text-status-info gap-1"
         >
           <Loader2 className="h-3 w-3 animate-spin" />
           Scanning
@@ -396,7 +402,10 @@ function ScanBadge({ status }: { status: string }) {
       );
     default:
       return (
-        <Badge variant="outline" className="bg-gray-100 text-gray-800 gap-1">
+        <Badge
+          variant="outline"
+          className="bg-status-info/10 text-status-info gap-1"
+        >
           <Clock className="h-3 w-3" />
           Pending
         </Badge>

@@ -69,9 +69,9 @@ export function CorrespondenceArchive() {
                 {/* Direction icon */}
                 <div className="mt-0.5">
                   {item.direction === "inbound" ? (
-                    <ArrowDownLeft className="h-4 w-4 text-blue-500" />
+                    <ArrowDownLeft className="h-4 w-4 text-status-info" />
                   ) : (
-                    <ArrowUpRight className="h-4 w-4 text-green-500" />
+                    <ArrowUpRight className="h-4 w-4 text-status-success" />
                   )}
                 </div>
 
@@ -100,7 +100,7 @@ export function CorrespondenceArchive() {
                       })}
                     </span>
                     {item.source === "colophony" && (
-                      <span className="text-blue-500">via Colophony</span>
+                      <span className="text-status-info">via Colophony</span>
                     )}
                   </div>
                 </div>

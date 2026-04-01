@@ -20,22 +20,22 @@ const cards = [
   {
     key: "onTrack" as const,
     label: "On Track",
-    color: "text-green-700 dark:text-green-400",
+    color: "text-status-success",
   },
   {
     key: "atRisk" as const,
     label: "At Risk",
-    color: "text-yellow-700 dark:text-yellow-400",
+    color: "text-status-warning",
   },
   {
     key: "overdue" as const,
     label: "Overdue",
-    color: "text-red-700 dark:text-red-400",
+    color: "text-status-error",
   },
   {
     key: "waiting" as const,
     label: "Waiting",
-    color: "text-blue-700 dark:text-blue-400",
+    color: "text-status-held",
   },
 ];
 

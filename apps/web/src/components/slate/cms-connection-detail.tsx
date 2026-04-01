@@ -238,7 +238,7 @@ export function CmsConnectionDetail({
                 </p>
                 <div className="flex items-center gap-2 mt-1">
                   <span
-                    className={`inline-block h-2 w-2 rounded-full ${connection.isActive ? "bg-green-500" : "bg-gray-300"}`}
+                    className={`inline-block h-2 w-2 rounded-full ${connection.isActive ? "bg-status-success" : "bg-status-info"}`}
                   />
                   <span className="text-sm">
                     {connection.isActive ? "Active" : "Inactive"}

@@ -116,16 +116,16 @@ describe("getHandoffStatus", () => {
 });
 
 describe("getAgingColor", () => {
-  it("returns green classes for on-track", () => {
+  it("returns success classes for on-track", () => {
     const color = getAgingColor("on-track");
-    expect(color.text).toContain("green");
-    expect(color.bg).toContain("green");
-    expect(color.badge).toContain("green");
+    expect(color.text).toContain("status-success");
+    expect(color.bg).toContain("status-success");
+    expect(color.badge).toContain("status-success");
   });
 
-  it("returns red classes for overdue", () => {
+  it("returns error classes for overdue", () => {
     const color = getAgingColor("overdue");
-    expect(color.text).toContain("red");
+    expect(color.text).toContain("status-error");
   });
 });
 
