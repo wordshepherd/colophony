@@ -83,6 +83,10 @@ export function CmsConnectionList() {
             <Globe className="h-5 w-5 text-primary" />
           </div>
           <h1 className="text-2xl font-bold">CMS Connections</h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Publish directly to your website. Connect your WordPress or Ghost
+            CMS to push finished pieces from the pipeline.
+          </p>
         </div>
         {isAdmin && (
           <Link href="/slate/cms/new">
@@ -138,12 +142,13 @@ export function CmsConnectionList() {
             </div>
           ) : filteredItems.length === 0 ? (
             <div className="text-center py-12">
-              <p className="text-muted-foreground">No CMS connections yet</p>
+              <p className="text-muted-foreground">
+                No CMS connections yet. Connect a WordPress or Ghost site to
+                publish pieces directly from your production pipeline.
+              </p>
               {isAdmin && (
                 <Link href="/slate/cms/new">
-                  <Button variant="link">
-                    Create your first CMS connection
-                  </Button>
+                  <Button variant="link">Create your first connection</Button>
                 </Link>
               )}
             </div>

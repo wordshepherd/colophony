@@ -141,11 +141,16 @@ export function CommandPaletteProvider({
                 {group.items.map((item: NavItem) => (
                   <CommandItem
                     key={item.href}
-                    value={`${group.label} ${item.name}`}
+                    value={`${group.label} ${item.name}${item.description ? ` ${item.description}` : ""}`}
                     onSelect={() => handleSelect(item.href)}
                   >
                     <item.icon className="mr-2 h-4 w-4" />
                     {item.name}
+                    {item.description && (
+                      <span className="text-xs text-muted-foreground ml-2">
+                        {item.description}
+                      </span>
+                    )}
                   </CommandItem>
                 ))}
               </CommandGroup>

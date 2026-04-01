@@ -17,7 +17,9 @@ test.describe("Portfolio (/workspace/portfolio)", () => {
     ).toBeVisible();
 
     // Group by piece toggle
-    await expect(main.getByText("Group by piece")).toBeVisible();
+    await expect(
+      main.getByText("Group by piece", { exact: true }),
+    ).toBeVisible();
   });
 
   test("shows external submission in portfolio", async ({
