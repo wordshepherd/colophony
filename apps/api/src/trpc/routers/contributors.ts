@@ -134,6 +134,10 @@ export const contributorsRouter = createRouter({
     .input(z.object({ contributorId: z.string().uuid() }))
     .output(z.array(contributorPublicationSchema))
     .query(async ({ ctx, input }) => {
-      return contributorService.listPublications(ctx.dbTx, input.contributorId);
+      return contributorService.listPublications(
+        ctx.dbTx,
+        input.contributorId,
+        ctx.authContext.orgId,
+      );
     }),
 });

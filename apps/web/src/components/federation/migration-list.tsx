@@ -23,7 +23,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  FilterTabs,
+  FilterTabsList,
+  FilterTabsTrigger,
+} from "@/components/ui/tabs";
 import {
   Select,
   SelectContent,
@@ -122,15 +126,19 @@ export function MigrationList() {
       )}
 
       <div className="flex items-center gap-4">
-        <Tabs value={tab} onValueChange={(v) => setTab(v as Tab)}>
-          <TabsList>
-            <TabsTrigger value="all">All</TabsTrigger>
-            <TabsTrigger value="pending_approval">Pending Approval</TabsTrigger>
-            <TabsTrigger value="in_progress">In Progress</TabsTrigger>
-            <TabsTrigger value="completed">Completed</TabsTrigger>
-            <TabsTrigger value="cancelled">Cancelled</TabsTrigger>
-          </TabsList>
-        </Tabs>
+        <FilterTabs value={tab} onValueChange={(v) => setTab(v as Tab)}>
+          <FilterTabsList>
+            <FilterTabsTrigger value="all">All</FilterTabsTrigger>
+            <FilterTabsTrigger value="pending_approval">
+              Pending Approval
+            </FilterTabsTrigger>
+            <FilterTabsTrigger value="in_progress">
+              In Progress
+            </FilterTabsTrigger>
+            <FilterTabsTrigger value="completed">Completed</FilterTabsTrigger>
+            <FilterTabsTrigger value="cancelled">Cancelled</FilterTabsTrigger>
+          </FilterTabsList>
+        </FilterTabs>
 
         <Select value={direction} onValueChange={setDirection}>
           <SelectTrigger className="w-[150px]">

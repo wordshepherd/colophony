@@ -23,7 +23,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  FilterTabs,
+  FilterTabsList,
+  FilterTabsTrigger,
+} from "@/components/ui/tabs";
 import { format } from "date-fns";
 
 const STATUS_COLORS: Record<string, string> = {
@@ -85,14 +89,14 @@ export function HubAdmin() {
 
       <h1 className="text-2xl font-bold">Hub Administration</h1>
 
-      <Tabs value={tab} onValueChange={(v) => setTab(v as Tab)}>
-        <TabsList>
-          <TabsTrigger value="all">All</TabsTrigger>
-          <TabsTrigger value="active">Active</TabsTrigger>
-          <TabsTrigger value="suspended">Suspended</TabsTrigger>
-          <TabsTrigger value="revoked">Revoked</TabsTrigger>
-        </TabsList>
-      </Tabs>
+      <FilterTabs value={tab} onValueChange={(v) => setTab(v as Tab)}>
+        <FilterTabsList>
+          <FilterTabsTrigger value="all">All</FilterTabsTrigger>
+          <FilterTabsTrigger value="active">Active</FilterTabsTrigger>
+          <FilterTabsTrigger value="suspended">Suspended</FilterTabsTrigger>
+          <FilterTabsTrigger value="revoked">Revoked</FilterTabsTrigger>
+        </FilterTabsList>
+      </FilterTabs>
 
       <Card>
         <CardHeader>

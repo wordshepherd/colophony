@@ -17,7 +17,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  FilterTabs,
+  FilterTabsList,
+  FilterTabsTrigger,
+} from "@/components/ui/tabs";
 import { format } from "date-fns";
 
 const STATUS_COLORS: Record<string, string> = {
@@ -70,14 +74,14 @@ export function TransferList() {
 
       <h1 className="text-2xl font-bold">Piece Transfers</h1>
 
-      <Tabs value={tab} onValueChange={(v) => setTab(v as Tab)}>
-        <TabsList>
-          <TabsTrigger value="all">All</TabsTrigger>
-          <TabsTrigger value="pending">Pending</TabsTrigger>
-          <TabsTrigger value="completed">Completed</TabsTrigger>
-          <TabsTrigger value="failed">Failed</TabsTrigger>
-        </TabsList>
-      </Tabs>
+      <FilterTabs value={tab} onValueChange={(v) => setTab(v as Tab)}>
+        <FilterTabsList>
+          <FilterTabsTrigger value="all">All</FilterTabsTrigger>
+          <FilterTabsTrigger value="pending">Pending</FilterTabsTrigger>
+          <FilterTabsTrigger value="completed">Completed</FilterTabsTrigger>
+          <FilterTabsTrigger value="failed">Failed</FilterTabsTrigger>
+        </FilterTabsList>
+      </FilterTabs>
 
       <Card>
         <CardHeader>

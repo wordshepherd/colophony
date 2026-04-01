@@ -7,7 +7,11 @@ import { trpc } from "@/lib/trpc";
 import { PipelineStageBadge } from "./pipeline-stage-badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  FilterTabs,
+  FilterTabsList,
+  FilterTabsTrigger,
+} from "@/components/ui/tabs";
 import {
   Table,
   TableBody,
@@ -106,15 +110,15 @@ export function PipelineList() {
       </div>
 
       {/* Stage tabs */}
-      <Tabs value={stageFilter} onValueChange={handleStageChange}>
-        <TabsList>
+      <FilterTabs value={stageFilter} onValueChange={handleStageChange}>
+        <FilterTabsList>
           {STAGE_TABS.map((tab) => (
-            <TabsTrigger key={tab.value} value={tab.value}>
+            <FilterTabsTrigger key={tab.value} value={tab.value}>
               {tab.label}
-            </TabsTrigger>
+            </FilterTabsTrigger>
           ))}
-        </TabsList>
-      </Tabs>
+        </FilterTabsList>
+      </FilterTabs>
 
       {/* Table or empty state */}
       {data && data.items.length > 0 ? (

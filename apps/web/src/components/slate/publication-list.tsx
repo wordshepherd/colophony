@@ -7,7 +7,11 @@ import { useOrganization } from "@/hooks/use-organization";
 import { PublicationCard } from "./publication-card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  FilterTabs,
+  FilterTabsList,
+  FilterTabsTrigger,
+} from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Library, Plus, X } from "lucide-react";
 import { toast } from "sonner";
@@ -127,15 +131,15 @@ export function PublicationList() {
       </div>
 
       {/* Status tabs */}
-      <Tabs value={statusFilter} onValueChange={handleStatusChange}>
-        <TabsList>
+      <FilterTabs value={statusFilter} onValueChange={handleStatusChange}>
+        <FilterTabsList>
           {STATUS_TABS.map((tab) => (
-            <TabsTrigger key={tab.value} value={tab.value}>
+            <FilterTabsTrigger key={tab.value} value={tab.value}>
               {tab.label}
-            </TabsTrigger>
+            </FilterTabsTrigger>
           ))}
-        </TabsList>
-      </Tabs>
+        </FilterTabsList>
+      </FilterTabs>
 
       {/* Grid or empty state */}
       {data && data.items.length > 0 ? (

@@ -118,10 +118,24 @@ export const contributorService = {
     return row ?? null;
   },
 
-  async listPublications(tx: DrizzleDb, contributorId: string) {
+  async listPublications(tx: DrizzleDb, contributorId: string, orgId: string) {
     return tx
-      .select()
+      .select({
+        id: contributorPublications.id,
+        contributorId: contributorPublications.contributorId,
+        pipelineItemId: contributorPublications.pipelineItemId,
+        role: contributorPublications.role,
+        displayOrder: contributorPublications.displayOrder,
+        createdAt: contributorPublications.createdAt,
+      })
       .from(contributorPublications)
+      .innerJoin(
+        contributors,
+        and(
+          eq(contributorPublications.contributorId, contributors.id),
+          eq(contributors.organizationId, orgId),
+        ),
+      )
       .where(eq(contributorPublications.contributorId, contributorId))
       .orderBy(contributorPublications.displayOrder);
   },

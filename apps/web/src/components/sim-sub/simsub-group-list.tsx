@@ -13,7 +13,11 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  FilterTabs,
+  FilterTabsList,
+  FilterTabsTrigger,
+} from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { GroupStatusBadge } from "./group-status-badge";
 import { CreateGroupDialog } from "./create-group-dialog";
@@ -50,20 +54,20 @@ export function SimsubGroupList() {
       </div>
 
       {/* Status tabs */}
-      <Tabs
+      <FilterTabs
         value={statusFilter}
         onValueChange={(v) => {
           setStatusFilter(v as StatusFilter);
           setPage(1);
         }}
       >
-        <TabsList>
-          <TabsTrigger value="ALL">All</TabsTrigger>
-          <TabsTrigger value="ACTIVE">Active</TabsTrigger>
-          <TabsTrigger value="RESOLVED">Resolved</TabsTrigger>
-          <TabsTrigger value="WITHDRAWN">Withdrawn</TabsTrigger>
-        </TabsList>
-      </Tabs>
+        <FilterTabsList>
+          <FilterTabsTrigger value="ALL">All</FilterTabsTrigger>
+          <FilterTabsTrigger value="ACTIVE">Active</FilterTabsTrigger>
+          <FilterTabsTrigger value="RESOLVED">Resolved</FilterTabsTrigger>
+          <FilterTabsTrigger value="WITHDRAWN">Withdrawn</FilterTabsTrigger>
+        </FilterTabsList>
+      </FilterTabs>
 
       {/* Loading */}
       {isLoading && (
