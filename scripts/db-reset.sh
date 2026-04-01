@@ -27,8 +27,18 @@ docker exec "$CONTAINER" psql -U "$DB_USER" -d "$DB_NAME" -c "
   GRANT USAGE ON SCHEMA public TO audit_writer;
 "
 
-echo "Pushing schema via drizzle-kit (bypasses migrate() silent no-op)..."
-pnpm --filter @colophony/db push
+echo "Running migrations (replays SQL files to restore functions, triggers, extensions)..."
+pnpm --filter @colophony/db migrate
+
+# drizzle-kit migrate() can silently no-op after DROP SCHEMA CASCADE.
+# Verify tables actually exist; fall back to drizzle-kit push if empty.
+TABLE_COUNT=$(docker exec "$CONTAINER" psql -U "$DB_USER" -d "$DB_NAME" -tAc \
+  "SELECT count(*) FROM pg_tables WHERE schemaname = 'public';")
+
+if [ "$TABLE_COUNT" -eq 0 ]; then
+  echo "WARNING: migrate() produced no tables (known Drizzle quirk). Falling back to drizzle-kit push..."
+  pnpm --filter @colophony/db push
+fi
 
 echo "Restoring app_user DML permissions..."
 docker exec "$CONTAINER" psql -U "$DB_USER" -d "$DB_NAME" -c "

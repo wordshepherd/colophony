@@ -62,11 +62,28 @@ export function CommandPaletteProvider({
 }: {
   children: React.ReactNode;
 }) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpenRaw] = useState(false);
   const [overlayOpen, setOverlayOpen] = useState(false);
   const triggerRef = useRef<HTMLElement | null>(null);
   const router = useRouter();
   const { isEditor, isProduction, isBusinessOps, isAdmin } = useOrganization();
+
+  // Wrap setOpen to capture activeElement synchronously before Radix
+  // moves focus into the dialog on the next render.
+  const setOpen = useCallback((next: boolean) => {
+    if (next) {
+      triggerRef.current = document.activeElement as HTMLElement | null;
+    }
+    setOpenRaw(next);
+  }, []);
+
+  // Restore focus to the element that triggered the palette when it closes.
+  useEffect(() => {
+    if (!open && triggerRef.current) {
+      triggerRef.current.focus();
+      triggerRef.current = null;
+    }
+  }, [open]);
 
   const mod = modifierKey();
 
@@ -87,17 +104,6 @@ export function CommandPaletteProvider({
     },
   ]);
 
-  // Capture the element that had focus when the palette opens;
-  // restore focus to it when the palette closes.
-  useEffect(() => {
-    if (open) {
-      triggerRef.current = document.activeElement as HTMLElement | null;
-    } else if (triggerRef.current) {
-      triggerRef.current.focus();
-      triggerRef.current = null;
-    }
-  }, [open]);
-
   useEffect(() => {
     if (!open) return;
     const modKey = mod === "meta" ? "metaKey" : "ctrlKey";
@@ -109,14 +115,14 @@ export function CommandPaletteProvider({
     };
     document.addEventListener("keydown", handleClose);
     return () => document.removeEventListener("keydown", handleClose);
-  }, [open, mod]);
+  }, [open, mod, setOpen]);
 
   const handleSelect = useCallback(
     (href: string) => {
       setOpen(false);
       router.push(href);
     },
-    [router],
+    [router, setOpen],
   );
 
   return (
