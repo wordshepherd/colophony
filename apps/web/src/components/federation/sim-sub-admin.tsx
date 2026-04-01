@@ -38,10 +38,10 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 
 const RESULT_COLORS: Record<string, string> = {
-  CLEAR: "border-green-500 text-green-700",
-  CONFLICT: "border-red-500 text-red-700",
-  PARTIAL: "border-yellow-500 text-yellow-700",
-  SKIPPED: "border-gray-400 text-gray-600",
+  CLEAR: "border-status-success text-status-success",
+  CONFLICT: "border-status-error text-status-error",
+  PARTIAL: "border-status-warning text-status-warning",
+  SKIPPED: "border-status-info text-status-info",
 };
 
 export function SimSubAdmin() {

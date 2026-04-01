@@ -16,6 +16,7 @@ import {
 import { Menu, Search } from "lucide-react";
 import { Sidebar } from "./sidebar";
 import { NotificationBell } from "@/components/notifications/notification-bell";
+import { ThemeToggle } from "./theme-toggle";
 import { useCommandPalette } from "@/components/command-palette/command-palette";
 import { modifierSymbol } from "@/lib/platform";
 
@@ -83,6 +84,7 @@ export function Header() {
         {isAuthenticated ? (
           <div className="flex items-center space-x-4">
             <CommandPaletteTrigger />
+            <ThemeToggle />
             <OrgSwitcher />
             <NotificationBell />
             <UserMenu />

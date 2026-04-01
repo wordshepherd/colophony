@@ -43,10 +43,10 @@ import { SecretDisplayDialog } from "./secret-display-dialog";
 const SKELETON_ITEMS = Array.from({ length: 5 });
 
 const STATUS_COLORS: Record<string, string> = {
-  QUEUED: "bg-yellow-500",
-  DELIVERING: "bg-blue-500",
-  DELIVERED: "bg-green-500",
-  FAILED: "bg-red-500",
+  QUEUED: "bg-status-warning",
+  DELIVERING: "bg-status-info",
+  DELIVERED: "bg-status-success",
+  FAILED: "bg-status-error",
 };
 
 interface WebhookDetailProps {
@@ -259,8 +259,8 @@ export function WebhookDetail({ endpointId }: WebhookDetailProps) {
                 <span
                   className={`inline-block h-2 w-2 rounded-full ${
                     endpoint.status === "ACTIVE"
-                      ? "bg-green-500"
-                      : "bg-gray-300"
+                      ? "bg-status-success"
+                      : "bg-status-info"
                   }`}
                 />
                 <span className="text-sm">{endpoint.status}</span>
@@ -325,7 +325,7 @@ export function WebhookDetail({ endpointId }: WebhookDetailProps) {
                         <div className="flex items-center gap-2">
                           <span
                             className={`inline-block h-2 w-2 rounded-full ${
-                              STATUS_COLORS[delivery.status] ?? "bg-gray-300"
+                              STATUS_COLORS[delivery.status] ?? "bg-status-info"
                             }`}
                           />
                           <span className="text-sm">{delivery.status}</span>

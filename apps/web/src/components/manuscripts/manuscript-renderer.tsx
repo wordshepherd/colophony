@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import { literata } from "@/lib/fonts";
 import { cn } from "@/lib/utils";
+import { useReadingTheme } from "@/hooks/use-reading-theme";
 import type {
   ProseMirrorDoc,
   ProseMirrorNode,
@@ -37,6 +38,7 @@ export function ManuscriptRenderer({
   initialAnchor,
 }: ManuscriptRendererProps) {
   const genre = content.attrs?.genre_hint ?? "prose";
+  const { readingTheme } = useReadingTheme();
   const containerRef = useRef<HTMLDivElement>(null);
   const anchorTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastReportedIndex = useRef<number>(-1);
@@ -103,7 +105,12 @@ export function ManuscriptRenderer({
   return (
     <div
       ref={containerRef}
-      className={cn(literata.className, "text-foreground", className)}
+      data-reading-theme={readingTheme}
+      className={cn(literata.className, "rounded-lg p-4", className)}
+      style={{
+        backgroundColor: "var(--reading-bg)",
+        color: "var(--reading-fg)",
+      }}
     >
       {genre === "poetry" ? (
         <PoetryRenderer

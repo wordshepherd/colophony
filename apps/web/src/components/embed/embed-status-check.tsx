@@ -33,13 +33,13 @@ const WRITER_STATUS_ICONS: Record<
 };
 
 const WRITER_STATUS_COLORS: Record<WriterStatus, string> = {
-  DRAFT: "bg-gray-100 text-gray-800",
-  RECEIVED: "bg-blue-100 text-blue-800",
-  IN_REVIEW: "bg-yellow-100 text-yellow-800",
-  REVISION_REQUESTED: "bg-amber-100 text-amber-800",
-  ACCEPTED: "bg-green-100 text-green-800",
-  DECISION_SENT: "bg-slate-100 text-slate-600",
-  WITHDRAWN: "bg-gray-100 text-gray-800",
+  DRAFT: "bg-status-info/10 text-status-info",
+  RECEIVED: "bg-status-info/10 text-status-info",
+  IN_REVIEW: "bg-status-info/10 text-status-info",
+  REVISION_REQUESTED: "bg-status-warning/10 text-status-warning",
+  ACCEPTED: "bg-status-success/10 text-status-success",
+  DECISION_SENT: "bg-status-info/10 text-status-info",
+  WITHDRAWN: "bg-status-held/10 text-status-held",
 };
 
 interface EmbedStatusCheckProps {
@@ -132,7 +132,8 @@ export function EmbedStatusCheck({
 
   const StatusIcon = WRITER_STATUS_ICONS[data.writerStatus] ?? Clock;
   const statusColor =
-    WRITER_STATUS_COLORS[data.writerStatus] ?? "bg-yellow-100 text-yellow-800";
+    WRITER_STATUS_COLORS[data.writerStatus] ??
+    "bg-status-warning/10 text-status-warning";
 
   return (
     <div className="max-w-md mx-auto py-12 px-4">

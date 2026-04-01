@@ -16,13 +16,11 @@ import {
 import { Badge } from "@/components/ui/badge";
 
 const roleColors: Record<string, string> = {
-  ADMIN: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200",
-  EDITOR: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
-  PRODUCTION:
-    "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200",
-  BUSINESS_OPS:
-    "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200",
-  READER: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200",
+  ADMIN: "bg-status-error/10 text-status-error",
+  EDITOR: "bg-status-info/10 text-status-info",
+  PRODUCTION: "bg-status-held/10 text-status-held",
+  BUSINESS_OPS: "bg-status-warning/10 text-status-warning",
+  READER: "bg-status-info/10 text-status-info",
 };
 
 export function OrgSwitcher() {

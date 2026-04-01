@@ -43,7 +43,7 @@ function TrendIndicator({
 
   if (diff < 0) {
     return (
-      <span className="inline-flex items-center gap-1 text-xs text-green-600">
+      <span className="inline-flex items-center gap-1 text-xs text-status-success">
         <TrendingDown className="h-3 w-3" />
         Getting faster
       </span>
@@ -51,7 +51,7 @@ function TrendIndicator({
   }
 
   return (
-    <span className="inline-flex items-center gap-1 text-xs text-amber-600">
+    <span className="inline-flex items-center gap-1 text-xs text-status-warning">
       <TrendingUp className="h-3 w-3" />
       Getting slower
     </span>

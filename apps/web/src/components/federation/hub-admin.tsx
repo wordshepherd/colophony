@@ -27,9 +27,9 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format } from "date-fns";
 
 const STATUS_COLORS: Record<string, string> = {
-  active: "border-green-500 text-green-700",
-  suspended: "border-yellow-500 text-yellow-700",
-  revoked: "border-red-500 text-red-700",
+  active: "border-status-success text-status-success",
+  suspended: "border-status-warning text-status-warning",
+  revoked: "border-status-error text-status-error",
 };
 
 type Tab = "all" | "active" | "suspended" | "revoked";

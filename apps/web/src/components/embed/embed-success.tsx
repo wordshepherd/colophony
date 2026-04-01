@@ -17,7 +17,7 @@ export function EmbedSuccess({
 
   return (
     <div className="flex flex-col items-center text-center py-8 space-y-4">
-      <CheckCircle className="h-16 w-16 text-green-600" />
+      <CheckCircle className="h-16 w-16 text-status-success" />
       <div>
         <h2 className="text-xl font-semibold">Submission Received</h2>
         <p className="text-sm text-muted-foreground mt-2">

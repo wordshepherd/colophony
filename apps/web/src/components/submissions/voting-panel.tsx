@@ -177,13 +177,13 @@ export function VotingPanel({
             <div className="space-y-2">
               <Label className="text-sm font-medium">Summary</Label>
               <div className="flex gap-3 text-sm">
-                <span className="text-green-600">
+                <span className="text-status-success">
                   Accept: {summary.acceptCount}
                 </span>
-                <span className="text-red-600">
+                <span className="text-status-error">
                   Reject: {summary.rejectCount}
                 </span>
-                <span className="text-yellow-600">
+                <span className="text-status-warning">
                   Maybe: {summary.maybeCount}
                 </span>
               </div>

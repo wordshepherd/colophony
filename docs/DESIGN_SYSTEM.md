@@ -790,3 +790,70 @@ To avoid migrations when federation sync arrives, the following are present in t
 | Responsive strategy    | Desktop-first; mobile limited to writer status checks                                         | Editorial workflows need desktop viewports. Writers check status on mobile. Build responsive for WriterLayout only; defer mobile editorial.                                         |
 | Sidebar surface        | Permanent dark navy (#191c2b), same in both themes                                            | Anchors the interface. Sub-brand preheaders use Muted Cream on navy. Warm Cream text, copper active states.                                                                         |
 | Sub-brand UI presence  | Sidebar preheader + layout breadcrumb bar (Hopper, Slate, Register). Relay system-level only. | Sub-brands provide identity and context without navigation friction. Preheader is visible but recessive. Relay is infrastructure, not a destination.                                |
+
+---
+
+## Section 10: Brand Token System
+
+### 10.1 Source Palette
+
+| Name            | Hex       | HSL                | CSS Variable           | Usage                                           |
+| --------------- | --------- | ------------------ | ---------------------- | ----------------------------------------------- |
+| Deep Navy       | `#191c2b` | `hsl(230 27% 13%)` | `--primary` (light)    | Primary buttons, dark backgrounds, sidebar      |
+| Warm Cream      | `#f0e8d5` | `hsl(42 47% 89%)`  | `--background` (light) | Light background, workspace surfaces            |
+| Light Parchment | `#f0ebe0` | `hsl(41 35% 91%)`  | `--card` (light)       | Card backgrounds, popovers                      |
+| Copper          | `#c87941` | `hsl(25 55% 52%)`  | `--accent`             | Critical actions, meaningful state changes ONLY |
+| Muted Cream     | `#d8cfc2` | `hsl(35 22% 80%)`  | `--border`             | Borders, input borders, secondary text          |
+| Near Black      | `#121212` | `hsl(0 0% 7%)`     | `--foreground` (light) | Primary text (light theme)                      |
+| Slate           | `#3E4A59` | `hsl(213 18% 30%)` | `--secondary` (dark)   | Secondary surfaces (dark theme)                 |
+
+### 10.2 Theme Architecture
+
+- **Light theme:** Warm Cream background, Near Black text, Light Parchment cards, Deep Navy primary buttons.
+- **Dark theme:** Deep Navy background, Warm Cream text, lighter navy cards, Warm Cream primary buttons.
+- **Sidebar:** Permanent dark surface — Deep Navy in both themes. Provides a consistent architectural anchor.
+- **Theme switching:** `next-themes` with `attribute="class"`, `defaultTheme="light"`, `enableSystem`. Toggle in header.
+
+### 10.3 Typography Stack
+
+| Context        | Typeface                            | Weights            | Usage                                                                                                      |
+| -------------- | ----------------------------------- | ------------------ | ---------------------------------------------------------------------------------------------------------- |
+| **Headings**   | Playfair Display                    | 400, 700 + Italic  | h1–h6 elements. Italic reserved for "productive friction" moments (Accept, Decline, Hold labels).          |
+| **Body / UI**  | Lato                                | 300, 400, 700, 900 | All interface text, labels, controls, navigation.                                                          |
+| **Manuscript** | Literata (variable, optical sizing) | full range         | ManuscriptRenderer ONLY. Never appears in interface chrome. Lato/Playfair never appear inside manuscripts. |
+
+### 10.4 Semantic Status Colors
+
+Six semantic status colors replace all hardcoded Tailwind color classes. Defined as CSS variables that change between light and dark themes.
+
+| Semantic           | Light HSL                          | Dark HSL           | Usage                                            |
+| ------------------ | ---------------------------------- | ------------------ | ------------------------------------------------ |
+| `--status-success` | `hsl(140 25% 33%)` (sage green)    | `hsl(140 30% 55%)` | Accepted, healthy, on-track, clean, connected    |
+| `--status-warning` | `hsl(38 65% 38%)` (warm amber)     | `hsl(38 55% 60%)`  | R&R, aging, approaching deadline, degraded       |
+| `--status-error`   | `hsl(11 52% 47%)` (brick red)      | `hsl(11 55% 58%)`  | Rejected, overdue, unhealthy, infected, failed   |
+| `--status-info`    | `hsl(35 9% 55%)` (muted warm gray) | `hsl(35 12% 65%)`  | Draft, submitted, under review, neutral, pending |
+| `--status-active`  | `hsl(25 55% 52%)` (copper)         | same               | Interactive elements, links (same as `--accent`) |
+| `--status-held`    | `hsl(206 25% 48%)` (dusty blue)    | `hsl(206 30% 60%)` | Hold, withdrawn, waiting, external handoff       |
+
+**Usage pattern:** `bg-status-{name}/10 text-status-{name}` for badge backgrounds with text. No `dark:` variants needed — CSS variables handle theme switching.
+
+### 10.5 ManuscriptRenderer Reading Themes
+
+Independent of the app's light/dark theme. Scoped via `data-reading-theme` attribute on the renderer wrapper.
+
+| Theme | Background                    | Text                          | Description                                                   |
+| ----- | ----------------------------- | ----------------------------- | ------------------------------------------------------------- |
+| Light | Warm Cream `hsl(42 47% 89%)`  | Near Black `hsl(0 0% 7%)`     | Matches app light workspace. Archival paper feel.             |
+| Sepia | Deeper warm `hsl(36 35% 85%)` | Dark brown `hsl(18 12% 15%)`  | Lower contrast for long reading. Aged paper under warm light. |
+| Dark  | Deep Navy `hsl(230 27% 13%)`  | Muted Cream `hsl(35 22% 80%)` | Matches dark theme background. Warm cream text, not white.    |
+
+Reading theme selector uses circular color swatches (visually distinct from the Sun/Moon app theme toggle).
+
+### 10.6 Brand Rules
+
+- **No cool or neutral grays.** All neutrals maintain warmth.
+- **No pure white (`#ffffff`) or pure black (`#000000`).** Use Warm Cream and Near Black.
+- **Copper is never decorative.** It marks meaningful interaction or state change.
+- **No bright, saturated neon colors.** All status/semantic colors are muted and warm-toned.
+- **Playfair Display Italic marks productive friction.** Decision labels only (Accept, Decline, Hold). Not navigation, form labels, or buttons.
+- **Outline/ghost button hover uses secondary (parchment), not accent (copper).** Copper hover would make every button feel like a critical action.

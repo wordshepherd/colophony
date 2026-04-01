@@ -115,8 +115,8 @@ export function WebhookList() {
                           <span
                             className={`inline-block h-2 w-2 rounded-full ${
                               endpoint.status === "ACTIVE"
-                                ? "bg-green-500"
-                                : "bg-gray-300"
+                                ? "bg-status-success"
+                                : "bg-status-info"
                             }`}
                           />
                           <span className="text-sm">{endpoint.status}</span>

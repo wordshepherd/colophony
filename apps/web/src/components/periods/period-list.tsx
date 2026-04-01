@@ -184,7 +184,7 @@ export function PeriodList() {
                       {item.isContest && (
                         <Badge
                           variant="outline"
-                          className="ml-2 text-xs text-amber-600 border-amber-300"
+                          className="ml-2 text-xs text-status-warning border-status-warning/30"
                         >
                           <Trophy className="mr-1 h-3 w-3" />
                           Contest

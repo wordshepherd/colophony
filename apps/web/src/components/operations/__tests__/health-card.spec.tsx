@@ -26,7 +26,7 @@ describe("HealthCard", () => {
     );
 
     const metric = screen.getByText("OK");
-    expect(metric.className).toContain("text-green-700");
+    expect(metric.className).toContain("text-status-success");
   });
 
   it("applies yellow styling for degraded status", () => {
@@ -40,7 +40,7 @@ describe("HealthCard", () => {
     );
 
     const metric = screen.getByText("3 stale");
-    expect(metric.className).toContain("text-yellow-700");
+    expect(metric.className).toContain("text-status-warning");
   });
 
   it("applies red styling for unhealthy status", () => {
@@ -54,7 +54,7 @@ describe("HealthCard", () => {
     );
 
     const metric = screen.getByText("5 failed");
-    expect(metric.className).toContain("text-red-700");
+    expect(metric.className).toContain("text-status-error");
   });
 
   it("renders skeleton when status is loading", () => {

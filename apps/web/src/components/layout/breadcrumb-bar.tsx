@@ -25,9 +25,7 @@ export function BreadcrumbBar() {
       {context.pageName && (
         <>
           <ChevronRight className="h-3 w-3 text-muted-foreground/40" />
-          <span className="text-sm text-muted-foreground/80">
-            {context.pageName}
-          </span>
+          <span className="text-sm text-foreground">{context.pageName}</span>
         </>
       )}
     </nav>

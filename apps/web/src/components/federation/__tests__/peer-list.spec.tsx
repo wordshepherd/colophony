@@ -130,8 +130,8 @@ describe("PeerList", () => {
     render(<PeerList />);
     const dots = document.querySelectorAll(".rounded-full");
     const classes = Array.from(dots).map((d) => d.className);
-    expect(classes.some((c) => c.includes("bg-green-500"))).toBe(true);
-    expect(classes.some((c) => c.includes("bg-yellow-500"))).toBe(true);
+    expect(classes.some((c) => c.includes("bg-status-success"))).toBe(true);
+    expect(classes.some((c) => c.includes("bg-status-warning"))).toBe(true);
   });
 
   it("Initiate Trust button renders for admin users", () => {

@@ -30,9 +30,8 @@ interface QueueHealthDetailProps {
 }
 
 function statusColor(failed: number, waiting: number): string {
-  if (failed > 10) return "text-red-700 dark:text-red-400";
-  if (failed > 0 || waiting >= 50)
-    return "text-yellow-700 dark:text-yellow-400";
+  if (failed > 10) return "text-status-error";
+  if (failed > 0 || waiting >= 50) return "text-status-warning";
   return "text-muted-foreground";
 }
 

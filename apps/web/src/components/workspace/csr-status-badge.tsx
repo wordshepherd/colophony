@@ -36,16 +36,16 @@ const statusConfig: Record<
 };
 
 const statusColors: Record<CSRStatus, string> = {
-  draft: "bg-gray-100 text-gray-800",
-  sent: "bg-blue-100 text-blue-800",
-  in_review: "bg-yellow-100 text-yellow-800",
-  hold: "bg-orange-100 text-orange-800",
-  accepted: "bg-green-100 text-green-800",
-  rejected: "bg-red-100 text-red-800",
-  withdrawn: "bg-gray-100 text-gray-800",
-  no_response: "bg-gray-100 text-gray-600",
-  revise: "bg-purple-100 text-purple-800",
-  unknown: "bg-gray-100 text-gray-600",
+  draft: "bg-status-info/10 text-status-info",
+  sent: "bg-status-info/10 text-status-info",
+  in_review: "bg-status-info/10 text-status-info",
+  hold: "bg-status-held/10 text-status-held",
+  accepted: "bg-status-success/10 text-status-success",
+  rejected: "bg-status-error/10 text-status-error",
+  withdrawn: "bg-status-held/10 text-status-held",
+  no_response: "bg-status-info/10 text-status-info",
+  revise: "bg-status-warning/10 text-status-warning",
+  unknown: "bg-status-info/10 text-status-info",
 };
 
 interface CsrStatusBadgeProps {
