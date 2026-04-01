@@ -99,7 +99,7 @@ function FilterTabsList({
 }: React.HTMLAttributes<HTMLDivElement>) {
   return (
     <div
-      role="tablist"
+      role="group"
       className={cn(
         "inline-flex h-9 items-center justify-center rounded-lg bg-muted p-1 text-muted-foreground",
         className,
@@ -122,8 +122,7 @@ function FilterTabsTrigger({
   return (
     <button
       type="button"
-      role="tab"
-      aria-selected={isActive}
+      aria-pressed={isActive}
       data-state={isActive ? "active" : "inactive"}
       onClick={() => ctx.onValueChange(value)}
       className={cn(
