@@ -15,10 +15,10 @@ export function BreadcrumbBar() {
       aria-label="Breadcrumb"
       className="flex items-center gap-1.5 px-6 pt-4 pb-0"
     >
-      <span className="text-[11px] font-medium uppercase tracking-[0.1em] text-muted-foreground/60">
+      <span className="text-[11px] font-medium uppercase tracking-[0.1em] text-muted-foreground">
         {context.subBrand}
       </span>
-      <ChevronRight className="h-3 w-3 text-muted-foreground/40" />
+      <ChevronRight className="h-3 w-3 text-muted-foreground/70" />
       <span className="text-sm text-muted-foreground">
         {context.groupLabel}
       </span>

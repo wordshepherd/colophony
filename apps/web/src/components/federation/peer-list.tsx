@@ -17,7 +17,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  FilterTabs,
+  FilterTabsList,
+  FilterTabsTrigger,
+} from "@/components/ui/tabs";
 import { InitiateTrustDialog } from "./initiate-trust-dialog";
 import { formatDistanceToNow } from "date-fns";
 
@@ -93,14 +97,14 @@ export function PeerList() {
       </div>
 
       {/* Filter tabs */}
-      <Tabs value={tab} onValueChange={(v) => setTab(v as FilterTab)}>
-        <TabsList>
-          <TabsTrigger value="all">All</TabsTrigger>
-          <TabsTrigger value="active">Active</TabsTrigger>
-          <TabsTrigger value="pending">Pending</TabsTrigger>
-          <TabsTrigger value="revoked">Revoked</TabsTrigger>
-        </TabsList>
-      </Tabs>
+      <FilterTabs value={tab} onValueChange={(v) => setTab(v as FilterTab)}>
+        <FilterTabsList>
+          <FilterTabsTrigger value="all">All</FilterTabsTrigger>
+          <FilterTabsTrigger value="active">Active</FilterTabsTrigger>
+          <FilterTabsTrigger value="pending">Pending</FilterTabsTrigger>
+          <FilterTabsTrigger value="revoked">Revoked</FilterTabsTrigger>
+        </FilterTabsList>
+      </FilterTabs>
 
       {/* Table */}
       <Card>

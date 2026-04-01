@@ -5,7 +5,11 @@ import Link from "next/link";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  FilterTabs,
+  FilterTabsList,
+  FilterTabsTrigger,
+} from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { FormCard } from "./form-card";
 import { Plus, FileText, Search } from "lucide-react";
@@ -101,21 +105,21 @@ export function FormList() {
 
       {/* Filters */}
       <div className="flex items-center gap-4">
-        <Tabs
+        <FilterTabs
           value={statusFilter}
           onValueChange={(v) => {
             setStatusFilter(v as FormStatus | "ALL");
             setPage(1);
           }}
         >
-          <TabsList>
+          <FilterTabsList>
             {statusTabs.map((tab) => (
-              <TabsTrigger key={tab.value} value={tab.value}>
+              <FilterTabsTrigger key={tab.value} value={tab.value}>
                 {tab.label}
-              </TabsTrigger>
+              </FilterTabsTrigger>
             ))}
-          </TabsList>
-        </Tabs>
+          </FilterTabsList>
+        </FilterTabs>
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input

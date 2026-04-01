@@ -9,7 +9,11 @@ import { getAdapterLabel } from "@/lib/cms-utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  FilterTabs,
+  FilterTabsList,
+  FilterTabsTrigger,
+} from "@/components/ui/tabs";
 import {
   Select,
   SelectContent,
@@ -91,15 +95,15 @@ export function CmsConnectionList() {
       </div>
 
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <Tabs value={adapterFilter} onValueChange={handleAdapterChange}>
-          <TabsList>
+        <FilterTabs value={adapterFilter} onValueChange={handleAdapterChange}>
+          <FilterTabsList>
             {ADAPTER_TABS.map((tab) => (
-              <TabsTrigger key={tab.value} value={tab.value}>
+              <FilterTabsTrigger key={tab.value} value={tab.value}>
                 {tab.label}
-              </TabsTrigger>
+              </FilterTabsTrigger>
             ))}
-          </TabsList>
-        </Tabs>
+          </FilterTabsList>
+        </FilterTabs>
 
         {publications && publications.items.length > 0 && (
           <Select

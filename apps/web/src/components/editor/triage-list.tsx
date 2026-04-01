@@ -5,7 +5,11 @@ import { differenceInDays } from "date-fns";
 import { trpc } from "@/lib/trpc";
 import { StatusBadge } from "@/components/submissions/status-badge";
 import { Input } from "@/components/ui/input";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  FilterTabs,
+  FilterTabsList,
+  FilterTabsTrigger,
+} from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Inbox } from "lucide-react";
 import type {
@@ -87,22 +91,22 @@ export function TriageList({
 
       {/* Status tabs */}
       <div className="px-2 py-1 border-b">
-        <Tabs
+        <FilterTabs
           value={statusFilter}
           onValueChange={(v) => setStatusFilter(v as SubmissionStatus | "ALL")}
         >
-          <TabsList className="h-7 w-full">
+          <FilterTabsList className="h-7 w-full">
             {STATUS_TABS.map((tab) => (
-              <TabsTrigger
+              <FilterTabsTrigger
                 key={tab.value}
                 value={tab.value}
                 className="text-xs px-2 py-0.5"
               >
                 {tab.label}
-              </TabsTrigger>
+              </FilterTabsTrigger>
             ))}
-          </TabsList>
-        </Tabs>
+          </FilterTabsList>
+        </FilterTabs>
       </div>
 
       {/* Item list */}
