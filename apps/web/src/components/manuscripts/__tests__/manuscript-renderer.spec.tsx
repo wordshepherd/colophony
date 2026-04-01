@@ -236,4 +236,119 @@ describe("ManuscriptRenderer", () => {
     expect(blockquote).toBeTruthy();
     expect(blockquote?.textContent).toBe("Quoted text.");
   });
+
+  // -------------------------------------------------------------------------
+  // Reading anchor behavior
+  // -------------------------------------------------------------------------
+
+  describe("reading anchor", () => {
+    const threeNodeDoc = makeDoc({
+      content: [
+        { type: "paragraph", text: "First." },
+        { type: "paragraph", text: "Second." },
+        { type: "paragraph", text: "Third." },
+      ],
+    });
+
+    it("renders data-node-index attributes on each top-level node", () => {
+      const { container } = render(
+        <ManuscriptRenderer content={threeNodeDoc} />,
+      );
+
+      const indexed = container.querySelectorAll("[data-node-index]");
+      expect(indexed).toHaveLength(3);
+      expect((indexed[0] as HTMLElement).dataset.nodeIndex).toBe("0");
+      expect((indexed[1] as HTMLElement).dataset.nodeIndex).toBe("1");
+      expect((indexed[2] as HTMLElement).dataset.nodeIndex).toBe("2");
+    });
+
+    it("scrolls to initialAnchor node on mount", async () => {
+      const scrollMock = vi.fn();
+      Element.prototype.scrollIntoView = scrollMock;
+
+      const rafSpy = vi
+        .spyOn(window, "requestAnimationFrame")
+        .mockImplementation((cb) => {
+          cb(0);
+          return 0;
+        });
+
+      render(
+        <ManuscriptRenderer
+          content={threeNodeDoc}
+          initialAnchor={{ nodeIndex: 1 }}
+        />,
+      );
+
+      expect(scrollMock).toHaveBeenCalledWith({ block: "start" });
+
+      rafSpy.mockRestore();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      delete (Element.prototype as any).scrollIntoView;
+    });
+
+    it("fires onAnchorChange with topmost visible index after debounce", () => {
+      vi.useFakeTimers();
+      let observerCallback: IntersectionObserverCallback | undefined;
+      const mockDisconnect = vi.fn();
+
+      const MockObserver = vi.fn().mockImplementation(function (
+        this: IntersectionObserver,
+        cb: IntersectionObserverCallback,
+      ) {
+        observerCallback = cb;
+        this.disconnect = mockDisconnect;
+        this.observe = vi.fn();
+        this.unobserve = vi.fn();
+        this.takeRecords = vi.fn().mockReturnValue([]);
+        this.root = null;
+        this.rootMargin = "";
+        this.thresholds = [0];
+      });
+      vi.stubGlobal("IntersectionObserver", MockObserver);
+
+      const onChange = vi.fn();
+      render(
+        <ManuscriptRenderer content={threeNodeDoc} onAnchorChange={onChange} />,
+      );
+
+      expect(MockObserver).toHaveBeenCalled();
+
+      // Simulate nodes 1 and 2 becoming visible
+      observerCallback!(
+        [
+          {
+            isIntersecting: true,
+            target: { dataset: { nodeIndex: "2" } },
+          },
+          {
+            isIntersecting: true,
+            target: { dataset: { nodeIndex: "1" } },
+          },
+        ] as unknown as IntersectionObserverEntry[],
+        {} as IntersectionObserver,
+      );
+
+      // Not called yet (2s debounce)
+      expect(onChange).not.toHaveBeenCalled();
+
+      vi.advanceTimersByTime(2000);
+
+      expect(onChange).toHaveBeenCalledWith({ nodeIndex: 1 });
+
+      vi.useRealTimers();
+      vi.unstubAllGlobals();
+    });
+
+    it("does not create IntersectionObserver when onAnchorChange is omitted", () => {
+      const MockObserver = vi.fn();
+      vi.stubGlobal("IntersectionObserver", MockObserver);
+
+      render(<ManuscriptRenderer content={threeNodeDoc} />);
+
+      expect(MockObserver).not.toHaveBeenCalled();
+
+      vi.unstubAllGlobals();
+    });
+  });
 });

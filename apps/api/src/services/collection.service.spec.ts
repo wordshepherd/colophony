@@ -70,7 +70,7 @@ import {
 } from './collection.service.js';
 import { assertEditorOrAdmin } from './errors.js';
 import { ilike, or } from 'drizzle-orm';
-import { eq } from '@colophony/db';
+import { eq, and, submissions } from '@colophony/db';
 import type { ServiceContext } from './types.js';
 
 // ---------------------------------------------------------------------------
@@ -320,6 +320,28 @@ describe('collectionService', () => {
 
       const result = await collectionService.getItems(tx, 'missing', ORG_ID);
       expect(result).toEqual([]);
+    });
+
+    it('joins submissions with org-scoped predicate (defense-in-depth)', async () => {
+      const itemsWithTitle = [{ ...fakeItem, submissionTitle: 'Poem A' }];
+      const getByIdChain = createSelectChain([fakeCollection]);
+      const itemsChain = createSelectChain(itemsWithTitle);
+
+      const selectFn = vi
+        .fn()
+        .mockReturnValueOnce(getByIdChain.select())
+        .mockReturnValueOnce(itemsChain.select());
+      const tx = { select: selectFn } as never;
+
+      await collectionService.getItems(tx, COLLECTION_ID, ORG_ID);
+
+      // leftJoin receives submissions table ref
+      expect(itemsChain.leftJoin).toHaveBeenCalled();
+      expect(itemsChain.leftJoin.mock.calls[0][0]).toBe(submissions);
+      // and() was called to combine two eq() conditions
+      expect(and).toHaveBeenCalled();
+      // eq() was called with submissions.organizationId + the org ID (defense-in-depth)
+      expect(eq).toHaveBeenCalledWith(submissions.organizationId, ORG_ID);
     });
   });
 
@@ -657,6 +679,56 @@ describe('collectionService', () => {
       const setArg = updateChain.set.mock.calls[0][0];
       expect(setArg.notes).toBe('Great piece');
       expect(setArg.touchedAt).toBeInstanceOf(Date);
+    });
+
+    it('persists readingAnchor when provided', async () => {
+      const getByIdChain = createSelectChain([fakeCollection]);
+      const anchor = { nodeIndex: 5, charOffset: 0 };
+      const updatedItem = { ...fakeItem, readingAnchor: anchor };
+      const updateChain = createUpdateChain([updatedItem]);
+
+      const tx = {
+        select: getByIdChain.select,
+        update: updateChain.update,
+      } as never;
+
+      const result = await collectionService.updateItem(
+        tx,
+        COLLECTION_ID,
+        ITEM_ID,
+        { readingAnchor: anchor },
+        ORG_ID,
+        USER_ID,
+      );
+
+      expect(result).toEqual(updatedItem);
+      const setArg = updateChain.set.mock.calls[0][0];
+      expect(setArg.readingAnchor).toEqual(anchor);
+      expect(setArg.touchedAt).toBeInstanceOf(Date);
+    });
+
+    it('clears readingAnchor when null is passed', async () => {
+      const getByIdChain = createSelectChain([fakeCollection]);
+      const updatedItem = { ...fakeItem, readingAnchor: null };
+      const updateChain = createUpdateChain([updatedItem]);
+
+      const tx = {
+        select: getByIdChain.select,
+        update: updateChain.update,
+      } as never;
+
+      const result = await collectionService.updateItem(
+        tx,
+        COLLECTION_ID,
+        ITEM_ID,
+        { readingAnchor: null },
+        ORG_ID,
+        USER_ID,
+      );
+
+      expect(result).toEqual(updatedItem);
+      const setArg = updateChain.set.mock.calls[0][0];
+      expect(setArg.readingAnchor).toBeNull();
     });
   });
 
