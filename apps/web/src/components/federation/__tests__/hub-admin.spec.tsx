@@ -82,9 +82,13 @@ describe("HubAdmin", () => {
 
   it("renders tab controls", () => {
     render(<HubAdmin />);
-    expect(screen.getByRole("tab", { name: /all/i })).toBeInTheDocument();
-    expect(screen.getByRole("tab", { name: /active/i })).toBeInTheDocument();
-    expect(screen.getByRole("tab", { name: /suspended/i })).toBeInTheDocument();
-    expect(screen.getByRole("tab", { name: /revoked/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /all/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /active/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /suspended/i }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /revoked/i }),
+    ).toBeInTheDocument();
   });
 });

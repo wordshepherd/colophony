@@ -91,14 +91,18 @@ describe("MigrationList", () => {
 
   it("renders tab controls", () => {
     render(<MigrationList />);
-    expect(screen.getByRole("tab", { name: /all/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /all/i })).toBeInTheDocument();
     expect(
-      screen.getByRole("tab", { name: /pending approval/i }),
+      screen.getByRole("button", { name: /pending approval/i }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("tab", { name: /in progress/i }),
+      screen.getByRole("button", { name: /in progress/i }),
     ).toBeInTheDocument();
-    expect(screen.getByRole("tab", { name: /completed/i })).toBeInTheDocument();
-    expect(screen.getByRole("tab", { name: /cancelled/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /completed/i }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /cancelled/i }),
+    ).toBeInTheDocument();
   });
 });

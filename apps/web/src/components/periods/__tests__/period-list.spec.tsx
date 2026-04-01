@@ -116,7 +116,7 @@ describe("PeriodList", () => {
   it("filters by status tab", () => {
     mockData = { items: [], total: 0, page: 1, limit: 20, totalPages: 0 };
     render(<PeriodList />);
-    const openTab = screen.getByRole("tab", { name: "Open" });
+    const openTab = screen.getByRole("button", { name: "Open" });
     fireEvent.click(openTab);
     // Tab should become active — no crash
     expect(screen.getByText("No submission periods")).toBeInTheDocument();

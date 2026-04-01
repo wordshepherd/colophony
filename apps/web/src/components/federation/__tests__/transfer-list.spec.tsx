@@ -77,9 +77,13 @@ describe("TransferList", () => {
 
   it("renders tab controls", () => {
     render(<TransferList />);
-    expect(screen.getByRole("tab", { name: /all/i })).toBeInTheDocument();
-    expect(screen.getByRole("tab", { name: /pending/i })).toBeInTheDocument();
-    expect(screen.getByRole("tab", { name: /completed/i })).toBeInTheDocument();
-    expect(screen.getByRole("tab", { name: /failed/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /all/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /pending/i }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /completed/i }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /failed/i })).toBeInTheDocument();
   });
 });
