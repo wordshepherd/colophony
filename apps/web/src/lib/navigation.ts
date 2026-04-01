@@ -109,23 +109,103 @@ export const operationsNavigation: NavItem[] = [
   },
 ];
 
-/** All nav groups with their label and role requirement */
+export type SubBrand = "Hopper" | "Slate" | "Register";
+
+/** All nav groups with their label, role requirement, and sub-brand */
 export const navGroups = [
-  { label: "Writing", items: writingNavigation, role: null },
-  { label: "Editorial", items: editorialNavigation, role: "editor" as const },
+  {
+    label: "Writing",
+    items: writingNavigation,
+    role: null,
+    subBrand: "Hopper" as const,
+  },
+  {
+    label: "Editorial",
+    items: editorialNavigation,
+    role: "editor" as const,
+    subBrand: "Hopper" as const,
+  },
   {
     label: "Production",
     items: productionNavigation,
     role: "production" as const,
+    subBrand: "Slate" as const,
   },
   {
     label: "Business",
     items: businessNavigation,
     role: "business_ops" as const,
+    subBrand: "Slate" as const,
   },
   {
     label: "Operations",
     items: operationsNavigation,
     role: "admin" as const,
+    subBrand: "Register" as const,
   },
 ] as const;
+
+export interface NavContext {
+  subBrand: SubBrand;
+  groupLabel: string;
+  pageName: string | null;
+}
+
+/**
+ * Resolve the navigation context for a given pathname.
+ * Uses longest-prefix matching against nav items.
+ * Returns null if no group matches.
+ */
+export function resolveNavContext(pathname: string): NavContext | null {
+  let bestMatch: {
+    subBrand: SubBrand;
+    groupLabel: string;
+    pageName: string;
+    matchLength: number;
+  } | null = null;
+
+  for (const group of navGroups) {
+    for (const item of group.items) {
+      // Exact match for dashboard routes, prefix match for others
+      const isMatch =
+        pathname === item.href || pathname.startsWith(item.href + "/");
+      if (isMatch && item.href.length > (bestMatch?.matchLength ?? 0)) {
+        bestMatch = {
+          subBrand: group.subBrand,
+          groupLabel: group.label,
+          pageName: item.name,
+          matchLength: item.href.length,
+        };
+      }
+    }
+  }
+
+  if (bestMatch) {
+    return {
+      subBrand: bestMatch.subBrand,
+      groupLabel: bestMatch.groupLabel,
+      pageName: bestMatch.pageName,
+    };
+  }
+
+  // Fallback: check if pathname falls under a group's common prefix
+  // e.g., /editor/something-not-in-nav still belongs to Editorial
+  for (const group of navGroups) {
+    for (const item of group.items) {
+      // Check if the pathname shares a base path with any item in the group
+      const basePath = item.href.split("/").slice(0, 2).join("/");
+      if (
+        basePath.length > 1 &&
+        (pathname === basePath || pathname.startsWith(basePath + "/"))
+      ) {
+        return {
+          subBrand: group.subBrand,
+          groupLabel: group.label,
+          pageName: null,
+        };
+      }
+    }
+  }
+
+  return null;
+}
