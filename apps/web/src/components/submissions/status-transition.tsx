@@ -132,7 +132,7 @@ export function StatusTransition({
               onClick={() => setSelectedStatus(status)}
               className={
                 isDecision
-                  ? "font-[var(--font-playfair)] italic font-bold"
+                  ? "[font-family:var(--font-playfair),ui-serif,Georgia,serif] italic font-bold"
                   : undefined
               }
             >
