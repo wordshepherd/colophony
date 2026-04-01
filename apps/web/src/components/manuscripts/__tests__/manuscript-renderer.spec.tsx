@@ -263,6 +263,7 @@ describe("ManuscriptRenderer", () => {
     });
 
     it("scrolls to initialAnchor node on mount", async () => {
+      const originalScrollIntoView = Element.prototype.scrollIntoView;
       const scrollMock = vi.fn();
       Element.prototype.scrollIntoView = scrollMock;
 
@@ -283,8 +284,7 @@ describe("ManuscriptRenderer", () => {
       expect(scrollMock).toHaveBeenCalledWith({ block: "start" });
 
       rafSpy.mockRestore();
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      delete (Element.prototype as any).scrollIntoView;
+      Element.prototype.scrollIntoView = originalScrollIntoView;
     });
 
     it("fires onAnchorChange with topmost visible index after debounce", () => {
