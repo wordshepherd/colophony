@@ -496,7 +496,7 @@
 - [x] [P3] Service test for `getByIdAsOwner` ownership check and error types — (Codex branch review 2026-03-26; done 2026-03-27)
 - [x] [P2] Collection service unit tests — 24 tests (CRUD, visibility filtering, cross-tenant validation, audit logging, reorder) in `collection.service.spec.ts` — (Codex branch review 2026-03-26; done 2026-03-27)
 - [x] [P2] Reading anchor wiring — ManuscriptRenderer IntersectionObserver tracking, collection detail reading mode, updateCollectionItemSchema + service whitelist, defense-in-depth fix for getItems() submissions join — (design system session 2026-03-28; done 2026-03-28)
-- [ ] [P3] Reading anchor test coverage — unit tests for: readingAnchor persistence in updateItem, org-scoped join predicate in getItems, ManuscriptRenderer anchor restore/callback, collection reading mode UI, scope guard (queue context = no anchor) — (Codex branch review drift 2026-03-28)
+- [x] [P3] Reading anchor test coverage — unit tests for: readingAnchor persistence in updateItem, org-scoped join predicate in getItems, ManuscriptRenderer anchor restore/callback, collection reading mode UI, scope guard (queue context = no anchor) — (Codex branch review drift 2026-03-28; done 2026-03-31)
 
 ---
 
