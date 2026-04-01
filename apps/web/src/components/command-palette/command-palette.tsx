@@ -6,6 +6,7 @@ import {
   useState,
   useCallback,
   useEffect,
+  useRef,
 } from "react";
 import { useRouter } from "next/navigation";
 import { useOrganization } from "@/hooks/use-organization";
@@ -63,6 +64,7 @@ export function CommandPaletteProvider({
 }) {
   const [open, setOpen] = useState(false);
   const [overlayOpen, setOverlayOpen] = useState(false);
+  const triggerRef = useRef<HTMLElement | null>(null);
   const router = useRouter();
   const { isEditor, isProduction, isBusinessOps, isAdmin } = useOrganization();
 
@@ -84,6 +86,17 @@ export function CommandPaletteProvider({
       description: "Show keyboard shortcuts",
     },
   ]);
+
+  // Capture the element that had focus when the palette opens;
+  // restore focus to it when the palette closes.
+  useEffect(() => {
+    if (open) {
+      triggerRef.current = document.activeElement as HTMLElement | null;
+    } else if (triggerRef.current) {
+      triggerRef.current.focus();
+      triggerRef.current = null;
+    }
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
