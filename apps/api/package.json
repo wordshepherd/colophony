@@ -73,7 +73,7 @@
   "devDependencies": {
     "@colophony/typescript-config": "workspace:*",
     "@eslint/js": "^9.39.2",
-    "@faker-js/faker": "^8.4.0",
+    "@faker-js/faker": "^10.4.0",
     "@types/archiver": "^7.0.0",
     "@types/clamscan": "^2.4.1",
     "@types/ioredis-mock": "^8.2.7",

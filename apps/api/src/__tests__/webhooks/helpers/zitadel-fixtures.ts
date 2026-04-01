@@ -39,7 +39,7 @@ export function createZitadelPayload(opts: ZitadelPayloadOptions = {}) {
     created_at: opts.creationDate ?? new Date().toISOString(),
     userID: faker.string.uuid(),
     event_payload: {
-      userName: faker.internet.userName(),
+      userName: faker.internet.username(),
       firstName: faker.person.firstName(),
       lastName: faker.person.lastName(),
       displayName: opts.displayName ?? faker.person.fullName(),
