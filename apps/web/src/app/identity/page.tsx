@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { InstanceIdentity } from "@/components/identity/instance-identity";
 
 export const metadata: Metadata = {
-  title: "Instance Identity - Colophony",
+  title: "Instance Identity",
   description:
     "Federation status, trust relationships, and governance commitments",
 };

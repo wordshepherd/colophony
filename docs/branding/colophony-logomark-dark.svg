@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <defs>
+    <style>@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&amp;display=swap');</style>
+    <path id="star"
+      d="M 0,-18 C 1,-13 3,-6 4.5,-4.5 C 6,-3 13,-1 18,0 C 13,1 6,3 4.5,4.5 C 3,6 1,13 0,18 C -1,13 -3,6 -4.5,4.5 C -6,3 -13,1 -18,0 C -13,-1 -6,-3 -4.5,-4.5 C -3,-6 -1,-13 0,-18 Z"/>
+  </defs>
+
+  <!-- Dark logomark: C + star on navy background -->
+  <rect width="200" height="200" rx="16" fill="#191c2b"/>
+
+  <!-- Capital C: Playfair Display Bold, cream -->
+  <text x="88" y="145"
+    font-family="'Playfair Display', Georgia, 'Times New Roman', serif"
+    font-size="140" font-weight="700" text-anchor="middle"
+    fill="#f0e8d5">C</text>
+
+  <!-- Star: cradled in the opening of the C, ochre -->
+  <use href="#star" transform="translate(138, 100) scale(0.7)" fill="#c87941"/>
+</svg>

@@ -49,10 +49,11 @@
     ]
   },
   "devDependencies": {
-    "turbo": "^2.8.21",
-    "prettier": "^3.4.0",
     "husky": "^9.0.0",
-    "lint-staged": "^16.4.0"
+    "lint-staged": "^16.4.0",
+    "prettier": "^3.4.0",
+    "sharp": "^0.34.5",
+    "turbo": "^2.8.21"
   },
   "pnpm": {
     "overrides": {
