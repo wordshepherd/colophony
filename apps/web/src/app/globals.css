@@ -27,6 +27,13 @@
   --chart-4: hsl(43 74% 66%);
   --chart-5: hsl(27 87% 67%);
   --radius: 0.5rem;
+  /* Sidebar — permanent dark surface (same in both themes) */
+  --sidebar-background: 230 26.5% 13.3%;
+  --sidebar-foreground: 42.2 47.4% 88.8%;
+  --sidebar-primary: 24.9 55.1% 52%;
+  --sidebar-accent: 213.3 17.9% 29.6%;
+  --sidebar-border: 213.3 17.9% 29.6%;
+  --sidebar-muted: 35.5 22% 80.4%;
 }
 
 .dark {
@@ -54,6 +61,13 @@
   --chart-3: hsl(30 80% 55%);
   --chart-4: hsl(280 65% 60%);
   --chart-5: hsl(340 75% 55%);
+  /* Sidebar — permanent dark surface (same in both themes) */
+  --sidebar-background: 230 26.5% 13.3%;
+  --sidebar-foreground: 42.2 47.4% 88.8%;
+  --sidebar-primary: 24.9 55.1% 52%;
+  --sidebar-accent: 213.3 17.9% 29.6%;
+  --sidebar-border: 213.3 17.9% 29.6%;
+  --sidebar-muted: 35.5 22% 80.4%;
 }
 
 @theme inline {
@@ -81,6 +95,12 @@
   --color-chart-3: var(--chart-3);
   --color-chart-4: var(--chart-4);
   --color-chart-5: var(--chart-5);
+  --color-sidebar-background: hsl(var(--sidebar-background));
+  --color-sidebar-foreground: hsl(var(--sidebar-foreground));
+  --color-sidebar-primary: hsl(var(--sidebar-primary));
+  --color-sidebar-accent: hsl(var(--sidebar-accent));
+  --color-sidebar-border: hsl(var(--sidebar-border));
+  --color-sidebar-muted: hsl(var(--sidebar-muted));
   --radius-lg: var(--radius);
   --radius-md: calc(var(--radius) - 2px);
   --radius-sm: calc(var(--radius) - 4px);
