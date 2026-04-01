@@ -284,6 +284,7 @@ export type PortfolioSource = z.infer<typeof portfolioSourceSchema>;
 export const portfolioItemSchema = z.object({
   id: z.string().uuid(),
   source: portfolioSourceSchema,
+  entryType: z.enum(["colophony_verified", "federation_verified", "external"]),
   title: z.string().nullable(),
   journalName: z.string().nullable(),
   status: csrStatusSchema,

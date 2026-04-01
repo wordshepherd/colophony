@@ -9,6 +9,7 @@ import {
   templateNameValues,
   TEMPLATE_LABELS,
   TEMPLATE_MERGE_FIELDS,
+  TEMPLATE_ARRAY_FIELDS,
   TEMPLATE_SAMPLE_DATA,
   type EmailTemplateName,
 } from '@colophony/types';
@@ -33,13 +34,27 @@ export const emailTemplatesRouter = createRouter({
         const customized = await emailTemplateService.list(ctx.dbTx);
         const customizedNames = new Set(customized.map((r) => r.templateName));
 
-        return templateNameValues.map((name) => ({
-          templateName: name,
-          label: TEMPLATE_LABELS[name].label,
-          description: TEMPLATE_LABELS[name].description,
-          isCustomized: customizedNames.has(name),
-          mergeFields: [...TEMPLATE_MERGE_FIELDS[name]],
-        }));
+        return templateNameValues.map((name) => {
+          const fields = TEMPLATE_MERGE_FIELDS[name];
+          const arrayFields: Record<
+            string,
+            (typeof TEMPLATE_ARRAY_FIELDS)[string]
+          > = {};
+          for (const field of fields) {
+            if (field in TEMPLATE_ARRAY_FIELDS) {
+              arrayFields[field] = TEMPLATE_ARRAY_FIELDS[field];
+            }
+          }
+
+          return {
+            templateName: name,
+            label: TEMPLATE_LABELS[name].label,
+            description: TEMPLATE_LABELS[name].description,
+            isCustomized: customizedNames.has(name),
+            mergeFields: [...fields],
+            ...(Object.keys(arrayFields).length > 0 && { arrayFields }),
+          };
+        });
       } catch (e) {
         mapServiceError(e);
       }

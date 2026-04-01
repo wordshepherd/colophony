@@ -71,6 +71,7 @@ function buildNativeSubquery(
   return sql`
     SELECT
       'native'::text AS source,
+      'colophony_verified'::text AS entry_type,
       s.id,
       s.title,
       o.name AS journal_name,
@@ -123,6 +124,7 @@ function buildExternalSubquery(
   return sql`
     SELECT
       'external'::text AS source,
+      'external'::text AS entry_type,
       es.id,
       es.journal_name AS title,
       es.journal_name,
@@ -189,6 +191,7 @@ export const portfolioService = {
     const rows = result.rows as Array<{
       total: number;
       source: string;
+      entry_type: string;
       id: string;
       title: string | null;
       journal_name: string | null;
@@ -205,6 +208,10 @@ export const portfolioService = {
     const items: PortfolioItem[] = rows.map((row) => ({
       id: row.id,
       source: row.source as 'native' | 'external',
+      entryType: row.entry_type as
+        | 'colophony_verified'
+        | 'federation_verified'
+        | 'external',
       title: row.title,
       journalName: row.journal_name,
       status: row.status as CSRStatus,

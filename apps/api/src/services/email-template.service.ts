@@ -361,10 +361,15 @@ export const emailTemplateService = {
   },
 
   /** Delete a template override (resets to built-in default). */
-  async delete(tx: DrizzleDb, templateName: string) {
+  async delete(tx: DrizzleDb, orgId: string, templateName: string) {
     const [row] = await tx
       .delete(emailTemplates)
-      .where(eq(emailTemplates.templateName, templateName))
+      .where(
+        and(
+          eq(emailTemplates.organizationId, orgId),
+          eq(emailTemplates.templateName, templateName),
+        ),
+      )
       .returning();
 
     return row ?? null;
@@ -372,7 +377,7 @@ export const emailTemplateService = {
 
   /** Delete with audit logging. Throws if the template doesn't exist. */
   async deleteWithAudit(ctx: ServiceContext, templateName: string) {
-    const row = await this.delete(ctx.tx, templateName);
+    const row = await this.delete(ctx.tx, ctx.actor.orgId, templateName);
 
     if (!row) {
       throw new EmailTemplateNotFoundError(templateName);
