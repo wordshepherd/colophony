@@ -26,6 +26,7 @@ export function EmailTemplateSettings() {
       <EmailTemplateEditor
         templateName={editingTemplate}
         mergeFields={tpl?.mergeFields ?? []}
+        arrayFields={tpl?.arrayFields}
         onClose={() => setEditingTemplate(null)}
       />
     );

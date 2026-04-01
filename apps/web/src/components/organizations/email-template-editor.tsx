@@ -5,7 +5,10 @@ import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Placeholder from "@tiptap/extension-placeholder";
 import Link from "@tiptap/extension-link";
-import type { EmailTemplateName } from "@colophony/types";
+import type {
+  EmailTemplateName,
+  EmailTemplateArrayField,
+} from "@colophony/types";
 import { trpc } from "@/lib/trpc";
 import { useOrganization } from "@/hooks/use-organization";
 import { Button } from "@/components/ui/button";
@@ -26,13 +29,20 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import { toast } from "sonner";
 import {
   ArrowLeft,
   Bold,
+  ChevronDown,
   Italic,
   List,
   ListOrdered,
+  ListTree,
   Link as LinkIcon,
   Eye,
   Loader2,
@@ -42,14 +52,18 @@ import {
 interface EmailTemplateEditorProps {
   templateName: string;
   mergeFields: string[];
+  arrayFields?: Record<string, EmailTemplateArrayField>;
   onClose: () => void;
 }
 
 export function EmailTemplateEditor({
   templateName,
   mergeFields,
+  arrayFields,
   onClose,
 }: EmailTemplateEditorProps) {
+  const arrayFieldNames = new Set(Object.keys(arrayFields ?? {}));
+  const subjectFields = mergeFields.filter((f) => !arrayFieldNames.has(f));
   const { isAdmin } = useOrganization();
   const utils = trpc.useUtils();
   const [subject, setSubject] = useState("");
@@ -193,7 +207,7 @@ export function EmailTemplateEditor({
               <SelectValue placeholder="Insert field" />
             </SelectTrigger>
             <SelectContent>
-              {mergeFields.map((field) => (
+              {subjectFields.map((field) => (
                 <SelectItem key={field} value={field}>
                   {`{{${field}}}`}
                 </SelectItem>
@@ -271,7 +285,15 @@ export function EmailTemplateEditor({
                 <SelectContent>
                   {mergeFields.map((field) => (
                     <SelectItem key={field} value={field}>
-                      {`{{${field}}}`}
+                      <span className="flex items-center gap-1">
+                        {arrayFieldNames.has(field) && (
+                          <ListTree className="h-3 w-3 text-muted-foreground" />
+                        )}
+                        {`{{${field}}}`}
+                        {arrayFieldNames.has(field) && (
+                          <span className="text-muted-foreground">(array)</span>
+                        )}
+                      </span>
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -284,6 +306,50 @@ export function EmailTemplateEditor({
           />
         </div>
       </div>
+
+      {/* Array fields help */}
+      {arrayFields && Object.keys(arrayFields).length > 0 && (
+        <Collapsible>
+          <CollapsibleTrigger asChild>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="gap-1 text-muted-foreground"
+            >
+              <ListTree className="h-4 w-4" />
+              Array fields reference
+              <ChevronDown className="h-3 w-3" />
+            </Button>
+          </CollapsibleTrigger>
+          <CollapsibleContent className="mt-2 rounded-md border bg-muted/50 p-3 text-sm space-y-3">
+            {Object.entries(arrayFields).map(([name, meta]) => (
+              <div key={name} className="space-y-1.5">
+                <p className="font-medium">{meta.label}</p>
+                <p className="text-muted-foreground text-xs">
+                  {meta.description}
+                </p>
+                <div className="space-y-1 text-xs font-mono bg-background rounded p-2">
+                  <p className="text-muted-foreground">
+                    {`Default: {{${name}}}`}
+                  </p>
+                  <p className="text-muted-foreground">
+                    {`Custom: {{#each ${name}}}...{{/each}}`}
+                  </p>
+                  <p className="text-muted-foreground mt-1">Inner fields:</p>
+                  {meta.innerFields.map((f) => (
+                    <p key={f.name} className="pl-2">
+                      {`{{this.${f.name}}}`}{" "}
+                      <span className="text-muted-foreground font-sans">
+                        — {f.label}
+                      </span>
+                    </p>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </CollapsibleContent>
+        </Collapsible>
+      )}
 
       {/* Actions */}
       <div className="flex items-center gap-2">

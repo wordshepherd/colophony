@@ -240,12 +240,23 @@ export const emailTemplatePreviewSchema = z.object({
   subject: z.string(),
 });
 
+export const emailTemplateArrayFieldSchema = z.object({
+  label: z.string(),
+  description: z.string(),
+  innerFields: z.array(z.object({ name: z.string(), label: z.string() })),
+});
+
+export type EmailTemplateArrayField = z.infer<
+  typeof emailTemplateArrayFieldSchema
+>;
+
 export const emailTemplateListItemSchema = z.object({
   templateName: templateNameSchema,
   label: z.string(),
   description: z.string(),
   isCustomized: z.boolean(),
   mergeFields: z.array(z.string()),
+  arrayFields: z.record(z.string(), emailTemplateArrayFieldSchema).optional(),
 });
 
 // ---------------------------------------------------------------------------

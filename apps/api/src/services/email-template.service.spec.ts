@@ -572,6 +572,9 @@ describe('emailTemplateService', () => {
       );
 
       expect(result).toEqual(row);
+      // Verify defense-in-depth: WHERE uses both orgId and templateName
+      const { and: mockAnd } = await import('@colophony/db');
+      expect(mockAnd).toHaveBeenCalled();
       expect(ctx.audit).toHaveBeenCalledWith(
         expect.objectContaining({
           resource: AuditResources.EMAIL_TEMPLATE,

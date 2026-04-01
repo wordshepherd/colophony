@@ -4,19 +4,42 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { CsrStatusBadge } from "./csr-status-badge";
 import { formatDistanceToNow } from "date-fns";
+import { Globe, ShieldCheck, UserPen } from "lucide-react";
 import type { PortfolioItem } from "@colophony/types";
+
+const ENTRY_TYPE_CONFIG = {
+  colophony_verified: {
+    label: "Verified",
+    icon: ShieldCheck,
+    variant: "default" as const,
+  },
+  federation_verified: {
+    label: "Federated",
+    icon: Globe,
+    variant: "secondary" as const,
+  },
+  external: {
+    label: "Self-reported",
+    icon: UserPen,
+    variant: "outline" as const,
+  },
+};
 
 interface PortfolioItemCardProps {
   item: PortfolioItem;
 }
 
 export function PortfolioItemCard({ item }: PortfolioItemCardProps) {
+  const typeConfig = ENTRY_TYPE_CONFIG[item.entryType];
+  const TypeIcon = typeConfig.icon;
+
   return (
     <Card>
       <CardContent className="p-4 space-y-2">
         <div className="flex items-center gap-2">
-          <Badge variant={item.source === "native" ? "default" : "secondary"}>
-            {item.source === "native" ? "Colophony" : "External"}
+          <Badge variant={typeConfig.variant} className="gap-1">
+            <TypeIcon className="h-3 w-3" />
+            {typeConfig.label}
           </Badge>
           <CsrStatusBadge status={item.status} />
         </div>
