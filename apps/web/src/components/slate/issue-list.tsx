@@ -8,7 +8,11 @@ import { useOrganization } from "@/hooks/use-organization";
 import { IssueStatusBadge } from "./issue-status-badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  FilterTabs,
+  FilterTabsList,
+  FilterTabsTrigger,
+} from "@/components/ui/tabs";
 import {
   Select,
   SelectContent,
@@ -154,15 +158,15 @@ export function IssueList() {
       </div>
 
       {/* Status tabs */}
-      <Tabs value={statusFilter} onValueChange={handleStatusChange}>
-        <TabsList>
+      <FilterTabs value={statusFilter} onValueChange={handleStatusChange}>
+        <FilterTabsList>
           {STATUS_TABS.map((tab) => (
-            <TabsTrigger key={tab.value} value={tab.value}>
+            <FilterTabsTrigger key={tab.value} value={tab.value}>
               {tab.label}
-            </TabsTrigger>
+            </FilterTabsTrigger>
           ))}
-        </TabsList>
-      </Tabs>
+        </FilterTabsList>
+      </FilterTabs>
 
       {/* Table or empty state */}
       {data && data.items.length > 0 ? (

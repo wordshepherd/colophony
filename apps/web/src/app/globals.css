@@ -14,7 +14,7 @@
   --secondary: hsl(41 35% 91%);
   --secondary-foreground: hsl(0 0% 7%);
   --muted: hsl(35 24% 86%);
-  --muted-foreground: hsl(37 9% 44%);
+  --muted-foreground: hsl(37 9% 36%);
   --accent: hsl(25 55% 52%);
   --accent-foreground: hsl(42 47% 89%);
   --destructive: hsl(11 52% 47%);
@@ -38,15 +38,15 @@
   /* Semantic status colors */
   --status-success: hsl(140 25% 33%);
   --status-success-foreground: hsl(42 47% 89%);
-  --status-warning: hsl(38 65% 38%);
+  --status-warning: hsl(38 65% 30%);
   --status-warning-foreground: hsl(0 0% 7%);
-  --status-error: hsl(11 52% 47%);
+  --status-error: hsl(11 52% 44%);
   --status-error-foreground: hsl(42 47% 89%);
-  --status-info: hsl(35 9% 55%);
+  --status-info: hsl(35 9% 36%);
   --status-info-foreground: hsl(0 0% 7%);
-  --status-active: hsl(25 55% 52%);
+  --status-active: hsl(25 55% 38%);
   --status-active-foreground: hsl(42 47% 89%);
-  --status-held: hsl(206 25% 48%);
+  --status-held: hsl(206 25% 40%);
   --status-held-foreground: hsl(42 47% 89%);
 }
 

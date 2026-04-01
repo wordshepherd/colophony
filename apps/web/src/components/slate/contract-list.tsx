@@ -10,7 +10,11 @@ import { ContractStatusBadge } from "./contract-status-badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  FilterTabs,
+  FilterTabsList,
+  FilterTabsTrigger,
+} from "@/components/ui/tabs";
 import {
   Table,
   TableBody,
@@ -47,21 +51,21 @@ export function ContractList() {
         </Link>
       </div>
 
-      <Tabs
+      <FilterTabs
         value={statusFilter}
         onValueChange={(v) => {
           setStatusFilter(v as ContractStatus | "ALL");
           setPage(1);
         }}
       >
-        <TabsList>
+        <FilterTabsList>
           {contractStatusTabs.map((tab) => (
-            <TabsTrigger key={tab.value} value={tab.value}>
+            <FilterTabsTrigger key={tab.value} value={tab.value}>
               {tab.label}
-            </TabsTrigger>
+            </FilterTabsTrigger>
           ))}
-        </TabsList>
-      </Tabs>
+        </FilterTabsList>
+      </FilterTabs>
 
       <Card>
         <CardHeader>

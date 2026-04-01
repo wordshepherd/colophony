@@ -93,10 +93,10 @@ test.describe("Peer Management", () => {
     ).toBeVisible();
 
     // Filter tabs
-    const allTab = page.getByRole("tab", { name: "All" });
-    const activeTab = page.getByRole("tab", { name: "Active" });
-    const pendingTab = page.getByRole("tab", { name: "Pending" });
-    const revokedTab = page.getByRole("tab", { name: "Revoked" });
+    const allTab = page.getByRole("button", { name: "All" });
+    const activeTab = page.getByRole("button", { name: "Active" });
+    const pendingTab = page.getByRole("button", { name: "Pending" });
+    const revokedTab = page.getByRole("button", { name: "Revoked" });
 
     await expect(allTab).toBeVisible();
     await expect(activeTab).toBeVisible();
@@ -286,10 +286,10 @@ test.describe("Transfer Management", () => {
     ).toBeVisible({ timeout: 10_000 });
 
     // Filter tabs
-    await expect(page.getByRole("tab", { name: "All" })).toBeVisible();
-    await expect(page.getByRole("tab", { name: "Pending" })).toBeVisible();
-    await expect(page.getByRole("tab", { name: "Completed" })).toBeVisible();
-    await expect(page.getByRole("tab", { name: "Failed" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "All" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Pending" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Completed" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Failed" })).toBeVisible();
 
     // Seeded transfer visible (scope to table — "Pending" tab matches case-insensitively)
     await expect(page.getByText("target-instance.example.com")).toBeVisible();
@@ -355,11 +355,13 @@ test.describe("Migration Management", () => {
     await expect(page.getByText("All Directions")).toBeVisible();
 
     // Status tabs
-    await expect(page.getByRole("tab", { name: "All" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "All" })).toBeVisible();
     await expect(
-      page.getByRole("tab", { name: "Pending Approval" }),
+      page.getByRole("button", { name: "Pending Approval" }),
     ).toBeVisible();
-    await expect(page.getByRole("tab", { name: "In Progress" })).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "In Progress" }),
+    ).toBeVisible();
 
     // Seeded migration visible
     await expect(page.getByText("migration-peer.example.com")).toBeVisible();

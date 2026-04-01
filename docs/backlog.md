@@ -548,6 +548,8 @@
 - [x] [P2] Scan status: add `aria-live` region for screen reader announcements during file scanning — (persona gap analysis 2026-02-27; done 2026-03-02)
 - [x] [P2] Sidebar: add `aria-label` to `<nav>` element — (persona gap analysis 2026-02-27; done 2026-03-02)
 - [x] [P3] Sim-sub error message: show human-readable explanation ("This manuscript appears to be under consideration at another publication that prohibits simultaneous submissions") instead of generic tRPC error — (persona gap analysis 2026-02-27; done 2026-03-02 via SimSubConflictDisplay graduated confidence component)
+- [ ] [P3] Skip navigation link — add "Skip to main content" sr-only link at top of layout for keyboard users — (manual a11y audit 2026-04-01)
+- [ ] [P3] Command palette focus restoration — cmdk dialog returns focus to `body` on close instead of the trigger button; investigate shadcn/cmdk fix — (manual a11y audit 2026-04-01)
 
 ---
 
@@ -607,6 +609,7 @@
 
 ### Dev Tooling
 
+- [ ] [P2] `db:reset` destroys Zitadel eventstore — `scripts/db-reset.sh` runs `docker compose down -v postgres` which removes the shared postgres volume, wiping Zitadel's `eventstore` schema. Zitadel then appears healthy (`/debug/healthz` 200) but all API calls fail. Fix: either (a) drop only `public` schema instead of the volume (`DROP SCHEMA public CASCADE; CREATE SCHEMA public;` + re-grant), or (b) also restart Zitadel container + re-run `pnpm zitadel:setup` after volume wipe. Option (a) preferred — preserves Zitadel state across resets. Also update `db:reset` to restart dev servers (env vars change when Zitadel is re-provisioned) — (QA session 2026-04-01)
 - [x] [P3] Upgrade @faker-js/faker 8.4.1 → 10.x — single type error: `faker.internet.userName()` renamed to `faker.internet.username()` in test factories. Dev dependency only. May have other runtime behavior changes across two major versions — audit factory usage after fix — (Dependabot PR #389, CI failure 2026-03-29; done 2026-03-31)
 - [x] [P2] Evaluate MinIO replacement — MinIO repo archived Feb 2026; no future security patches. Evaluate alternatives (LocalStack, SeaweedFS, direct S3/R2) for dev/CI/self-hosted object storage. Not urgent while no CVEs exist, but blocked from upstream fixes if one surfaces — (2026-03-25, CI image pin session; done 2026-03-25 — migrated to Garage v2.2.0)
 - [x] [P2] Replace Overmind with hivemind or concurrently — Overmind solves signal handling but tmux dependency, `dev:clean` escape hatch, and WSL quirks are operational drag. hivemind (Go binary, no tmux, proper signal handling) preferred; concurrently as fallback. Test on macOS, Linux, WSL before standardizing. Keep `dev:clean` as escape hatch, not normal workflow. Turbo `--watch` only if shutdown behavior verified in this repo — (architecture review 2026-03-16; code changes done 2026-03-16; validated on WSL/Linux 2026-03-22, macOS deferred — not in team environment)

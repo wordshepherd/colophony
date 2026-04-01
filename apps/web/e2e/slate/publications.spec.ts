@@ -32,13 +32,13 @@ test.describe("Publications (/slate/publications)", () => {
     });
 
     // Active tab — seed pub is ACTIVE, should be visible
-    await authedPage.getByRole("tab", { name: "Active" }).click();
+    await authedPage.getByRole("button", { name: "Active" }).click();
     await expect(
       authedPage.getByText(slateData.publication.name),
     ).toBeVisible();
 
     // Archived tab — should show empty state
-    await authedPage.getByRole("tab", { name: "Archived" }).click();
+    await authedPage.getByRole("button", { name: "Archived" }).click();
     await expect(
       authedPage.getByText("No publications", { exact: true }),
     ).toBeVisible();

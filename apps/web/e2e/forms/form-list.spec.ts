@@ -29,11 +29,11 @@ test.describe("Form List (/editor/forms)", () => {
     });
 
     // Click Drafts tab — seeded form is DRAFT so it should appear
-    await authedPage.getByRole("tab", { name: "Drafts" }).click();
+    await authedPage.getByRole("button", { name: "Drafts" }).click();
     await expect(authedPage.getByText(formData.form.name)).toBeVisible();
 
     // Click Published tab — draft form should not appear
-    await authedPage.getByRole("tab", { name: "Published" }).click();
+    await authedPage.getByRole("button", { name: "Published" }).click();
     // Wait for the tab content to update (state-based, not fixed sleep)
     await expect(authedPage.getByText(formData.form.name)).not.toBeVisible({
       timeout: 10_000,

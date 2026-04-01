@@ -62,6 +62,17 @@ import {
   embedTokens,
   savedQueuePresets,
   userConsents,
+  contributors,
+  contributorPublications,
+  rightsAgreements,
+  paymentTransactions,
+  contestGroups,
+  simsubGroups,
+  simsubGroupSubmissions,
+  portfolioEntries,
+  readerFeedback,
+  workspaceCollections,
+  workspaceItems,
 } from "./schema";
 
 // ---------------------------------------------------------------------------
@@ -2160,7 +2171,340 @@ async function main() {
     console.log("  User consents: 4");
 
     // -----------------------------------------------------------------------
-    // Section N: Mark staging as seeded (idempotency flag)
+    // Section N: Business Operations (Track 13)
+    // -----------------------------------------------------------------------
+
+    // Contributors
+    const [contributor1] = await tx
+      .insert(contributors)
+      .values({
+        organizationId: base.org1.id,
+        userId: base.writerUser.id,
+        displayName: "Elena Vasquez",
+        bio: "Elena Vasquez is a fiction writer and poet whose work explores displacement, memory, and the landscapes of the American Southwest. Her stories have appeared in Ploughshares, Tin House, and The Georgia Review.",
+        pronouns: "she/her",
+        email: "elena.vasquez@example.com",
+        website: "https://elenavasquez.com",
+        notes: "Accepted contributor since Spring 2025 issue.",
+      })
+      .returning();
+
+    const [contributor2] = await tx
+      .insert(contributors)
+      .values({
+        organizationId: base.org1.id,
+        displayName: "James Achebe",
+        bio: "James Achebe writes at the intersection of speculative fiction and literary realism. His debut collection, 'The Weight of Fireflies,' was longlisted for the Caine Prize.",
+        pronouns: "he/him",
+        email: "j.achebe@example.com",
+      })
+      .returning();
+
+    const [contributor3] = await tx
+      .insert(contributors)
+      .values({
+        organizationId: base.org1.id,
+        displayName: "River Chen",
+        bio: "River Chen is a nonbinary poet and essayist based in Portland. Their chapbook 'Tidepool Liturgy' won the 2025 Kundiman Prize.",
+        pronouns: "they/them",
+        website: "https://riverchen.net",
+      })
+      .returning();
+
+    console.log("  Contributors: 3");
+
+    // Contributor publications (link to existing pipeline items)
+    await tx.insert(contributorPublications).values([
+      {
+        contributorId: contributor1!.id,
+        pipelineItemId: base.pipeItem1.id,
+        role: "author",
+        displayOrder: 0,
+      },
+      {
+        contributorId: contributor2!.id,
+        pipelineItemId: base.pipeItem2.id,
+        role: "author",
+        displayOrder: 0,
+      },
+    ]);
+
+    console.log("  Contributor publications: 2");
+
+    // Rights agreements
+    await tx.insert(rightsAgreements).values([
+      {
+        organizationId: base.org1.id,
+        contributorId: contributor1!.id,
+        pipelineItemId: base.pipeItem1.id,
+        rightsType: "first_north_american_serial",
+        status: "ACTIVE",
+        grantedAt: daysAgo(30),
+        expiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
+        notes: "Standard FNASR — 12-month exclusivity window.",
+      },
+      {
+        organizationId: base.org1.id,
+        contributorId: contributor2!.id,
+        pipelineItemId: base.pipeItem2.id,
+        rightsType: "electronic",
+        status: "DRAFT",
+        notes: "Pending signature from author.",
+      },
+      {
+        organizationId: base.org1.id,
+        contributorId: contributor3!.id,
+        rightsType: "first_north_american_serial",
+        status: "REVERTED",
+        grantedAt: daysAgo(400),
+        revertedAt: daysAgo(35),
+        notes: "Exclusivity period ended — rights reverted to author.",
+      },
+    ]);
+
+    console.log("  Rights agreements: 3");
+
+    // Payment transactions
+    await tx.insert(paymentTransactions).values([
+      {
+        organizationId: base.org1.id,
+        contributorId: contributor1!.id,
+        type: "contributor_payment",
+        direction: "outbound",
+        amount: 15000,
+        currency: "usd",
+        status: "SUCCEEDED",
+        description: "Payment for 'Meridians of Light' — Spring 2026 issue",
+        processedAt: daysAgo(20),
+      },
+      {
+        organizationId: base.org1.id,
+        submissionId: base.submittedSub.id,
+        type: "submission_fee",
+        direction: "inbound",
+        amount: 300,
+        currency: "usd",
+        status: "SUCCEEDED",
+        description: "Submission fee — Spring Reading Period",
+        processedAt: daysAgo(45),
+      },
+      {
+        organizationId: base.org1.id,
+        contributorId: contributor2!.id,
+        type: "contributor_payment",
+        direction: "outbound",
+        amount: 10000,
+        currency: "usd",
+        status: "PENDING",
+        description: "Payment for 'The Weight of Fireflies' — pending contract",
+      },
+    ]);
+
+    console.log("  Payment transactions: 3");
+
+    // Contest groups
+    await tx.insert(contestGroups).values({
+      organizationId: base.org1.id,
+      name: "Annual Fiction Prize 2026",
+      description:
+        "Two-round fiction contest. First round: editorial shortlist. Final round: guest judge selects winner and runner-up.",
+      totalRoundsPlanned: 2,
+    });
+
+    console.log("  Contest groups: 1");
+
+    // -----------------------------------------------------------------------
+    // Section O: Writer Platform (Track 14)
+    // -----------------------------------------------------------------------
+
+    // Simsub groups (user-scoped, for the writer user)
+    const [simsubGroup1] = await tx
+      .insert(simsubGroups)
+      .values({
+        userId: base.writerUser.id,
+        name: "The Weight of Small Things — sim-sub batch",
+        manuscriptId: base.manuscript1.id,
+        status: "ACTIVE",
+        notes:
+          "Submitted to 3 journals simultaneously. Quarterly Review prohibits sim-sub so tracking separately.",
+      })
+      .returning();
+
+    const [simsubGroup2] = await tx
+      .insert(simsubGroups)
+      .values({
+        userId: base.writerUser.id,
+        name: "Ode to Impermanence — resolved",
+        status: "RESOLVED",
+        notes: "Accepted at Tin House; withdrew from others.",
+      })
+      .returning();
+
+    console.log("  Simsub groups: 2");
+
+    // Simsub group submissions (link to existing submissions + external subs)
+    const writerExternalSubs = await tx
+      .select()
+      .from(externalSubmissions)
+      .where(eq(externalSubmissions.userId, base.writerUser.id))
+      .limit(2);
+
+    await tx.insert(simsubGroupSubmissions).values([
+      {
+        userId: base.writerUser.id,
+        simsubGroupId: simsubGroup1!.id,
+        submissionId: base.submittedSub.id,
+      },
+      ...(writerExternalSubs.length > 0
+        ? [
+            {
+              userId: base.writerUser.id,
+              simsubGroupId: simsubGroup1!.id,
+              externalSubmissionId: writerExternalSubs[0]!.id,
+            },
+          ]
+        : []),
+      ...(writerExternalSubs.length > 1
+        ? [
+            {
+              userId: base.writerUser.id,
+              simsubGroupId: simsubGroup2!.id,
+              externalSubmissionId: writerExternalSubs[1]!.id,
+            },
+          ]
+        : []),
+    ]);
+
+    console.log(
+      `  Simsub group submissions: ${1 + Math.min(writerExternalSubs.length, 2)}`,
+    );
+
+    // Portfolio entries
+    await tx.insert(portfolioEntries).values([
+      {
+        userId: base.writerUser.id,
+        type: "colophony_verified",
+        title: "Meridians of Light",
+        publicationName: "The Quarterly Review",
+        publishedAt: daysAgo(60),
+        url: "https://quarterlyreview.example.com/spring-2026/meridians",
+        contributorPublicationId: (
+          await tx
+            .select({ id: contributorPublications.id })
+            .from(contributorPublications)
+            .where(eq(contributorPublications.contributorId, contributor1!.id))
+            .limit(1)
+        )[0]?.id,
+      },
+      {
+        userId: base.writerUser.id,
+        type: "external",
+        title: "Catalogue of Vanishing",
+        publicationName: "The Georgia Review",
+        publishedAt: daysAgo(180),
+        url: "https://thegeorgiareview.com/posts/catalogue-of-vanishing",
+        notes: "Nominated for Pushcart Prize.",
+      },
+    ]);
+
+    console.log("  Portfolio entries: 2");
+
+    // Reader feedback
+    const feedbackCandidates = allStagingSubs.filter(
+      (s) =>
+        s.organizationId === base.org1.id &&
+        ["UNDER_REVIEW", "ACCEPTED", "REJECTED"].includes(s.status),
+    );
+
+    const feedbackValues = feedbackCandidates.slice(0, 3).map((sub, idx) => ({
+      organizationId: base.org1.id,
+      submissionId: sub.id,
+      reviewerUserId: base.editorUser.id,
+      tags: [
+        ["strong_voice", "compelling_narrative"],
+        ["needs_revision", "promising"],
+        ["exceptional", "recommend_accept"],
+      ][idx]!,
+      comment: [
+        "Striking opening — the second section loses momentum but recovers beautifully in the final paragraph.",
+        "Interesting premise that doesn't quite land yet. With revision, this could be very strong.",
+        "One of the strongest pieces in this batch. Ready for the next round.",
+      ][idx]!,
+      isForwardable: idx === 2,
+      forwardedAt: idx === 2 ? daysAgo(5) : undefined,
+      forwardedBy: idx === 2 ? base.adminUser.id : undefined,
+    }));
+
+    if (feedbackValues.length > 0) {
+      await tx.insert(readerFeedback).values(feedbackValues);
+    }
+
+    console.log(`  Reader feedback: ${feedbackValues.length}`);
+
+    // -----------------------------------------------------------------------
+    // Section P: Editor Collections (Track 12)
+    // -----------------------------------------------------------------------
+
+    const [collection1] = await tx
+      .insert(workspaceCollections)
+      .values({
+        organizationId: base.org1.id,
+        ownerId: base.editorUser.id,
+        name: "Spring Reading Shortlist",
+        description:
+          "Strongest pieces from the Spring reading period — for final editorial discussion.",
+        visibility: "team",
+        typeHint: "reading_list",
+      })
+      .returning();
+
+    const [collection2] = await tx
+      .insert(workspaceCollections)
+      .values({
+        organizationId: base.org1.id,
+        ownerId: base.editorUser.id,
+        name: "In Progress",
+        description: "Submissions I'm currently reading.",
+        visibility: "private",
+        typeHint: "custom",
+      })
+      .returning();
+
+    console.log("  Workspace collections: 2");
+
+    // Add items to collections from base + staging submissions
+    const collectionSubs = [
+      base.underReviewSub,
+      base.acceptedSub,
+      ...(reviewableSubs.length > 0 ? [reviewableSubs[0]!] : []),
+    ];
+
+    const collectionItems = collectionSubs.map((sub, idx) => ({
+      collectionId: idx < 2 ? collection1!.id : collection2!.id,
+      submissionId: sub.id,
+      position: idx,
+      notes:
+        idx === 0
+          ? "Strong candidate — discuss at Tuesday meeting."
+          : idx === 1
+            ? "Accepted, moving to pipeline."
+            : undefined,
+      readingAnchor:
+        idx === 0
+          ? { paragraphIndex: 4, scrollPercent: 0.35 }
+          : idx === 2
+            ? { paragraphIndex: 1, scrollPercent: 0.1 }
+            : null,
+    }));
+
+    if (collectionItems.length > 0) {
+      await tx.insert(workspaceItems).values(collectionItems);
+    }
+
+    console.log(`  Workspace items: ${collectionItems.length}`);
+
+    // -----------------------------------------------------------------------
+    // Section Q: Mark staging as seeded (idempotency flag)
     // -----------------------------------------------------------------------
     await tx
       .update(organizations)

@@ -4,7 +4,11 @@ import { useState, useEffect } from "react";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  FilterTabs,
+  FilterTabsList,
+  FilterTabsTrigger,
+} from "@/components/ui/tabs";
 import {
   Select,
   SelectContent,
@@ -148,22 +152,22 @@ export function AddItemDialog({
           </div>
 
           {/* Stage filter */}
-          <Tabs
+          <FilterTabs
             value={stageFilter}
             onValueChange={(v) => setStageFilter(v as PipelineStage | "ALL")}
           >
-            <TabsList className="h-8">
+            <FilterTabsList className="h-8">
               {STAGE_TABS.map((tab) => (
-                <TabsTrigger
+                <FilterTabsTrigger
                   key={tab.value}
                   value={tab.value}
                   className="text-xs px-2 py-1"
                 >
                   {tab.label}
-                </TabsTrigger>
+                </FilterTabsTrigger>
               ))}
-            </TabsList>
-          </Tabs>
+            </FilterTabsList>
+          </FilterTabs>
 
           {/* Items table */}
           <div className="max-h-[300px] overflow-auto border rounded-md">

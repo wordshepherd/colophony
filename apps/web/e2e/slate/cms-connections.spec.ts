@@ -36,13 +36,13 @@ test.describe("CMS Connections (/slate/cms)", () => {
     ).toBeVisible({ timeout: 10_000 });
 
     // WordPress tab — seed connection is WordPress
-    await authedPage.getByRole("tab", { name: "WordPress" }).click();
+    await authedPage.getByRole("button", { name: "WordPress" }).click();
     await expect(
       authedPage.getByText(slateData.cmsConnection.name),
     ).toBeVisible();
 
     // Ghost tab — should show empty state
-    await authedPage.getByRole("tab", { name: "Ghost" }).click();
+    await authedPage.getByRole("button", { name: "Ghost" }).click();
     await expect(authedPage.getByText("No CMS connections yet")).toBeVisible();
   });
 

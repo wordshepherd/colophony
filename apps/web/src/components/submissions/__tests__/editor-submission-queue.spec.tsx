@@ -1,5 +1,5 @@
 import { vi } from "vitest";
-import { render, screen, fireEvent, act } from "@testing-library/react";
+import { render, screen, within, fireEvent, act } from "@testing-library/react";
 import { EditorSubmissionQueue } from "../editor-submission-queue";
 
 // --- Mutable mock state ---
@@ -233,15 +233,20 @@ describe("EditorSubmissionQueue", () => {
       totalPages: 1,
     };
     render(<EditorSubmissionQueue />);
-    // All sortable columns should have clickable buttons
-    expect(screen.getByRole("button", { name: /Title/ })).toBeInTheDocument();
+    // All sortable columns should have clickable buttons (scoped to table)
+    const table = screen.getByRole("table");
     expect(
-      screen.getByRole("button", { name: /Submitter/ }),
+      within(table).getByRole("button", { name: /Title/ }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: /Submitted/ }),
+      within(table).getByRole("button", { name: /Submitter/ }),
     ).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Status/ })).toBeInTheDocument();
+    expect(
+      within(table).getByRole("button", { name: /Submitted/ }),
+    ).toBeInTheDocument();
+    expect(
+      within(table).getByRole("button", { name: /Status/ }),
+    ).toBeInTheDocument();
   });
 
   it("clicking a column header updates sort parameters", () => {

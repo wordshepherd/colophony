@@ -4,7 +4,11 @@ import { useState } from "react";
 import Link from "next/link";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  FilterTabs,
+  FilterTabsList,
+  FilterTabsTrigger,
+} from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SubmissionCard } from "./submission-card";
 import { Plus, FileText } from "lucide-react";
@@ -65,21 +69,21 @@ export function SubmissionList() {
       </div>
 
       {/* Status filter tabs */}
-      <Tabs
+      <FilterTabs
         value={statusFilter}
         onValueChange={(v) => {
           setStatusFilter(v as WriterStatus | "ALL");
           setPage(1);
         }}
       >
-        <TabsList>
+        <FilterTabsList>
           {statusTabs.map((tab) => (
-            <TabsTrigger key={tab.value} value={tab.value}>
+            <FilterTabsTrigger key={tab.value} value={tab.value}>
               {tab.label}
-            </TabsTrigger>
+            </FilterTabsTrigger>
           ))}
-        </TabsList>
-      </Tabs>
+        </FilterTabsList>
+      </FilterTabs>
 
       {/* Loading state */}
       {isLoading && (

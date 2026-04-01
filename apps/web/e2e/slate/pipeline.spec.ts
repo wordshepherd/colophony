@@ -9,12 +9,12 @@ test.describe("Pipeline (/slate/pipeline)", () => {
     await expect(
       authedPage.getByRole("heading", { name: "Pipeline" }),
     ).toBeVisible();
-    await expect(authedPage.getByRole("tab", { name: "All" })).toBeVisible();
+    await expect(authedPage.getByRole("button", { name: "All" })).toBeVisible();
     await expect(
-      authedPage.getByRole("tab", { name: "Pending" }),
+      authedPage.getByRole("button", { name: "Pending" }),
     ).toBeVisible();
     await expect(
-      authedPage.getByRole("tab", { name: "Copyediting" }),
+      authedPage.getByRole("button", { name: "Copyediting" }),
     ).toBeVisible();
   });
 
@@ -40,11 +40,11 @@ test.describe("Pipeline (/slate/pipeline)", () => {
     });
 
     // Pending tab — seed item is COPYEDIT_PENDING, should be visible
-    await authedPage.getByRole("tab", { name: "Pending" }).click();
+    await authedPage.getByRole("button", { name: "Pending" }).click();
     await expect(authedPage.getByText(subTitle)).toBeVisible();
 
     // Published tab — should show empty state
-    await authedPage.getByRole("tab", { name: "Published" }).click();
+    await authedPage.getByRole("button", { name: "Published" }).click();
     await expect(authedPage.getByText("No pipeline items")).toBeVisible();
   });
 
