@@ -92,6 +92,17 @@ describe("BreadcrumbBar", () => {
     expect(nav).toHaveAttribute("aria-label", "Breadcrumb");
   });
 
+  it("should not match dashboard root for detail routes like /editor/[id]", () => {
+    // /editor/123 should NOT match /editor (Editor Dashboard) — exact-match route
+    // Should fall back to group-only context
+    mockPathname = "/editor/123";
+    render(<BreadcrumbBar />);
+
+    expect(screen.getByText("Hopper")).toBeInTheDocument();
+    expect(screen.getByText("Editorial")).toBeInTheDocument();
+    expect(screen.queryByText("Editor Dashboard")).not.toBeInTheDocument();
+  });
+
   it("should use longest prefix match for nested routes", () => {
     // /editor/forms/new should match /editor/forms (Forms), not /editor (Editor Dashboard)
     mockPathname = "/editor/forms/new";

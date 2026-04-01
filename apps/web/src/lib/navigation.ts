@@ -151,9 +151,19 @@ export interface NavContext {
   pageName: string | null;
 }
 
+// Dashboard roots that require exact-match only (same logic as sidebar isActiveLink)
+const exactMatchRoutes = new Set([
+  "/editor",
+  "/slate",
+  "/workspace",
+  "/business",
+  "/operations",
+]);
+
 /**
  * Resolve the navigation context for a given pathname.
- * Uses longest-prefix matching against nav items.
+ * Uses longest-prefix matching against nav items, with exact-match
+ * enforcement for dashboard root routes (same rules as sidebar).
  * Returns null if no group matches.
  */
 export function resolveNavContext(pathname: string): NavContext | null {
@@ -166,9 +176,10 @@ export function resolveNavContext(pathname: string): NavContext | null {
 
   for (const group of navGroups) {
     for (const item of group.items) {
-      // Exact match for dashboard routes, prefix match for others
-      const isMatch =
-        pathname === item.href || pathname.startsWith(item.href + "/");
+      const isExactOnly = exactMatchRoutes.has(item.href);
+      const isMatch = isExactOnly
+        ? pathname === item.href
+        : pathname === item.href || pathname.startsWith(item.href + "/");
       if (isMatch && item.href.length > (bestMatch?.matchLength ?? 0)) {
         bestMatch = {
           subBrand: group.subBrand,
