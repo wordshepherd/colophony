@@ -4,10 +4,10 @@
  * Uses Playwright to render SVGs with web fonts loaded correctly,
  * then sharp to resize/convert to required formats.
  *
- * Run: pnpm --filter @colophony/api exec tsx ../../scripts/generate-brand-assets.ts
+ * Run: pnpm --filter @colophony/web exec tsx ../../scripts/generate-brand-assets.ts
  */
 
-import { chromium } from "playwright";
+import { chromium } from "@playwright/test";
 import sharp from "sharp";
 import { join, resolve, dirname } from "node:path";
 import { readFile, writeFile } from "node:fs/promises";
