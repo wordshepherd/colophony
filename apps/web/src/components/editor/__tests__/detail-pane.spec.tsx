@@ -5,7 +5,7 @@ import { DetailPane, type WorkspaceContext } from "../detail-pane";
 // --- Mutable mock state ---
 let mockSubmission: Record<string, unknown> | undefined;
 let mockIsPending = false;
-let mockMutate: ReturnType<typeof vi.fn>;
+let mockMutate: (...args: unknown[]) => void;
 let mockInvalidate: ReturnType<typeof vi.fn>;
 
 // --- Capture ManuscriptRenderer props ---
@@ -49,11 +49,11 @@ vi.mock("@/lib/trpc", () => ({
       updateItem: {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         useMutation: (opts: any) => ({
-          mutate: (...args: unknown[]) => {
-            mockMutate(...args);
+          mutate: (input: unknown) => {
+            mockMutate(input);
             opts?.onSuccess?.(
               undefined,
-              args[0] as Record<string, unknown>,
+              input as Record<string, unknown>,
               undefined,
             );
           },

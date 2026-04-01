@@ -301,9 +301,9 @@ describe("ManuscriptRenderer", () => {
         this.observe = vi.fn();
         this.unobserve = vi.fn();
         this.takeRecords = vi.fn().mockReturnValue([]);
-        this.root = null;
-        this.rootMargin = "";
-        this.thresholds = [0];
+        Object.defineProperty(this, "root", { value: null });
+        Object.defineProperty(this, "rootMargin", { value: "" });
+        Object.defineProperty(this, "thresholds", { value: [0] });
       });
       vi.stubGlobal("IntersectionObserver", MockObserver);
 
