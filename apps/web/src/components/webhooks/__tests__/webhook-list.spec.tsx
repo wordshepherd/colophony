@@ -72,10 +72,10 @@ describe("WebhookList", () => {
     mockWebhooks = [];
     render(<WebhookList />);
     expect(
-      screen.getByText("No webhook endpoints configured"),
+      screen.getByText(/No webhook endpoints configured/),
     ).toBeInTheDocument();
     expect(
-      screen.getByText("Create your first webhook endpoint"),
+      screen.getByText(/Create your first webhook endpoint/),
     ).toBeInTheDocument();
   });
 

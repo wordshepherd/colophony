@@ -1,5 +1,6 @@
 import { vi, describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { ProductionDashboard } from "../production-dashboard";
 
 // Mock tRPC
@@ -54,7 +55,11 @@ describe("ProductionDashboard", () => {
       error: null,
     });
 
-    render(<ProductionDashboard />);
+    render(
+      <TooltipProvider>
+        <ProductionDashboard />
+      </TooltipProvider>,
+    );
 
     expect(screen.getByText("Production")).toBeInTheDocument();
     expect(screen.getByText(/No active issues found/)).toBeInTheDocument();
@@ -100,7 +105,11 @@ describe("ProductionDashboard", () => {
       error: null,
     });
 
-    render(<ProductionDashboard />);
+    render(
+      <TooltipProvider>
+        <ProductionDashboard />
+      </TooltipProvider>,
+    );
 
     expect(screen.getByText("Production")).toBeInTheDocument();
     expect(screen.getByText("Total Pieces")).toBeInTheDocument();
@@ -114,7 +123,11 @@ describe("ProductionDashboard", () => {
       error: null,
     });
 
-    const { container } = render(<ProductionDashboard />);
+    const { container } = render(
+      <TooltipProvider>
+        <ProductionDashboard />
+      </TooltipProvider>,
+    );
 
     const skeletons = container.querySelectorAll('[class*="animate-pulse"]');
     expect(skeletons.length).toBeGreaterThan(0);

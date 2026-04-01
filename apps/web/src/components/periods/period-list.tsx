@@ -122,7 +122,14 @@ export function PeriodList() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Submission Periods</h1>
+        <div>
+          <h1 className="text-2xl font-bold">Submission Periods</h1>
+          <p className="text-muted-foreground">
+            Submission periods control when your publication accepts new work.
+            Each period has open and close dates, and can optionally require a
+            fee or run as a contest.
+          </p>
+        </div>
         <Button onClick={() => setCreateOpen(true)}>
           <Plus className="mr-2 h-4 w-4" />
           Create Period

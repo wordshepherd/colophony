@@ -27,7 +27,8 @@ export function WriterAnalyticsPage() {
           <h1 className="text-2xl font-bold">Writer Analytics</h1>
         </div>
         <p className="text-muted-foreground">
-          Personal submission statistics across all journals
+          How your submissions are performing over time. Includes both Colophony
+          and externally-tracked submissions.
         </p>
       </div>
 
@@ -44,11 +45,25 @@ export function WriterAnalyticsPage() {
 
       {/* Charts — 2-col grid */}
       <div className="grid gap-6 lg:grid-cols-2">
-        <WriterStatusChart filter={filter} />
-        <WriterTimeSeriesChart filter={filter} />
+        <div>
+          <p className="text-sm text-muted-foreground mb-2">
+            Breakdown of your submissions by their current status.
+          </p>
+          <WriterStatusChart filter={filter} />
+        </div>
+        <div>
+          <p className="text-sm text-muted-foreground mb-2">
+            Submissions sent over time.
+          </p>
+          <WriterTimeSeriesChart filter={filter} />
+        </div>
       </div>
 
       {/* Response time chart — full width */}
+      <p className="text-sm text-muted-foreground mb-2">
+        How long journals typically take to respond, from submission to first
+        decision.
+      </p>
       <WriterResponseTimeChart filter={filter} />
     </div>
   );

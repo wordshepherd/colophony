@@ -1,19 +1,22 @@
 import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { ProductionStatsCards } from "../production-stats-cards";
 
 describe("ProductionStatsCards", () => {
   it("renders all five stat cards with correct values", () => {
     render(
-      <ProductionStatsCards
-        summary={{
-          total: 12,
-          onTrack: 7,
-          atRisk: 3,
-          overdue: 2,
-          waiting: 5,
-        }}
-      />,
+      <TooltipProvider>
+        <ProductionStatsCards
+          summary={{
+            total: 12,
+            onTrack: 7,
+            atRisk: 3,
+            overdue: 2,
+            waiting: 5,
+          }}
+        />
+      </TooltipProvider>,
     );
 
     expect(screen.getByText("Total Pieces")).toBeInTheDocument();
@@ -30,16 +33,18 @@ describe("ProductionStatsCards", () => {
 
   it("renders skeleton loader when loading", () => {
     const { container } = render(
-      <ProductionStatsCards
-        summary={{
-          total: 0,
-          onTrack: 0,
-          atRisk: 0,
-          overdue: 0,
-          waiting: 0,
-        }}
-        isLoading
-      />,
+      <TooltipProvider>
+        <ProductionStatsCards
+          summary={{
+            total: 0,
+            onTrack: 0,
+            atRisk: 0,
+            overdue: 0,
+            waiting: 0,
+          }}
+          isLoading
+        />
+      </TooltipProvider>,
     );
 
     // Should have skeleton elements, not real values

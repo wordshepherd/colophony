@@ -34,20 +34,37 @@ export interface NavItem {
   name: string;
   href: string;
   icon: LucideIcon;
+  /** Short description shown in sidebar tooltips and command palette. */
+  description?: string;
 }
 
 export const writingNavigation: NavItem[] = [
   { name: "Dashboard", href: "/workspace", icon: LayoutDashboard },
   { name: "Manuscripts", href: "/manuscripts", icon: BookOpen },
   { name: "My Submissions", href: "/submissions", icon: FileText },
-  { name: "External Subs", href: "/workspace/external", icon: Send },
-  { name: "Sim-Sub Groups", href: "/workspace/sim-sub", icon: Copy },
+  {
+    name: "External Subs",
+    href: "/workspace/external",
+    icon: Send,
+    description: "Track submissions to non-Colophony journals",
+  },
+  {
+    name: "Sim-Sub Groups",
+    href: "/workspace/sim-sub",
+    icon: Copy,
+    description: "Same piece sent to multiple journals",
+  },
   {
     name: "Correspondence",
     href: "/workspace/correspondence",
     icon: Mail,
   },
-  { name: "Portfolio", href: "/workspace/portfolio", icon: Layers },
+  {
+    name: "Portfolio",
+    href: "/workspace/portfolio",
+    icon: Layers,
+    description: "All submissions in one view",
+  },
   { name: "Analytics", href: "/workspace/analytics", icon: BarChart3 },
   { name: "Import", href: "/workspace/import", icon: Upload },
   { name: "Settings", href: "/settings", icon: Settings },
@@ -57,26 +74,51 @@ export const editorialNavigation: NavItem[] = [
   { name: "Editor Dashboard", href: "/editor", icon: LayoutDashboard },
   { name: "Reading Queue", href: "/editor/queue", icon: BookOpen },
   { name: "All Submissions", href: "/editor/submissions", icon: Inbox },
-  { name: "Collections", href: "/editor/collections", icon: FolderOpen },
+  {
+    name: "Collections",
+    href: "/editor/collections",
+    icon: FolderOpen,
+    description: "Organize submissions into reading lists",
+  },
   { name: "Forms", href: "/editor/forms", icon: ClipboardList },
-  { name: "Periods", href: "/editor/periods", icon: Calendar },
+  {
+    name: "Periods",
+    href: "/editor/periods",
+    icon: Calendar,
+    description: "When you accept submissions",
+  },
   { name: "Submission Analytics", href: "/editor/analytics", icon: BarChart3 },
   {
     name: "Editorial Analytics",
     href: "/editor/editorial-analytics",
     icon: TrendingUp,
   },
-  { name: "Contests", href: "/editor/contests", icon: Trophy },
+  {
+    name: "Contests",
+    href: "/editor/contests",
+    icon: Trophy,
+    description: "Competitions with rounds and prizes",
+  },
 ];
 
 export const productionNavigation: NavItem[] = [
   { name: "Production Dashboard", href: "/slate", icon: BookMarked },
   { name: "Publications", href: "/slate/publications", icon: Library },
-  { name: "Pipeline", href: "/slate/pipeline", icon: GitBranch },
+  {
+    name: "Pipeline",
+    href: "/slate/pipeline",
+    icon: GitBranch,
+    description: "Accepted pieces in production",
+  },
   { name: "Issues", href: "/slate/issues", icon: BookCopy },
   { name: "Calendar", href: "/slate/calendar", icon: Calendar },
   { name: "Contracts", href: "/slate/contracts", icon: FileSignature },
-  { name: "CMS", href: "/slate/cms", icon: Globe },
+  {
+    name: "CMS",
+    href: "/slate/cms",
+    icon: Globe,
+    description: "Publish to WordPress or Ghost",
+  },
 ];
 
 export const businessNavigation: NavItem[] = [
@@ -101,11 +143,13 @@ export const operationsNavigation: NavItem[] = [
     name: "Webhooks",
     href: "/webhooks",
     icon: Webhook,
+    description: "Notify external services of events",
   },
   {
     name: "Federation",
     href: "/federation",
     icon: Network,
+    description: "Connect with other Colophony instances",
   },
 ];
 
