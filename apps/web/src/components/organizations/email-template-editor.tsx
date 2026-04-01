@@ -333,7 +333,7 @@ export function EmailTemplateEditor({
                     {`Default: {{${name}}}`}
                   </p>
                   <p className="text-muted-foreground">
-                    {`Custom: {{#each ${name}}}...{{/each}}`}
+                    {`Custom: {{#each ${name}}}${meta.innerFields.map((f) => `{{this.${f.name}}}`).join(" — ")}{{/each}}`}
                   </p>
                   <p className="text-muted-foreground mt-1">Inner fields:</p>
                   {meta.innerFields.map((f) => (
