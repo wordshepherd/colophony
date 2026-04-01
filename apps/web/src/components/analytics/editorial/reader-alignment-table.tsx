@@ -76,9 +76,9 @@ export function ReaderAlignmentTable({ filter }: ReaderAlignmentTableProps) {
                     <td className="py-2 pr-4 text-right">{row.voteCount}</td>
                     <td className="py-2 text-center">
                       {row.matched ? (
-                        <span className="text-green-600">Yes</span>
+                        <span className="text-status-success">Yes</span>
                       ) : (
-                        <span className="text-red-500">No</span>
+                        <span className="text-status-error">No</span>
                       )}
                     </td>
                   </tr>

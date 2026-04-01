@@ -37,7 +37,7 @@ function NavGroup({
       {showDivider && <div className="my-2 border-t border-sidebar-border" />}
       <p
         className={cn(
-          "px-3 text-xs font-semibold uppercase tracking-wider",
+          "px-3 text-[12px] font-semibold uppercase tracking-wider",
           active ? "text-sidebar-foreground" : "text-sidebar-muted",
         )}
       >
@@ -50,10 +50,10 @@ function NavGroup({
             key={item.name}
             href={item.href}
             className={cn(
-              "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
+              "flex items-center gap-3 px-3 py-2 text-[13px] transition-colors",
               isActive
-                ? "bg-sidebar-accent text-sidebar-primary"
-                : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-primary",
+                ? "text-sidebar-foreground border-l-2 border-sidebar-primary"
+                : "text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-foreground",
             )}
           >
             <item.icon className="h-4 w-4" />

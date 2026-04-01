@@ -13,19 +13,17 @@ const statusConfig: Record<
 > = {
   DRAFT: {
     label: "Draft",
-    className: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200",
+    className: "bg-status-info/10 text-status-info",
     icon: FileEdit,
   },
   PUBLISHED: {
     label: "Published",
-    className:
-      "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
+    className: "bg-status-success/10 text-status-success",
     icon: CheckCircle,
   },
   ARCHIVED: {
     label: "Archived",
-    className:
-      "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200",
+    className: "bg-status-held/10 text-status-held",
     icon: Archive,
   },
 };

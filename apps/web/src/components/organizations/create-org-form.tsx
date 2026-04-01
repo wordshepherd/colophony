@@ -133,7 +133,7 @@ export function CreateOrgForm() {
                           {isChecking ? (
                             <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
                           ) : isAvailable === true ? (
-                            <Check className="h-4 w-4 text-green-600" />
+                            <Check className="h-4 w-4 text-status-success" />
                           ) : isAvailable === false ? (
                             <X className="h-4 w-4 text-destructive" />
                           ) : null}

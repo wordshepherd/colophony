@@ -41,27 +41,27 @@ const scanStatusConfig: Record<
   PENDING: {
     label: "Pending scan",
     icon: Clock,
-    className: "bg-gray-100 text-gray-800",
+    className: "bg-status-info/10 text-status-info",
   },
   SCANNING: {
     label: "Scanning...",
     icon: Loader2,
-    className: "bg-blue-100 text-blue-800",
+    className: "bg-status-info/10 text-status-info",
   },
   CLEAN: {
     label: "Clean",
     icon: CheckCircle,
-    className: "bg-green-100 text-green-800",
+    className: "bg-status-success/10 text-status-success",
   },
   INFECTED: {
     label: "Infected",
     icon: AlertCircle,
-    className: "bg-red-100 text-red-800",
+    className: "bg-status-error/10 text-status-error",
   },
   FAILED: {
     label: "Scan failed",
     icon: AlertCircle,
-    className: "bg-orange-100 text-orange-800",
+    className: "bg-status-held/10 text-status-held",
   },
 };
 

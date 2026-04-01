@@ -61,23 +61,21 @@ export function getAgingColor(status: AgingStatus): {
   switch (status) {
     case "on-track":
       return {
-        text: "text-green-700 dark:text-green-400",
-        bg: "bg-green-100 dark:bg-green-900/30",
-        badge:
-          "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
+        text: "text-status-success",
+        bg: "bg-status-success/10",
+        badge: "bg-status-success/10 text-status-success",
       };
     case "at-risk":
       return {
-        text: "text-yellow-700 dark:text-yellow-400",
-        bg: "bg-yellow-100 dark:bg-yellow-900/30",
-        badge:
-          "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200",
+        text: "text-status-warning",
+        bg: "bg-status-warning/10",
+        badge: "bg-status-warning/10 text-status-warning",
       };
     case "overdue":
       return {
-        text: "text-red-700 dark:text-red-400",
-        bg: "bg-red-100 dark:bg-red-900/30",
-        badge: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200",
+        text: "text-status-error",
+        bg: "bg-status-error/10",
+        badge: "bg-status-error/10 text-status-error",
       };
   }
 }

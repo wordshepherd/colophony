@@ -28,36 +28,31 @@ const writerStatusConfig: Record<
   }
 > = {
   DRAFT: {
-    className: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200",
+    className: "bg-status-info/10 text-status-info",
     icon: FileEdit,
   },
   RECEIVED: {
-    className: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
+    className: "bg-status-info/10 text-status-info",
     icon: Send,
   },
   IN_REVIEW: {
-    className:
-      "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200",
+    className: "bg-status-info/10 text-status-info",
     icon: Eye,
   },
   REVISION_REQUESTED: {
-    className:
-      "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200",
+    className: "bg-status-warning/10 text-status-warning",
     icon: RotateCcw,
   },
   ACCEPTED: {
-    className:
-      "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
+    className: "bg-status-success/10 text-status-success",
     icon: CheckCircle,
   },
   DECISION_SENT: {
-    className:
-      "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300",
+    className: "bg-status-info/10 text-status-info",
     icon: MessageCircle,
   },
   WITHDRAWN: {
-    className:
-      "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200",
+    className: "bg-status-held/10 text-status-held",
     icon: Ban,
   },
 };

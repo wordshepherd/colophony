@@ -61,7 +61,10 @@ export function ReviewerList({ submissionId }: ReviewerListProps) {
                 {reviewer.reviewerRole}
               </Badge>
               {reviewer.readAt ? (
-                <Badge variant="default" className="text-xs gap-1 bg-green-600">
+                <Badge
+                  variant="default"
+                  className="text-xs gap-1 bg-status-success text-white"
+                >
                   <Eye className="h-3 w-3" />
                   Read{" "}
                   {formatDistanceToNow(new Date(reviewer.readAt), {

@@ -73,7 +73,7 @@ export function SortableFieldItem({
         "flex items-center gap-2 rounded-lg border p-3 bg-background transition-colors",
         isSelected && "ring-2 ring-primary border-primary",
         isDragging && "opacity-50",
-        field.branchId && "ml-4 border-l-2 border-l-blue-400",
+        field.branchId && "ml-4 border-l-2 border-l-status-info",
       )}
     >
       <button
@@ -91,7 +91,7 @@ export function SortableFieldItem({
         type="button"
       >
         {field.hasBranching ? (
-          <GitBranch className="h-4 w-4 text-blue-500 shrink-0" />
+          <GitBranch className="h-4 w-4 text-status-info shrink-0" />
         ) : (
           <Icon className="h-4 w-4 text-muted-foreground shrink-0" />
         )}

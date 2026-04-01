@@ -2,11 +2,12 @@
 
 import { useState } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { ThemeProvider } from "next-themes";
 import { trpc, getTrpcClient } from "@/lib/trpc";
 
 /**
  * Root providers component
- * Wraps the app with tRPC and TanStack Query providers.
+ * Wraps the app with theme, tRPC, and TanStack Query providers.
  */
 export function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(
@@ -26,8 +27,12 @@ export function Providers({ children }: { children: React.ReactNode }) {
   const [trpcClient] = useState(() => getTrpcClient());
 
   return (
-    <trpc.Provider client={trpcClient} queryClient={queryClient}>
-      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
-    </trpc.Provider>
+    <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
+      <trpc.Provider client={trpcClient} queryClient={queryClient}>
+        <QueryClientProvider client={queryClient}>
+          {children}
+        </QueryClientProvider>
+      </trpc.Provider>
+    </ThemeProvider>
   );
 }

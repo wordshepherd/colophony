@@ -122,15 +122,24 @@ export function StatusTransition({
   return (
     <>
       <div className="flex flex-wrap gap-2">
-        {allowedTransitions.map((status) => (
-          <Button
-            key={status}
-            variant={statusButtonVariants[status]}
-            onClick={() => setSelectedStatus(status)}
-          >
-            {statusLabels[status]}
-          </Button>
-        ))}
+        {allowedTransitions.map((status) => {
+          const isDecision =
+            status === "ACCEPTED" || status === "REJECTED" || status === "HOLD";
+          return (
+            <Button
+              key={status}
+              variant={statusButtonVariants[status]}
+              onClick={() => setSelectedStatus(status)}
+              className={
+                isDecision
+                  ? "[font-family:var(--font-playfair),ui-serif,Georgia,serif] italic font-bold"
+                  : undefined
+              }
+            >
+              {statusLabels[status]}
+            </Button>
+          );
+        })}
       </div>
 
       <Dialog

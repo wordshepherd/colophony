@@ -75,15 +75,15 @@ export function SimSubConflictDisplay({
       {policyRequirement && !policyRequirement.acknowledgedAt && (
         <Alert
           variant="default"
-          className="border-amber-500 bg-amber-50 dark:bg-amber-950/20"
+          className="border-status-warning bg-status-warning/5"
         >
-          <AlertTriangle className="h-4 w-4 text-amber-600" />
-          <AlertTitle className="text-amber-800 dark:text-amber-200">
+          <AlertTriangle className="h-4 w-4 text-status-warning" />
+          <AlertTitle className="text-status-warning">
             {policyRequirement.type === "withdraw"
               ? "Withdrawal Required"
               : "Notification Required"}
           </AlertTitle>
-          <AlertDescription className="text-amber-700 dark:text-amber-300">
+          <AlertDescription>
             {policyRequirement.type === "withdraw" ? (
               <>
                 This publication requires you to withdraw from other

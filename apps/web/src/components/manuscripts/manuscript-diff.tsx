@@ -45,10 +45,7 @@ export function ManuscriptDiff({
       {diff.map((part, i) => {
         if (part.added) {
           return (
-            <span
-              key={i}
-              className="bg-green-100 text-green-900 dark:bg-green-900/30 dark:text-green-300"
-            >
+            <span key={i} className="bg-status-success/10 text-status-success">
               {part.value}
             </span>
           );
@@ -57,7 +54,7 @@ export function ManuscriptDiff({
           return (
             <span
               key={i}
-              className="bg-red-100 text-red-900 line-through dark:bg-red-900/30 dark:text-red-300"
+              className="bg-status-error/10 text-status-error line-through"
             >
               {part.value}
             </span>

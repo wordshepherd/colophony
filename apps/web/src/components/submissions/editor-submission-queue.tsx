@@ -87,13 +87,11 @@ function AgeBadge({
     return <span className="text-muted-foreground">{"\u2014"}</span>;
   }
   const days = differenceInDays(new Date(), new Date(submittedAt));
-  let colorClass =
-    "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300";
+  let colorClass = "bg-status-success/10 text-status-success";
   if (days > 30) {
-    colorClass = "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300";
+    colorClass = "bg-status-error/10 text-status-error";
   } else if (days >= 14) {
-    colorClass =
-      "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300";
+    colorClass = "bg-status-warning/10 text-status-warning";
   }
   return (
     <span

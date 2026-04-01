@@ -122,7 +122,7 @@ export function FederationOverview() {
                 {config?.enabled ? (
                   <Badge
                     variant="outline"
-                    className="border-green-500 text-green-700"
+                    className="border-status-success text-status-success"
                   >
                     Enabled
                   </Badge>
@@ -286,7 +286,7 @@ export function FederationOverview() {
             <div className="flex items-center gap-2">
               <Badge
                 variant="outline"
-                className="border-green-500 text-green-700"
+                className="border-status-success text-status-success"
               >
                 {peerCounts.active} Active
               </Badge>
@@ -294,7 +294,7 @@ export function FederationOverview() {
             <div className="flex items-center gap-2">
               <Badge
                 variant="outline"
-                className="border-yellow-500 text-yellow-700"
+                className="border-status-warning text-status-warning"
               >
                 {peerCounts.pendingInbound} Pending Inbound
               </Badge>
@@ -302,7 +302,7 @@ export function FederationOverview() {
             <div className="flex items-center gap-2">
               <Badge
                 variant="outline"
-                className="border-yellow-500 text-yellow-700"
+                className="border-status-warning text-status-warning"
               >
                 {peerCounts.pendingOutbound} Pending Outbound
               </Badge>

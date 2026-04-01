@@ -114,7 +114,7 @@ export function ProductionPipelineTable({
                     <span
                       className={
                         aging === "overdue"
-                          ? "text-red-700 dark:text-red-400 font-medium"
+                          ? "text-status-error font-medium"
                           : "text-muted-foreground"
                       }
                     >
@@ -134,7 +134,7 @@ export function ProductionPipelineTable({
                 </TableCell>
                 <TableCell>
                   {handoff === "waiting-external" ? (
-                    <span className="text-orange-700 dark:text-orange-400 text-sm">
+                    <span className="text-status-held text-sm">
                       Waiting: Author
                     </span>
                   ) : (

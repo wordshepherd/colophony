@@ -82,7 +82,9 @@ export function PipelineHealthChart({ filter }: PipelineHealthChartProps) {
                       </p>
                       <p
                         className={
-                          d.stuckCount > 0 ? "text-red-500 font-medium" : ""
+                          d.stuckCount > 0
+                            ? "text-status-error font-medium"
+                            : ""
                         }
                       >
                         Stuck (&gt;14d): {d.stuckCount}

@@ -27,16 +27,16 @@ const STATUS_STYLES: Record<
   { text: string; border: string }
 > = {
   healthy: {
-    text: "text-green-700 dark:text-green-400",
-    border: "border-l-green-500",
+    text: "text-status-success",
+    border: "border-l-status-success",
   },
   degraded: {
-    text: "text-yellow-700 dark:text-yellow-400",
-    border: "border-l-yellow-500",
+    text: "text-status-warning",
+    border: "border-l-status-warning",
   },
   unhealthy: {
-    text: "text-red-700 dark:text-red-400",
-    border: "border-l-red-500",
+    text: "text-status-error",
+    border: "border-l-status-error",
   },
   unknown: {
     text: "text-muted-foreground",

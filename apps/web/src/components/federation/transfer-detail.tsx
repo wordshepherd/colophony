@@ -30,13 +30,13 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 
 const STATUS_COLORS: Record<string, string> = {
-  PENDING: "border-yellow-500 text-yellow-700",
-  FILES_REQUESTED: "border-blue-500 text-blue-700",
-  COMPLETED: "border-green-500 text-green-700",
-  REJECTED: "border-red-500 text-red-700",
-  FAILED: "border-red-500 text-red-700",
-  CANCELLED: "border-gray-400 text-gray-600",
-  EXPIRED: "border-gray-400 text-gray-600",
+  PENDING: "border-status-warning text-status-warning",
+  FILES_REQUESTED: "border-status-info text-status-info",
+  COMPLETED: "border-status-success text-status-success",
+  REJECTED: "border-status-error text-status-error",
+  FAILED: "border-status-error text-status-error",
+  CANCELLED: "border-status-info text-status-info",
+  EXPIRED: "border-status-info text-status-info",
 };
 
 const CANCELLABLE_STATUSES = new Set(["PENDING", "FILES_REQUESTED"]);

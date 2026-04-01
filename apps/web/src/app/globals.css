@@ -2,30 +2,31 @@
 @import "tw-animate-css";
 
 :root {
-  --background: hsl(0 0% 100%);
-  --foreground: hsl(0 0% 3.9%);
-  --card: hsl(0 0% 100%);
-  --card-foreground: hsl(0 0% 3.9%);
-  --popover: hsl(0 0% 100%);
-  --popover-foreground: hsl(0 0% 3.9%);
-  --primary: hsl(0 0% 9%);
-  --primary-foreground: hsl(0 0% 98%);
-  --secondary: hsl(0 0% 96.1%);
-  --secondary-foreground: hsl(0 0% 9%);
-  --muted: hsl(0 0% 96.1%);
-  --muted-foreground: hsl(0 0% 45.1%);
-  --accent: hsl(0 0% 96.1%);
-  --accent-foreground: hsl(0 0% 9%);
-  --destructive: hsl(0 84.2% 60.2%);
-  --destructive-foreground: hsl(0 0% 98%);
-  --border: hsl(0 0% 89.8%);
-  --input: hsl(0 0% 89.8%);
-  --ring: hsl(0 0% 3.9%);
-  --chart-1: hsl(12 76% 61%);
-  --chart-2: hsl(173 58% 39%);
-  --chart-3: hsl(197 37% 24%);
-  --chart-4: hsl(43 74% 66%);
-  --chart-5: hsl(27 87% 67%);
+  /* Brand palette — Warm Cream / Near Black / Deep Navy / Copper */
+  --background: hsl(42 47% 89%);
+  --foreground: hsl(0 0% 7%);
+  --card: hsl(41 35% 91%);
+  --card-foreground: hsl(0 0% 7%);
+  --popover: hsl(41 35% 91%);
+  --popover-foreground: hsl(0 0% 7%);
+  --primary: hsl(230 27% 13%);
+  --primary-foreground: hsl(42 47% 89%);
+  --secondary: hsl(41 35% 91%);
+  --secondary-foreground: hsl(0 0% 7%);
+  --muted: hsl(35 24% 86%);
+  --muted-foreground: hsl(37 9% 44%);
+  --accent: hsl(25 55% 52%);
+  --accent-foreground: hsl(42 47% 89%);
+  --destructive: hsl(11 52% 47%);
+  --destructive-foreground: hsl(42 47% 89%);
+  --border: hsl(35 22% 80%);
+  --input: hsl(35 22% 80%);
+  --ring: hsl(25 55% 52%);
+  --chart-1: hsl(230 27% 13%);
+  --chart-2: hsl(25 55% 52%);
+  --chart-3: hsl(140 25% 33%);
+  --chart-4: hsl(38 65% 45%);
+  --chart-5: hsl(206 25% 48%);
   --radius: 0.5rem;
   /* Sidebar — permanent dark surface (same in both themes) */
   --sidebar-background: 230 26.5% 13.3%;
@@ -34,33 +35,47 @@
   --sidebar-accent: 213.3 17.9% 29.6%;
   --sidebar-border: 213.3 17.9% 29.6%;
   --sidebar-muted: 35.5 22% 80.4%;
+  /* Semantic status colors */
+  --status-success: hsl(140 25% 33%);
+  --status-success-foreground: hsl(42 47% 89%);
+  --status-warning: hsl(38 65% 38%);
+  --status-warning-foreground: hsl(0 0% 7%);
+  --status-error: hsl(11 52% 47%);
+  --status-error-foreground: hsl(42 47% 89%);
+  --status-info: hsl(35 9% 55%);
+  --status-info-foreground: hsl(0 0% 7%);
+  --status-active: hsl(25 55% 52%);
+  --status-active-foreground: hsl(42 47% 89%);
+  --status-held: hsl(206 25% 48%);
+  --status-held-foreground: hsl(42 47% 89%);
 }
 
 .dark {
-  --background: hsl(0 0% 3.9%);
-  --foreground: hsl(0 0% 98%);
-  --card: hsl(0 0% 3.9%);
-  --card-foreground: hsl(0 0% 98%);
-  --popover: hsl(0 0% 3.9%);
-  --popover-foreground: hsl(0 0% 98%);
-  --primary: hsl(0 0% 98%);
-  --primary-foreground: hsl(0 0% 9%);
-  --secondary: hsl(0 0% 14.9%);
-  --secondary-foreground: hsl(0 0% 98%);
-  --muted: hsl(0 0% 14.9%);
-  --muted-foreground: hsl(0 0% 63.9%);
-  --accent: hsl(0 0% 14.9%);
-  --accent-foreground: hsl(0 0% 98%);
-  --destructive: hsl(0 62.8% 30.6%);
-  --destructive-foreground: hsl(0 0% 98%);
-  --border: hsl(0 0% 14.9%);
-  --input: hsl(0 0% 14.9%);
-  --ring: hsl(0 0% 83.1%);
-  --chart-1: hsl(220 70% 50%);
-  --chart-2: hsl(160 60% 45%);
-  --chart-3: hsl(30 80% 55%);
-  --chart-4: hsl(280 65% 60%);
-  --chart-5: hsl(340 75% 55%);
+  /* Dark theme — Deep Navy background, Warm Cream foreground */
+  --background: hsl(230 27% 13%);
+  --foreground: hsl(42 47% 89%);
+  --card: hsl(228 22% 19%);
+  --card-foreground: hsl(42 47% 89%);
+  --popover: hsl(228 22% 19%);
+  --popover-foreground: hsl(42 47% 89%);
+  --primary: hsl(42 47% 89%);
+  --primary-foreground: hsl(230 27% 13%);
+  --secondary: hsl(213 18% 30%);
+  --secondary-foreground: hsl(42 47% 89%);
+  --muted: hsl(222 18% 22%);
+  --muted-foreground: hsl(35 22% 80%);
+  --accent: hsl(25 55% 52%);
+  --accent-foreground: hsl(42 47% 89%);
+  --destructive: hsl(11 55% 55%);
+  --destructive-foreground: hsl(42 47% 89%);
+  --border: hsl(213 18% 30%);
+  --input: hsl(213 18% 30%);
+  --ring: hsl(25 55% 52%);
+  --chart-1: hsl(230 30% 65%);
+  --chart-2: hsl(25 60% 60%);
+  --chart-3: hsl(140 30% 55%);
+  --chart-4: hsl(38 60% 60%);
+  --chart-5: hsl(206 30% 60%);
   /* Sidebar — permanent dark surface (same in both themes) */
   --sidebar-background: 230 26.5% 13.3%;
   --sidebar-foreground: 42.2 47.4% 88.8%;
@@ -68,6 +83,12 @@
   --sidebar-accent: 213.3 17.9% 29.6%;
   --sidebar-border: 213.3 17.9% 29.6%;
   --sidebar-muted: 35.5 22% 80.4%;
+  /* Semantic status colors — lightened for dark backgrounds */
+  --status-success: hsl(140 30% 55%);
+  --status-warning: hsl(38 55% 60%);
+  --status-error: hsl(11 55% 58%);
+  --status-info: hsl(35 12% 65%);
+  --status-held: hsl(206 30% 60%);
 }
 
 @theme inline {
@@ -101,12 +122,46 @@
   --color-sidebar-accent: hsl(var(--sidebar-accent));
   --color-sidebar-border: hsl(var(--sidebar-border));
   --color-sidebar-muted: hsl(var(--sidebar-muted));
+  --color-status-success: var(--status-success);
+  --color-status-success-foreground: var(--status-success-foreground);
+  --color-status-warning: var(--status-warning);
+  --color-status-warning-foreground: var(--status-warning-foreground);
+  --color-status-error: var(--status-error);
+  --color-status-error-foreground: var(--status-error-foreground);
+  --color-status-info: var(--status-info);
+  --color-status-info-foreground: var(--status-info-foreground);
+  --color-status-active: var(--status-active);
+  --color-status-active-foreground: var(--status-active-foreground);
+  --color-status-held: var(--status-held);
+  --color-status-held-foreground: var(--status-held-foreground);
+  --color-reading-bg: var(--reading-bg);
+  --color-reading-fg: var(--reading-fg);
   --radius-lg: var(--radius);
   --radius-md: calc(var(--radius) - 2px);
   --radius-sm: calc(var(--radius) - 4px);
 }
 
 @custom-variant dark (&:is(.dark *));
+
+/* Reading themes — scoped to ManuscriptRenderer via data attribute */
+[data-reading-theme="light"] {
+  --reading-bg: hsl(42 47% 89%);
+  --reading-fg: hsl(0 0% 7%);
+}
+
+[data-reading-theme="sepia"] {
+  --reading-bg: hsl(36 35% 85%);
+  --reading-fg: hsl(18 12% 15%);
+}
+
+[data-reading-theme="dark"] {
+  --reading-bg: hsl(230 27% 13%);
+  --reading-fg: hsl(35 22% 80%);
+}
+
+[data-reading-theme] {
+  transition: background-color 150ms ease, color 150ms ease;
+}
 
 /* Density tokens — scoped via data-density attribute set by DensityProvider */
 [data-density="comfortable"] {
@@ -166,5 +221,9 @@
   }
   body {
     @apply bg-background text-foreground;
+    font-family: var(--font-lato), ui-sans-serif, system-ui, sans-serif;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-playfair), ui-serif, Georgia, serif;
   }
 }
