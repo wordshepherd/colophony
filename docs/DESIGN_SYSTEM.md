@@ -168,6 +168,31 @@ Operations                       (ADMIN)
 - **URL-driven.** Each nav item is a route. Browser back/forward works naturally. Bookmarkable. Linkable.
 - **Implicit shell transition.** Navigating from a Writing page to a Reading page changes the layout shell (and therefore density context) via the route's layout component — a Next.js layout boundary, not a mode toggle.
 
+### Sub-brand identity
+
+Colophony's four subsystems (Hopper, Slate, Register, Relay) appear as quiet structural labels in the UI. They provide identity and context without adding navigation friction.
+
+| Sub-brand    | Sidebar groups        | Rationale                                                          |
+| ------------ | --------------------- | ------------------------------------------------------------------ |
+| **Hopper**   | Writing + Editorial   | Full submission lifecycle — writer's side and editor's side        |
+| **Slate**    | Production + Business | Post-acceptance: pipeline, issue assembly, payments, rights        |
+| **Register** | Operations            | Identity, org configuration, federation, system health             |
+| **Relay**    | _(system-level only)_ | Communications infrastructure — docs, architecture, marketing only |
+
+**Sidebar surface:** The sidebar is a permanent dark surface — Deep Navy (`#191c2b`) in both light and dark themes. This anchors the interface and provides a stable background for the sub-brand preheaders.
+
+**Sidebar preheader:** The sub-brand name appears as a subtle preheader above the first activity group within that sub-brand. When a sub-brand spans multiple groups (Hopper → Writing + Editorial), the preheader appears only once above the first group.
+
+Preheader styling:
+
+- Font: Medium weight, 11px, uppercase, letter-spacing 0.1em
+- Color: Muted Cream (`#d8cfc2`) — fainter than group labels
+- Spacing: 16–20px above (separates from previous sub-brand), 4–6px below (tight to its first group)
+
+**Breadcrumb bar:** A layout-level breadcrumb bar renders above page content: `Sub-brand > Group > Page`. Derived automatically from the pathname via `resolveNavContext()` in `navigation.ts`. Uses longest-prefix matching; falls back to group-level context for detail/non-nav routes; renders nothing for unmatched routes.
+
+**Relay exception:** Relay does not appear in the sidebar, breadcrumbs, or page headers. It appears in documentation, architecture diagrams, and marketing. Relay is architecturally real but not a user destination — communications surface inside both Hopper (correspondence) and Register (webhooks).
+
 ### Quick access
 
 - **Recents list** at the top of the sidebar: last 3-5 visited submissions/pages, with Cmd+K command palette for instant jump. Provides the quick-access benefit of tabs without persistent visual weight.
@@ -748,18 +773,20 @@ To avoid migrations when federation sync arrives, the following are present in t
 
 ## Appendix A: Design Decision Log
 
-| Decision               | Choice                                                      | Rationale                                                                                                                                                                           |
-| ---------------------- | ----------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Density mechanism      | Layout shells with DensityProvider context                  | Shell -> context -> component gets dependency direction right. Role determines density, not per-component props.                                                                    |
-| Navigation model       | Unified sidebar with 4 activity groups                      | Reading + Editing merged into "Editorial" — split wasn't justified by distinct nav items. Route-driven shell transitions.                                                           |
-| Editor UX model        | Split pane with collapsible list + deep-read mode           | Editors read literature, not emails. The reading pane needs room to breathe. Triage and deep-read are different cognitive modes.                                                    |
-| State visibility       | Role-filtered projections                                   | Writers must not see internal editorial states. Each role sees only states relevant to their decision authority.                                                                    |
-| Writer-facing statuses | Org-configurable names                                      | Different magazines have different transparency cultures. Editorial voice decision, not software decision.                                                                          |
-| Editor workspace       | Generic collection primitive                                | One primitive (named, ordered, annotated collection) replaces holds, bookmarks, comparison sets, reading lists. Let editorial culture determine usage.                              |
-| Typography             | Genre-aware with strong house opinion                       | Render literature like literature. Constrained editor preferences (size, theme, line-height) around exceptional defaults.                                                           |
-| Production view        | Issue-centric with time-visible pipeline                    | Production thinks in issues and deadlines, not submissions. Time pressure must be visible. Prototype multiple approaches.                                                           |
-| Manuscript storage     | ProseMirror JSON with custom literary nodes and marks       | Decouple rendering from source format (.docx, .pdf). Preserve authorial intent. TipTap/ProseMirror already in the stack — extend rather than invent.                                |
-| Private notes          | Always invisible to writers, no toggle                      | An editor's desk reasoning is never submitter-facing. Making it configurable invites mistakes.                                                                                      |
-| Reading position       | Content-anchored (paragraph/char offset), not scroll offset | Scroll offsets break on any layout change (font size, resize, browser update). Content anchors are stable across rendering contexts.                                                |
-| Smart typography       | On by default, bypass per submission, store both forms      | Some writers use straight quotes or double hyphens intentionally. Storing both normalized and original in the intermediate format makes normalization reversible without data loss. |
-| Responsive strategy    | Desktop-first; mobile limited to writer status checks       | Editorial workflows need desktop viewports. Writers check status on mobile. Build responsive for WriterLayout only; defer mobile editorial.                                         |
+| Decision               | Choice                                                                                        | Rationale                                                                                                                                                                           |
+| ---------------------- | --------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Density mechanism      | Layout shells with DensityProvider context                                                    | Shell -> context -> component gets dependency direction right. Role determines density, not per-component props.                                                                    |
+| Navigation model       | Unified sidebar with 5 activity groups                                                        | Reading + Editing merged into "Editorial" — split wasn't justified by distinct nav items. Route-driven shell transitions.                                                           |
+| Editor UX model        | Split pane with collapsible list + deep-read mode                                             | Editors read literature, not emails. The reading pane needs room to breathe. Triage and deep-read are different cognitive modes.                                                    |
+| State visibility       | Role-filtered projections                                                                     | Writers must not see internal editorial states. Each role sees only states relevant to their decision authority.                                                                    |
+| Writer-facing statuses | Org-configurable names                                                                        | Different magazines have different transparency cultures. Editorial voice decision, not software decision.                                                                          |
+| Editor workspace       | Generic collection primitive                                                                  | One primitive (named, ordered, annotated collection) replaces holds, bookmarks, comparison sets, reading lists. Let editorial culture determine usage.                              |
+| Typography             | Genre-aware with strong house opinion                                                         | Render literature like literature. Constrained editor preferences (size, theme, line-height) around exceptional defaults.                                                           |
+| Production view        | Issue-centric with time-visible pipeline                                                      | Production thinks in issues and deadlines, not submissions. Time pressure must be visible. Prototype multiple approaches.                                                           |
+| Manuscript storage     | ProseMirror JSON with custom literary nodes and marks                                         | Decouple rendering from source format (.docx, .pdf). Preserve authorial intent. TipTap/ProseMirror already in the stack — extend rather than invent.                                |
+| Private notes          | Always invisible to writers, no toggle                                                        | An editor's desk reasoning is never submitter-facing. Making it configurable invites mistakes.                                                                                      |
+| Reading position       | Content-anchored (paragraph/char offset), not scroll offset                                   | Scroll offsets break on any layout change (font size, resize, browser update). Content anchors are stable across rendering contexts.                                                |
+| Smart typography       | On by default, bypass per submission, store both forms                                        | Some writers use straight quotes or double hyphens intentionally. Storing both normalized and original in the intermediate format makes normalization reversible without data loss. |
+| Responsive strategy    | Desktop-first; mobile limited to writer status checks                                         | Editorial workflows need desktop viewports. Writers check status on mobile. Build responsive for WriterLayout only; defer mobile editorial.                                         |
+| Sidebar surface        | Permanent dark navy (#191c2b), same in both themes                                            | Anchors the interface. Sub-brand preheaders use Muted Cream on navy. Warm Cream text, copper active states.                                                                         |
+| Sub-brand UI presence  | Sidebar preheader + layout breadcrumb bar (Hopper, Slate, Register). Relay system-level only. | Sub-brands provide identity and context without navigation friction. Preheader is visible but recessive. Relay is infrastructure, not a destination.                                |

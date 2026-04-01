@@ -5,12 +5,16 @@ import { Sidebar } from "../sidebar";
 
 // --- Mutable mock state ---
 let mockIsEditor = false;
+let mockIsProduction = false;
+let mockIsBusinessOps = false;
 let mockIsAdmin = false;
 let mockPathname = "/";
 
 vi.mock("@/hooks/use-organization", () => ({
   useOrganization: () => ({
     isEditor: mockIsEditor,
+    isProduction: mockIsProduction,
+    isBusinessOps: mockIsBusinessOps,
     isAdmin: mockIsAdmin,
   }),
 }));
@@ -46,6 +50,8 @@ describe("Sidebar", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockIsEditor = false;
+    mockIsProduction = false;
+    mockIsBusinessOps = false;
     mockIsAdmin = false;
     mockPathname = "/";
   });
@@ -92,12 +98,16 @@ describe("Sidebar", () => {
     render(<Sidebar />);
 
     const submissionsLink = screen.getByText("My Submissions").closest("a");
-    // Active: has "bg-accent" as a standalone class (not hover:bg-accent)
-    expect(submissionsLink?.className).toMatch(/(?:^|\s)bg-accent(?:\s|$)/);
+    // Active: has "bg-sidebar-accent" as a standalone class
+    expect(submissionsLink?.className).toMatch(
+      /(?:^|\s)bg-sidebar-accent(?:\s|$)/,
+    );
 
     const settingsLink = screen.getByText("Settings").closest("a");
-    // Inactive: should NOT have standalone "bg-accent" (hover:bg-accent is fine)
-    expect(settingsLink?.className).not.toMatch(/(?:^|\s)bg-accent(?:\s|$)/);
+    // Inactive: should NOT have standalone "bg-sidebar-accent" (hover: is fine)
+    expect(settingsLink?.className).not.toMatch(
+      /(?:^|\s)bg-sidebar-accent(?:\s|$)/,
+    );
   });
 
   it("should apply active class to settings when on settings path", () => {
@@ -105,7 +115,9 @@ describe("Sidebar", () => {
     render(<Sidebar />);
 
     const settingsLink = screen.getByText("Settings").closest("a");
-    expect(settingsLink?.className).toMatch(/(?:^|\s)bg-accent(?:\s|$)/);
+    expect(settingsLink?.className).toMatch(
+      /(?:^|\s)bg-sidebar-accent(?:\s|$)/,
+    );
   });
 
   it("should render Colophony brand link", () => {
@@ -141,11 +153,13 @@ describe("Sidebar", () => {
 
     const dashboardLink = screen.getByText("Editor Dashboard").closest("a");
     // /editor uses exact match — should NOT be active on /editor/forms
-    expect(dashboardLink?.className).not.toMatch(/(?:^|\s)bg-accent(?:\s|$)/);
+    expect(dashboardLink?.className).not.toMatch(
+      /(?:^|\s)bg-sidebar-accent(?:\s|$)/,
+    );
 
     const formsLink = screen.getByText("Forms").closest("a");
     // /editor/forms uses startsWith — should be active
-    expect(formsLink?.className).toMatch(/(?:^|\s)bg-accent(?:\s|$)/);
+    expect(formsLink?.className).toMatch(/(?:^|\s)bg-sidebar-accent(?:\s|$)/);
   });
 
   it("should highlight Editor Dashboard only on exact /editor path", () => {
@@ -154,7 +168,9 @@ describe("Sidebar", () => {
     render(<Sidebar />);
 
     const dashboardLink = screen.getByText("Editor Dashboard").closest("a");
-    expect(dashboardLink?.className).toMatch(/(?:^|\s)bg-accent(?:\s|$)/);
+    expect(dashboardLink?.className).toMatch(
+      /(?:^|\s)bg-sidebar-accent(?:\s|$)/,
+    );
   });
 
   it("should show Federation link in Operations section when isAdmin", () => {
@@ -184,10 +200,12 @@ describe("Sidebar", () => {
     render(<Sidebar />);
 
     const formsLink = screen.getByText("Forms").closest("a");
-    expect(formsLink?.className).toMatch(/(?:^|\s)bg-accent(?:\s|$)/);
+    expect(formsLink?.className).toMatch(/(?:^|\s)bg-sidebar-accent(?:\s|$)/);
 
     const dashboardLink = screen.getByText("Editor Dashboard").closest("a");
-    expect(dashboardLink?.className).not.toMatch(/(?:^|\s)bg-accent(?:\s|$)/);
+    expect(dashboardLink?.className).not.toMatch(
+      /(?:^|\s)bg-sidebar-accent(?:\s|$)/,
+    );
   });
 
   it("should highlight active group header", () => {
@@ -195,7 +213,7 @@ describe("Sidebar", () => {
     render(<Sidebar />);
 
     const writingHeader = screen.getByText("Writing");
-    expect(writingHeader.className).toMatch(/text-foreground/);
+    expect(writingHeader.className).toMatch(/text-sidebar-foreground/);
   });
 
   it("should not highlight inactive group headers", () => {
@@ -204,6 +222,59 @@ describe("Sidebar", () => {
     render(<Sidebar />);
 
     const editorialHeader = screen.getByText("Editorial");
-    expect(editorialHeader.className).toMatch(/text-muted-foreground/);
+    expect(editorialHeader.className).toMatch(/text-sidebar-muted/);
+  });
+
+  // --- Sub-brand preheader tests ---
+
+  it("should render HOPPER preheader above Writing group", () => {
+    render(<Sidebar />);
+    expect(screen.getByText("Hopper")).toBeInTheDocument();
+  });
+
+  it("should not repeat HOPPER preheader above Editorial", () => {
+    mockIsEditor = true;
+    render(<Sidebar />);
+    const hopperLabels = screen.getAllByText("Hopper");
+    expect(hopperLabels).toHaveLength(1);
+  });
+
+  it("should render SLATE preheader above Production", () => {
+    mockIsProduction = true;
+    render(<Sidebar />);
+    expect(screen.getByText("Slate")).toBeInTheDocument();
+  });
+
+  it("should not repeat SLATE preheader above Business", () => {
+    mockIsProduction = true;
+    mockIsBusinessOps = true;
+    render(<Sidebar />);
+    const slateLabels = screen.getAllByText("Slate");
+    expect(slateLabels).toHaveLength(1);
+  });
+
+  it("should render REGISTER preheader when admin", () => {
+    mockIsAdmin = true;
+    render(<Sidebar />);
+    expect(screen.getByText("Register")).toBeInTheDocument();
+  });
+
+  it("should not render REGISTER preheader when not admin", () => {
+    mockIsAdmin = false;
+    render(<Sidebar />);
+    expect(screen.queryByText("Register")).not.toBeInTheDocument();
+  });
+
+  it("should apply navy sidebar background", () => {
+    render(<Sidebar />);
+    const sidebar = screen.getByRole("navigation").parentElement;
+    expect(sidebar?.className).toMatch(/bg-sidebar-background/);
+  });
+
+  it("should apply copper color to active nav item", () => {
+    mockPathname = "/workspace";
+    render(<Sidebar />);
+    const dashboardLink = screen.getByText("Dashboard").closest("a");
+    expect(dashboardLink?.className).toMatch(/text-sidebar-primary/);
   });
 });

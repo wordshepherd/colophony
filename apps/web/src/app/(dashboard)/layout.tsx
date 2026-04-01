@@ -3,6 +3,7 @@
 import { ProtectedRoute } from "@/components/auth/protected-route";
 import { Header } from "@/components/layout/header";
 import { Sidebar } from "@/components/layout/sidebar";
+import { BreadcrumbBar } from "@/components/layout/breadcrumb-bar";
 import { Toaster } from "@/components/ui/sonner";
 import { DensityProvider } from "@/hooks/use-density";
 import { CommandPaletteProvider } from "@/components/command-palette/command-palette";
@@ -20,12 +21,13 @@ export default function DashboardLayout({
             <Header />
             <div className="flex-1 flex">
               {/* Sidebar - hidden on mobile */}
-              <aside className="hidden md:flex w-64 flex-col border-r">
+              <aside className="hidden md:flex w-64 flex-col border-r border-sidebar-border">
                 <Sidebar />
               </aside>
 
               {/* Main content */}
               <main className="flex-1 overflow-auto">
+                <BreadcrumbBar />
                 <div className="container py-6">{children}</div>
               </main>
             </div>
