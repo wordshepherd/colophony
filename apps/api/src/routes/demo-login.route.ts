@@ -48,6 +48,23 @@ export async function registerDemoRoutes(
 ) {
   const { env } = opts;
 
+  // In-memory rate limiter (fallback when Redis is unavailable)
+  const ipRequests = new Map<string, { count: number; windowStart: number }>();
+
+  function checkInMemoryRateLimit(ip: string): boolean {
+    const now = Date.now();
+    const entry = ipRequests.get(ip);
+    if (!entry || now - entry.windowStart >= DEMO_LOGIN_RATE_LIMIT_WINDOW_MS) {
+      ipRequests.set(ip, { count: 1, windowStart: now });
+      return true;
+    }
+    if (entry.count >= DEMO_LOGIN_RATE_LIMIT_MAX) {
+      return false;
+    }
+    entry.count++;
+    return true;
+  }
+
   // Lazy Redis import — demo routes only registered when DEMO_MODE=true
   let redis: import('ioredis').default | null = null;
   try {
@@ -62,7 +79,7 @@ export async function registerDemoRoutes(
     await redis.connect();
   } catch {
     app.log.warn(
-      'Demo rate limiter: Redis unavailable — allowing all requests',
+      'Demo rate limiter: Redis unavailable — using in-memory fallback',
     );
   }
 
@@ -86,7 +103,8 @@ export async function registerDemoRoutes(
 
       const { role } = parsed.data;
 
-      // Rate limit
+      // Rate limit (Redis primary, in-memory fallback)
+      let rateLimitPassed = false;
       if (redis) {
         try {
           const ip = request.ip;
@@ -106,15 +124,20 @@ export async function registerDemoRoutes(
             DEMO_LOGIN_RATE_LIMIT_MAX,
           )) as [number, number];
 
-          if (result[1] === 0) {
-            return reply.status(429).send({
-              error: 'rate_limited',
-              message: 'Too many demo login requests. Try again later.',
-            });
-          }
+          rateLimitPassed = result[1] === 1;
         } catch {
-          // Fail open — allow the request
+          // Redis error — fall through to in-memory
+          rateLimitPassed = checkInMemoryRateLimit(request.ip);
         }
+      } else {
+        rateLimitPassed = checkInMemoryRateLimit(request.ip);
+      }
+
+      if (!rateLimitPassed) {
+        return reply.status(429).send({
+          error: 'rate_limited',
+          message: 'Too many demo login requests. Try again later.',
+        });
       }
 
       const config = DEMO_USERS[role];
