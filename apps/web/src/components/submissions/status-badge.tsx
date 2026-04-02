@@ -72,9 +72,11 @@ const statusConfig: Record<
 interface StatusBadgeProps {
   status: SubmissionStatus;
   className?: string;
+  /** Trigger entrance animation (e.g. when status just changed to ACCEPTED) */
+  animated?: boolean;
 }
 
-export function StatusBadge({ status, className }: StatusBadgeProps) {
+export function StatusBadge({ status, className, animated }: StatusBadgeProps) {
   const { isCompact } = useDensity();
   const config = statusConfig[status];
   const Icon = config.icon;
@@ -82,7 +84,12 @@ export function StatusBadge({ status, className }: StatusBadgeProps) {
   const badge = (
     <Badge
       variant="secondary"
-      className={cn("gap-1", config.className, className)}
+      className={cn(
+        "gap-1",
+        config.className,
+        animated && "animate-status-enter",
+        className,
+      )}
     >
       <Icon className="h-3 w-3" />
       {!isCompact && config.label}

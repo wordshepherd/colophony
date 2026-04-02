@@ -738,6 +738,60 @@ export const submissionsRouter = createRouter({
       }
     }),
 
+  /** Find active sibling submissions for the same manuscript (cross-org). */
+  findSiblings: userProcedure
+    .use(requireScopes('submissions:read'))
+    .input(idParamSchema)
+    .output(
+      z.object({
+        siblings: z.array(
+          z.object({
+            id: z.string().uuid(),
+            title: z.string().nullable(),
+            status: z.string(),
+            organizationId: z.string().uuid(),
+            organizationName: z.string(),
+            submittedAt: z.string().nullable(),
+          }),
+        ),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      const siblings = await submissionService.findSiblingSubmissions(
+        ctx.authContext.userId,
+        input.id,
+      );
+      return { siblings };
+    }),
+
+  /** Withdraw all sibling submissions for the same manuscript — owner only, cross-org. */
+  withdrawCascade: userProcedure
+    .use(requireScopes('submissions:write'))
+    .input(
+      z.object({
+        id: z.string().uuid(),
+        withdrawalNote: z.string().max(1000).optional(),
+      }),
+    )
+    .output(
+      z.object({
+        withdrawn: z.array(
+          z.object({
+            submissionId: z.string().uuid(),
+            organizationName: z.string(),
+            previousStatus: z.string(),
+          }),
+        ),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      return await submissionService.withdrawCascadeAsOwner(
+        ctx.authContext.userId,
+        input.id,
+        input.withdrawalNote,
+      );
+    }),
+
   /** Aging submissions: non-terminal submissions older than threshold. */
   analyticsAging: orgProcedure
     .use(requireScopes('submissions:read'))

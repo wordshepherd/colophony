@@ -58,6 +58,9 @@ vi.mock("@/lib/trpc", () => ({
       submissions: {
         getById: { invalidate: vi.fn() },
         getHistory: { invalidate: vi.fn() },
+        mySubmissionDetail: { invalidate: vi.fn() },
+        findSiblings: { invalidate: vi.fn() },
+        mySubmissions: { invalidate: vi.fn() },
       },
       files: {
         getDownloadUrl: { fetch: vi.fn() },
@@ -89,6 +92,12 @@ vi.mock("@/lib/trpc", () => ({
         useMutation: () => ({ mutate: vi.fn(), isPending: false }),
       },
       withdraw: {
+        useMutation: () => ({ mutate: vi.fn(), isPending: false }),
+      },
+      findSiblings: {
+        useQuery: () => ({ data: { siblings: [] } }),
+      },
+      withdrawCascade: {
         useMutation: () => ({ mutate: vi.fn(), isPending: false }),
       },
     },
