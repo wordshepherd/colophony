@@ -241,11 +241,15 @@ export async function buildApp(env: Env): Promise<FastifyInstance> {
     await registerInngestRoutes(scope);
   });
 
+  // Instance metadata — always registered so the identity page gets a
+  // proper 503 ("federation_disabled") instead of a 404 when federation
+  // is not enabled.
+  await app.register(async (scope) => {
+    await registerFederationDiscoveryRoutes(scope, { env });
+  });
+
   // Federation — isolated scopes (public endpoints)
   if (env.FEDERATION_ENABLED) {
-    await app.register(async (scope) => {
-      await registerFederationDiscoveryRoutes(scope, { env });
-    });
     await app.register(async (scope) => {
       await registerFederationDidRoutes(scope, { env });
     });

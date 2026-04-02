@@ -19,6 +19,7 @@ fi
 
 echo "Dropping and recreating public schema (Zitadel database preserved)..."
 docker exec "$CONTAINER" psql -U "$DB_USER" -d "$DB_NAME" -c "
+  DROP SCHEMA IF EXISTS drizzle CASCADE;
   DROP SCHEMA IF EXISTS public CASCADE;
   CREATE SCHEMA public;
   GRANT ALL ON SCHEMA public TO $DB_USER;
@@ -27,17 +28,16 @@ docker exec "$CONTAINER" psql -U "$DB_USER" -d "$DB_NAME" -c "
   GRANT USAGE ON SCHEMA public TO audit_writer;
 "
 
-echo "Running migrations (replays SQL files to restore functions, triggers, extensions)..."
+echo "Running migrations from clean state (includes SQL functions, triggers, extensions)..."
 pnpm --filter @colophony/db migrate
 
-# drizzle-kit migrate() can silently no-op after DROP SCHEMA CASCADE.
-# Verify tables actually exist; fall back to drizzle-kit push if empty.
+# Verify tables actually exist after migration.
 TABLE_COUNT=$(docker exec "$CONTAINER" psql -U "$DB_USER" -d "$DB_NAME" -tAc \
   "SELECT count(*) FROM pg_tables WHERE schemaname = 'public';")
 
 if [ "$TABLE_COUNT" -eq 0 ]; then
-  echo "WARNING: migrate() produced no tables (known Drizzle quirk). Falling back to drizzle-kit push..."
-  pnpm --filter @colophony/db push
+  echo "ERROR: migrate() produced no tables. This is a Drizzle bug — check packages/db/drizzle.config.ts." >&2
+  exit 1
 fi
 
 echo "Restoring app_user DML permissions..."

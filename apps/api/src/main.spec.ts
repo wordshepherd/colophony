@@ -202,17 +202,21 @@ describe('Fastify app', () => {
     expect(response.headers['cache-control']).toBeUndefined();
   });
 
-  it('federation discovery routes return 404 when FEDERATION_ENABLED=false', async () => {
+  it('federation discovery routes return 503 when FEDERATION_ENABLED=false', async () => {
+    // Discovery routes are always registered so the identity page gets a
+    // proper 503 instead of a 404 when federation is disabled.
     const colophonyRes = await app.inject({
       method: 'GET',
       url: '/.well-known/colophony',
     });
-    expect(colophonyRes.statusCode).toBe(404);
+    expect(colophonyRes.statusCode).toBe(503);
+    expect(colophonyRes.json()).toEqual({ error: 'federation_disabled' });
 
     const webfingerRes = await app.inject({
       method: 'GET',
       url: '/.well-known/webfinger?resource=acct:test@example.com',
     });
-    expect(webfingerRes.statusCode).toBe(404);
+    expect(webfingerRes.statusCode).toBe(503);
+    expect(webfingerRes.json()).toEqual({ error: 'federation_disabled' });
   });
 });
