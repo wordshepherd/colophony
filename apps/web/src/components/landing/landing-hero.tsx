@@ -66,11 +66,11 @@ export function LandingHero({ onRequestDemo }: LandingHeroProps) {
                 className="rounded-lg border border-white/10 shadow-2xl"
               />
             </div>
-            {/* Editor reading pane — overlapping right, in front */}
+            {/* Editor submissions queue — overlapping right, in front */}
             <div className="relative z-20 -mt-[30%] ml-auto w-[85%] md:-mt-[45%] md:w-[55%]">
               <Image
-                src="/screenshots/editor-reading.png"
-                alt="Editor's submission detail view showing a manuscript rendered with reading-quality typography alongside reviewer scores and discussion"
+                src="/screenshots/editor-submissions.png"
+                alt="Editor's All Submissions queue showing four submissions with status badges, submitter emails, submission dates, and age indicators for editorial triage"
                 width={1280}
                 height={800}
                 priority

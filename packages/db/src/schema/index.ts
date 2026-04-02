@@ -35,4 +35,5 @@ export * from "./invitations";
 export * from "./business-ops";
 export * from "./contests";
 export * from "./writer-platform";
+export * from "./demo-requests";
 export * from "./relations";
