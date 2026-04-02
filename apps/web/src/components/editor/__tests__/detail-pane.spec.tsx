@@ -36,6 +36,16 @@ vi.mock("@/lib/trpc", () => ({
       collections: {
         getItems: { invalidate: mockInvalidate },
       },
+      submissions: {
+        getById: { invalidate: vi.fn() },
+        getHistory: { invalidate: vi.fn() },
+        mySubmissionDetail: { invalidate: vi.fn() },
+        findSiblings: { invalidate: vi.fn() },
+        mySubmissions: { invalidate: vi.fn() },
+      },
+      files: {
+        getDownloadUrl: { fetch: vi.fn() },
+      },
     }),
     submissions: {
       getById: {
@@ -43,6 +53,33 @@ vi.mock("@/lib/trpc", () => ({
           data: mockSubmission,
           isPending: mockIsPending,
         }),
+      },
+      mySubmissionDetail: {
+        useQuery: (_input: unknown, opts?: { enabled?: boolean }) => ({
+          data: opts?.enabled === false ? undefined : mockSubmission,
+          isPending: opts?.enabled === false ? false : mockIsPending,
+        }),
+      },
+      getHistory: {
+        useQuery: () => ({ data: [] }),
+      },
+      listReviewers: {
+        useQuery: () => ({ data: [] }),
+      },
+      markReviewerRead: {
+        useMutation: () => ({ mutate: vi.fn() }),
+      },
+      delete: {
+        useMutation: () => ({ mutate: vi.fn(), isPending: false }),
+      },
+      withdraw: {
+        useMutation: () => ({ mutate: vi.fn(), isPending: false }),
+      },
+      findSiblings: {
+        useQuery: () => ({ data: { siblings: [] } }),
+      },
+      withdrawCascade: {
+        useMutation: () => ({ mutate: vi.fn(), isPending: false }),
       },
     },
     collections: {

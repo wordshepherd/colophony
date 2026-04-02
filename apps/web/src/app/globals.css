@@ -227,3 +227,32 @@
     font-family: var(--font-playfair), ui-serif, Georgia, serif;
   }
 }
+
+/* Status badge entrance animation — used when a submission is newly accepted */
+@keyframes status-badge-enter {
+  0% {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  50% {
+    transform: scale(1.08);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes status-badge-glow {
+  0%, 100% {
+    box-shadow: 0 0 0 0 var(--color-status-success) / 0;
+  }
+  50% {
+    box-shadow: 0 0 8px 2px var(--color-status-success) / 0.3;
+  }
+}
+
+.animate-status-enter {
+  animation: status-badge-enter 0.5s ease-out,
+    status-badge-glow 1.5s ease-in-out 0.5s 2;
+}
