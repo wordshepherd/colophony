@@ -49,6 +49,12 @@ import {
 } from "./schema";
 
 // ---------------------------------------------------------------------------
+// Stable demo user IDs (deterministic, survive resets, referenced by DEMO_USER_IDS env var)
+// ---------------------------------------------------------------------------
+export const DEMO_WRITER_ID = "00000000-0000-4000-a000-000000000001";
+export const DEMO_EDITOR_ID = "00000000-0000-4000-a000-000000000002";
+
+// ---------------------------------------------------------------------------
 // Date helpers
 // ---------------------------------------------------------------------------
 const now = new Date();
@@ -111,6 +117,7 @@ async function seedDemo(tx: DrizzleDb) {
   const [writer] = await tx
     .insert(users)
     .values({
+      id: DEMO_WRITER_ID,
       email: "elena.vasquez@example.com",
       displayName: "Elena Vasquez",
       zitadelUserId: "demo-zitadel-writer-001",
@@ -122,6 +129,7 @@ async function seedDemo(tx: DrizzleDb) {
   const [meridianEditor] = await tx
     .insert(users)
     .values({
+      id: DEMO_EDITOR_ID,
       email: "margaret.chen@meridianreview.org",
       displayName: "Margaret Chen",
       zitadelUserId: "demo-zitadel-meridian-editor-001",

@@ -29,7 +29,7 @@ export function ProtectedRoute({
   useEffect(() => {
     if (isLoading) return;
 
-    // Not authenticated - redirect to Zitadel login
+    // Not authenticated - redirect to Zitadel login (demo users are already authenticated)
     if (!isAuthenticated) {
       login();
       return;

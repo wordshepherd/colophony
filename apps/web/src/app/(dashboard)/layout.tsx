@@ -8,6 +8,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { DensityProvider } from "@/hooks/use-density";
 import { CommandPaletteProvider } from "@/components/command-palette/command-palette";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { DemoBanner } from "@/components/demo/demo-banner";
 
 export default function DashboardLayout({
   children,
@@ -26,6 +27,7 @@ export default function DashboardLayout({
               >
                 Skip to main content
               </a>
+              <DemoBanner />
               <Header />
               <div className="flex-1 flex">
                 {/* Sidebar - hidden on mobile */}

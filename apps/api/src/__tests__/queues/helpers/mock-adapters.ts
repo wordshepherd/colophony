@@ -91,6 +91,7 @@ export function createTestEnv(overrides?: Partial<Env>): Env {
     CLAMAV_PORT: 3310,
     VIRUS_SCAN_ENABLED: true,
     DEV_AUTH_BYPASS: false,
+    DEMO_MODE: false,
     FEDERATION_RATE_LIMIT_MAX: 60,
     FEDERATION_RATE_LIMIT_WINDOW_SECONDS: 60,
     STATUS_TOKEN_TTL_DAYS: 90,

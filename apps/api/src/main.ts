@@ -171,6 +171,7 @@ export async function buildApp(env: Env): Promise<FastifyInstance> {
       'X-Organization-Id',
       'X-Request-Id',
       'X-Api-Key',
+      'X-Demo-User-Id',
     ],
     exposedHeaders: [
       'X-RateLimit-Limit',

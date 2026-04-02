@@ -52,6 +52,7 @@ export function createTestEnv(overrides?: Partial<Env>): Env {
     ZITADEL_CLIENT_ID: undefined,
     ZITADEL_WEBHOOK_SECRET: 'test-webhook-secret-32-characters!',
     DEV_AUTH_BYPASS: false,
+    DEMO_MODE: false,
     FEDERATION_DOMAIN: undefined,
     FEDERATION_ENABLED: false,
     FEDERATION_RATE_LIMIT_MAX: 60,
