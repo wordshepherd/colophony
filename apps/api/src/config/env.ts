@@ -154,6 +154,9 @@ const envSchema = z
     SENDGRID_API_KEY: z.string().optional(),
     SENDGRID_FROM: z.string().optional(),
 
+    // Demo request notifications
+    DEMO_NOTIFY_EMAIL: z.string().email().optional(),
+
     // Monitoring — Sentry
     SENTRY_DSN: z
       .string()

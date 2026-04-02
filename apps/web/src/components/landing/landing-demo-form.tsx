@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -26,8 +27,11 @@ const demoFormSchema = z.object({
 
 type DemoFormData = z.infer<typeof demoFormSchema>;
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
+
 export function LandingDemoForm() {
   const { ref, isInView } = useInView(0.1);
+  const [submitting, setSubmitting] = useState(false);
 
   const form = useForm<DemoFormData>({
     resolver: zodResolver(demoFormSchema),
@@ -39,13 +43,33 @@ export function LandingDemoForm() {
     },
   });
 
-  function onSubmit(data: DemoFormData) {
-    // TODO: Wire up to a backend endpoint or email service (e.g., POST /api/demo-request)
-    console.log("Demo request submitted:", data);
-    toast.success("Thank you! We'll be in touch soon.", {
-      description: `We received your request for ${data.magazine}.`,
-    });
-    form.reset();
+  async function onSubmit(data: DemoFormData) {
+    setSubmitting(true);
+    try {
+      const res = await fetch(`${API_URL}/v1/public/demo-requests`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+
+      if (!res.ok) {
+        const body = await res.json().catch(() => null);
+        throw new Error(body?.error ?? `Request failed (${res.status})`);
+      }
+
+      toast.success("Thank you! We'll be in touch soon.", {
+        description: `We received your request for ${data.magazine}.`,
+      });
+      form.reset();
+    } catch (err) {
+      toast.error(
+        err instanceof Error
+          ? err.message
+          : "Something went wrong. Please try again.",
+      );
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (
@@ -154,9 +178,10 @@ export function LandingDemoForm() {
             <Button
               type="submit"
               size="lg"
+              disabled={submitting}
               className="w-full bg-accent text-accent-foreground hover:bg-accent/90 text-base"
             >
-              Request a Demo
+              {submitting ? "Sending..." : "Request a Demo"}
             </Button>
           </form>
         </Form>
