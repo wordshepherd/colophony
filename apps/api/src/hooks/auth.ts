@@ -123,7 +123,8 @@ export default fp(
     });
 
     // Production guard: fail fast if Zitadel is not configured
-    if (isProduction && !env.ZITADEL_AUTHORITY) {
+    // Exception: DEMO_MODE runs in production without Zitadel (uses X-Demo-User-Id header)
+    if (isProduction && !env.ZITADEL_AUTHORITY && !env.DEMO_MODE) {
       throw new Error(
         'ZITADEL_AUTHORITY is required in production. Cannot start without auth.',
       );
