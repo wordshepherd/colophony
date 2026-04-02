@@ -7,6 +7,7 @@ import {
   submissionHistory,
   submissionPeriods,
   formDefinitions,
+  organizations,
   users,
   eq,
   and,
@@ -990,7 +991,6 @@ export const submissionService = {
     if (versionIds.length === 0) return [];
 
     // Step 4: Find active submissions on any of those versions (excluding the current one)
-    const { organizations } = await import('@colophony/db');
     const siblings = await db
       .select({
         id: submissions.id,
@@ -1060,12 +1060,23 @@ export const submissionService = {
       withdrawalNote ??
       'This piece has been accepted elsewhere. Thank you for your consideration.';
 
-    // Withdraw each sibling using the superuser pool (cross-org)
+    // Withdraw each sibling using the superuser pool (cross-org).
+    // Guarded update: only withdraw if status is still active (prevents
+    // overwriting concurrent editorial decisions).
     for (const sib of siblings) {
-      await db
+      const [updated] = await db
         .update(submissions)
         .set({ status: 'WITHDRAWN', updatedAt: new Date() })
-        .where(eq(submissions.id, sib.id));
+        .where(
+          and(
+            eq(submissions.id, sib.id),
+            inArray(submissions.status, ['SUBMITTED', 'UNDER_REVIEW', 'HOLD']),
+          ),
+        )
+        .returning({ id: submissions.id, status: submissions.status });
+
+      // Skip if the row wasn't updated (status changed since lookup)
+      if (!updated) continue;
 
       await db.insert(submissionHistory).values({
         submissionId: sib.id,
@@ -1074,6 +1085,17 @@ export const submissionService = {
         changedBy: userId,
         comment,
       });
+
+      // Emit outbox event so withdrawal emails/webhooks fire
+      await enqueueOutboxEvent(
+        db as unknown as DrizzleDb,
+        'hopper/submission.withdrawn',
+        {
+          orgId: sib.organizationId,
+          submissionId: sib.id,
+          submitterId: userId,
+        },
+      );
 
       withdrawn.push({
         submissionId: sib.id,

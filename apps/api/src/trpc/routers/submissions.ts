@@ -740,6 +740,7 @@ export const submissionsRouter = createRouter({
 
   /** Find active sibling submissions for the same manuscript (cross-org). */
   findSiblings: userProcedure
+    .use(requireScopes('submissions:read'))
     .input(idParamSchema)
     .output(
       z.object({
@@ -765,6 +766,7 @@ export const submissionsRouter = createRouter({
 
   /** Withdraw all sibling submissions for the same manuscript — owner only, cross-org. */
   withdrawCascade: userProcedure
+    .use(requireScopes('submissions:write'))
     .input(
       z.object({
         id: z.string().uuid(),
