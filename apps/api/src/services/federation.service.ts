@@ -334,6 +334,12 @@ export const federationService = {
    * for cross-org public metadata (same pattern as org-context.ts:78).
    */
   async getInstanceMetadata(env: Env): Promise<FederationMetadata> {
+    // Fast path: check env flag before any DB queries so the identity
+    // page gets a clean 503 even when federation tables are empty.
+    if (!env.FEDERATION_ENABLED) {
+      throw new FederationDisabledError();
+    }
+
     const config = await this.getPublicConfig(env);
 
     if (!config.enabled) {
@@ -402,6 +408,10 @@ export const federationService = {
     env: Env,
     resource: string,
   ): Promise<WebFingerResponse> {
+    if (!env.FEDERATION_ENABLED) {
+      throw new FederationDisabledError();
+    }
+
     const config = await this.getPublicConfig(env);
 
     if (!config.enabled) {
