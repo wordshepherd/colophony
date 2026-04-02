@@ -27,6 +27,7 @@ import { registerStripeWebhooks } from './webhooks/stripe.webhook.js';
 import { registerDocumensoWebhooks } from './webhooks/documenso.webhook.js';
 import { registerEmbedRoutes } from './routes/embed.routes.js';
 import { registerPublicRoutes } from './routes/public.routes.js';
+import { registerDemoRoutes } from './routes/demo-login.route.js';
 import { fastifyTRPCPlugin } from '@trpc/server/adapters/fastify';
 import { appRouter } from './trpc/router.js';
 import { createContext } from './trpc/context.js';
@@ -171,6 +172,7 @@ export async function buildApp(env: Env): Promise<FastifyInstance> {
       'X-Organization-Id',
       'X-Request-Id',
       'X-Api-Key',
+      'X-Demo-User-Id',
     ],
     exposedHeaders: [
       'X-RateLimit-Limit',
@@ -220,6 +222,14 @@ export async function buildApp(env: Env): Promise<FastifyInstance> {
   await app.register(async (scope) => {
     await registerPublicRoutes(scope, { env });
   });
+
+  // Demo routes — only when DEMO_MODE is enabled
+  if (env.DEMO_MODE) {
+    await app.register(async (scope) => {
+      await registerDemoRoutes(scope, { env });
+    });
+    app.log.info('Demo mode enabled — /v1/public/demo/login route registered');
+  }
 
   // Prometheus metrics endpoint — isolated scope (public, no auth/rate-limit)
   if (env.METRICS_ENABLED) {

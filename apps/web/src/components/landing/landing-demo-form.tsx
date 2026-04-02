@@ -16,6 +16,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import Link from "next/link";
 import { useInView } from "@/hooks/use-in-view";
 
 const demoFormSchema = z.object({
@@ -183,6 +184,16 @@ export function LandingDemoForm() {
             >
               {submitting ? "Sending..." : "Request a Demo"}
             </Button>
+            <p className="text-center text-sm text-muted-foreground">
+              Or{" "}
+              <Link
+                href="/demo"
+                className="text-primary hover:text-primary/80 font-medium underline underline-offset-4"
+              >
+                try the demo now
+              </Link>{" "}
+              &mdash; no account needed.
+            </p>
           </form>
         </Form>
       </div>

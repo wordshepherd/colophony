@@ -226,6 +226,43 @@ export default fp(
           });
         }
 
+        // Demo mode: allow demo user injection via header (gated behind DEMO_MODE env var)
+        if (env.DEMO_MODE) {
+          const demoUserId = request.headers['x-demo-user-id'] as
+            | string
+            | undefined;
+          if (demoUserId) {
+            const allowedIds = (env.DEMO_USER_IDS || '')
+              .split(',')
+              .filter(Boolean);
+            if (!allowedIds.includes(demoUserId)) {
+              return reply.status(401).send({
+                error: 'unauthorized',
+                message: 'Invalid demo user',
+              });
+            }
+            const [demoUser] = await db
+              .select()
+              .from(users)
+              .where(eq(users.id, demoUserId))
+              .limit(1);
+            if (!demoUser) {
+              return reply.status(401).send({
+                error: 'unauthorized',
+                message: 'Demo user not found',
+              });
+            }
+            request.authContext = {
+              userId: demoUser.id,
+              zitadelUserId: demoUser.zitadelUserId ?? demoUserId,
+              email: demoUser.email,
+              emailVerified: true,
+              authMethod: 'demo',
+            };
+            return;
+          }
+        }
+
         // Extract Bearer token
         const authHeader = request.headers.authorization;
         if (!authHeader) {

@@ -93,6 +93,11 @@ const envSchema = z
       .enum(['true', 'false'])
       .default('false')
       .transform((v) => v === 'true'),
+    DEMO_MODE: z
+      .enum(['true', 'false'])
+      .default('false')
+      .transform((v) => v === 'true'),
+    DEMO_USER_IDS: z.string().optional(),
     // Federation rate limiting (per-peer)
     FEDERATION_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(60),
     FEDERATION_RATE_LIMIT_WINDOW_SECONDS: z.coerce

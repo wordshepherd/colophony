@@ -28,7 +28,7 @@ export interface AuthContext {
   userId: string;
   email: string;
   emailVerified: boolean;
-  authMethod: "oidc" | "apikey" | "test";
+  authMethod: "oidc" | "apikey" | "test" | "demo";
   /** Zitadel user ID — set for OIDC auth only. */
   zitadelUserId?: string;
   /** API key ID — set for API key auth only. */
