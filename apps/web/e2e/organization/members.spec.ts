@@ -7,22 +7,23 @@ test.describe("Member Management (Members tab)", () => {
     await authedPage.goto("/organizations/settings");
     await authedPage.getByRole("tab", { name: "Members" }).click();
 
-    // Assert table headers
+    // Assert table headers (scope to first table — members, not invitations)
+    const membersTable = authedPage.getByRole("table").first();
     await expect(
-      authedPage.getByRole("columnheader", { name: "Email" }),
+      membersTable.getByRole("columnheader", { name: "Email" }),
     ).toBeVisible();
     await expect(
-      authedPage.getByRole("columnheader", { name: "Role" }),
+      membersTable.getByRole("columnheader", { name: "Role" }),
     ).toBeVisible();
     await expect(
-      authedPage.getByRole("columnheader", { name: "Joined" }),
+      membersTable.getByRole("columnheader", { name: "Joined" }),
     ).toBeVisible();
     await expect(
-      authedPage.getByRole("columnheader", { name: "Actions" }),
+      membersTable.getByRole("columnheader", { name: "Actions" }),
     ).toBeVisible();
 
     // At least one member row visible (header + data rows, minimum 2)
-    const rowCount = await authedPage.getByRole("row").count();
+    const rowCount = await membersTable.getByRole("row").count();
     expect(rowCount).toBeGreaterThanOrEqual(2);
     await expect(
       authedPage.getByRole("cell", { name: "editor@quarterlyreview.org" }),
