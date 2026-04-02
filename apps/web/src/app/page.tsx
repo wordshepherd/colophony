@@ -2,8 +2,17 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { Toaster } from "@/components/ui/sonner";
 import { getUserManager } from "@/lib/oidc";
-import { Button } from "@/components/ui/button";
+import { LandingHeader } from "@/components/landing/landing-header";
+import { LandingHero } from "@/components/landing/landing-hero";
+import {
+  LandingTwoSides,
+  LandingDifferentiators,
+} from "@/components/landing/landing-features";
+import { LandingDeployment } from "@/components/landing/landing-deployment";
+import { LandingDemoForm } from "@/components/landing/landing-demo-form";
+import { LandingFooter } from "@/components/landing/landing-footer";
 
 export default function Home() {
   const router = useRouter();
@@ -42,49 +51,22 @@ export default function Home() {
     }
   };
 
+  const scrollToDemo = () => {
+    document.getElementById("demo")?.scrollIntoView({ behavior: "smooth" });
+  };
+
   return (
-    <div className="min-h-screen flex flex-col">
-      {/* Header */}
-      <header className="border-b">
-        <div className="container flex h-14 items-center justify-between">
-          <span className="font-bold text-lg">Colophony</span>
-          <Button variant="ghost" onClick={handleSignIn}>
-            Sign in
-          </Button>
-        </div>
-      </header>
-
-      {/* Hero */}
-      <main className="flex-1 flex items-center justify-center">
-        <div className="container max-w-4xl py-12 text-center">
-          <h1 className="text-4xl font-bold tracking-tight sm:text-6xl">
-            Submissions Management Platform
-          </h1>
-          <p className="mt-6 text-lg text-muted-foreground max-w-2xl mx-auto">
-            A modern platform for creative arts magazines to manage submissions,
-            review content, and streamline the editorial workflow.
-          </p>
-          <div className="mt-10 flex items-center justify-center gap-4">
-            <Button size="lg" onClick={handleSignIn}>
-              Get Started
-            </Button>
-          </div>
-        </div>
+    <div className="dark min-h-screen scroll-smooth bg-background text-foreground">
+      <LandingHeader onSignIn={handleSignIn} />
+      <main>
+        <LandingHero onRequestDemo={scrollToDemo} />
+        <LandingTwoSides />
+        <LandingDifferentiators />
+        <LandingDeployment />
+        <LandingDemoForm />
       </main>
-
-      {/* Footer */}
-      <footer className="border-t py-6">
-        <div className="container text-center text-sm text-muted-foreground space-y-2">
-          <div>
-            &copy; {new Date().getFullYear()} Colophony. All rights reserved.
-          </div>
-          <div>
-            <a href="/identity" className="underline hover:text-foreground">
-              Instance Identity
-            </a>
-          </div>
-        </div>
-      </footer>
+      <LandingFooter />
+      <Toaster theme="dark" />
     </div>
   );
 }
