@@ -112,6 +112,7 @@ const baseEnv: Env = {
   CLAMAV_PORT: 3310,
   VIRUS_SCAN_ENABLED: true,
   DEV_AUTH_BYPASS: false,
+  DEMO_MODE: false,
   FEDERATION_ENABLED: true,
   FEDERATION_DOMAIN: 'magazine.example',
   FEDERATION_RATE_LIMIT_MAX: 60,

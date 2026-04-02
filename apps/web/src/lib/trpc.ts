@@ -80,13 +80,21 @@ export function getTrpcClient() {
           });
         },
         async headers() {
-          const token = await getAccessToken();
           const orgId = getCurrentOrgId();
-
           const headers: Record<string, string> = {};
 
-          if (token) {
-            headers["Authorization"] = `Bearer ${token}`;
+          // Demo mode: send X-Demo-User-Id instead of OIDC Bearer token
+          const demoUserId =
+            typeof window !== "undefined"
+              ? localStorage.getItem("colophony_demo_user_id")
+              : null;
+          if (demoUserId) {
+            headers["X-Demo-User-Id"] = demoUserId;
+          } else {
+            const token = await getAccessToken();
+            if (token) {
+              headers["Authorization"] = `Bearer ${token}`;
+            }
           }
 
           if (orgId) {

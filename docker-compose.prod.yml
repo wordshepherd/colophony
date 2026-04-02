@@ -545,6 +545,132 @@ services:
     networks:
       - colophony
 
+  # ---------------------------------------------------------------------------
+  # Demo environment (--profile demo)
+  # ---------------------------------------------------------------------------
+
+  # Demo database migration + seed (uses builder target for source files + tools)
+  demo-migrate:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+      target: builder
+    container_name: colophony-demo-migrate
+    profiles: [demo]
+    entrypoint: ["sh", "-c"]
+    command:
+      - |
+        apk add --no-cache postgresql16-client bash
+        /app/scripts/init-prod.sh
+        echo "Running demo seed..."
+        cd /app && npx tsx packages/db/src/seed-demo.ts
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-colophony}:${POSTGRES_PASSWORD}@postgres:5432/colophony_demo
+      DATABASE_APP_URL: postgresql://app_user:${APP_USER_PASSWORD}@postgres:5432/colophony_demo
+    volumes:
+      - ./scripts/init-prod.sh:/app/scripts/init-prod.sh:ro
+      - ./scripts/verify-rls.sh:/app/scripts/verify-rls.sh:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - colophony
+
+  # Demo API server
+  api-demo:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    container_name: colophony-demo-api
+    profiles: [demo]
+    expose:
+      - "4000"
+    environment:
+      NODE_ENV: production
+      PORT: 4000
+      HOST: 0.0.0.0
+      DATABASE_URL: postgresql://${POSTGRES_USER:-colophony}:${POSTGRES_PASSWORD}@postgres:5432/colophony_demo
+      DATABASE_APP_URL: postgresql://app_user:${APP_USER_PASSWORD}@pgbouncer:6432/colophony_demo?sslmode=disable
+      DB_SSL: ${DB_SSL:-false}
+      DB_ADMIN_POOL_MAX: 3
+      DB_APP_POOL_MAX: 10
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      S3_ENDPOINT: http://garage:3900
+      S3_BUCKET: demo-submissions
+      S3_QUARANTINE_BUCKET: demo-quarantine
+      S3_ACCESS_KEY: ${GARAGE_S3_ACCESS_KEY}
+      S3_SECRET_KEY: ${GARAGE_S3_SECRET_KEY}
+      S3_REGION: us-east-1
+      CORS_ORIGIN: https://demo.${DOMAIN:-localhost}
+      APP_URL: https://demo.${DOMAIN:-localhost}
+      LOG_LEVEL: info
+      RATE_LIMIT_DEFAULT_MAX: 120
+      RATE_LIMIT_AUTH_MAX: 400
+      RATE_LIMIT_WINDOW_SECONDS: 60
+      RATE_LIMIT_KEY_PREFIX: colophony-demo:rl
+      AUTH_FAILURE_THROTTLE_MAX: 20
+      AUTH_FAILURE_THROTTLE_WINDOW_SECONDS: 300
+      VIRUS_SCAN_ENABLED: "false"
+      EMAIL_PROVIDER: none
+      DEMO_MODE: "true"
+      DEMO_USER_IDS: "00000000-0000-4000-a000-000000000001,00000000-0000-4000-a000-000000000002"
+      METRICS_ENABLED: "false"
+      FEDERATION_ENABLED: "false"
+      INNGEST_DEV: "true"
+    depends_on:
+      demo-migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4000/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    deploy:
+      resources:
+        limits:
+          memory: 384M
+    networks:
+      - colophony
+
+  # Demo web frontend
+  web-demo:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args:
+        NEXT_PUBLIC_APP_URL: https://demo.${DOMAIN:-localhost}
+        NEXT_PUBLIC_API_URL: https://demo.${DOMAIN:-localhost}
+        NEXT_PUBLIC_TUS_URL: https://demo.${DOMAIN:-localhost}/upload/files/
+        NEXT_PUBLIC_ZITADEL_AUTHORITY: ""
+        NEXT_PUBLIC_ZITADEL_CLIENT_ID: ""
+    container_name: colophony-demo-web
+    profiles: [demo]
+    expose:
+      - "3000"
+    environment:
+      NODE_ENV: production
+      API_URL: http://api-demo:4000
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+    networks:
+      - colophony
+
 volumes:
   caddy_data:
     name: ${VOLUME_PREFIX:-colophony}_caddy_data

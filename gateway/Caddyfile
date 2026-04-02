@@ -56,8 +56,8 @@
 		reverse_proxy api:4000
 	}
 
-	# REST API
-	@api path /api /api/*
+	# REST API (oRPC + public routes)
+	@api path /api /api/* /v1 /v1/*
 	handle @api {
 		reverse_proxy api:4000
 	}
@@ -99,5 +99,39 @@
 			rewrite * /maintenance.html
 			file_server
 		}
+	}
+}
+
+# Demo subdomain (only resolves when demo profile services are running)
+demo.{$DOMAIN:localhost} {
+	encode gzip
+
+	header {
+		X-Frame-Options "SAMEORIGIN"
+		X-Content-Type-Options "nosniff"
+		X-XSS-Protection "1; mode=block"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+	}
+
+	# API routes
+	@demo_trpc path /trpc /trpc/*
+	handle @demo_trpc {
+		reverse_proxy api-demo:4000
+	}
+
+	@demo_api path /api /api/* /v1 /v1/*
+	handle @demo_api {
+		reverse_proxy api-demo:4000
+	}
+
+	@demo_webhooks path /webhooks /webhooks/*
+	handle @demo_webhooks {
+		reverse_proxy api-demo:4000
+	}
+
+	# Next.js frontend (default)
+	handle {
+		reverse_proxy web-demo:3000
 	}
 }

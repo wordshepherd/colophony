@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { User } from "oidc-client-ts";
 import { getUserManager } from "@/lib/oidc";
 import { trpc, setCurrentOrgId } from "@/lib/trpc";
+import { isDemoMode, getDemoDisplayName, clearDemo } from "@/lib/demo-auth";
 
 export interface UserProfile {
   id: string;
@@ -22,16 +23,24 @@ export interface UserProfile {
 export function useAuth() {
   const [oidcUser, setOidcUser] = useState<User | null>(null);
   const [oidcLoading, setOidcLoading] = useState(true);
+  const [inDemoMode, setInDemoMode] = useState(false);
   const initializedRef = useRef(false);
 
-  // Check for existing OIDC session on mount
+  // Check for existing OIDC session or demo session on mount
   useEffect(() => {
     if (initializedRef.current) return;
     initializedRef.current = true;
 
+    // Demo mode: skip OIDC entirely
+    if (isDemoMode()) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- sync guard, fires once before any async work
+      setInDemoMode(true);
+      setOidcLoading(false);
+      return;
+    }
+
     const userManager = getUserManager();
     if (!userManager) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- sync guard, fires once before any async work
       setOidcLoading(false);
       return;
     }
@@ -76,7 +85,7 @@ export function useAuth() {
     isPending: profilePending,
     error: profileError,
   } = trpc.users.me.useQuery(undefined, {
-    enabled: hasOidcToken,
+    enabled: hasOidcToken || inDemoMode,
     retry: (failureCount) => {
       // Retry a few times (user may not be provisioned yet via webhook)
       return failureCount < 3;
@@ -92,7 +101,7 @@ export function useAuth() {
   // retries, the token is invalid (e.g., Zitadel signing keys changed).
   // Clear OIDC state and force re-authentication.
   useEffect(() => {
-    if (!profileError || !hasOidcToken) return;
+    if (!profileError || !hasOidcToken || inDemoMode) return;
 
     const isAuthError =
       profileError.data?.code === "UNAUTHORIZED" ||
@@ -108,23 +117,26 @@ export function useAuth() {
         void userManager.signinRedirect();
       });
     }
-  }, [profileError, hasOidcToken]);
+  }, [profileError, hasOidcToken, inDemoMode]);
 
-  // Build the user profile with name from OIDC claims
+  // Build the user profile with name from OIDC claims (or demo data)
   const user: UserProfile | null = userProfile
     ? {
         ...userProfile,
-        name: oidcUser?.profile?.name ?? null,
+        name: inDemoMode
+          ? (getDemoDisplayName() ?? null)
+          : (oidcUser?.profile?.name ?? null),
         createdAt: new Date(userProfile.createdAt),
       }
     : null;
 
-  const isLoading = oidcLoading || (hasOidcToken && profilePending);
+  const isLoading =
+    oidcLoading || ((hasOidcToken || inDemoMode) && profilePending);
 
-  // Authenticated = valid OIDC token exists. This prevents ProtectedRoute
+  // Authenticated = valid OIDC token or demo session. This prevents ProtectedRoute
   // from triggering a redirect loop when the user profile hasn't loaded yet
   // (e.g., first login before Zitadel webhook provisions the user).
-  const isAuthenticated = hasOidcToken;
+  const isAuthenticated = hasOidcToken || inDemoMode;
 
   const login = useCallback(() => {
     const userManager = getUserManager();
@@ -141,13 +153,18 @@ export function useAuth() {
   }, []);
 
   const logout = useCallback(() => {
+    if (inDemoMode) {
+      clearDemo();
+      window.location.href = "/demo";
+      return;
+    }
     const userManager = getUserManager();
     if (userManager) {
       // Clear persisted org selection so it doesn't leak to the next session
       setCurrentOrgId(null);
       void userManager.signoutRedirect();
     }
-  }, []);
+  }, [inDemoMode]);
 
   return {
     user,

@@ -47,3 +47,4 @@ export * from "./contest";
 export * from "./simsub-group";
 export * from "./portfolio-entry";
 export * from "./reader-feedback";
+export * from "./demo";

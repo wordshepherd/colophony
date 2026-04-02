@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { ExternalLink } from "lucide-react";
 
@@ -32,9 +33,13 @@ export function LandingHero({ onRequestDemo }: LandingHeroProps) {
             published and the contributor is paid.
           </p>
           <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
+            <Button size="lg" className="px-8 text-base" asChild>
+              <Link href="/demo">Try the Demo</Link>
+            </Button>
             <Button
               size="lg"
-              className="bg-accent text-accent-foreground hover:bg-accent/90 px-8 text-base"
+              variant="outline"
+              className="px-8 text-base"
               onClick={onRequestDemo}
             >
               Request a Demo

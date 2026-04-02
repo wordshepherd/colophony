@@ -48,6 +48,9 @@ export function LandingHeader({ onSignIn }: LandingHeaderProps) {
           >
             Sign in
           </button>
+          <Button variant="ghost" asChild className="hidden md:inline-flex">
+            <Link href="/demo">Try Demo</Link>
+          </Button>
           <Button
             asChild
             className="bg-accent text-accent-foreground hover:bg-accent/90"
