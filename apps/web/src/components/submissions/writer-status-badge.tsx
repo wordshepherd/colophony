@@ -61,12 +61,15 @@ interface WriterStatusBadgeProps {
   status: WriterStatus;
   label: string;
   className?: string;
+  /** Trigger entrance animation (e.g. when status just changed to ACCEPTED) */
+  animated?: boolean;
 }
 
 export function WriterStatusBadge({
   status,
   label,
   className,
+  animated,
 }: WriterStatusBadgeProps) {
   const { isCompact } = useDensity();
   const config = writerStatusConfig[status];
@@ -75,7 +78,12 @@ export function WriterStatusBadge({
   const badge = (
     <Badge
       variant="secondary"
-      className={cn("gap-1", config.className, className)}
+      className={cn(
+        "gap-1",
+        config.className,
+        animated && "animate-status-enter",
+        className,
+      )}
     >
       <Icon className="h-3 w-3" />
       {!isCompact && label}

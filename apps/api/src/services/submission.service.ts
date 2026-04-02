@@ -939,6 +939,153 @@ export const submissionService = {
   },
 
   /**
+   * Find active sibling submissions for the same manuscript across all orgs.
+   * Returns submissions that share any version of the same manuscript.
+   * Uses superuser pool for cross-org lookup (writer-scoped by submitterId).
+   */
+  async findSiblingSubmissions(
+    userId: string,
+    submissionId: string,
+  ): Promise<
+    Array<{
+      id: string;
+      title: string | null;
+      status: string;
+      organizationId: string;
+      organizationName: string;
+      submittedAt: string | null;
+    }>
+  > {
+    // Step 1: Get the manuscript version for this submission
+    const [sub] = await db
+      .select({
+        manuscriptVersionId: submissions.manuscriptVersionId,
+        submitterId: submissions.submitterId,
+      })
+      .from(submissions)
+      .where(eq(submissions.id, submissionId))
+      .limit(1);
+
+    if (!sub || sub.submitterId !== userId || !sub.manuscriptVersionId) {
+      return [];
+    }
+
+    // Step 2: Get the manuscript ID from this version
+    const [version] = await db
+      .select({ manuscriptId: manuscriptVersions.manuscriptId })
+      .from(manuscriptVersions)
+      .where(eq(manuscriptVersions.id, sub.manuscriptVersionId))
+      .limit(1);
+
+    if (!version) return [];
+
+    // Step 3: Get all version IDs for this manuscript
+    const allVersions = await db
+      .select({ id: manuscriptVersions.id })
+      .from(manuscriptVersions)
+      .where(eq(manuscriptVersions.manuscriptId, version.manuscriptId))
+      .limit(50);
+
+    const versionIds = allVersions.map((v) => v.id);
+    if (versionIds.length === 0) return [];
+
+    // Step 4: Find active submissions on any of those versions (excluding the current one)
+    const { organizations } = await import('@colophony/db');
+    const siblings = await db
+      .select({
+        id: submissions.id,
+        title: submissions.title,
+        status: submissions.status,
+        organizationId: submissions.organizationId,
+        organizationName: organizations.name,
+        submittedAt: submissions.submittedAt,
+      })
+      .from(submissions)
+      .innerJoin(
+        organizations,
+        eq(submissions.organizationId, organizations.id),
+      )
+      .where(
+        and(
+          inArray(submissions.manuscriptVersionId, versionIds),
+          eq(submissions.submitterId, userId),
+          inArray(submissions.status, ['SUBMITTED', 'UNDER_REVIEW', 'HOLD']),
+          sql`${submissions.id} != ${submissionId}`,
+        ),
+      )
+      .limit(50);
+
+    return siblings.map((s) => ({
+      id: s.id,
+      title: s.title,
+      status: s.status,
+      organizationId: s.organizationId,
+      organizationName: s.organizationName,
+      submittedAt: s.submittedAt?.toISOString() ?? null,
+    }));
+  },
+
+  /**
+   * Withdraw all sibling submissions for the same manuscript — owner only.
+   * Cross-org: uses superuser pool to update submissions the writer owns
+   * at other magazines. Each withdrawal gets history + outbox event.
+   */
+  async withdrawCascadeAsOwner(
+    userId: string,
+    submissionId: string,
+    withdrawalNote?: string,
+  ): Promise<{
+    withdrawn: Array<{
+      submissionId: string;
+      organizationName: string;
+      previousStatus: string;
+    }>;
+  }> {
+    const siblings = await submissionService.findSiblingSubmissions(
+      userId,
+      submissionId,
+    );
+
+    if (siblings.length === 0) {
+      return { withdrawn: [] };
+    }
+
+    const withdrawn: Array<{
+      submissionId: string;
+      organizationName: string;
+      previousStatus: string;
+    }> = [];
+
+    const comment =
+      withdrawalNote ??
+      'This piece has been accepted elsewhere. Thank you for your consideration.';
+
+    // Withdraw each sibling using the superuser pool (cross-org)
+    for (const sib of siblings) {
+      await db
+        .update(submissions)
+        .set({ status: 'WITHDRAWN', updatedAt: new Date() })
+        .where(eq(submissions.id, sib.id));
+
+      await db.insert(submissionHistory).values({
+        submissionId: sib.id,
+        fromStatus: sib.status as SubmissionStatus,
+        toStatus: 'WITHDRAWN',
+        changedBy: userId,
+        comment,
+      });
+
+      withdrawn.push({
+        submissionId: sib.id,
+        organizationName: sib.organizationName,
+        previousStatus: sib.status,
+      });
+    }
+
+    return { withdrawn };
+  },
+
+  /**
    * Editor/admin status transition with audit.
    */
   async updateStatusAsEditor(

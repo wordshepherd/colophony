@@ -106,6 +106,8 @@ export function SubmissionDetail({
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showWithdrawDialog, setShowWithdrawDialog] = useState(false);
   const [showComposeDialog, setShowComposeDialog] = useState(false);
+  const [showWithdrawCascadeDialog, setShowWithdrawCascadeDialog] =
+    useState(false);
   const [isReadingMode, setIsReadingMode] = useState(false);
   const utils = trpc.useUtils();
 
@@ -164,6 +166,36 @@ export function SubmissionDetail({
       utils.submissions.getById.invalidate({ id: submissionId });
       utils.submissions.mySubmissionDetail.invalidate({ id: submissionId });
       utils.submissions.getHistory.invalidate({ submissionId });
+    },
+    onError: (err) => {
+      toast.error(err.message);
+    },
+  });
+
+  // Sibling submissions for withdrawal cascade (only when owner + accepted)
+  const submissionStatus =
+    submission && "status" in submission ? submission.status : undefined;
+  const submissionWriterStatus =
+    submission && "writerStatus" in submission
+      ? submission.writerStatus
+      : undefined;
+  const isSubmissionAccepted =
+    submissionStatus === "ACCEPTED" || submissionWriterStatus === "ACCEPTED";
+  const isSubmissionOwner = !!(user && submission?.submitterId === user.id);
+
+  const { data: siblingsData } = trpc.submissions.findSiblings.useQuery(
+    { id: submissionId },
+    { enabled: isSubmissionOwner && isSubmissionAccepted },
+  );
+
+  const withdrawCascadeMutation = trpc.submissions.withdrawCascade.useMutation({
+    onSuccess: (result) => {
+      const count = result.withdrawn.length;
+      toast.success(
+        `Withdrawn from ${count} magazine${count !== 1 ? "s" : ""}`,
+      );
+      utils.submissions.findSiblings.invalidate({ id: submissionId });
+      utils.submissions.mySubmissions.invalidate();
     },
     onError: (err) => {
       toast.error(err.message);
@@ -316,6 +348,37 @@ export function SubmissionDetail({
           }
         />
       )}
+
+      {/* Withdrawal cascade — shown to owner when accepted with active siblings */}
+      {isOwner &&
+        isSubmissionAccepted &&
+        siblingsData &&
+        siblingsData.siblings.length > 0 && (
+          <Card className="border-status-success/30 bg-status-success/5">
+            <CardContent className="pt-6">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-sm font-medium">
+                    This piece is still pending at{" "}
+                    {siblingsData.siblings.length} other magazine
+                    {siblingsData.siblings.length !== 1 ? "s" : ""}
+                  </p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {siblingsData.siblings
+                      .map((s) => s.organizationName)
+                      .join(", ")}
+                  </p>
+                </div>
+                <Button
+                  variant="outline"
+                  onClick={() => setShowWithdrawCascadeDialog(true)}
+                >
+                  Withdraw other submissions
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
       {/* Queue navigation — hidden when embedded in split pane */}
       {!embedded && queueIds && queueIds.length > 0 && queueIdx != null && (
@@ -737,6 +800,65 @@ export function SubmissionDetail({
               disabled={deleteMutation.isPending}
             >
               {deleteMutation.isPending ? "Deleting..." : "Delete"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Withdraw cascade dialog — withdraw from all other magazines */}
+      <Dialog
+        open={showWithdrawCascadeDialog}
+        onOpenChange={setShowWithdrawCascadeDialog}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Withdraw other submissions?</DialogTitle>
+            <DialogDescription>
+              This will withdraw your submission from the following magazine
+              {(siblingsData?.siblings.length ?? 0) !== 1 ? "s" : ""}. A
+              courteous withdrawal note will be sent.
+            </DialogDescription>
+          </DialogHeader>
+          {siblingsData && siblingsData.siblings.length > 0 && (
+            <div className="space-y-2 py-2">
+              {siblingsData.siblings.map((sib) => (
+                <div
+                  key={sib.id}
+                  className="flex items-center justify-between rounded-lg border p-3"
+                >
+                  <span className="text-sm font-medium">
+                    {sib.organizationName}
+                  </span>
+                  <Badge variant="secondary" className="text-xs">
+                    {sib.status.replace(/_/g, " ")}
+                  </Badge>
+                </div>
+              ))}
+              <div className="mt-3 rounded-lg bg-muted p-3">
+                <p className="text-xs text-muted-foreground italic">
+                  &ldquo;This piece has been accepted elsewhere. Thank you for
+                  your consideration.&rdquo;
+                </p>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowWithdrawCascadeDialog(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={() => {
+                withdrawCascadeMutation.mutate({ id: submissionId });
+                setShowWithdrawCascadeDialog(false);
+              }}
+              disabled={withdrawCascadeMutation.isPending}
+            >
+              {withdrawCascadeMutation.isPending
+                ? "Withdrawing..."
+                : `Withdraw from ${siblingsData?.siblings.length ?? 0} magazine${(siblingsData?.siblings.length ?? 0) !== 1 ? "s" : ""}`}
             </Button>
           </DialogFooter>
         </DialogContent>
