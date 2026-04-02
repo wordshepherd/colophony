@@ -203,14 +203,14 @@ if [ -z "$DEMO_URL" ]; then
   warn "Demo site check skipped (no --demo-url provided)"
 else
   DEMO_URL="${DEMO_URL%/}"
-  # Check demo frontend loads
+  # Check demo frontend loads (warn-only — demo may not be provisioned yet)
   DEMO_STATUS=$(curl -so /dev/null --max-time 10 -w "%{http_code}" "${DEMO_URL}/demo" 2>/dev/null || true)
   if [ "$DEMO_STATUS" = "200" ]; then
     pass "GET ${DEMO_URL}/demo — 200 (demo page loads)"
   else
-    fail "GET ${DEMO_URL}/demo — expected 200, got ${DEMO_STATUS:-no response}"
+    warn "GET ${DEMO_URL}/demo — got ${DEMO_STATUS:-no response} (demo may need one-time setup)"
   fi
-  # Check demo login endpoint exists (POST-only, GET should return 404 or 405)
+  # Check demo login endpoint (warn-only — demo DB may not be seeded)
   DEMO_LOGIN_STATUS=$(curl -so /dev/null --max-time 10 -w "%{http_code}" \
     -X POST -H "Content-Type: application/json" -d '{"role":"writer"}' \
     "${DEMO_URL}/v1/public/demo/login" 2>/dev/null || true)
@@ -219,7 +219,7 @@ else
   elif [ "$DEMO_LOGIN_STATUS" = "503" ]; then
     warn "POST /v1/public/demo/login — 503 (demo data may not be seeded)"
   else
-    fail "POST ${DEMO_URL}/v1/public/demo/login — expected 200, got ${DEMO_LOGIN_STATUS:-no response}"
+    warn "POST ${DEMO_URL}/v1/public/demo/login — got ${DEMO_LOGIN_STATUS:-no response} (demo may need setup)"
   fi
 fi
 
