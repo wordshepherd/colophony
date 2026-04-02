@@ -6,6 +6,7 @@
 #     --skip-grafana        Skip Grafana health check
 #     --skip-webhooks       Skip webhook freshness check
 #     --oidc-issuer <url>   Zitadel issuer URL for OIDC discovery check
+#     --demo-url <url>      Demo site base URL for demo-specific checks
 set -euo pipefail
 
 # --- Colors ---
@@ -23,6 +24,7 @@ SKIP_TLS=false
 SKIP_GRAFANA=false
 SKIP_WEBHOOKS=false
 OIDC_ISSUER=""
+DEMO_URL=""
 
 # --- Parse args ---
 if [ $# -lt 1 ]; then
@@ -32,6 +34,7 @@ if [ $# -lt 1 ]; then
   echo "    --skip-grafana        Skip Grafana health check"
   echo "    --skip-webhooks       Skip webhook freshness check"
   echo "    --oidc-issuer <url>   Zitadel issuer URL for OIDC discovery check"
+  echo "    --demo-url <url>      Demo site base URL for demo-specific checks"
   exit 1
 fi
 
@@ -43,6 +46,7 @@ while [ $# -gt 0 ]; do
     --skip-grafana)  SKIP_GRAFANA=true; shift ;;
     --skip-webhooks) SKIP_WEBHOOKS=true; shift ;;
     --oidc-issuer)   OIDC_ISSUER="${2:-}"; shift 2 ;;
+    --demo-url)      DEMO_URL="${2:-}"; shift 2 ;;
     *)               echo "Unknown option: $1"; exit 1 ;;
   esac
 done
@@ -191,6 +195,31 @@ else
     pass "GET /webhooks/health — all providers healthy"
   else
     warn "GET /webhooks/health — one or more providers stale/unknown"
+  fi
+fi
+
+# --- 13. Demo site ---
+if [ -z "$DEMO_URL" ]; then
+  warn "Demo site check skipped (no --demo-url provided)"
+else
+  DEMO_URL="${DEMO_URL%/}"
+  # Check demo frontend loads
+  DEMO_STATUS=$(curl -so /dev/null --max-time 10 -w "%{http_code}" "${DEMO_URL}/demo" 2>/dev/null || true)
+  if [ "$DEMO_STATUS" = "200" ]; then
+    pass "GET ${DEMO_URL}/demo — 200 (demo page loads)"
+  else
+    fail "GET ${DEMO_URL}/demo — expected 200, got ${DEMO_STATUS:-no response}"
+  fi
+  # Check demo login endpoint exists (POST-only, GET should return 404 or 405)
+  DEMO_LOGIN_STATUS=$(curl -so /dev/null --max-time 10 -w "%{http_code}" \
+    -X POST -H "Content-Type: application/json" -d '{"role":"writer"}' \
+    "${DEMO_URL}/v1/public/demo/login" 2>/dev/null || true)
+  if [ "$DEMO_LOGIN_STATUS" = "200" ]; then
+    pass "POST ${DEMO_URL}/v1/public/demo/login — 200 (demo login works)"
+  elif [ "$DEMO_LOGIN_STATUS" = "503" ]; then
+    warn "POST /v1/public/demo/login — 503 (demo data may not be seeded)"
+  else
+    fail "POST ${DEMO_URL}/v1/public/demo/login — expected 200, got ${DEMO_LOGIN_STATUS:-no response}"
   fi
 fi
 
