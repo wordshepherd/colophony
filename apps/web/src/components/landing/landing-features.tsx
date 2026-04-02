@@ -92,8 +92,8 @@ export function LandingTwoSides() {
                 "Track every submission across every magazine from a single dashboard. When one accepts, withdrawals happen automatically.",
               ]}
               screenshot={{
-                src: "/screenshots/sim-sub-dashboard.png",
-                alt: "Writer's simultaneous submission dashboard showing a single manuscript tracked across multiple magazine submissions with real-time status updates",
+                src: "/screenshots/writer-submissions.png",
+                alt: "Writer's My Submissions page showing four pieces sent to a magazine with status cards — Received, In Review, and Accepted — each with submission dates",
               }}
             />
           </FadeIn>
@@ -110,8 +110,8 @@ export function LandingTwoSides() {
                   "Score, discuss, and decide without leaving the platform. Internal discussion threads, voting, and blind review modes built in.",
                 ]}
                 screenshot={{
-                  src: "/screenshots/editor-queue.png",
-                  alt: "Editor's review queue showing submissions with status badges, reviewer assignments, scores, and batch action controls",
+                  src: "/screenshots/reading-queue.png",
+                  alt: "Editor's reading queue in triage mode showing a submission list alongside the selected piece with reviewer assignment, internal discussion thread, and editorial actions",
                 }}
               />
             </div>
@@ -173,8 +173,8 @@ export function LandingDifferentiators() {
           heading="Manuscripts rendered like literature, not like web forms."
           description="Colophony renders prose with proper paragraph indentation, generous margins, and careful typographic conventions. Poetry preserves line breaks, stanza spacing, indentation, and stepped lines exactly as written. Editors read work the way it was meant to be read. Toggle between the rendered view and the original document with a single click."
           screenshot={{
-            src: "/screenshots/manuscript-detail.png",
-            alt: "Manuscript detail view showing a literary work rendered with reading-quality typography — proper paragraph indentation, generous margins, and version history sidebar",
+            src: "/screenshots/deep-read.png",
+            alt: "Deep-read mode showing a prose poem rendered with Literata literary font, generous margins, reading theme selector, and distraction-free layout",
           }}
         />
 
@@ -182,8 +182,8 @@ export function LandingDifferentiators() {
           heading="Simultaneous submissions without the spreadsheet."
           description="Writers send the same piece to multiple magazines and track every submission from a single dashboard. When one magazine accepts, the platform coordinates withdrawals and status cascades across the network. No more cross-referencing spreadsheets or wondering where something was sent three months ago."
           screenshot={{
-            src: "/screenshots/federation-sim-sub.png",
-            alt: "Federation simultaneous submission coordination view showing cross-instance submission tracking with automatic status synchronization between magazines",
+            src: "/screenshots/sim-sub-groups.png",
+            alt: "Writer's Sim-Sub Groups page showing three manuscript groups tracked across magazines — two active with pending responses, one resolved after acceptance with automatic withdrawals",
           }}
           reverse
         />

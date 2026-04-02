@@ -218,7 +218,7 @@ export async function buildApp(env: Env): Promise<FastifyInstance> {
 
   // Public routes — unauthenticated, rate-limited by IP
   await app.register(async (scope) => {
-    await registerPublicRoutes(scope);
+    await registerPublicRoutes(scope, { env });
   });
 
   // Prometheus metrics endpoint — isolated scope (public, no auth/rate-limit)
