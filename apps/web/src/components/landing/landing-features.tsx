@@ -99,20 +99,22 @@ export function LandingTwoSides() {
           </FadeIn>
 
           <FadeIn>
-            <PerspectiveColumn
-              icon={Eye}
-              label="For Editors"
-              heading="Read, review, decide."
-              features={[
-                "A submissions queue with information density tuned for editorial triage — sort, filter, and batch-process without losing context.",
-                "Read manuscripts directly in the platform. Prose and poetry rendered with reading-quality typography, not pasted into a text box.",
-                "Score, discuss, and decide without leaving the platform. Internal discussion threads, voting, and blind review modes built in.",
-              ]}
-              screenshot={{
-                src: "/screenshots/editor-queue.png",
-                alt: "Editor's review queue showing submissions with status badges, reviewer assignments, scores, and batch action controls",
-              }}
-            />
+            <div id="editors" className="scroll-mt-20">
+              <PerspectiveColumn
+                icon={Eye}
+                label="For Editors"
+                heading="Read, review, decide."
+                features={[
+                  "A submissions queue with information density tuned for editorial triage — sort, filter, and batch-process without losing context.",
+                  "Read manuscripts directly in the platform. Prose and poetry rendered with reading-quality typography, not pasted into a text box.",
+                  "Score, discuss, and decide without leaving the platform. Internal discussion threads, voting, and blind review modes built in.",
+                ]}
+                screenshot={{
+                  src: "/screenshots/editor-queue.png",
+                  alt: "Editor's review queue showing submissions with status badges, reviewer assignments, scores, and batch action controls",
+                }}
+              />
+            </div>
           </FadeIn>
         </div>
       </div>
