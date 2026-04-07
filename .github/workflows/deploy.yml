@@ -140,7 +140,9 @@ jobs:
             docker compose -f docker-compose.prod.yml --env-file .env.staging --profile demo build --no-cache
 
             echo "=== Recreating containers ==="
-            docker compose -f docker-compose.prod.yml --env-file .env.staging --profile demo up -d --force-recreate
+            docker compose -f docker-compose.prod.yml --env-file .env.staging up -d --force-recreate
+            echo "Starting demo services (if provisioned)..."
+            docker compose -f docker-compose.prod.yml --env-file .env.staging --profile demo up -d --no-recreate 2>&1 || echo "::warning::Demo services failed to start — may need provisioning"
             echo "Waiting for services..."
             sleep 15
             docker compose -f docker-compose.prod.yml --env-file .env.staging --profile demo ps
