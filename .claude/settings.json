@@ -48,6 +48,16 @@
         ]
       },
       {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node .claude/hooks/pre-pr-rebase-check.js",
+            "if": "Bash(gh pr create*)"
+          }
+        ]
+      },
+      {
         "matcher": "ExitPlanMode",
         "hooks": [
           {
