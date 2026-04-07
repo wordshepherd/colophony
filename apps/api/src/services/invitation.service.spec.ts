@@ -74,8 +74,8 @@ function createMockTx() {
     tokenPrefix: 'col_inv_',
     status: 'PENDING',
     invitedBy: 'user-1',
-    expiresAt: new Date('2026-04-03'),
-    createdAt: new Date('2026-03-27'),
+    expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+    createdAt: new Date(),
   });
 
   const updateChain = createChain({
@@ -162,8 +162,8 @@ describe('invitation.service', () => {
             roles: ['EDITOR'],
             status: 'PENDING',
             invited_by: 'user-1',
-            expires_at: new Date('2026-04-03'),
-            created_at: new Date('2026-03-27'),
+            expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+            created_at: new Date(),
             organization_name: 'Test Org',
           },
         ],
@@ -286,8 +286,8 @@ describe('invitation.service', () => {
             roles: ['EDITOR'],
             status: 'ACCEPTED',
             invited_by: 'user-1',
-            expires_at: new Date('2026-04-03'),
-            created_at: new Date('2026-03-27'),
+            expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+            created_at: new Date(),
             organization_name: 'Test Org',
           },
         ],
@@ -348,7 +348,7 @@ describe('invitation.service', () => {
     it('throws InvitationEmailMismatchError when emails differ', async () => {
       // acceptToken returns null
       mockPoolQuery.mockResolvedValueOnce({ rows: [] });
-      // verifyToken returns invitation with different email
+      // verifyToken returns invitation with different email (not expired)
       mockPoolQuery.mockResolvedValueOnce({
         rows: [
           {
@@ -358,8 +358,8 @@ describe('invitation.service', () => {
             roles: ['EDITOR'],
             status: 'PENDING',
             invited_by: 'user-1',
-            expires_at: new Date('2026-04-03'),
-            created_at: new Date('2026-03-27'),
+            expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+            created_at: new Date(),
             organization_name: 'Test Org',
           },
         ],
