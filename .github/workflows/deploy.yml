@@ -119,11 +119,28 @@ jobs:
           username: ${{ secrets.STAGING_USER }}
           key: ${{ secrets.STAGING_SSH_KEY }}
           script: |
+            set -e
             cd ${{ vars.STAGING_APP_DIR }}
+
+            echo "=== Pre-deploy diagnostics ==="
+            echo "Current commit: $(git rev-parse HEAD)"
+            echo "Working tree status:"
+            git status --short
+            echo "Target ref: ${{ needs.prepare.outputs.ref }}"
+
+            echo "=== Updating source ==="
             git fetch origin main
-            git checkout ${{ needs.prepare.outputs.ref }}
+            git reset --hard ${{ needs.prepare.outputs.ref }}
+            git clean -fd
+            echo "Checked out: $(git rev-parse HEAD)"
+            echo "Landing components:"
+            ls -la apps/web/src/components/landing/ 2>/dev/null || echo "MISSING"
+
+            echo "=== Building images ==="
             docker compose -f docker-compose.prod.yml --env-file .env.staging --profile demo build --no-cache
-            docker compose -f docker-compose.prod.yml --env-file .env.staging --profile demo up -d
+
+            echo "=== Recreating containers ==="
+            docker compose -f docker-compose.prod.yml --env-file .env.staging --profile demo up -d --force-recreate
             echo "Waiting for services..."
             sleep 15
             docker compose -f docker-compose.prod.yml --env-file .env.staging --profile demo ps
@@ -185,11 +202,26 @@ jobs:
           username: ${{ secrets.PRODUCTION_USER }}
           key: ${{ secrets.PRODUCTION_SSH_KEY }}
           script: |
+            set -e
             cd ${{ vars.PRODUCTION_APP_DIR }}
+
+            echo "=== Pre-deploy diagnostics ==="
+            echo "Current commit: $(git rev-parse HEAD)"
+            echo "Working tree status:"
+            git status --short
+            echo "Target ref: ${{ needs.prepare.outputs.ref }}"
+
+            echo "=== Updating source ==="
             git fetch origin main
-            git checkout ${{ needs.prepare.outputs.ref }}
+            git reset --hard ${{ needs.prepare.outputs.ref }}
+            git clean -fd
+            echo "Checked out: $(git rev-parse HEAD)"
+
+            echo "=== Building images ==="
             docker compose -f docker-compose.prod.yml --env-file .env.prod build --no-cache
-            docker compose -f docker-compose.prod.yml --env-file .env.prod up -d
+
+            echo "=== Recreating containers ==="
+            docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --force-recreate
             echo "Waiting for health checks..."
             sleep 15
             docker compose -f docker-compose.prod.yml ps
