@@ -122,7 +122,7 @@ jobs:
             cd ${{ vars.STAGING_APP_DIR }}
             git fetch origin main
             git checkout ${{ needs.prepare.outputs.ref }}
-            docker compose -f docker-compose.prod.yml --env-file .env.staging --profile demo build
+            docker compose -f docker-compose.prod.yml --env-file .env.staging --profile demo build --no-cache
             docker compose -f docker-compose.prod.yml --env-file .env.staging --profile demo up -d
             echo "Waiting for services..."
             sleep 15
@@ -188,7 +188,7 @@ jobs:
             cd ${{ vars.PRODUCTION_APP_DIR }}
             git fetch origin main
             git checkout ${{ needs.prepare.outputs.ref }}
-            docker compose -f docker-compose.prod.yml --env-file .env.prod build
+            docker compose -f docker-compose.prod.yml --env-file .env.prod build --no-cache
             docker compose -f docker-compose.prod.yml --env-file .env.prod up -d
             echo "Waiting for health checks..."
             sleep 15
