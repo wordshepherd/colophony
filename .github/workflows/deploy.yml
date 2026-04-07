@@ -139,8 +139,11 @@ jobs:
             echo "=== Building images ==="
             docker compose -f docker-compose.prod.yml --env-file .env.staging --profile demo build --no-cache
 
-            echo "=== Recreating containers ==="
-            docker compose -f docker-compose.prod.yml --env-file .env.staging up -d --force-recreate
+            echo "=== Stopping old containers ==="
+            docker compose -f docker-compose.prod.yml --env-file .env.staging --profile demo down --remove-orphans || true
+
+            echo "=== Starting containers ==="
+            docker compose -f docker-compose.prod.yml --env-file .env.staging up -d
             echo "Starting demo services (if provisioned)..."
             docker compose -f docker-compose.prod.yml --env-file .env.staging --profile demo up -d --no-recreate 2>&1 || echo "::warning::Demo services failed to start — may need provisioning"
             echo "Waiting for services..."
@@ -222,8 +225,11 @@ jobs:
             echo "=== Building images ==="
             docker compose -f docker-compose.prod.yml --env-file .env.prod build --no-cache
 
-            echo "=== Recreating containers ==="
-            docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --force-recreate
+            echo "=== Stopping old containers ==="
+            docker compose -f docker-compose.prod.yml --env-file .env.prod down --remove-orphans || true
+
+            echo "=== Starting containers ==="
+            docker compose -f docker-compose.prod.yml --env-file .env.prod up -d
             echo "Waiting for health checks..."
             sleep 15
             docker compose -f docker-compose.prod.yml ps
