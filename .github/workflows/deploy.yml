@@ -144,11 +144,10 @@ jobs:
             docker ps -q --filter "name=colophony-" | xargs -r docker stop || true
             docker ps -aq --filter "name=colophony-" | xargs -r docker rm -f || true
 
-            echo "=== Checking port 80/443 ==="
-            echo "Port 80:" && (ss -tlnp sport = :80 || true)
-            echo "Port 443:" && (ss -tlnp sport = :443 || true)
-            echo "Docker containers on port 80:" && (docker ps --filter "publish=80" --format '{{.Names}} {{.Status}}' || true)
-            # Kill anything holding port 80/443 (e.g., leftover Coolify/Traefik)
+            # Remove leftover Coolify proxy (migrated to Caddy in PR #336)
+            echo "=== Clearing port 80/443 ==="
+            docker stop coolify-proxy 2>/dev/null && docker rm coolify-proxy 2>/dev/null && echo "Removed coolify-proxy" || true
+            # Safety net: kill any remaining process on port 80/443
             fuser -k 80/tcp 2>/dev/null || true
             fuser -k 443/tcp 2>/dev/null || true
             sleep 2
