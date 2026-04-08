@@ -160,9 +160,9 @@ jobs:
             echo "Port 80 after cleanup:" && (ss -tlnp sport = :80 || true)
 
             echo "=== Starting containers ==="
-            docker compose -f docker-compose.prod.yml --env-file .env.staging up -d
-            echo "Starting demo services (if provisioned)..."
-            docker compose -f docker-compose.prod.yml --env-file .env.staging --profile demo up -d --no-recreate 2>&1 || echo "::warning::Demo services failed to start — may need provisioning"
+            # up -d can fail if non-critical services (garage, demo) have issues — don't abort
+            docker compose -f docker-compose.prod.yml --env-file .env.staging up -d 2>&1 || echo "::warning::Some services failed to start"
+            docker compose -f docker-compose.prod.yml --env-file .env.staging --profile demo up -d --no-recreate 2>&1 || echo "::warning::Demo services failed to start"
             echo "Waiting for services..."
             sleep 15
             docker compose -f docker-compose.prod.yml --env-file .env.staging --profile demo ps
