@@ -591,6 +591,14 @@
 - [x] [P2] Verify SSRF protection in `hub-client.service.ts` — `fetch()` calls at lines 38/104/141/199; `validateOutboundUrl` is imported but may not be called before every fetch — (Codex plan review 2026-03-19; done 2026-03-20)
 - [x] [P3] Add LIMIT to unbounded queries — `correspondence.service.ts:70`, `submission.service.ts:730`, `file.service.ts:80` — (Codex plan review 2026-03-19; done 2026-03-20)
 
+### Staging Provisioning
+
+- [ ] [P2] Provision Garage S3 on staging — add GARAGE_RPC_SECRET, GARAGE_ADMIN_TOKEN, GARAGE_S3_ACCESS_KEY, GARAGE_S3_SECRET_KEY to .env.staging; run start-garage.sh layout assign — (DEVLOG 2026-04-07, deploy diagnostics)
+- [ ] [P2] Provision tusd on staging — smoke test shows `OPTIONS /upload — Tus-Resumable header missing`; tusd container likely needs S3 config — (DEVLOG 2026-04-07, smoke test)
+- [ ] [P2] Demo one-time server setup — DNS for demo.staging.colophony.pub, init-demo-db.sh, Garage demo buckets, 4-hour cron reset. See docs/demo/deploy-checklist.md — (DEVLOG 2026-04-02, handoff)
+- [ ] [P3] Remove Coolify cleanup from deploy workflow — `systemctl stop/disable coolify.service` and coolify container removal can be removed once confirmed Coolify is gone permanently; currently runs every deploy as safety net — (DEVLOG 2026-04-07)
+- [ ] [P3] Clean up deploy diagnostics — remove verbose ss/echo diagnostics from deploy.yml once deploy is stable for a few sessions — (DEVLOG 2026-04-07)
+
 ### Monitoring
 
 - [~] GitHub GraphQL rate limit passive drain (~60 pts/hr) — diagnosed 2026-02-19, likely GitHub-internal (Dependabot, security scanning). At ~1.2% budget/hr, not actionable unless large exhaustion recurs. If so, convert skills from `gh pr list/create` (GraphQL) to `gh api` (REST) — (DEVLOG 2026-02-19)
