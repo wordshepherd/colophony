@@ -593,11 +593,11 @@
 
 ### Staging Provisioning
 
-- [ ] [P2] Provision Garage S3 on staging — add GARAGE_RPC_SECRET, GARAGE_ADMIN_TOKEN, GARAGE_S3_ACCESS_KEY, GARAGE_S3_SECRET_KEY to .env.staging; run start-garage.sh layout assign — (DEVLOG 2026-04-07, deploy diagnostics)
-- [ ] [P2] Provision tusd on staging — smoke test shows `OPTIONS /upload — Tus-Resumable header missing`; tusd container likely needs S3 config — (DEVLOG 2026-04-07, smoke test)
-- [ ] [P2] Demo one-time server setup — DNS for demo.staging.colophony.pub, init-demo-db.sh, Garage demo buckets, 4-hour cron reset. See docs/demo/deploy-checklist.md — (DEVLOG 2026-04-02, handoff)
-- [ ] [P3] Remove Coolify cleanup from deploy workflow — `systemctl stop/disable coolify.service` and coolify container removal can be removed once confirmed Coolify is gone permanently; currently runs every deploy as safety net — (DEVLOG 2026-04-07)
-- [ ] [P3] Clean up deploy diagnostics — remove verbose ss/echo diagnostics from deploy.yml once deploy is stable for a few sessions — (DEVLOG 2026-04-07)
+- [x] [P2] Provision Garage S3 on staging — add GARAGE_RPC_SECRET, GARAGE_ADMIN_TOKEN, GARAGE_S3_ACCESS_KEY, GARAGE_S3_SECRET_KEY to .env.staging; run start-garage.sh layout assign — (DEVLOG 2026-04-07, deploy diagnostics; done 2026-04-08)
+- [x] [P2] Provision tusd on staging — smoke test shows `OPTIONS /upload — Tus-Resumable header missing`; tusd container likely needs S3 config — (DEVLOG 2026-04-07, smoke test; done 2026-04-08 — tusd connected to Garage, Tus-Resumable header present)
+- [x] [P2] Demo one-time server setup — DNS for demo.staging.colophony.pub, init-demo-db.sh, Garage demo buckets, 4-hour cron reset. See docs/demo/deploy-checklist.md — (DEVLOG 2026-04-02, handoff; done 2026-04-08)
+- [x] [P3] Remove Coolify cleanup from deploy workflow — `systemctl stop/disable coolify.service` and coolify container removal can be removed once confirmed Coolify is gone permanently; currently runs every deploy as safety net — (DEVLOG 2026-04-07; done 2026-04-08 — Coolify confirmed gone, systemd unit not-found, leftover coolify-redis/coolify-db removed)
+- [x] [P3] Clean up deploy diagnostics — remove verbose ss/echo diagnostics from deploy.yml once deploy is stable for a few sessions — (DEVLOG 2026-04-07; done 2026-04-08)
 
 ### Monitoring
 

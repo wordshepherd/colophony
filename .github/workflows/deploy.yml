@@ -122,19 +122,11 @@ jobs:
             set -e
             cd ${{ vars.STAGING_APP_DIR }}
 
-            echo "=== Pre-deploy diagnostics ==="
-            echo "Current commit: $(git rev-parse HEAD)"
-            echo "Working tree status:"
-            git status --short
-            echo "Target ref: ${{ needs.prepare.outputs.ref }}"
-
             echo "=== Updating source ==="
             git fetch origin main
             git reset --hard ${{ needs.prepare.outputs.ref }}
             git clean -fd
             echo "Checked out: $(git rev-parse HEAD)"
-            echo "Landing components:"
-            ls -la apps/web/src/components/landing/ 2>/dev/null || echo "MISSING"
 
             echo "=== Building images ==="
             docker compose -f docker-compose.prod.yml --env-file .env.staging --profile demo build --no-cache
@@ -144,23 +136,7 @@ jobs:
             docker ps -q --filter "name=colophony-" | xargs -r docker stop || true
             docker ps -aq --filter "name=colophony-" | xargs -r docker rm -f || true
 
-            # Fully stop Coolify (migrated to Caddy in PR #336) — it auto-restarts its proxy
-            echo "=== Removing Coolify ==="
-            systemctl stop coolify.service 2>/dev/null || true
-            systemctl disable coolify.service 2>/dev/null || true
-            docker stop coolify-proxy 2>/dev/null && docker rm -f coolify-proxy 2>/dev/null || true
-            docker stop coolify 2>/dev/null && docker rm -f coolify 2>/dev/null || true
-            # Stop any other Coolify-managed containers
-            docker ps -q --filter "label=coolify.managed=true" | xargs -r docker stop 2>/dev/null || true
-            docker ps -aq --filter "label=coolify.managed=true" | xargs -r docker rm -f 2>/dev/null || true
-            # Final safety net
-            fuser -k 80/tcp 2>/dev/null || true
-            fuser -k 443/tcp 2>/dev/null || true
-            sleep 3
-            echo "Port 80 after cleanup:" && (ss -tlnp sport = :80 || true)
-
             echo "=== Starting containers ==="
-            # up -d can fail if non-critical services (garage, demo) have issues — don't abort
             docker compose -f docker-compose.prod.yml --env-file .env.staging up -d 2>&1 || echo "::warning::Some services failed to start"
             docker compose -f docker-compose.prod.yml --env-file .env.staging --profile demo up -d --no-recreate 2>&1 || echo "::warning::Demo services failed to start"
             echo "Waiting for services..."
