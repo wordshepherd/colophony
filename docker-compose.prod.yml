@@ -563,7 +563,7 @@ services:
         apk add --no-cache postgresql16-client bash
         /app/scripts/init-prod.sh
         echo "Running demo seed..."
-        cd /app && npx tsx packages/db/src/seed-demo.ts
+        cd /app && ./packages/db/node_modules/.bin/tsx packages/db/src/seed-demo.ts
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-colophony}:${POSTGRES_PASSWORD}@postgres:5432/colophony_demo
       DATABASE_APP_URL: postgresql://app_user:${APP_USER_PASSWORD}@postgres:5432/colophony_demo
