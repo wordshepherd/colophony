@@ -1,22 +1,20 @@
 "use client";
 
+import type { RefObject } from "react";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { ExternalLink } from "lucide-react";
-
-function getDemoUrl() {
-  if (typeof window === "undefined") return "/demo";
-  const host = window.location.hostname;
-  if (host.startsWith("demo.")) return "/demo";
-  const proto = window.location.protocol;
-  return `${proto}//demo.${host}/demo`;
-}
+import { getDemoUrl } from "@/lib/demo-url";
 
 interface LandingHeroProps {
-  onRequestDemo: () => void;
+  onRequestConsult: () => void;
+  heroLogoRef: RefObject<HTMLDivElement | null>;
 }
 
-export function LandingHero({ onRequestDemo }: LandingHeroProps) {
+export function LandingHero({
+  onRequestConsult,
+  heroLogoRef,
+}: LandingHeroProps) {
   return (
     <section className="relative overflow-hidden pb-24 pt-20 md:pb-32 md:pt-28">
       {/* Subtle radial gradient behind hero */}
@@ -31,6 +29,12 @@ export function LandingHero({ onRequestDemo }: LandingHeroProps) {
 
       <div className="mx-auto max-w-7xl px-6 lg:px-8">
         <div className="mx-auto max-w-3xl text-center">
+          {/* Logotype hero slot — invisible placeholder sized for the morph animation */}
+          <div
+            ref={heroLogoRef}
+            className="mx-auto mb-8 w-full max-w-3xl aspect-[5/2]"
+            aria-hidden="true"
+          />
           <h1 className="text-4xl font-bold tracking-tight sm:text-5xl lg:text-6xl">
             The editorial workflow your magazine deserves.
           </h1>
@@ -47,9 +51,9 @@ export function LandingHero({ onRequestDemo }: LandingHeroProps) {
               size="lg"
               variant="outline"
               className="px-8 text-base"
-              onClick={onRequestDemo}
+              onClick={onRequestConsult}
             >
-              Request a Demo
+              Request a Consult
             </Button>
             <Button variant="ghost" size="lg" className="text-base" asChild>
               <a

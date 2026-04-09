@@ -6,15 +6,17 @@ const footerLinks = [
     href: "https://github.com/colophony-project",
     external: true,
   },
-  // TODO: Add documentation URL when docs site is live
-  { label: "Documentation", href: "#", external: false },
+  {
+    label: "Documentation",
+    href: "https://github.com/colophony-project/colophony#readme",
+    external: true,
+  },
   {
     label: "License (AGPL-3.0)",
     href: "https://github.com/colophony-project/colophony/blob/main/LICENSE",
     external: true,
   },
-  // TODO: Add contact page or email when ready
-  { label: "Contact", href: "#demo", external: false },
+  { label: "Contact", href: "#consult", external: false },
 ] as const;
 
 export function LandingFooter() {
