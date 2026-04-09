@@ -4,6 +4,14 @@ import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 
+function getDemoUrl() {
+  if (typeof window === "undefined") return "/demo";
+  const host = window.location.hostname;
+  if (host.startsWith("demo.")) return "/demo";
+  const proto = window.location.protocol;
+  return `${proto}//demo.${host}/demo`;
+}
+
 const navLinks = [
   { label: "Features", href: "#features" },
   { label: "For Writers", href: "#writers" },
@@ -23,8 +31,8 @@ export function LandingHeader({ onSignIn }: LandingHeaderProps) {
           <Image
             src="/logos/logotype-dark.svg"
             alt="Colophony"
-            width={160}
-            height={32}
+            width={200}
+            height={40}
             priority
           />
         </Link>
@@ -49,7 +57,7 @@ export function LandingHeader({ onSignIn }: LandingHeaderProps) {
             Sign in
           </button>
           <Button variant="ghost" asChild className="hidden md:inline-flex">
-            <Link href="/demo">Try Demo</Link>
+            <a href={getDemoUrl()}>Try Demo</a>
           </Button>
           <Button
             asChild

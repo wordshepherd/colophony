@@ -116,7 +116,7 @@ describe("Sidebar", () => {
 
   it("should render Colophony brand link", () => {
     render(<Sidebar />);
-    const brandLink = screen.getByText("Colophony").closest("a");
+    const brandLink = screen.getByRole("link", { name: /Colophony/ });
     expect(brandLink).toHaveAttribute("href", "/");
   });
 
