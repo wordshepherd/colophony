@@ -31,8 +31,8 @@ export function LandingHeader({ onSignIn }: LandingHeaderProps) {
           <Image
             src="/logos/logotype-dark.svg"
             alt="Colophony"
-            width={160}
-            height={32}
+            width={200}
+            height={40}
             priority
           />
         </Link>
