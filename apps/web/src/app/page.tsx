@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Toaster } from "@/components/ui/sonner";
 import { getUserManager } from "@/lib/oidc";
 import { LandingHeader } from "@/components/landing/landing-header";
 import { LandingHero } from "@/components/landing/landing-hero";
+import { LogotypeMorph } from "@/components/landing/logotype-morph";
 import {
   LandingTwoSides,
   LandingDifferentiators,
@@ -17,6 +18,8 @@ import { LandingFooter } from "@/components/landing/landing-footer";
 export default function Home() {
   const router = useRouter();
   const [checking, setChecking] = useState(true);
+  const heroLogoRef = useRef<HTMLDivElement>(null);
+  const headerLogoRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const userManager = getUserManager();
@@ -41,7 +44,7 @@ export default function Home() {
   }, [router]);
 
   if (checking) {
-    return null;
+    return <div className="dark min-h-screen bg-background" />;
   }
 
   const handleSignIn = () => {
@@ -51,15 +54,19 @@ export default function Home() {
     }
   };
 
-  const scrollToDemo = () => {
-    document.getElementById("demo")?.scrollIntoView({ behavior: "smooth" });
+  const scrollToConsult = () => {
+    document.getElementById("consult")?.scrollIntoView({ behavior: "smooth" });
   };
 
   return (
-    <div className="dark min-h-screen scroll-smooth bg-background text-foreground">
-      <LandingHeader onSignIn={handleSignIn} />
+    <div className="dark min-h-screen scroll-smooth bg-background text-foreground animate-in fade-in duration-300">
+      <LandingHeader onSignIn={handleSignIn} headerLogoRef={headerLogoRef} />
+      <LogotypeMorph heroSlotRef={heroLogoRef} headerSlotRef={headerLogoRef} />
       <main>
-        <LandingHero onRequestDemo={scrollToDemo} />
+        <LandingHero
+          onRequestConsult={scrollToConsult}
+          heroLogoRef={heroLogoRef}
+        />
         <LandingTwoSides />
         <LandingDifferentiators />
         <LandingDeployment />
