@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useSyncExternalStore } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/hooks/use-auth";
@@ -73,8 +74,23 @@ export function Header() {
         <MobileMenu key={pathname} />
 
         {/* Logo */}
-        <Link href="/" className="flex items-center space-x-2 mr-6">
-          <span className="font-bold text-lg">Colophony</span>
+        <Link href="/" className="mr-6" aria-label="Colophony home">
+          <Image
+            src="/logos/logotype-light.svg"
+            alt="Colophony"
+            width={120}
+            height={24}
+            className="hidden dark:block"
+            priority
+          />
+          <Image
+            src="/logos/logotype-dark.svg"
+            alt="Colophony"
+            width={120}
+            height={24}
+            className="block dark:hidden"
+            priority
+          />
         </Link>
 
         {/* Spacer */}

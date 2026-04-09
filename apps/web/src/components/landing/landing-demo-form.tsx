@@ -16,8 +16,15 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import Link from "next/link";
 import { useInView } from "@/hooks/use-in-view";
+
+function getDemoUrl() {
+  if (typeof window === "undefined") return "/demo";
+  const host = window.location.hostname;
+  if (host.startsWith("demo.")) return "/demo";
+  const proto = window.location.protocol;
+  return `${proto}//demo.${host}/demo`;
+}
 
 const demoFormSchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -186,12 +193,12 @@ export function LandingDemoForm() {
             </Button>
             <p className="text-center text-sm text-muted-foreground">
               Or{" "}
-              <Link
-                href="/demo"
+              <a
+                href={getDemoUrl()}
                 className="text-primary hover:text-primary/80 font-medium underline underline-offset-4"
               >
                 try the demo now
-              </Link>{" "}
+              </a>{" "}
               &mdash; no account needed.
             </p>
           </form>

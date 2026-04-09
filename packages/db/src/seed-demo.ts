@@ -46,6 +46,7 @@ import {
   payments,
   workspaceCollections,
   workspaceItems,
+  externalSubmissions,
 } from "./schema";
 
 // ---------------------------------------------------------------------------
@@ -1002,6 +1003,80 @@ async function seedDemo(tx: DrizzleDb) {
 
   console.log(
     "  Editor workspace: 1 collection, 2 items (with reading position)",
+  );
+
+  // =========================================================================
+  // 11. External submissions (writer's submission tracker for other magazines)
+  // =========================================================================
+
+  await tx.insert(externalSubmissions).values([
+    {
+      userId: writer!.id,
+      manuscriptId: poetryMs!.id,
+      journalName: "Ploughshares",
+      status: "accepted",
+      sentAt: daysAgo(90),
+      respondedAt: daysAgo(30),
+      method: "Submittable",
+      notes: "Guest editor loved the tidal imagery.",
+    },
+    {
+      userId: writer!.id,
+      manuscriptId: poetryMs!.id,
+      journalName: "The Kenyon Review",
+      status: "rejected",
+      sentAt: daysAgo(120),
+      respondedAt: daysAgo(75),
+      method: "Submittable",
+      notes: "Form rejection — 60 days.",
+    },
+    {
+      userId: writer!.id,
+      manuscriptId: fictionMs!.id,
+      journalName: "Tin House",
+      status: "sent",
+      sentAt: daysAgo(14),
+      method: "Submittable",
+    },
+    {
+      userId: writer!.id,
+      manuscriptId: fictionMs!.id,
+      journalName: "One Story",
+      status: "in_review",
+      sentAt: daysAgo(45),
+      method: "email",
+      notes: "Received personal note from reader — moved to second round.",
+    },
+    {
+      userId: writer!.id,
+      manuscriptId: nonfictionMs!.id,
+      journalName: "The Sun Magazine",
+      status: "sent",
+      sentAt: daysAgo(21),
+      method: "postal",
+    },
+    {
+      userId: writer!.id,
+      manuscriptId: nonfictionMs!.id,
+      journalName: "Orion Magazine",
+      status: "rejected",
+      sentAt: daysAgo(100),
+      respondedAt: daysAgo(55),
+      method: "Submittable",
+      notes: "Encouraging rejection — asked to see future work.",
+    },
+    {
+      userId: writer!.id,
+      journalName: "AGNI",
+      status: "no_response",
+      sentAt: daysAgo(180),
+      method: "Submittable",
+      notes: "Past their stated response window. Assuming rejection.",
+    },
+  ]);
+
+  console.log(
+    "  External submissions: 7 (2 accepted/rejected, 3 pending, 2 rejected/no-response)",
   );
 
   console.log("\nDemo seed complete.");
