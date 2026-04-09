@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
@@ -128,8 +129,21 @@ export function Sidebar() {
     <div className="flex flex-col h-full bg-sidebar-background">
       {/* Header */}
       <div className="flex h-14 items-center border-b border-sidebar-border px-4">
-        <Link href="/" className="font-bold text-lg text-sidebar-foreground">
-          Colophony
+        <Link href="/" aria-label="Colophony home">
+          <Image
+            src="/logos/logotype-light.svg"
+            alt="Colophony"
+            width={120}
+            height={24}
+            className="hidden dark:block"
+          />
+          <Image
+            src="/logos/logotype-dark.svg"
+            alt="Colophony"
+            width={120}
+            height={24}
+            className="block dark:hidden"
+          />
         </Link>
       </div>
 
