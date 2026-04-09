@@ -1,9 +1,16 @@
 "use client";
 
 import Image from "next/image";
-import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { ExternalLink } from "lucide-react";
+
+function getDemoUrl() {
+  if (typeof window === "undefined") return "/demo";
+  const host = window.location.hostname;
+  if (host.startsWith("demo.")) return "/demo";
+  const proto = window.location.protocol;
+  return `${proto}//demo.${host}/demo`;
+}
 
 interface LandingHeroProps {
   onRequestDemo: () => void;
@@ -34,7 +41,7 @@ export function LandingHero({ onRequestDemo }: LandingHeroProps) {
           </p>
           <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
             <Button size="lg" className="px-8 text-base" asChild>
-              <Link href="/demo">Try the Demo</Link>
+              <a href={getDemoUrl()}>Try the Demo</a>
             </Button>
             <Button
               size="lg"
