@@ -62,7 +62,8 @@ export function useLogotypeMorph(
     const end = heroAbsBottom - HEADER_HEIGHT;
     const range = end - start;
 
-    const progress = range > 0 ? clamp(window.scrollY / range, 0, 1) : 0;
+    const progress =
+      range > 0 ? clamp((window.scrollY - start) / range, 0, 1) : 0;
     const eased = easeOutCubic(progress);
     const locked = progress >= 0.99;
 
@@ -100,7 +101,7 @@ export function useLogotypeMorph(
 
     window.addEventListener("scroll", onScroll, { passive: true });
 
-    // Recalculate on resize
+    // Recalculate on element resize (dimension changes)
     const observer = new ResizeObserver(() => {
       cancelAnimationFrame(rafId.current);
       rafId.current = requestAnimationFrame(update);
@@ -108,8 +109,16 @@ export function useLogotypeMorph(
     observer.observe(heroSlot);
     observer.observe(headerSlot);
 
+    // Recalculate on window resize (position changes without dimension changes)
+    function onResize() {
+      cancelAnimationFrame(rafId.current);
+      rafId.current = requestAnimationFrame(update);
+    }
+    window.addEventListener("resize", onResize, { passive: true });
+
     return () => {
       window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", onResize);
       cancelAnimationFrame(rafId.current);
       observer.disconnect();
     };
