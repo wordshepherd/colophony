@@ -1,19 +1,15 @@
 import type { FastifyInstance } from 'fastify';
 import { db, organizations, users, demoRequests } from '@colophony/db';
 import { eq } from 'drizzle-orm';
-import { slugSchema, demoLoginRequestSchema } from '@colophony/types';
-import { z } from 'zod';
+import {
+  slugSchema,
+  demoLoginRequestSchema,
+  consultRequestSchema,
+} from '@colophony/types';
 import { responseTimeTransparencyService } from '../services/response-time-transparency.service.js';
 import { getGlobalRegistry } from '../adapters/registry-accessor.js';
 import type { EmailAdapter } from '@colophony/plugin-sdk';
 import type { Env } from '../config/env.js';
-
-const demoRequestSchema = z.object({
-  name: z.string().min(1).max(256),
-  email: z.string().email().max(320),
-  magazine: z.string().min(1).max(256),
-  message: z.string().max(5000).optional(),
-});
 
 const DEMO_RATE_LIMIT_MAX = 5;
 const DEMO_RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000; // 1 hour
@@ -107,7 +103,7 @@ export async function registerPublicRoutes(
     }
 
     // Validate input
-    const parsed = demoRequestSchema.safeParse(request.body);
+    const parsed = consultRequestSchema.safeParse(request.body);
     if (!parsed.success) {
       return reply.status(400).send({
         error: 'Invalid request',

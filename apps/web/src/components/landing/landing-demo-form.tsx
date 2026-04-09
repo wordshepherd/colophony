@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,23 +16,11 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { useInView } from "@/hooks/use-in-view";
-
-function getDemoUrl() {
-  if (typeof window === "undefined") return "/demo";
-  const host = window.location.hostname;
-  if (host.startsWith("demo.")) return "/demo";
-  const proto = window.location.protocol;
-  return `${proto}//demo.${host}/demo`;
-}
-
-const demoFormSchema = z.object({
-  name: z.string().min(1, "Name is required"),
-  email: z.string().email("Please enter a valid email address"),
-  magazine: z.string().min(1, "Magazine name is required"),
-  message: z.string().optional(),
-});
-
-type DemoFormData = z.infer<typeof demoFormSchema>;
+import { getDemoUrl } from "@/lib/demo-url";
+import {
+  consultRequestSchema,
+  type ConsultRequestData,
+} from "@colophony/types";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
 
@@ -41,8 +28,8 @@ export function LandingDemoForm() {
   const { ref, isInView } = useInView(0.1);
   const [submitting, setSubmitting] = useState(false);
 
-  const form = useForm<DemoFormData>({
-    resolver: zodResolver(demoFormSchema),
+  const form = useForm<ConsultRequestData>({
+    resolver: zodResolver(consultRequestSchema),
     defaultValues: {
       name: "",
       email: "",
@@ -51,7 +38,7 @@ export function LandingDemoForm() {
     },
   });
 
-  async function onSubmit(data: DemoFormData) {
+  async function onSubmit(data: ConsultRequestData) {
     setSubmitting(true);
     try {
       const res = await fetch(`${API_URL}/v1/public/demo-requests`, {
@@ -82,7 +69,7 @@ export function LandingDemoForm() {
 
   return (
     <section
-      id="demo"
+      id="consult"
       className="scroll-mt-20 border-t border-border/50 py-24 md:py-32"
     >
       <div
@@ -93,11 +80,12 @@ export function LandingDemoForm() {
       >
         <div className="text-center">
           <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
-            See Colophony in action
+            Let&rsquo;s talk about your magazine
           </h2>
           <p className="mt-4 text-lg text-muted-foreground">
-            We&rsquo;d love to walk you through the platform. Tell us about your
-            magazine and we&rsquo;ll set up a time.
+            Tell us about your editorial workflow and we&rsquo;ll discuss how
+            Colophony can help. No obligation, no sales pitch&mdash;just a
+            conversation.
           </p>
         </div>
 
@@ -189,7 +177,7 @@ export function LandingDemoForm() {
               disabled={submitting}
               className="w-full bg-accent text-accent-foreground hover:bg-accent/90 text-base"
             >
-              {submitting ? "Sending..." : "Request a Demo"}
+              {submitting ? "Sending..." : "Request a Consult"}
             </Button>
             <p className="text-center text-sm text-muted-foreground">
               Or{" "}
