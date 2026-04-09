@@ -10,6 +10,8 @@
  *   3. Open PR via `gh pr create`
  */
 
+const { execSync } = require('child_process');
+
 const command = process.env.CLAUDE_TOOL_ARGS_command || '';
 
 // Only check git push commands
@@ -23,7 +25,6 @@ if (!command.includes('git push')) {
 const pushToMainPattern = /git push\b.*(?:\s|:)(main|master)(?:\s|$)/;
 
 if (pushToMainPattern.test(command)) {
-  // Output JSON to block the action
   const result = {
     decision: "block",
     reason: "Cannot push directly to main — it is a protected branch.\n" +
@@ -34,6 +35,28 @@ if (pushToMainPattern.test(command)) {
   };
   console.log(JSON.stringify(result));
   process.exit(0);
+}
+
+// Detect pushing to a branch whose PR was already merged (remote tracking ref deleted)
+try {
+  const branchInfo = execSync('git branch -vv --no-color 2>/dev/null', { encoding: 'utf8' });
+  const currentLine = branchInfo.split('\n').find(l => l.startsWith('*'));
+  if (currentLine && currentLine.includes(': gone]')) {
+    const branchName = currentLine.replace(/^\*\s+/, '').split(/\s/)[0];
+    const result = {
+      decision: "block",
+      reason: `Branch '${branchName}' has a deleted remote tracking ref (PR was likely merged).\n` +
+        "Pushing here will recreate the remote branch but won't reopen the PR.\n" +
+        "Create a new branch instead:\n" +
+        `  1. git checkout -b <new-branch>  (from current commits)\n` +
+        "  2. git push -u origin <new-branch>\n" +
+        "  3. gh pr create --title '...' --body '...'"
+    };
+    console.log(JSON.stringify(result));
+    process.exit(0);
+  }
+} catch {
+  // If git command fails, don't block — fail open
 }
 
 process.exit(0);
