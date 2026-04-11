@@ -63,5 +63,6 @@ session-handoff.md
 # Development tooling (local only)
 CLAUDE.md
 .claude/
+.claudeignore
 .codex/
 docs/devlog/

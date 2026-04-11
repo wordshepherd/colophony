@@ -251,7 +251,7 @@
 
 - [x] Zod 3 → 4 — ground-up rewrite (stable May 2025); touches types package, all tRPC inputs, env config; largest migration surface — (dependabot #80; done 2026-02-17)
 - [x] TanStack Query 4 → 5 — upgraded with tRPC 11; `isPending` alias pattern used; `fetchStatus` workaround removed from `use-auth.ts` — (dependabot #74; done 2026-02-17)
-- [x] tRPC 10 → 11 — combined tRPC 11 + TQ5 + TS 5.7.2 migration; TS2742 quirk resolved — (CLAUDE.md version pin; done 2026-02-17)
+- [x] tRPC 10 → 11 — combined tRPC 11 + TQ5 + TS 5.7.2 migration; TS2742 quirk resolved — (version pin; done 2026-02-17)
 - [x] Inngest 3 → 4 — hard breaking change (v4.0.3 errors on v3-style function config); 15 function definitions across 11 files + 6 test files; TS2742 fix via `InngestFunction.Any` annotation — (dependabot #315; done 2026-03-22)
 
 ### [P2] Medium — Dev tooling, lower risk
@@ -276,7 +276,7 @@
 
 ### File Size & Complexity
 
-- [x] Add soft 500-line guideline to CLAUDE.md — flag files over 500 lines for review during `code review`; not a hard gate, just a review trigger — (dev workflow session 2026-02-20; done 2026-02-20)
+- [x] Add soft 500-line guideline — flag files over 500 lines for review during `code review`; not a hard gate, just a review trigger — (dev workflow session 2026-02-20; done 2026-02-20)
 - [x] Extract `validateFormData` and per-type validators from `form.service.ts` (912 lines) into `form-validation.service.ts` — natural seam between CRUD operations and validation logic — (dev workflow session 2026-02-20; done 2026-02-20)
 - [x] [P3] Consolidate API test file locations — 49 spec files are co-located (`services/*.spec.ts`), 4 are in `services/__tests__/`. Move the 4 `__tests__/` files to co-located pattern for consistency. `queue-preset` has complementary tests in both locations that should be merged into one file. — (2026-03-26; done 2026-03-27)
 
@@ -296,7 +296,7 @@
 - [x] Structured session handoff doc (`session-handoff.md`, gitignored) — `/end-session` writes machine-readable state (branch, status, files touched, decisions made, open questions, next action) alongside DEVLOG narrative; `/start-session` reads handoff first for instant context restoration, falls back to DEVLOG if missing. DEVLOG becomes purely archival/human-readable — (dev workflow session 2026-02-20; done 2026-02-20)
 - [x] Add decision-surfacing step to plan mode — after exploring code but before writing the plan, explicitly enumerate architectural gray areas and present them with a recommended path and rationale; get user preferences before committing to an approach. Still recommend, just surface the choice — (dev workflow session 2026-02-20; done 2026-02-20)
 - [x] Integrate plan review into plan mode — run `code review plan` automatically after writing the plan but before ExitPlanMode; adjust plan based on findings, note changes and dismissals with rationale; user sees a reviewed plan at approval time instead of manually triggering review — (dev workflow session 2026-02-20; done 2026-02-20)
-- [x] Increase plan specificity standard — plans should include exact file paths, concrete type/prop names, and named test cases with setup and assertions where feasible; specific enough to mechanically verify post-implementation. Update plan mode instructions in CLAUDE.md — (dev workflow session 2026-02-20; done 2026-02-20)
+- [x] Increase plan specificity standard — plans should include exact file paths, concrete type/prop names, and named test cases with setup and assertions where feasible; specific enough to mechanically verify post-implementation. Update plan mode instructions — (dev workflow session 2026-02-20; done 2026-02-20)
 - [x] Plan drift detection — after implementation, verify that the delivered code matches the approved plan. Check that specified files exist, export expected symbols, and follow specified patterns. Run as part of `code review branch` or as a standalone `/plan-drift` skill — (dev workflow session 2026-02-20; done 2026-02-20)
 - [x] Plan override log for drift detection — during implementation, when discoveries require deliberate divergence from the plan, log overrides with rationale (file, what changed, why) in a structured format (e.g., task list metadata or a plan-overrides section in the PR). Drift detection reads the override log and excludes acknowledged divergences, only flagging unlogged drift — (dev workflow session 2026-02-20; done 2026-02-20)
 - [x] Automatic branch review before PR — run `code review branch` automatically after implementation is complete (all tasks done, tests passing) but before creating the PR; incorporate findings before presenting the PR for user review. Mirrors the plan review integration: user sees a reviewed PR, not a raw first draft — (dev workflow session 2026-02-20; done 2026-02-20)
@@ -326,7 +326,7 @@
 - [x] [P3] Flakiness and determinism CI checks — run unit tests with retries disabled and `--sequence.shuffle` on at least one CI lane; add quarantine convention (`.flaky.test.ts` suffix or skip marker) and fail PRs that introduce new flaky markers — (code review 2026-03-03; done 2026-03-04)
 - [x] [P3] Risk-based test matrix — audit coverage per domain (pipeline, federation, workspace, forms) and document minimum test layers per domain (unit + service integration + API route + E2E happy path) in `docs/testing.md`; identify high-risk low-coverage hotspots — (code review 2026-03-03; done 2026-03-04)
 - [ ] [P3] ESLint 9 → 10 upgrade — blocked by `eslint-plugin-react`, `eslint-plugin-react-hooks`, `eslint-plugin-jsx-a11y` (transitive via `eslint-config-next`); Dependabot canary will signal when unblocked; tracking issue #273 — (2026-03-16); canary verified 2026-03-22 (Dependabot PR #269 failed CI as expected, still blocked by eslint-plugin-react)
-- [x] [P2] Diagnostic: plan review step dropped from workflow — root cause: plan mode system reminder's rigid Phase 5 overrides CLAUDE.md instruction; no mechanical enforcement existed. Fix: `PreToolUse` hook on `ExitPlanMode` blocks unless `code review plan` marker exists or plan is trivial — (2026-03-28, user-reported; done 2026-03-28)
+- [x] [P2] Diagnostic: plan review step dropped from workflow — root cause: plan mode system reminder's rigid Phase 5 overrides instruction; no mechanical enforcement existed. Fix: `PreToolUse` hook on `ExitPlanMode` blocks unless `code review plan` marker exists or plan is trivial — (2026-03-28, user-reported; done 2026-03-28)
 - [x] [P3] Skill update: code review should auto-add actionable out-of-scope findings to backlog — during both plan review and branch/diff review, any Important+ findings outside the current task scope should be appended to docs/backlog.md automatically — (workflow improvement 2026-03-03; done 2026-03-22 — enhanced /end-session Step 4b with systematic review finding extraction)
 - [x] [P4] Ephemeral DB/queue per test worker — standardize `TestContext` factory for isolated schemas per worker; replace ad-hoc Redis db 1 patching in `vitest-setup.ts`; add explicit contract tests around external boundaries (webhooks, auth, adapters) with fixture replay — (code review 2026-03-03; closed 2026-03-22 — current isolation via truncateAllTables, Redis db 1, singleFork is adequate)
 - [x] [P4] Manual QA tracking — establish lightweight QA log (structured markdown or checklist) for pre-release smoke tests, exploratory testing sessions, and regression checks; track what was tested, time spent, and issues found — (code review 2026-03-03; done 2026-03-03)
@@ -439,7 +439,7 @@
 
 > **Status:** Complete. All governance and community readiness items done.
 
-- [x] [P0] AGPL license boundary documentation — clearly document what is AGPL (Zitadel), what license Colophony uses, obligations for self-hosters, and how the boundary works — (CLAUDE.md security checklist + persona gap analysis 2026-02-27; done 2026-03-02 `docs/licensing.md`)
+- [x] [P0] AGPL license boundary documentation — clearly document what is AGPL (Zitadel), what license Colophony uses, obligations for self-hosters, and how the boundary works — (security checklist + persona gap analysis 2026-02-27; done 2026-03-02 `docs/licensing.md`)
 - [x] [P0] Choose and document Colophony's own license — AGPL-3.0-or-later for core, MIT for SDKs/plugin tooling — (persona gap analysis 2026-02-27; done 2026-03-02 `LICENSE` + `docs/licensing.md`)
 - [x] [P1] CONTRIBUTING.md — how to contribute, development setup, PR process, code of conduct reference — (persona gap analysis 2026-02-27; done 2026-03-02)
 - [x] [P1] CODE_OF_CONDUCT.md — (persona gap analysis 2026-02-27; done 2026-03-02 Contributor Covenant v3.0)
@@ -573,11 +573,11 @@
 
 ### Database Hardening
 
-- [x] Change `app_user` password from default — (CLAUDE.md; done 2026-03-17 init script validation)
-- [x] PostgreSQL SSL/TLS (`DB_SSL` env var) — (CLAUDE.md; done 2026-03-17)
-- [x] Connection pooling (PgBouncer) — (CLAUDE.md, PR pending)
+- [x] Change `app_user` password from default — (checklist; done 2026-03-17 init script validation)
+- [x] PostgreSQL SSL/TLS (`DB_SSL` env var) — (checklist; done 2026-03-17)
+- [x] Connection pooling (PgBouncer) — (checklist, PR pending)
 - [x] Backups (WAL-G to S3) — done 2026-03-19
-- [x] `pg_stat_statements` for query monitoring — (CLAUDE.md; done 2026-03-17)
+- [x] `pg_stat_statements` for query monitoring — (checklist; done 2026-03-17)
 - [x] Verify RLS in production — done 2026-03-19
 
 ### Schema Bugs
@@ -586,8 +586,8 @@
 
 ### Security & Compliance
 
-- [x] Rotate credentials quarterly — done 2026-03-19, `scripts/rotate-secrets.sh` + `docs/credential-rotation.md` — (CLAUDE.md)
-- [x] AGPL license boundary documented (Zitadel is AGPL) — done 2026-03-02 `docs/licensing.md` — (CLAUDE.md)
+- [x] Rotate credentials quarterly — done 2026-03-19, `scripts/rotate-secrets.sh` + `docs/credential-rotation.md` — (checklist)
+- [x] AGPL license boundary documented (Zitadel is AGPL) — done 2026-03-02 `docs/licensing.md` — (checklist)
 - [x] [P2] Verify SSRF protection in `hub-client.service.ts` — `fetch()` calls at lines 38/104/141/199; `validateOutboundUrl` is imported but may not be called before every fetch — (plan review 2026-03-19; done 2026-03-20)
 - [x] [P3] Add LIMIT to unbounded queries — `correspondence.service.ts:70`, `submission.service.ts:730`, `file.service.ts:80` — (plan review 2026-03-19; done 2026-03-20)
 
@@ -622,7 +622,7 @@
 - [x] [P2] Evaluate MinIO replacement — MinIO repo archived Feb 2026; no future security patches. Evaluate alternatives (LocalStack, SeaweedFS, direct S3/R2) for dev/CI/self-hosted object storage. Not urgent while no CVEs exist, but blocked from upstream fixes if one surfaces — (2026-03-25, CI image pin session; done 2026-03-25 — migrated to Garage v2.2.0)
 - [x] [P2] Replace Overmind with hivemind or concurrently — Overmind solves signal handling but tmux dependency, `dev:clean` escape hatch, and WSL quirks are operational drag. hivemind (Go binary, no tmux, proper signal handling) preferred; concurrently as fallback. Test on macOS, Linux, WSL before standardizing. Keep `dev:clean` as escape hatch, not normal workflow. Turbo `--watch` only if shutdown behavior verified in this repo — (architecture review 2026-03-16; code changes done 2026-03-16; validated on WSL/Linux 2026-03-22, macOS deferred — not in team environment)
 - [x] [P3] Remove `packages/eslint-config` — unused v1 legacy configs (`base.js`, `nextjs.js`, `nestjs.js`), neither app imports from it. Moved `eslint` and `eslint-config-next` to direct app devDependencies — (architecture review 2026-03-16; done 2026-03-16)
-- [x] [P1] Migrate project hooks from `.claude/hooks/hooks.json` to `.claude/settings.json` — hooks.json uses wrong schema (`event`+`script` keys) and wrong file location; Claude Code only reads hooks from settings.json files with `matcher`+`hooks[{type,command}]` format. ALL project hooks (pre-edit-validate, pre-payment-validate, pre-frontend-validate, pre-router-audit, pre-push-branch, pre-exit-plan-review, post-edit-lint, post-schema, post-email-template, post-migration-validate, post-commit-devlog, post-test-file) are affected. Requires Claude Code restart after fix — (diagnosed 2026-03-29, ExitPlanMode hook failed to block; done 2026-03-29)
+- [x] [P1] Migrate project hooks configuration — hooks config used wrong schema (`event`+`script` keys) and wrong file location; migrated to correct `matcher`+`hooks[{type,command}]` format. All 12 project hooks affected — (diagnosed 2026-03-29; done 2026-03-29)
 
 ### Testing & CI
 
