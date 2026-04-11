@@ -30,6 +30,7 @@ interface MorphStyle {
 interface MorphResult {
   style: MorphStyle | null;
   isLocked: boolean;
+  progress: number;
 }
 
 const HEADER_HEIGHT = 64;
@@ -45,6 +46,7 @@ export function useLogotypeMorph(
 ): MorphResult {
   const [style, setStyle] = useState<MorphStyle | null>(null);
   const [isLocked, setIsLocked] = useState(false);
+  const [progress, setProgress] = useState(0);
   const rafId = useRef<number>(0);
 
   const update = useCallback(() => {
@@ -84,6 +86,7 @@ export function useLogotypeMorph(
       willChange: locked ? "auto" : "transform",
     });
     setIsLocked(locked);
+    setProgress(progress);
   }, [heroSlotRef, headerSlotRef]);
 
   useEffect(() => {
@@ -124,5 +127,5 @@ export function useLogotypeMorph(
     };
   }, [heroSlotRef, headerSlotRef, update]);
 
-  return { style, isLocked };
+  return { style, isLocked, progress };
 }

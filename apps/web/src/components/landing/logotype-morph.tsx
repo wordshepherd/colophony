@@ -20,7 +20,7 @@ export function LogotypeMorph({
   const img = (
     // eslint-disable-next-line @next/next/no-img-element -- fixed-position animated element; Next Image doesn't support dynamic inline sizing
     <img
-      src="/logos/logotype-dark.svg"
+      src="/logos/logotype-wordmark-dark.svg"
       alt="Colophony"
       style={{
         position: style.position,
