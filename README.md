@@ -21,22 +21,38 @@ Colophony is designed for independent literary publications that want full contr
 
 ## Features
 
-- **Form builder** with custom fields, file uploads (resumable via tus), and embeddable submission forms
-- **Review pipeline** with configurable stages, assignments, and bulk actions
-- **Publication workflow** — copyediting, contract management (Documenso integration), and issue assembly
-- **CMS publishing** with adapter support for static site generators
-- **Notifications** — email (SMTP/SendGrid), webhooks, and in-app messaging
+### For Editors
+
+- **Form builder** — custom fields, conditional logic, multi-page wizards, file uploads (resumable via tus), and embeddable iframe widget for third-party sites
+- **Review pipeline** — configurable stages, reviewer assignments, voting/scoring, blind review mode, batch operations, discussion threads, and distraction-free reading mode
+- **Publication workflow** — copyediting with .docx round-trip, contract management (Documenso integration), and issue assembly
+- **CMS publishing** — WordPress and Ghost adapters with external ID tracking
+- **Editorial analytics** — acceptance rates, response time distribution, pipeline health, genre breakdown, and contributor diversity metrics
+- **Business operations** — contributor management, rights agreements with reversion tracking, revenue reporting, and contest management with anonymous judging
+- **5 org roles** — Admin, Editor, Reader, Production, and Business Ops with role-specific access controls
+
+### For Writers
+
+- **Writer workspace** — manuscript library, submission tracking across magazines, and personal analytics
+- **External submission tracking** — log submissions to non-Colophony journals with import flows for Submittable, Chill Subs, and generic CSV
+- **Sim-sub group management** — track simultaneous submissions of the same work with auto-withdraw prompts on acceptance
+- **Portfolio** — verified publications (from Colophony) and manually-added external credits
+- **Reader feedback** — opt-in anonymized reader comments included with rejection notices
+- **Response time transparency** — aggregated response stats displayed on magazine profiles
+
+### Platform
+
 - **Cross-instance federation** — discover and trust other Colophony instances
 - **Simultaneous submission detection** via the Blind Simultaneous Attestation Protocol (BSAP) — federated instances can detect overlapping submissions without revealing manuscript content or author identity to each other
-- **Writer workspace** — personal portfolio, submission tracking, and analytics across magazines
+- **Notifications** — email (SMTP/SendGrid), webhooks, in-app messaging via SSE
 - **Data portability** — export/import via the Common Submission Record (CSR) format
-- **Plugin system** — extend functionality with SDK-based plugins and UI extensions
-- **Analytics** — submission metrics for editors, personal stats for writers
+- **Plugin system** — SDK-based plugins with typed hooks, UI extension points, and a plugin gallery
+- **Email invitations** — invite team members by link without requiring a pre-existing account
 
 ## Quick Start
 
 ```bash
-git clone https://github.com/colophony-project/colophony.git
+git clone https://github.com/wordshepherd/colophony.git
 cd colophony
 pnpm docker:up        # PostgreSQL, Redis, Garage, Zitadel
 pnpm install
@@ -50,13 +66,13 @@ Prerequisites: Node.js >= 22, pnpm 9.15+, Docker, [hivemind](https://github.com/
 
 ## Tech Stack
 
-| Layer        | Technologies                                               |
-| ------------ | ---------------------------------------------------------- |
-| **Frontend** | Next.js 16, React 19, TypeScript, Tailwind CSS, shadcn/ui  |
-| **Backend**  | Fastify 5, TypeScript, Drizzle ORM, BullMQ                 |
-| **Auth**     | Zitadel (OIDC)                                             |
-| **Data**     | PostgreSQL 16+ (RLS), Redis 7+, Garage (S3-compatible)     |
-| **Infra**    | Docker Compose (self-hosted), Hetzner VPS (Docker Compose) |
+| Layer        | Technologies                                              |
+| ------------ | --------------------------------------------------------- |
+| **Frontend** | Next.js 16, React 19, TypeScript, Tailwind CSS, shadcn/ui |
+| **Backend**  | Fastify 5, TypeScript, Drizzle ORM, BullMQ, Inngest       |
+| **Auth**     | Zitadel (OIDC)                                            |
+| **Data**     | PostgreSQL 16+ (RLS), Redis 7+, Garage (S3-compatible)    |
+| **Infra**    | Docker Compose, Caddy (TLS + routing), Hetzner VPS        |
 
 ## Documentation
 
@@ -81,8 +97,8 @@ Client SDKs are available for [TypeScript](sdks/typescript/) and [Python](sdks/p
 
 Colophony supports two deployment models:
 
-- **Self-hosted** — Docker Compose with PostgreSQL, Redis, Garage, and Zitadel
-- **Managed hosting** — Hetzner VPS with Docker Compose (see [docs/deployment.md](docs/deployment.md))
+- **Self-hosted** — Docker Compose with PostgreSQL, Redis, Garage, Zitadel, and Caddy for TLS termination
+- **Managed hosting** — Hetzner VPS with Docker Compose and Caddy (see [docs/deployment.md](docs/deployment.md))
 
 ## License
 

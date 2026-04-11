@@ -57,7 +57,7 @@ export function LandingHero({
             </Button>
             <Button variant="ghost" size="lg" className="text-base" asChild>
               <a
-                href="https://github.com/colophony-project"
+                href="https://github.com/wordshepherd/colophony"
                 target="_blank"
                 rel="noopener noreferrer"
               >

@@ -3,17 +3,17 @@ import Image from "next/image";
 const footerLinks = [
   {
     label: "GitHub",
-    href: "https://github.com/colophony-project",
+    href: "https://github.com/wordshepherd/colophony",
     external: true,
   },
   {
     label: "Documentation",
-    href: "https://github.com/colophony-project/colophony#readme",
+    href: "https://github.com/wordshepherd/colophony#readme",
     external: true,
   },
   {
     label: "License (AGPL-3.0)",
-    href: "https://github.com/colophony-project/colophony/blob/main/LICENSE",
+    href: "https://github.com/wordshepherd/colophony/blob/main/LICENSE",
     external: true,
   },
   { label: "Contact", href: "#consult", external: false },
