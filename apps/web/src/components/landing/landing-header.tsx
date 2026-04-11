@@ -84,7 +84,7 @@ export function LandingHeader({ onSignIn, headerLogoRef }: LandingHeaderProps) {
           {/* Logotype header slot — invisible placeholder for the morph animation target */}
           <div
             ref={headerLogoRef}
-            className="h-10 w-[200px]"
+            className="h-10 w-[250px]"
             aria-hidden="true"
           />
         </div>
