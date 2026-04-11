@@ -26,7 +26,7 @@ declare module 'fastify' {
  * To add a new public route:
  * 1. Add the exact path to PUBLIC_EXACT or prefix to PUBLIC_PREFIXES
  * 2. Add a corresponding test in auth.spec.ts
- * 3. Document in apps/api/CLAUDE.md
+ * 3. Document in apps/api/README.md
  */
 const PUBLIC_PREFIXES = [
   '/health',

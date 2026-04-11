@@ -73,8 +73,6 @@ When submitting a PR:
 
 Colophony is organized into four suite components (Hopper, Slate, Relay, Register) plus shared infrastructure. See [docs/architecture.md](docs/architecture.md) for the full architecture overview.
 
-Per-directory `CLAUDE.md` files contain domain-specific context for each package and app.
-
 ## License
 
 By contributing to Colophony, you agree that your contributions will be licensed under the [AGPL-3.0-or-later](LICENSE) license. See [docs/licensing.md](docs/licensing.md) for details on the licensing boundary (SDKs and plugin tooling use MIT).

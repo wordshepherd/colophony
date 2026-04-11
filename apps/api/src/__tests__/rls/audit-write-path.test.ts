@@ -2,7 +2,7 @@
  * Integration tests for auditService.logDirect() and auditService.log()
  * against PostgreSQL with RLS policies enforced.
  *
- * Codex review finding #4: logDirect() was only unit-tested with mocked DB.
+ * Note: logDirect() was previously only unit-tested with mocked DB.
  * These tests exercise the actual service methods as app_user with RLS.
  *
  * Requires: postgres-test container running on port 5433

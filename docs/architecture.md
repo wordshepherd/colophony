@@ -446,7 +446,7 @@ Relay (cross-cutting)        → Started in Track 1, evolved with each track
 
 **Original estimate:** 18-24 months across 5 phases with 4 beta cohorts.
 
-**Actual:** Tracks 1-8 and 10 completed in ~3 weeks (2026-02-10 to 2026-03-02). The original timeline assumed a single developer working part-time with manual coding. AI-assisted development (Claude Code) dramatically compressed the schedule. All architectural decisions, implementation, testing, and CI/CD were completed in this period.
+**Actual:** Tracks 1-8 and 10 completed in ~3 weeks (2026-02-10 to 2026-03-02). The original timeline assumed a single developer working part-time with manual coding. Focused full-time development dramatically compressed the schedule. All architectural decisions, implementation, testing, and CI/CD were completed in this period.
 
 **Remaining:** Track 9 (governance docs) and public launch preparation are not yet started.
 
@@ -473,7 +473,7 @@ Relay (cross-cutting)        → Started in Track 1, evolved with each track
 
 - Scope creep — Compressed timeline eliminated this concern.
 - Technology churn — 3-week build avoided dependency drift entirely.
-- Motivation/burnout — AI-assisted development kept momentum high.
+- Motivation/burnout — compressed timeline kept momentum high.
 
 ### 6.6 Pothos + Drizzle Decision Point — Resolved (Extracted)
 

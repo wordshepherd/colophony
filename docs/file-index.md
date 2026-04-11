@@ -1,6 +1,6 @@
 # Key File Locations
 
-Quick-reference index of important files across the codebase. See also per-directory `CLAUDE.md` files for domain-specific details.
+Quick-reference index of important files across the codebase.
 
 ## Core Packages
 

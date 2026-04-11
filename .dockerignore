@@ -53,5 +53,5 @@ eslint.config.mjs
 session-handoff.md
 .qa
 
-# Claude Code
+# Local dev tooling
 .claude

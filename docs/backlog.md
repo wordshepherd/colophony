@@ -15,8 +15,8 @@
 ### Code
 
 - [x] Security headers via @fastify/helmet (CSP, HSTS, X-Content-Type-Options) — (security checklist)
-- [x] Add `Permissions-Policy` header to restrict browser features — (Codex review 2026-02-15)
-- [x] Endpoint-specific `Cache-Control` for authenticated JSON responses — (Codex review 2026-02-15)
+- [x] Add `Permissions-Policy` header to restrict browser features — (code review 2026-02-15)
+- [x] Endpoint-specific `Cache-Control` for authenticated JSON responses — (code review 2026-02-15)
 - [x] Wire rate limiting globally on all API surfaces — hook exists in `apps/api/src/hooks/rate-limit.ts`, needs registration on all routes — (security checklist)
 - [x] Zitadel OIDC token validation enforced on all protected routes — (security checklist, PR #72)
 - [x] API key authentication with scopes — blocks Track 2 REST API — (security checklist, PR pending 2026-02-15)
@@ -25,13 +25,13 @@
 - [x] Stripe webhook signature verification + idempotency — (security checklist)
 - [x] Dedicated `audit_writer` DB role with INSERT-only on `audit_events` — production hardening — (DEVLOG 2026-02-12, 2026-02-13; done 2026-02-17 PR #89)
 - [x] In-memory per-IP throttle for auth failure auditing — DoS protection — (DEVLOG 2026-02-12, 2026-02-13; done 2026-02-17 PR #89)
-- [x] Restore two-tier rate limiting (AUTH_MAX for authenticated users) via second-pass hook after auth — (DEVLOG 2026-02-15, Codex review; done 2026-02-17 PR #89)
+- [x] Restore two-tier rate limiting (AUTH_MAX for authenticated users) via second-pass hook after auth — (DEVLOG 2026-02-15, code review; done 2026-02-17 PR #89)
 - [x] Request correlation columns (`requestId`, `method`, `route`) in `audit_events` — requires schema migration — (DEVLOG 2026-02-12, 2026-02-13; done 2026-02-17 PR #89)
-- [x] Zitadel webhook two-step idempotency — current one-step pattern doesn't handle crash recovery (row inserted but `processed=false`); align with Stripe webhook's two-step pattern — (Codex review 2026-02-17; done 2026-02-17)
+- [x] Zitadel webhook two-step idempotency — current one-step pattern doesn't handle crash recovery (row inserted but `processed=false`); align with Stripe webhook's two-step pattern — (code review 2026-02-17; done 2026-02-17)
 - [x] Audit query/list endpoints — wait for API surfaces — (DEVLOG 2026-02-13; done 2026-02-18 PR #101)
 - [x] Seed data (`packages/db/src/seed.ts` has TODO) — wait for API layer — (code TODO; done 2026-02-18 PR #104)
 - [x] [P2] Sliding window rate limiting — replaced fixed-window Lua script with sliding-window-log algorithm using Redis sorted sets; fixes burst-at-boundary 2x rate vulnerability; kept custom two-tier design (IP pre-auth + user post-auth) — (dev feedback 2026-02-25; done 2026-02-25)
-- [x] [P2] RLS app connection fallback to superuser — packages/db/src/client.ts appPool falls back to DATABASE_URL when DATABASE_APP_URL is unset; production could silently use superuser credentials — (Codex review 2026-03-03; done 2026-03-04)
+- [x] [P2] RLS app connection fallback to superuser — packages/db/src/client.ts appPool falls back to DATABASE_URL when DATABASE_APP_URL is unset; production could silently use superuser credentials — (code review 2026-03-03; done 2026-03-04)
 
 ### QA / Testing
 
@@ -76,7 +76,7 @@
 - [x] oRPC REST API surface — PR 3: typed client package — (DEVLOG 2026-02-18; done 2026-02-18)
 - [x] API key scope enforcement on REST + tRPC endpoints — (DEVLOG 2026-02-18, done 2026-02-18)
 - [x] API key scope enforcement on GraphQL surface — `requireScopes` guard wired on all 10 query resolvers — (DEVLOG 2026-02-18; done 2026-02-19)
-- [x] Stripe webhook: audit raw payload storage for PCI compliance — `stripe.webhook.ts` stores raw event payload in `stripe_webhook_events`; verified: Checkout Session events contain amounts/currency/payment_intent ID/metadata only, never card numbers/CVV/cardholder data. Added PCI note comment. — (Codex review 2026-02-18; done 2026-02-19)
+- [x] Stripe webhook: audit raw payload storage for PCI compliance — `stripe.webhook.ts` stores raw event payload in `stripe_webhook_events`; verified: Checkout Session events contain amounts/currency/payment_intent ID/metadata only, never card numbers/CVV/cardholder data. Added PCI note comment. — (code review 2026-02-18; done 2026-02-19)
 - [x] Stripe webhook: `resourceId` passed to `insert_audit_event()` is Stripe session ID (`cs_...`), not UUID — fails `::uuid` cast in production. Fixed: removed `resourceId` from audit calls (session ID already in `newValue.stripeSessionId`); updated tests to use realistic `cs_test_` IDs. — (DEVLOG 2026-02-19; done 2026-02-19)
 - [x] tRPC `.output()` runtime response validation — all 30 procedures wired with Zod output schemas; 9 new response schemas added — (input validation audit 2026-02-18; done 2026-02-18)
 - [x] Pothos + GraphQL Yoga surface — PR 1: foundation (types, queries, DataLoaders, scope enforcement, Fastify integration) done 2026-02-19; PR 2: mutations done 2026-02-19 — (architecture doc Track 2, Section 6.6)
@@ -100,7 +100,7 @@
 - [x] Form renderer for submitters — render published forms in submission flow — (architecture doc Track 3, form-builder-research.md; done 2026-02-20)
 - [x] Form builder integration — wire validateFormData into submission create/update flow, formData persistence + validation on submit — (architecture doc Track 3, deferred from backend PR 2026-02-20; done 2026-02-20)
 - [x] Add `formDefinitionId` to `createSubmissionPeriodSchema` — done 2026-02-21 as part of submission periods UI PR
-- [x] [P2] GraphQL resolvers: add `idParamSchema` validation on all raw string ID args passed to services — forms (query + field mutations), submissions (query + history), audit (query) — (Codex plan review 2026-02-20; done 2026-02-21)
+- [x] [P2] GraphQL resolvers: add `idParamSchema` validation on all raw string ID args passed to services — forms (query + field mutations), submissions (query + history), audit (query) — (plan review 2026-02-20; done 2026-02-21)
 - [x] Conditional logic engine — (architecture doc Track 3, form-builder-research.md; done 2026-02-21)
 - [x] Form branching logic PR 1 — schema, evaluation engine, all API surfaces, form builder UI, renderer; single-page branching complete — (roadmap idea 2026-02-21; done 2026-02-21)
 - [x] Form branching logic PR 2 — multi-page wizard renderer, per-page validation, page navigation with branching rules, stepper UI — (roadmap idea 2026-02-21; done 2026-02-21)
@@ -141,8 +141,8 @@
 - [x] Slate frontend PR4 — editorial calendar — (architecture doc Track 4; done 2026-02-23 PR pending)
 - [x] Slate frontend PR5 — contracts + templates (Tiptap WYSIWYG + merge fields) — (architecture doc Track 4; done 2026-02-24 PR pending)
 - [x] Slate frontend PR6 — CMS connections (CRUD, adapter config, test) — (architecture doc Track 4; done 2026-02-24)
-- [x] [P2] Redact CMS credentials from audit logs — `updateWithAudit` writes raw `config` (including passwords) to audit table; needs field-level redaction before `newValue` storage — (Codex review 2026-02-24; done 2026-02-24)
-- [x] [P2] Add audit logging for `testConnection` — sensitive operation using stored credentials, currently not audit-logged — (Codex review 2026-02-24; done 2026-02-24)
+- [x] [P2] Redact CMS credentials from audit logs — `updateWithAudit` writes raw `config` (including passwords) to audit table; needs field-level redaction before `newValue` storage — (code review 2026-02-24; done 2026-02-24)
+- [x] [P2] Add audit logging for `testConnection` — sensitive operation using stored credentials, currently not audit-logged — (code review 2026-02-24; done 2026-02-24)
 - [x] Slate E2E tests — Playwright tests for pipeline flows (30 tests, 5 spec files) — (architecture doc Track 4; done 2026-02-24)
 
 ### Research / Design
@@ -158,9 +158,9 @@
 
 - [x] Discovery: WebFinger + `.well-known` endpoints — (architecture doc Track 5; done 2026-02-24)
 - [x] Identity: `did:web` DID document resolution — per-user Ed25519 keypairs, native crypto (no jose needed) — (architecture doc Track 5; done 2026-02-24)
-- [x] [P2] Split `getOrInitConfig()` to separate public-key-only read from private-key read — reduces private key exposure surface — (Codex review 2026-02-24, deferred to Phase 3; done 2026-02-25)
+- [x] [P2] Split `getOrInitConfig()` to separate public-key-only read from private-key read — reduces private key exposure surface — (code review 2026-02-24, deferred to Phase 3; done 2026-02-25)
 - [x] [P3] Key rotation mechanism for user keypairs — (architecture doc Track 5, deferred to Phase 7; done 2026-02-25)
-- [x] [P2] Inbound metadata fetch hardening — SSRF protection, domain mismatch, size limits, shared `fetchAndValidateMetadata()` helper — (Codex review 2026-02-24, deferred to Phase 3; done 2026-02-25)
+- [x] [P2] Inbound metadata fetch hardening — SSRF protection, domain mismatch, size limits, shared `fetchAndValidateMetadata()` helper — (code review 2026-02-24, deferred to Phase 3; done 2026-02-25)
 - [x] Trust establishment — bilateral trust with HTTP signatures, trust service, public S2S + admin routes — (architecture doc Track 5; done 2026-02-24)
 - [x] [P2] Federation signature verification middleware — protect all federation endpoints with signature-based auth — (DEVLOG 2026-02-24, done 2026-02-24)
 - [x] Sim-sub enforcement (BSAP) — fingerprint service, sim-sub service (local+remote check), S2S endpoint, admin routes, submission flow integration, all 3 API surfaces — (architecture doc Track 5; done 2026-02-24)
@@ -173,13 +173,13 @@
 - [x] Enum cleanup — varchar→pgEnum for identity migration direction, hub instance status, trust initiator — (plan C1; done 2026-02-25)
 - [x] Open mode auto-accept for inbound trust — (plan C2; done 2026-02-25)
 - [x] Inbound transfer tracking table with status lifecycle — (plan C4; done 2026-02-25)
-- [x] [P3] Per-capability rate limiting — rate limit per federation capability (simsub, transfer, etc.) rather than global per-peer — (OpenCode review 2026-02-25, deferred to production hardening; done 2026-02-26)
-- [x] [P3] Migration rollback testing — enum casts can fail on dirty data; add rollback scenario tests before production deployment — (OpenCode review 2026-02-25, deferred pre-launch; done 2026-02-26)
-- [x] [P4] Consider splitting schema migrations (enum changes vs new tables) for safer production rollback — documented as pattern + pre-flight validator instead of splitting 0031 (already applied) — (OpenCode review 2026-02-25, deferred pre-launch; done 2026-02-26)
+- [x] [P3] Per-capability rate limiting — rate limit per federation capability (simsub, transfer, etc.) rather than global per-peer — (code review 2026-02-25, deferred to production hardening; done 2026-02-26)
+- [x] [P3] Migration rollback testing — enum casts can fail on dirty data; add rollback scenario tests before production deployment — (code review 2026-02-25, deferred pre-launch; done 2026-02-26)
+- [x] [P4] Consider splitting schema migrations (enum changes vs new tables) for safer production rollback — documented as pattern + pre-flight validator instead of splitting 0031 (already applied) — (code review 2026-02-25, deferred pre-launch; done 2026-02-26)
 - [x] [P3] Federation rate limit fail mode: configurable fail-open/fail-closed + in-process fallback when Redis unavailable — (audit finding #4, 2026-03-01; done 2026-03-01 PR #225)
 - [x] [P3] Federation test gaps: integration tests for trust handshake flow and hub-first discovery path — (audit finding #5, 2026-03-01; done 2026-03-01 PR #225)
-- [x] [P3] Unbounded peer query in migration broadcast — migration.service.ts:870 fetches all trusted peers with no LIMIT; small dataset in practice but violates pagination rule — (Codex review 2026-03-03; done 2026-03-04)
-- [x] [P3] Trust metadata SSRF uses custom resolveAndCheckPrivateIp instead of validateOutboundUrl — trust.service.ts:88; functionally equivalent but inconsistent with the standard pattern — (Codex review 2026-03-03; done 2026-03-04)
+- [x] [P3] Unbounded peer query in migration broadcast — migration.service.ts:870 fetches all trusted peers with no LIMIT; small dataset in practice but violates pagination rule — (code review 2026-03-03; done 2026-03-04)
+- [x] [P3] Trust metadata SSRF uses custom resolveAndCheckPrivateIp instead of validateOutboundUrl — trust.service.ts:88; functionally equivalent but inconsistent with the standard pattern — (code review 2026-03-03; done 2026-03-04)
 
 ### Design Decisions
 
@@ -233,7 +233,7 @@
 - [x] Notification preferences frontend — UI for users to manage email opt-in/opt-out per event type — (DEVLOG 2026-02-26; done 2026-02-26)
 - [x] Webhook delivery system (outbound) — (architecture doc, Relay; done 2026-02-26)
 - [x] In-app notification center — SSE + Redis pub/sub + bell UI + dual-channel preferences — (architecture doc, Relay; done 2026-02-26)
-- [x] [P2] Defense-in-depth org filtering missing in webhook.service.ts — getEndpoint, listEndpoints, rotateSecret query by ID only (RLS-only, no explicit organizationId filter) — (Codex review 2026-03-03; done 2026-03-04)
+- [x] [P2] Defense-in-depth org filtering missing in webhook.service.ts — getEndpoint, listEndpoints, rotateSecret query by ID only (RLS-only, no explicit organizationId filter) — (code review 2026-03-03; done 2026-03-04)
 
 ---
 
@@ -276,30 +276,30 @@
 
 ### File Size & Complexity
 
-- [x] Add soft 500-line guideline to CLAUDE.md — flag files over 500 lines for review during `/codex-review`; not a hard gate, just a review trigger — (dev workflow session 2026-02-20; done 2026-02-20)
+- [x] Add soft 500-line guideline to CLAUDE.md — flag files over 500 lines for review during `code review`; not a hard gate, just a review trigger — (dev workflow session 2026-02-20; done 2026-02-20)
 - [x] Extract `validateFormData` and per-type validators from `form.service.ts` (912 lines) into `form-validation.service.ts` — natural seam between CRUD operations and validation logic — (dev workflow session 2026-02-20; done 2026-02-20)
 - [x] [P3] Consolidate API test file locations — 49 spec files are co-located (`services/*.spec.ts`), 4 are in `services/__tests__/`. Move the 4 `__tests__/` files to co-located pattern for consistency. `queue-preset` has complementary tests in both locations that should be merged into one file. — (2026-03-26; done 2026-03-27)
 
-### Defense-in-Depth (Codex Review Findings 2026-03-03)
+### Defense-in-Depth (Code Review Findings 2026-03-03)
 
-- [x] [Critical] `submission_discussions` missing `FORCE ROW LEVEL SECURITY` — `packages/db/migrations/0041_submission_discussions.sql` enables RLS but does not force it — (Codex review 2026-03-03; done 2026-03-03 migration 0050)
-- [x] [P2] Defense-in-depth: transfer service org-scoped methods missing explicit `organizationId` predicate — `apps/api/src/services/transfer.service.ts:347,361,382,423` — (Codex review 2026-03-03; done 2026-03-03)
-- [x] [P2] Unbounded query: transfer listing by submission has no pagination/limit — `apps/api/src/services/transfer.service.ts:339` — (Codex review 2026-03-03; done 2026-03-03)
-- [x] [P2] Migration token verification unused `_submissionId` parameter (missing binding check) — `apps/api/src/services/migration.service.ts:958` — (Codex review 2026-03-03; done 2026-03-03)
-- [x] [P2] Unbounded query: migration pending approvals — `apps/api/src/services/migration.service.ts:1119` — (Codex review 2026-03-03; done 2026-03-03)
-- [x] [P2] Defense-in-depth: sim-sub peer query lacks explicit `organizationId` filter — `apps/api/src/services/simsub.service.ts:403` — (Codex review 2026-03-03; done 2026-03-03)
-- [x] [P3] Notification preferences list has no `LIMIT` — `apps/api/src/services/notification-preference.service.ts:71` — (Codex review 2026-03-03; done 2026-03-03)
-- [x] [P3] Defense-in-depth: pipeline service query methods missing explicit `organizationId` filter — `apps/api/src/services/pipeline.service.ts:113,196,500,512` — (Codex plan review 2026-03-03, deferred from READER role PR)
+- [x] [Critical] `submission_discussions` missing `FORCE ROW LEVEL SECURITY` — `packages/db/migrations/0041_submission_discussions.sql` enables RLS but does not force it — (code review 2026-03-03; done 2026-03-03 migration 0050)
+- [x] [P2] Defense-in-depth: transfer service org-scoped methods missing explicit `organizationId` predicate — `apps/api/src/services/transfer.service.ts:347,361,382,423` — (code review 2026-03-03; done 2026-03-03)
+- [x] [P2] Unbounded query: transfer listing by submission has no pagination/limit — `apps/api/src/services/transfer.service.ts:339` — (code review 2026-03-03; done 2026-03-03)
+- [x] [P2] Migration token verification unused `_submissionId` parameter (missing binding check) — `apps/api/src/services/migration.service.ts:958` — (code review 2026-03-03; done 2026-03-03)
+- [x] [P2] Unbounded query: migration pending approvals — `apps/api/src/services/migration.service.ts:1119` — (code review 2026-03-03; done 2026-03-03)
+- [x] [P2] Defense-in-depth: sim-sub peer query lacks explicit `organizationId` filter — `apps/api/src/services/simsub.service.ts:403` — (code review 2026-03-03; done 2026-03-03)
+- [x] [P3] Notification preferences list has no `LIMIT` — `apps/api/src/services/notification-preference.service.ts:71` — (code review 2026-03-03; done 2026-03-03)
+- [x] [P3] Defense-in-depth: pipeline service query methods missing explicit `organizationId` filter — `apps/api/src/services/pipeline.service.ts:113,196,500,512` — (plan review 2026-03-03, deferred from READER role PR)
 
 ### Dev Workflow
 
 - [x] Structured session handoff doc (`session-handoff.md`, gitignored) — `/end-session` writes machine-readable state (branch, status, files touched, decisions made, open questions, next action) alongside DEVLOG narrative; `/start-session` reads handoff first for instant context restoration, falls back to DEVLOG if missing. DEVLOG becomes purely archival/human-readable — (dev workflow session 2026-02-20; done 2026-02-20)
 - [x] Add decision-surfacing step to plan mode — after exploring code but before writing the plan, explicitly enumerate architectural gray areas and present them with a recommended path and rationale; get user preferences before committing to an approach. Still recommend, just surface the choice — (dev workflow session 2026-02-20; done 2026-02-20)
-- [x] Integrate Codex plan review into plan mode — run `/codex-review plan` automatically after writing the plan but before ExitPlanMode; adjust plan based on findings, note changes and dismissals with rationale; user sees a Codex-vetted plan at approval time instead of reviewing then manually triggering Codex — (dev workflow session 2026-02-20; done 2026-02-20)
+- [x] Integrate plan review into plan mode — run `code review plan` automatically after writing the plan but before ExitPlanMode; adjust plan based on findings, note changes and dismissals with rationale; user sees a reviewed plan at approval time instead of manually triggering review — (dev workflow session 2026-02-20; done 2026-02-20)
 - [x] Increase plan specificity standard — plans should include exact file paths, concrete type/prop names, and named test cases with setup and assertions where feasible; specific enough to mechanically verify post-implementation. Update plan mode instructions in CLAUDE.md — (dev workflow session 2026-02-20; done 2026-02-20)
-- [x] Plan drift detection — after implementation, verify that the delivered code matches the approved plan. Check that specified files exist, export expected symbols, and follow specified patterns. Run as part of `/codex-review branch` or as a standalone `/plan-drift` skill — (dev workflow session 2026-02-20; done 2026-02-20)
+- [x] Plan drift detection — after implementation, verify that the delivered code matches the approved plan. Check that specified files exist, export expected symbols, and follow specified patterns. Run as part of `code review branch` or as a standalone `/plan-drift` skill — (dev workflow session 2026-02-20; done 2026-02-20)
 - [x] Plan override log for drift detection — during implementation, when discoveries require deliberate divergence from the plan, log overrides with rationale (file, what changed, why) in a structured format (e.g., task list metadata or a plan-overrides section in the PR). Drift detection reads the override log and excludes acknowledged divergences, only flagging unlogged drift — (dev workflow session 2026-02-20; done 2026-02-20)
-- [x] Automatic Codex branch review before PR — run `/codex-review branch` automatically after implementation is complete (all tasks done, tests passing) but before creating the PR; incorporate findings before presenting the PR for user review. Mirrors the plan review integration: user sees a Codex-vetted PR, not a raw first draft — (dev workflow session 2026-02-20; done 2026-02-20)
+- [x] Automatic branch review before PR — run `code review branch` automatically after implementation is complete (all tasks done, tests passing) but before creating the PR; incorporate findings before presenting the PR for user review. Mirrors the plan review integration: user sees a reviewed PR, not a raw first draft — (dev workflow session 2026-02-20; done 2026-02-20)
 
 ### Test Coverage Improvement
 
@@ -319,17 +319,17 @@
 
 ### Testing Infrastructure Hardening
 
-- [x] [P1] Console error/warn as test failures — add `vi.spyOn(console, 'error')` / `jest.spyOn(console, 'error')` in global setup files with `afterEach` assertions; allowlist intentional warnings; fix `act(...)` warnings in web tests and Vitest mock warnings — (Codex feedback 2026-03-03; done 2026-03-03)
-- [x] [P2] Add `test:cov` scripts to all packages — add `--coverage` with lcov.info + JSON output to api, web, api-client, auth-client, create-plugin, plugin-sdk, types; collect coverage artifacts in CI — (Codex feedback 2026-03-03; done 2026-03-03)
-- [x] [P2] Per-package coverage gates — add `coverageThreshold` in `apps/web/jest.config.ts` and Vitest thresholds in `apps/api/vitest.config.ts`; measure current coverage first, set floors at current minus 5% buffer, ratchet up monthly — (Codex feedback 2026-03-03; done 2026-03-03)
-- [x] [P2] Changed-code coverage guardrails — enforce minimum coverage on changed files/lines in PRs (e.g., `diff-cover` or Codecov PR checks); prevents new low-coverage hotspots while legacy gaps burn down gradually — (Codex feedback 2026-03-03; done 2026-03-03 diff-cover 80% threshold)
-- [x] [P3] Flakiness and determinism CI checks — run unit tests with retries disabled and `--sequence.shuffle` on at least one CI lane; add quarantine convention (`.flaky.test.ts` suffix or skip marker) and fail PRs that introduce new flaky markers — (Codex feedback 2026-03-03; done 2026-03-04)
-- [x] [P3] Risk-based test matrix — audit coverage per domain (pipeline, federation, workspace, forms) and document minimum test layers per domain (unit + service integration + API route + E2E happy path) in `docs/testing.md`; identify high-risk low-coverage hotspots — (Codex feedback 2026-03-03; done 2026-03-04)
+- [x] [P1] Console error/warn as test failures — add `vi.spyOn(console, 'error')` / `jest.spyOn(console, 'error')` in global setup files with `afterEach` assertions; allowlist intentional warnings; fix `act(...)` warnings in web tests and Vitest mock warnings — (code review 2026-03-03; done 2026-03-03)
+- [x] [P2] Add `test:cov` scripts to all packages — add `--coverage` with lcov.info + JSON output to api, web, api-client, auth-client, create-plugin, plugin-sdk, types; collect coverage artifacts in CI — (code review 2026-03-03; done 2026-03-03)
+- [x] [P2] Per-package coverage gates — add `coverageThreshold` in `apps/web/jest.config.ts` and Vitest thresholds in `apps/api/vitest.config.ts`; measure current coverage first, set floors at current minus 5% buffer, ratchet up monthly — (code review 2026-03-03; done 2026-03-03)
+- [x] [P2] Changed-code coverage guardrails — enforce minimum coverage on changed files/lines in PRs (e.g., `diff-cover` or Codecov PR checks); prevents new low-coverage hotspots while legacy gaps burn down gradually — (code review 2026-03-03; done 2026-03-03 diff-cover 80% threshold)
+- [x] [P3] Flakiness and determinism CI checks — run unit tests with retries disabled and `--sequence.shuffle` on at least one CI lane; add quarantine convention (`.flaky.test.ts` suffix or skip marker) and fail PRs that introduce new flaky markers — (code review 2026-03-03; done 2026-03-04)
+- [x] [P3] Risk-based test matrix — audit coverage per domain (pipeline, federation, workspace, forms) and document minimum test layers per domain (unit + service integration + API route + E2E happy path) in `docs/testing.md`; identify high-risk low-coverage hotspots — (code review 2026-03-03; done 2026-03-04)
 - [ ] [P3] ESLint 9 → 10 upgrade — blocked by `eslint-plugin-react`, `eslint-plugin-react-hooks`, `eslint-plugin-jsx-a11y` (transitive via `eslint-config-next`); Dependabot canary will signal when unblocked; tracking issue #273 — (2026-03-16); canary verified 2026-03-22 (Dependabot PR #269 failed CI as expected, still blocked by eslint-plugin-react)
-- [x] [P2] Diagnostic: Codex plan review step dropped from workflow — root cause: plan mode system reminder's rigid Phase 5 overrides CLAUDE.md instruction; no mechanical enforcement existed. Fix: `PreToolUse` hook on `ExitPlanMode` blocks unless `/codex-review plan` marker exists or plan is trivial — (2026-03-28, user-reported; done 2026-03-28)
-- [x] [P3] Skill update: /codex-review should auto-add actionable out-of-scope findings to backlog — during both plan review and branch/diff review, any Important+ findings outside the current task scope should be appended to docs/backlog.md automatically — (workflow improvement 2026-03-03; done 2026-03-22 — enhanced /end-session Step 4b with systematic review finding extraction)
-- [x] [P4] Ephemeral DB/queue per test worker — standardize `TestContext` factory for isolated schemas per worker; replace ad-hoc Redis db 1 patching in `vitest-setup.ts`; add explicit contract tests around external boundaries (webhooks, auth, adapters) with fixture replay — (Codex feedback 2026-03-03; closed 2026-03-22 — current isolation via truncateAllTables, Redis db 1, singleFork is adequate)
-- [x] [P4] Manual QA tracking — establish lightweight QA log (structured markdown or checklist) for pre-release smoke tests, exploratory testing sessions, and regression checks; track what was tested, time spent, and issues found — (Codex feedback 2026-03-03; done 2026-03-03)
+- [x] [P2] Diagnostic: plan review step dropped from workflow — root cause: plan mode system reminder's rigid Phase 5 overrides CLAUDE.md instruction; no mechanical enforcement existed. Fix: `PreToolUse` hook on `ExitPlanMode` blocks unless `code review plan` marker exists or plan is trivial — (2026-03-28, user-reported; done 2026-03-28)
+- [x] [P3] Skill update: code review should auto-add actionable out-of-scope findings to backlog — during both plan review and branch/diff review, any Important+ findings outside the current task scope should be appended to docs/backlog.md automatically — (workflow improvement 2026-03-03; done 2026-03-22 — enhanced /end-session Step 4b with systematic review finding extraction)
+- [x] [P4] Ephemeral DB/queue per test worker — standardize `TestContext` factory for isolated schemas per worker; replace ad-hoc Redis db 1 patching in `vitest-setup.ts`; add explicit contract tests around external boundaries (webhooks, auth, adapters) with fixture replay — (code review 2026-03-03; closed 2026-03-22 — current isolation via truncateAllTables, Redis db 1, singleFork is adequate)
+- [x] [P4] Manual QA tracking — establish lightweight QA log (structured markdown or checklist) for pre-release smoke tests, exploratory testing sessions, and regression checks; track what was tested, time spent, and issues found — (code review 2026-03-03; done 2026-03-03)
 
 ### CI
 
@@ -488,15 +488,15 @@
 - [x] [P3] READER role enforcement — define what READER can and cannot do distinct from EDITOR; currently decorative — (persona gap analysis 2026-02-27; done 2026-03-03)
 - [x] [P3] Email invitation workflow — invite by email link/token instead of requiring pre-existing Zitadel account — (persona gap analysis 2026-02-27; done 2026-03-27 PR pending)
 - [x] [P3] Custom org roles — expanded enum to 5 roles (ADMIN/EDITOR/READER/PRODUCTION/BUSINESS_OPS) with multi-role array, productionProcedure/editorProcedure middleware, role display names in org settings — (persona gap analysis 2026-02-27; done 2026-03-27 PR #369)
-- [x] [P1] Documenso webhook: defense-in-depth org filter — mutation phase uses `withRls()` on appPool + explicit `orgId` on `updateStatus`; Codex review caught `set_config` on superuser pool doesn't enforce RLS — (Codex review 2026-03-22; done 2026-03-22)
-- [x] [P2] Documenso webhook: Zod schema validation — `documensoWebhookPayloadSchema` validates payload structure before processing — (Codex review 2026-03-22; done 2026-03-22)
-- [x] [P2] Documenso webhook: audit logging for contract status changes — `CONTRACT_SIGNED` and `CONTRACT_COMPLETED` audit actions logged via `auditService.log()` inside `withRls` — (Codex review 2026-03-22; done 2026-03-22)
-- [x] [P3] Test `mySubmissions` projected response shape — assert `writerStatus`/`writerStatusLabel` fields in tRPC router test — (Codex branch review 2026-03-26; done 2026-03-27)
-- [x] [P3] Test `mySubmissionDetail` procedure + writer-context routing in `submission-detail.tsx` — (Codex branch review 2026-03-26; done 2026-03-27)
-- [x] [P3] Service test for `getByIdAsOwner` ownership check and error types — (Codex branch review 2026-03-26; done 2026-03-27)
-- [x] [P2] Collection service unit tests — 24 tests (CRUD, visibility filtering, cross-tenant validation, audit logging, reorder) in `collection.service.spec.ts` — (Codex branch review 2026-03-26; done 2026-03-27)
+- [x] [P1] Documenso webhook: defense-in-depth org filter — mutation phase uses `withRls()` on appPool + explicit `orgId` on `updateStatus`; code review caught `set_config` on superuser pool doesn't enforce RLS — (code review 2026-03-22; done 2026-03-22)
+- [x] [P2] Documenso webhook: Zod schema validation — `documensoWebhookPayloadSchema` validates payload structure before processing — (code review 2026-03-22; done 2026-03-22)
+- [x] [P2] Documenso webhook: audit logging for contract status changes — `CONTRACT_SIGNED` and `CONTRACT_COMPLETED` audit actions logged via `auditService.log()` inside `withRls` — (code review 2026-03-22; done 2026-03-22)
+- [x] [P3] Test `mySubmissions` projected response shape — assert `writerStatus`/`writerStatusLabel` fields in tRPC router test — (branch review 2026-03-26; done 2026-03-27)
+- [x] [P3] Test `mySubmissionDetail` procedure + writer-context routing in `submission-detail.tsx` — (branch review 2026-03-26; done 2026-03-27)
+- [x] [P3] Service test for `getByIdAsOwner` ownership check and error types — (branch review 2026-03-26; done 2026-03-27)
+- [x] [P2] Collection service unit tests — 24 tests (CRUD, visibility filtering, cross-tenant validation, audit logging, reorder) in `collection.service.spec.ts` — (branch review 2026-03-26; done 2026-03-27)
 - [x] [P2] Reading anchor wiring — ManuscriptRenderer IntersectionObserver tracking, collection detail reading mode, updateCollectionItemSchema + service whitelist, defense-in-depth fix for getItems() submissions join — (design system session 2026-03-28; done 2026-03-28)
-- [x] [P3] Reading anchor test coverage — unit tests for: readingAnchor persistence in updateItem, org-scoped join predicate in getItems, ManuscriptRenderer anchor restore/callback, collection reading mode UI, scope guard (queue context = no anchor) — (Codex branch review drift 2026-03-28; done 2026-03-31)
+- [x] [P3] Reading anchor test coverage — unit tests for: readingAnchor persistence in updateItem, org-scoped join predicate in getItems, ManuscriptRenderer anchor restore/callback, collection reading mode UI, scope guard (queue context = no anchor) — (branch review drift 2026-03-28; done 2026-03-31)
 
 ---
 
@@ -533,11 +533,11 @@
 - [x] [P2] Response time transparency — aggregation query over local submission records, displayed on magazine public profile + submission form. `source` field (local vs federated) for future federation data. Org opt-out available — (design system session 2026-03-28; done 2026-03-30)
 - [x] [P2] Feedback on rejection flow — reader tags/comments during scoring, editor inclusion of anonymized feedback in rejection notice, org-level feature toggle (default off) — (design system session 2026-03-28; done 2026-03-31)
 - [x] [P3] Writer sidebar updates — Sim-Sub Groups nav item (already done), Portfolio badges (verified/federated/external), Analytics personal response time stats (already done) — (design system session 2026-03-28; done 2026-03-31)
-- [x] [P1] Reader feedback service: defense-in-depth org match on submission_id — service must verify `submission.organizationId === orgId` before insert to prevent cross-org feedback — (Codex branch review 2026-03-29)
-- [x] [P2] Sim-sub junction service: ownership validation on referenced records — service must verify `simsubGroup.userId`, `submission.submitterId`, and `externalSubmission.userId` match the caller before insert — (Codex branch review 2026-03-29)
-- [x] [P2] Custom rejection templates: reader feedback array support — `renderCustomTemplate()` only interpolates scalar merge fields; `readerFeedback` array is silently ignored for orgs with custom rejection email overrides. Need array/loop support in custom template renderer — (Codex branch review 2026-03-31; done 2026-03-31)
-- [x] [P2] Defense-in-depth: `emailTemplateService.delete()` missing `organizationId` filter — deletes by `templateName` only (relies on RLS alone); should also filter on `organizationId` per defense-in-depth rule. Pre-existing issue in `apps/api/src/services/email-template.service.ts:209` — (Codex plan review 2026-03-31; done 2026-03-31)
-- [x] [P3] Custom template editor: surface `{{#each}}` syntax to editors — `TEMPLATE_ARRAY_FIELDS` metadata exported from `@colophony/types` but editor UI only consumes `mergeFields: string[]`; need data-path change to show array field documentation and `{{#each}}` syntax help — (Codex plan review 2026-03-31; done 2026-03-31)
+- [x] [P1] Reader feedback service: defense-in-depth org match on submission_id — service must verify `submission.organizationId === orgId` before insert to prevent cross-org feedback — (branch review 2026-03-29)
+- [x] [P2] Sim-sub junction service: ownership validation on referenced records — service must verify `simsubGroup.userId`, `submission.submitterId`, and `externalSubmission.userId` match the caller before insert — (branch review 2026-03-29)
+- [x] [P2] Custom rejection templates: reader feedback array support — `renderCustomTemplate()` only interpolates scalar merge fields; `readerFeedback` array is silently ignored for orgs with custom rejection email overrides. Need array/loop support in custom template renderer — (branch review 2026-03-31; done 2026-03-31)
+- [x] [P2] Defense-in-depth: `emailTemplateService.delete()` missing `organizationId` filter — deletes by `templateName` only (relies on RLS alone); should also filter on `organizationId` per defense-in-depth rule. Pre-existing issue in `apps/api/src/services/email-template.service.ts:209` — (plan review 2026-03-31; done 2026-03-31)
+- [x] [P3] Custom template editor: surface `{{#each}}` syntax to editors — `TEMPLATE_ARRAY_FIELDS` metadata exported from `@colophony/types` but editor UI only consumes `mergeFields: string[]`; need data-path change to show array field documentation and `{{#each}}` syntax help — (plan review 2026-03-31; done 2026-03-31)
 
 ---
 
@@ -565,7 +565,7 @@
 - [x] [P3] Coolify IPv6 network bug — `coolify` Docker network gets malformed IPv6 gateway on Hetzner; manual recreate needed after Coolify install — (DEVLOG 2026-03-20; confirmed fixed 2026-03-22)
 - [x] [P3] Investigate webhook rate limit Redis error — every Zitadel webhook request logs "Webhook rate limit Redis error — allowing request"; non-fatal but indicates Redis connection issue for webhook-specific rate limiter — (DEVLOG 2026-03-22; done 2026-03-22)
 - [x] [P3] Coolify proxy restart after redeploy — original fix: Docker DNS resolver + variable-based proxy_pass in nginx for dynamic re-resolution (DEVLOG 2026-03-22; done 2026-03-22). Root cause updated 2026-03-24: the real issue is Traefik's Docker provider losing container references during all-at-once teardown, not nginx DNS caching. nginx fix is still valuable but doesn't prevent the Traefik stale routing. Auto-recovery added to deploy workflow (PR #336). Permanent fix: split into individual Coolify services (see P1 item below)
-- [x] [P3] `queue-preset.service.ts:49` — `listByUser()` missing explicit `organizationId` filter and LIMIT — (Codex plan review 2026-03-20; done 2026-03-21 PR #292)
+- [x] [P3] `queue-preset.service.ts:49` — `listByUser()` missing explicit `organizationId` filter and LIMIT — (plan review 2026-03-20; done 2026-03-21 PR #292)
 - [x] Monitoring stack: Prometheus + Grafana (Sentry for errors) — done 2026-02-27 PR pending; Loki deferred to production
 - [x] [P1] Split Coolify deployment into individual services — split monolithic docker-compose.coolify.yml into 5 Coolify resources (data, app, gateway, uploads, monitoring) on shared `colophony-net` network. Smart deploy detection via LAST_DEPLOYED_SHA. Eliminates Traefik stale routing and proxy restart workaround — (2026-03-24, deploy debugging session; done 2026-03-24)
 - [x] [P2] Drop Coolify in favor of direct SSH + Docker Compose deploy — replaced nginx with Caddy (automatic HTTPS), unified staging/production on single `docker-compose.prod.yml` + SSH deploy, removed 5 Coolify compose files + Coolify quirks + LAST_DEPLOYED_SHA smart detection — (2026-03-24; done 2026-03-25)
@@ -588,8 +588,8 @@
 
 - [x] Rotate credentials quarterly — done 2026-03-19, `scripts/rotate-secrets.sh` + `docs/credential-rotation.md` — (CLAUDE.md)
 - [x] AGPL license boundary documented (Zitadel is AGPL) — done 2026-03-02 `docs/licensing.md` — (CLAUDE.md)
-- [x] [P2] Verify SSRF protection in `hub-client.service.ts` — `fetch()` calls at lines 38/104/141/199; `validateOutboundUrl` is imported but may not be called before every fetch — (Codex plan review 2026-03-19; done 2026-03-20)
-- [x] [P3] Add LIMIT to unbounded queries — `correspondence.service.ts:70`, `submission.service.ts:730`, `file.service.ts:80` — (Codex plan review 2026-03-19; done 2026-03-20)
+- [x] [P2] Verify SSRF protection in `hub-client.service.ts` — `fetch()` calls at lines 38/104/141/199; `validateOutboundUrl` is imported but may not be called before every fetch — (plan review 2026-03-19; done 2026-03-20)
+- [x] [P3] Add LIMIT to unbounded queries — `correspondence.service.ts:70`, `submission.service.ts:730`, `file.service.ts:80` — (plan review 2026-03-19; done 2026-03-20)
 
 ### Staging Provisioning
 
@@ -628,8 +628,8 @@
 
 - [x] [P2] Testing optimization — Python SDK in CI, test/CI contract clarity, Vitest config consolidation, deterministic web test UUIDs, coverage includes specialized suites, webhook CI job, flaky test fix — (architecture review 2026-03-16; done 2026-03-17)
 - [x] [P2] E2E selector brittleness — replaced CSS class selectors, parent traversal, positional disambiguation with `data-testid` and dialog-scoped role locators; removed `waitForTimeout` calls; ~20 acceptable `.first()/.last()` uses left unchanged — (done 2026-03-17)
-- [x] [P2] Defense-in-depth org filtering — CMS connection service (`getById`, `update`, `delete`, `testConnection`) and issue service (`getById`, `getItems`, `getSections`) do not pass available `orgId` for defense-in-depth WHERE clause; REST/tRPC callers also omit it — (Codex plan review 2026-03-17; done 2026-03-17)
-- [x] [P2] RLS infrastructure test coverage — `rls-infrastructure.test.ts` `RLS_TABLES` array missing 23 of 45 RLS tables — added all, unified org-policy assertion — (Codex plan review 2026-03-17; done 2026-03-17)
+- [x] [P2] Defense-in-depth org filtering — CMS connection service (`getById`, `update`, `delete`, `testConnection`) and issue service (`getById`, `getItems`, `getSections`) do not pass available `orgId` for defense-in-depth WHERE clause; REST/tRPC callers also omit it — (plan review 2026-03-17; done 2026-03-17)
+- [x] [P2] RLS infrastructure test coverage — `rls-infrastructure.test.ts` `RLS_TABLES` array missing 23 of 45 RLS tables — added all, unified org-policy assertion — (plan review 2026-03-17; done 2026-03-17)
 - [x] [P3] Clean up redundant per-migration GRANTs — `init-db.sh` `ALTER DEFAULT PRIVILEGES` grants full DML to all tables, making per-migration `GRANT SELECT, INSERT, UPDATE` (without DELETE) on `sim_sub_checks`, `trusted_peers`, `inbound_transfers` effectively no-ops — (DEVLOG 2026-03-17; done 2026-03-17)
 - [x] [P3] Vitest everywhere — replace Jest in `apps/web` with Vitest to eliminate test runner split (`vi.*` vs `jest.*`), deduplicate mock APIs, coverage configs, and setup patterns — (architecture review 2026-03-16; done 2026-03-17)
 

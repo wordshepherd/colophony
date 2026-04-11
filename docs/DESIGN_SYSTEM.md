@@ -8,7 +8,7 @@
 This document serves three readers:
 
 1. **Design** — the primary author and decision-maker. This document captures design intent and rationale so decisions survive between sessions.
-2. **Claude Code** — the implementation agent. Implementation plans reference this document but do not duplicate it. When a plan says "follow the density architecture," this is what it means.
+2. **Implementation** — plans reference this document but do not duplicate it. When a plan says "follow the density architecture," this is what it means.
 3. **Future contributors** — onboarding context. Anyone encountering the codebase should understand _why_ the component architecture looks the way it does, not just _what_ it is.
 
 ---

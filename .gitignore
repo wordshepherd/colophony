@@ -50,7 +50,7 @@ Thumbs.db
 # Session handoff (machine-readable, not for version control)
 session-handoff.md
 
-# OpenCode review temp files
+# Review temp files
 .opencode-review-diff.txt
 .opencode-review-plan.md
 
@@ -58,5 +58,10 @@ session-handoff.md
 .qa/
 
 # MCP server config (may contain credentials)
-.claude/mcp.json
 .mcp.json
+
+# Development tooling (local only)
+CLAUDE.md
+.claude/
+.codex/
+docs/devlog/
