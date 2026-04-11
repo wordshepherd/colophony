@@ -28,7 +28,7 @@ There are no formal contributor tiers or committees. Contributors who demonstrat
 
 ## Proposing Changes
 
-**Bug reports and feature requests** — open a [GitHub Issue](https://github.com/colophony-project/colophony/issues). Provide enough context for someone unfamiliar with the problem to understand it.
+**Bug reports and feature requests** — open a [GitHub Issue](https://github.com/wordshepherd/colophony/issues). Provide enough context for someone unfamiliar with the problem to understand it.
 
 **Major changes** — new components, architectural shifts, federation protocol changes, or anything that would affect multiple tracks — should be proposed as a GitHub Issue with the `proposal` label. A good proposal includes:
 
@@ -75,7 +75,7 @@ This governance model will evolve as the project grows. Possible future changes 
 
 Colophony is licensed under AGPL-3.0-or-later, which ensures the codebase remains forkable regardless of project status or maintainer availability.
 
-Community input on governance changes is welcome via [GitHub Issues](https://github.com/colophony-project/colophony/issues). This document will be updated to reflect reality as it changes — not to describe aspirations.
+Community input on governance changes is welcome via [GitHub Issues](https://github.com/wordshepherd/colophony/issues). This document will be updated to reflect reality as it changes — not to describe aspirations.
 
 ## References
 

@@ -81,6 +81,6 @@ By contributing to Colophony, you agree that your contributions will be licensed
 
 ## Reporting Issues
 
-- **Bugs and feature requests:** [GitHub Issues](https://github.com/colophony-project/colophony/issues)
+- **Bugs and feature requests:** [GitHub Issues](https://github.com/wordshepherd/colophony/issues)
 - **Security vulnerabilities:** See [SECURITY.md](SECURITY.md) for our disclosure policy. Email security@colophony.pub.
 - **Code of conduct concerns:** conduct@colophony.pub
