@@ -54,7 +54,7 @@
     "clamscan": "^2.4.0",
     "docx": "^9.6.1",
     "drizzle-orm": "^0.45.2",
-    "fastify": "^5.8.4",
+    "fastify": "^5.8.5",
     "fastify-plugin": "^5.0.0",
     "fastify-raw-body": "^5.0.0",
     "htmlparser2": "^12.0.0",
