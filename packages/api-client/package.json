@@ -21,15 +21,15 @@
   },
   "dependencies": {
     "@colophony/api-contracts": "workspace:*",
-    "@orpc/client": "^1.13.13",
-    "@orpc/contract": "^1.13.13",
-    "@orpc/openapi-client": "^1.13.13"
+    "@orpc/client": "^1.13.14",
+    "@orpc/contract": "^1.13.14",
+    "@orpc/openapi-client": "^1.13.14"
   },
   "devDependencies": {
     "@colophony/typescript-config": "workspace:*",
-    "@types/node": "^25.5.0",
+    "@types/node": "^25.6.0",
     "typescript": "^5.7.2",
-    "@vitest/coverage-v8": "^4.1.2",
-    "vitest": "^4.1.2"
+    "@vitest/coverage-v8": "^4.1.4",
+    "vitest": "^4.1.4"
   }
 }
