@@ -18,8 +18,8 @@
   },
   "dependencies": {
     "@colophony/types": "workspace:*",
-    "@orpc/contract": "^1.13.13",
-    "zod": "^4.3.6"
+    "@orpc/contract": "^1.14.1",
+    "zod": "^4.4.2"
   },
   "devDependencies": {
     "@colophony/typescript-config": "workspace:*",
