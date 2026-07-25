@@ -63,6 +63,10 @@
 - [x] Migrate `forwardRef` → ref-as-prop in 19 shadcn/ui components — React 19 deprecation — (DEVLOG 2026-02-16; done 2026-02-17)
 - [x] Migrate `Context.Provider` → `Context` — React 19 deprecation — (DEVLOG 2026-02-16; done 2026-02-17)
 - [x] Refactor OIDC guard `setState` in effects to satisfy `react-hooks/set-state-in-effect` — `callback/page.tsx` — (DEVLOG 2026-02-16; done 2026-02-17)
+- [ ] Drive `pnpm audit --audit-level=high` to zero so the CI step can become blocking — currently 151 findings (79 high, 2 critical; `--prod` 126/68/2), dominated by transitive advisories via dev tooling such as `brace-expansion` GHSA-mh99-v99m-4gvg through `eslint` (235 paths). The CI step is deliberately `continue-on-error` until then; see the comment in `.github/workflows/ci.yml`. Approach: bump the direct deps that pull the vulnerable transitives, extend `pnpm.overrides` where no upstream fix exists, then add explicit `pnpm.auditConfig.ignoreCves` entries for anything genuinely accepted — (DEVLOG 2026-07-25)
+- [ ] Reduce the `apps/api` ESLint rule suppressions — `recommendedTypeChecked` is enabled but `no-explicit-any` and five `no-unsafe-*` rules are switched off, which neutralises most of its value. At minimum promote `no-floating-promises` from `warn` to `error`, since unhandled rejections in Fastify handlers are a production failure mode — (DEVLOG 2026-07-25)
+- [ ] Enable `noUncheckedIndexedAccess` in `packages/typescript-config/base.json` — package by package (`types` and `api-contracts` first, then `db`, `api`, `web`) — (DEVLOG 2026-07-25)
+- [ ] Add `tseslint.configs.recommendedTypeChecked` to `apps/web/eslint.config.mjs` — the web app is currently unlinted for `no-floating-promises`, `no-misused-promises`, `await-thenable`, and the `no-unsafe-*` family, unlike `apps/api`. Expect a large first-run count; start the noisiest rules at `warn` — (DEVLOG 2026-07-25)
 
 ---
 

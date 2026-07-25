@@ -1,0 +1,30 @@
+# Normalise line endings on commit. Without this, git does no normalisation at all and
+# CRLF can enter the repo from Windows/WSL tooling that ignores .editorconfig.
+# .editorconfig already declares end_of_line = lf for editors; this enforces it in git.
+* text=auto eol=lf
+
+# Shell scripts and git hooks must be LF regardless of platform — CRLF breaks the
+# shebang line under sh/dash.
+*.sh text eol=lf
+.husky/* text eol=lf
+
+# Binary files: never touch, never diff as text.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.webp binary
+*.avif binary
+*.pdf binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.eot binary
+*.otf binary
+*.zip binary
+*.gz binary
+
+# Generated — collapse in PR diffs and exclude from language stats.
+pnpm-lock.yaml linguist-generated=true -diff
+sdks/** linguist-generated=true

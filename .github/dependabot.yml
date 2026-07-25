@@ -31,7 +31,7 @@ updates:
     reviewers:
       - "dmahaffey"
 
-  # Docker base images (pinned to Node 20 LTS)
+  # Docker base images (Node 22 LTS — keep in sync with .nvmrc)
   - package-ecosystem: "docker"
     directory: "/apps/api"
     schedule:

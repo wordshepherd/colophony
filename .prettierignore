@@ -1,0 +1,21 @@
+# Prettier does not read .gitignore, so locally-generated artifacts otherwise make
+# `pnpm format:check` fail on developer machines while passing in CI (where they
+# don't exist). Keep this in sync with the generated paths in .gitignore.
+
+# Build output
+dist/
+.next/
+.turbo/
+coverage/
+
+# Test artifacts
+**/.pytest_cache/
+playwright-report/
+test-results/
+
+# Generated SDKs
+sdks/python/
+sdks/typescript/
+
+# Lockfiles
+pnpm-lock.yaml

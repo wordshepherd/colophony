@@ -8,8 +8,8 @@ Please read our [Code of Conduct](CODE_OF_CONDUCT.md) before participating.
 
 ### Prerequisites
 
-- Node.js >= 22
-- pnpm 9.15+
+- Node.js 22.x — the exact version is pinned in [`.nvmrc`](.nvmrc); run `nvm use` to match it
+- pnpm — the version is pinned in `package.json` → `packageManager`; run `corepack enable` and let it resolve
 - Docker and Docker Compose
 - [hivemind](https://github.com/DarthSim/hivemind) — process manager for running the API and web dev servers concurrently with labeled log output
 
