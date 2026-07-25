@@ -12,9 +12,29 @@ updates:
     groups:
       # Group minor/patch updates to reduce PR noise
       minor-and-patch:
+        applies-to: version-updates
         update-types:
           - "minor"
           - "patch"
+      # Security updates are grouped deliberately, not for noise reduction.
+      #
+      # Ungrouped security updates are raised per-manifest (titled "... in
+      # /apps/api"). In a pnpm workspace the lockfile lives only at the repo
+      # root, so a per-manifest update rewrites apps/*/package.json and leaves
+      # pnpm-lock.yaml untouched. Every install path here uses
+      # --frozen-lockfile, so those PRs fail at install with:
+      #
+      #   ERR_PNPM_OUTDATED_LOCKFILE  Cannot install with "frozen-lockfile"
+      #   because pnpm-lock.yaml is not up to date with <ROOT>/apps/api/package.json
+      #
+      # Grouped updates are resolved at the workspace root and do include the
+      # lockfile. Routing security updates through the same path is what makes
+      # them installable. `@dependabot recreate` does not fix the ungrouped
+      # ones — verified on #472, which regenerated still missing the lockfile.
+      security:
+        applies-to: security-updates
+        patterns:
+          - "*"
     reviewers:
       - "dmahaffey"
 
