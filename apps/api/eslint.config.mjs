@@ -41,7 +41,11 @@ export default tseslint.config(
         { argsIgnorePattern: "^_" },
       ],
       "no-case-declarations": "off",
-      "prettier/prettier": ["error", { endOfLine: "auto" }],
+      // endOfLine intentionally left at prettier's default ("lf"). The previous
+      // { endOfLine: "auto" } accepted whatever line endings a file already had,
+      // which defeated the lf intent rather than enforcing it. .gitattributes now
+      // normalises on commit, so "auto" is no longer needed.
+      "prettier/prettier": "error",
     },
   },
 );

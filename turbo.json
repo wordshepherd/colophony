@@ -4,7 +4,20 @@
     "build": {
       "dependsOn": ["^build"],
       "outputs": ["dist/**", ".next/**", "!.next/cache/**"],
-      "env": ["NODE_ENV"]
+      // Every variable that changes build OUTPUT must be listed here. NEXT_PUBLIC_*
+      // values are inlined into the client bundle at build time, so omitting them lets
+      // turbo serve a bundle built against a different environment as a valid cache hit.
+      "env": [
+        "NODE_ENV",
+        "NEXT_PUBLIC_*",
+        "API_URL",
+        "SENTRY_DSN",
+        "SENTRY_ENVIRONMENT",
+        "SENTRY_TRACES_SAMPLE_RATE",
+        "SENTRY_AUTH_TOKEN",
+        "SENTRY_ORG",
+        "SENTRY_PROJECT"
+      ]
     },
     "dev": {
       "cache": false,

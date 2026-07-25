@@ -6,7 +6,8 @@ done
 export PATH
 
 # Secret scanning (blocks commit on live keys, private keys, env files)
-sh scripts/check-secrets.sh
+# CI runs this same script with --tracked on every branch push.
+sh scripts/check-secrets.sh --staged
 
 # Lint and format staged files
 lint-staged
