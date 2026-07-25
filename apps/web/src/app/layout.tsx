@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { playfairDisplay, lato } from "@/lib/fonts";
 import "./globals.css";
 import { Providers } from "@/components/providers";
+import { clientEnv } from "@/env";
 
 export const metadata: Metadata = {
   title: {
@@ -10,9 +11,7 @@ export const metadata: Metadata = {
   },
   description:
     "Open-source editorial workflow for literary magazines — from submission to publication.",
-  metadataBase: new URL(
-    process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
-  ),
+  metadataBase: new URL(clientEnv.NEXT_PUBLIC_APP_URL),
   openGraph: {
     title: "Colophony",
     description: "Submissions, managed.",

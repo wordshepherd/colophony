@@ -35,20 +35,27 @@ global.ResizeObserver = class ResizeObserver {
   disconnect() {}
 };
 
-// Mock window.matchMedia (required by shadcn/ui components)
-Object.defineProperty(window, "matchMedia", {
-  writable: true,
-  value: vi.fn().mockImplementation((query: string) => ({
-    matches: false,
-    media: query,
-    onchange: null,
-    addListener: vi.fn(),
-    removeListener: vi.fn(),
-    addEventListener: vi.fn(),
-    removeEventListener: vi.fn(),
-    dispatchEvent: vi.fn(),
-  })),
-});
+// Mock window.matchMedia (required by shadcn/ui components).
+// Guarded because this setup file also runs for specs that opt into the node
+// environment via `@vitest-environment node` (e.g. src/env.spec.ts), where
+// `window` does not exist.
+const IS_DOM = typeof window !== "undefined";
+
+if (IS_DOM) {
+  Object.defineProperty(window, "matchMedia", {
+    writable: true,
+    value: vi.fn().mockImplementation((query: string) => ({
+      matches: false,
+      media: query,
+      onchange: null,
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    })),
+  });
+}
 
 // Mock crypto.randomUUID with deterministic counter
 let uuidCounter = 0;
@@ -63,7 +70,7 @@ Object.defineProperty(globalThis, "crypto", {
 
 // Clear localStorage and reset mocks after each test
 afterEach(() => {
-  localStorage.clear();
+  if (IS_DOM) localStorage.clear();
   uuidCounter = 0;
   mockPush.mockClear();
   mockReplace.mockClear();

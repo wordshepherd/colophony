@@ -1,4 +1,5 @@
 import { UserManager, WebStorageStateStore } from "oidc-client-ts";
+import { clientEnv } from "@/env";
 
 let _userManager: UserManager | null = null;
 
@@ -10,8 +11,8 @@ export function getUserManager(): UserManager | null {
   if (typeof window === "undefined") return null;
 
   if (!_userManager) {
-    const authority = process.env.NEXT_PUBLIC_ZITADEL_AUTHORITY;
-    const clientId = process.env.NEXT_PUBLIC_ZITADEL_CLIENT_ID;
+    const authority = clientEnv.NEXT_PUBLIC_ZITADEL_AUTHORITY;
+    const clientId = clientEnv.NEXT_PUBLIC_ZITADEL_CLIENT_ID;
 
     if (!authority || !clientId) {
       console.warn(

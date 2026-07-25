@@ -1,5 +1,6 @@
 import type { DemoLoginResponse } from "@colophony/types";
 import { setCurrentOrgId } from "./trpc";
+import { clientEnv } from "@/env";
 
 const DEMO_KEYS = {
   USER_ID: "colophony_demo_user_id",
@@ -45,7 +46,7 @@ export function getDemoUserId(): string | null {
  * localStorage, and returns the redirect path.
  */
 export async function loginAsDemo(role: "writer" | "editor"): Promise<string> {
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+  const apiUrl = clientEnv.NEXT_PUBLIC_API_URL;
 
   const res = await fetch(`${apiUrl}/v1/public/demo/login`, {
     method: "POST",

@@ -1,4 +1,5 @@
 import { EmbedForm } from "@/components/embed/embed-form";
+import { clientEnv } from "@/env";
 
 export default async function EmbedPage({
   params,
@@ -6,7 +7,7 @@ export default async function EmbedPage({
   params: Promise<{ token: string }>;
 }) {
   const { token } = await params;
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+  const apiUrl = clientEnv.NEXT_PUBLIC_API_URL;
 
   return <EmbedForm token={token} apiUrl={apiUrl} />;
 }

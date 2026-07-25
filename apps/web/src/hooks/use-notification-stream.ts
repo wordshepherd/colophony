@@ -3,9 +3,10 @@
 import { useEffect, useRef } from "react";
 import { getAccessToken, getCurrentOrgId, trpc } from "@/lib/trpc";
 import { useOrganization } from "./use-organization";
+import { clientEnv } from "@/env";
 
 function getBaseUrl() {
-  return process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+  return clientEnv.NEXT_PUBLIC_API_URL;
 }
 
 export function useNotificationStream(): void {

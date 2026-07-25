@@ -1,4 +1,5 @@
 import { EmbedStatusCheck } from "@/components/embed/embed-status-check";
+import { clientEnv } from "@/env";
 
 export default async function EmbedStatusPage({
   params,
@@ -6,7 +7,7 @@ export default async function EmbedStatusPage({
   params: Promise<{ statusToken: string }>;
 }) {
   const { statusToken } = await params;
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+  const apiUrl = clientEnv.NEXT_PUBLIC_API_URL;
 
   return <EmbedStatusCheck statusToken={statusToken} apiUrl={apiUrl} />;
 }
