@@ -1,6 +1,6 @@
 # Stage 1: deps — install pnpm workspace dependencies
 FROM node:22-alpine AS deps
-RUN corepack enable && corepack prepare pnpm@9.15.0 --activate
+RUN corepack enable && corepack prepare pnpm@10.34.5 --activate
 WORKDIR /app
 COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
 COPY packages/db/package.json packages/db/
