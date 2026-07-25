@@ -1,4 +1,5 @@
 import { EmbedResubmit } from "@/components/embed/embed-resubmit";
+import { clientEnv } from "@/env";
 
 export default async function EmbedResubmitPage({
   params,
@@ -6,7 +7,7 @@ export default async function EmbedResubmitPage({
   params: Promise<{ statusToken: string }>;
 }) {
   const { statusToken } = await params;
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+  const apiUrl = clientEnv.NEXT_PUBLIC_API_URL;
 
   return <EmbedResubmit statusToken={statusToken} apiUrl={apiUrl} />;
 }

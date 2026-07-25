@@ -1,7 +1,8 @@
 import type { MetadataRoute } from "next";
+import { clientEnv } from "@/env";
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://colophony.pub";
+  const baseUrl = clientEnv.NEXT_PUBLIC_APP_URL;
 
   return [
     {

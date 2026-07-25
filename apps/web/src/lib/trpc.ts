@@ -1,6 +1,7 @@
 import { createTRPCReact } from "@trpc/react-query";
 import { httpBatchLink } from "@trpc/client";
 import type { AppRouter } from "@colophony/api/trpc/client-types";
+import { clientEnv, getServerEnv } from "@/env";
 
 /**
  * tRPC React client
@@ -13,9 +14,9 @@ export const trpc = createTRPCReact<AppRouter>();
  */
 function getBaseUrl() {
   if (typeof window !== "undefined") {
-    return process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+    return clientEnv.NEXT_PUBLIC_API_URL;
   }
-  return process.env.API_URL || "http://localhost:4000";
+  return getServerEnv().API_URL;
 }
 
 /**
@@ -62,7 +63,7 @@ export async function getAccessToken(): Promise<string | null> {
  * Get the tusd upload endpoint URL
  */
 export function getTusEndpoint(): string {
-  return process.env.NEXT_PUBLIC_TUS_URL || "http://localhost:1080/files/";
+  return clientEnv.NEXT_PUBLIC_TUS_URL;
 }
 
 /**

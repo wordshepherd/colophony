@@ -21,8 +21,9 @@ import {
   consultRequestSchema,
   type ConsultRequestData,
 } from "@colophony/types";
+import { clientEnv } from "@/env";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
+const API_URL = clientEnv.NEXT_PUBLIC_API_URL;
 
 export function LandingDemoForm() {
   const { ref, isInView } = useInView(0.1);

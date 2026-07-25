@@ -10,6 +10,12 @@ formatting item was demoted from P2 to P3 (its stated failure mode did not hold)
 file counts and call-site lists were corrected, and one already-satisfied action was
 removed. Corrections are marked inline as _Amended_.
 
+**Implemented 2026-07-25.** Most of this document has been acted on across three branches
+(`chore/repo-hygiene-ci-and-toolchain`, `chore/pnpm-10-and-exact-pins`,
+`feat/web-env-schema`). Implementation disproved two recommendations outright — see
+"Corrections from implementation" at the end, which is the section to read first if you
+are picking this up cold. Remaining work is tracked in `docs/backlog.md`, not here.
+
 **Context / calibration:** colophony is the more rigorous repo overall. It has a 13-job CI
 matrix (RLS, queue, service, security, webhook, Playwright, Python SDK), a diff-cover ≥80%
 gate on changed lines, CODEOWNERS, dependabot with grouping, a PR template, SECURITY.md,
@@ -492,3 +498,69 @@ rested on the conflict claim that did not hold); the two new P1 items are slotte
 10. **P2 `noUncheckedIndexedAccess`** — largest blast radius, package-by-package.
 11. **P2 dependency pinning policy**, **P3 agent instructions**, **P3 formatting**, and
     **P3 pre-push type-check scope** — decisions first, then mechanical follow-through.
+
+---
+
+## Corrections from implementation
+
+Two recommendations above did not survive contact with the repo. Both were stated
+confidently and both were wrong; they are left in place above rather than quietly edited,
+with the corrections here.
+
+### `pnpm audit` cannot be gated — the P1 item is not actionable as written
+
+The item says gating is "a one-line decision, either way." It is not. Measured on
+2026-07-25:
+
+| Scope                                  | Result                                                          |
+| -------------------------------------- | --------------------------------------------------------------- |
+| `pnpm audit --audit-level=high`        | exit 1 — 151 findings (9 low, 61 moderate, 79 high, 2 critical) |
+| `pnpm audit --prod --audit-level=high` | exit 1 — 126 findings (4 low, 52 moderate, 68 high, 2 critical) |
+
+Restricting to production dependencies does not help. The volume is dominated by
+transitive advisories reached through dev tooling — `brace-expansion`
+GHSA-mh99-v99m-4gvg alone appears on 235 paths via `eslint`.
+
+Removing `continue-on-error` would therefore fail every build on the first push while
+improving nothing. **Resolution:** the step stays advisory, the reasoning is recorded
+inline at `.github/workflows/ci.yml`, and the remediation is a tracked backlog project.
+Gating is the _end state_ of that project, not a config change that precedes it.
+
+### The `onlyBuiltDependencies` candidates were wrong in both directions
+
+The P1 item guesses `sharp`, `esbuild`, and `clamscan`. What pnpm 10 actually blocks on a
+forced clean install:
+
+```
+Ignored build scripts: @prisma/client@5.22.0, @prisma/engines@5.22.0,
+@sentry/cli@2.58.5, prisma@5.22.0, protobufjs@7.5.4.
+```
+
+- **`clamscan` declares no install script at all** — it is a pure-JS wrapper around the
+  `clamd` binary. It never needed allowlisting.
+- **`@sentry/cli` was missed**, and it is the one entry with real breakage potential: its
+  postinstall downloads the binary `@sentry/nextjs` uses for sourcemap upload during
+  `next build`. Leaving it blocked breaks the web Docker build whenever
+  `SENTRY_AUTH_TOKEN` is set — precisely the failure this control is meant to prevent.
+
+The doc's own advice to "confirm empirically" was right, and following it mattered. Note
+that a plain `pnpm install` is not sufficient to surface the list: it reuses prebuilt
+natives from the global store and prints nothing. Use `pnpm install --force`.
+
+### Additional notes worth carrying forward
+
+- **`packageManager` cannot take a range.** `corepack prepare pnpm@10.x --activate`
+  reports success but leaves the previous version active. Pin an exact version.
+- **`turbo.json` accepts `env` wildcards but rejects `"//"` comment keys** inside a task
+  definition (`Found an unknown key`). Use real JSONC `//` comments.
+- **Exact pinning rewrites `pnpm-lock.yaml`.** Lockfile v9 records `specifier:` per
+  importer, so `--frozen-lockfile` fails until the lockfile is regenerated. Verify by
+  comparing package _names_ between old and new lockfiles, not by counting diff lines —
+  a naive count suggested 96 packages had been dropped when the real change was
+  duplicate-version deduplication.
+- **Do not mark `pnpm-lock.yaml` as `-diff` in `.gitattributes`.** That makes git treat it
+  as binary, hiding exactly the changes a reviewer of a dependency change needs to read.
+  `linguist-generated=true` alone collapses it in GitHub's UI while keeping it diffable.
+- **The secret scanner blocks security documentation.** Any file quoting the literal PEM
+  private-key header trips the content pattern — including this document, which had to be
+  reworded. Worth knowing before someone reaches for `--no-verify`.

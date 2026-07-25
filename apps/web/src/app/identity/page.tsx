@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { InstanceIdentity } from "@/components/identity/instance-identity";
+import { clientEnv } from "@/env";
 
 export const metadata: Metadata = {
   title: "Instance Identity",
@@ -8,6 +9,6 @@ export const metadata: Metadata = {
 };
 
 export default function IdentityPage() {
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+  const apiUrl = clientEnv.NEXT_PUBLIC_API_URL;
   return <InstanceIdentity apiUrl={apiUrl} />;
 }
