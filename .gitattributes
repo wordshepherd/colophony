@@ -25,6 +25,9 @@
 *.zip binary
 *.gz binary
 
-# Generated — collapse in PR diffs and exclude from language stats.
-pnpm-lock.yaml linguist-generated=true -diff
+# Generated — collapse in GitHub PR diffs and exclude from language stats.
+# Deliberately NOT marked `-diff`: that makes git treat the file as binary, and a
+# dependency lockfile is exactly the file a reviewer must be able to read line by
+# line. linguist-generated alone collapses it by default while keeping it diffable.
+pnpm-lock.yaml linguist-generated=true
 sdks/** linguist-generated=true

@@ -54,6 +54,45 @@ Git hooks enforce quality automatically:
 - **Pre-commit:** secret scanning + Prettier formatting on staged files
 - **Pre-push:** TypeScript type-check + ESLint
 
+Note that `git commit --no-verify` skips the pre-commit hook, but the same secret
+scanner runs in CI on every branch push (`.github/workflows/secret-scan.yml`), so it
+cannot be bypassed that way.
+
+## Dependency Policy
+
+**Dependencies are pinned to exact versions.** No `^` or `~` ranges in any workspace
+`package.json`. Dependabot proposes upgrades weekly, grouped by minor/patch, and those
+PRs are how versions move.
+
+The rationale is that the version you read in `package.json` is the version you get,
+without cross-referencing `pnpm-lock.yaml`. The lockfile remains authoritative for
+transitive dependencies, and every install path — CI, Docker, local — uses
+`--frozen-lockfile`.
+
+When adding a dependency, install it and then replace the caret range pnpm writes:
+
+```bash
+pnpm --filter @colophony/api add some-package
+# then edit apps/api/package.json: "some-package": "^1.2.3" -> "1.2.3"
+pnpm install --lockfile-only
+```
+
+The pnpm version itself is pinned in `package.json` → `packageManager`, and pnpm 10
+blocks dependency build scripts unless the package is listed in
+`pnpm.onlyBuiltDependencies`. If an install warns that scripts were ignored, decide
+deliberately whether that package needs to build — do not add entries reflexively.
+
+## Agent Instruction Files
+
+`CLAUDE.md`, `.claude/`, `.claudeignore`, and `.codex/` are intentionally **not tracked**
+(see `.gitignore`). They hold local, per-developer AI-assistant context rather than
+project documentation, and they change far more often than the project does.
+
+Anything a contributor genuinely needs belongs in tracked documentation instead —
+this file, `README.md`, `docs/architecture.md`, or the per-directory docs. If you find
+yourself relying on an untracked instruction file to explain how the project works,
+that content is in the wrong place.
+
 ## Pull Request Process
 
 The `main` branch is protected. All changes require:
