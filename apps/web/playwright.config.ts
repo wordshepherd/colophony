@@ -60,7 +60,14 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
   workers: 1, // Single worker to avoid DB conflicts
-  reporter: process.env.CI ? "github" : "html",
+  // In CI, run BOTH reporters. "github" emits inline annotations on the PR, but
+  // it writes no files — on its own it leaves apps/web/playwright-report/ empty,
+  // so the workflow's upload step finds nothing and every failure lands with no
+  // trace, screenshot, or report to inspect. The html reporter produces that
+  // directory; `open: "never"` stops it trying to launch a browser on the runner.
+  reporter: process.env.CI
+    ? [["github"], ["html", { open: "never" }]]
+    : [["html", { open: "never" }]],
   timeout: 30_000,
 
   globalSetup: "./e2e/global-setup.ts",
