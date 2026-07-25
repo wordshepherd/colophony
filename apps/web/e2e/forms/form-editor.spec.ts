@@ -129,22 +129,25 @@ test.describe("Form Editor (/editor/forms/[formId])", () => {
         timeout: 10_000,
       });
 
-      // Add Short Text
+      // One "Remove field" button is rendered per field on the canvas, so this
+      // count is the observable signal that a click actually committed a field.
+      const fields = authedPage.getByRole("button", { name: "Remove field" });
+
+      // Each click must be confirmed before issuing the next one. Firing all
+      // three and only asserting the total at the end races the canvas re-render:
+      // a click can land while the list is rebuilding and be dropped, leaving a
+      // count of 2 that never recovers.
       await authedPage.getByRole("button", { name: "Short Text" }).click();
-      await expect(authedPage.getByText("No fields yet")).not.toBeVisible({
-        timeout: 10_000,
-      });
+      await expect(fields).toHaveCount(1, { timeout: 10_000 });
 
-      // Add Long Text
       await authedPage.getByRole("button", { name: "Long Text" }).click();
+      await expect(fields).toHaveCount(2, { timeout: 10_000 });
 
-      // Add Dropdown
       await authedPage.getByRole("button", { name: "Dropdown" }).click();
+      await expect(fields).toHaveCount(3, { timeout: 10_000 });
 
-      // Should have 3 remove buttons (one per field)
-      await expect(
-        authedPage.getByRole("button", { name: "Remove field" }),
-      ).toHaveCount(3, { timeout: 10_000 });
+      // The empty state is gone once any field exists.
+      await expect(authedPage.getByText("No fields yet")).not.toBeVisible();
     } finally {
       await deleteFormDefinition(form.id);
     }
