@@ -23,8 +23,12 @@ RUN pnpm --filter @colophony/auth-client build
 RUN pnpm --filter @colophony/plugin-sdk build
 RUN pnpm --filter @colophony/api-contracts build
 RUN pnpm --filter @colophony/api build
-# Deploy creates a standalone directory with production deps (pnpm's Docker approach)
-RUN pnpm --filter @colophony/api deploy --prod /app/deploy
+# Deploy creates a standalone directory with production deps (pnpm's Docker approach).
+# --legacy is required from pnpm 10: the default implementation refuses to deploy a
+# workspace without inject-workspace-packages=true. Legacy is also the behaviour the
+# runner stage below expects — it leaves workspace packages out of /app/deploy, which
+# is why their dist/ and package.json are copied in explicitly.
+RUN pnpm --filter @colophony/api deploy --prod --legacy /app/deploy
 
 # Stage 3: runner — production image
 FROM node:22-alpine AS runner
