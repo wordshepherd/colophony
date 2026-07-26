@@ -291,7 +291,7 @@ const appPool = new Pool({
 | `organization-service.test.ts`   | —     | Org service operations under RLS                             |
 | `audit-write-path.test.ts`       | —     | Audit write path under RLS                                   |
 
-**Config:** `apps/api/vitest.config.rls.ts` — `singleFork: true` (sequential execution, shared pools), `fileParallelism: false`.
+**Config:** `apps/api/vitest.config.rls.ts` — `fileParallelism: false` (sequential execution, shared pools).
 
 **Running:**
 
@@ -319,7 +319,21 @@ Tests verify the full webhook handler path: HTTP request → signature/auth veri
 
 **Mocked:** Stripe SDK (`constructEvent`), Zitadel signature verification, BullMQ (`enqueueFileScan`), S3 operations. Redis rate limiting degrades gracefully when unavailable.
 
-**Config:** `apps/api/vitest.config.webhooks.ts` — `singleFork: true`, `fileParallelism: false`, `DATABASE_URL` pointed at test DB, `NODE_ENV: 'test'`.
+**Config:** `apps/api/vitest.config.webhooks.ts` — `fileParallelism: false`, `DATABASE_URL` pointed at test DB, `NODE_ENV: 'test'`. Shared settings live in `vitest.config.integration-base.ts`.
+
+> **Vitest 4 removed `poolOptions`.** The base config used to set
+> `poolOptions.forks.singleFork: true`; v4 ignores it entirely and only emits a
+> deprecation warning, so it was removed. Serialization comes from
+> `fileParallelism: false` — these suites share one test database and must never
+> run two files at once. The v4 equivalent of `singleFork` is `isolate: false`,
+> which is deliberately NOT set: it would change cross-file module isolation.
+
+> **`hookTimeout` does not inherit from `testTimeout`.** Integration `beforeAll`
+> hooks do more work than any single test (schema reset, pool warm-up, Fastify
+> build) but defaulted to 10s against the suite's 30s, so slow runners failed in
+> setup rather than in an assertion. Both are now 30s. Teardown must also guard
+> against failed setup — `await app?.close()` in a `try`/`finally`, since calling
+> `.close()` on an undefined app throws a `TypeError` that replaces the real error.
 
 **Running:**
 
@@ -346,7 +360,7 @@ Tests verify the full enqueue → BullMQ picks up → processor runs → DB stat
 
 **Mocked:** S3 storage adapter, ClamAV (`clamscan`), email adapter, `globalThis.fetch`, Inngest client, SSRF validation, Prometheus metrics, Sentry, logger.
 
-**Config:** `apps/api/vitest.config.queues.ts` — `singleFork: true`, `fileParallelism: false`, `DATABASE_URL` + `REDIS_HOST`/`REDIS_PORT` pointed at test infra.
+**Config:** `apps/api/vitest.config.queues.ts` — `fileParallelism: false`, `DATABASE_URL` + `REDIS_HOST`/`REDIS_PORT` pointed at test infra.
 
 **Running:**
 
@@ -579,7 +593,7 @@ All unit test suites run with randomized test ordering to detect order-dependent
 
 Vitest prints the shuffle seed in output — use `--sequence.seed=<N>` to reproduce a specific ordering.
 
-Integration test configs (`vitest.config.rls.ts`, `vitest.config.services.ts`, `vitest.config.webhooks.ts`, `vitest.config.queues.ts`, `vitest.config.security.ts`) are **excluded from shuffle** because they use `singleFork: true` + `fileParallelism: false` with shared database state where test ordering matters.
+Integration test configs (`vitest.config.rls.ts`, `vitest.config.services.ts`, `vitest.config.webhooks.ts`, `vitest.config.queues.ts`, `vitest.config.security.ts`) are **excluded from shuffle** because they use `fileParallelism: false` with shared database state where test ordering matters.
 
 ### No Retries
 
@@ -677,9 +691,11 @@ Playwright tests use separate ports (API: 4010, Web: 3010) to avoid conflicting 
 
 Vitest resolves workspace packages via `exports` field pointing to `dist/`. CI must run `pnpm build` for dependency packages (`@colophony/db`, `@colophony/types`, `@colophony/auth-client`, `@colophony/api-client`) before running tests.
 
-### RLS `singleFork: true` requirement
+### RLS sequential-execution requirement
 
-RLS tests use `singleFork: true` + `fileParallelism: false` because test files share database pools and rely on sequential `set_config` + `COMMIT`/`ROLLBACK` within transactions. Parallel execution would cause GUC context bleed between tests.
+RLS tests use `fileParallelism: false` because test files share database pools and rely on sequential `set_config` + `COMMIT`/`ROLLBACK` within transactions. Parallel execution would cause GUC context bleed between tests.
+
+This previously also set `poolOptions.forks.singleFork: true`. Vitest 4 removed `poolOptions`, so that setting had stopped doing anything — `fileParallelism: false` is what actually enforces the ordering.
 
 ### Console error/warn enforcement
 
