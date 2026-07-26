@@ -69,6 +69,7 @@
 - [ ] Reduce the `apps/api` ESLint rule suppressions — `recommendedTypeChecked` is enabled but `no-explicit-any` and five `no-unsafe-*` rules are switched off, which neutralises most of its value. At minimum promote `no-floating-promises` from `warn` to `error`, since unhandled rejections in Fastify handlers are a production failure mode — (DEVLOG 2026-07-25)
 - [ ] Enable `noUncheckedIndexedAccess` in `packages/typescript-config/base.json` — package by package (`types` and `api-contracts` first, then `db`, `api`, `web`) — (DEVLOG 2026-07-25)
 - [ ] Add `tseslint.configs.recommendedTypeChecked` to `apps/web/eslint.config.mjs` — the web app is currently unlinted for `no-floating-promises`, `no-misused-promises`, `await-thenable`, and the `no-unsafe-*` family, unlike `apps/api`. Expect a large first-run count; start the noisiest rules at `warn` — (DEVLOG 2026-07-25)
+- [ ] [P2] Stop passing `SENTRY_AUTH_TOKEN` as a Docker build ARG — `apps/web/Dockerfile` lines 34–35 take it as `ARG` then promote it to `ENV`. Build ARGs are recorded in image history, so the token is recoverable from any built image; `docker build` warns about this (`SecretsUsedInArgOrEnv`). Use a BuildKit secret mount (`RUN --mount=type=secret,id=sentry_auth_token`) and pass it via `--secret` from the deploy workflow instead — (DEVLOG 2026-07-26)
 
 ---
 
@@ -343,6 +344,9 @@
 ### CI
 
 - [x] [P2] CI path filtering for Playwright suites — skip irrelevant E2E suites on PRs based on changed files; `.github/scripts/detect-changes.sh` with fail-open strategy — (DEVLOG 2026-02-24; done 2026-02-24)
+- [ ] [P1] Stop the Deploy workflow reporting `success` on no-op runs — when `prepare` sets `skip`, Build and both deploy jobs are skipped and the run still concludes `success`. On 2026-07-25/26 four such runs interleaved with real failures, so a total deployment outage read as intermittent flakiness and went unnoticed for about seven hours. Either fail the run when `skip` is set for a `workflow_run` trigger on `main`, or surface "deployed / not deployed" somewhere that does not depend on reading each run's job list — (DEVLOG 2026-07-26)
+- [ ] [P2] Make Coverage Report a required status check — #494 reached `mergeStateStatus: CLEAN` with Coverage Report unresolved, so the job can fail without blocking a merge. That is how an infrastructure flake (or a real coverage regression) becomes invisible — (DEVLOG 2026-07-26)
+- [ ] [P3] Consider a registry pull-through cache or retry for service containers — Coverage Report failed on 2026-07-26 when Docker Hub timed out three times pulling `postgres:16-alpine`, killing `Initialize containers` before any test ran. Passed on retry — (DEVLOG 2026-07-26)
 
 ### Dev Environment
 
