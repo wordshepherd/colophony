@@ -21,8 +21,7 @@ export function initSentry(env: Env): void {
       if (event.breadcrumbs) {
         for (const breadcrumb of event.breadcrumbs) {
           const headers = breadcrumb.data?.headers as
-            | Record<string, unknown>
-            | undefined;
+            Record<string, unknown> | undefined;
           if (headers) {
             delete headers.authorization;
             delete headers['x-api-key'];

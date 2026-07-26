@@ -314,7 +314,7 @@ describe('submissions tRPC router', () => {
         page: 1,
         limit: 20,
         totalPages: 0,
-      } as never);
+      });
       const caller = createCaller(editorContext());
       const result = await caller.submissions.list({ page: 1, limit: 20 });
       expect(result.items).toEqual([]);
@@ -413,7 +413,7 @@ describe('submissions tRPC router', () => {
         limit: 20,
         totalPages: 0,
       };
-      mockService.listBySubmitter.mockResolvedValueOnce(response as never);
+      mockService.listBySubmitter.mockResolvedValueOnce(response);
 
       const caller = createCaller(orgContext());
       await caller.submissions.mySubmissions({ page: 1, limit: 20 });
@@ -500,7 +500,7 @@ describe('submissions tRPC router', () => {
         limit: 20,
         totalPages: 0,
       };
-      mockService.listAll.mockResolvedValueOnce(response as never);
+      mockService.listAll.mockResolvedValueOnce(response);
 
       const caller = createCaller(orgContext(['ADMIN']));
       await caller.submissions.list({ page: 1, limit: 20 });

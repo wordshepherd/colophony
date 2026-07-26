@@ -178,7 +178,7 @@ export function startTransferFetchWorker(
                 ...existingFormData,
                 _transferFiles: enrichedManifest,
                 _transferStatus: totalSuccess ? 'complete' : 'partial',
-              } as Record<string, unknown>,
+              },
             })
             .where(eq(submissions.id, localSubmissionId));
         });

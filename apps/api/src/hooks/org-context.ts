@@ -61,8 +61,7 @@ export default fp(
         }
 
         const orgIdHeader = request.headers['x-organization-id'] as
-          | string
-          | undefined;
+          string | undefined;
 
         // No org header — routes decide if org context is required
         if (!orgIdHeader) return;

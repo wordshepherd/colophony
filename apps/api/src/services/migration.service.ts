@@ -1012,8 +1012,7 @@ export const migrationService = {
 
     // Verify fileId is in the allowed list
     const allowedFileIds = (claims as Record<string, unknown>).fileIds as
-      | string[]
-      | undefined;
+      string[] | undefined;
     if (!allowedFileIds || !allowedFileIds.includes(fileId)) {
       throw new MigrationTokenError('File ID not in migration allowlist');
     }
@@ -1101,7 +1100,7 @@ export const migrationService = {
       throw new MigrationNotFoundError(migrationId);
     }
 
-    return migration as IdentityMigration;
+    return migration;
   },
 
   async listMigrationsForUser(
@@ -1134,7 +1133,7 @@ export const migrationService = {
       ]);
 
       return {
-        migrations: rows as IdentityMigration[],
+        migrations: rows,
         total: countResult[0]?.count ?? 0,
       };
     });
@@ -1156,7 +1155,7 @@ export const migrationService = {
         )
         .orderBy(sql`${identityMigrations.createdAt} DESC`)
         .limit(100);
-      return rows as IdentityMigration[];
+      return rows;
     });
   },
 

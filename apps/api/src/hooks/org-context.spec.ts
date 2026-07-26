@@ -56,8 +56,7 @@ const fakeAuthPlugin = fp(
     app.decorateRequest('authContext', null);
     app.addHook('onRequest', async (request) => {
       const testUserId = request.headers['x-test-user-id'] as
-        | string
-        | undefined;
+        string | undefined;
       if (testUserId) {
         request.authContext = {
           userId: testUserId,

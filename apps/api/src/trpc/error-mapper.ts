@@ -297,7 +297,7 @@ function extractPgError(
     typeof error === 'object' &&
     error !== null &&
     'code' in error &&
-    typeof (error as { code: unknown }).code === 'string'
+    typeof error.code === 'string'
   ) {
     const e = error as { code: string; detail?: string };
     if (/^\d{5}$/.test(e.code)) return e;

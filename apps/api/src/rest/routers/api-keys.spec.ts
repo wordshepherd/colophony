@@ -129,7 +129,7 @@ describe('api-keys REST router', () => {
         limit: 20,
         totalPages: 1,
       };
-      mockService.list.mockResolvedValueOnce(response as never);
+      mockService.list.mockResolvedValueOnce(response);
 
       const call = client(apiKeysRouter.list, orgContext(['READER']));
       const result = await call({ page: 1, limit: 20 });
@@ -161,7 +161,7 @@ describe('api-keys REST router', () => {
         lastUsedAt: null,
         revokedAt: null,
       };
-      mockService.create.mockResolvedValueOnce(result as never);
+      mockService.create.mockResolvedValueOnce(result);
 
       const ctx = orgContext(['ADMIN']);
       const call = client(apiKeysRouter.create, ctx);
@@ -209,7 +209,7 @@ describe('api-keys REST router', () => {
         name: 'Test Key',
         revokedAt: new Date(),
       };
-      mockService.revoke.mockResolvedValueOnce(revoked as never);
+      mockService.revoke.mockResolvedValueOnce(revoked);
 
       const ctx = orgContext(['ADMIN']);
       const call = client(apiKeysRouter.revoke, ctx);
@@ -248,7 +248,7 @@ describe('api-keys REST router', () => {
 
     it('deletes an API key and audits', async () => {
       const deleted = { id: KEY_ID, name: 'Test Key' };
-      mockService.delete.mockResolvedValueOnce(deleted as never);
+      mockService.delete.mockResolvedValueOnce(deleted);
 
       const ctx = orgContext(['ADMIN']);
       const call = client(apiKeysRouter.delete, ctx);
@@ -313,7 +313,7 @@ describe('api-keys REST router', () => {
         limit: 20,
         totalPages: 1,
       };
-      mockService.list.mockResolvedValueOnce(response as never);
+      mockService.list.mockResolvedValueOnce(response);
 
       const ctx = apiKeyContext(['api-keys:read']);
       const call = client(apiKeysRouter.list, ctx);

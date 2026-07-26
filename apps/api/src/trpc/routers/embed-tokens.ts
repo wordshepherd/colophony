@@ -7,8 +7,6 @@ import {
   embedTokenResponseSchema,
   AuditActions,
   AuditResources,
-  type EmbedTokenResponse,
-  type CreateEmbedTokenResponse,
 } from '@colophony/types';
 import { z } from 'zod';
 import {
@@ -53,7 +51,7 @@ export const embedTokensRouter = createRouter({
           allowedOrigins: input.allowedOrigins,
         },
       });
-      return result as CreateEmbedTokenResponse;
+      return result;
     }),
 
   listByPeriod: orgProcedure
@@ -61,10 +59,7 @@ export const embedTokensRouter = createRouter({
     .input(listEmbedTokensByPeriodSchema)
     .output(z.array(embedTokenResponseSchema))
     .query(async ({ ctx, input }) => {
-      return embedTokenService.list(
-        ctx.dbTx,
-        input.submissionPeriodId,
-      ) as Promise<EmbedTokenResponse[]>;
+      return embedTokenService.list(ctx.dbTx, input.submissionPeriodId);
     }),
 
   revoke: adminProcedure

@@ -291,7 +291,7 @@ describe('files tRPC router', () => {
         url: 'https://s3.example.com/signed-url',
         filename: 'poem.pdf',
         mimeType: 'application/pdf',
-      } as never);
+      });
 
       const caller = createCaller(orgContext());
       const result = await caller.files.getDownloadUrl({ fileId: FILE_ID });

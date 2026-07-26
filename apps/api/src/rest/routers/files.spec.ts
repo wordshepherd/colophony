@@ -207,7 +207,7 @@ describe('files REST router', () => {
         mimeType: 'application/pdf',
       };
       mockFileService.getDownloadUrlWithAccess.mockResolvedValueOnce(
-        downloadInfo as never,
+        downloadInfo,
       );
 
       const call = client(filesRouter.download, orgContext(['READER']));

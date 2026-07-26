@@ -490,7 +490,7 @@ describe('embedSubmissionService', () => {
       // Mock withRls to execute the callback
       mockWithRls.mockImplementation(
         async (_ctx: unknown, fn: (tx: unknown) => Promise<unknown>) => {
-          return fn({} as never);
+          return fn({});
         },
       );
 
@@ -543,7 +543,7 @@ describe('embedSubmissionService', () => {
 
       mockWithRls.mockImplementation(
         async (_ctx: unknown, fn: (tx: unknown) => Promise<unknown>) => {
-          return fn({} as never);
+          return fn({});
         },
       );
 
@@ -577,7 +577,7 @@ describe('embedSubmissionService', () => {
 
       mockWithRls.mockImplementation(
         async (_ctx: unknown, fn: (tx: unknown) => Promise<unknown>) => {
-          return fn({} as never);
+          return fn({});
         },
       );
 
@@ -605,7 +605,7 @@ describe('embedSubmissionService', () => {
 
       mockWithRls.mockImplementation(
         async (_ctx: unknown, fn: (tx: unknown) => Promise<unknown>) => {
-          return fn({} as never);
+          return fn({});
         },
       );
 

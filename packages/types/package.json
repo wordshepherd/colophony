@@ -19,12 +19,12 @@
     "test:cov": "vitest run --coverage"
   },
   "dependencies": {
-    "zod": "4.3.6"
+    "zod": "4.4.3"
   },
   "devDependencies": {
     "@colophony/typescript-config": "workspace:*",
     "typescript": "5.9.3",
-    "@vitest/coverage-v8": "4.1.2",
-    "vitest": "4.1.2"
+    "@vitest/coverage-v8": "4.1.10",
+    "vitest": "4.1.10"
   }
 }

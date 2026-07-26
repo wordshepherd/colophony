@@ -51,9 +51,9 @@
   "devDependencies": {
     "husky": "9.1.7",
     "lint-staged": "16.4.0",
-    "prettier": "3.8.1",
-    "sharp": "0.34.5",
-    "turbo": "2.8.21"
+    "prettier": "3.9.6",
+    "sharp": "0.35.3",
+    "turbo": "2.10.7"
   },
   "pnpm": {
     "onlyBuiltDependencies": [

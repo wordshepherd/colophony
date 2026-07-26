@@ -85,7 +85,7 @@ describe('users REST router', () => {
         createdAt: new Date(),
         organizations: [],
       };
-      mockUserService.getProfile.mockResolvedValueOnce(profile as never);
+      mockUserService.getProfile.mockResolvedValueOnce(profile);
 
       const call = client(usersRouter.me, authedContext());
       const result = await call({});
@@ -94,7 +94,7 @@ describe('users REST router', () => {
     });
 
     it('throws NOT_FOUND when user profile is null', async () => {
-      mockUserService.getProfile.mockResolvedValueOnce(null as never);
+      mockUserService.getProfile.mockResolvedValueOnce(null);
 
       const call = client(usersRouter.me, authedContext());
       await expect(call({})).rejects.toThrow('User not found');
@@ -120,7 +120,7 @@ describe('users REST router', () => {
         createdAt: new Date(),
         organizations: [],
       };
-      mockUserService.getProfile.mockResolvedValueOnce(profile as never);
+      mockUserService.getProfile.mockResolvedValueOnce(profile);
 
       const ctx = apiKeyAuthedContext(['users:read']);
       const call = client(usersRouter.me, ctx);

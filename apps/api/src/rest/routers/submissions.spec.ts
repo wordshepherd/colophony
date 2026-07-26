@@ -310,7 +310,7 @@ describe('submissions REST router', () => {
         limit: 20,
         totalPages: 0,
       };
-      mockService.listAll.mockResolvedValueOnce(response as never);
+      mockService.listAll.mockResolvedValueOnce(response);
 
       const call = client(submissionsRouter.list, orgContext(['ADMIN']));
       const result = await call({ page: 1, limit: 20 });
@@ -718,7 +718,7 @@ describe('submissions REST router', () => {
         limit: 20,
         totalPages: 0,
       };
-      mockService.listBySubmitter.mockResolvedValueOnce(response as never);
+      mockService.listBySubmitter.mockResolvedValueOnce(response);
 
       const ctx = apiKeyContext(['submissions:read']);
       const call = client(submissionsRouter.mine, ctx);

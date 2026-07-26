@@ -39,8 +39,7 @@ const fakeAuthPlugin = fp(
     app.decorateRequest('authContext', null);
     app.addHook('onRequest', async (request) => {
       const testUserId = request.headers['x-test-user-id'] as
-        | string
-        | undefined;
+        string | undefined;
       if (testUserId) {
         request.authContext = {
           userId: testUserId,
@@ -114,7 +113,7 @@ async function buildApp(
   const env = { ...testEnv, ...envOverrides };
 
   await app.register(fakeAuthPlugin);
-  await app.register(rateLimitPlugin, { env, redis: redis as never });
+  await app.register(rateLimitPlugin, { env, redis: redis });
 
   // Test route
   app.get('/api/test', async (request) => ({
@@ -304,7 +303,7 @@ describe('rate-limit plugin', () => {
       await app.register(fakeAuthPlugin);
       await app.register(rateLimitPlugin, {
         env: testEnv,
-        redis: redis as never,
+        redis: redis,
       });
 
       app.get('/api/test', async () => ({ ok: true }));

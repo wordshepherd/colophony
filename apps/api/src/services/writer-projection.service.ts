@@ -18,9 +18,7 @@ export const writerProjectionService = {
     orgSettings?: Record<string, unknown>,
   ): { writerStatus: WriterStatus; writerStatusLabel: string } {
     const writerStatus = projectWriterStatus(internalStatus);
-    const overrides = (orgSettings?.writerStatusLabels ?? undefined) as
-      | Partial<Record<WriterStatus, string>>
-      | undefined;
+    const overrides = orgSettings?.writerStatusLabels ?? undefined;
     const writerStatusLabel = resolveWriterStatusLabel(writerStatus, overrides);
     return { writerStatus, writerStatusLabel };
   },
@@ -35,9 +33,7 @@ export const writerProjectionService = {
     const writerStatus = projectWriterStatus(
       internalStatus as SubmissionStatus,
     );
-    const overrides = (orgSettings?.writerStatusLabels ?? undefined) as
-      | Partial<Record<WriterStatus, string>>
-      | undefined;
+    const overrides = orgSettings?.writerStatusLabels ?? undefined;
     return resolveWriterStatusLabel(writerStatus, overrides);
   },
 };

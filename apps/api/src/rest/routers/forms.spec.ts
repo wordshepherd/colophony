@@ -254,7 +254,7 @@ describe('forms REST router', () => {
         limit: 20,
         totalPages: 0,
       };
-      mockService.list.mockResolvedValueOnce(response as never);
+      mockService.list.mockResolvedValueOnce(response);
 
       const ctx = apiKeyContext(['forms:read']);
       const call = client(formsRouter.list, ctx);

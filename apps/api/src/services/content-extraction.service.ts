@@ -56,7 +56,7 @@ export const contentExtractionService = {
       .from(manuscriptVersions)
       .where(ownershipFilter(manuscriptVersionId, userId))
       .limit(1);
-    return (row?.status as ContentExtractionStatus) ?? null;
+    return row?.status ?? null;
   },
 
   /**
