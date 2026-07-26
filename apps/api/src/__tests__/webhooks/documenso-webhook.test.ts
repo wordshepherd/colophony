@@ -75,8 +75,14 @@ describe('Documenso webhook integration', () => {
   });
 
   afterAll(async () => {
-    await app.close();
-    await globalTeardown();
+    // `app` is undefined when beforeAll failed. Calling .close() on it throws
+    // a TypeError that replaces the real setup error in the report, so guard
+    // it and make sure teardown runs either way.
+    try {
+      await app?.close();
+    } finally {
+      await globalTeardown();
+    }
   });
 
   beforeEach(async () => {

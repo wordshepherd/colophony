@@ -15,22 +15,31 @@ export interface RenderedEmail {
   subject: string;
 }
 
-export function renderMjml(mjmlString: string): { html: string } {
-  const result = mjml2html(mjmlString, { validationLevel: 'soft' });
+/**
+ * mjml 5 returns a Promise from mjml2html; mjml 4 returned the result
+ * synchronously. Promise.resolve() normalizes both, so the render layer is
+ * async regardless of which major is installed.
+ */
+export async function renderMjml(
+  mjmlString: string,
+): Promise<{ html: string }> {
+  const result = await Promise.resolve(
+    mjml2html(mjmlString, { validationLevel: 'soft' }),
+  );
   return { html: result.html };
 }
 
-export function renderEmailTemplate(
+export async function renderEmailTemplate(
   name: TemplateName,
   data: Record<string, unknown>,
-): RenderedEmail {
+): Promise<RenderedEmail> {
   const renderer = templates[name];
   if (!renderer) {
     throw new Error(`Unknown email template: ${name}`);
   }
 
   const { mjml, text, subject } = renderer(data);
-  const { html } = renderMjml(mjml);
+  const { html } = await renderMjml(mjml);
 
   return { html, text, subject };
 }
@@ -39,11 +48,11 @@ export function renderEmailTemplate(
  * Render a custom (user-defined) email template with merge field
  * interpolation, HTML sanitization, and MJML layout wrapping.
  */
-export function renderCustomTemplate(
+export async function renderCustomTemplate(
   customTemplate: { subjectTemplate: string; bodyHtml: string },
   data: Record<string, unknown>,
   orgName: string,
-): RenderedEmail {
+): Promise<RenderedEmail> {
   // Interpolate merge fields in subject (scalar-only — no HTML blocks)
   const subject = interpolateMergeFields(customTemplate.subjectTemplate, data);
 
@@ -59,7 +68,7 @@ export function renderCustomTemplate(
     `<mj-text>${sanitizedBody}</mj-text>`,
     orgName,
   );
-  const { html } = renderMjml(mjmlString);
+  const { html } = await renderMjml(mjmlString);
 
   // Generate plain text: convert block elements to newlines before stripping
   const textFriendly = sanitizedBody

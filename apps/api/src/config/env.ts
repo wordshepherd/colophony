@@ -85,6 +85,7 @@ const envSchema = z
     STRIPE_WEBHOOK_SECRET: z.string().optional(),
     ZITADEL_AUTHORITY: z
       .string()
+      .optional()
       .transform((v) => (v === '' ? undefined : v))
       .pipe(z.string().url().optional()),
     ZITADEL_CLIENT_ID: z.string().optional(),
@@ -120,6 +121,7 @@ const envSchema = z
       .transform((v) => v === 'true'),
     FEDERATION_CONTACT: z
       .string()
+      .optional()
       .transform((v) => (v === '' ? undefined : v))
       .pipe(z.string().email().optional()),
     FEDERATION_PRIVATE_KEY: z.string().optional(),
@@ -136,6 +138,7 @@ const envSchema = z
     // Documenso contract signing
     DOCUMENSO_API_URL: z
       .string()
+      .optional()
       .transform((v) => (v === '' ? undefined : v))
       .pipe(z.string().url().optional()),
     DOCUMENSO_API_KEY: z.string().optional(),
@@ -165,6 +168,7 @@ const envSchema = z
     // Monitoring — Sentry
     SENTRY_DSN: z
       .string()
+      .optional()
       .transform((v) => (v === '' ? undefined : v))
       .pipe(z.string().url().optional()),
     SENTRY_ENVIRONMENT: z.string().default('development'),

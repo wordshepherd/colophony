@@ -37,24 +37,35 @@ export interface ApiResponse<T> {
   data: T;
 }
 
-export async function waitForHealth(
-  maxRetries = 30,
+/**
+ * Block until Zitadel can actually serve API traffic.
+ *
+ * `/debug/healthz` is a LIVENESS probe — it answers as soon as the HTTP
+ * listener binds, which happens well before the instance is usable. Calling
+ * the management API in that window fails with gRPC code 14 (UNAVAILABLE)
+ * and `dial tcp [::1]:8080: connect: connection refused`, because Zitadel's
+ * own HTTP-to-gRPC gateway is dialling a gRPC server that has not come up
+ * yet. `/debug/ready` is the READINESS probe and stays non-200 until the
+ * instance is initialized, so that is what we wait on.
+ */
+export async function waitForReady(
+  maxRetries = 60,
   intervalMs = 2000,
 ): Promise<void> {
   console.log(`Waiting for Zitadel at ${ZITADEL_URL}...`);
   for (let i = 0; i < maxRetries; i++) {
     try {
-      const res = await fetch(`${ZITADEL_URL}/debug/healthz`);
+      const res = await fetch(`${ZITADEL_URL}/debug/ready`);
       if (res.ok) {
-        console.log("Zitadel is healthy.");
+        console.log("Zitadel is ready.");
         return;
       }
     } catch {
-      // Not ready yet
+      // Not listening yet
     }
     await new Promise((r) => setTimeout(r, intervalMs));
   }
-  throw new Error(`Zitadel not healthy after ${maxRetries * intervalMs}ms`);
+  throw new Error(`Zitadel not ready after ${maxRetries * intervalMs}ms`);
 }
 
 /**
@@ -84,23 +95,66 @@ export function getAdminToken(): string {
   return pat;
 }
 
+/** gRPC status code for UNAVAILABLE — the request never reached the service. */
+const GRPC_UNAVAILABLE = 14;
+
+/**
+ * True when a response means "Zitadel could not be reached", as opposed to
+ * "Zitadel considered the request and said no". Only the former is retried:
+ * the request never executed, so replaying it cannot duplicate a resource.
+ */
+function isTransient(status: number, data: unknown): boolean {
+  if (status === 502 || status === 503 || status === 504) return true;
+  return (
+    typeof data === "object" &&
+    data !== null &&
+    (data as { code?: number }).code === GRPC_UNAVAILABLE
+  );
+}
+
 export async function zitadelApi<T>(
   token: string,
   path: string,
   method: string = "POST",
   body?: unknown,
   baseUrl: string = ZITADEL_URL,
+  maxAttempts = 5,
 ): Promise<ApiResponse<T>> {
-  const res = await fetch(`${baseUrl}${path}`, {
-    method,
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    },
-    ...(body ? { body: JSON.stringify(body) } : {}),
-  });
-  const data = (await res.json().catch(() => ({}))) as T;
-  return { ok: res.ok, status: res.status, data };
+  let lastError: unknown;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      const res = await fetch(`${baseUrl}${path}`, {
+        method,
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        ...(body ? { body: JSON.stringify(body) } : {}),
+      });
+      const data = (await res.json().catch(() => ({}))) as T;
+
+      if (attempt < maxAttempts && isTransient(res.status, data)) {
+        console.log(
+          `  ${method} ${path} unavailable (attempt ${attempt}/${maxAttempts}), retrying...`,
+        );
+        await new Promise((r) => setTimeout(r, attempt * 1000));
+        continue;
+      }
+
+      return { ok: res.ok, status: res.status, data };
+    } catch (err) {
+      // Connection-level failure (refused/reset) — same transient class.
+      lastError = err;
+      if (attempt === maxAttempts) break;
+      console.log(
+        `  ${method} ${path} connection failed (attempt ${attempt}/${maxAttempts}), retrying...`,
+      );
+      await new Promise((r) => setTimeout(r, attempt * 1000));
+    }
+  }
+
+  throw lastError;
 }
 
 // ---------------------------------------------------------------------------

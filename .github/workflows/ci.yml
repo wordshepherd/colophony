@@ -1552,8 +1552,11 @@ jobs:
             start-from-init --masterkey "MasterkeyNeedsToHave32Characters" --tlsMode disabled
       - name: Wait for Zitadel
         run: |
+          # /debug/healthz is liveness — it answers before the instance can
+          # serve API calls. /debug/ready is the readiness probe; waiting on
+          # healthz let provisioning race ahead and fail with gRPC code 14.
           echo "Waiting for Zitadel to be ready..."
-          timeout 180 bash -c 'until curl -sf http://localhost:8080/debug/healthz; do sleep 5; done'
+          timeout 180 bash -c 'until curl -sf http://localhost:8080/debug/ready; do sleep 5; done'
           echo "Zitadel is ready."
       - name: Provision Zitadel E2E config
         run: pnpm --filter @colophony/db exec tsx ../../scripts/setup-zitadel-e2e.ts

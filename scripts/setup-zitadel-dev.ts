@@ -26,7 +26,7 @@ import {
   TEST_USER_PASSWORD,
   TEST_USER_FIRST,
   TEST_USER_LAST,
-  waitForHealth,
+  waitForReady,
   getAdminToken,
   findOrCreateProject,
   findOrCreateOidcApp,
@@ -84,7 +84,7 @@ async function main() {
   console.log("=== Zitadel Dev Setup ===\n");
 
   // 1. Wait for Zitadel
-  await waitForHealth();
+  await waitForReady();
 
   // 2. Get admin token
   console.log("\nReading admin PAT...");

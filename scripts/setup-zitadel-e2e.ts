@@ -25,7 +25,7 @@ import {
   TEST_USER_PASSWORD,
   TEST_USER_FIRST,
   TEST_USER_LAST,
-  waitForHealth,
+  waitForReady,
   getAdminToken,
   findOrCreateProject,
   findOrCreateOidcApp,
@@ -58,8 +58,8 @@ const API_ENV_PATH = resolve(__dirname, "../apps/api/.env");
 async function main() {
   console.log("=== Zitadel E2E Setup ===\n");
 
-  // 1. Wait for Zitadel
-  await waitForHealth();
+  // 1. Wait for Zitadel to be able to serve API traffic (not merely alive)
+  await waitForReady();
 
   // 2. Get admin token (PAT from start-from-init machine user)
   console.log("\nReading admin PAT...");
