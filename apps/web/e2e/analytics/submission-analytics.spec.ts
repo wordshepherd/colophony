@@ -83,9 +83,9 @@ test.describe("Submission Analytics Dashboard", () => {
     // Assert against the select trigger rather than page text: once an option
     // is chosen, the same label appears BOTH in the trigger and in the option
     // still mounted in the listbox, so getByText resolves to two elements and
-    // fails Playwright's strict mode. The chart's granularity select is the
-    // only combobox on this page.
-    const granularity = page.getByRole("combobox");
+    // fails Playwright's strict mode. Name the combobox too — the filter bar
+    // above the chart contributes a second one.
+    const granularity = page.getByRole("combobox", { name: "Granularity" });
 
     // Granularity selector defaults to "Monthly"
     await expect(granularity).toHaveText("Monthly");

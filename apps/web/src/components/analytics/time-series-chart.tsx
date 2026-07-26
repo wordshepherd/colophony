@@ -47,7 +47,7 @@ export function TimeSeriesChart({ filter }: TimeSeriesChartProps) {
             setGranularity(v as "daily" | "weekly" | "monthly")
           }
         >
-          <SelectTrigger className="w-28">
+          <SelectTrigger className="w-28" aria-label="Granularity">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
