@@ -64,11 +64,7 @@ export interface ReadingAnchor {
 // --- Content Extraction Status ---
 
 export type ContentExtractionStatus =
-  | "PENDING"
-  | "EXTRACTING"
-  | "COMPLETE"
-  | "FAILED"
-  | "UNSUPPORTED";
+  "PENDING" | "EXTRACTING" | "COMPLETE" | "FAILED" | "UNSUPPORTED";
 
 // --- Zod Schemas (for tRPC output validation) ---
 

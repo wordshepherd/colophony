@@ -4,8 +4,7 @@ import { useFileUpload } from "../use-file-upload";
 
 // Track tus Upload instances
 let tusOnProgress:
-  | ((bytesUploaded: number, bytesTotal: number) => void)
-  | undefined;
+  ((bytesUploaded: number, bytesTotal: number) => void) | undefined;
 let tusOnSuccess: (() => void) | undefined;
 let tusOnError: ((error: Error) => void) | undefined;
 const mockTusStart = vi.fn();

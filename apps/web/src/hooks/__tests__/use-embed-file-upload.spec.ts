@@ -3,8 +3,7 @@ import { renderHook, act } from "@testing-library/react";
 import { useEmbedFileUpload } from "../use-embed-file-upload";
 
 let tusOnProgress:
-  | ((bytesUploaded: number, bytesTotal: number) => void)
-  | undefined;
+  ((bytesUploaded: number, bytesTotal: number) => void) | undefined;
 let tusOnSuccess: (() => void) | undefined;
 let tusOnError: ((error: Error) => void) | undefined;
 let tusConstructorArgs: Record<string, unknown>;

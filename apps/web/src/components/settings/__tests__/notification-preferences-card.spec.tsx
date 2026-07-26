@@ -4,8 +4,7 @@ import { NotificationPreferencesCard } from "../notification-preferences-card";
 
 // --- Mutable mock state ---
 let mockPreferences:
-  | Array<{ eventType: string; channel: string; enabled: boolean }>
-  | undefined;
+  Array<{ eventType: string; channel: string; enabled: boolean }> | undefined;
 let mockIsPending: boolean;
 let mockError: { message: string } | null;
 let mockRefetch: Mock;

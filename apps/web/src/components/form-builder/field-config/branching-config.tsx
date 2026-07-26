@@ -37,8 +37,7 @@ export function BranchingConfig({
   // because the schema rejects empty branches arrays — but we need to support the
   // intermediate state where branching is enabled but no branches exist yet.
   const rawBranching = config.branching as
-    | { enabled?: boolean; branches?: BranchDefinition[] }
-    | undefined;
+    { enabled?: boolean; branches?: BranchDefinition[] } | undefined;
   const enabled = rawBranching?.enabled ?? false;
   const branches: BranchDefinition[] = rawBranching?.branches ?? [];
   const options = (config.options as SelectOption[] | undefined) ?? [];

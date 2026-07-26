@@ -5,11 +5,7 @@ import { getCurrentOrgId, setCurrentOrgId, trpc } from "@/lib/trpc";
 import { useAuth } from "./use-auth";
 
 export type OrgRole =
-  | "ADMIN"
-  | "EDITOR"
-  | "READER"
-  | "PRODUCTION"
-  | "BUSINESS_OPS";
+  "ADMIN" | "EDITOR" | "READER" | "PRODUCTION" | "BUSINESS_OPS";
 
 export interface Organization {
   id: string;

@@ -89,8 +89,7 @@ let mockUpdateIsPending: boolean;
 let mockSubmitMutateAsync: Mock;
 let mockSubmitIsPending: boolean;
 let mockSubmitOnError:
-  | ((err: { message: string; data?: unknown }) => void)
-  | undefined;
+  ((err: { message: string; data?: unknown }) => void) | undefined;
 
 const mockInvalidateGetById = vi.fn();
 
@@ -199,8 +198,7 @@ vi.mock("../file-upload", () => ({
 }));
 
 let mockManuscriptPickerOnChange:
-  | ((versionId: string | null) => void)
-  | undefined;
+  ((versionId: string | null) => void) | undefined;
 vi.mock("@/components/manuscripts/manuscript-picker", () => ({
   ManuscriptPicker: (props: {
     value: string | null;

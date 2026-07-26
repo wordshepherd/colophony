@@ -700,12 +700,7 @@ export interface AdapterRegistry {
 }
 
 export type AdapterType =
-  | "email"
-  | "payment"
-  | "storage"
-  | "search"
-  | "auth"
-  | "newsletter";
+  "email" | "payment" | "storage" | "search" | "auth" | "newsletter";
 
 export interface AdapterInfo {
   id: string;
