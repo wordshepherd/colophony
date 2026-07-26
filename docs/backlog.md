@@ -54,6 +54,8 @@
 - [x] CI: add Playwright submission E2E job (20 tests, needs Postgres service) — (DEVLOG 2026-02-18; done 2026-02-19)
 - [x] CI: add Playwright uploads E2E job (6 tests, needs tusd + MinIO services) — (DEVLOG 2026-02-19; done 2026-02-19 PR #115)
 - [x] CI: add Playwright OIDC E2E job (6 tests, needs Zitadel service) — (DEVLOG 2026-02-19; done 2026-02-19 PR #115)
+- [ ] [P2] Investigate the Workspace E2E 404 if it recurs — one CI run returned a genuine HTTP 404 for every `/workspace/*` route (24 tests, both attempts) while sibling `(dashboard)` suites passed. Ruled out: dependency bumps, missing/gitignored source, `notFound()` calls, and un-compiled-route timing (trace shows the 404 eleven minutes after server start). Passed on rerun and every run since, so runner-side. `error-context.md` in the report artifact carries the page snapshot — (DEVLOG 2026-07-25)
+- [ ] [P3] Consider capturing the Next dev server's startup output in the Playwright CI jobs — during the 404 investigation only six `[WebServer]` lines were recorded and no Next "Ready"/compile output, which limited diagnosis — (DEVLOG 2026-07-25)
 
 ### Housekeeping
 
@@ -266,6 +268,9 @@
 ### [P3] Low — Unused or minimal impact
 
 - [x] nodemailer 7 → 8 — already at v8.0.1; bumped @types/nodemailer 7.0.9 → 7.0.11 — (dependabot #77; done 2026-02-26)
+- [x] nodemailer 8 → 9 — security update; clean against the existing `@types/nodemailer` 7.0.11, no adapter changes needed — (dependabot #490; done 2026-07-25)
+- [x] mjml 4 → 5 — `mjml2html` returns a Promise in v5; render layer made async and normalized with `Promise.resolve()` so it works under both majors — (dependabot #475 / #488; done 2026-07-25)
+- [x] zod 4.3 → 4.4 — surfaced a latent `env.ts` bug where an optional `.pipe()` target sat behind a non-optional outer `z.string()` — (dependabot #489; done 2026-07-25)
 
 ### Upgrade order notes
 
