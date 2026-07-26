@@ -13,11 +13,7 @@ describe('toServiceContext', () => {
         userId: 'u1',
         orgId: 'o1',
         roles: ['ADMIN'] as (
-          | 'ADMIN'
-          | 'EDITOR'
-          | 'READER'
-          | 'PRODUCTION'
-          | 'BUSINESS_OPS'
+          'ADMIN' | 'EDITOR' | 'READER' | 'PRODUCTION' | 'BUSINESS_OPS'
         )[],
       },
       audit,
@@ -37,11 +33,7 @@ describe('toServiceContext', () => {
         userId: 'u2',
         orgId: 'o2',
         roles: ['EDITOR'] as (
-          | 'ADMIN'
-          | 'EDITOR'
-          | 'READER'
-          | 'PRODUCTION'
-          | 'BUSINESS_OPS'
+          'ADMIN' | 'EDITOR' | 'READER' | 'PRODUCTION' | 'BUSINESS_OPS'
         )[],
       },
       audit: vi.fn() as AuditFn,

@@ -209,9 +209,7 @@ export const portfolioService = {
       id: row.id,
       source: row.source as 'native' | 'external',
       entryType: row.entry_type as
-        | 'colophony_verified'
-        | 'federation_verified'
-        | 'external',
+        'colophony_verified' | 'federation_verified' | 'external',
       title: row.title,
       journalName: row.journal_name,
       status: row.status as CSRStatus,

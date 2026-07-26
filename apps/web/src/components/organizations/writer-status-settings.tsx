@@ -36,8 +36,7 @@ export function WriterStatusSettings() {
 
   const currentLabels =
     ((org?.settings as Record<string, unknown>)?.writerStatusLabels as
-      | Partial<Record<WriterStatus, string>>
-      | undefined) ?? {};
+      Partial<Record<WriterStatus, string>> | undefined) ?? {};
 
   const form = useForm<FormData>({
     defaultValues: Object.fromEntries(

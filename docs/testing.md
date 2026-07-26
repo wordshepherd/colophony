@@ -222,9 +222,7 @@ describe("auth plugin", () => {
   beforeAll(async () => {
     app = Fastify({ logger: false });
     await app.register(authPlugin, {
-      env: {
-        /* test env */
-      },
+      env: {/* test env */},
     });
     app.get("/protected", async (request) => ({
       authContext: request.authContext,

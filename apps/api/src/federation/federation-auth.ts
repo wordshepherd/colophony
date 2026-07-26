@@ -89,11 +89,9 @@ export default fp(
       'preHandler',
       async (request: FastifyRequest, reply: FastifyReply) => {
         const signatureHeader = request.headers['signature'] as
-          | string
-          | undefined;
+          string | undefined;
         const signatureInputHeader = request.headers['signature-input'] as
-          | string
-          | undefined;
+          string | undefined;
 
         if (!signatureHeader || !signatureInputHeader) {
           return reply.status(401).send({ error: 'missing_signature' });

@@ -722,10 +722,7 @@ export const transferService = {
           .update(submissions)
           .set({
             // Store enriched manifest as form data for later processing
-            formData: { _transferFiles: enrichedManifest } as Record<
-              string,
-              unknown
-            >,
+            formData: { _transferFiles: enrichedManifest },
           })
           .where(eq(submissions.id, localSubmissionId));
       });
@@ -796,8 +793,7 @@ export const transferService = {
 
     // Verify fileId is in the allowed list
     const allowedFileIds = (claims as Record<string, unknown>).fileIds as
-      | string[]
-      | undefined;
+      string[] | undefined;
     if (!allowedFileIds || !allowedFileIds.includes(fileId)) {
       throw new TransferTokenError('File ID not in transfer allowlist');
     }

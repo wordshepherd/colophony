@@ -885,10 +885,7 @@ export const pipelineService = {
     );
     const genreHint =
       (copyeditData.genreHint as
-        | 'prose'
-        | 'poetry'
-        | 'hybrid'
-        | 'creative_nonfiction') ?? undefined;
+        'prose' | 'poetry' | 'hybrid' | 'creative_nonfiction') ?? undefined;
 
     // 3. Convert .docx → ProseMirror via shared convertFile (includes size check, smart typography, metadata)
     const DOCX_MIME =

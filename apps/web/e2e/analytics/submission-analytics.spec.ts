@@ -80,15 +80,22 @@ test.describe("Submission Analytics Dashboard", () => {
 
     await expect(page.getByText("Submissions Over Time")).toBeVisible();
 
+    // Assert against the select trigger rather than page text: once an option
+    // is chosen, the same label appears BOTH in the trigger and in the option
+    // still mounted in the listbox, so getByText resolves to two elements and
+    // fails Playwright's strict mode. Name the combobox too — the filter bar
+    // above the chart contributes a second one.
+    const granularity = page.getByRole("combobox", { name: "Granularity" });
+
     // Granularity selector defaults to "Monthly"
-    await expect(page.getByText("Monthly")).toBeVisible();
+    await expect(granularity).toHaveText("Monthly");
 
     // Change to Daily
-    await page.getByText("Monthly").click();
+    await granularity.click();
     await page.getByRole("option", { name: "Daily" }).click();
 
     // Verify selector updated
-    await expect(page.getByText("Daily")).toBeVisible();
+    await expect(granularity).toHaveText("Daily");
   });
 
   test("renders Response Time Distribution and Aging Submissions", async ({

@@ -45,7 +45,7 @@ let submissionService: Awaited<
 >['submissionService'];
 
 function adminDb(): ReturnType<typeof drizzle> {
-  return drizzle(getAdminPool()) as ReturnType<typeof drizzle>;
+  return drizzle(getAdminPool());
 }
 
 beforeAll(async () => {

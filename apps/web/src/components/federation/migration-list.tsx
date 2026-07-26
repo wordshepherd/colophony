@@ -56,11 +56,7 @@ const DIRECTION_COLORS: Record<string, string> = {
 };
 
 type Tab =
-  | "all"
-  | "pending_approval"
-  | "in_progress"
-  | "completed"
-  | "cancelled";
+  "all" | "pending_approval" | "in_progress" | "completed" | "cancelled";
 
 export function MigrationList() {
   const router = useRouter();

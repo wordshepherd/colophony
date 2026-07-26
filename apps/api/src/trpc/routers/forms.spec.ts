@@ -222,7 +222,7 @@ describe('forms tRPC router', () => {
         limit: 20,
         totalPages: 1,
       };
-      mockService.list.mockResolvedValueOnce(response as never);
+      mockService.list.mockResolvedValueOnce(response);
 
       const caller = createCaller(orgContext());
       const result = await caller.forms.list({ page: 1, limit: 20 });
@@ -238,7 +238,7 @@ describe('forms tRPC router', () => {
         fields: [makeFormField()],
         pages: [],
       };
-      mockService.getById.mockResolvedValueOnce(form as never);
+      mockService.getById.mockResolvedValueOnce(form);
 
       const caller = createCaller(orgContext());
       const result = await caller.forms.getById({ id: FORM_ID });
@@ -247,7 +247,7 @@ describe('forms tRPC router', () => {
     });
 
     it('maps FormNotFoundError to NOT_FOUND', async () => {
-      mockService.getById.mockResolvedValueOnce(null as never);
+      mockService.getById.mockResolvedValueOnce(null);
 
       const caller = createCaller(orgContext());
       await expect(caller.forms.getById({ id: FORM_ID })).rejects.toThrow(
@@ -263,7 +263,7 @@ describe('forms tRPC router', () => {
   describe('create', () => {
     it('creates a form definition', async () => {
       const form = makeFormDefinition();
-      mockService.createWithAudit.mockResolvedValueOnce(form as never);
+      mockService.createWithAudit.mockResolvedValueOnce(form);
 
       const caller = createCaller(orgContext());
       const result = await caller.forms.create({ name: 'Test Form' });
@@ -282,7 +282,7 @@ describe('forms tRPC router', () => {
   describe('update', () => {
     it('updates a DRAFT form', async () => {
       const updated = makeFormDefinition({ name: 'Updated' });
-      mockService.updateWithAudit.mockResolvedValueOnce(updated as never);
+      mockService.updateWithAudit.mockResolvedValueOnce(updated);
 
       const caller = createCaller(orgContext());
       const result = await caller.forms.update({
@@ -312,7 +312,7 @@ describe('forms tRPC router', () => {
         status: 'PUBLISHED',
         publishedAt: new Date(),
       });
-      mockService.publishWithAudit.mockResolvedValueOnce(published as never);
+      mockService.publishWithAudit.mockResolvedValueOnce(published);
 
       const caller = createCaller(orgContext());
       const result = await caller.forms.publish({ id: FORM_ID });
@@ -339,7 +339,7 @@ describe('forms tRPC router', () => {
         status: 'ARCHIVED',
         archivedAt: new Date(),
       });
-      mockService.archiveWithAudit.mockResolvedValueOnce(archived as never);
+      mockService.archiveWithAudit.mockResolvedValueOnce(archived);
 
       const caller = createCaller(orgContext());
       const result = await caller.forms.archive({ id: FORM_ID });
@@ -357,7 +357,7 @@ describe('forms tRPC router', () => {
         fields: [makeFormField()],
         pages: [],
       };
-      mockService.duplicateWithAudit.mockResolvedValueOnce(duplicated as never);
+      mockService.duplicateWithAudit.mockResolvedValueOnce(duplicated);
 
       const caller = createCaller(orgContext());
       const result = await caller.forms.duplicate({ id: FORM_ID });
@@ -390,7 +390,7 @@ describe('forms tRPC router', () => {
   describe('addField', () => {
     it('adds a field to a draft form', async () => {
       const field = makeFormField();
-      mockService.addFieldWithAudit.mockResolvedValueOnce(field as never);
+      mockService.addFieldWithAudit.mockResolvedValueOnce(field);
 
       const caller = createCaller(orgContext());
       const result = await caller.forms.addField({
@@ -424,7 +424,7 @@ describe('forms tRPC router', () => {
   describe('removeField', () => {
     it('removes a field from a draft form', async () => {
       const field = makeFormField();
-      mockService.removeFieldWithAudit.mockResolvedValueOnce(field as never);
+      mockService.removeFieldWithAudit.mockResolvedValueOnce(field);
 
       const caller = createCaller(orgContext());
       const result = await caller.forms.removeField({

@@ -2350,11 +2350,7 @@ export interface operations {
                * @enum {unknown}
                */
               scanStatus:
-                | "PENDING"
-                | "SCANNING"
-                | "CLEAN"
-                | "INFECTED"
-                | "FAILED";
+                "PENDING" | "SCANNING" | "CLEAN" | "INFECTED" | "FAILED";
               /** @description When the virus scan completed */
               scannedAt: string | null;
               /**
@@ -3152,11 +3148,7 @@ export interface operations {
                  * @enum {unknown}
                  */
                 scanStatus:
-                  | "PENDING"
-                  | "SCANNING"
-                  | "CLEAN"
-                  | "INFECTED"
-                  | "FAILED";
+                  "PENDING" | "SCANNING" | "CLEAN" | "INFECTED" | "FAILED";
                 /** @description When the virus scan completed */
                 scannedAt: string | null;
                 /**
@@ -3431,11 +3423,7 @@ export interface operations {
              * @enum {unknown}
              */
             scanStatus:
-              | "PENDING"
-              | "SCANNING"
-              | "CLEAN"
-              | "INFECTED"
-              | "FAILED";
+              "PENDING" | "SCANNING" | "CLEAN" | "INFECTED" | "FAILED";
             /** @description When the virus scan completed */
             scannedAt: string | null;
             /**
@@ -8109,11 +8097,7 @@ export interface operations {
                * @enum {unknown}
                */
               status:
-                | "PLANNING"
-                | "ASSEMBLING"
-                | "READY"
-                | "PUBLISHED"
-                | "ARCHIVED";
+                "PLANNING" | "ASSEMBLING" | "READY" | "PUBLISHED" | "ARCHIVED";
               /** @description Scheduled publication date */
               publicationDate: string | null;
               /** @description Actual publish timestamp */
@@ -8220,11 +8204,7 @@ export interface operations {
              * @enum {unknown}
              */
             status:
-              | "PLANNING"
-              | "ASSEMBLING"
-              | "READY"
-              | "PUBLISHED"
-              | "ARCHIVED";
+              "PLANNING" | "ASSEMBLING" | "READY" | "PUBLISHED" | "ARCHIVED";
             /** @description Scheduled publication date */
             publicationDate: string | null;
             /** @description Actual publish timestamp */
@@ -8296,11 +8276,7 @@ export interface operations {
              * @enum {unknown}
              */
             status:
-              | "PLANNING"
-              | "ASSEMBLING"
-              | "READY"
-              | "PUBLISHED"
-              | "ARCHIVED";
+              "PLANNING" | "ASSEMBLING" | "READY" | "PUBLISHED" | "ARCHIVED";
             /** @description Scheduled publication date */
             publicationDate: string | null;
             /** @description Actual publish timestamp */
@@ -8389,11 +8365,7 @@ export interface operations {
              * @enum {unknown}
              */
             status:
-              | "PLANNING"
-              | "ASSEMBLING"
-              | "READY"
-              | "PUBLISHED"
-              | "ARCHIVED";
+              "PLANNING" | "ASSEMBLING" | "READY" | "PUBLISHED" | "ARCHIVED";
             /** @description Scheduled publication date */
             publicationDate: string | null;
             /** @description Actual publish timestamp */
@@ -8675,11 +8647,7 @@ export interface operations {
              * @enum {unknown}
              */
             status:
-              | "PLANNING"
-              | "ASSEMBLING"
-              | "READY"
-              | "PUBLISHED"
-              | "ARCHIVED";
+              "PLANNING" | "ASSEMBLING" | "READY" | "PUBLISHED" | "ARCHIVED";
             /** @description Scheduled publication date */
             publicationDate: string | null;
             /** @description Actual publish timestamp */
@@ -8755,11 +8723,7 @@ export interface operations {
              * @enum {unknown}
              */
             status:
-              | "PLANNING"
-              | "ASSEMBLING"
-              | "READY"
-              | "PUBLISHED"
-              | "ARCHIVED";
+              "PLANNING" | "ASSEMBLING" | "READY" | "PUBLISHED" | "ARCHIVED";
             /** @description Scheduled publication date */
             publicationDate: string | null;
             /** @description Actual publish timestamp */

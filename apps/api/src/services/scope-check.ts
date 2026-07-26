@@ -1,8 +1,7 @@
 import type { AuthContext, ApiKeyScope } from '@colophony/types';
 
 export type ScopeCheckResult =
-  | { allowed: true }
-  | { allowed: false; missing: ApiKeyScope[] };
+  { allowed: true } | { allowed: false; missing: ApiKeyScope[] };
 
 /**
  * Check whether the current auth context satisfies the required API key scopes.

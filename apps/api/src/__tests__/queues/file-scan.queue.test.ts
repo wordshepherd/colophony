@@ -108,7 +108,7 @@ describe('file-scan queue integration', () => {
     const version = await createManuscriptVersion(manuscript.id);
     const storageKey = `uploads/${Date.now()}/test.pdf`;
     const file = await createFile(version.id, {
-      scanStatus: 'PENDING' as any,
+      scanStatus: 'PENDING',
       storageKey,
     });
 
@@ -155,7 +155,7 @@ describe('file-scan queue integration', () => {
     const version = await createManuscriptVersion(manuscript.id);
     const storageKey = `uploads/${Date.now()}/infected.pdf`;
     const file = await createFile(version.id, {
-      scanStatus: 'PENDING' as any,
+      scanStatus: 'PENDING',
       storageKey,
     });
 
@@ -200,7 +200,7 @@ describe('file-scan queue integration', () => {
     const version = await createManuscriptVersion(manuscript.id);
     const storageKey = `uploads/${Date.now()}/error.pdf`;
     const file = await createFile(version.id, {
-      scanStatus: 'PENDING' as any,
+      scanStatus: 'PENDING',
       storageKey,
     });
 
@@ -239,7 +239,7 @@ describe('file-scan queue integration', () => {
     const version = await createManuscriptVersion(manuscript.id);
     const storageKey = `uploads/${Date.now()}/dedup.pdf`;
     const file = await createFile(version.id, {
-      scanStatus: 'PENDING' as any,
+      scanStatus: 'PENDING',
       storageKey,
     });
 

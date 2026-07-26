@@ -42,7 +42,7 @@ export function createCheckoutCompletedEvent(
         },
       } as unknown as Stripe.Checkout.Session,
     },
-  } as Stripe.Event;
+  };
 }
 
 export function createCheckoutExpiredEvent(
@@ -76,7 +76,7 @@ export function createCheckoutExpiredEvent(
         },
       } as unknown as Stripe.Checkout.Session,
     },
-  } as Stripe.Event;
+  };
 }
 
 export function createInvalidMetadataEvent(
@@ -107,5 +107,5 @@ export function createInvalidMetadataEvent(
         },
       } as unknown as Stripe.Checkout.Session,
     },
-  } as Stripe.Event;
+  };
 }

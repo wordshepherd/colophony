@@ -148,8 +148,7 @@ export async function registerDocumensoWebhooks(
       }
 
       const signature = request.headers['x-documenso-signature'] as
-        | string
-        | undefined;
+        string | undefined;
 
       if (!signature) {
         request.log.warn('Missing x-documenso-signature header');

@@ -40,8 +40,7 @@ const fakeAuthPlugin = fp(
     app.decorateRequest('authContext', null);
     app.addHook('onRequest', async (request) => {
       const testUserId = request.headers['x-test-user-id'] as
-        | string
-        | undefined;
+        string | undefined;
       if (testUserId) {
         request.authContext = {
           userId: testUserId,
@@ -115,7 +114,7 @@ async function buildApp(
   const env = { ...testEnv, ...envOverrides };
 
   // Register both rate limit plugins with auth in between (mirrors main.ts order)
-  await app.register(rateLimitPlugin, { env, redis: redis as never });
+  await app.register(rateLimitPlugin, { env, redis: redis });
   await app.register(fakeAuthPlugin);
   await app.register(rateLimitAuthPlugin, { env });
 
@@ -294,7 +293,7 @@ describe('rate-limit-auth plugin (second-pass)', () => {
 
       await app.register(rateLimitPlugin, {
         env: testEnv,
-        redis: redis as never,
+        redis: redis,
       });
       await app.register(fakeAuthPlugin);
       await app.register(rateLimitAuthPlugin, { env: testEnv });

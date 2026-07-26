@@ -63,8 +63,7 @@ type NotificationChannel = "email" | "in_app";
 
 function deriveEnabled(
   preferences:
-    | Array<{ eventType: string; channel: string; enabled: boolean }>
-    | undefined,
+    Array<{ eventType: string; channel: string; enabled: boolean }> | undefined,
   eventType: NotificationEventType,
   channel: NotificationChannel,
 ): boolean {
@@ -196,8 +195,7 @@ function EventGroup({
   title: string;
   events: EventConfig[];
   preferences:
-    | Array<{ eventType: string; channel: string; enabled: boolean }>
-    | undefined;
+    Array<{ eventType: string; channel: string; enabled: boolean }> | undefined;
   onToggle: (
     eventType: NotificationEventType,
     channel: NotificationChannel,

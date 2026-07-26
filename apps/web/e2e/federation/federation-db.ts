@@ -65,11 +65,7 @@ export async function createTrustedPeer(data: {
   orgId: string;
   domain: string;
   status:
-    | "pending_outbound"
-    | "pending_inbound"
-    | "active"
-    | "rejected"
-    | "revoked";
+    "pending_outbound" | "pending_inbound" | "active" | "rejected" | "revoked";
   capabilities?: Record<string, boolean>;
   initiatedBy?: "local" | "remote";
 }): Promise<{ id: string; domain: string }> {

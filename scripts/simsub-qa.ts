@@ -794,8 +794,7 @@ async function main(): Promise<void> {
       const data = (body.data ?? body) as Record<string, unknown>;
       const localConflicts = data?.conflicts as unknown[] | undefined;
       const remoteResults = data?.remoteResults as
-        | Array<Record<string, unknown>>
-        | undefined;
+        Array<Record<string, unknown>> | undefined;
 
       // Aggregate: local conflicts + remote conflicts
       const allConflicts = [

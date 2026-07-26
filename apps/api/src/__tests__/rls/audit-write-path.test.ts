@@ -143,7 +143,7 @@ describe('logDirect() auth failure write path', () => {
         action: AuditActions.AUTH_TOKEN_INVALID,
         resource: AuditResources.AUTH,
         organizationId: orgA.id,
-      } as AuthAuditParams),
+      }),
     ).rejects.toThrow('logDirect must not include organizationId');
 
     // Verify nothing was written

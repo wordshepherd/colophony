@@ -97,7 +97,7 @@ describe('content-extract queue integration', () => {
     const file = await createFile(version.id, {
       mimeType: 'text/plain',
       filename: 'story.txt',
-      scanStatus: 'CLEAN' as any,
+      scanStatus: 'CLEAN',
     });
 
     mockStorage.downloadFromBucket.mockResolvedValue(
@@ -140,7 +140,7 @@ describe('content-extract queue integration', () => {
     const file = await createFile(version.id, {
       mimeType: 'image/png',
       filename: 'photo.png',
-      scanStatus: 'CLEAN' as any,
+      scanStatus: 'CLEAN',
     });
 
     mockStorage.downloadFromBucket.mockResolvedValue(
@@ -176,12 +176,12 @@ describe('content-extract queue integration', () => {
     const file1 = await createFile(version.id, {
       mimeType: 'text/plain',
       filename: 'poem1.txt',
-      scanStatus: 'CLEAN' as any,
+      scanStatus: 'CLEAN',
     });
     const file2 = await createFile(version.id, {
       mimeType: 'text/plain',
       filename: 'poem2.txt',
-      scanStatus: 'CLEAN' as any,
+      scanStatus: 'CLEAN',
     });
 
     // Mock S3: return different content per storage key
@@ -226,7 +226,7 @@ describe('content-extract queue integration', () => {
     const file = await createFile(version.id, {
       mimeType: 'text/plain',
       filename: 'quotes.txt',
-      scanStatus: 'CLEAN' as any,
+      scanStatus: 'CLEAN',
     });
 
     mockStorage.downloadFromBucket.mockResolvedValue(
@@ -274,7 +274,7 @@ describe('content-extract queue integration', () => {
     const file = await createFile(version.id, {
       mimeType: 'text/plain',
       filename: 'story.txt',
-      scanStatus: 'CLEAN' as any,
+      scanStatus: 'CLEAN',
     });
 
     mockStorage.downloadFromBucket.mockRejectedValue(

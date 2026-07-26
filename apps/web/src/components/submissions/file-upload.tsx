@@ -222,8 +222,7 @@ export function FileUpload({
         enabled: !!manuscriptVersionId,
         refetchInterval: (query) => {
           const files = query.state.data as
-            | Array<{ scanStatus: ScanStatus }>
-            | undefined;
+            Array<{ scanStatus: ScanStatus }> | undefined;
           const hasPending = files?.some(
             (f) => f.scanStatus === "PENDING" || f.scanStatus === "SCANNING",
           );

@@ -272,8 +272,7 @@ export function isBranchActive(
   // Find the source field whose config.branching.branches contains this branchId
   let sourceField: BranchableField | undefined;
   let matchedBranch:
-    | { id: string; name: string; optionValues: string[] }
-    | undefined;
+    { id: string; name: string; optionValues: string[] } | undefined;
 
   for (const field of fields) {
     const branching = extractBranchingConfig(field.config);

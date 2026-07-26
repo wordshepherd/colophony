@@ -20,12 +20,7 @@ import { ResponseTimeDisplay } from "./response-time-display";
 import { Loader2 } from "lucide-react";
 
 type EmbedStep =
-  | "loading"
-  | "identity"
-  | "form"
-  | "submitting"
-  | "success"
-  | "error";
+  "loading" | "identity" | "form" | "submitting" | "success" | "error";
 
 interface EmbedState {
   step: EmbedStep;

@@ -173,7 +173,7 @@ describe('submissionService access-aware methods', () => {
 
     it('throws SubmissionNotFoundError when not found', async () => {
       // eslint-disable-next-line @typescript-eslint/unbound-method
-      vi.mocked(submissionService.getById).mockResolvedValueOnce(null as never);
+      vi.mocked(submissionService.getById).mockResolvedValueOnce(null);
 
       const svc = makeSvc();
       await expect(
@@ -237,7 +237,7 @@ describe('submissionService access-aware methods', () => {
 
     it('throws SubmissionNotFoundError when not found', async () => {
       // eslint-disable-next-line @typescript-eslint/unbound-method
-      vi.mocked(submissionService.getById).mockResolvedValueOnce(null as never);
+      vi.mocked(submissionService.getById).mockResolvedValueOnce(null);
 
       const svc = makeSvc();
       await expect(
@@ -350,7 +350,7 @@ describe('submissionService access-aware methods', () => {
       const result = await submissionService.updateStatusAsEditor(
         svc,
         SUBMISSION_ID,
-        'UNDER_REVIEW' as never,
+        'UNDER_REVIEW',
         undefined,
       );
 
@@ -366,7 +366,7 @@ describe('submissionService access-aware methods', () => {
         submissionService.updateStatusAsEditor(
           svc,
           SUBMISSION_ID,
-          'UNDER_REVIEW' as never,
+          'UNDER_REVIEW',
           undefined,
         ),
       ).rejects.toThrow(ForbiddenError);
@@ -385,7 +385,7 @@ describe('submissionService access-aware methods', () => {
         submissionService.updateStatusAsEditor(
           svc,
           SUBMISSION_ID,
-          'REVISE_AND_RESUBMIT' as never,
+          'REVISE_AND_RESUBMIT',
           undefined,
         ),
       ).rejects.toThrow(MissingRevisionNotesError);
@@ -402,7 +402,7 @@ describe('submissionService access-aware methods', () => {
         submissionService.updateStatusAsEditor(
           svc,
           SUBMISSION_ID,
-          'REVISE_AND_RESUBMIT' as never,
+          'REVISE_AND_RESUBMIT',
           '   ',
         ),
       ).rejects.toThrow(MissingRevisionNotesError);
@@ -424,7 +424,7 @@ describe('submissionService access-aware methods', () => {
       const result = await submissionService.updateStatusAsEditor(
         svc,
         SUBMISSION_ID,
-        'REVISE_AND_RESUBMIT' as never,
+        'REVISE_AND_RESUBMIT',
         'Please revise the opening stanza',
       );
 
@@ -485,7 +485,7 @@ describe('submissionService access-aware methods', () => {
 
     it('throws SubmissionNotFoundError when not found', async () => {
       // eslint-disable-next-line @typescript-eslint/unbound-method
-      vi.mocked(submissionService.getById).mockResolvedValueOnce(null as never);
+      vi.mocked(submissionService.getById).mockResolvedValueOnce(null);
 
       const svc = makeSvc();
       await expect(
@@ -524,7 +524,7 @@ describe('submissionService access-aware methods', () => {
 
     it('throws SubmissionNotFoundError when submission does not exist', async () => {
       // eslint-disable-next-line @typescript-eslint/unbound-method
-      vi.mocked(submissionService.getById).mockResolvedValueOnce(null as never);
+      vi.mocked(submissionService.getById).mockResolvedValueOnce(null);
 
       await expect(
         submissionService.getByIdAsOwner({} as never, SUBMISSION_ID, 'user-1'),

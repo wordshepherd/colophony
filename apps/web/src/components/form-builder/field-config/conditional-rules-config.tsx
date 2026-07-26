@@ -143,8 +143,7 @@ function getFieldOptions(
 ): Array<{ label: string; value: string }> | null {
   const config = field.config as Record<string, unknown> | null;
   const options = config?.options as
-    | Array<{ label: string; value: string }>
-    | undefined;
+    Array<{ label: string; value: string }> | undefined;
   if (options && options.length > 0) return options;
   return null;
 }

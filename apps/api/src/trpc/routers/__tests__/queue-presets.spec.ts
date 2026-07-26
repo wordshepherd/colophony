@@ -59,13 +59,13 @@ vi.mock('../../error-mapper.js', async () => {
       if (e instanceof PresetLimitExceededError) {
         throw new TRPCError({
           code: 'BAD_REQUEST',
-          message: (e as Error).message,
+          message: e.message,
         });
       }
       if (e instanceof PresetNotFoundError) {
         throw new TRPCError({
           code: 'NOT_FOUND',
-          message: (e as Error).message,
+          message: e.message,
         });
       }
       throw e;

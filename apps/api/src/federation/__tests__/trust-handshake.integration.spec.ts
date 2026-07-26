@@ -87,7 +87,7 @@ function createStatefulMockDb() {
           // Update the first matching peer
           for (const [id, row] of peers) {
             const updated = { ...row, ...updates, updatedAt: new Date() };
-            peers.set(id, updated as PeerRow);
+            peers.set(id, updated);
             return {
               returning: vi.fn().mockReturnValue([updated]),
             };

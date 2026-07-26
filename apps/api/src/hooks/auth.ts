@@ -202,11 +202,9 @@ export default fp(
         // Test mode: allow injection via headers when no JWKS verifier
         if (isTest && !verifyToken) {
           const testUserId = request.headers['x-test-user-id'] as
-            | string
-            | undefined;
+            string | undefined;
           const testEmail = request.headers['x-test-email'] as
-            | string
-            | undefined;
+            string | undefined;
 
           if (testUserId) {
             request.authContext = {
@@ -230,8 +228,7 @@ export default fp(
         // Demo mode: allow demo user injection via header (gated behind DEMO_MODE env var)
         if (env.DEMO_MODE) {
           const demoUserId = request.headers['x-demo-user-id'] as
-            | string
-            | undefined;
+            string | undefined;
           if (demoUserId) {
             const allowedIds = (env.DEMO_USER_IDS || '')
               .split(',')
@@ -269,8 +266,7 @@ export default fp(
         if (!authHeader) {
           // Check for API key before rejecting
           const apiKeyHeader = request.headers['x-api-key'] as
-            | string
-            | undefined;
+            string | undefined;
           if (apiKeyHeader) {
             const result = await apiKeyService.verifyKey(apiKeyHeader);
             if (!result) {

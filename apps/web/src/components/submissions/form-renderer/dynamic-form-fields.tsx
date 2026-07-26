@@ -33,8 +33,7 @@ export function DynamicFormFields({
   // Must call hooks before any early returns (rules of hooks)
   const formCtx = useFormContext();
   const watchedFormData = formCtx?.watch("formData") as
-    | Record<string, unknown>
-    | undefined;
+    Record<string, unknown> | undefined;
 
   if (isPending) {
     return (

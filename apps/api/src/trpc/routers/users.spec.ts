@@ -104,11 +104,7 @@ describe('users tRPC router', () => {
         {
           organizationId: ORG_ID,
           roles: ['ADMIN'] as (
-            | 'ADMIN'
-            | 'EDITOR'
-            | 'READER'
-            | 'PRODUCTION'
-            | 'BUSINESS_OPS'
+            'ADMIN' | 'EDITOR' | 'READER' | 'PRODUCTION' | 'BUSINESS_OPS'
           )[],
           name: 'Test Org',
           slug: 'test-org',

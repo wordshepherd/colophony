@@ -239,7 +239,7 @@ describe('periodService', () => {
 
     it('throws PeriodNotFoundError when missing', async () => {
       const ctx = makeServiceContext();
-      vi.spyOn(periodService, 'update').mockResolvedValueOnce(null as never);
+      vi.spyOn(periodService, 'update').mockResolvedValueOnce(null);
 
       await expect(
         periodService.updateWithAudit(ctx, 'nonexistent', { name: 'X' }),
@@ -282,7 +282,7 @@ describe('periodService', () => {
 
     it('throws PeriodNotFoundError when period missing', async () => {
       const ctx = makeServiceContext();
-      vi.spyOn(periodService, 'delete').mockResolvedValueOnce(null as never);
+      vi.spyOn(periodService, 'delete').mockResolvedValueOnce(null);
 
       await expect(
         periodService.deleteWithAudit(ctx, 'nonexistent'),

@@ -515,8 +515,7 @@ export interface FormAuditParams extends BaseAuditParams {
 export interface PaymentAuditParams extends BaseAuditParams {
   resource: typeof AuditResources.PAYMENT;
   action:
-    | typeof AuditActions.PAYMENT_SUCCEEDED
-    | typeof AuditActions.PAYMENT_EXPIRED;
+    typeof AuditActions.PAYMENT_SUCCEEDED | typeof AuditActions.PAYMENT_EXPIRED;
 }
 
 export interface EmbedTokenAuditParams extends BaseAuditParams {

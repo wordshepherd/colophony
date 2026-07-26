@@ -32,14 +32,11 @@ vi.mock('../../config/logger.js', () => ({
   }),
 }));
 
-const mockRenderEmailTemplate = vi.fn(
-  (_name: unknown, _data: unknown) =>
-    ({
-      html: '<p>Hello</p>',
-      text: 'Hello',
-      subject: 'Test Subject',
-    }) as { html: string; text: string; subject: string },
-);
+const mockRenderEmailTemplate = vi.fn((_name: unknown, _data: unknown) => ({
+  html: '<p>Hello</p>',
+  text: 'Hello',
+  subject: 'Test Subject',
+}));
 const mockGetActiveTemplate = vi.fn();
 vi.mock('../../services/email-template.service.js', () => ({
   emailTemplateService: {

@@ -135,7 +135,7 @@ describe('audit REST router', () => {
         limit: 20,
         totalPages: 1,
       };
-      mockService.list.mockResolvedValueOnce(response as never);
+      mockService.list.mockResolvedValueOnce(response);
 
       const ctx = adminContext();
       const call = client(auditRouter.list, ctx);
@@ -156,7 +156,7 @@ describe('audit REST router', () => {
         page: 1,
         limit: 10,
         totalPages: 0,
-      } as never);
+      });
 
       const call = client(auditRouter.list, adminContext());
       await call({
@@ -198,7 +198,7 @@ describe('audit REST router', () => {
         route: null,
         createdAt: new Date(),
       };
-      mockService.getById.mockResolvedValueOnce(event as never);
+      mockService.getById.mockResolvedValueOnce(event);
 
       const ctx = adminContext();
       const call = client(auditRouter.getById, ctx);
@@ -215,7 +215,7 @@ describe('audit REST router', () => {
     });
 
     it('throws NOT_FOUND when event does not exist', async () => {
-      mockService.getById.mockResolvedValueOnce(null as never);
+      mockService.getById.mockResolvedValueOnce(null);
 
       const call = client(auditRouter.getById, adminContext());
       await expect(call({ id: EVENT_ID })).rejects.toThrow(
@@ -265,7 +265,7 @@ describe('audit REST router', () => {
         limit: 20,
         totalPages: 0,
       };
-      mockService.list.mockResolvedValueOnce(response as never);
+      mockService.list.mockResolvedValueOnce(response);
 
       const ctx = apiKeyContext(['audit:read']);
       const call = client(auditRouter.list, ctx);
