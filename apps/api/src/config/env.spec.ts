@@ -183,4 +183,41 @@ describe('validateEnv', () => {
     });
     expect(envFalse.FEDERATION_ENABLED).toBe(false);
   });
+
+  // These four vars use `.optional().transform(...).pipe(z.string()....optional())`
+  // to treat an empty string the same as an unset variable — deployment tooling
+  // frequently writes `VAR=` rather than omitting the line. Dropping `.optional()`
+  // from the OUTER string makes the whole chain reject `undefined`, which takes
+  // down every environment that legitimately leaves these unset.
+  describe.each([
+    ['ZITADEL_AUTHORITY', 'https://auth.example.com', 'not-a-url'],
+    ['DOCUMENSO_API_URL', 'https://sign.example.com', 'not-a-url'],
+    ['SENTRY_DSN', 'https://abc@sentry.example.com/1', 'not-a-url'],
+    ['FEDERATION_CONTACT', 'editor@example.com', 'not-an-email'],
+  ])('optional env var %s', (key, valid, invalid) => {
+    it('is undefined when unset', () => {
+      const env = validateEnv(validBase) as Record<string, unknown>;
+      expect(env[key]).toBeUndefined();
+    });
+
+    it('treats an empty string as unset', () => {
+      const env = validateEnv({ ...validBase, [key]: '' }) as Record<
+        string,
+        unknown
+      >;
+      expect(env[key]).toBeUndefined();
+    });
+
+    it('accepts a well-formed value', () => {
+      const env = validateEnv({ ...validBase, [key]: valid }) as Record<
+        string,
+        unknown
+      >;
+      expect(env[key]).toBe(valid);
+    });
+
+    it('rejects a malformed value', () => {
+      expect(() => validateEnv({ ...validBase, [key]: invalid })).toThrow();
+    });
+  });
 });

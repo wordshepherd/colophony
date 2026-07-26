@@ -56,13 +56,13 @@ export function startEmailWorker(
 
         if (customTemplate) {
           const orgNameVal = templateData.orgName ?? '';
-          rendered = renderCustomTemplate(
+          rendered = await renderCustomTemplate(
             customTemplate,
             templateData,
             String(orgNameVal),
           );
         } else {
-          rendered = renderEmailTemplate(
+          rendered = await renderEmailTemplate(
             templateName as TemplateName,
             templateData,
           );

@@ -3,9 +3,9 @@ import { renderEmailTemplate, renderMjml } from '../render.js';
 import type { TemplateName } from '../types.js';
 
 describe('renderMjml', () => {
-  it('converts MJML to HTML', () => {
+  it('converts MJML to HTML', async () => {
     const mjml = `<mjml><mj-body><mj-section><mj-column><mj-text>Hello</mj-text></mj-column></mj-section></mj-body></mjml>`;
-    const result = renderMjml(mjml);
+    const result = await renderMjml(mjml);
     expect(result.html).toContain('Hello');
     expect(result.html).toContain('<!doctype html>');
   });
@@ -81,8 +81,8 @@ describe('renderEmailTemplate', () => {
   ];
 
   for (const { name, data } of templates) {
-    it(`renders ${name} template with html, text, and subject`, () => {
-      const result = renderEmailTemplate(name, data);
+    it(`renders ${name} template with html, text, and subject`, async () => {
+      const result = await renderEmailTemplate(name, data);
       expect(result.html).toBeTruthy();
       expect(result.html).toContain('<!doctype html>');
       expect(result.text).toBeTruthy();
@@ -90,10 +90,10 @@ describe('renderEmailTemplate', () => {
     });
   }
 
-  it('throws for unknown template', () => {
-    expect(() =>
+  it('rejects for unknown template', async () => {
+    await expect(
       renderEmailTemplate('nonexistent' as TemplateName, {}),
-    ).toThrow('Unknown email template');
+    ).rejects.toThrow('Unknown email template');
   });
 
   describe('submission-rejected with reader feedback', () => {
@@ -104,14 +104,14 @@ describe('renderEmailTemplate', () => {
       orgName: 'Test Lit Mag',
     };
 
-    it('does not include feedback section when no feedback provided', () => {
-      const result = renderEmailTemplate('submission-rejected', baseData);
+    it('does not include feedback section when no feedback provided', async () => {
+      const result = await renderEmailTemplate('submission-rejected', baseData);
       expect(result.text).not.toContain('Reader feedback');
       expect(result.html).not.toContain('Reader feedback');
     });
 
-    it('includes feedback section when readerFeedback is present', () => {
-      const result = renderEmailTemplate('submission-rejected', {
+    it('includes feedback section when readerFeedback is present', async () => {
+      const result = await renderEmailTemplate('submission-rejected', {
         ...baseData,
         readerFeedback: [
           { tags: ['engaging', 'well-written'], comment: 'Great pacing' },
@@ -131,8 +131,8 @@ describe('renderEmailTemplate', () => {
       expect(result.html).toContain('Great pacing');
     });
 
-    it('escapes HTML in feedback tags and comments', () => {
-      const result = renderEmailTemplate('submission-rejected', {
+    it('escapes HTML in feedback tags and comments', async () => {
+      const result = await renderEmailTemplate('submission-rejected', {
         ...baseData,
         readerFeedback: [
           {

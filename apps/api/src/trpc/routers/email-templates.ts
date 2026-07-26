@@ -128,7 +128,7 @@ export const emailTemplatesRouter = createRouter({
     .output(emailTemplatePreviewSchema)
     .mutation(async ({ input }) => {
       const sampleData = TEMPLATE_SAMPLE_DATA[input.templateName];
-      const rendered = renderCustomTemplate(
+      const rendered = await renderCustomTemplate(
         {
           subjectTemplate: input.subjectTemplate,
           bodyHtml: input.bodyHtml,
