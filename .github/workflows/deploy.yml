@@ -90,7 +90,10 @@ jobs:
       - name: Build all packages
         run: pnpm build
         env:
-          NEXT_PUBLIC_API_URL: placeholder
+          # This job is a build gate — it uploads no artifacts. Servers rebuild
+          # via `docker compose build` with real values from .env.staging/.env.prod.
+          # The value only has to satisfy the URL validation in apps/web/src/env.ts.
+          NEXT_PUBLIC_API_URL: https://placeholder.invalid
 
   # ──────────────────────────────────────────────────
   # Deploy to staging via SSH + Docker Compose
