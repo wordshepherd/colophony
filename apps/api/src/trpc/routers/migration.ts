@@ -3,13 +3,13 @@ import {
   migrationListQuerySchema,
   requestMigrationInputSchema,
 } from '@colophony/types';
-import { authedProcedure, createRouter } from '../init.js';
+import { internalAuthedProcedure, createRouter } from '../init.js';
 import { mapServiceError } from '../error-mapper.js';
 import { migrationService } from '../../services/migration.service.js';
 import { validateEnv } from '../../config/env.js';
 
 export const migrationRouter = createRouter({
-  list: authedProcedure
+  list: internalAuthedProcedure
     .input(migrationListQuerySchema)
     .query(async ({ ctx, input }) => {
       try {
@@ -20,7 +20,7 @@ export const migrationRouter = createRouter({
       }
     }),
 
-  getById: authedProcedure
+  getById: internalAuthedProcedure
     .input(z.object({ id: z.string().uuid() }))
     .query(async ({ ctx, input }) => {
       try {
@@ -31,7 +31,7 @@ export const migrationRouter = createRouter({
       }
     }),
 
-  listPending: authedProcedure.query(async ({ ctx }) => {
+  listPending: internalAuthedProcedure.query(async ({ ctx }) => {
     try {
       const userId = ctx.authContext.userId;
       return await migrationService.getPendingApprovalForUser(userId);
@@ -40,7 +40,7 @@ export const migrationRouter = createRouter({
     }
   }),
 
-  request: authedProcedure
+  request: internalAuthedProcedure
     .input(requestMigrationInputSchema)
     .mutation(async ({ ctx, input }) => {
       try {
@@ -57,7 +57,7 @@ export const migrationRouter = createRouter({
       }
     }),
 
-  approve: authedProcedure
+  approve: internalAuthedProcedure
     .input(z.object({ id: z.string().uuid() }))
     .mutation(async ({ ctx, input }) => {
       try {
@@ -73,7 +73,7 @@ export const migrationRouter = createRouter({
       }
     }),
 
-  reject: authedProcedure
+  reject: internalAuthedProcedure
     .input(z.object({ id: z.string().uuid() }))
     .mutation(async ({ ctx, input }) => {
       try {
@@ -89,7 +89,7 @@ export const migrationRouter = createRouter({
       }
     }),
 
-  cancel: authedProcedure
+  cancel: internalAuthedProcedure
     .input(z.object({ id: z.string().uuid() }))
     .mutation(async ({ ctx, input }) => {
       try {

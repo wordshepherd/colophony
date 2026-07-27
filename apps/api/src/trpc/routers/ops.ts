@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { sql, eq, gte, lt, and, count, isNotNull } from 'drizzle-orm';
 import { db, submissions } from '@colophony/db';
-import { adminProcedure, createRouter } from '../init.js';
+import { internalAdminProcedure, createRouter } from '../init.js';
 import { validateEnv } from '../../config/env.js';
 import {
   getEmailQueueInstance,
@@ -70,7 +70,7 @@ export const opsRouter = createRouter({
    * Queue health — job counts for all 7 BullMQ queues.
    * Reads from Redis (not tenant-scoped), so no RLS needed.
    */
-  queueHealth: adminProcedure
+  queueHealth: internalAdminProcedure
     .output(queueHealthOutputSchema)
     .query(async () => {
       const queues = await Promise.all(
@@ -106,7 +106,7 @@ export const opsRouter = createRouter({
    * Webhook provider health — freshness status for Zitadel, Stripe, Documenso.
    * Uses admin pool (system tables, no RLS).
    */
-  webhookProviderHealth: adminProcedure
+  webhookProviderHealth: internalAdminProcedure
     .output(webhookProviderHealthOutputSchema)
     .query(async () => {
       const env = validateEnv();
@@ -164,7 +164,7 @@ export const opsRouter = createRouter({
    * Submission trend — this month vs last month, org-scoped.
    * Uses ctx.dbTx (RLS) + explicit organizationId filter (defense-in-depth).
    */
-  submissionTrend: adminProcedure
+  submissionTrend: internalAdminProcedure
     .output(submissionTrendOutputSchema)
     .query(async ({ ctx }) => {
       const now = new Date();

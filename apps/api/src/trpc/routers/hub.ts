@@ -1,12 +1,12 @@
 import { z } from 'zod';
 import { hubInstanceListQuerySchema } from '@colophony/types';
-import { adminProcedure, createRouter } from '../init.js';
+import { internalAdminProcedure, createRouter } from '../init.js';
 import { mapServiceError } from '../error-mapper.js';
 import { hubService } from '../../services/hub.service.js';
 import { validateEnv } from '../../config/env.js';
 
 export const hubRouter = createRouter({
-  listInstances: adminProcedure
+  listInstances: internalAdminProcedure
     .input(hubInstanceListQuerySchema.optional())
     .query(async ({ input }) => {
       try {
@@ -18,7 +18,7 @@ export const hubRouter = createRouter({
       }
     }),
 
-  getInstanceById: adminProcedure
+  getInstanceById: internalAdminProcedure
     .input(z.object({ id: z.string().uuid() }))
     .query(async ({ input }) => {
       try {
@@ -30,7 +30,7 @@ export const hubRouter = createRouter({
       }
     }),
 
-  suspendInstance: adminProcedure
+  suspendInstance: internalAdminProcedure
     .input(z.object({ id: z.string().uuid() }))
     .mutation(async ({ ctx, input }) => {
       try {
@@ -44,7 +44,7 @@ export const hubRouter = createRouter({
       }
     }),
 
-  revokeInstance: adminProcedure
+  revokeInstance: internalAdminProcedure
     .input(z.object({ id: z.string().uuid() }))
     .mutation(async ({ ctx, input }) => {
       try {

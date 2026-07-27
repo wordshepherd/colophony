@@ -100,8 +100,8 @@ Ordered as the design doc's Phase 0/D.
 - [ ] **[P0] tRPC is reachable by API keys, and 10 routers enforce no scopes.** Nothing
       restricts `X-Api-Key` to the REST surface, and `requireScopes` is opt-in per procedure.
       `federation`, `gdpr`, `hub`, `migration`, `notification-preferences`, `notifications`,
-      `ops`, `simsub`, `transfer`, `webhooks` call it zero times — so a key scoped
-      `manuscripts:read` can call `webhooks.rotateSecret`, `federation.updateConfig`,
+      `ops`, `simsub`, `transfer`, `webhooks` called it zero times — so a key scoped
+      `manuscripts:read` could call `webhooks.rotateSecret`, `federation.updateConfig`,
       `hub.revokeInstance`, `simsub.grantOverride`. Fix has **two halves, both P0**:
       (1) `internalOnly` middleware as an **allowlist** of interactive auth methods
       (`oidc`/`demo`/`test`), never a denylist of `apikey`, applied to the seven
@@ -110,6 +110,18 @@ Ordered as the design doc's Phase 0/D.
       `notification-preferences`, and `webhooks` are unscoped but _not_ internal-only.
       Shipping only (1) narrows the bypass rather than closing it. —
       (design doc §0.1(e), §1.6 M1, P0.1/P0.1b/P0.5)
+  - [x] **P0.1** — `internalOnly` allowlist + `internalAdminProcedure` /
+        `internalAuthedProcedure` applied to all 29 procedures across the seven internal
+        routers. Log-only behind `TRPC_INTERNAL_ONLY_ENFORCE` (default `false`), emitting
+        `API_KEY_INTERNAL_ROUTE` audit events. — done 2026-07-27
+  - [x] **P0.1b** — `requireScopes` on all 16 procedures in `notifications`,
+        `notification-preferences`, `webhooks`. New scopes `notifications:read`,
+        `notifications:write`, `webhooks:read`; `webhooks:manage` now consumed. Enforcing
+        immediately (denials audit as `API_KEY_SCOPE_DENIED`). — done 2026-07-27
+  - [ ] **P0.4** — coverage manifest test. Until it lands, nothing _keeps_ the boundary
+        closed: a new procedure declaring neither guard reopens it silently.
+  - [ ] **P0.5** — flip `TRPC_INTERNAL_ONLY_ENFORCE` to `true` after the observation
+        window; decide `payments:read`.
 - [ ] **[P0] The CI "SDK Drift Check" validates the wrong direction.** `ci.yml:1610`
       regenerates the TS SDK _from_ the committed spec and diffs that — it never checks the
       spec against `apps/api/src/rest/routers/`. Green on every run for five months while the
@@ -118,6 +130,11 @@ Ordered as the design doc's Phase 0/D.
       in source. Whole routers missing from the published contract: `collections` (10), `csr`
       (2), all invitations, submission discussions/resubmit/reviewers/votes/batch, six
       analytics endpoints. Blocked on making export offline. — (design doc §0.1(a))
+      **Also now behind on the scope enum:** P0.1b added `notifications:read`,
+      `notifications:write`, and `webhooks:read`, which do not appear in the committed spec
+      or either generated SDK. Server-side validation uses the live Zod schema, so the
+      scopes work today — only a generated-SDK client constructing a create-API-key call is
+      affected, and the REST routes needing them do not exist until P1.1/P1.2.
 - [ ] **[P1] `scripts/export-openapi.ts` requires a running dev server.** Fetches
       `/v1/openapi.json` over HTTP, so it cannot run in CI — the root cause of the two items
       above. `@orpc/openapi@1.14.10` exports `OpenAPIGenerator`; build the spec in-process
@@ -142,9 +159,10 @@ Ordered as the design doc's Phase 0/D.
 - [ ] **[P2] No dedup constraint on `webhook_deliveries`.** `createDelivery`
       (`webhook.service.ts:222`) has no unique constraint per endpoint/event, so Inngest
       retries or replayed events can duplicate deliveries. — (design review 2026-07-27)
-- [ ] **[P2] Two dead scopes.** `webhooks:manage` and `payments:read` are declared in
-      `apiKeyScopeSchema` and enforced nowhere. `webhooks:manage` gets consumed by the REST
-      webhooks router (P1.1); `payments:read` needs a decision. — (design doc §0.1(e))
+- [ ] **[P2] One dead scope left.** `payments:read` is declared in `apiKeyScopeSchema` and
+      enforced nowhere; it needs a decision (P0.5). `webhooks:manage` was consumed by the
+      tRPC webhooks router in P0.1b rather than waiting for REST P1.1. —
+      (design doc §0.1(e); updated 2026-07-27)
 - [ ] **[P2] REST spec coverage.** Only 7 of 17 REST routers have a `.spec.ts`. —
       (design doc §1.8)
 - [ ] **[P3] Two RLS idioms in the schema.** `notifications`, `notifications-inbox`,

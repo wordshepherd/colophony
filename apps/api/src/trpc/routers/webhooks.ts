@@ -7,13 +7,19 @@ import {
   AuditResources,
 } from '@colophony/types';
 import { webhookEndpoints, eq, and } from '@colophony/db';
-import { adminProcedure, orgProcedure, createRouter } from '../init.js';
+import {
+  adminProcedure,
+  orgProcedure,
+  requireScopes,
+  createRouter,
+} from '../init.js';
 import { webhookService } from '../../services/webhook.service.js';
 import { enqueueWebhook } from '../../queues/webhook.queue.js';
 import { validateEnv } from '../../config/env.js';
 
 export const webhooksRouter = createRouter({
   create: adminProcedure
+    .use(requireScopes('webhooks:manage'))
     .input(createWebhookEndpointSchema)
     .mutation(async ({ ctx, input }) => {
       const row = await webhookService.createEndpoint(ctx.dbTx, {
@@ -32,6 +38,7 @@ export const webhooksRouter = createRouter({
     }),
 
   update: adminProcedure
+    .use(requireScopes('webhooks:manage'))
     .input(
       z.object({ id: z.string().uuid() }).merge(updateWebhookEndpointSchema),
     )
@@ -53,6 +60,7 @@ export const webhooksRouter = createRouter({
     }),
 
   delete: adminProcedure
+    .use(requireScopes('webhooks:manage'))
     .input(z.object({ id: z.string().uuid() }))
     .mutation(async ({ ctx, input }) => {
       await webhookService.deleteEndpoint(
@@ -69,6 +77,7 @@ export const webhooksRouter = createRouter({
     }),
 
   getById: orgProcedure
+    .use(requireScopes('webhooks:read'))
     .input(z.object({ id: z.string().uuid() }))
     .query(async ({ ctx, input }) => {
       return webhookService.getEndpoint(
@@ -79,6 +88,7 @@ export const webhooksRouter = createRouter({
     }),
 
   list: orgProcedure
+    .use(requireScopes('webhooks:read'))
     .input(
       z.object({
         page: z.number().int().min(1).default(1),
@@ -93,6 +103,7 @@ export const webhooksRouter = createRouter({
     }),
 
   rotateSecret: adminProcedure
+    .use(requireScopes('webhooks:manage'))
     .input(z.object({ id: z.string().uuid() }))
     .mutation(async ({ ctx, input }) => {
       const row = await webhookService.rotateSecret(
@@ -109,6 +120,7 @@ export const webhooksRouter = createRouter({
     }),
 
   test: adminProcedure
+    .use(requireScopes('webhooks:manage'))
     .input(z.object({ id: z.string().uuid() }))
     .mutation(async ({ ctx, input }) => {
       const env = validateEnv();
@@ -164,6 +176,7 @@ export const webhooksRouter = createRouter({
     }),
 
   deliveries: orgProcedure
+    .use(requireScopes('webhooks:read'))
     .input(listWebhookDeliveriesSchema)
     .query(async ({ ctx, input }) => {
       return webhookService.listDeliveries(ctx.dbTx, {
@@ -173,6 +186,7 @@ export const webhooksRouter = createRouter({
     }),
 
   retryDelivery: adminProcedure
+    .use(requireScopes('webhooks:manage'))
     .input(z.object({ deliveryId: z.string().uuid() }))
     .mutation(async ({ ctx, input }) => {
       const env = validateEnv();

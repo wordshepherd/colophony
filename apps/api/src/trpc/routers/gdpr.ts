@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { TRPCError } from '@trpc/server';
 import { successResponseSchema } from '@colophony/types';
-import { authedProcedure, createRouter } from '../init.js';
+import { internalAuthedProcedure, createRouter } from '../init.js';
 import {
   gdprService,
   UserNotDeletableError,
@@ -9,7 +9,7 @@ import {
 import { validateEnv } from '../../config/env.js';
 
 export const gdprRouter = createRouter({
-  deleteAccount: authedProcedure
+  deleteAccount: internalAuthedProcedure
     .output(successResponseSchema.extend({ storageKeysEnqueued: z.number() }))
     .mutation(async ({ ctx }) => {
       const env = validateEnv();

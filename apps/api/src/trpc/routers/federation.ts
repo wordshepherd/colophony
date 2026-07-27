@@ -5,14 +5,14 @@ import {
   initiateTrustSchema,
   peerActionSchema,
 } from '@colophony/types';
-import { adminProcedure, createRouter } from '../init.js';
+import { internalAdminProcedure, createRouter } from '../init.js';
 import { mapServiceError } from '../error-mapper.js';
 import { federationService } from '../../services/federation.service.js';
 import { trustService } from '../../services/trust.service.js';
 import { validateEnv } from '../../config/env.js';
 
 export const federationRouter = createRouter({
-  getConfig: adminProcedure.query(async () => {
+  getConfig: internalAdminProcedure.query(async () => {
     try {
       const env = validateEnv();
       return await federationService.getPublicConfig(env);
@@ -21,7 +21,7 @@ export const federationRouter = createRouter({
     }
   }),
 
-  updateConfig: adminProcedure
+  updateConfig: internalAdminProcedure
     .input(updateFederationConfigSchema)
     .mutation(async ({ ctx, input }) => {
       try {
@@ -33,7 +33,7 @@ export const federationRouter = createRouter({
       }
     }),
 
-  previewRemote: adminProcedure
+  previewRemote: internalAdminProcedure
     .input(domainParamSchema)
     .query(async ({ input }) => {
       try {
@@ -43,7 +43,7 @@ export const federationRouter = createRouter({
       }
     }),
 
-  listPeers: adminProcedure.query(async ({ ctx }) => {
+  listPeers: internalAdminProcedure.query(async ({ ctx }) => {
     try {
       const orgId = ctx.authContext.orgId;
       return await trustService.listPeers(orgId);
@@ -52,7 +52,7 @@ export const federationRouter = createRouter({
     }
   }),
 
-  getPeer: adminProcedure
+  getPeer: internalAdminProcedure
     .input(z.object({ id: z.string().uuid() }))
     .query(async ({ ctx, input }) => {
       try {
@@ -63,7 +63,7 @@ export const federationRouter = createRouter({
       }
     }),
 
-  initiateTrust: adminProcedure
+  initiateTrust: internalAdminProcedure
     .input(initiateTrustSchema)
     .mutation(async ({ ctx, input }) => {
       try {
@@ -76,7 +76,7 @@ export const federationRouter = createRouter({
       }
     }),
 
-  acceptPeer: adminProcedure
+  acceptPeer: internalAdminProcedure
     .input(z.object({ id: z.string().uuid() }).merge(peerActionSchema))
     .mutation(async ({ ctx, input }) => {
       try {
@@ -96,7 +96,7 @@ export const federationRouter = createRouter({
       }
     }),
 
-  rejectPeer: adminProcedure
+  rejectPeer: internalAdminProcedure
     .input(z.object({ id: z.string().uuid() }))
     .mutation(async ({ ctx, input }) => {
       try {
@@ -108,7 +108,7 @@ export const federationRouter = createRouter({
       }
     }),
 
-  revokePeer: adminProcedure
+  revokePeer: internalAdminProcedure
     .input(z.object({ id: z.string().uuid() }))
     .mutation(async ({ ctx, input }) => {
       try {

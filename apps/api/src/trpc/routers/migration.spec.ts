@@ -44,7 +44,7 @@ vi.mock('../init.js', () => {
     use: vi.fn().mockReturnThis(),
   };
   return {
-    authedProcedure: passthrough,
+    internalAuthedProcedure: passthrough,
     createRouter: vi.fn((routes) => routes),
   };
 });
