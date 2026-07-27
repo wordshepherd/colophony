@@ -19,6 +19,7 @@ import { embedTokenService } from '../../services/embed-token.service.js';
 
 export const embedTokensRouter = createRouter({
   create: adminProcedure
+    .use(requireScopes('periods:write'))
     .input(createEmbedTokenSchema)
     .output(createEmbedTokenResponseSchema)
     .mutation(async ({ ctx, input }) => {
@@ -63,6 +64,7 @@ export const embedTokensRouter = createRouter({
     }),
 
   revoke: adminProcedure
+    .use(requireScopes('periods:write'))
     .input(revokeEmbedTokenSchema)
     .output(z.object({ id: z.string().uuid(), active: z.boolean() }))
     .mutation(async ({ ctx, input }) => {

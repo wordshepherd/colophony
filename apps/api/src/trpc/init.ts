@@ -201,13 +201,59 @@ const isBusinessOps = t.middleware(({ ctx, next }) => {
   });
 });
 
+// ---------------------------------------------------------------------------
+// Guard tagging
+// ---------------------------------------------------------------------------
+
+/**
+ * Marks a middleware as one of the two guards that keep a tRPC procedure out of
+ * an API key's reach. Read by `guard-coverage.spec.ts`, which fails the build on
+ * a procedure declaring neither.
+ *
+ * Tagging is necessary because neither guard is identifiable by reference:
+ * `requireScopes` mints a fresh closure per call, and both are anonymous inside
+ * `t.middleware(...)`. tRPC keeps the function object itself in
+ * `procedure._def.middlewares`, so a non-enumerable property on it survives
+ * builder composition intact.
+ */
+export const TRPC_GUARD = Symbol.for('colophony.trpc.guard');
+
+export type GuardTag =
+  { kind: 'scopes'; scopes: readonly ApiKeyScope[] } | { kind: 'internal' };
+
+/**
+ * Tags the underlying function of a middleware builder, returning the builder
+ * unchanged. Takes the builder rather than the raw function so the middleware
+ * body keeps tRPC's parameter inference.
+ */
+function tagGuard<TBuilder extends { _middlewares: readonly unknown[] }>(
+  middleware: TBuilder,
+  tag: GuardTag,
+): TBuilder {
+  const fn = middleware._middlewares[0];
+  /* c8 ignore next 3 -- defensive: tRPC always populates _middlewares[0] */
+  if (typeof fn !== 'function') {
+    throw new Error('Cannot tag guard: middleware builder has no function');
+  }
+  Object.defineProperty(fn, TRPC_GUARD, { value: tag, enumerable: false });
+  return middleware;
+}
+
+/** Reads the guard tags declared on a built procedure's middleware chain. */
+export function readGuardTags(middlewares: readonly unknown[]): GuardTag[] {
+  return middlewares
+    .filter((mw): mw is object => typeof mw === 'function')
+    .map((mw) => (mw as Record<symbol, GuardTag | undefined>)[TRPC_GUARD])
+    .filter((tag): tag is GuardTag => tag !== undefined);
+}
+
 /**
  * Factory: returns tRPC middleware that enforces API key scopes.
  * OIDC/test auth bypasses the check (scopes are API-key-only).
  * Must be chained after isAuthed or hasOrgContext.
  */
 export function requireScopes(...scopes: ApiKeyScope[]) {
-  return t.middleware(async ({ ctx, next }) => {
+  const middleware = t.middleware(async ({ ctx, next }) => {
     if (!ctx.authContext) {
       throw new TRPCError({
         code: 'UNAUTHORIZED',
@@ -231,6 +277,8 @@ export function requireScopes(...scopes: ApiKeyScope[]) {
 
     return next();
   });
+
+  return tagGuard(middleware, { kind: 'scopes', scopes });
 }
 
 /**
@@ -255,7 +303,7 @@ const INTERACTIVE_AUTH_METHODS: readonly string[] = ['oidc', 'demo', 'test'];
  * audited and let through, so real usage can be measured before the boundary
  * starts rejecting. An unauthenticated caller is rejected in both modes.
  */
-export const internalOnly = t.middleware(async ({ ctx, path, next }) => {
+const internalOnlyMiddleware = t.middleware(async ({ ctx, path, next }) => {
   if (!ctx.authContext) {
     throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Not authenticated' });
   }
@@ -287,6 +335,10 @@ export const internalOnly = t.middleware(async ({ ctx, path, next }) => {
   }
 
   return next();
+});
+
+export const internalOnly = tagGuard(internalOnlyMiddleware, {
+  kind: 'internal',
 });
 
 // ---------------------------------------------------------------------------

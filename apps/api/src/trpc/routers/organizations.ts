@@ -155,6 +155,7 @@ const invitationsRouter = createRouter({
     }),
 
   accept: userProcedure
+    .use(requireScopes('organizations:write'))
     .input(acceptInvitationSchema)
     .output(acceptInvitationResultSchema)
     .mutation(async ({ ctx, input }) => {

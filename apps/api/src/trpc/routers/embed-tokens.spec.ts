@@ -178,4 +178,95 @@ describe('embedTokens router', () => {
       ).rejects.toThrow('Admin role required');
     });
   });
+
+  /**
+   * Until the P0.4 coverage gate landed, create and revoke declared no scope
+   * guard — so any API key, holding any scope, could mint or revoke an embed
+   * token for the org. The role check alone did not help: a key inherits its
+   * creator's roles, and embed tokens are created by admins.
+   *
+   * `init.js` is deliberately not mocked in this suite, so these exercise the
+   * real `requireScopes` middleware.
+   */
+  describe('API key scope enforcement (P0.4)', () => {
+    const PERIOD_ID = 'b2222222-2222-2222-a222-222222222222';
+    const TOKEN_ID = 'a1111111-1111-1111-a111-111111111111';
+
+    function keyCaller(scopes: string[]) {
+      return createCaller(
+        orgContext(['ADMIN'], {
+          authContext: {
+            userId: 'user-1',
+            email: 'key@example.com',
+            emailVerified: true,
+            authMethod: 'apikey',
+            apiKeyId: 'key-1',
+            apiKeyScopes: scopes,
+            orgId: 'org-1',
+            roles: ['ADMIN'],
+          },
+        } as Partial<TRPCContext>),
+      );
+    }
+
+    it('denies create to a key without periods:write', async () => {
+      await expect(
+        keyCaller(['manuscripts:read']).embedTokens.create({
+          submissionPeriodId: PERIOD_ID,
+          allowedOrigins: ['https://example.com'],
+        }),
+      ).rejects.toMatchObject({ code: 'FORBIDDEN' });
+      expect(mockEmbedTokenService.create).not.toHaveBeenCalled();
+    });
+
+    it('denies create to a key holding only the read scope', async () => {
+      await expect(
+        keyCaller(['periods:read']).embedTokens.create({
+          submissionPeriodId: PERIOD_ID,
+          allowedOrigins: ['https://example.com'],
+        }),
+      ).rejects.toMatchObject({ code: 'FORBIDDEN' });
+    });
+
+    it('denies revoke to a key without periods:write', async () => {
+      await expect(
+        keyCaller(['periods:read']).embedTokens.revoke({ tokenId: TOKEN_ID }),
+      ).rejects.toMatchObject({ code: 'FORBIDDEN' });
+      expect(mockEmbedTokenService.revoke).not.toHaveBeenCalled();
+    });
+
+    it('admits create to a key holding periods:write', async () => {
+      mockEmbedTokenService.create.mockResolvedValueOnce({
+        id: TOKEN_ID,
+        submissionPeriodId: PERIOD_ID,
+        tokenPrefix: 'col_emb_',
+        plainTextToken: 'col_emb_abcdef1234567890abcdef1234567890',
+        allowedOrigins: ['https://example.com'],
+        themeConfig: null,
+        active: true,
+        createdAt: new Date(),
+        expiresAt: null,
+      });
+
+      await expect(
+        keyCaller(['periods:write']).embedTokens.create({
+          submissionPeriodId: PERIOD_ID,
+          allowedOrigins: ['https://example.com'],
+        }),
+      ).resolves.toMatchObject({ id: TOKEN_ID });
+    });
+
+    it('leaves interactive sessions unaffected — they carry no scopes at all', async () => {
+      mockEmbedTokenService.revoke.mockResolvedValueOnce({
+        id: TOKEN_ID,
+        active: false,
+      });
+
+      await expect(
+        createCaller(orgContext(['ADMIN'])).embedTokens.revoke({
+          tokenId: TOKEN_ID,
+        }),
+      ).resolves.toMatchObject({ id: TOKEN_ID, active: false });
+    });
+  });
 });
