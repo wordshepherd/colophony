@@ -26,6 +26,7 @@ const ADMIN_USER_PROFILE = {
 
 /** All scopes needed for Forms E2E tests */
 const FORMS_E2E_SCOPES = [
+  "notifications:read",
   "forms:read",
   "forms:write",
   "submissions:read",

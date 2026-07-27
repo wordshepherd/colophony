@@ -17,6 +17,7 @@ import { getOrgBySlug, getUserByEmail, createApiKey, deleteApiKey } from "./db";
 
 /** All scopes needed for submission flow E2E tests */
 const E2E_SCOPES = [
+  "notifications:read",
   "submissions:read",
   "submissions:write",
   "files:read",

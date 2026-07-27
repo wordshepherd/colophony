@@ -3,6 +3,7 @@ import type { ApiKeyScope } from '@colophony/types';
 import { AuditActions, AuditResources } from '@colophony/types';
 import type { TRPCContext } from './context.js';
 import { checkApiKeyScopes } from '../services/scope-check.js';
+import { validateEnv } from '../config/env.js';
 
 export const t = initTRPC.context<TRPCContext>().create({
   errorFormatter({ shape, error }) {
@@ -232,6 +233,62 @@ export function requireScopes(...scopes: ApiKeyScope[]) {
   });
 }
 
+/**
+ * Auth methods that represent an interactive human session.
+ *
+ * This is an ALLOWLIST, and the distinction is not stylistic. A denylist of
+ * 'apikey' stays correct only until the next credential class exists — the
+ * `col_svc_` service principal would carry a different authMethod and silently
+ * readmit itself to `federation.updateConfig` and `hub.revokeInstance` with
+ * broader tenancy than the credential the rule was written to exclude.
+ * Written this way, every future auth method is excluded by construction and
+ * has to be explicitly admitted here.
+ *
+ * See docs/api-integration-design.md §1.6 M1.
+ */
+const INTERACTIVE_AUTH_METHODS: readonly string[] = ['oidc', 'demo', 'test'];
+
+/**
+ * Restricts a procedure to interactive human sessions.
+ *
+ * Log-only until TRPC_INTERNAL_ONLY_ENFORCE=true: non-interactive callers are
+ * audited and let through, so real usage can be measured before the boundary
+ * starts rejecting. An unauthenticated caller is rejected in both modes.
+ */
+export const internalOnly = t.middleware(async ({ ctx, path, next }) => {
+  if (!ctx.authContext) {
+    throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Not authenticated' });
+  }
+
+  if (INTERACTIVE_AUTH_METHODS.includes(ctx.authContext.authMethod)) {
+    return next();
+  }
+
+  // validateEnv() is called here rather than at module level — a module-level
+  // call breaks test imports.
+  const enforced = validateEnv().TRPC_INTERNAL_ONLY_ENFORCE;
+
+  await ctx.audit?.({
+    action: AuditActions.API_KEY_INTERNAL_ROUTE,
+    resource: AuditResources.API_KEY,
+    resourceId: ctx.authContext.apiKeyId,
+    newValue: {
+      procedure: path,
+      authMethod: ctx.authContext.authMethod,
+      enforced,
+    },
+  });
+
+  if (enforced) {
+    throw new TRPCError({
+      code: 'FORBIDDEN',
+      message: 'This procedure is not available to API keys',
+    });
+  }
+
+  return next();
+});
+
 // ---------------------------------------------------------------------------
 // Procedure builders
 // ---------------------------------------------------------------------------
@@ -260,5 +317,16 @@ export const editorProcedure = t.procedure.use(isEditor);
 export const productionProcedure = t.procedure.use(isProduction);
 export const adminProcedure = t.procedure.use(isAdmin);
 export const businessOpsProcedure = t.procedure.use(isBusinessOps);
+
+// Internal-only variants. `internalOnly` runs FIRST so that a non-interactive
+// credential is logged even when the role check would have rejected it anyway —
+// otherwise the observation window undercounts real usage.
+export const internalAuthedProcedure = t.procedure
+  .use(internalOnly)
+  .use(isAuthed);
+export const internalAdminProcedure = t.procedure
+  .use(internalOnly)
+  .use(isAdmin);
+
 export const createRouter = t.router;
 export const mergeRouters = t.mergeRouters;

@@ -6,11 +6,12 @@ import {
   AuditResources,
 } from '@colophony/types';
 import { z } from 'zod';
-import { orgProcedure, createRouter } from '../init.js';
+import { orgProcedure, requireScopes, createRouter } from '../init.js';
 import { notificationPreferenceService } from '../../services/notification-preference.service.js';
 
 export const notificationPreferencesRouter = createRouter({
   list: orgProcedure
+    .use(requireScopes('notifications:read'))
     .output(z.array(notificationPreferenceResponseSchema))
     .query(async ({ ctx }) => {
       return notificationPreferenceService.listForUser(
@@ -21,6 +22,7 @@ export const notificationPreferencesRouter = createRouter({
     }),
 
   upsert: orgProcedure
+    .use(requireScopes('notifications:write'))
     .input(upsertNotificationPreferenceSchema)
     .output(notificationPreferenceResponseSchema)
     .mutation(async ({ ctx, input }) => {
@@ -41,6 +43,7 @@ export const notificationPreferencesRouter = createRouter({
     }),
 
   bulkUpsert: orgProcedure
+    .use(requireScopes('notifications:write'))
     .input(bulkUpsertNotificationPreferencesSchema)
     .output(z.array(notificationPreferenceResponseSchema))
     .mutation(async ({ ctx, input }) => {

@@ -55,6 +55,8 @@ export const AuditActions = {
   API_KEY_AUTH_SUCCESS: "API_KEY_AUTH_SUCCESS",
   API_KEY_AUTH_FAILED: "API_KEY_AUTH_FAILED",
   API_KEY_SCOPE_DENIED: "API_KEY_SCOPE_DENIED",
+  /** A non-interactive credential reached a procedure marked internal-only. */
+  API_KEY_INTERNAL_ROUTE: "API_KEY_INTERNAL_ROUTE",
 
   // Period lifecycle
   PERIOD_CREATED: "PERIOD_CREATED",
@@ -482,7 +484,8 @@ export interface ApiKeyAuditParams extends BaseAuditParams {
     | typeof AuditActions.API_KEY_DELETED
     | typeof AuditActions.API_KEY_AUTH_SUCCESS
     | typeof AuditActions.API_KEY_AUTH_FAILED
-    | typeof AuditActions.API_KEY_SCOPE_DENIED;
+    | typeof AuditActions.API_KEY_SCOPE_DENIED
+    | typeof AuditActions.API_KEY_INTERNAL_ROUTE;
 }
 
 export interface PeriodAuditParams extends BaseAuditParams {

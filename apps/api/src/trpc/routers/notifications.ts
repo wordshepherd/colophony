@@ -7,11 +7,12 @@ import {
   AuditActions,
   AuditResources,
 } from '@colophony/types';
-import { orgProcedure, createRouter } from '../init.js';
+import { orgProcedure, requireScopes, createRouter } from '../init.js';
 import { notificationService } from '../../services/notification.service.js';
 
 export const notificationsRouter = createRouter({
   list: orgProcedure
+    .use(requireScopes('notifications:read'))
     .input(listNotificationsSchema)
     .output(
       z.object({
@@ -29,6 +30,7 @@ export const notificationsRouter = createRouter({
     }),
 
   unreadCount: orgProcedure
+    .use(requireScopes('notifications:read'))
     .output(unreadCountResponseSchema)
     .query(async ({ ctx }) => {
       const count = await notificationService.unreadCount(
@@ -39,6 +41,7 @@ export const notificationsRouter = createRouter({
     }),
 
   markRead: orgProcedure
+    .use(requireScopes('notifications:write'))
     .input(markNotificationReadSchema)
     .output(z.object({ success: z.boolean() }))
     .mutation(async ({ ctx, input }) => {
@@ -58,6 +61,7 @@ export const notificationsRouter = createRouter({
     }),
 
   markAllRead: orgProcedure
+    .use(requireScopes('notifications:write'))
     .output(z.object({ count: z.number() }))
     .mutation(async ({ ctx }) => {
       const count = await notificationService.markAllRead(

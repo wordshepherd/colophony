@@ -45,6 +45,7 @@ const testEnv: Env = {
   PORT: 0,
   HOST: '127.0.0.1',
   NODE_ENV: 'test',
+  TRPC_INTERNAL_ONLY_ENFORCE: false,
   LOG_LEVEL: 'fatal',
   REDIS_HOST: 'localhost',
   REDIS_PORT: 6379,

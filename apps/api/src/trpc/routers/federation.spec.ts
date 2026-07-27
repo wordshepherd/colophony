@@ -50,7 +50,7 @@ vi.mock('../init.js', () => {
     use: vi.fn().mockReturnThis(),
   };
   return {
-    adminProcedure: passthrough,
+    internalAdminProcedure: passthrough,
     createRouter: vi.fn((routes) => routes),
   };
 });

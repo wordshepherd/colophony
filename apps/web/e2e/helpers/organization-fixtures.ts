@@ -31,6 +31,8 @@ const ADMIN_USER_PROFILE = {
 
 /** All scopes needed for Organization E2E tests */
 const ORG_E2E_SCOPES = [
+  "notifications:read",
+  "notifications:write",
   "organizations:read",
   "organizations:write",
   "users:read",

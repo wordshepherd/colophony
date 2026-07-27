@@ -19,6 +19,7 @@ const READER_USER_PROFILE = {
 
 /** Read-only scopes for READER E2E tests */
 const READER_E2E_SCOPES = [
+  "notifications:read",
   "organizations:read",
   "submissions:read",
   "users:read",

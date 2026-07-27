@@ -26,6 +26,7 @@ const WRITER_USER_PROFILE = {
 
 /** All scopes needed for Workspace E2E tests */
 const WORKSPACE_E2E_SCOPES = [
+  "notifications:read",
   "external-submissions:read",
   "external-submissions:write",
   "correspondence:read",

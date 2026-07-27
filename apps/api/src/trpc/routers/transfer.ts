@@ -1,11 +1,11 @@
 import { z } from 'zod';
 import { transferListQuerySchema } from '@colophony/types';
-import { adminProcedure, createRouter } from '../init.js';
+import { internalAdminProcedure, createRouter } from '../init.js';
 import { mapServiceError } from '../error-mapper.js';
 import { transferService } from '../../services/transfer.service.js';
 
 export const transferRouter = createRouter({
-  list: adminProcedure
+  list: internalAdminProcedure
     .input(transferListQuerySchema)
     .query(async ({ ctx, input }) => {
       try {
@@ -16,7 +16,7 @@ export const transferRouter = createRouter({
       }
     }),
 
-  getById: adminProcedure
+  getById: internalAdminProcedure
     .input(z.object({ id: z.string().uuid() }))
     .query(async ({ ctx, input }) => {
       try {
@@ -27,7 +27,7 @@ export const transferRouter = createRouter({
       }
     }),
 
-  cancel: adminProcedure
+  cancel: internalAdminProcedure
     .input(z.object({ id: z.string().uuid() }))
     .mutation(async ({ ctx, input }) => {
       try {

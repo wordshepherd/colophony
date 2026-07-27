@@ -118,27 +118,28 @@ curl http://localhost/health
 
 ### Optional
 
-| Variable                 | Description                                 | Default     |
-| ------------------------ | ------------------------------------------- | ----------- |
-| `POSTGRES_USER`          | PostgreSQL superuser name                   | `colophony` |
-| `POSTGRES_DB`            | Database name                               | `colophony` |
-| `HTTP_PORT`              | Caddy HTTP listen port                      | `80`        |
-| `HTTPS_PORT`             | Caddy HTTPS listen port                     | `443`       |
-| `RATE_LIMIT_DEFAULT_MAX` | General rate limit (req/min)                | `60`        |
-| `RATE_LIMIT_AUTH_MAX`    | Auth rate limit (req/min)                   | `200`       |
-| `ZITADEL_AUTHORITY`      | Zitadel issuer URL                          | (empty)     |
-| `ZITADEL_CLIENT_ID`      | Zitadel OIDC client ID                      | (empty)     |
-| `STRIPE_SECRET_KEY`      | Stripe API key                              | (empty)     |
-| `STRIPE_WEBHOOK_SECRET`  | Stripe webhook secret                       | (empty)     |
-| `EMAIL_PROVIDER`         | Email provider (`smtp`, `sendgrid`, `none`) | `none`      |
-| `SMTP_HOST`              | SMTP server hostname                        | (empty)     |
-| `SMTP_PORT`              | SMTP server port                            | `587`       |
-| `SMTP_USER`              | SMTP username                               | (empty)     |
-| `SMTP_PASS`              | SMTP password                               | (empty)     |
-| `SMTP_FROM`              | SMTP sender address                         | (empty)     |
-| `FEDERATION_ENABLED`     | Enable federation features                  | `false`     |
-| `SENTRY_DSN`             | Sentry error tracking DSN                   | (empty)     |
-| `METRICS_ENABLED`        | Enable Prometheus `/metrics`                | `false`     |
+| Variable                     | Description                                                        | Default     |
+| ---------------------------- | ------------------------------------------------------------------ | ----------- |
+| `POSTGRES_USER`              | PostgreSQL superuser name                                          | `colophony` |
+| `POSTGRES_DB`                | Database name                                                      | `colophony` |
+| `HTTP_PORT`                  | Caddy HTTP listen port                                             | `80`        |
+| `HTTPS_PORT`                 | Caddy HTTPS listen port                                            | `443`       |
+| `RATE_LIMIT_DEFAULT_MAX`     | General rate limit (req/min)                                       | `60`        |
+| `RATE_LIMIT_AUTH_MAX`        | Auth rate limit (req/min)                                          | `200`       |
+| `ZITADEL_AUTHORITY`          | Zitadel issuer URL                                                 | (empty)     |
+| `ZITADEL_CLIENT_ID`          | Zitadel OIDC client ID                                             | (empty)     |
+| `STRIPE_SECRET_KEY`          | Stripe API key                                                     | (empty)     |
+| `STRIPE_WEBHOOK_SECRET`      | Stripe webhook secret                                              | (empty)     |
+| `EMAIL_PROVIDER`             | Email provider (`smtp`, `sendgrid`, `none`)                        | `none`      |
+| `SMTP_HOST`                  | SMTP server hostname                                               | (empty)     |
+| `SMTP_PORT`                  | SMTP server port                                                   | `587`       |
+| `SMTP_USER`                  | SMTP username                                                      | (empty)     |
+| `SMTP_PASS`                  | SMTP password                                                      | (empty)     |
+| `SMTP_FROM`                  | SMTP sender address                                                | (empty)     |
+| `FEDERATION_ENABLED`         | Enable federation features                                         | `false`     |
+| `TRPC_INTERNAL_ONLY_ENFORCE` | Reject API keys on internal-only tRPC routers (`false` = log only) | `false`     |
+| `SENTRY_DSN`                 | Sentry error tracking DSN                                          | (empty)     |
+| `METRICS_ENABLED`            | Enable Prometheus `/metrics`                                       | `false`     |
 
 ## Architecture
 

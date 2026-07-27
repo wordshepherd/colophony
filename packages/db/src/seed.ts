@@ -445,6 +445,8 @@ export async function seedBase(tx: DrizzleDb): Promise<SeedResult> {
       "audit:read",
       "periods:read",
       "periods:write",
+      "notifications:read",
+      "webhooks:read",
     ],
   });
 

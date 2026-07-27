@@ -1,12 +1,12 @@
 import { z } from 'zod';
 import { withRls, simSubChecks, eq } from '@colophony/db';
 import { desc } from 'drizzle-orm';
-import { adminProcedure, createRouter } from '../init.js';
+import { internalAdminProcedure, createRouter } from '../init.js';
 import { mapServiceError } from '../error-mapper.js';
 import { simsubService } from '../../services/simsub.service.js';
 
 export const simsubRouter = createRouter({
-  listChecks: adminProcedure
+  listChecks: internalAdminProcedure
     .input(z.object({ submissionId: z.string().uuid() }))
     .query(async ({ ctx, input }) => {
       try {
@@ -23,7 +23,7 @@ export const simsubRouter = createRouter({
       }
     }),
 
-  grantOverride: adminProcedure
+  grantOverride: internalAdminProcedure
     .input(z.object({ submissionId: z.string().uuid() }))
     .mutation(async ({ ctx, input }) => {
       try {

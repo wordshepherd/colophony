@@ -21,6 +21,7 @@ vi.mock('../init.js', () => {
     use: vi.fn().mockReturnThis(),
   };
   return {
+    requireScopes: vi.fn(() => vi.fn()),
     orgProcedure: passthrough,
     adminProcedure: passthrough,
     createRouter: vi.fn((routes) => routes),
