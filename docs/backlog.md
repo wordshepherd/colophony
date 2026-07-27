@@ -70,6 +70,7 @@
 - [ ] Enable `noUncheckedIndexedAccess` in `packages/typescript-config/base.json` — package by package (`types` and `api-contracts` first, then `db`, `api`, `web`) — (DEVLOG 2026-07-25)
 - [ ] Add `tseslint.configs.recommendedTypeChecked` to `apps/web/eslint.config.mjs` — the web app is currently unlinted for `no-floating-promises`, `no-misused-promises`, `await-thenable`, and the `no-unsafe-*` family, unlike `apps/api`. Expect a large first-run count; start the noisiest rules at `warn` — (DEVLOG 2026-07-25)
 - [ ] [P2] Stop passing `SENTRY_AUTH_TOKEN` as a Docker build ARG — `apps/web/Dockerfile` lines 34–35 take it as `ARG` then promote it to `ENV`. Build ARGs are recorded in image history, so the token is recoverable from any built image; `docker build` warns about this (`SecretsUsedInArgOrEnv`). Use a BuildKit secret mount (`RUN --mount=type=secret,id=sentry_auth_token`) and pass it via `--secret` from the deploy workflow instead — (DEVLOG 2026-07-26)
+- [ ] [P3] Spot-check rendered email output after the mjml 5 upgrade — 5.0.0 replaced `html-minifier`/`js-beautify` with `htmlnano` + `cssnano`, so the emitted HTML differs in whitespace and minification from 4.x. Unit tests and the staging smoke suite both pass, which covers the render path but not client rendering; send one templated email and one custom template through the email queue and compare against a 4.x capture — (DEVLOG 2026-07-26b)
 
 ---
 
