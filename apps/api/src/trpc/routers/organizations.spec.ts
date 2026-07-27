@@ -54,12 +54,19 @@ vi.mock('../../config/env.js', () => ({
   }),
 }));
 
+// Hoisted so the scope-enforcement tests below can reference the mock directly
+// rather than through `invitationService.acceptWithAudit`, which trips
+// @typescript-eslint/unbound-method.
+const { mockAcceptWithAudit } = vi.hoisted(() => ({
+  mockAcceptWithAudit: vi.fn().mockResolvedValue({}),
+}));
+
 vi.mock('../../services/invitation.service.js', () => ({
   invitationService: {
     listPending: vi.fn().mockResolvedValue([]),
     revokeWithAudit: vi.fn().mockResolvedValue({}),
     resendWithAudit: vi.fn().mockResolvedValue({}),
-    acceptWithAudit: vi.fn().mockResolvedValue({}),
+    acceptWithAudit: mockAcceptWithAudit,
   },
   InvitationNotFoundError: class InvitationNotFoundError extends Error {
     name = 'InvitationNotFoundError';
@@ -514,6 +521,82 @@ describe('organizations tRPC router', () => {
           roles: ['READER'],
         }),
       ).rejects.toThrow('last admin');
+    });
+  });
+
+  /**
+   * Until the P0.4 coverage gate landed, accept was the one procedure in this
+   * router declaring no scope guard — every sibling already had one. An API key
+   * holding any scope could therefore accept an invitation on behalf of its
+   * creator, joining them to an org.
+   *
+   * `init.js` is deliberately not mocked in this suite, so these exercise the
+   * real `requireScopes` middleware.
+   */
+  describe('organizations.invitations.accept — API key scope enforcement (P0.4)', () => {
+    function keyCaller(scopes: string[]) {
+      return createCaller(
+        makeContext({
+          authContext: {
+            userId: USER_ID,
+            zitadelUserId: ZITADEL_USER_ID,
+            email: 'key@example.com',
+            emailVerified: true,
+            authMethod: 'apikey',
+            apiKeyId: '00000000-0000-4000-a000-0000000000ff',
+            apiKeyScopes: scopes,
+          },
+          dbTx: {} as never,
+          audit: vi.fn(),
+        } as Partial<TRPCContext>),
+      );
+    }
+
+    it('denies a key holding only organizations:read', async () => {
+      await expect(
+        keyCaller(['organizations:read']).organizations.invitations.accept({
+          token: 'plain-invitation-token',
+        }),
+      ).rejects.toMatchObject({ code: 'FORBIDDEN' });
+      expect(mockAcceptWithAudit).not.toHaveBeenCalled();
+    });
+
+    it('denies a key holding an unrelated scope', async () => {
+      await expect(
+        keyCaller(['manuscripts:read']).organizations.invitations.accept({
+          token: 'plain-invitation-token',
+        }),
+      ).rejects.toMatchObject({ code: 'FORBIDDEN' });
+    });
+
+    it('admits a key holding organizations:write', async () => {
+      mockAcceptWithAudit.mockResolvedValueOnce({
+        invitationId: '00000000-0000-4000-a000-000000000030',
+        organizationId: ORG_ID,
+        memberId: MEMBER_ID,
+        roles: ['READER'],
+      });
+
+      await expect(
+        keyCaller(['organizations:write']).organizations.invitations.accept({
+          token: 'plain-invitation-token',
+        }),
+      ).resolves.toMatchObject({ organizationId: ORG_ID });
+    });
+
+    it('leaves interactive sessions unaffected — they carry no scopes at all', async () => {
+      mockAcceptWithAudit.mockResolvedValueOnce({
+        invitationId: '00000000-0000-4000-a000-000000000030',
+        organizationId: ORG_ID,
+        memberId: MEMBER_ID,
+        roles: ['READER'],
+      });
+
+      await expect(
+        createCaller(
+          authedContext({ dbTx: {} as never }),
+        ).organizations.invitations.accept({ token: 'plain-invitation-token' }),
+      ).resolves.toMatchObject({ organizationId: ORG_ID });
     });
   });
 });

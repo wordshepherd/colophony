@@ -161,7 +161,11 @@ export const test = base.extend<{
     const apiKey = await createApiKey({
       orgId: inviteeOrg.id,
       userId: inviteTarget.id,
-      scopes: ["organizations:read", "users:read"],
+      // organizations:write is required by invitations.accept, which this page
+      // is built to drive. Kept inline rather than folded into ORG_E2E_SCOPES
+      // because the invitee is deliberately a different, lower-privilege
+      // principal than the org admin.
+      scopes: ["organizations:read", "organizations:write", "users:read"],
       name: `e2e-invitee-${Date.now()}`,
     });
 

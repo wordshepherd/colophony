@@ -118,8 +118,25 @@ Ordered as the design doc's Phase 0/D.
         `notification-preferences`, `webhooks`. New scopes `notifications:read`,
         `notifications:write`, `webhooks:read`; `webhooks:manage` now consumed. Enforcing
         immediately (denials audit as `API_KEY_SCOPE_DENIED`). — done 2026-07-27
-  - [ ] **P0.4** — coverage manifest test. Until it lands, nothing _keeps_ the boundary
-        closed: a new procedure declaring neither guard reopens it silently.
+  - [x] **P0.4** — guard coverage gate. `apps/api/src/trpc/guard-coverage.spec.ts` reads
+        every procedure's middleware chain out of the built `appRouter` and fails on one
+        declaring neither `requireScopes(...)` nor an `internal*Procedure` builder.
+        Also pins the seven internal routers against a silent downgrade to a plain scope
+        guard, rejects vacuous `requireScopes()` (an empty list allows everything), and
+        rejects scope strings absent from `apiKeyScopeSchema`. Found and closed three live
+        gaps: `embedTokens.create`, `embedTokens.revoke` (`periods:write`) and
+        `organizations.invitations.accept` (`organizations:write`). — done 2026-07-27
+        **Narrower than design doc §1.6 M4**, which specifies a three-list manifest
+        (REST-equivalent / internal-only / deferred) across all 301 procedures. Only the
+        mechanical half shipped: M4's argument for a manifest over a heuristic is about
+        REST-parity name-matching, which this does not attempt, and seeding a
+        "has REST equivalent" list from a spec 36 operations stale would bake in wrong
+        data. Per-procedure parity classification moves to P1.1–P1.4.
+        **Note the gate asserts declaration, not denial.** `requireScopes` declares and
+        enforces in one step; `internalOnly` only declares while
+        `TRPC_INTERNAL_ONLY_ENFORCE` is `false`, so those 29 procedures stay reachable by
+        any key until P0.5. The suite's last test pins the enforced behaviour across all
+        29 so the gap stays visible.
   - [ ] **P0.5** — flip `TRPC_INTERNAL_ONLY_ENFORCE` to `true` after the observation
         window; decide `payments:read`. **Blocked on the E2E auth model** — see below.
   - [ ] **[P1] Playwright suites authenticate as API keys, which blocks P0.5.**
@@ -134,6 +151,14 @@ Ordered as the design doc's Phase 0/D.
         (`x-test-user-id`, already supported in `hooks/auth.ts`) instead of a key, so
         E2E exercises the same auth class the web app actually uses. —
         (discovered 2026-07-27 during P0.1b)
+        **(3) The `*_E2E_SCOPES` naming convention is not universal, so grepping for it
+        is not a reliable audit.** `organization-fixtures.ts` mints a _second_ key inline
+        for the `inviteePage` fixture with its own scope array — deliberately, since the
+        invitee is a lower-privilege principal than the org admin. Adding
+        `organizations:write` to `invitations.accept` in P0.4 broke four accept-side
+        tests until that inline array was updated too. `scopes:` is the search key that
+        finds every grant; there are nine across `apps/web/e2e/helpers/`. The rework
+        should collapse both onto the interactive path. — (found 2026-07-27 during P0.4)
 - [ ] **[P0] The CI "SDK Drift Check" validates the wrong direction.** `ci.yml:1610`
       regenerates the TS SDK _from_ the committed spec and diffs that — it never checks the
       spec against `apps/api/src/rest/routers/`. Green on every run for five months while the
