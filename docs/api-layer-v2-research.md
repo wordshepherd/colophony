@@ -3,7 +3,21 @@
 Research document covering the design of a multi-surface API layer (REST + GraphQL + tRPC) for Colophony. This document evaluates tooling, proposes architecture, and provides concrete recommendations.
 
 **Last updated:** 2026-02-11
-**Status:** Research / RFC — Updated for Fastify + Drizzle decisions
+**Status:** Historical — records why the surfaces and tooling were chosen. Several
+recommendations were superseded during implementation; do not read it as current-state.
+
+> **Superseded (noted 2026-07-27).** What changed since this was written:
+>
+> | This document says                                                | Actual                                                                             |
+> | ----------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+> | ts-rest for REST                                                  | **oRPC** — better OpenAPI 3.1 and Zod 4 support (architecture.md §5.5)             |
+> | GraphQL (Pothos + Yoga)                                           | Built, then **extracted** to `chore/extract-graphql-to-feature-branch` — no demand |
+> | Speakeasy for SDKs                                                | **openapi-typescript** (TS) + **openapi-python-client** (Python)                   |
+> | `packages/api-contracts`                                          | Exists, but routers live in `apps/api/src/rest/routers/`                           |
+> | API keys "low risk, start simple, add scoping later" (Appendix C) | Scoping was added; **tenancy was not** — one key still binds to one org            |
+>
+> For the current REST↔tRPC inventory, the boundary policy, and the cross-org principal
+> design, see [`docs/api-integration-design.md`](api-integration-design.md) (2026-07-27).
 
 > **Revision Note (2026-02-11):** This document was originally researched assuming NestJS and Prisma. Following architecture decisions in `docs/architecture.md`, the chosen stack is **Fastify 5** (replacing NestJS) and **Drizzle ORM** (replacing Prisma). All code examples, diagrams, and recommendations have been updated accordingly. Evaluation tables retain the original comparisons for reference but "NestJS Compat" and "Prisma Integration" columns are no longer selection criteria.
 
