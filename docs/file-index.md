@@ -19,36 +19,37 @@ Quick-reference index of important files across the codebase.
 
 ## API (`apps/api/`)
 
-| What                       | Path                                                                                     |
-| -------------------------- | ---------------------------------------------------------------------------------------- |
-| **Fastify app entry**      | `apps/api/src/main.ts`                                                                   |
-| **Fastify hooks**          | `apps/api/src/hooks/` (auth, rate-limit, org-context, db-context, audit)                 |
-| **Service layer**          | `apps/api/src/services/`                                                                 |
-| **tRPC (internal)**        | `apps/api/src/trpc/`                                                                     |
-| **Zitadel webhook**        | `apps/api/src/webhooks/zitadel.webhook.ts`                                               |
-| **Stripe webhook**         | `apps/api/src/webhooks/stripe.webhook.ts`                                                |
-| **Documenso webhook**      | `apps/api/src/webhooks/documenso.webhook.ts`                                             |
-| **Inngest functions**      | `apps/api/src/inngest/`                                                                  |
-| **Adapter registry**       | `apps/api/src/adapters/registry-accessor.ts` (module-level singleton)                    |
-| **Config builder**         | `apps/api/src/colophony.config.ts` (maps env → adapter init)                             |
-| **SDK adapters**           | `apps/api/src/adapters/{email,storage,payment}/` (SDK-compatible)                        |
-| **CMS adapters**           | `apps/api/src/adapters/cms/`                                                             |
-| **Env config (Zod)**       | `apps/api/src/config/env.ts`                                                             |
-| **SSRF validation**        | `apps/api/src/lib/url-validation.ts` (validateOutboundUrl, isPrivateIPv4/v6)             |
-| **Sentry config**          | `apps/api/src/config/sentry.ts` (init, captureException, isSentryEnabled)                |
-| **Metrics registry**       | `apps/api/src/config/metrics.ts` (Prometheus counters, histograms, gauges)               |
-| **Metrics plugin**         | `apps/api/src/hooks/metrics.ts` (Fastify plugin — HTTP request instrumentation)          |
-| **Instrumented worker**    | `apps/api/src/config/instrumented-worker.ts` (BullMQ wrapper with metrics)               |
-| **Webhook health**         | `apps/api/src/webhooks/webhook-health.route.ts`                                          |
-| **Ops tRPC router**        | `apps/api/src/trpc/routers/ops.ts` (queueHealth, webhookProviderHealth, submissionTrend) |
-| **Content converters**     | `apps/api/src/converters/` (text, docx, smart-typography, format router)                 |
-| **Content extract queue**  | `apps/api/src/queues/content-extract.queue.ts`                                           |
-| **Content extract worker** | `apps/api/src/workers/content-extract.worker.ts` (4-phase extraction)                    |
-| **Content extract svc**    | `apps/api/src/services/content-extraction.service.ts`                                    |
-| **CSR service**            | `apps/api/src/services/csr.service.ts` (export/import for data portability)              |
-| **Analytics service**      | `apps/api/src/services/submission-analytics.service.ts`                                  |
-| **Portfolio service**      | `apps/api/src/services/portfolio.service.ts` (cross-org UNION ALL, status maps)          |
-| **Writer analytics svc**   | `apps/api/src/services/writer-analytics.service.ts` (personal stats/charts)              |
+| What                       | Path                                                                                                            |
+| -------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| **Fastify app entry**      | `apps/api/src/main.ts`                                                                                          |
+| **Fastify hooks**          | `apps/api/src/hooks/` (auth, rate-limit, org-context, db-context, audit)                                        |
+| **Service layer**          | `apps/api/src/services/`                                                                                        |
+| **tRPC**                   | `apps/api/src/trpc/` — intended internal, but API keys reach it too (see `docs/api-integration-design.md` §0.1) |
+| **REST (oRPC, public)**    | `apps/api/src/rest/` (`context.ts` = procedure builders + `requireScopes`, `routers/` = 139 operations)         |
+| **Zitadel webhook**        | `apps/api/src/webhooks/zitadel.webhook.ts`                                                                      |
+| **Stripe webhook**         | `apps/api/src/webhooks/stripe.webhook.ts`                                                                       |
+| **Documenso webhook**      | `apps/api/src/webhooks/documenso.webhook.ts`                                                                    |
+| **Inngest functions**      | `apps/api/src/inngest/`                                                                                         |
+| **Adapter registry**       | `apps/api/src/adapters/registry-accessor.ts` (module-level singleton)                                           |
+| **Config builder**         | `apps/api/src/colophony.config.ts` (maps env → adapter init)                                                    |
+| **SDK adapters**           | `apps/api/src/adapters/{email,storage,payment}/` (SDK-compatible)                                               |
+| **CMS adapters**           | `apps/api/src/adapters/cms/`                                                                                    |
+| **Env config (Zod)**       | `apps/api/src/config/env.ts`                                                                                    |
+| **SSRF validation**        | `apps/api/src/lib/url-validation.ts` (validateOutboundUrl, isPrivateIPv4/v6)                                    |
+| **Sentry config**          | `apps/api/src/config/sentry.ts` (init, captureException, isSentryEnabled)                                       |
+| **Metrics registry**       | `apps/api/src/config/metrics.ts` (Prometheus counters, histograms, gauges)                                      |
+| **Metrics plugin**         | `apps/api/src/hooks/metrics.ts` (Fastify plugin — HTTP request instrumentation)                                 |
+| **Instrumented worker**    | `apps/api/src/config/instrumented-worker.ts` (BullMQ wrapper with metrics)                                      |
+| **Webhook health**         | `apps/api/src/webhooks/webhook-health.route.ts`                                                                 |
+| **Ops tRPC router**        | `apps/api/src/trpc/routers/ops.ts` (queueHealth, webhookProviderHealth, submissionTrend)                        |
+| **Content converters**     | `apps/api/src/converters/` (text, docx, smart-typography, format router)                                        |
+| **Content extract queue**  | `apps/api/src/queues/content-extract.queue.ts`                                                                  |
+| **Content extract worker** | `apps/api/src/workers/content-extract.worker.ts` (4-phase extraction)                                           |
+| **Content extract svc**    | `apps/api/src/services/content-extraction.service.ts`                                                           |
+| **CSR service**            | `apps/api/src/services/csr.service.ts` (export/import for data portability)                                     |
+| **Analytics service**      | `apps/api/src/services/submission-analytics.service.ts`                                                         |
+| **Portfolio service**      | `apps/api/src/services/portfolio.service.ts` (cross-org UNION ALL, status maps)                                 |
+| **Writer analytics svc**   | `apps/api/src/services/writer-analytics.service.ts` (personal stats/charts)                                     |
 
 ## Federation (`apps/api/src/federation/`)
 
@@ -101,12 +102,14 @@ Quick-reference index of important files across the codebase.
 
 ## SDKs & Scripts
 
-| What               | Path                                                                     |
-| ------------------ | ------------------------------------------------------------------------ |
-| **OpenAPI spec**   | `sdks/openapi.json` (exported from running API, 67 paths, 15 tag groups) |
-| **TypeScript SDK** | `sdks/typescript/` (`@colophony/sdk` — openapi-fetch + generated types)  |
-| **Python SDK**     | `sdks/python/` (`colophony` — openapi-python-client generated)           |
-| **SDK generation** | `scripts/generate-sdks.ts` (regenerate both SDKs from committed spec)    |
+| What                | Path                                                                                                                                                                                                      |
+| ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **OpenAPI spec**    | `sdks/openapi.json` — **stale as of 2026-07-27:** 67 paths / 103 operations committed vs 93 / 139 in `apps/api/src/rest/routers/`. Last regenerated 2026-02-27. See `docs/api-integration-design.md` §0.1 |
+| **TypeScript SDK**  | `sdks/typescript/` (`@colophony/sdk` — openapi-fetch + generated types)                                                                                                                                   |
+| **Python SDK**      | `sdks/python/` (`colophony` — openapi-python-client generated)                                                                                                                                            |
+| **Spec export**     | `scripts/export-openapi.ts` (fetches `/v1/openapi.json` — **requires a running dev server**, so it cannot run in CI)                                                                                      |
+| **SDK generation**  | `scripts/generate-sdks.ts` (regenerate both SDKs from committed spec)                                                                                                                                     |
+| **SDK drift check** | `.github/workflows/ci.yml` `sdk-check` job — checks SDK ↔ spec, **not** spec ↔ source, so it cannot detect the staleness above                                                                            |
 
 ## Infrastructure & Ops
 
@@ -123,11 +126,12 @@ Quick-reference index of important files across the codebase.
 
 ## Documentation
 
-| What                  | Path                                                                             |
-| --------------------- | -------------------------------------------------------------------------------- |
-| **Backlog**           | `docs/backlog.md` (track-organized, drives session focus)                        |
-| **Design system**     | `docs/DESIGN_SYSTEM.md` (roles, density, navigation, typography, migration path) |
-| **Manuscript format** | `docs/manuscript-format.md` (ProseMirror JSON schema, conversion pipeline)       |
-| **CSR format spec**   | `docs/csr-format.md`                                                             |
-| **QA log**            | `docs/qa-log.md`                                                                 |
-| **Release checklist** | `docs/release-checklist.md`                                                      |
+| What                       | Path                                                                                        |
+| -------------------------- | ------------------------------------------------------------------------------------------- |
+| **Backlog**                | `docs/backlog.md` (track-organized, drives session focus)                                   |
+| **API integration design** | `docs/api-integration-design.md` (REST parity inventory, cross-org service principal — RFC) |
+| **Design system**          | `docs/DESIGN_SYSTEM.md` (roles, density, navigation, typography, migration path)            |
+| **Manuscript format**      | `docs/manuscript-format.md` (ProseMirror JSON schema, conversion pipeline)                  |
+| **CSR format spec**        | `docs/csr-format.md`                                                                        |
+| **QA log**                 | `docs/qa-log.md`                                                                            |
+| **Release checklist**      | `docs/release-checklist.md`                                                                 |

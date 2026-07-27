@@ -89,11 +89,98 @@
 - [x] tRPC `.output()` runtime response validation — all 30 procedures wired with Zod output schemas; 9 new response schemas added — (input validation audit 2026-02-18; done 2026-02-18)
 - [x] Pothos + GraphQL Yoga surface — PR 1: foundation (types, queries, DataLoaders, scope enforcement, Fastify integration) done 2026-02-19; PR 2: mutations done 2026-02-19 — (architecture doc Track 2, Section 6.6)
 - [x] GraphQL mutations (PR 2) — 16 mutations + API key list query, unit tests (36 new tests) — done 2026-02-19
-- [x] SDK generation (TypeScript, Python) — openapi-typescript + openapi-fetch TS SDK, openapi-python-client Python SDK, generation script + CI drift check — (architecture doc Track 2; done 2026-02-27)
+- [x] SDK generation (TypeScript, Python) — openapi-typescript + openapi-fetch TS SDK, openapi-python-client Python SDK, generation script + CI drift check — (architecture doc Track 2; done 2026-02-27) — **note:** the drift check validates SDK ↔ spec only; see the P0 item below
 - [x] API documentation — Zod descriptions, oRPC metadata, GraphQL Pothos descriptions, Scalar UI, export scripts — (architecture doc Track 2; done 2026-02-19)
+
+### Integration surface — findings 2026-07-27
+
+Full analysis and sequencing: [`docs/api-integration-design.md`](api-integration-design.md).
+Ordered as the design doc's Phase 0/D.
+
+- [ ] **[P0] tRPC is reachable by API keys, and 10 routers enforce no scopes.** Nothing
+      restricts `X-Api-Key` to the REST surface, and `requireScopes` is opt-in per procedure.
+      `federation`, `gdpr`, `hub`, `migration`, `notification-preferences`, `notifications`,
+      `ops`, `simsub`, `transfer`, `webhooks` call it zero times — so a key scoped
+      `manuscripts:read` can call `webhooks.rotateSecret`, `federation.updateConfig`,
+      `hub.revokeInstance`, `simsub.grantOverride`. Fix has **two halves, both P0**:
+      (1) `internalOnly` middleware as an **allowlist** of interactive auth methods
+      (`oidc`/`demo`/`test`), never a denylist of `apikey`, applied to the seven
+      deliberately-internal routers — ship log-only first, then enforce; (2) add
+      `requireScopes` to every remaining unscoped procedure, since `notifications`,
+      `notification-preferences`, and `webhooks` are unscoped but _not_ internal-only.
+      Shipping only (1) narrows the bypass rather than closing it. —
+      (design doc §0.1(e), §1.6 M1, P0.1/P0.1b/P0.5)
+- [ ] **[P0] The CI "SDK Drift Check" validates the wrong direction.** `ci.yml:1610`
+      regenerates the TS SDK _from_ the committed spec and diffs that — it never checks the
+      spec against `apps/api/src/rest/routers/`. Green on every run for five months while the
+      spec fell 36 operations behind. Fix: invert it. — (design doc §0.1(b), §1.6 M3, P0.3)
+- [ ] **[P1] `sdks/openapi.json` is stale.** 67 paths / 103 operations committed vs 93 / 139
+      in source. Whole routers missing from the published contract: `collections` (10), `csr`
+      (2), all invitations, submission discussions/resubmit/reviewers/votes/batch, six
+      analytics endpoints. Blocked on making export offline. — (design doc §0.1(a))
+- [ ] **[P1] `scripts/export-openapi.ts` requires a running dev server.** Fetches
+      `/v1/openapi.json` over HTTP, so it cannot run in CI — the root cause of the two items
+      above. `@orpc/openapi@1.14.10` exports `OpenAPIGenerator`; build the spec in-process
+      from the router objects. — (design doc §1.6 M2, P0.2)
+- [ ] **[P1] No per-key rate limits.** `hooks/rate-limit-auth.ts:57` keys the authenticated
+      window on `userId`, which for key auth is the key's _creator_ — so all of an admin's
+      keys share one bucket with each other and with that admin's browser session. Key on
+      the credential instead. — (design doc §0.1(c), P2.4)
+- [ ] **[P1] Audit cannot distinguish an API key from its creator.** `audit_events` has a
+      single `actor_id` and `BaseAuditParams` carries no `apiKeyId`, so a key's actions and
+      the human's own actions are recorded identically. Add `principal_id` / `principal_type`
+      (also the prerequisite for acting-as). Requires updating `insert_audit_event()`. —
+      (design doc §0.1(d), P2.2)
+- [ ] **[P1] Webhook deliveries are not revalidated before send.** The Inngest fan-out
+      serialises endpoint URL and secret into the BullMQ job (`webhook-delivery.ts:44,63`)
+      and the worker sends what the job carries without re-reading the endpoint
+      (`webhook.worker.ts:23`). With 8 retries backing off to 1h, a deleted or disabled
+      endpoint — or a rotated secret — keeps receiving events for up to an hour. The worker
+      already re-runs `validateOutboundUrl()` per attempt for this same reason;
+      authorisation belongs in the same place. Blast radius is one org today; it becomes
+      cross-tenant if instance subscriptions land first. — (design doc §1.9, P2.-1)
+- [ ] **[P2] No dedup constraint on `webhook_deliveries`.** `createDelivery`
+      (`webhook.service.ts:222`) has no unique constraint per endpoint/event, so Inngest
+      retries or replayed events can duplicate deliveries. — (design review 2026-07-27)
+- [ ] **[P2] Two dead scopes.** `webhooks:manage` and `payments:read` are declared in
+      `apiKeyScopeSchema` and enforced nowhere. `webhooks:manage` gets consumed by the REST
+      webhooks router (P1.1); `payments:read` needs a decision. — (design doc §0.1(e))
+- [ ] **[P2] REST spec coverage.** Only 7 of 17 REST routers have a `.spec.ts`. —
+      (design doc §1.8)
+- [ ] **[P3] Two RLS idioms in the schema.** `notifications`, `notifications-inbox`,
+      `webhook-endpoints`, `transfers` use raw `current_setting('app.current_org')::uuid`
+      (raises when unset); the other 24 use `current_org_id()` (returns NULL). Both
+      fail closed, so not a vulnerability — but a request with no org context gets a 500
+      rather than an empty result on those four. Normalise deliberately. —
+      (design doc §2.3 F6)
+
+### Blocking REST gaps (integrator workflow)
+
+Gated on the design doc's Phase D decisions. Note that votes, reviewer assignment, and
+invitations were assumed missing and are in fact already exposed — see §0 of the design doc.
+
+- [ ] **[P1] Webhook endpoint management over REST** (9 tRPC procs, `webhooks:manage`
+      already exists). **Requires the subscription-model decision (D2) first** — per-org vs
+      instance-level is a resource-model question, not a route question. — (design doc §1.9, P1.1)
+- [ ] **[P1] Notifications over REST** (list, unread-count, mark-read, mark-all-read + 3
+      preference procs). Only path today is SSE, unusable for consumers that cannot hold a
+      connection. — (design doc §1.7, P1.2)
+- [ ] **[P1] File upload initiation under `/v1`.** Intake is incomplete: an integrator can
+      create a submission but cannot attach a manuscript. `POST /embed/:token/prepare-upload`
+      is a working template. — (design doc §1.7, P1.3)
+- [ ] **[P1] Public discovery of open submission periods.** `/v1/public/` has only
+      `orgs/:slug/response-time` and the demo routes. — (design doc §1.7, P1.4)
+- [ ] **[P2] Idempotency keys for integrator writes.** No `Idempotency-Key` on any `/v1`
+      `POST`, including submission creation and the two batch operations. Contract surface,
+      so it cannot be added cheaply later. — (design doc §1.10, D3)
 
 ### Design Decisions
 
+- [ ] **Cross-org service principal** — instance-scoped principal + acting-as. Approach and
+      migration path in [`docs/api-integration-design.md`](api-integration-design.md);
+      recommendation is a separate `service_principals` table, flat capability strings with
+      tenancy in a grant table, and org-visible/org-revocable grants. Four decisions gate the
+      work (D1–D4, §5 Phase D). Not started.
 - [x] Submitter role architecture: per-org role assignment vs global identity with per-org role bindings — **Resolved 2026-02-19:** Submitter is a global user capability, not an org role. Staff roles (`ADMIN/EDITOR/READER`) unchanged. Manuscript library is user-owned and cross-org. Follow/subscribe for org-to-writer comms. — (architecture doc Open Question #1)
 - [x] Self-serve org creation: managed hosting provisioning model vs self-hosted admin — **Partially resolved 2026-02-19:** Self-serve in both contexts. Managed hosting: free tier with quotas, paid upgrade, all features on all tiers. Self-hosted: no billing. Managed hosting infra deferred to post-Track 3. — (architecture doc Open Question #2)
 
