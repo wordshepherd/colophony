@@ -27,6 +27,8 @@ const ADMIN_USER_PROFILE = {
 };
 
 const ORG_E2E_SCOPES = [
+  "notifications:read",
+  "notifications:write",
   "organizations:read",
   "organizations:write",
   "users:read",

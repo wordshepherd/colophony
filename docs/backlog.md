@@ -121,7 +121,19 @@ Ordered as the design doc's Phase 0/D.
   - [ ] **P0.4** — coverage manifest test. Until it lands, nothing _keeps_ the boundary
         closed: a new procedure declaring neither guard reopens it silently.
   - [ ] **P0.5** — flip `TRPC_INTERNAL_ONLY_ENFORCE` to `true` after the observation
-        window; decide `payments:read`.
+        window; decide `payments:read`. **Blocked on the E2E auth model** — see below.
+  - [ ] **[P1] Playwright suites authenticate as API keys, which blocks P0.5.**
+        `e2e/helpers/*-fixtures.ts` mint a real `col_test_` key per suite and set it as
+        a browser header, so every E2E request carries `authMethod: 'apikey'` rather
+        than an interactive session. Consequences: (1) every scope added to a tRPC
+        procedure must also be added to each suite's `*_E2E_SCOPES` array — this is
+        what broke CI on the P0.1b branch; (2) `federation-admin.spec.ts` and the
+        `/settings` account-deletion path drive `internalOnly` routers, so they pass
+        only while the boundary is log-only and **will 403 the moment P0.5 flips it**.
+        Fix by having the fixtures use the interactive test-auth path
+        (`x-test-user-id`, already supported in `hooks/auth.ts`) instead of a key, so
+        E2E exercises the same auth class the web app actually uses. —
+        (discovered 2026-07-27 during P0.1b)
 - [ ] **[P0] The CI "SDK Drift Check" validates the wrong direction.** `ci.yml:1610`
       regenerates the TS SDK _from_ the committed spec and diffs that — it never checks the
       spec against `apps/api/src/rest/routers/`. Green on every run for five months while the

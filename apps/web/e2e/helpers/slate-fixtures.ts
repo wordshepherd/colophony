@@ -38,6 +38,7 @@ const ADMIN_USER_PROFILE = {
 
 /** All scopes needed for Slate E2E tests */
 const SLATE_E2E_SCOPES = [
+  "notifications:read",
   "publications:read",
   "publications:write",
   "pipeline:read",
