@@ -291,17 +291,33 @@ Ordered as the design doc's Phase 0/D.
 - [ ] **[P2] No dedup constraint on `webhook_deliveries`.** `createDelivery`
       (`webhook.service.ts:222`) has no unique constraint per endpoint/event, so Inngest
       retries or replayed events can duplicate deliveries. — (design review 2026-07-27)
-- [ ] **[P1] `apiKeyService` carries no explicit `organizationId` predicate.** `list`
+- [x] **[P1] `apiKeyService` carries no explicit `organizationId` predicate.** `list`
       (`apps/api/src/services/api-key.service.ts:71`), `revoke` (`:129`) and `delete`
-      (`:145`) rely on RLS alone, and no caller passes an org ID
+      (`:145`) relied on RLS alone, and no caller passed an org ID
       (`apps/api/src/rest/routers/api-keys.ts:61,108,133`). `revoke`'s
       `where(and(eq(apiKeys.id, keyId)))` — a single condition wrapped in `and()` —
-      reads like a filter that was removed rather than never added. This is the one
-      place the defense-in-depth rule for tenant queries is unmet: RLS is doing the
-      whole job, so a context-setting bug degrades straight to cross-tenant access
+      read like a filter that was removed rather than never added. This was the one
+      place the defense-in-depth rule for tenant queries was unmet: RLS was doing the
+      whole job, so a context-setting bug degraded straight to cross-tenant access
       with nothing behind it. Pre-existing; deliberately left out of P0.5b so a
       multi-tenancy change would not ride inside a scope cleanup —
-      (found 2026-07-28 while removing `payments:read`)
+      (found 2026-07-28 while removing `payments:read`; done 2026-07-28)
+      All three now take a required `orgId` and filter on it, matching the house
+      `(tx, id|input, orgId)` convention. **`getById` was deleted rather than fixed** —
+      it had zero callers and zero tests, and was the one method returning a full key
+      row by ID with no org predicate; less surface beats more.
+      **The count query needed the predicate too**, which is the easy half to miss:
+      with only the page query filtered, `items` is correct while `total` reports every
+      org's key count.
+      **Verification is the point of this one.** Both existing router specs mock the
+      service outright and the service spec stubs `eq`/`and` to identity functions, so
+      before this change all 35 tests passed with or without a predicate. The new
+      `apps/api/src/__tests__/rls/api-key-service.test.ts` runs the service over the
+      **admin pool** (`rolsuper`/`rolbypassrls`), where RLS — including the `FORCE` set
+      by `0008_api_keys_rls.sql` — does not apply, so the `WHERE` clause is the only
+      thing isolating tenants. It failed 4/7 on the pre-change tree. It is the
+      deliberate mirror of `__tests__/security/defense-in-depth.test.ts`, which proves
+      the opposite direction; do not "fix" it by switching to the app pool.
 - [ ] **[P3] `apiKeysContract.revoke` has drifted from its handler.** The contract
       declares `apiKeyResponseSchema` (`packages/api-contracts/src/api-keys.ts:77`)
       while the procedure returns `revokeApiKeyResponseSchema` — a full key object

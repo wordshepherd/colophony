@@ -29,7 +29,58 @@ vi.mock('@colophony/db', () => ({
   DrizzleDb: {},
 }));
 
+import { eq, apiKeys } from '@colophony/db';
 import { apiKeyService } from './api-key.service.js';
+
+const LIST_ITEMS = [
+  {
+    id: 'key-1',
+    name: 'Key 1',
+    scopes: ['submissions:read'],
+    keyPrefix: 'col_live_',
+    createdAt: new Date(),
+    expiresAt: null,
+    lastUsedAt: null,
+    revokedAt: null,
+  },
+];
+
+/**
+ * `list()` calls `tx.select()` twice under Promise.all — once for the page, once for
+ * the count — and each chain now carries a `.where()` link. Returning a different
+ * chain per call is what lets both resolve to their own shape.
+ */
+function makeListTx(
+  items: typeof LIST_ITEMS,
+  count: number,
+): Parameters<typeof apiKeyService.list>[0] {
+  let callCount = 0;
+  return {
+    select: vi.fn().mockImplementation(() => {
+      callCount++;
+      if (callCount === 1) {
+        // Page query: from → where → orderBy → limit → offset
+        return {
+          from: vi.fn().mockReturnValue({
+            where: vi.fn().mockReturnValue({
+              orderBy: vi.fn().mockReturnValue({
+                limit: vi.fn().mockReturnValue({
+                  offset: vi.fn().mockResolvedValue(items),
+                }),
+              }),
+            }),
+          }),
+        };
+      }
+      // Count query: from → where → resolves
+      return {
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockResolvedValue([{ count }]),
+        }),
+      };
+    }),
+  } as unknown as Parameters<typeof apiKeyService.list>[0];
+}
 
 describe('apiKeyService', () => {
   beforeEach(() => {
@@ -145,7 +196,7 @@ describe('apiKeyService', () => {
           ]),
       } as unknown as Parameters<typeof apiKeyService.revoke>[0];
 
-      const result = await apiKeyService.revoke(mockTx, 'key-1');
+      const result = await apiKeyService.revoke(mockTx, 'key-1', 'org-1');
       expect(result).not.toBeNull();
       expect(result?.revokedAt).toBeInstanceOf(Date);
     });
@@ -158,66 +209,20 @@ describe('apiKeyService', () => {
         returning: vi.fn().mockResolvedValue([]),
       } as unknown as Parameters<typeof apiKeyService.revoke>[0];
 
-      const result = await apiKeyService.revoke(mockTx, 'nonexistent');
+      const result = await apiKeyService.revoke(mockTx, 'nonexistent', 'org-1');
       expect(result).toBeNull();
     });
   });
 
   describe('list', () => {
     it('returns paginated results without keyHash', async () => {
-      const items = [
-        {
-          id: 'key-1',
-          name: 'Key 1',
-          scopes: ['submissions:read'],
-          keyPrefix: 'col_live_',
-          createdAt: new Date(),
-          expiresAt: null,
-          lastUsedAt: null,
-          revokedAt: null,
-        },
-      ];
+      const result = await apiKeyService.list(
+        makeListTx(LIST_ITEMS, 1),
+        { page: 1, limit: 20 },
+        'org-1',
+      );
 
-      const mockTx = {
-        select: vi.fn().mockReturnValue({
-          from: vi.fn().mockReturnValue({
-            orderBy: vi.fn().mockReturnValue({
-              limit: vi.fn().mockReturnValue({
-                offset: vi.fn().mockResolvedValue(items),
-              }),
-            }),
-          }),
-        }),
-      } as unknown as Parameters<typeof apiKeyService.list>[0];
-
-      // Mock the count query — list() calls tx.select() twice via Promise.all
-      // We need to override select to return different chains for the two calls
-      let callCount = 0;
-      (mockTx as unknown as { select: ReturnType<typeof vi.fn> }).select = vi
-        .fn()
-        .mockImplementation(() => {
-          callCount++;
-          if (callCount === 1) {
-            // Items query
-            return {
-              from: vi.fn().mockReturnValue({
-                orderBy: vi.fn().mockReturnValue({
-                  limit: vi.fn().mockReturnValue({
-                    offset: vi.fn().mockResolvedValue(items),
-                  }),
-                }),
-              }),
-            };
-          }
-          // Count query
-          return {
-            from: vi.fn().mockResolvedValue([{ count: 1 }]),
-          };
-        });
-
-      const result = await apiKeyService.list(mockTx, { page: 1, limit: 20 });
-
-      expect(result.items).toEqual(items);
+      expect(result.items).toEqual(LIST_ITEMS);
       expect(result.total).toBe(1);
       expect(result.page).toBe(1);
       expect(result.totalPages).toBe(1);
@@ -225,6 +230,59 @@ describe('apiKeyService', () => {
       for (const item of result.items) {
         expect(item).not.toHaveProperty('keyHash');
       }
+    });
+  });
+
+  /**
+   * These assert the *predicates*, not the results. The mock `tx` returns whatever it
+   * is told regardless of the WHERE clause, so a "wrong org returns null" test here
+   * would pass with the filter removed. Asserting on the mocked `eq()` is what
+   * actually fails when a predicate goes missing.
+   *
+   * The real proof lives in `src/__tests__/rls/api-key-service.test.ts`, which runs
+   * these queries against Postgres over an RLS-bypassing connection.
+   */
+  describe('defense-in-depth: organization predicates', () => {
+    it('list filters both the page and the count query on organization_id', async () => {
+      await apiKeyService.list(
+        makeListTx(LIST_ITEMS, 1),
+        { page: 1, limit: 20 },
+        'org-1',
+      );
+
+      const orgPredicates = vi
+        .mocked(eq)
+        .mock.calls.filter(
+          ([col, val]) => col === apiKeys.organizationId && val === 'org-1',
+        );
+      // Twice: once for the page query, once for the count query. A count query
+      // without the predicate reports every org's key total.
+      expect(orgPredicates).toHaveLength(2);
+    });
+
+    it('revoke filters on organization_id', async () => {
+      const mockTx = {
+        update: vi.fn().mockReturnThis(),
+        set: vi.fn().mockReturnThis(),
+        where: vi.fn().mockReturnThis(),
+        returning: vi.fn().mockResolvedValue([]),
+      } as unknown as Parameters<typeof apiKeyService.revoke>[0];
+
+      await apiKeyService.revoke(mockTx, 'key-1', 'org-1');
+
+      expect(eq).toHaveBeenCalledWith(apiKeys.organizationId, 'org-1');
+    });
+
+    it('delete filters on organization_id', async () => {
+      const mockTx = {
+        delete: vi.fn().mockReturnThis(),
+        where: vi.fn().mockReturnThis(),
+        returning: vi.fn().mockResolvedValue([]),
+      } as unknown as Parameters<typeof apiKeyService.delete>[0];
+
+      await apiKeyService.delete(mockTx, 'key-1', 'org-1');
+
+      expect(eq).toHaveBeenCalledWith(apiKeys.organizationId, 'org-1');
     });
   });
 });
