@@ -47,6 +47,7 @@ const STATUS_COLORS: Record<string, string> = {
   DELIVERING: "bg-status-info",
   DELIVERED: "bg-status-success",
   FAILED: "bg-status-error",
+  CANCELLED: "bg-status-warning",
 };
 
 interface WebhookDetailProps {
@@ -342,7 +343,8 @@ export function WebhookDetail({ endpointId }: WebhookDetailProps) {
                       </TableCell>
                       {isAdmin && (
                         <TableCell>
-                          {delivery.status === "FAILED" && (
+                          {(delivery.status === "FAILED" ||
+                            delivery.status === "CANCELLED") && (
                             <Button
                               variant="ghost"
                               size="sm"

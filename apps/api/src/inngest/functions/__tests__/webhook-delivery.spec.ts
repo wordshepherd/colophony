@@ -120,5 +120,18 @@ describe('webhookDelivery Inngest function', () => {
     expect(result).toEqual({ delivered: 2 });
     expect(mockCreateDelivery).toHaveBeenCalledTimes(2);
     expect(mockEnqueueWebhook).toHaveBeenCalledTimes(2);
+
+    // The endpoint URL and secret must not ride along in the job — the worker
+    // re-reads both at send time, so a rotated secret cannot be replayed.
+    for (const call of mockEnqueueWebhook.mock.calls) {
+      const jobData = call[1] as Record<string, unknown>;
+      expect(jobData).not.toHaveProperty('secret');
+      expect(jobData).not.toHaveProperty('endpointUrl');
+      expect(Object.keys(jobData).sort()).toEqual([
+        'deliveryId',
+        'orgId',
+        'payload',
+      ]);
+    }
   });
 });

@@ -9,11 +9,15 @@ export interface WebhookPayload {
   data: Record<string, unknown>;
 }
 
+/**
+ * The endpoint URL and signing secret are deliberately NOT carried here. The worker
+ * re-reads both from the database immediately before every send, so a rotated secret or
+ * an edited URL cannot be replayed out of a job that has been sitting in Redis (retries
+ * back off to 1h, and `removeOnFail` keeps failed jobs for 7 days).
+ */
 export interface WebhookJobData {
   deliveryId: string;
   orgId: string;
-  endpointUrl: string;
-  secret: string;
   payload: WebhookPayload;
 }
 
@@ -56,6 +60,26 @@ export async function enqueueWebhook(
   data: WebhookJobData,
 ): Promise<void> {
   await getQueue(env).add('deliver', data, { jobId: data.deliveryId });
+}
+
+/**
+ * Enqueue an operator-initiated retry of an existing delivery.
+ *
+ * `jobId` is the delivery id, and BullMQ treats a re-added jobId as a duplicate for as
+ * long as the previous job is retained — 24h for completed (`removeOnComplete`), 7 days
+ * for failed. Every terminal state a retry is offered from leaves such a job behind:
+ * FAILED exhausts its attempts, and CANCELLED / permanent-SSRF-failure return
+ * successfully. Re-adding alone therefore sets the row back to QUEUED and then never
+ * runs. Drop the retained job first so the retry actually executes.
+ */
+export async function enqueueWebhookRetry(
+  env: Env,
+  data: WebhookJobData,
+): Promise<void> {
+  const q = getQueue(env);
+  // Returns 0 if the job is gone or currently active; neither is an error here.
+  await q.remove(data.deliveryId).catch(() => undefined);
+  await q.add('deliver', data, { jobId: data.deliveryId });
 }
 
 export function getWebhookQueueInstance(): Queue<WebhookJobData> | null {

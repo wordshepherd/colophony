@@ -145,6 +145,31 @@ describe("WebhookDetail", () => {
     expect(screen.getByText("200")).toBeInTheDocument();
   });
 
+  it("renders a CANCELLED delivery and offers a retry", () => {
+    // Cancelled before send — e.g. the endpoint was disabled while the job was
+    // queued. Retry must be offered so it can be re-sent after re-enabling.
+    mockDeliveries = [
+      {
+        ...(mockDeliveries[0] as Record<string, unknown>),
+        id: "del-cancelled",
+        status: "CANCELLED",
+        httpStatusCode: null,
+        errorMessage: "Cancelled before send: Endpoint is disabled",
+        deliveredAt: null,
+      },
+    ];
+    const { container } = render(<WebhookDetail endpointId="ep-1" />);
+    expect(screen.getByText("CANCELLED")).toBeInTheDocument();
+    // The retry control lives in the delivery table; a DELIVERED row has none.
+    expect(container.querySelectorAll("table button")).toHaveLength(1);
+  });
+
+  it("offers no retry for a DELIVERED delivery", () => {
+    const { container } = render(<WebhookDetail endpointId="ep-1" />);
+    expect(screen.getByText("DELIVERED")).toBeInTheDocument();
+    expect(container.querySelectorAll("table button")).toHaveLength(0);
+  });
+
   it("shows action buttons for admins", () => {
     render(<WebhookDetail endpointId="ep-1" />);
     expect(screen.getByText("Test")).toBeInTheDocument();

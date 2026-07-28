@@ -227,6 +227,9 @@ export const webhookDeliveryStatusEnum = pgEnum("WebhookDeliveryStatus", [
   "DELIVERING",
   "DELIVERED",
   "FAILED",
+  // Endpoint was deleted, disabled, or unsubscribed between enqueue and send.
+  // Distinct from FAILED so cancellations don't feed the auto-disable threshold.
+  "CANCELLED",
 ]);
 
 export const contractStatusEnum = pgEnum("ContractStatus", [

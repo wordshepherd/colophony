@@ -63,8 +63,6 @@ export const webhookDelivery: InngestFunction.Any = inngest.createFunction(
         await enqueueWebhook(env, {
           deliveryId: delivery.id,
           orgId,
-          endpointUrl: endpoint.url,
-          secret: endpoint.secret,
           payload,
         });
       }
