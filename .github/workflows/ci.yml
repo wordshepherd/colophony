@@ -530,8 +530,12 @@ jobs:
           node-version-file: .nvmrc
           cache: "pnpm"
       - run: pnpm install --frozen-lockfile
+      # auth-client is needed because the scope-enforcement suite builds the real
+      # auth hook, which imports createJwksVerifier. Vitest resolves workspace
+      # packages through `exports` -> dist/, so an unbuilt dep fails to resolve
+      # rather than failing a test.
       - name: Build workspace dependencies
-        run: pnpm turbo run build --filter=@colophony/db --filter=@colophony/types --filter=@colophony/api-contracts --filter=@colophony/plugin-sdk
+        run: pnpm turbo run build --filter=@colophony/db --filter=@colophony/auth-client --filter=@colophony/types --filter=@colophony/api-contracts --filter=@colophony/plugin-sdk
       - name: Run security tests
         run: pnpm --filter @colophony/api test:security
         env:
