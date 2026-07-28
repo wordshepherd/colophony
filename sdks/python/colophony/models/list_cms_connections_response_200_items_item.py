@@ -1,45 +1,41 @@
 from __future__ import annotations
 
+import datetime
 from collections.abc import Mapping
-from typing import Any, TypeVar, BinaryIO, TextIO, TYPE_CHECKING, Generator
+from typing import TYPE_CHECKING, Any, TypeVar, cast
+from uuid import UUID
 
 from attrs import define as _attrs_define
 from attrs import field as _attrs_field
 
-from ..types import UNSET, Unset
-
-from ..models.list_cms_connections_response_200_items_item_adapter_type import ListCmsConnectionsResponse200ItemsItemAdapterType
-from dateutil.parser import isoparse
-from typing import cast
-from uuid import UUID
-import datetime
+from ..models.list_cms_connections_response_200_items_item_adapter_type import (
+    ListCmsConnectionsResponse200ItemsItemAdapterType,
+)
 
 if TYPE_CHECKING:
-  from ..models.list_cms_connections_response_200_items_item_config import ListCmsConnectionsResponse200ItemsItemConfig
-
-
-
+    from ..models.list_cms_connections_response_200_items_item_config import (
+        ListCmsConnectionsResponse200ItemsItemConfig,
+    )
 
 
 T = TypeVar("T", bound="ListCmsConnectionsResponse200ItemsItem")
 
 
-
 @_attrs_define
 class ListCmsConnectionsResponse200ItemsItem:
-    """ 
-        Attributes:
-            id (UUID):
-            organization_id (UUID):
-            publication_id (None | UUID):
-            adapter_type (ListCmsConnectionsResponse200ItemsItemAdapterType):
-            name (str):
-            config (ListCmsConnectionsResponse200ItemsItemConfig):
-            is_active (bool):
-            last_sync_at (datetime.datetime | None):
-            created_at (datetime.datetime):
-            updated_at (datetime.datetime):
-     """
+    """
+    Attributes:
+        id (UUID):
+        organization_id (UUID):
+        publication_id (None | UUID):
+        adapter_type (ListCmsConnectionsResponse200ItemsItemAdapterType):
+        name (str):
+        config (ListCmsConnectionsResponse200ItemsItemConfig):
+        is_active (bool):
+        last_sync_at (datetime.datetime | None):
+        created_at (datetime.datetime):
+        updated_at (datetime.datetime):
+    """
 
     id: UUID
     organization_id: UUID
@@ -53,12 +49,7 @@ class ListCmsConnectionsResponse200ItemsItem:
     updated_at: datetime.datetime
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
-
-
-
-
     def to_dict(self) -> dict[str, Any]:
-        from ..models.list_cms_connections_response_200_items_item_config import ListCmsConnectionsResponse200ItemsItemConfig
         id = str(self.id)
 
         organization_id = str(self.organization_id)
@@ -87,39 +78,35 @@ class ListCmsConnectionsResponse200ItemsItem:
 
         updated_at = self.updated_at.isoformat()
 
-
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
-        field_dict.update({
-            "id": id,
-            "organizationId": organization_id,
-            "publicationId": publication_id,
-            "adapterType": adapter_type,
-            "name": name,
-            "config": config,
-            "isActive": is_active,
-            "lastSyncAt": last_sync_at,
-            "createdAt": created_at,
-            "updatedAt": updated_at,
-        })
+        field_dict.update(
+            {
+                "id": id,
+                "organizationId": organization_id,
+                "publicationId": publication_id,
+                "adapterType": adapter_type,
+                "name": name,
+                "config": config,
+                "isActive": is_active,
+                "lastSyncAt": last_sync_at,
+                "createdAt": created_at,
+                "updatedAt": updated_at,
+            }
+        )
 
         return field_dict
 
-
-
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.list_cms_connections_response_200_items_item_config import ListCmsConnectionsResponse200ItemsItemConfig
+        from ..models.list_cms_connections_response_200_items_item_config import (
+            ListCmsConnectionsResponse200ItemsItemConfig,
+        )
+
         d = dict(src_dict)
         id = UUID(d.pop("id"))
 
-
-
-
         organization_id = UUID(d.pop("organizationId"))
-
-
-
 
         def _parse_publication_id(data: object) -> None | UUID:
             if data is None:
@@ -129,8 +116,6 @@ class ListCmsConnectionsResponse200ItemsItem:
                     raise TypeError()
                 publication_id_type_0 = UUID(data)
 
-
-
                 return publication_id_type_0
             except (TypeError, ValueError, AttributeError, KeyError):
                 pass
@@ -138,18 +123,11 @@ class ListCmsConnectionsResponse200ItemsItem:
 
         publication_id = _parse_publication_id(d.pop("publicationId"))
 
-
         adapter_type = ListCmsConnectionsResponse200ItemsItemAdapterType(d.pop("adapterType"))
-
-
-
 
         name = d.pop("name")
 
         config = ListCmsConnectionsResponse200ItemsItemConfig.from_dict(d.pop("config"))
-
-
-
 
         is_active = d.pop("isActive")
 
@@ -159,9 +137,7 @@ class ListCmsConnectionsResponse200ItemsItem:
             try:
                 if not isinstance(data, str):
                     raise TypeError()
-                last_sync_at_type_0 = isoparse(data)
-
-
+                last_sync_at_type_0 = datetime.datetime.fromisoformat(data)
 
                 return last_sync_at_type_0
             except (TypeError, ValueError, AttributeError, KeyError):
@@ -170,16 +146,9 @@ class ListCmsConnectionsResponse200ItemsItem:
 
         last_sync_at = _parse_last_sync_at(d.pop("lastSyncAt"))
 
+        created_at = datetime.datetime.fromisoformat(d.pop("createdAt"))
 
-        created_at = isoparse(d.pop("createdAt"))
-
-
-
-
-        updated_at = isoparse(d.pop("updatedAt"))
-
-
-
+        updated_at = datetime.datetime.fromisoformat(d.pop("updatedAt"))
 
         list_cms_connections_response_200_items_item = cls(
             id=id,
@@ -193,7 +162,6 @@ class ListCmsConnectionsResponse200ItemsItem:
             created_at=created_at,
             updated_at=updated_at,
         )
-
 
         list_cms_connections_response_200_items_item.additional_properties = d
         return list_cms_connections_response_200_items_item

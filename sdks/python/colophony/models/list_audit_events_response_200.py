@@ -1,36 +1,28 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from typing import Any, TypeVar, BinaryIO, TextIO, TYPE_CHECKING, Generator
+from typing import TYPE_CHECKING, Any, TypeVar
 
 from attrs import define as _attrs_define
 from attrs import field as _attrs_field
 
-from ..types import UNSET, Unset
-
-from typing import cast
-
 if TYPE_CHECKING:
-  from ..models.list_audit_events_response_200_items_item import ListAuditEventsResponse200ItemsItem
-
-
-
+    from ..models.list_audit_events_response_200_items_item import ListAuditEventsResponse200ItemsItem
 
 
 T = TypeVar("T", bound="ListAuditEventsResponse200")
 
 
-
 @_attrs_define
 class ListAuditEventsResponse200:
-    """ 
-        Attributes:
-            items (list[ListAuditEventsResponse200ItemsItem]): Items on the current page
-            total (float): Total number of items across all pages
-            page (float): Current page number
-            limit (float): Items per page
-            total_pages (float): Total number of pages
-     """
+    """
+    Attributes:
+        items (list[ListAuditEventsResponse200ItemsItem]): Items on the current page
+        total (float): Total number of items across all pages
+        page (float): Current page number
+        limit (float): Items per page
+        total_pages (float): Total number of pages
+    """
 
     items: list[ListAuditEventsResponse200ItemsItem]
     total: float
@@ -39,18 +31,11 @@ class ListAuditEventsResponse200:
     total_pages: float
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
-
-
-
-
     def to_dict(self) -> dict[str, Any]:
-        from ..models.list_audit_events_response_200_items_item import ListAuditEventsResponse200ItemsItem
         items = []
         for items_item_data in self.items:
             items_item = items_item_data.to_dict()
             items.append(items_item)
-
-
 
         total = self.total
 
@@ -60,34 +45,31 @@ class ListAuditEventsResponse200:
 
         total_pages = self.total_pages
 
-
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
-        field_dict.update({
-            "items": items,
-            "total": total,
-            "page": page,
-            "limit": limit,
-            "totalPages": total_pages,
-        })
+        field_dict.update(
+            {
+                "items": items,
+                "total": total,
+                "page": page,
+                "limit": limit,
+                "totalPages": total_pages,
+            }
+        )
 
         return field_dict
-
-
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
         from ..models.list_audit_events_response_200_items_item import ListAuditEventsResponse200ItemsItem
+
         d = dict(src_dict)
         items = []
         _items = d.pop("items")
-        for items_item_data in (_items):
+        for items_item_data in _items:
             items_item = ListAuditEventsResponse200ItemsItem.from_dict(items_item_data)
 
-
-
             items.append(items_item)
-
 
         total = d.pop("total")
 
@@ -104,7 +86,6 @@ class ListAuditEventsResponse200:
             limit=limit,
             total_pages=total_pages,
         )
-
 
         list_audit_events_response_200.additional_properties = d
         return list_audit_events_response_200

@@ -1,37 +1,32 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from typing import Any, TypeVar, BinaryIO, TextIO, TYPE_CHECKING, Generator
+from typing import TYPE_CHECKING, Any, TypeVar, cast
 
 from attrs import define as _attrs_define
 from attrs import field as _attrs_field
 
 from ..types import UNSET, Unset
 
-from ..types import UNSET, Unset
-from typing import cast
-
 if TYPE_CHECKING:
-  from ..models.update_contract_template_body_merge_fields_type_0_item import UpdateContractTemplateBodyMergeFieldsType0Item
-
-
-
+    from ..models.update_contract_template_body_merge_fields_type_0_item import (
+        UpdateContractTemplateBodyMergeFieldsType0Item,
+    )
 
 
 T = TypeVar("T", bound="UpdateContractTemplateBody")
 
 
-
 @_attrs_define
 class UpdateContractTemplateBody:
-    """ 
-        Attributes:
-            name (str | Unset): New name
-            description (None | str | Unset): New description (null to clear)
-            body (str | Unset): New template body
-            merge_fields (list[UpdateContractTemplateBodyMergeFieldsType0Item] | None | Unset): New merge field definitions
-            is_default (bool | Unset): Set as default template
-     """
+    """
+    Attributes:
+        name (str | Unset): New name
+        description (None | str | Unset): New description (null to clear)
+        body (str | Unset): New template body
+        merge_fields (list[UpdateContractTemplateBodyMergeFieldsType0Item] | None | Unset): New merge field definitions
+        is_default (bool | Unset): Set as default template
+    """
 
     name: str | Unset = UNSET
     description: None | str | Unset = UNSET
@@ -40,12 +35,7 @@ class UpdateContractTemplateBody:
     is_default: bool | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
-
-
-
-
     def to_dict(self) -> dict[str, Any]:
-        from ..models.update_contract_template_body_merge_fields_type_0_item import UpdateContractTemplateBodyMergeFieldsType0Item
         name = self.name
 
         description: None | str | Unset
@@ -65,17 +55,14 @@ class UpdateContractTemplateBody:
                 merge_fields_type_0_item = merge_fields_type_0_item_data.to_dict()
                 merge_fields.append(merge_fields_type_0_item)
 
-
         else:
             merge_fields = self.merge_fields
 
         is_default = self.is_default
 
-
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
-        field_dict.update({
-        })
+        field_dict.update({})
         if name is not UNSET:
             field_dict["name"] = name
         if description is not UNSET:
@@ -89,11 +76,12 @@ class UpdateContractTemplateBody:
 
         return field_dict
 
-
-
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.update_contract_template_body_merge_fields_type_0_item import UpdateContractTemplateBodyMergeFieldsType0Item
+        from ..models.update_contract_template_body_merge_fields_type_0_item import (
+            UpdateContractTemplateBodyMergeFieldsType0Item,
+        )
+
         d = dict(src_dict)
         name = d.pop("name", UNSET)
 
@@ -105,7 +93,6 @@ class UpdateContractTemplateBody:
             return cast(None | str | Unset, data)
 
         description = _parse_description(d.pop("description", UNSET))
-
 
         body = d.pop("body", UNSET)
 
@@ -119,10 +106,10 @@ class UpdateContractTemplateBody:
                     raise TypeError()
                 merge_fields_type_0 = []
                 _merge_fields_type_0 = data
-                for merge_fields_type_0_item_data in (_merge_fields_type_0):
-                    merge_fields_type_0_item = UpdateContractTemplateBodyMergeFieldsType0Item.from_dict(merge_fields_type_0_item_data)
-
-
+                for merge_fields_type_0_item_data in _merge_fields_type_0:
+                    merge_fields_type_0_item = UpdateContractTemplateBodyMergeFieldsType0Item.from_dict(
+                        merge_fields_type_0_item_data
+                    )
 
                     merge_fields_type_0.append(merge_fields_type_0_item)
 
@@ -133,7 +120,6 @@ class UpdateContractTemplateBody:
 
         merge_fields = _parse_merge_fields(d.pop("mergeFields", UNSET))
 
-
         is_default = d.pop("isDefault", UNSET)
 
         update_contract_template_body = cls(
@@ -143,7 +129,6 @@ class UpdateContractTemplateBody:
             merge_fields=merge_fields,
             is_default=is_default,
         )
-
 
         update_contract_template_body.additional_properties = d
         return update_contract_template_body

@@ -1,45 +1,37 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from typing import Any, TypeVar, BinaryIO, TextIO, TYPE_CHECKING, Generator
+from typing import TYPE_CHECKING, Any, TypeVar
 
 from attrs import define as _attrs_define
 from attrs import field as _attrs_field
 
-from ..types import UNSET, Unset
-
-from ..models.update_form_page_body_branching_rules_type_0_item_condition_operator import UpdateFormPageBodyBranchingRulesType0ItemConditionOperator
-from typing import cast
+from ..models.update_form_page_body_branching_rules_type_0_item_condition_operator import (
+    UpdateFormPageBodyBranchingRulesType0ItemConditionOperator,
+)
 
 if TYPE_CHECKING:
-  from ..models.update_form_page_body_branching_rules_type_0_item_condition_rules_item import UpdateFormPageBodyBranchingRulesType0ItemConditionRulesItem
-
-
-
+    from ..models.update_form_page_body_branching_rules_type_0_item_condition_rules_item import (
+        UpdateFormPageBodyBranchingRulesType0ItemConditionRulesItem,
+    )
 
 
 T = TypeVar("T", bound="UpdateFormPageBodyBranchingRulesType0ItemCondition")
 
 
-
 @_attrs_define
 class UpdateFormPageBodyBranchingRulesType0ItemCondition:
-    """ 
-        Attributes:
-            operator (UpdateFormPageBodyBranchingRulesType0ItemConditionOperator):
-            rules (list[UpdateFormPageBodyBranchingRulesType0ItemConditionRulesItem]):
-     """
+    """
+    Attributes:
+        operator (UpdateFormPageBodyBranchingRulesType0ItemConditionOperator):
+        rules (list[UpdateFormPageBodyBranchingRulesType0ItemConditionRulesItem]):
+    """
 
     operator: UpdateFormPageBodyBranchingRulesType0ItemConditionOperator
     rules: list[UpdateFormPageBodyBranchingRulesType0ItemConditionRulesItem]
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
-
-
-
-
     def to_dict(self) -> dict[str, Any]:
-        from ..models.update_form_page_body_branching_rules_type_0_item_condition_rules_item import UpdateFormPageBodyBranchingRulesType0ItemConditionRulesItem
         operator = self.operator.value
 
         rules = []
@@ -47,44 +39,37 @@ class UpdateFormPageBodyBranchingRulesType0ItemCondition:
             rules_item = rules_item_data.to_dict()
             rules.append(rules_item)
 
-
-
-
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
-        field_dict.update({
-            "operator": operator,
-            "rules": rules,
-        })
+        field_dict.update(
+            {
+                "operator": operator,
+                "rules": rules,
+            }
+        )
 
         return field_dict
 
-
-
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.update_form_page_body_branching_rules_type_0_item_condition_rules_item import UpdateFormPageBodyBranchingRulesType0ItemConditionRulesItem
+        from ..models.update_form_page_body_branching_rules_type_0_item_condition_rules_item import (
+            UpdateFormPageBodyBranchingRulesType0ItemConditionRulesItem,
+        )
+
         d = dict(src_dict)
         operator = UpdateFormPageBodyBranchingRulesType0ItemConditionOperator(d.pop("operator"))
 
-
-
-
         rules = []
         _rules = d.pop("rules")
-        for rules_item_data in (_rules):
+        for rules_item_data in _rules:
             rules_item = UpdateFormPageBodyBranchingRulesType0ItemConditionRulesItem.from_dict(rules_item_data)
 
-
-
             rules.append(rules_item)
-
 
         update_form_page_body_branching_rules_type_0_item_condition = cls(
             operator=operator,
             rules=rules,
         )
-
 
         update_form_page_body_branching_rules_type_0_item_condition.additional_properties = d
         return update_form_page_body_branching_rules_type_0_item_condition

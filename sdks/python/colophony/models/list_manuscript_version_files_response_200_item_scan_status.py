@@ -1,5 +1,6 @@
 from enum import Enum
 
+
 class ListManuscriptVersionFilesResponse200ItemScanStatus(str, Enum):
     CLEAN = "CLEAN"
     FAILED = "FAILED"

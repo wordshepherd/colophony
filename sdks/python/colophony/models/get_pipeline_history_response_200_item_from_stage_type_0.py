@@ -1,5 +1,6 @@
 from enum import Enum
 
+
 class GetPipelineHistoryResponse200ItemFromStageType0(str, Enum):
     AUTHOR_REVIEW = "AUTHOR_REVIEW"
     COPYEDIT_IN_PROGRESS = "COPYEDIT_IN_PROGRESS"

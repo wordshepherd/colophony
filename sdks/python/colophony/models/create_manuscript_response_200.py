@@ -1,38 +1,27 @@
 from __future__ import annotations
 
+import datetime
 from collections.abc import Mapping
-from typing import Any, TypeVar, BinaryIO, TextIO, TYPE_CHECKING, Generator
+from typing import Any, TypeVar, cast
+from uuid import UUID
 
 from attrs import define as _attrs_define
 from attrs import field as _attrs_field
 
-from ..types import UNSET, Unset
-
-from dateutil.parser import isoparse
-from typing import cast
-from uuid import UUID
-import datetime
-
-
-
-
-
-
 T = TypeVar("T", bound="CreateManuscriptResponse200")
-
 
 
 @_attrs_define
 class CreateManuscriptResponse200:
-    """ 
-        Attributes:
-            id (UUID): Unique identifier for the manuscript
-            owner_id (UUID): ID of the user who owns this manuscript
-            title (str): Title of the manuscript
-            description (None | str): Optional description of the manuscript
-            created_at (datetime.datetime): When the manuscript was created
-            updated_at (datetime.datetime): When the manuscript was last updated
-     """
+    """
+    Attributes:
+        id (UUID): Unique identifier for the manuscript
+        owner_id (UUID): ID of the user who owns this manuscript
+        title (str): Title of the manuscript
+        description (None | str): Optional description of the manuscript
+        created_at (datetime.datetime): When the manuscript was created
+        updated_at (datetime.datetime): When the manuscript was last updated
+    """
 
     id: UUID
     owner_id: UUID
@@ -41,10 +30,6 @@ class CreateManuscriptResponse200:
     created_at: datetime.datetime
     updated_at: datetime.datetime
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
-
-
-
-
 
     def to_dict(self) -> dict[str, Any]:
         id = str(self.id)
@@ -60,34 +45,27 @@ class CreateManuscriptResponse200:
 
         updated_at = self.updated_at.isoformat()
 
-
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
-        field_dict.update({
-            "id": id,
-            "ownerId": owner_id,
-            "title": title,
-            "description": description,
-            "createdAt": created_at,
-            "updatedAt": updated_at,
-        })
+        field_dict.update(
+            {
+                "id": id,
+                "ownerId": owner_id,
+                "title": title,
+                "description": description,
+                "createdAt": created_at,
+                "updatedAt": updated_at,
+            }
+        )
 
         return field_dict
-
-
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
         d = dict(src_dict)
         id = UUID(d.pop("id"))
 
-
-
-
         owner_id = UUID(d.pop("ownerId"))
-
-
-
 
         title = d.pop("title")
 
@@ -98,16 +76,9 @@ class CreateManuscriptResponse200:
 
         description = _parse_description(d.pop("description"))
 
+        created_at = datetime.datetime.fromisoformat(d.pop("createdAt"))
 
-        created_at = isoparse(d.pop("createdAt"))
-
-
-
-
-        updated_at = isoparse(d.pop("updatedAt"))
-
-
-
+        updated_at = datetime.datetime.fromisoformat(d.pop("updatedAt"))
 
         create_manuscript_response_200 = cls(
             id=id,
@@ -117,7 +88,6 @@ class CreateManuscriptResponse200:
             created_at=created_at,
             updated_at=updated_at,
         )
-
 
         create_manuscript_response_200.additional_properties = d
         return create_manuscript_response_200

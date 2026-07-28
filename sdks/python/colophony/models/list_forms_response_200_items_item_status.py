@@ -1,5 +1,6 @@
 from enum import Enum
 
+
 class ListFormsResponse200ItemsItemStatus(str, Enum):
     ARCHIVED = "ARCHIVED"
     DRAFT = "DRAFT"

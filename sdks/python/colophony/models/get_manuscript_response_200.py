@@ -1,41 +1,32 @@
 from __future__ import annotations
 
+import datetime
 from collections.abc import Mapping
-from typing import Any, TypeVar, BinaryIO, TextIO, TYPE_CHECKING, Generator
+from typing import TYPE_CHECKING, Any, TypeVar, cast
+from uuid import UUID
 
 from attrs import define as _attrs_define
 from attrs import field as _attrs_field
 
-from ..types import UNSET, Unset
-
-from dateutil.parser import isoparse
-from typing import cast
-from uuid import UUID
-import datetime
-
 if TYPE_CHECKING:
-  from ..models.get_manuscript_response_200_versions_item import GetManuscriptResponse200VersionsItem
-
-
-
+    from ..models.get_manuscript_response_200_versions_item import GetManuscriptResponse200VersionsItem
 
 
 T = TypeVar("T", bound="GetManuscriptResponse200")
 
 
-
 @_attrs_define
 class GetManuscriptResponse200:
-    """ 
-        Attributes:
-            id (UUID): Unique identifier for the manuscript
-            owner_id (UUID): ID of the user who owns this manuscript
-            title (str): Title of the manuscript
-            description (None | str): Optional description of the manuscript
-            created_at (datetime.datetime): When the manuscript was created
-            updated_at (datetime.datetime): When the manuscript was last updated
-            versions (list[GetManuscriptResponse200VersionsItem]): All versions of this manuscript with their files
-     """
+    """
+    Attributes:
+        id (UUID): Unique identifier for the manuscript
+        owner_id (UUID): ID of the user who owns this manuscript
+        title (str): Title of the manuscript
+        description (None | str): Optional description of the manuscript
+        created_at (datetime.datetime): When the manuscript was created
+        updated_at (datetime.datetime): When the manuscript was last updated
+        versions (list[GetManuscriptResponse200VersionsItem]): All versions of this manuscript with their files
+    """
 
     id: UUID
     owner_id: UUID
@@ -46,12 +37,7 @@ class GetManuscriptResponse200:
     versions: list[GetManuscriptResponse200VersionsItem]
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
-
-
-
-
     def to_dict(self) -> dict[str, Any]:
-        from ..models.get_manuscript_response_200_versions_item import GetManuscriptResponse200VersionsItem
         id = str(self.id)
 
         owner_id = str(self.owner_id)
@@ -70,38 +56,30 @@ class GetManuscriptResponse200:
             versions_item = versions_item_data.to_dict()
             versions.append(versions_item)
 
-
-
-
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
-        field_dict.update({
-            "id": id,
-            "ownerId": owner_id,
-            "title": title,
-            "description": description,
-            "createdAt": created_at,
-            "updatedAt": updated_at,
-            "versions": versions,
-        })
+        field_dict.update(
+            {
+                "id": id,
+                "ownerId": owner_id,
+                "title": title,
+                "description": description,
+                "createdAt": created_at,
+                "updatedAt": updated_at,
+                "versions": versions,
+            }
+        )
 
         return field_dict
-
-
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
         from ..models.get_manuscript_response_200_versions_item import GetManuscriptResponse200VersionsItem
+
         d = dict(src_dict)
         id = UUID(d.pop("id"))
 
-
-
-
         owner_id = UUID(d.pop("ownerId"))
-
-
-
 
         title = d.pop("title")
 
@@ -112,26 +90,16 @@ class GetManuscriptResponse200:
 
         description = _parse_description(d.pop("description"))
 
+        created_at = datetime.datetime.fromisoformat(d.pop("createdAt"))
 
-        created_at = isoparse(d.pop("createdAt"))
-
-
-
-
-        updated_at = isoparse(d.pop("updatedAt"))
-
-
-
+        updated_at = datetime.datetime.fromisoformat(d.pop("updatedAt"))
 
         versions = []
         _versions = d.pop("versions")
-        for versions_item_data in (_versions):
+        for versions_item_data in _versions:
             versions_item = GetManuscriptResponse200VersionsItem.from_dict(versions_item_data)
 
-
-
             versions.append(versions_item)
-
 
         get_manuscript_response_200 = cls(
             id=id,
@@ -142,7 +110,6 @@ class GetManuscriptResponse200:
             updated_at=updated_at,
             versions=versions,
         )
-
 
         get_manuscript_response_200.additional_properties = d
         return get_manuscript_response_200

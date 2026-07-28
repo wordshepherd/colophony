@@ -1,5 +1,6 @@
 from enum import Enum
 
+
 class ReorderFormFieldsResponse200ItemFieldType(str, Enum):
     CHECKBOX = "checkbox"
     CHECKBOX_GROUP = "checkbox_group"

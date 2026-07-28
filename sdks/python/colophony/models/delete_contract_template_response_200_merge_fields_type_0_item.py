@@ -1,45 +1,35 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from typing import Any, TypeVar, BinaryIO, TextIO, TYPE_CHECKING, Generator
+from typing import Any, TypeVar
 
 from attrs import define as _attrs_define
 from attrs import field as _attrs_field
 
+from ..models.delete_contract_template_response_200_merge_fields_type_0_item_source import (
+    DeleteContractTemplateResponse200MergeFieldsType0ItemSource,
+)
 from ..types import UNSET, Unset
-
-from ..models.delete_contract_template_response_200_merge_fields_type_0_item_source import DeleteContractTemplateResponse200MergeFieldsType0ItemSource
-from ..types import UNSET, Unset
-
-
-
-
-
 
 T = TypeVar("T", bound="DeleteContractTemplateResponse200MergeFieldsType0Item")
 
 
-
 @_attrs_define
 class DeleteContractTemplateResponse200MergeFieldsType0Item:
-    """ 
-        Attributes:
-            key (str): Merge field key (e.g. author_name)
-            label (str): Human-readable label
-            source (DeleteContractTemplateResponse200MergeFieldsType0ItemSource): Whether the field is auto-populated or
-                manually entered
-            default_value (str | Unset): Default value if not provided
-     """
+    """
+    Attributes:
+        key (str): Merge field key (e.g. author_name)
+        label (str): Human-readable label
+        source (DeleteContractTemplateResponse200MergeFieldsType0ItemSource): Whether the field is auto-populated or
+            manually entered
+        default_value (str | Unset): Default value if not provided
+    """
 
     key: str
     label: str
     source: DeleteContractTemplateResponse200MergeFieldsType0ItemSource
     default_value: str | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
-
-
-
-
 
     def to_dict(self) -> dict[str, Any]:
         key = self.key
@@ -50,20 +40,19 @@ class DeleteContractTemplateResponse200MergeFieldsType0Item:
 
         default_value = self.default_value
 
-
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
-        field_dict.update({
-            "key": key,
-            "label": label,
-            "source": source,
-        })
+        field_dict.update(
+            {
+                "key": key,
+                "label": label,
+                "source": source,
+            }
+        )
         if default_value is not UNSET:
             field_dict["defaultValue"] = default_value
 
         return field_dict
-
-
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
@@ -74,9 +63,6 @@ class DeleteContractTemplateResponse200MergeFieldsType0Item:
 
         source = DeleteContractTemplateResponse200MergeFieldsType0ItemSource(d.pop("source"))
 
-
-
-
         default_value = d.pop("defaultValue", UNSET)
 
         delete_contract_template_response_200_merge_fields_type_0_item = cls(
@@ -85,7 +71,6 @@ class DeleteContractTemplateResponse200MergeFieldsType0Item:
             source=source,
             default_value=default_value,
         )
-
 
         delete_contract_template_response_200_merge_fields_type_0_item.additional_properties = d
         return delete_contract_template_response_200_merge_fields_type_0_item

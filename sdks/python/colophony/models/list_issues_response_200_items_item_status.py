@@ -1,5 +1,6 @@
 from enum import Enum
 
+
 class ListIssuesResponse200ItemsItemStatus(str, Enum):
     ARCHIVED = "ARCHIVED"
     ASSEMBLING = "ASSEMBLING"

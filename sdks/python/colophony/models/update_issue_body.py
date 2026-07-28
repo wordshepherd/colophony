@@ -1,38 +1,28 @@
 from __future__ import annotations
 
+import datetime
 from collections.abc import Mapping
-from typing import Any, TypeVar, BinaryIO, TextIO, TYPE_CHECKING, Generator
+from typing import Any, TypeVar, cast
 
 from attrs import define as _attrs_define
 from attrs import field as _attrs_field
 
 from ..types import UNSET, Unset
 
-from ..types import UNSET, Unset
-from dateutil.parser import isoparse
-from typing import cast
-import datetime
-
-
-
-
-
-
 T = TypeVar("T", bound="UpdateIssueBody")
-
 
 
 @_attrs_define
 class UpdateIssueBody:
-    """ 
-        Attributes:
-            title (str | Unset): New title
-            volume (int | None | Unset): New volume number
-            issue_number (int | None | Unset): New issue number
-            description (None | str | Unset): New description
-            cover_image_url (None | str | Unset): New cover image URL
-            publication_date (datetime.datetime | None | Unset): New publication date
-     """
+    """
+    Attributes:
+        title (str | Unset): New title
+        volume (int | None | Unset): New volume number
+        issue_number (int | None | Unset): New issue number
+        description (None | str | Unset): New description
+        cover_image_url (None | str | Unset): New cover image URL
+        publication_date (datetime.datetime | None | Unset): New publication date
+    """
 
     title: str | Unset = UNSET
     volume: int | None | Unset = UNSET
@@ -41,10 +31,6 @@ class UpdateIssueBody:
     cover_image_url: None | str | Unset = UNSET
     publication_date: datetime.datetime | None | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
-
-
-
-
 
     def to_dict(self) -> dict[str, Any]:
         title = self.title
@@ -81,11 +67,9 @@ class UpdateIssueBody:
         else:
             publication_date = self.publication_date
 
-
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
-        field_dict.update({
-        })
+        field_dict.update({})
         if title is not UNSET:
             field_dict["title"] = title
         if volume is not UNSET:
@@ -101,8 +85,6 @@ class UpdateIssueBody:
 
         return field_dict
 
-
-
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
         d = dict(src_dict)
@@ -117,7 +99,6 @@ class UpdateIssueBody:
 
         volume = _parse_volume(d.pop("volume", UNSET))
 
-
         def _parse_issue_number(data: object) -> int | None | Unset:
             if data is None:
                 return data
@@ -126,7 +107,6 @@ class UpdateIssueBody:
             return cast(int | None | Unset, data)
 
         issue_number = _parse_issue_number(d.pop("issueNumber", UNSET))
-
 
         def _parse_description(data: object) -> None | str | Unset:
             if data is None:
@@ -137,7 +117,6 @@ class UpdateIssueBody:
 
         description = _parse_description(d.pop("description", UNSET))
 
-
         def _parse_cover_image_url(data: object) -> None | str | Unset:
             if data is None:
                 return data
@@ -147,7 +126,6 @@ class UpdateIssueBody:
 
         cover_image_url = _parse_cover_image_url(d.pop("coverImageUrl", UNSET))
 
-
         def _parse_publication_date(data: object) -> datetime.datetime | None | Unset:
             if data is None:
                 return data
@@ -156,9 +134,7 @@ class UpdateIssueBody:
             try:
                 if not isinstance(data, str):
                     raise TypeError()
-                publication_date_type_0 = isoparse(data)
-
-
+                publication_date_type_0 = datetime.datetime.fromisoformat(data)
 
                 return publication_date_type_0
             except (TypeError, ValueError, AttributeError, KeyError):
@@ -166,7 +142,6 @@ class UpdateIssueBody:
             return cast(datetime.datetime | None | Unset, data)
 
         publication_date = _parse_publication_date(d.pop("publicationDate", UNSET))
-
 
         update_issue_body = cls(
             title=title,
@@ -176,7 +151,6 @@ class UpdateIssueBody:
             cover_image_url=cover_image_url,
             publication_date=publication_date,
         )
-
 
         update_issue_body.additional_properties = d
         return update_issue_body

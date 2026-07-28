@@ -1,18 +1,13 @@
 from http import HTTPStatus
-from typing import Any, cast
-from urllib.parse import quote
+from typing import Any
 
 import httpx
 
-from ...client import AuthenticatedClient, Client
-from ...types import Response, UNSET
 from ... import errors
-
+from ...client import AuthenticatedClient, Client
 from ...models.list_periods_response_200 import ListPeriodsResponse200
 from ...models.list_periods_status import ListPeriodsStatus
-from ...types import UNSET, Unset
-from typing import cast
-
+from ...types import UNSET, Response, Unset
 
 
 def _get_kwargs(
@@ -21,11 +16,7 @@ def _get_kwargs(
     search: str | Unset = UNSET,
     page: int | Unset = 1,
     limit: int | Unset = 20,
-
 ) -> dict[str, Any]:
-    
-
-    
 
     params: dict[str, Any] = {}
 
@@ -41,9 +32,7 @@ def _get_kwargs(
 
     params["limit"] = limit
 
-
     params = {k: v for k, v in params.items() if v is not UNSET and v is not None}
-
 
     _kwargs: dict[str, Any] = {
         "method": "get",
@@ -51,16 +40,12 @@ def _get_kwargs(
         "params": params,
     }
 
-
     return _kwargs
-
 
 
 def _parse_response(*, client: AuthenticatedClient | Client, response: httpx.Response) -> ListPeriodsResponse200 | None:
     if response.status_code == 200:
         response_200 = ListPeriodsResponse200.from_dict(response.json())
-
-
 
         return response_200
 
@@ -70,7 +55,9 @@ def _parse_response(*, client: AuthenticatedClient | Client, response: httpx.Res
         return None
 
 
-def _build_response(*, client: AuthenticatedClient | Client, response: httpx.Response) -> Response[ListPeriodsResponse200]:
+def _build_response(
+    *, client: AuthenticatedClient | Client, response: httpx.Response
+) -> Response[ListPeriodsResponse200]:
     return Response(
         status_code=HTTPStatus(response.status_code),
         content=response.content,
@@ -86,9 +73,8 @@ def sync_detailed(
     search: str | Unset = UNSET,
     page: int | Unset = 1,
     limit: int | Unset = 20,
-
 ) -> Response[ListPeriodsResponse200]:
-    """ List submission periods
+    """List submission periods
 
      Returns a paginated list of submission periods in the organization.
 
@@ -104,15 +90,13 @@ def sync_detailed(
 
     Returns:
         Response[ListPeriodsResponse200]
-     """
-
+    """
 
     kwargs = _get_kwargs(
         status=status,
-search=search,
-page=page,
-limit=limit,
-
+        search=search,
+        page=page,
+        limit=limit,
     )
 
     response = client.get_httpx_client().request(
@@ -121,6 +105,7 @@ limit=limit,
 
     return _build_response(client=client, response=response)
 
+
 def sync(
     *,
     client: AuthenticatedClient | Client,
@@ -128,9 +113,8 @@ def sync(
     search: str | Unset = UNSET,
     page: int | Unset = 1,
     limit: int | Unset = 20,
-
 ) -> ListPeriodsResponse200 | None:
-    """ List submission periods
+    """List submission periods
 
      Returns a paginated list of submission periods in the organization.
 
@@ -146,17 +130,16 @@ def sync(
 
     Returns:
         ListPeriodsResponse200
-     """
-
+    """
 
     return sync_detailed(
         client=client,
-status=status,
-search=search,
-page=page,
-limit=limit,
-
+        status=status,
+        search=search,
+        page=page,
+        limit=limit,
     ).parsed
+
 
 async def asyncio_detailed(
     *,
@@ -165,9 +148,8 @@ async def asyncio_detailed(
     search: str | Unset = UNSET,
     page: int | Unset = 1,
     limit: int | Unset = 20,
-
 ) -> Response[ListPeriodsResponse200]:
-    """ List submission periods
+    """List submission periods
 
      Returns a paginated list of submission periods in the organization.
 
@@ -183,22 +165,19 @@ async def asyncio_detailed(
 
     Returns:
         Response[ListPeriodsResponse200]
-     """
-
+    """
 
     kwargs = _get_kwargs(
         status=status,
-search=search,
-page=page,
-limit=limit,
-
+        search=search,
+        page=page,
+        limit=limit,
     )
 
-    response = await client.get_async_httpx_client().request(
-        **kwargs
-    )
+    response = await client.get_async_httpx_client().request(**kwargs)
 
     return _build_response(client=client, response=response)
+
 
 async def asyncio(
     *,
@@ -207,9 +186,8 @@ async def asyncio(
     search: str | Unset = UNSET,
     page: int | Unset = 1,
     limit: int | Unset = 20,
-
 ) -> ListPeriodsResponse200 | None:
-    """ List submission periods
+    """List submission periods
 
      Returns a paginated list of submission periods in the organization.
 
@@ -225,14 +203,14 @@ async def asyncio(
 
     Returns:
         ListPeriodsResponse200
-     """
+    """
 
-
-    return (await asyncio_detailed(
-        client=client,
-status=status,
-search=search,
-page=page,
-limit=limit,
-
-    )).parsed
+    return (
+        await asyncio_detailed(
+            client=client,
+            status=status,
+            search=search,
+            page=page,
+            limit=limit,
+        )
+    ).parsed

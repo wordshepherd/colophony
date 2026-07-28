@@ -1,38 +1,27 @@
 from __future__ import annotations
 
+import datetime
 from collections.abc import Mapping
-from typing import Any, TypeVar, BinaryIO, TextIO, TYPE_CHECKING, Generator
+from typing import Any, TypeVar, cast
+from uuid import UUID
 
 from attrs import define as _attrs_define
 from attrs import field as _attrs_field
 
-from ..types import UNSET, Unset
-
-from dateutil.parser import isoparse
-from typing import cast
-from uuid import UUID
-import datetime
-
-
-
-
-
-
 T = TypeVar("T", bound="GetManuscriptRelatedSubmissionsResponse200Item")
-
 
 
 @_attrs_define
 class GetManuscriptRelatedSubmissionsResponse200Item:
-    """ 
-        Attributes:
-            id (UUID): Submission ID
-            organization_id (UUID): Organization ID
-            status (str): Current submission status
-            title (None | str): Submission title
-            version_number (int): Manuscript version number used
-            submitted_at (datetime.datetime | None): When the submission was submitted
-     """
+    """
+    Attributes:
+        id (UUID): Submission ID
+        organization_id (UUID): Organization ID
+        status (str): Current submission status
+        title (None | str): Submission title
+        version_number (int): Manuscript version number used
+        submitted_at (datetime.datetime | None): When the submission was submitted
+    """
 
     id: UUID
     organization_id: UUID
@@ -41,10 +30,6 @@ class GetManuscriptRelatedSubmissionsResponse200Item:
     version_number: int
     submitted_at: datetime.datetime | None
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
-
-
-
-
 
     def to_dict(self) -> dict[str, Any]:
         id = str(self.id)
@@ -64,34 +49,27 @@ class GetManuscriptRelatedSubmissionsResponse200Item:
         else:
             submitted_at = self.submitted_at
 
-
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
-        field_dict.update({
-            "id": id,
-            "organizationId": organization_id,
-            "status": status,
-            "title": title,
-            "versionNumber": version_number,
-            "submittedAt": submitted_at,
-        })
+        field_dict.update(
+            {
+                "id": id,
+                "organizationId": organization_id,
+                "status": status,
+                "title": title,
+                "versionNumber": version_number,
+                "submittedAt": submitted_at,
+            }
+        )
 
         return field_dict
-
-
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
         d = dict(src_dict)
         id = UUID(d.pop("id"))
 
-
-
-
         organization_id = UUID(d.pop("organizationId"))
-
-
-
 
         status = d.pop("status")
 
@@ -102,7 +80,6 @@ class GetManuscriptRelatedSubmissionsResponse200Item:
 
         title = _parse_title(d.pop("title"))
 
-
         version_number = d.pop("versionNumber")
 
         def _parse_submitted_at(data: object) -> datetime.datetime | None:
@@ -111,9 +88,7 @@ class GetManuscriptRelatedSubmissionsResponse200Item:
             try:
                 if not isinstance(data, str):
                     raise TypeError()
-                submitted_at_type_0 = isoparse(data)
-
-
+                submitted_at_type_0 = datetime.datetime.fromisoformat(data)
 
                 return submitted_at_type_0
             except (TypeError, ValueError, AttributeError, KeyError):
@@ -121,7 +96,6 @@ class GetManuscriptRelatedSubmissionsResponse200Item:
             return cast(datetime.datetime | None, data)
 
         submitted_at = _parse_submitted_at(d.pop("submittedAt"))
-
 
         get_manuscript_related_submissions_response_200_item = cls(
             id=id,
@@ -131,7 +105,6 @@ class GetManuscriptRelatedSubmissionsResponse200Item:
             version_number=version_number,
             submitted_at=submitted_at,
         )
-
 
         get_manuscript_related_submissions_response_200_item.additional_properties = d
         return get_manuscript_related_submissions_response_200_item

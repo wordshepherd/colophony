@@ -1,44 +1,33 @@
 from http import HTTPStatus
-from typing import Any, cast
+from typing import Any
 from urllib.parse import quote
+from uuid import UUID
 
 import httpx
 
-from ...client import AuthenticatedClient, Client
-from ...types import Response, UNSET
 from ... import errors
-
+from ...client import AuthenticatedClient, Client
 from ...models.get_form_response_200 import GetFormResponse200
-from typing import cast
-from uuid import UUID
-
+from ...types import Response
 
 
 def _get_kwargs(
     id: UUID,
-
 ) -> dict[str, Any]:
-    
-
-    
-
-    
 
     _kwargs: dict[str, Any] = {
         "method": "get",
-        "url": "/forms/{id}".format(id=quote(str(id), safe=""),),
+        "url": "/forms/{id}".format(
+            id=quote(str(id), safe=""),
+        ),
     }
 
-
     return _kwargs
-
 
 
 def _parse_response(*, client: AuthenticatedClient | Client, response: httpx.Response) -> GetFormResponse200 | None:
     if response.status_code == 200:
         response_200 = GetFormResponse200.from_dict(response.json())
-
-
 
         return response_200
 
@@ -61,9 +50,8 @@ def sync_detailed(
     id: UUID,
     *,
     client: AuthenticatedClient | Client,
-
 ) -> Response[GetFormResponse200]:
-    """ Get a form definition
+    """Get a form definition
 
      Retrieve a form definition by ID, including its fields ordered by sortOrder.
 
@@ -76,12 +64,10 @@ def sync_detailed(
 
     Returns:
         Response[GetFormResponse200]
-     """
-
+    """
 
     kwargs = _get_kwargs(
         id=id,
-
     )
 
     response = client.get_httpx_client().request(
@@ -90,13 +76,13 @@ def sync_detailed(
 
     return _build_response(client=client, response=response)
 
+
 def sync(
     id: UUID,
     *,
     client: AuthenticatedClient | Client,
-
 ) -> GetFormResponse200 | None:
-    """ Get a form definition
+    """Get a form definition
 
      Retrieve a form definition by ID, including its fields ordered by sortOrder.
 
@@ -109,22 +95,20 @@ def sync(
 
     Returns:
         GetFormResponse200
-     """
-
+    """
 
     return sync_detailed(
         id=id,
-client=client,
-
+        client=client,
     ).parsed
+
 
 async def asyncio_detailed(
     id: UUID,
     *,
     client: AuthenticatedClient | Client,
-
 ) -> Response[GetFormResponse200]:
-    """ Get a form definition
+    """Get a form definition
 
      Retrieve a form definition by ID, including its fields ordered by sortOrder.
 
@@ -137,27 +121,23 @@ async def asyncio_detailed(
 
     Returns:
         Response[GetFormResponse200]
-     """
-
+    """
 
     kwargs = _get_kwargs(
         id=id,
-
     )
 
-    response = await client.get_async_httpx_client().request(
-        **kwargs
-    )
+    response = await client.get_async_httpx_client().request(**kwargs)
 
     return _build_response(client=client, response=response)
+
 
 async def asyncio(
     id: UUID,
     *,
     client: AuthenticatedClient | Client,
-
 ) -> GetFormResponse200 | None:
-    """ Get a form definition
+    """Get a form definition
 
      Retrieve a form definition by ID, including its fields ordered by sortOrder.
 
@@ -170,11 +150,11 @@ async def asyncio(
 
     Returns:
         GetFormResponse200
-     """
+    """
 
-
-    return (await asyncio_detailed(
-        id=id,
-client=client,
-
-    )).parsed
+    return (
+        await asyncio_detailed(
+            id=id,
+            client=client,
+        )
+    ).parsed

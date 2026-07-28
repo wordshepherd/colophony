@@ -1,5 +1,6 @@
 from enum import Enum
 
+
 class GetContractTemplateResponse200MergeFieldsType0ItemSource(str, Enum):
     AUTO = "auto"
     MANUAL = "manual"

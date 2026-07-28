@@ -1632,6 +1632,13 @@ jobs:
           node-version-file: .nvmrc
           cache: "pnpm"
       - run: pnpm install --frozen-lockfile
+      # The export script imports the oRPC routers, which resolve @colophony/*
+      # through package exports -> dist/. Without this build the import fails
+      # in a fresh checkout.
+      - name: Build workspace packages
+        run: pnpm turbo run build --filter=@colophony/db --filter=@colophony/types --filter=@colophony/api-contracts
+      - name: Check spec matches source
+        run: pnpm sdk:check-spec
       - name: Install TS SDK deps
         run: cd sdks/typescript && npm ci
       - name: Regenerate TypeScript SDK
@@ -1648,3 +1655,28 @@ jobs:
             exit 1
           fi
           echo "TypeScript SDK is up to date."
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+      # Generated Python output is version-sensitive, so both the generator and
+      # the Python version are pinned. Bumping either requires regenerating and
+      # committing sdks/python/colophony/ in the same change. See the note in
+      # sdks/python/openapi-python-client.yaml.
+      - name: Regenerate Python SDK
+        run: |
+          pip install openapi-python-client==0.29.0
+          pnpm sdk:generate
+      - name: Check for Python SDK drift
+        run: |
+          # Only colophony/ is generator output. pyproject.toml, poetry.lock,
+          # README.md, and tests/ are hand- or Dependabot-maintained.
+          #
+          # `git status --porcelain`, not `git diff`: a new operation adds new
+          # untracked model and endpoint files, which `git diff` does not see.
+          DRIFT=$(git status --porcelain -- sdks/python/colophony/)
+          if [ -n "$DRIFT" ]; then
+            echo "::error::Python SDK is out of date. Run 'pnpm sdk:generate' and commit."
+            echo "$DRIFT"
+            exit 1
+          fi
+          echo "Python SDK is up to date."

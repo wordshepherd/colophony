@@ -1,39 +1,29 @@
 from __future__ import annotations
 
+import datetime
 from collections.abc import Mapping
-from typing import Any, TypeVar, BinaryIO, TextIO, TYPE_CHECKING, Generator
+from typing import Any, TypeVar, cast
+from uuid import UUID
 
 from attrs import define as _attrs_define
 from attrs import field as _attrs_field
 
-from ..types import UNSET, Unset
-
 from ..models.list_pipeline_comments_response_200_item_stage import ListPipelineCommentsResponse200ItemStage
-from dateutil.parser import isoparse
-from typing import cast
-from uuid import UUID
-import datetime
-
-
-
-
-
 
 T = TypeVar("T", bound="ListPipelineCommentsResponse200Item")
 
 
-
 @_attrs_define
 class ListPipelineCommentsResponse200Item:
-    """ 
-        Attributes:
-            id (UUID):
-            pipeline_item_id (UUID):
-            author_id (None | UUID):
-            content (str):
-            stage (ListPipelineCommentsResponse200ItemStage): Current pipeline stage for the piece
-            created_at (datetime.datetime):
-     """
+    """
+    Attributes:
+        id (UUID):
+        pipeline_item_id (UUID):
+        author_id (None | UUID):
+        content (str):
+        stage (ListPipelineCommentsResponse200ItemStage): Current pipeline stage for the piece
+        created_at (datetime.datetime):
+    """
 
     id: UUID
     pipeline_item_id: UUID
@@ -42,10 +32,6 @@ class ListPipelineCommentsResponse200Item:
     stage: ListPipelineCommentsResponse200ItemStage
     created_at: datetime.datetime
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
-
-
-
-
 
     def to_dict(self) -> dict[str, Any]:
         id = str(self.id)
@@ -64,34 +50,27 @@ class ListPipelineCommentsResponse200Item:
 
         created_at = self.created_at.isoformat()
 
-
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
-        field_dict.update({
-            "id": id,
-            "pipelineItemId": pipeline_item_id,
-            "authorId": author_id,
-            "content": content,
-            "stage": stage,
-            "createdAt": created_at,
-        })
+        field_dict.update(
+            {
+                "id": id,
+                "pipelineItemId": pipeline_item_id,
+                "authorId": author_id,
+                "content": content,
+                "stage": stage,
+                "createdAt": created_at,
+            }
+        )
 
         return field_dict
-
-
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
         d = dict(src_dict)
         id = UUID(d.pop("id"))
 
-
-
-
         pipeline_item_id = UUID(d.pop("pipelineItemId"))
-
-
-
 
         def _parse_author_id(data: object) -> None | UUID:
             if data is None:
@@ -101,8 +80,6 @@ class ListPipelineCommentsResponse200Item:
                     raise TypeError()
                 author_id_type_0 = UUID(data)
 
-
-
                 return author_id_type_0
             except (TypeError, ValueError, AttributeError, KeyError):
                 pass
@@ -110,18 +87,11 @@ class ListPipelineCommentsResponse200Item:
 
         author_id = _parse_author_id(d.pop("authorId"))
 
-
         content = d.pop("content")
 
         stage = ListPipelineCommentsResponse200ItemStage(d.pop("stage"))
 
-
-
-
-        created_at = isoparse(d.pop("createdAt"))
-
-
-
+        created_at = datetime.datetime.fromisoformat(d.pop("createdAt"))
 
         list_pipeline_comments_response_200_item = cls(
             id=id,
@@ -131,7 +101,6 @@ class ListPipelineCommentsResponse200Item:
             stage=stage,
             created_at=created_at,
         )
-
 
         list_pipeline_comments_response_200_item.additional_properties = d
         return list_pipeline_comments_response_200_item

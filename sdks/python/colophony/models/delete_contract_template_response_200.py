@@ -1,43 +1,36 @@
 from __future__ import annotations
 
+import datetime
 from collections.abc import Mapping
-from typing import Any, TypeVar, BinaryIO, TextIO, TYPE_CHECKING, Generator
+from typing import TYPE_CHECKING, Any, TypeVar, cast
+from uuid import UUID
 
 from attrs import define as _attrs_define
 from attrs import field as _attrs_field
 
-from ..types import UNSET, Unset
-
-from dateutil.parser import isoparse
-from typing import cast
-from uuid import UUID
-import datetime
-
 if TYPE_CHECKING:
-  from ..models.delete_contract_template_response_200_merge_fields_type_0_item import DeleteContractTemplateResponse200MergeFieldsType0Item
-
-
-
+    from ..models.delete_contract_template_response_200_merge_fields_type_0_item import (
+        DeleteContractTemplateResponse200MergeFieldsType0Item,
+    )
 
 
 T = TypeVar("T", bound="DeleteContractTemplateResponse200")
 
 
-
 @_attrs_define
 class DeleteContractTemplateResponse200:
-    """ 
-        Attributes:
-            id (UUID): Contract template ID
-            organization_id (UUID): Organization ID
-            name (str): Template name
-            description (None | str): Template description
-            body (str): Template body with {{merge_field}} placeholders
-            merge_fields (list[DeleteContractTemplateResponse200MergeFieldsType0Item] | None): Merge field definitions
-            is_default (bool): Whether this is the default template
-            created_at (datetime.datetime): When the template was created
-            updated_at (datetime.datetime): When the template was last updated
-     """
+    """
+    Attributes:
+        id (UUID): Contract template ID
+        organization_id (UUID): Organization ID
+        name (str): Template name
+        description (None | str): Template description
+        body (str): Template body with {{merge_field}} placeholders
+        merge_fields (list[DeleteContractTemplateResponse200MergeFieldsType0Item] | None): Merge field definitions
+        is_default (bool): Whether this is the default template
+        created_at (datetime.datetime): When the template was created
+        updated_at (datetime.datetime): When the template was last updated
+    """
 
     id: UUID
     organization_id: UUID
@@ -50,12 +43,7 @@ class DeleteContractTemplateResponse200:
     updated_at: datetime.datetime
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
-
-
-
-
     def to_dict(self) -> dict[str, Any]:
-        from ..models.delete_contract_template_response_200_merge_fields_type_0_item import DeleteContractTemplateResponse200MergeFieldsType0Item
         id = str(self.id)
 
         organization_id = str(self.organization_id)
@@ -74,7 +62,6 @@ class DeleteContractTemplateResponse200:
                 merge_fields_type_0_item = merge_fields_type_0_item_data.to_dict()
                 merge_fields.append(merge_fields_type_0_item)
 
-
         else:
             merge_fields = self.merge_fields
 
@@ -84,38 +71,34 @@ class DeleteContractTemplateResponse200:
 
         updated_at = self.updated_at.isoformat()
 
-
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
-        field_dict.update({
-            "id": id,
-            "organizationId": organization_id,
-            "name": name,
-            "description": description,
-            "body": body,
-            "mergeFields": merge_fields,
-            "isDefault": is_default,
-            "createdAt": created_at,
-            "updatedAt": updated_at,
-        })
+        field_dict.update(
+            {
+                "id": id,
+                "organizationId": organization_id,
+                "name": name,
+                "description": description,
+                "body": body,
+                "mergeFields": merge_fields,
+                "isDefault": is_default,
+                "createdAt": created_at,
+                "updatedAt": updated_at,
+            }
+        )
 
         return field_dict
 
-
-
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.delete_contract_template_response_200_merge_fields_type_0_item import DeleteContractTemplateResponse200MergeFieldsType0Item
+        from ..models.delete_contract_template_response_200_merge_fields_type_0_item import (
+            DeleteContractTemplateResponse200MergeFieldsType0Item,
+        )
+
         d = dict(src_dict)
         id = UUID(d.pop("id"))
 
-
-
-
         organization_id = UUID(d.pop("organizationId"))
-
-
-
 
         name = d.pop("name")
 
@@ -125,7 +108,6 @@ class DeleteContractTemplateResponse200:
             return cast(None | str, data)
 
         description = _parse_description(d.pop("description"))
-
 
         body = d.pop("body")
 
@@ -137,10 +119,10 @@ class DeleteContractTemplateResponse200:
                     raise TypeError()
                 merge_fields_type_0 = []
                 _merge_fields_type_0 = data
-                for merge_fields_type_0_item_data in (_merge_fields_type_0):
-                    merge_fields_type_0_item = DeleteContractTemplateResponse200MergeFieldsType0Item.from_dict(merge_fields_type_0_item_data)
-
-
+                for merge_fields_type_0_item_data in _merge_fields_type_0:
+                    merge_fields_type_0_item = DeleteContractTemplateResponse200MergeFieldsType0Item.from_dict(
+                        merge_fields_type_0_item_data
+                    )
 
                     merge_fields_type_0.append(merge_fields_type_0_item)
 
@@ -151,18 +133,11 @@ class DeleteContractTemplateResponse200:
 
         merge_fields = _parse_merge_fields(d.pop("mergeFields"))
 
-
         is_default = d.pop("isDefault")
 
-        created_at = isoparse(d.pop("createdAt"))
+        created_at = datetime.datetime.fromisoformat(d.pop("createdAt"))
 
-
-
-
-        updated_at = isoparse(d.pop("updatedAt"))
-
-
-
+        updated_at = datetime.datetime.fromisoformat(d.pop("updatedAt"))
 
         delete_contract_template_response_200 = cls(
             id=id,
@@ -175,7 +150,6 @@ class DeleteContractTemplateResponse200:
             created_at=created_at,
             updated_at=updated_at,
         )
-
 
         delete_contract_template_response_200.additional_properties = d
         return delete_contract_template_response_200

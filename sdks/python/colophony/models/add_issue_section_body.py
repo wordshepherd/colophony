@@ -1,57 +1,44 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from typing import Any, TypeVar, BinaryIO, TextIO, TYPE_CHECKING, Generator
+from typing import Any, TypeVar
 
 from attrs import define as _attrs_define
 from attrs import field as _attrs_field
 
 from ..types import UNSET, Unset
 
-from ..types import UNSET, Unset
-
-
-
-
-
-
 T = TypeVar("T", bound="AddIssueSectionBody")
-
 
 
 @_attrs_define
 class AddIssueSectionBody:
-    """ 
-        Attributes:
-            title (str): Section title
-            sort_order (int | Unset): Sort order
-     """
+    """
+    Attributes:
+        title (str): Section title
+        sort_order (int | Unset): Sort order
+    """
 
     title: str
     sort_order: int | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
-
-
-
-
 
     def to_dict(self) -> dict[str, Any]:
         title = self.title
 
         sort_order = self.sort_order
 
-
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
-        field_dict.update({
-            "title": title,
-        })
+        field_dict.update(
+            {
+                "title": title,
+            }
+        )
         if sort_order is not UNSET:
             field_dict["sortOrder"] = sort_order
 
         return field_dict
-
-
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
@@ -64,7 +51,6 @@ class AddIssueSectionBody:
             title=title,
             sort_order=sort_order,
         )
-
 
         add_issue_section_body.additional_properties = d
         return add_issue_section_body

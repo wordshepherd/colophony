@@ -1,40 +1,30 @@
 from __future__ import annotations
 
+import datetime
 from collections.abc import Mapping
-from typing import Any, TypeVar, BinaryIO, TextIO, TYPE_CHECKING, Generator
+from typing import Any, TypeVar, cast
+from uuid import UUID
 
 from attrs import define as _attrs_define
 from attrs import field as _attrs_field
 
 from ..types import UNSET, Unset
 
-from ..types import UNSET, Unset
-from dateutil.parser import isoparse
-from typing import cast
-from uuid import UUID
-import datetime
-
-
-
-
-
-
 T = TypeVar("T", bound="AddIssueItemResponse201")
-
 
 
 @_attrs_define
 class AddIssueItemResponse201:
-    """ 
-        Attributes:
-            id (UUID): Issue item ID
-            issue_id (UUID): Issue ID
-            pipeline_item_id (UUID): Pipeline item ID
-            issue_section_id (None | UUID): Section ID (if assigned)
-            sort_order (int): Sort order within section
-            created_at (datetime.datetime): When the item was added
-            submission_title (None | str | Unset):
-     """
+    """
+    Attributes:
+        id (UUID): Issue item ID
+        issue_id (UUID): Issue ID
+        pipeline_item_id (UUID): Pipeline item ID
+        issue_section_id (None | UUID): Section ID (if assigned)
+        sort_order (int): Sort order within section
+        created_at (datetime.datetime): When the item was added
+        submission_title (None | str | Unset):
+    """
 
     id: UUID
     issue_id: UUID
@@ -44,10 +34,6 @@ class AddIssueItemResponse201:
     created_at: datetime.datetime
     submission_title: None | str | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
-
-
-
-
 
     def to_dict(self) -> dict[str, Any]:
         id = str(self.id)
@@ -72,41 +58,31 @@ class AddIssueItemResponse201:
         else:
             submission_title = self.submission_title
 
-
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
-        field_dict.update({
-            "id": id,
-            "issueId": issue_id,
-            "pipelineItemId": pipeline_item_id,
-            "issueSectionId": issue_section_id,
-            "sortOrder": sort_order,
-            "createdAt": created_at,
-        })
+        field_dict.update(
+            {
+                "id": id,
+                "issueId": issue_id,
+                "pipelineItemId": pipeline_item_id,
+                "issueSectionId": issue_section_id,
+                "sortOrder": sort_order,
+                "createdAt": created_at,
+            }
+        )
         if submission_title is not UNSET:
             field_dict["submissionTitle"] = submission_title
 
         return field_dict
-
-
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
         d = dict(src_dict)
         id = UUID(d.pop("id"))
 
-
-
-
         issue_id = UUID(d.pop("issueId"))
 
-
-
-
         pipeline_item_id = UUID(d.pop("pipelineItemId"))
-
-
-
 
         def _parse_issue_section_id(data: object) -> None | UUID:
             if data is None:
@@ -116,8 +92,6 @@ class AddIssueItemResponse201:
                     raise TypeError()
                 issue_section_id_type_0 = UUID(data)
 
-
-
                 return issue_section_id_type_0
             except (TypeError, ValueError, AttributeError, KeyError):
                 pass
@@ -125,13 +99,9 @@ class AddIssueItemResponse201:
 
         issue_section_id = _parse_issue_section_id(d.pop("issueSectionId"))
 
-
         sort_order = d.pop("sortOrder")
 
-        created_at = isoparse(d.pop("createdAt"))
-
-
-
+        created_at = datetime.datetime.fromisoformat(d.pop("createdAt"))
 
         def _parse_submission_title(data: object) -> None | str | Unset:
             if data is None:
@@ -142,7 +112,6 @@ class AddIssueItemResponse201:
 
         submission_title = _parse_submission_title(d.pop("submissionTitle", UNSET))
 
-
         add_issue_item_response_201 = cls(
             id=id,
             issue_id=issue_id,
@@ -152,7 +121,6 @@ class AddIssueItemResponse201:
             created_at=created_at,
             submission_title=submission_title,
         )
-
 
         add_issue_item_response_201.additional_properties = d
         return add_issue_item_response_201

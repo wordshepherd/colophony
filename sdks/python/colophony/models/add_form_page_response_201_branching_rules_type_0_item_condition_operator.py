@@ -1,5 +1,6 @@
 from enum import Enum
 
+
 class AddFormPageResponse201BranchingRulesType0ItemConditionOperator(str, Enum):
     AND = "AND"
     OR = "OR"

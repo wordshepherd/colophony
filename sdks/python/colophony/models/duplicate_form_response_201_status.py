@@ -1,5 +1,6 @@
 from enum import Enum
 
+
 class DuplicateFormResponse201Status(str, Enum):
     ARCHIVED = "ARCHIVED"
     DRAFT = "DRAFT"

@@ -1,80 +1,67 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from typing import Any, TypeVar, BinaryIO, TextIO, TYPE_CHECKING, Generator
+from typing import TYPE_CHECKING, Any, TypeVar
 
 from attrs import define as _attrs_define
 from attrs import field as _attrs_field
 
-from ..types import UNSET, Unset
-
-from ..models.add_form_field_response_201_conditional_rules_type_0_item_effect import AddFormFieldResponse201ConditionalRulesType0ItemEffect
-from typing import cast
+from ..models.add_form_field_response_201_conditional_rules_type_0_item_effect import (
+    AddFormFieldResponse201ConditionalRulesType0ItemEffect,
+)
 
 if TYPE_CHECKING:
-  from ..models.add_form_field_response_201_conditional_rules_type_0_item_condition import AddFormFieldResponse201ConditionalRulesType0ItemCondition
-
-
-
+    from ..models.add_form_field_response_201_conditional_rules_type_0_item_condition import (
+        AddFormFieldResponse201ConditionalRulesType0ItemCondition,
+    )
 
 
 T = TypeVar("T", bound="AddFormFieldResponse201ConditionalRulesType0Item")
 
 
-
 @_attrs_define
 class AddFormFieldResponse201ConditionalRulesType0Item:
-    """ 
-        Attributes:
-            effect (AddFormFieldResponse201ConditionalRulesType0ItemEffect):
-            condition (AddFormFieldResponse201ConditionalRulesType0ItemCondition):
-     """
+    """
+    Attributes:
+        effect (AddFormFieldResponse201ConditionalRulesType0ItemEffect):
+        condition (AddFormFieldResponse201ConditionalRulesType0ItemCondition):
+    """
 
     effect: AddFormFieldResponse201ConditionalRulesType0ItemEffect
     condition: AddFormFieldResponse201ConditionalRulesType0ItemCondition
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
-
-
-
-
     def to_dict(self) -> dict[str, Any]:
-        from ..models.add_form_field_response_201_conditional_rules_type_0_item_condition import AddFormFieldResponse201ConditionalRulesType0ItemCondition
         effect = self.effect.value
 
         condition = self.condition.to_dict()
 
-
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
-        field_dict.update({
-            "effect": effect,
-            "condition": condition,
-        })
+        field_dict.update(
+            {
+                "effect": effect,
+                "condition": condition,
+            }
+        )
 
         return field_dict
 
-
-
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.add_form_field_response_201_conditional_rules_type_0_item_condition import AddFormFieldResponse201ConditionalRulesType0ItemCondition
+        from ..models.add_form_field_response_201_conditional_rules_type_0_item_condition import (
+            AddFormFieldResponse201ConditionalRulesType0ItemCondition,
+        )
+
         d = dict(src_dict)
         effect = AddFormFieldResponse201ConditionalRulesType0ItemEffect(d.pop("effect"))
 
-
-
-
         condition = AddFormFieldResponse201ConditionalRulesType0ItemCondition.from_dict(d.pop("condition"))
-
-
-
 
         add_form_field_response_201_conditional_rules_type_0_item = cls(
             effect=effect,
             condition=condition,
         )
-
 
         add_form_field_response_201_conditional_rules_type_0_item.additional_properties = d
         return add_form_field_response_201_conditional_rules_type_0_item

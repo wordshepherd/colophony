@@ -49,6 +49,12 @@ function generateTypeScript() {
     TS_DIR,
   );
 
+  // The sdk-check CI job formats the generated file before diffing it, so this
+  // must run here too — otherwise `pnpm sdk:generate` produces output that CI
+  // reformats and then reports as drift.
+  console.log("Formatting...");
+  run("npx prettier --write src/generated/openapi.ts", TS_DIR);
+
   console.log("Building...");
   run("npx tsc -p tsconfig.build.json", TS_DIR);
 
@@ -69,10 +75,19 @@ function generatePython() {
     return;
   }
 
-  // Remove existing generated code (keep config and .gitignore)
+  // Replace ONLY the generated client package.
+  //
+  // pyproject.toml, README.md, poetry.lock, and tests/ are hand- or
+  // Dependabot-maintained and must survive regeneration:
+  //   - pyproject.toml carries [tool.poetry.group.dev.dependencies] pytest and
+  //     [tool.pytest.ini_options] testpaths, added by hand (PR #278)
+  //   - poetry.lock is Dependabot-maintained (e.g. #439) and is never
+  //     regenerated here, so overwriting pyproject.toml desynchronizes it
+  // Overwriting them breaks the python-sdk-tests CI job, which runs
+  // `poetry install && poetry run pytest`. Do not "fix" this back.
   const generatedDir = resolve(PY_DIR, "colophony");
   if (existsSync(generatedDir)) {
-    run("rm -rf colophony pyproject.toml README.md", PY_DIR);
+    run("rm -rf colophony", PY_DIR);
   }
 
   console.log("Generating Python SDK from OpenAPI spec...");
@@ -81,11 +96,7 @@ function generatePython() {
     PY_DIR,
   );
 
-  // Move generated files to the right place
-  run(
-    "mv .generated/colophony .generated/pyproject.toml .generated/README.md .generated/.gitignore . 2>/dev/null; rm -rf .generated",
-    PY_DIR,
-  );
+  run("mv .generated/colophony .; rm -rf .generated", PY_DIR);
 
   console.log("Python SDK generated successfully.");
 }

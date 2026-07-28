@@ -1,5 +1,6 @@
 from enum import Enum
 
+
 class ListContractsByPipelineItemResponse200ItemStatus(str, Enum):
     COMPLETED = "COMPLETED"
     COUNTERSIGNED = "COUNTERSIGNED"

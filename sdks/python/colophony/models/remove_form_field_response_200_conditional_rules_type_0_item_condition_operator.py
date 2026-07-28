@@ -1,5 +1,6 @@
 from enum import Enum
 
+
 class RemoveFormFieldResponse200ConditionalRulesType0ItemConditionOperator(str, Enum):
     AND = "AND"
     OR = "OR"

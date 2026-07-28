@@ -1,49 +1,41 @@
 from __future__ import annotations
 
+import datetime
 from collections.abc import Mapping
-from typing import Any, TypeVar, BinaryIO, TextIO, TYPE_CHECKING, Generator
+from typing import TYPE_CHECKING, Any, TypeVar, cast
+from uuid import UUID
 
 from attrs import define as _attrs_define
 from attrs import field as _attrs_field
 
-from ..types import UNSET, Unset
-
 from ..models.get_issue_response_200_status import GetIssueResponse200Status
-from dateutil.parser import isoparse
-from typing import cast
-from uuid import UUID
-import datetime
 
 if TYPE_CHECKING:
-  from ..models.get_issue_response_200_metadata_type_0 import GetIssueResponse200MetadataType0
-
-
-
+    from ..models.get_issue_response_200_metadata_type_0 import GetIssueResponse200MetadataType0
 
 
 T = TypeVar("T", bound="GetIssueResponse200")
 
 
-
 @_attrs_define
 class GetIssueResponse200:
-    """ 
-        Attributes:
-            id (UUID): Issue ID
-            organization_id (UUID): Organization ID
-            publication_id (UUID): Publication ID
-            title (str): Issue title
-            volume (int | None): Volume number
-            issue_number (int | None): Issue number
-            description (None | str): Issue description
-            cover_image_url (None | str): Cover image URL
-            status (GetIssueResponse200Status): Current status of the issue
-            publication_date (datetime.datetime | None): Scheduled publication date
-            published_at (datetime.datetime | None): Actual publish timestamp
-            metadata (GetIssueResponse200MetadataType0 | None): Metadata
-            created_at (datetime.datetime): When the issue was created
-            updated_at (datetime.datetime): When the issue was last updated
-     """
+    """
+    Attributes:
+        id (UUID): Issue ID
+        organization_id (UUID): Organization ID
+        publication_id (UUID): Publication ID
+        title (str): Issue title
+        volume (int | None): Volume number
+        issue_number (int | None): Issue number
+        description (None | str): Issue description
+        cover_image_url (None | str): Cover image URL
+        status (GetIssueResponse200Status): Current status of the issue
+        publication_date (datetime.datetime | None): Scheduled publication date
+        published_at (datetime.datetime | None): Actual publish timestamp
+        metadata (GetIssueResponse200MetadataType0 | None): Metadata
+        created_at (datetime.datetime): When the issue was created
+        updated_at (datetime.datetime): When the issue was last updated
+    """
 
     id: UUID
     organization_id: UUID
@@ -61,12 +53,9 @@ class GetIssueResponse200:
     updated_at: datetime.datetime
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
-
-
-
-
     def to_dict(self) -> dict[str, Any]:
         from ..models.get_issue_response_200_metadata_type_0 import GetIssueResponse200MetadataType0
+
         id = str(self.id)
 
         organization_id = str(self.organization_id)
@@ -111,48 +100,39 @@ class GetIssueResponse200:
 
         updated_at = self.updated_at.isoformat()
 
-
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
-        field_dict.update({
-            "id": id,
-            "organizationId": organization_id,
-            "publicationId": publication_id,
-            "title": title,
-            "volume": volume,
-            "issueNumber": issue_number,
-            "description": description,
-            "coverImageUrl": cover_image_url,
-            "status": status,
-            "publicationDate": publication_date,
-            "publishedAt": published_at,
-            "metadata": metadata,
-            "createdAt": created_at,
-            "updatedAt": updated_at,
-        })
+        field_dict.update(
+            {
+                "id": id,
+                "organizationId": organization_id,
+                "publicationId": publication_id,
+                "title": title,
+                "volume": volume,
+                "issueNumber": issue_number,
+                "description": description,
+                "coverImageUrl": cover_image_url,
+                "status": status,
+                "publicationDate": publication_date,
+                "publishedAt": published_at,
+                "metadata": metadata,
+                "createdAt": created_at,
+                "updatedAt": updated_at,
+            }
+        )
 
         return field_dict
-
-
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
         from ..models.get_issue_response_200_metadata_type_0 import GetIssueResponse200MetadataType0
+
         d = dict(src_dict)
         id = UUID(d.pop("id"))
 
-
-
-
         organization_id = UUID(d.pop("organizationId"))
 
-
-
-
         publication_id = UUID(d.pop("publicationId"))
-
-
-
 
         title = d.pop("title")
 
@@ -163,14 +143,12 @@ class GetIssueResponse200:
 
         volume = _parse_volume(d.pop("volume"))
 
-
         def _parse_issue_number(data: object) -> int | None:
             if data is None:
                 return data
             return cast(int | None, data)
 
         issue_number = _parse_issue_number(d.pop("issueNumber"))
-
 
         def _parse_description(data: object) -> None | str:
             if data is None:
@@ -179,7 +157,6 @@ class GetIssueResponse200:
 
         description = _parse_description(d.pop("description"))
 
-
         def _parse_cover_image_url(data: object) -> None | str:
             if data is None:
                 return data
@@ -187,11 +164,7 @@ class GetIssueResponse200:
 
         cover_image_url = _parse_cover_image_url(d.pop("coverImageUrl"))
 
-
         status = GetIssueResponse200Status(d.pop("status"))
-
-
-
 
         def _parse_publication_date(data: object) -> datetime.datetime | None:
             if data is None:
@@ -199,9 +172,7 @@ class GetIssueResponse200:
             try:
                 if not isinstance(data, str):
                     raise TypeError()
-                publication_date_type_0 = isoparse(data)
-
-
+                publication_date_type_0 = datetime.datetime.fromisoformat(data)
 
                 return publication_date_type_0
             except (TypeError, ValueError, AttributeError, KeyError):
@@ -210,16 +181,13 @@ class GetIssueResponse200:
 
         publication_date = _parse_publication_date(d.pop("publicationDate"))
 
-
         def _parse_published_at(data: object) -> datetime.datetime | None:
             if data is None:
                 return data
             try:
                 if not isinstance(data, str):
                     raise TypeError()
-                published_at_type_0 = isoparse(data)
-
-
+                published_at_type_0 = datetime.datetime.fromisoformat(data)
 
                 return published_at_type_0
             except (TypeError, ValueError, AttributeError, KeyError):
@@ -227,7 +195,6 @@ class GetIssueResponse200:
             return cast(datetime.datetime | None, data)
 
         published_at = _parse_published_at(d.pop("publishedAt"))
-
 
         def _parse_metadata(data: object) -> GetIssueResponse200MetadataType0 | None:
             if data is None:
@@ -237,8 +204,6 @@ class GetIssueResponse200:
                     raise TypeError()
                 metadata_type_0 = GetIssueResponse200MetadataType0.from_dict(data)
 
-
-
                 return metadata_type_0
             except (TypeError, ValueError, AttributeError, KeyError):
                 pass
@@ -246,16 +211,9 @@ class GetIssueResponse200:
 
         metadata = _parse_metadata(d.pop("metadata"))
 
+        created_at = datetime.datetime.fromisoformat(d.pop("createdAt"))
 
-        created_at = isoparse(d.pop("createdAt"))
-
-
-
-
-        updated_at = isoparse(d.pop("updatedAt"))
-
-
-
+        updated_at = datetime.datetime.fromisoformat(d.pop("updatedAt"))
 
         get_issue_response_200 = cls(
             id=id,
@@ -273,7 +231,6 @@ class GetIssueResponse200:
             created_at=created_at,
             updated_at=updated_at,
         )
-
 
         get_issue_response_200.additional_properties = d
         return get_issue_response_200
