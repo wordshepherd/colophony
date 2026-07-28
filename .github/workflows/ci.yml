@@ -694,6 +694,7 @@ jobs:
           path: |
             apps/web/playwright-report/
             apps/web/test-results/
+            apps/web/next-e2e.log
           retention-days: 30
 
   # ──────────────────────────────────────────────────
@@ -779,6 +780,7 @@ jobs:
           path: |
             apps/web/playwright-report/
             apps/web/test-results/
+            apps/web/next-e2e.log
           retention-days: 30
 
   # ──────────────────────────────────────────────────
@@ -864,6 +866,7 @@ jobs:
           path: |
             apps/web/playwright-report/
             apps/web/test-results/
+            apps/web/next-e2e.log
           retention-days: 30
 
   # ──────────────────────────────────────────────────
@@ -949,6 +952,7 @@ jobs:
           path: |
             apps/web/playwright-report/
             apps/web/test-results/
+            apps/web/next-e2e.log
           retention-days: 30
 
   # ──────────────────────────────────────────────────
@@ -1034,6 +1038,7 @@ jobs:
           path: |
             apps/web/playwright-report/
             apps/web/test-results/
+            apps/web/next-e2e.log
           retention-days: 30
 
   # ──────────────────────────────────────────────────
@@ -1119,6 +1124,7 @@ jobs:
           path: |
             apps/web/playwright-report/
             apps/web/test-results/
+            apps/web/next-e2e.log
           retention-days: 30
 
   # ──────────────────────────────────────────────────
@@ -1203,6 +1209,7 @@ jobs:
           path: |
             apps/web/playwright-report/
             apps/web/test-results/
+            apps/web/next-e2e.log
           retention-days: 30
 
   # ──────────────────────────────────────────────────
@@ -1288,6 +1295,7 @@ jobs:
           path: |
             apps/web/playwright-report/
             apps/web/test-results/
+            apps/web/next-e2e.log
           retention-days: 30
 
   # ──────────────────────────────────────────────────
@@ -1449,6 +1457,7 @@ jobs:
           path: |
             apps/web/playwright-report/
             apps/web/test-results/
+            apps/web/next-e2e.log
           retention-days: 30
 
   # ──────────────────────────────────────────────────
@@ -1581,6 +1590,7 @@ jobs:
           path: |
             apps/web/playwright-report/
             apps/web/test-results/
+            apps/web/next-e2e.log
           retention-days: 30
 
   # ──────────────────────────────────────────────────

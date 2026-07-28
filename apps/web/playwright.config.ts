@@ -28,6 +28,23 @@ const E2E_API_PORT = 4010;
 const E2E_WEB_PORT = 3010;
 
 /**
+ * Where the Next dev server's own output is kept.
+ *
+ * Playwright's `webServer.stdout` defaults to "ignore" (only `stderr` defaults
+ * to "pipe"), so Next's `Ready` line, its per-route `Compiling`/`Compiled`
+ * output, and any Turbopack diagnostic were being discarded — which is why past
+ * investigations of the intermittent `(dashboard)` 404 had six `[WebServer]`
+ * stderr warnings to work from and nothing else.
+ *
+ * Teeing to a file rather than setting `stdout: "pipe"` keeps the job log
+ * readable and, more importantly, produces an artifact that outlives the run.
+ * Path is relative to `cwd` below, which is the repo root.
+ *
+ * See docs/backlog.md, Track 1 QA/Testing.
+ */
+const NEXT_DEV_LOG = "apps/web/next-e2e.log";
+
+/**
  * When OIDC_E2E=true, load real Zitadel config for OIDC project tests.
  * Otherwise, use fake values for submissions/uploads projects.
  */
@@ -156,7 +173,8 @@ export default defineConfig({
       },
     },
     {
-      command: "pnpm --filter @colophony/web dev",
+      // `2>&1 | tee` rather than `stdout: "pipe"` — see NEXT_DEV_LOG above.
+      command: `pnpm --filter @colophony/web dev 2>&1 | tee ${NEXT_DEV_LOG}`,
       url: `http://localhost:${E2E_WEB_PORT}`,
       // Always start fresh — reusing a server started without the test OIDC
       // env vars causes an auth storage key mismatch (injectAuth writes to a
