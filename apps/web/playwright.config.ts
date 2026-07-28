@@ -155,7 +155,15 @@ export default defineConfig({
       testDir: "./e2e/federation",
       use: { ...devices["Desktop Chrome"] },
     },
-  ],
+    // The shared API server can only be in one auth mode at a time (see
+    // webServer below): NODE_ENV=test with the interactive header, or a real
+    // JWKS verifier for the oidc suite. One run cannot host both, so partition
+    // the projects on the same flag that picks the mode. Doing it here rather
+    // than by listing project names in a package script means a newly added
+    // suite is included automatically instead of being silently skipped.
+  ].filter((project) =>
+    isOidcE2e ? project.name === "oidc" : project.name !== "oidc",
+  ),
 
   webServer: [
     {
