@@ -8,32 +8,14 @@
  * test use, with automatic cleanup in teardown.
  */
 
-import { test as base, expect, type Page, devices } from "@playwright/test";
-import { buildStorageState, setupPageAuth } from "./auth";
-import { getOrgBySlug, getUserByEmail, createApiKey, deleteApiKey } from "./db";
+import { test as base, expect, type Page } from "@playwright/test";
+import { createAuthedContext, ADMIN_USER_PROFILE } from "./auth";
+import { getOrgBySlug, getUserByEmail } from "./db";
 import {
   createFormDefinition,
   createFormField,
   deleteFormDefinition,
 } from "./forms-db";
-
-/** Admin user profile (ADMIN role in quarterly-review org) */
-const ADMIN_USER_PROFILE = {
-  sub: "seed-zitadel-admin-001",
-  email: "editor@quarterlyreview.org",
-  name: "Test Admin",
-};
-
-/** All scopes needed for Forms E2E tests */
-const FORMS_E2E_SCOPES = [
-  "notifications:read",
-  "forms:read",
-  "forms:write",
-  "submissions:read",
-  "submissions:write",
-  "users:read",
-  "organizations:read",
-];
 
 interface SeedOrg {
   id: string;
@@ -46,11 +28,6 @@ interface SeedUser {
   email: string;
 }
 
-interface TestApiKey {
-  id: string;
-  plainKey: string;
-}
-
 interface FormData {
   form: { id: string; name: string; status: string };
   fields: Array<{ id: string; fieldKey: string }>;
@@ -59,7 +36,6 @@ interface FormData {
 export const test = base.extend<{
   seedOrg: SeedOrg;
   seedAdmin: SeedUser;
-  testApiKey: TestApiKey;
   authedPage: Page;
   formData: FormData;
 }>({
@@ -83,32 +59,12 @@ export const test = base.extend<{
     await use(user);
   },
 
-  testApiKey: async ({ seedOrg, seedAdmin }, use) => {
-    const key = await createApiKey({
-      orgId: seedOrg.id,
-      userId: seedAdmin.id,
-      scopes: FORMS_E2E_SCOPES,
-      name: `e2e-forms-${Date.now()}`,
-    });
-
-    await use(key);
-
-    await deleteApiKey(key.id);
-  },
-
-  authedPage: async ({ browser, seedOrg, testApiKey, baseURL }, use) => {
-    const context = await browser.newContext({
-      ...devices["Desktop Chrome"],
-      baseURL: baseURL ?? undefined,
-      storageState: buildStorageState(seedOrg.id, ADMIN_USER_PROFILE),
-    });
-
-    const page = await context.newPage();
-
-    await setupPageAuth(
-      page,
+  authedPage: async ({ browser, seedOrg, seedAdmin, baseURL }, use) => {
+    const { context, page } = await createAuthedContext(
+      browser,
+      baseURL ?? undefined,
       seedOrg.id,
-      testApiKey.plainKey,
+      seedAdmin.id,
       ADMIN_USER_PROFILE,
     );
 

@@ -85,9 +85,9 @@ test.describe("File Upload (/submissions/:id — edit mode)", () => {
 
   test("uploads a file and shows it in file list", async ({
     authedPage,
-    testApiKey,
+    seedUser,
   }) => {
-    await setupTusAuth(authedPage, testApiKey.plainKey);
+    await setupTusAuth(authedPage, seedUser.id);
     await authedPage.goto(`/submissions/${submissionId}`);
 
     // Click Edit to enter edit mode
@@ -114,11 +114,8 @@ test.describe("File Upload (/submissions/:id — edit mode)", () => {
     });
   });
 
-  test("shows upload progress indicator", async ({
-    authedPage,
-    testApiKey,
-  }) => {
-    await setupTusAuth(authedPage, testApiKey.plainKey);
+  test("shows upload progress indicator", async ({ authedPage, seedUser }) => {
+    await setupTusAuth(authedPage, seedUser.id);
     await authedPage.goto(`/submissions/${submissionId}`);
     await authedPage.getByRole("button", { name: /edit/i }).click();
 
@@ -139,9 +136,9 @@ test.describe("File Upload (/submissions/:id — edit mode)", () => {
 
   test("uploaded file has CLEAN scan status in database", async ({
     authedPage,
-    testApiKey,
+    seedUser,
   }) => {
-    await setupTusAuth(authedPage, testApiKey.plainKey);
+    await setupTusAuth(authedPage, seedUser.id);
     await authedPage.goto(`/submissions/${submissionId}`);
     await authedPage.getByRole("button", { name: /edit/i }).click();
 
@@ -166,8 +163,8 @@ test.describe("File Upload (/submissions/:id — edit mode)", () => {
     expect(uploaded!.scanStatus).toBe("CLEAN");
   });
 
-  test("can delete an uploaded file", async ({ authedPage, testApiKey }) => {
-    await setupTusAuth(authedPage, testApiKey.plainKey);
+  test("can delete an uploaded file", async ({ authedPage, seedUser }) => {
+    await setupTusAuth(authedPage, seedUser.id);
     await authedPage.goto(`/submissions/${submissionId}`);
     await authedPage.getByRole("button", { name: /edit/i }).click();
 
@@ -210,9 +207,9 @@ test.describe("File Upload (/submissions/:id — edit mode)", () => {
 
   test("rejects invalid MIME type (client-side)", async ({
     authedPage,
-    testApiKey,
+    seedUser,
   }) => {
-    await setupTusAuth(authedPage, testApiKey.plainKey);
+    await setupTusAuth(authedPage, seedUser.id);
     await authedPage.goto(`/submissions/${submissionId}`);
     await authedPage.getByRole("button", { name: /edit/i }).click();
 
@@ -240,8 +237,8 @@ test.describe("File Upload (/submissions/:id — edit mode)", () => {
     expect(exe).toBeUndefined();
   });
 
-  test("uploads multiple files", async ({ authedPage, testApiKey }) => {
-    await setupTusAuth(authedPage, testApiKey.plainKey);
+  test("uploads multiple files", async ({ authedPage, seedUser }) => {
+    await setupTusAuth(authedPage, seedUser.id);
     await authedPage.goto(`/submissions/${submissionId}`);
     await authedPage.getByRole("button", { name: /edit/i }).click();
 

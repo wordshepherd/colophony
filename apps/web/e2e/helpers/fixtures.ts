@@ -1,30 +1,18 @@
 /**
  * Custom Playwright test fixtures for E2E tests.
  *
- * Provides authenticated page context with seed data lookups and
- * API key management. Each test gets a fresh API key that is
- * cleaned up after the test.
+ * Provides an authenticated page context with seed data lookups.
  *
  * Auth strategy: create a BrowserContext with pre-populated localStorage
  * (storageState) so OIDC user + currentOrgId are available before any page
  * JS executes. This eliminates the race condition between addInitScript and
- * page JavaScript reading localStorage.
+ * page JavaScript reading localStorage. Requests are then authenticated to the
+ * API via the interactive test path (`x-test-user-id`) — see ./auth.
  */
 
-import { test as base, expect, type Page, devices } from "@playwright/test";
-import { buildStorageState, setupPageAuth } from "./auth";
-import { getOrgBySlug, getUserByEmail, createApiKey, deleteApiKey } from "./db";
-
-/** All scopes needed for submission flow E2E tests */
-const E2E_SCOPES = [
-  "notifications:read",
-  "submissions:read",
-  "submissions:write",
-  "files:read",
-  "files:write",
-  "users:read",
-  "organizations:read",
-];
+import { test as base, expect, type Page } from "@playwright/test";
+import { createAuthedContext, WRITER_USER_PROFILE } from "./auth";
+import { getOrgBySlug, getUserByEmail } from "./db";
 
 interface SeedOrg {
   id: string;
@@ -37,30 +25,17 @@ interface SeedUser {
   email: string;
 }
 
-interface TestApiKey {
-  id: string;
-  plainKey: string;
-}
-
-const TEST_USER_PROFILE = {
-  sub: "seed-zitadel-writer-001",
-  email: "writer@example.com",
-  name: "Test Writer",
-};
-
 /**
  * Extended Playwright test with auth fixtures.
  *
  * Fixtures:
  * - `seedOrg` — the "quarterly-review" seed org
- * - `seedUser` — the "writer@example.com" seed user
- * - `testApiKey` — a fresh API key for the seed user (cleaned up after test)
- * - `authedPage` — a Page with auth injected (OIDC + API key interception)
+ * - `seedUser` — the "writer@example.com" seed user (READER in that org)
+ * - `authedPage` — a Page authenticated as that user
  */
 export const test = base.extend<{
   seedOrg: SeedOrg;
   seedUser: SeedUser;
-  testApiKey: TestApiKey;
   authedPage: Page;
 }>({
   seedOrg: async ({}, use) => {
@@ -83,38 +58,13 @@ export const test = base.extend<{
     await use(user);
   },
 
-  testApiKey: async ({ seedOrg, seedUser }, use) => {
-    const key = await createApiKey({
-      orgId: seedOrg.id,
-      userId: seedUser.id,
-      scopes: E2E_SCOPES,
-      name: `e2e-test-${Date.now()}`,
-    });
-
-    await use(key);
-
-    // Cleanup
-    await deleteApiKey(key.id);
-  },
-
-  authedPage: async ({ browser, seedOrg, testApiKey, baseURL }, use) => {
-    // Create a fresh context with pre-populated localStorage.
-    // This ensures OIDC user + currentOrgId exist BEFORE any page JS runs,
-    // eliminating the race condition between addInitScript and JS execution.
-    const context = await browser.newContext({
-      ...devices["Desktop Chrome"],
-      baseURL: baseURL ?? undefined,
-      storageState: buildStorageState(seedOrg.id, TEST_USER_PROFILE),
-    });
-
-    const page = await context.newPage();
-
-    // Set up route interception + addInitScript safety net
-    await setupPageAuth(
-      page,
+  authedPage: async ({ browser, seedOrg, seedUser, baseURL }, use) => {
+    const { context, page } = await createAuthedContext(
+      browser,
+      baseURL ?? undefined,
       seedOrg.id,
-      testApiKey.plainKey,
-      TEST_USER_PROFILE,
+      seedUser.id,
+      WRITER_USER_PROFILE,
     );
 
     await use(page);

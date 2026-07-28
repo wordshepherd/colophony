@@ -101,13 +101,19 @@ export async function disconnectUploadDb(): Promise<void> {
 }
 
 /**
- * Set up tus request interception to swap Bearer token for API key.
+ * Set up tus request interception to swap the Bearer token for test auth.
  *
- * Mirrors the tRPC interception pattern in auth.ts — intercepts all
- * requests to tusd (localhost:1080) and replaces the Authorization
- * header with X-Api-Key.
+ * Mirrors the interception pattern in auth.ts — intercepts all requests to
+ * tusd (localhost:1080) and replaces the Authorization header with
+ * X-Test-User-Id.
+ *
+ * tusd forwards this to the webhook via `-hooks-http-forward-headers`
+ * (docker-compose.e2e.yml); the pre-create and post-finish handlers read it in
+ * their `NODE_ENV === 'test'` branch. That branch sits last in the chain
+ * (api-key -> embed-token -> status-token -> test), so it is only reached
+ * because we no longer forward a key.
  */
-export async function setupTusAuth(page: Page, apiKey: string): Promise<void> {
+export async function setupTusAuth(page: Page, userId: string): Promise<void> {
   await page.route("**/localhost:1080/**", async (route) => {
     const request = route.request();
     const headers = { ...request.headers() };
@@ -115,8 +121,7 @@ export async function setupTusAuth(page: Page, apiKey: string): Promise<void> {
     // Remove the fake OIDC Bearer token
     delete headers["authorization"];
 
-    // Add the real API key
-    headers["x-api-key"] = apiKey;
+    headers["x-test-user-id"] = userId;
 
     await route.continue({ headers });
   });

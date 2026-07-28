@@ -2,19 +2,22 @@
  * Federation-specific Playwright test fixtures.
  *
  * Uses the ADMIN user (editor@quarterlyreview.org) — federation endpoints
- * require adminProcedure. Audit router requires audit:read scope.
+ * require adminProcedure.
+ *
+ * Most of this suite drives `internalOnly` routers (federation, simsub,
+ * transfer, migration, hub). Those admit only interactive auth methods, so the
+ * suite passes under TRPC_INTERNAL_ONLY_ENFORCE=true precisely because it
+ * authenticates as `authMethod: 'test'` rather than as an API key.
  *
  * Co-located in e2e/federation/ (not e2e/helpers/) to avoid triggering
  * all Playwright suites via detect-changes.sh shared prefix matching.
  */
 
-import { test as base, expect, type Page, devices } from "@playwright/test";
-import { buildStorageState, setupPageAuth } from "../helpers/auth";
+import { test as base, expect, type Page } from "@playwright/test";
+import { createAuthedContext, ADMIN_USER_PROFILE } from "../helpers/auth";
 import {
   getOrgBySlug,
   getUserByEmail,
-  createApiKey,
-  deleteApiKey,
   createSubmission,
   deleteSubmission,
   createManuscript,
@@ -34,21 +37,6 @@ import {
   deleteIdentityMigration,
 } from "./federation-db";
 
-/** Admin user profile (ADMIN role in quarterly-review org) */
-const ADMIN_USER_PROFILE = {
-  sub: "seed-zitadel-admin-001",
-  email: "editor@quarterlyreview.org",
-  name: "Test Admin",
-};
-
-/** All scopes needed for Federation E2E tests */
-const FEDERATION_SCOPES = [
-  "audit:read",
-  "submissions:read",
-  "organizations:read",
-  "users:read",
-];
-
 interface SeedOrg {
   id: string;
   name: string;
@@ -58,11 +46,6 @@ interface SeedOrg {
 interface SeedUser {
   id: string;
   email: string;
-}
-
-interface TestApiKey {
-  id: string;
-  plainKey: string;
 }
 
 interface FederationData {
@@ -85,7 +68,6 @@ interface FederationData {
 export const test = base.extend<{
   seedOrg: SeedOrg;
   seedAdmin: SeedUser;
-  testApiKey: TestApiKey;
   authedPage: Page;
   federationData: FederationData;
 }>({
@@ -109,32 +91,12 @@ export const test = base.extend<{
     await use(user);
   },
 
-  testApiKey: async ({ seedOrg, seedAdmin }, use) => {
-    const key = await createApiKey({
-      orgId: seedOrg.id,
-      userId: seedAdmin.id,
-      scopes: FEDERATION_SCOPES,
-      name: `e2e-federation-${Date.now()}`,
-    });
-
-    await use(key);
-
-    await deleteApiKey(key.id);
-  },
-
-  authedPage: async ({ browser, seedOrg, testApiKey, baseURL }, use) => {
-    const context = await browser.newContext({
-      ...devices["Desktop Chrome"],
-      baseURL: baseURL ?? undefined,
-      storageState: buildStorageState(seedOrg.id, ADMIN_USER_PROFILE),
-    });
-
-    const page = await context.newPage();
-
-    await setupPageAuth(
-      page,
+  authedPage: async ({ browser, seedOrg, seedAdmin, baseURL }, use) => {
+    const { context, page } = await createAuthedContext(
+      browser,
+      baseURL ?? undefined,
       seedOrg.id,
-      testApiKey.plainKey,
+      seedAdmin.id,
       ADMIN_USER_PROFILE,
     );
 
