@@ -202,17 +202,19 @@ Ordered as the design doc's Phase 0/D.
         `apps/api/src/__tests__/security/scope-enforcement.test.ts` now pins the
         default with the variable unset, so a silent revert to log-only fails the
         build. — done 2026-07-27
-  - [ ] **P0.5b** — remove the dead `payments:read` scope. **Decision taken
-        2026-07-27: remove it.** It is enforced nowhere, and every payment-adjacent
-        guard uses the distinct `payment-transactions:*` scope
-        (`apps/api/src/trpc/routers/payment-transactions.ts`). Split out of P0.5
-        because it is materially larger than the flag flip: `packages/types/src/api-key.ts:24`,
-        the seeded read-only key at `packages/db/src/seed.ts:444`, and three CI-gated
-        generated artefacts (`sdks/openapi.json`, `sdks/typescript/src/generated/`,
-        `sdks/python/colophony/models/`) that `sdk-check` diffs in all three directions.
-        Note the latent break: `apiKeyResponseSchema` validates `scopes` on the
-        `apiKeys.list` output, so any pre-existing DB row still holding the scope throws
-        after removal — the seed row must go in the same change.
+  - [x] **P0.5b** — remove the dead `payments:read` scope. Removed from
+        `apiKeyScopeSchema`, from the seeded read-only key, and from the three
+        generated SDK artefacts (one line each — the enum reaches the spec only
+        through the create-key request body, since every response already declared
+        `scopes` as plain strings). The latent break was real: `apiKeyResponseSchema`
+        validated `apiKeys.list` output against the enum, so the seeded row would
+        have made that procedure throw. Closed from both ends —
+        `0067_drop_payments_read_scope.sql` strips the value from stored `scopes`
+        arrays, and the response schema now declares `z.array(z.string())`, matching
+        what `apps/api/src/rest/routers/api-keys.ts` had always done. That ends a
+        divergence where the same field was strict on tRPC and permissive on REST;
+        both surfaces now have a test pinning the permissive behaviour.
+        **This completes Phase 0.** — done 2026-07-28
   - [x] **[P1] Playwright suites authenticated as API keys, which blocked P0.5.**
         Every suite minted a `col_test_` key and set it as a browser header, so E2E ran
         as `authMethod: 'apikey'`. The fixtures now use the interactive test path
@@ -289,11 +291,23 @@ Ordered as the design doc's Phase 0/D.
 - [ ] **[P2] No dedup constraint on `webhook_deliveries`.** `createDelivery`
       (`webhook.service.ts:222`) has no unique constraint per endpoint/event, so Inngest
       retries or replayed events can duplicate deliveries. — (design review 2026-07-27)
-- [ ] **[P2] One dead scope left.** `payments:read` is declared in `apiKeyScopeSchema` and
-      enforced nowhere. **Decision taken 2026-07-27: remove it** — tracked as P0.5b above,
-      where the removal's real cost is scoped. `webhooks:manage` was consumed by the
-      tRPC webhooks router in P0.1b rather than waiting for REST P1.1. —
-      (design doc §0.1(e); updated 2026-07-27)
+- [ ] **[P1] `apiKeyService` carries no explicit `organizationId` predicate.** `list`
+      (`apps/api/src/services/api-key.service.ts:71`), `revoke` (`:129`) and `delete`
+      (`:145`) rely on RLS alone, and no caller passes an org ID
+      (`apps/api/src/rest/routers/api-keys.ts:61,108,133`). `revoke`'s
+      `where(and(eq(apiKeys.id, keyId)))` — a single condition wrapped in `and()` —
+      reads like a filter that was removed rather than never added. This is the one
+      place the defense-in-depth rule for tenant queries is unmet: RLS is doing the
+      whole job, so a context-setting bug degrades straight to cross-tenant access
+      with nothing behind it. Pre-existing; deliberately left out of P0.5b so a
+      multi-tenancy change would not ride inside a scope cleanup —
+      (found 2026-07-28 while removing `payments:read`)
+- [ ] **[P3] `apiKeysContract.revoke` has drifted from its handler.** The contract
+      declares `apiKeyResponseSchema` (`packages/api-contracts/src/api-keys.ts:77`)
+      while the procedure returns `revokeApiKeyResponseSchema` — a full key object
+      versus three fields. Type-only today: the contract is consumed by
+      `packages/api-client` for inference, not used to validate the server response.
+      — (found 2026-07-28 while removing `payments:read`)
 - [ ] **[P2] REST spec coverage.** Only 7 of 17 REST routers have a `.spec.ts`. —
       (design doc §1.8)
 - [ ] **[P2] The served spec reports `3.1.1`; the committed one says `3.1.0`.**

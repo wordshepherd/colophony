@@ -21,7 +21,6 @@ export const apiKeyScopeSchema = z
     "users:read",
     "api-keys:read",
     "api-keys:manage",
-    "payments:read",
     "notifications:read",
     "notifications:write",
     "webhooks:read",
@@ -107,7 +106,11 @@ export const deleteApiKeySchema = z.object({
 export const apiKeyResponseSchema = z.object({
   id: z.string().uuid().describe("Unique identifier for the API key"),
   name: z.string().describe("Human-readable name"),
-  scopes: z.array(apiKeyScopeSchema).describe("Granted permission scopes"),
+  // Plain strings, not apiKeyScopeSchema: this field is populated from the
+  // JSONB column, so validating it against the enum would turn a key granted a
+  // since-retired scope into a 500 rather than a listing. Matches the REST
+  // router's output schema — see apps/api/src/rest/routers/api-keys.ts.
+  scopes: z.array(z.string()).describe("Granted permission scopes"),
   keyPrefix: z
     .string()
     .describe(

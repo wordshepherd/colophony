@@ -36,7 +36,6 @@ class CreateApiKeyBodyScopesItem(str, Enum):
     NOTIFICATIONSWRITE = "notifications:write"
     ORGANIZATIONSREAD = "organizations:read"
     ORGANIZATIONSWRITE = "organizations:write"
-    PAYMENTSREAD = "payments:read"
     PAYMENT_TRANSACTIONSREAD = "payment-transactions:read"
     PAYMENT_TRANSACTIONSWRITE = "payment-transactions:write"
     PERIODSREAD = "periods:read"

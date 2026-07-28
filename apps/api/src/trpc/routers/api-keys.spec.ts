@@ -87,6 +87,40 @@ describe('apiKeys router', () => {
       expect(mockApiKeyService.list).toHaveBeenCalledOnce();
     });
 
+    it('lists a key holding a scope the enum no longer declares', async () => {
+      // Stored scopes come back from JSONB and are not re-validated against
+      // apiKeyScopeSchema. A key granted a since-retired scope must still list
+      // rather than fail output validation. REST behaves the same way — see
+      // the matching case in src/rest/routers/api-keys.spec.ts.
+      const keys = {
+        items: [
+          {
+            id: 'a1111111-1111-1111-a111-111111111111',
+            name: 'Legacy Key',
+            scopes: ['submissions:read', 'payments:read'],
+            keyPrefix: 'col_live_',
+            createdAt: new Date(),
+            expiresAt: null,
+            lastUsedAt: null,
+            revokedAt: null,
+          },
+        ],
+        total: 1,
+        page: 1,
+        limit: 20,
+        totalPages: 1,
+      };
+      mockApiKeyService.list.mockResolvedValueOnce(keys);
+
+      const caller = createCaller(orgContext(['READER']));
+      const result = await caller.apiKeys.list({ page: 1, limit: 20 });
+
+      expect(result.items[0]?.scopes).toEqual([
+        'submissions:read',
+        'payments:read',
+      ]);
+    });
+
     it('requires org context', async () => {
       const caller = createCaller(
         makeContext({
