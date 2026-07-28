@@ -22,9 +22,16 @@
 
 import type { Browser, Page } from "@playwright/test";
 import { devices } from "@playwright/test";
+import { OIDC_AUTHORITY, OIDC_CLIENT_ID } from "../e2e-env";
 
-export const OIDC_AUTHORITY = "http://test-idp:8080";
-export const OIDC_CLIENT_ID = "test-client";
+// Re-exported, not redeclared. `oidc-client-ts` derives its localStorage key from
+// the authority/client id the app was configured with, and under `next start` the
+// app's copy is inlined at build time by scripts/build-e2e.ts. Two independent
+// literals would let the injected session land under a key the app never reads —
+// which fails every authenticated suite at once, with nothing pointing at the
+// cause. See e2e/e2e-env.ts.
+export { OIDC_AUTHORITY, OIDC_CLIENT_ID };
+
 export const OIDC_STORAGE_KEY = `oidc.user:${OIDC_AUTHORITY}:${OIDC_CLIENT_ID}`;
 
 export interface UserProfile {

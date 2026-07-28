@@ -1,7 +1,12 @@
-import { existsSync, readFileSync } from "fs";
 import { resolve } from "path";
 import dotenv from "dotenv";
 import { defineConfig, devices } from "@playwright/test";
+import {
+  E2E_API_PORT,
+  E2E_WEB_PORT,
+  getPublicEnv,
+  readZitadelConfig,
+} from "./e2e/e2e-env";
 
 /**
  * Playwright configuration for browser E2E tests.
@@ -21,6 +26,11 @@ import { defineConfig, devices } from "@playwright/test";
  * IMPORTANT: Playwright's webServer.env replaces process.env entirely for child
  * processes. We must load .env files and spread process.env to ensure DATABASE_URL
  * and other vars reach the dev servers.
+ *
+ * IMPORTANT: the web server runs in one of two modes (see `useProdBuild` below),
+ * and they source `NEXT_PUBLIC_*` differently — the dev server takes them from
+ * `webServer.env` at runtime, a production build has them inlined by
+ * `scripts/build-e2e.ts`. Both read them from `e2e/e2e-env.ts` so the modes agree.
  */
 
 // Load .env files from both app packages (does not override existing process.env)
@@ -28,11 +38,21 @@ dotenv.config({ path: resolve(__dirname, "../api/.env") });
 dotenv.config({ path: resolve(__dirname, ".env.local") });
 
 /**
- * E2E servers run on dedicated ports (4010/3010) so they never collide with
- * dev servers on the default ports (4000/3000).
+ * CI runs the suites against a production build; local runs stay on the dev server.
+ *
+ * `next dev --turbo` compiles a route on its first request. Four times between
+ * 2026-07-25 and 2026-07-28 a CI job got a genuine Next 404 from a route at that
+ * boundary while its already-compiled siblings served 200 from the same process,
+ * each time passing on rerun. `next start` serves an ahead-of-time build and has no
+ * first-request compile boundary for a route to be lost at.
+ *
+ * Local keeps the dev server for hot reload and to avoid a build per iteration.
+ * `E2E_PROD_BUILD` forces either mode — note it only selects the server command, so
+ * `pnpm --filter @colophony/web build:e2e` must have been run first.
  */
-const E2E_API_PORT = 4010;
-const E2E_WEB_PORT = 3010;
+const useProdBuild = process.env.E2E_PROD_BUILD
+  ? process.env.E2E_PROD_BUILD !== "false"
+  : !!process.env.CI;
 
 /**
  * Where the Next dev server's own output is kept.
@@ -57,26 +77,13 @@ const NEXT_DEV_LOG = "apps/web/next-e2e.log";
  */
 const isOidcE2e = process.env.OIDC_E2E === "true";
 
-let oidcAuthority = "http://test-idp:8080";
-let oidcClientId = "test-client";
+// The NEXT_PUBLIC_* pair the app is built with (CI) or handed at runtime (local).
+const publicEnv = getPublicEnv(isOidcE2e);
 
-// projectId is used for API audience validation: Zitadel JWT tokens put
-// the project ID (not client_id) in the `aud` claim.
-let oidcProjectId = "";
-
-if (isOidcE2e) {
-  const configPath = resolve(__dirname, "e2e/.zitadel-e2e-config.json");
-  if (existsSync(configPath)) {
-    const config = JSON.parse(readFileSync(configPath, "utf-8")) as {
-      authority: string;
-      clientId: string;
-      projectId: string;
-    };
-    oidcAuthority = config.authority;
-    oidcClientId = config.clientId;
-    oidcProjectId = config.projectId;
-  }
-}
+// projectId is a server-side value for API audience validation — Zitadel JWTs put
+// the project ID (not client_id) in the `aud` claim — so it is not part of
+// getPublicEnv() and is read separately.
+const oidcProjectId = isOidcE2e ? (readZitadelConfig()?.projectId ?? "") : "";
 
 export default defineConfig({
   testDir: "./e2e",
@@ -190,15 +197,19 @@ export default defineConfig({
         // wins over apps/api/.env.
         ...(isOidcE2e ? {} : { NODE_ENV: "test", ZITADEL_AUTHORITY: "" }),
         ...(isOidcE2e && {
-          ZITADEL_AUTHORITY: oidcAuthority,
+          // Same authority the browser bundle uses, so the API validates tokens
+          // against the issuer that minted them.
+          ZITADEL_AUTHORITY: publicEnv.NEXT_PUBLIC_ZITADEL_AUTHORITY,
           // Zitadel JWT aud contains the project_id as the resource audience
           ZITADEL_CLIENT_ID: oidcProjectId,
         }),
       },
     },
     {
-      // `2>&1 | tee` rather than `stdout: "pipe"` — see NEXT_DEV_LOG above.
-      command: `pnpm --filter @colophony/web dev 2>&1 | tee ${NEXT_DEV_LOG}`,
+      // `2>&1 | tee` rather than `stdout: "pipe"` — see NEXT_DEV_LOG above. Kept
+      // for both modes: `next start` also logs a line per request, and the
+      // artifact stays the first thing to read when a suite fails.
+      command: `pnpm --filter @colophony/web ${useProdBuild ? "start" : "dev"} 2>&1 | tee ${NEXT_DEV_LOG}`,
       url: `http://localhost:${E2E_WEB_PORT}`,
       // Always start fresh — reusing a server started without the test OIDC
       // env vars causes an auth storage key mismatch (injectAuth writes to a
@@ -208,11 +219,18 @@ export default defineConfig({
       cwd: "../..",
       env: {
         ...process.env,
+        // `next start` honours PORT the same way `next dev` does.
         PORT: String(E2E_WEB_PORT),
-        NEXT_PUBLIC_API_URL: `http://localhost:${E2E_API_PORT}`,
-        NEXT_PUBLIC_ZITADEL_AUTHORITY: oidcAuthority,
-        NEXT_PUBLIC_ZITADEL_CLIENT_ID: oidcClientId,
-        NEXT_PUBLIC_TUS_URL: "http://localhost:1080/files/",
+        // next.config.ts is re-read by `next start`, not just by `next build`, so
+        // this has to be set on both sides — otherwise the server resolves
+        // `output: "standalone"` against a build that deliberately did not emit it
+        // and warns on every startup. The E2E stack never wants the standalone
+        // bundle in either mode.
+        NEXT_E2E_BUILD: "1",
+        // Only reaches the app in dev mode. A production build has these inlined
+        // at build time by scripts/build-e2e.ts, which derives them from the same
+        // getPublicEnv() call — passing them here is a no-op under `next start`.
+        ...publicEnv,
       },
     },
   ],
