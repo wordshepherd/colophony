@@ -134,6 +134,14 @@ describe('api-keys REST router', () => {
       const call = client(apiKeysRouter.list, orgContext(['READER']));
       const result = await call({ page: 1, limit: 20 });
       expect(result.items).toHaveLength(1);
+      // The org ID must reach the service — it carries the explicit tenant
+      // predicate, so a dropped argument silently widens the query to RLS alone.
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(mockService.list).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({ page: 1, limit: 20 }),
+        ORG_ID,
+      );
     });
 
     it('lists a key holding a scope the enum no longer declares', async () => {
@@ -248,6 +256,12 @@ describe('api-keys REST router', () => {
       const result = await call({ keyId: KEY_ID });
 
       expect(result.id).toBe(KEY_ID);
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(mockService.revoke).toHaveBeenCalledWith(
+        expect.anything(),
+        KEY_ID,
+        ORG_ID,
+      );
       expect(ctx.audit).toHaveBeenCalledWith(
         expect.objectContaining({
           action: 'API_KEY_REVOKED',
@@ -287,6 +301,12 @@ describe('api-keys REST router', () => {
       const result = await call({ keyId: KEY_ID });
 
       expect(result).toEqual({ success: true });
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(mockService.delete).toHaveBeenCalledWith(
+        expect.anything(),
+        KEY_ID,
+        ORG_ID,
+      );
       expect(ctx.audit).toHaveBeenCalledWith(
         expect.objectContaining({
           action: 'API_KEY_DELETED',

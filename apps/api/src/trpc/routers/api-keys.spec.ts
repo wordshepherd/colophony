@@ -84,7 +84,13 @@ describe('apiKeys router', () => {
       const result = await caller.apiKeys.list({ page: 1, limit: 20 });
 
       expect(result).toEqual(keys);
-      expect(mockApiKeyService.list).toHaveBeenCalledOnce();
+      // The org ID must reach the service — it carries the explicit tenant
+      // predicate, so a dropped argument silently widens the query to RLS alone.
+      expect(mockApiKeyService.list).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({ page: 1, limit: 20 }),
+        'org-1',
+      );
     });
 
     it('lists a key holding a scope the enum no longer declares', async () => {
@@ -213,6 +219,11 @@ describe('apiKeys router', () => {
       });
 
       expect(result.revokedAt).toBeInstanceOf(Date);
+      expect(mockApiKeyService.revoke).toHaveBeenCalledWith(
+        expect.anything(),
+        'a1111111-1111-1111-a111-111111111111',
+        'org-1',
+      );
       expect(ctx.audit).toHaveBeenCalledWith(
         expect.objectContaining({
           action: 'API_KEY_REVOKED',
@@ -256,6 +267,11 @@ describe('apiKeys router', () => {
       });
 
       expect(result).toEqual({ success: true });
+      expect(mockApiKeyService.delete).toHaveBeenCalledWith(
+        expect.anything(),
+        'a1111111-1111-1111-a111-111111111111',
+        'org-1',
+      );
       expect(ctx.audit).toHaveBeenCalledWith(
         expect.objectContaining({
           action: 'API_KEY_DELETED',

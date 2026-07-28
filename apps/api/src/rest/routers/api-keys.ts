@@ -58,7 +58,7 @@ const list = orgProcedure
   .input(restPaginationQuery)
   .output(paginatedApiKeysSchema)
   .handler(async ({ input, context }) => {
-    return apiKeyService.list(context.dbTx, input);
+    return apiKeyService.list(context.dbTx, input, context.authContext.orgId);
   });
 
 const create = adminProcedure
@@ -105,7 +105,11 @@ const revoke = adminProcedure
   .input(keyIdParam)
   .output(revokeApiKeyResponseSchema)
   .handler(async ({ input, context }) => {
-    const revoked = await apiKeyService.revoke(context.dbTx, input.keyId);
+    const revoked = await apiKeyService.revoke(
+      context.dbTx,
+      input.keyId,
+      context.authContext.orgId,
+    );
     if (!revoked) {
       throw new ORPCError('NOT_FOUND', { message: 'API key not found' });
     }
@@ -130,7 +134,11 @@ const del = adminProcedure
   .input(keyIdParam)
   .output(successResponseSchema)
   .handler(async ({ input, context }) => {
-    const deleted = await apiKeyService.delete(context.dbTx, input.keyId);
+    const deleted = await apiKeyService.delete(
+      context.dbTx,
+      input.keyId,
+      context.authContext.orgId,
+    );
     if (!deleted) {
       throw new ORPCError('NOT_FOUND', { message: 'API key not found' });
     }

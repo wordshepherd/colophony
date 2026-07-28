@@ -65,10 +65,13 @@ export const apiKeyService = {
   },
 
   /**
-   * List API keys for the current org (RLS handles filtering).
-   * Never returns keyHash.
+   * List API keys for an org. Filters on organizationId explicitly, with RLS as the
+   * backstop rather than the only defence. Never returns keyHash.
+   *
+   * The count query carries the predicate too — without it, `total` reports every
+   * org's key count while `items` is correctly scoped.
    */
-  async list(tx: DrizzleDb, pagination: PaginationInput) {
+  async list(tx: DrizzleDb, pagination: PaginationInput, orgId: string) {
     const { page, limit } = pagination;
     const offset = (page - 1) * limit;
 
@@ -85,10 +88,14 @@ export const apiKeyService = {
           revokedAt: apiKeys.revokedAt,
         })
         .from(apiKeys)
+        .where(eq(apiKeys.organizationId, orgId))
         .orderBy(apiKeys.createdAt)
         .limit(limit)
         .offset(offset),
-      tx.select({ count: sql<number>`count(*)::int` }).from(apiKeys),
+      tx
+        .select({ count: sql<number>`count(*)::int` })
+        .from(apiKeys)
+        .where(eq(apiKeys.organizationId, orgId)),
     ]);
 
     const total = countResult[0]?.count ?? 0;
@@ -103,34 +110,14 @@ export const apiKeyService = {
   },
 
   /**
-   * Get a single API key by ID. RLS scoped.
+   * Revoke an API key by setting revokedAt. Scoped to the org explicitly, so a key
+   * belonging to another org returns null rather than being revoked.
    */
-  async getById(tx: DrizzleDb, keyId: string) {
-    const [row] = await tx
-      .select({
-        id: apiKeys.id,
-        name: apiKeys.name,
-        scopes: apiKeys.scopes,
-        keyPrefix: apiKeys.keyPrefix,
-        createdAt: apiKeys.createdAt,
-        expiresAt: apiKeys.expiresAt,
-        lastUsedAt: apiKeys.lastUsedAt,
-        revokedAt: apiKeys.revokedAt,
-      })
-      .from(apiKeys)
-      .where(eq(apiKeys.id, keyId))
-      .limit(1);
-    return row ?? null;
-  },
-
-  /**
-   * Revoke an API key by setting revokedAt.
-   */
-  async revoke(tx: DrizzleDb, keyId: string) {
+  async revoke(tx: DrizzleDb, keyId: string, orgId: string) {
     const [updated] = await tx
       .update(apiKeys)
       .set({ revokedAt: new Date() })
-      .where(and(eq(apiKeys.id, keyId)))
+      .where(and(eq(apiKeys.id, keyId), eq(apiKeys.organizationId, orgId)))
       .returning({
         id: apiKeys.id,
         name: apiKeys.name,
@@ -140,12 +127,12 @@ export const apiKeyService = {
   },
 
   /**
-   * Hard delete an API key.
+   * Hard delete an API key. Scoped to the org explicitly.
    */
-  async delete(tx: DrizzleDb, keyId: string) {
+  async delete(tx: DrizzleDb, keyId: string, orgId: string) {
     const [deleted] = await tx
       .delete(apiKeys)
-      .where(eq(apiKeys.id, keyId))
+      .where(and(eq(apiKeys.id, keyId), eq(apiKeys.organizationId, orgId)))
       .returning({ id: apiKeys.id });
     return deleted ?? null;
   },

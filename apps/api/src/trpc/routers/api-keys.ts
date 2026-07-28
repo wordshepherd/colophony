@@ -30,7 +30,7 @@ export const apiKeysRouter = createRouter({
     .output(paginatedResponseSchema(apiKeyResponseSchema))
     .query(
       async ({ ctx, input }): Promise<PaginatedResponse<ApiKeyResponse>> => {
-        return apiKeyService.list(ctx.dbTx, input);
+        return apiKeyService.list(ctx.dbTx, input, ctx.authContext.orgId);
       },
     ),
 
@@ -59,7 +59,11 @@ export const apiKeysRouter = createRouter({
     .input(revokeApiKeySchema)
     .output(revokeApiKeyResponseSchema)
     .mutation(async ({ ctx, input }) => {
-      const revoked = await apiKeyService.revoke(ctx.dbTx, input.keyId);
+      const revoked = await apiKeyService.revoke(
+        ctx.dbTx,
+        input.keyId,
+        ctx.authContext.orgId,
+      );
       if (!revoked) {
         throw new TRPCError({
           code: 'NOT_FOUND',
@@ -79,7 +83,11 @@ export const apiKeysRouter = createRouter({
     .input(deleteApiKeySchema)
     .output(successResponseSchema)
     .mutation(async ({ ctx, input }) => {
-      const deleted = await apiKeyService.delete(ctx.dbTx, input.keyId);
+      const deleted = await apiKeyService.delete(
+        ctx.dbTx,
+        input.keyId,
+        ctx.authContext.orgId,
+      );
       if (!deleted) {
         throw new TRPCError({
           code: 'NOT_FOUND',
