@@ -299,9 +299,10 @@ const INTERACTIVE_AUTH_METHODS: readonly string[] = ['oidc', 'demo', 'test'];
 /**
  * Restricts a procedure to interactive human sessions.
  *
- * Log-only until TRPC_INTERNAL_ONLY_ENFORCE=true: non-interactive callers are
- * audited and let through, so real usage can be measured before the boundary
- * starts rejecting. An unauthenticated caller is rejected in both modes.
+ * Enforcing by default: a non-interactive caller is audited and rejected with
+ * 403. TRPC_INTERNAL_ONLY_ENFORCE=false reverts to log-only, auditing the
+ * crossing and letting it through — kept as a revert lever, not a normal
+ * setting. An unauthenticated caller is rejected in both modes, unaudited.
  */
 const internalOnlyMiddleware = t.middleware(async ({ ctx, path, next }) => {
   if (!ctx.authContext) {
@@ -371,8 +372,8 @@ export const adminProcedure = t.procedure.use(isAdmin);
 export const businessOpsProcedure = t.procedure.use(isBusinessOps);
 
 // Internal-only variants. `internalOnly` runs FIRST so that a non-interactive
-// credential is logged even when the role check would have rejected it anyway —
-// otherwise the observation window undercounts real usage.
+// credential is audited and rejected on the boundary rather than incidentally
+// on its role — the audit trail should say why the call was actually refused.
 export const internalAuthedProcedure = t.procedure
   .use(internalOnly)
   .use(isAuthed);

@@ -230,7 +230,11 @@ describe('tRPC scope enforcement (P0.1b)', () => {
   // equivalent, internalOnly covers the ones that never will. Either alone
   // leaves a way in.
   describe('internal-only routers (P0.1)', () => {
-    it('lets an API key reach federation while the window is open', async () => {
+    // Enforcement is the default since 2026-07-27; this covers the revert
+    // path, not pending behaviour.
+    it('lets an API key reach federation when explicitly set to log-only', async () => {
+      envState.TRPC_INTERNAL_ONLY_ENFORCE = false;
+
       await expect(
         keyCaller(['manuscripts:read']).federation.getConfig(),
       ).resolves.toBeDefined();

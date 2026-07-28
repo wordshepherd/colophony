@@ -137,7 +137,7 @@ curl http://localhost/health
 | `SMTP_PASS`                  | SMTP password                                                      | (empty)     |
 | `SMTP_FROM`                  | SMTP sender address                                                | (empty)     |
 | `FEDERATION_ENABLED`         | Enable federation features                                         | `false`     |
-| `TRPC_INTERNAL_ONLY_ENFORCE` | Reject API keys on internal-only tRPC routers (`false` = log only) | `false`     |
+| `TRPC_INTERNAL_ONLY_ENFORCE` | Reject API keys on internal-only tRPC routers (`false` = log only) | `true`      |
 | `SENTRY_DSN`                 | Sentry error tracking DSN                                          | (empty)     |
 | `METRICS_ENABLED`            | Enable Prometheus `/metrics`                                       | `false`     |
 

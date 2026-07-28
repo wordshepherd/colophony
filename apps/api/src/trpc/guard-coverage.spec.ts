@@ -11,12 +11,12 @@
  * the eleventh appearing: it reads every procedure's middleware chain out of the
  * built `appRouter` and fails on one that declares neither.
  *
- * DECLARES, not "is protected" — the distinction is load-bearing. A
- * `requireScopes` declaration is also its enforcement. `internalOnly` is not,
- * yet: while `TRPC_INTERNAL_ONLY_ENFORCE` is false it audits the call and lets
- * it through, so the internal procedures counted here remain reachable by any
- * key until P0.5 flips the flag. The last test pins the enforced behaviour so
- * that gap stays visible rather than implied.
+ * DECLARES, not "is protected" — the distinction was load-bearing while the
+ * two guards differed. A `requireScopes` declaration is also its enforcement;
+ * `internalOnly` only declared, and audited the crossing, until P0.5 flipped
+ * `TRPC_INTERNAL_ONLY_ENFORCE` to true on 2026-07-27. Both now enforce on
+ * declaration. The last test pins that, so a revert to log-only cannot pass
+ * silently.
  *
  * Introspection only — no service is mocked because tests 1-5 never invoke a
  * procedure, and test 6 rejects at middleware index 0, before any service is

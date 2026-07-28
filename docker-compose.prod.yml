@@ -141,6 +141,8 @@ services:
       FEDERATION_RATE_LIMIT_FAIL_MODE: ${FEDERATION_RATE_LIMIT_FAIL_MODE:-open}
       # Status tokens
       STATUS_TOKEN_TTL_DAYS: ${STATUS_TOKEN_TTL_DAYS:-90}
+      # Internal tRPC boundary. Set false only to revert to log-only.
+      TRPC_INTERNAL_ONLY_ENFORCE: ${TRPC_INTERNAL_ONLY_ENFORCE:-true}
       # Background jobs (Inngest)
       INNGEST_EVENT_KEY: ${INNGEST_EVENT_KEY:-}
       INNGEST_SIGNING_KEY: ${INNGEST_SIGNING_KEY:-}
@@ -620,6 +622,10 @@ services:
       METRICS_ENABLED: "false"
       FEDERATION_ENABLED: "false"
       INNGEST_DEV: "true"
+      # A no-op here in practice — the demo API authenticates as `demo`, which
+      # is on the interactive allowlist — but set explicitly so the deployed
+      # value never depends on the schema default.
+      TRPC_INTERNAL_ONLY_ENFORCE: ${TRPC_INTERNAL_ONLY_ENFORCE:-true}
     depends_on:
       demo-migrate:
         condition: service_completed_successfully

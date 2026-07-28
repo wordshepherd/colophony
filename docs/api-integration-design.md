@@ -1090,6 +1090,21 @@ Since Colophony has no external users yet (architecture.md §6.1), step 2 will v
 return nothing, and the sequence collapses to a formality. Run it anyway — it costs one
 flag and it is the difference between knowing and assuming.
 
+**Resolved 2026-07-27 — steps 2–4 done, on evidence rather than elapsed time.** The
+prediction above was right, and the month was not what made it verifiable. Staging, the only
+deployed environment, has **never held an API key** (`api_keys` is empty across an
+`audit_events` history from 2026-04-08), so no call of this shape was possible there
+regardless of how long anyone waited. Every shipped client that sends `X-Api-Key` is
+REST-only, and the web tRPC client sends interactive credentials exclusively. The 71
+`API_KEY_INTERNAL_ROUTE` rows in the dev database were 67 parts test-suite self-observation.
+
+What the window could never have delivered is worth stating, because it is the reason the
+calendar was the wrong instrument: elapsed time with no traffic is not evidence about future
+traffic. `X-Api-Key` is accepted on every non-public route, so a hand-rolled request reaches
+`federation.getConfig` whether or not anyone has tried it yet — which is an argument for
+enforcing sooner, not later. The durable guarantee is the test that now pins the default
+(`apps/api/src/__tests__/security/scope-enforcement.test.ts`), not the observation period.
+
 ---
 
 ## 5. Implementation sequence (reviewable PRs)
@@ -1118,7 +1133,7 @@ parallel.
 | **P0.2**  | Rewrite `scripts/export-openapi.ts` to use `OpenAPIGenerator` in-process. Regenerate `sdks/openapi.json` (+36 operations). **Per D4: stop committing generated SDKs, move generation to CI release.**                                    | Low — large deletion, mechanical                  |
 | **P0.3**  | CI: **invert** the existing `sdk-check` job (`ci.yml:1610`) — diff the regenerated _spec_ against source, not the SDK against the spec. Per D4, delete the SDK-regeneration half.                                                        | Low — a correction, not an addition (finding (b)) |
 | **P0.4**  | CI: coverage manifest test (M4). Seed the manifest from §1.2–1.5.                                                                                                                                                                        | Low                                               |
-| **P0.5**  | Flip `internalOnly` to enforcing after the observation window. Remove or wire the two dead scopes (`webhooks:manage`, `payments:read`).                                                                                                  | Medium — behaviour change                         |
+| **P0.5**  | Flip `internalOnly` to enforcing. **Done 2026-07-27**; the observation window was closed early on the evidence in §4. `webhooks:manage` was consumed by P0.1b; `payments:read` removal is split out as P0.5b.                            | Medium — behaviour change                         |
 
 _P0.1 is one middleware and it is the single highest-value change here; review it for the
 allowlist, not the router list. P0.2 is the largest diff and contains no logic — with D4 it
