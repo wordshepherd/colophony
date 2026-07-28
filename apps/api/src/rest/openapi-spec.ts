@@ -176,8 +176,15 @@ export const openApiDocumentConfig: OpenAPIGeneratorGenerateOptions = {
  * BullMQ queues lazily and `pg.Pool` does not connect until first query. This
  * is what lets `scripts/export-openapi.ts` run in CI.
  *
- * The generator emits `3.1.1`; we pin to `3.1.0` for broader tool
- * compatibility (the two are functionally identical).
+ * The generator emits `3.1.1`; the exported artifact is pinned to `3.1.0` for
+ * broader tool compatibility (the two are functionally identical).
+ *
+ * NOTE: the pin applies to `sdks/openapi.json` only. The live
+ * `/v1/openapi.json` still reports `3.1.1`, because `OpenAPIReferencePlugin`
+ * generates its own document and `OpenAPIGeneratorGenerateOptions` is
+ * `Partial<Omit<OpenAPI.Document, 'openapi'>>` — the version cannot be set
+ * through it. Pre-existing behaviour: the previous fetch-based export applied
+ * the same normalization to the response. Tracked in `docs/backlog.md`.
  */
 export async function generateOpenApiDocument(): Promise<
   Record<string, unknown>

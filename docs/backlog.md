@@ -225,6 +225,17 @@ Ordered as the design doc's Phase 0/D.
       (design doc §0.1(e); updated 2026-07-27)
 - [ ] **[P2] REST spec coverage.** Only 7 of 17 REST routers have a `.spec.ts`. —
       (design doc §1.8)
+- [ ] **[P2] The served spec reports `3.1.1`; the committed one says `3.1.0`.**
+      `generateOpenApiDocument()` pins the exported `sdks/openapi.json` to `3.1.0` for
+      broader tool compatibility, but `/v1/openapi.json` is generated independently by
+      `OpenAPIReferencePlugin` and cannot be pinned through it —
+      `OpenAPIGeneratorGenerateOptions` is `Partial<Omit<OpenAPI.Document, 'openapi'>>`, so
+      the version is explicitly un-settable. Any tool that motivated the pin still gets
+      `3.1.1` from the live endpoint. Pre-existing — the old fetch-based export normalized
+      the response the same way — and not introduced by P0.2, but the guarantee is only
+      half-true today. Fix by serving `generateOpenApiDocument()` from a dedicated route and
+      pointing the reference plugin's `specPath` at it, so one function feeds both. —
+      (code review 2026-07-27)
 - [ ] **[P3] Three OpenAPI tags are used but never declared.** Operations carry
       `Collections`, `Submission Analytics`, and `Submission Votes`, but
       `openApiDocumentConfig.tags` in `apps/api/src/rest/openapi-spec.ts` declares only 17
