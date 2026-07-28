@@ -133,7 +133,8 @@ The single exception is `invitationsAccept`, which is a user-token flow and corr
 exempt.
 
 Separately, `webhooks:manage` and `payments:read` are declared in `apiKeyScopeSchema` and
-enforced nowhere.
+enforced nowhere. Both have since been resolved: `webhooks:manage` was consumed by the tRPC
+webhooks router in P0.1b, and `payments:read` was removed outright in P0.5b (2026-07-28).
 
 This reframes Problem 1's second question. The boundary policy the brief proposes —
 "REST is the public contract, tRPC is the frontend's private convenience" — is not a
@@ -353,15 +354,15 @@ external-submissions) which serve the writer web app rather than an org integrat
 
 Measured against the current committed artefacts.
 
-| Artefact            | Cost                                                   | Notes                                                                                                                                                |
-| ------------------- | ------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| oRPC procedure      | ~25–40 lines in `rest/routers/<domain>.ts`             | Handler is a thin adapter; the service method already exists for every gap in §1.3–1.4.                                                              |
-| Response schema     | 0–20 lines in `@colophony/types`                       | Often already present — tRPC procedures declare `.output(...)`.                                                                                      |
-| Scope constant      | 1 line, or 0                                           | `webhooks:manage` and `payments:read` already exist unused.                                                                                          |
-| `sdks/openapi.json` | ~170 lines/operation                                   | 17,281 lines for 103 operations.                                                                                                                     |
-| TypeScript SDK      | ~90 lines/operation, fully generated                   | 9,184 lines in `src/generated/openapi.ts`. No hand-written code.                                                                                     |
-| Python SDK          | **~4.3 model files + ~1.15 api modules per operation** | 447 model files and 119 api modules for 103 operations, 6.1 MB committed. This is the dominant cost and it is committed wholesale to the repository. |
-| Tests               | 1 spec file per router                                 | Only 7 of 17 REST routers have one today.                                                                                                            |
+| Artefact            | Cost                                                   | Notes                                                                                                                                                 |
+| ------------------- | ------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| oRPC procedure      | ~25–40 lines in `rest/routers/<domain>.ts`             | Handler is a thin adapter; the service method already exists for every gap in §1.3–1.4.                                                               |
+| Response schema     | 0–20 lines in `@colophony/types`                       | Often already present — tRPC procedures declare `.output(...)`.                                                                                       |
+| Scope constant      | 1 line                                                 | Measured before P0.1b/P0.5b, when `webhooks:manage` and `payments:read` sat unused and a new endpoint could adopt one for free. Neither is spare now. |
+| `sdks/openapi.json` | ~170 lines/operation                                   | 17,281 lines for 103 operations.                                                                                                                      |
+| TypeScript SDK      | ~90 lines/operation, fully generated                   | 9,184 lines in `src/generated/openapi.ts`. No hand-written code.                                                                                      |
+| Python SDK          | **~4.3 model files + ~1.15 api modules per operation** | 447 model files and 119 api modules for 103 operations, 6.1 MB committed. This is the dominant cost and it is committed wholesale to the repository.  |
+| Tests               | 1 spec file per router                                 | Only 7 of 17 REST routers have one today.                                                                                                             |
 
 So the marginal cost of one endpoint is roughly **~65 lines hand-written, ~260 lines of
 generated spec and TS, and ~5 new Python files**. Bringing the published spec up to the
@@ -1126,14 +1127,15 @@ parallel.
 
 ### Phase 0 — Make the current surface honest
 
-| PR        | Content                                                                                                                                                                                                                                  | Risk                                              |
-| --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------- |
-| **P0.1**  | `internalOnly` middleware in `trpc/init.ts` as an **allowlist** of interactive auth methods (§1.6), applied in log-only mode to the seven §1.5 routers. New audit action.                                                                | Low — logs only                                   |
-| **P0.1b** | **Scope the rest.** Add `requireScopes` to every tRPC procedure not covered by P0.1 — `notifications`, `notification-preferences`, and `webhooks` are unscoped and _not_ internal-only. Without this the bypass is narrowed, not closed. | Low — but P0, not deferrable                      |
-| **P0.2**  | Rewrite `scripts/export-openapi.ts` to use `OpenAPIGenerator` in-process. Regenerate `sdks/openapi.json` (+36 operations). **Per D4: stop committing generated SDKs, move generation to CI release.**                                    | Low — large deletion, mechanical                  |
-| **P0.3**  | CI: **invert** the existing `sdk-check` job (`ci.yml:1610`) — diff the regenerated _spec_ against source, not the SDK against the spec. Per D4, delete the SDK-regeneration half.                                                        | Low — a correction, not an addition (finding (b)) |
-| **P0.4**  | CI: coverage manifest test (M4). Seed the manifest from §1.2–1.5.                                                                                                                                                                        | Low                                               |
-| **P0.5**  | Flip `internalOnly` to enforcing. **Done 2026-07-27**; the observation window was closed early on the evidence in §4. `webhooks:manage` was consumed by P0.1b; `payments:read` removal is split out as P0.5b.                            | Medium — behaviour change                         |
+| PR        | Content                                                                                                                                                                                                                                                                                                                          | Risk                                              |
+| --------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------- |
+| **P0.1**  | `internalOnly` middleware in `trpc/init.ts` as an **allowlist** of interactive auth methods (§1.6), applied in log-only mode to the seven §1.5 routers. New audit action.                                                                                                                                                        | Low — logs only                                   |
+| **P0.1b** | **Scope the rest.** Add `requireScopes` to every tRPC procedure not covered by P0.1 — `notifications`, `notification-preferences`, and `webhooks` are unscoped and _not_ internal-only. Without this the bypass is narrowed, not closed.                                                                                         | Low — but P0, not deferrable                      |
+| **P0.2**  | Rewrite `scripts/export-openapi.ts` to use `OpenAPIGenerator` in-process. Regenerate `sdks/openapi.json` (+36 operations). **Per D4: stop committing generated SDKs, move generation to CI release.**                                                                                                                            | Low — large deletion, mechanical                  |
+| **P0.3**  | CI: **invert** the existing `sdk-check` job (`ci.yml:1610`) — diff the regenerated _spec_ against source, not the SDK against the spec. Per D4, delete the SDK-regeneration half.                                                                                                                                                | Low — a correction, not an addition (finding (b)) |
+| **P0.4**  | CI: coverage manifest test (M4). Seed the manifest from §1.2–1.5.                                                                                                                                                                                                                                                                | Low                                               |
+| **P0.5**  | Flip `internalOnly` to enforcing. **Done 2026-07-27**; the observation window was closed early on the evidence in §4. `webhooks:manage` was consumed by P0.1b; `payments:read` removal is split out as P0.5b.                                                                                                                    | Medium — behaviour change                         |
+| **P0.5b** | Remove the dead `payments:read` scope. **Done 2026-07-28**, completing Phase 0. Migration `0067` strips the value from stored `scopes` arrays, and `apiKeyResponseSchema` now declares `scopes` as plain strings so a retired scope on a key degrades to a listing rather than a 500 — matching what the REST router always did. | Low                                               |
 
 _P0.1 is one middleware and it is the single highest-value change here; review it for the
 allowlist, not the router list. P0.2 is the largest diff and contains no logic — with D4 it

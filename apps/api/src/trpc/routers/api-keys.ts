@@ -28,12 +28,11 @@ export const apiKeysRouter = createRouter({
     .use(requireScopes('api-keys:read'))
     .input(paginationSchema)
     .output(paginatedResponseSchema(apiKeyResponseSchema))
-    .query(async ({ ctx, input }) => {
-      // Cast: Drizzle JSONB returns `scopes: string[]`; .output() validates at runtime
-      return apiKeyService.list(ctx.dbTx, input) as Promise<
-        PaginatedResponse<ApiKeyResponse>
-      >;
-    }),
+    .query(
+      async ({ ctx, input }): Promise<PaginatedResponse<ApiKeyResponse>> => {
+        return apiKeyService.list(ctx.dbTx, input);
+      },
+    ),
 
   create: adminProcedure
     .use(requireScopes('api-keys:manage'))
@@ -52,8 +51,7 @@ export const apiKeysRouter = createRouter({
         resourceId: result.id,
         newValue: { name: input.name, scopes: input.scopes },
       });
-      // Cast: Drizzle JSONB returns `scopes: string[]`; .output() validates at runtime
-      return result as CreateApiKeyResponse;
+      return result satisfies CreateApiKeyResponse;
     }),
 
   revoke: adminProcedure

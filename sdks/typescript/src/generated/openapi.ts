@@ -5371,7 +5371,6 @@ export interface operations {
             | "users:read"
             | "api-keys:read"
             | "api-keys:manage"
-            | "payments:read"
             | "notifications:read"
             | "notifications:write"
             | "webhooks:read"

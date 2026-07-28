@@ -441,7 +441,6 @@ export async function seedBase(tx: DrizzleDb): Promise<SeedResult> {
       "organizations:read",
       "users:read",
       "api-keys:read",
-      "payments:read",
       "audit:read",
       "periods:read",
       "periods:write",

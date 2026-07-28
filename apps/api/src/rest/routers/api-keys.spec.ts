@@ -135,6 +135,38 @@ describe('api-keys REST router', () => {
       const result = await call({ page: 1, limit: 20 });
       expect(result.items).toHaveLength(1);
     });
+
+    it('lists a key holding a scope the enum no longer declares', async () => {
+      // Counterpart to the tRPC case in src/trpc/routers/api-keys.spec.ts.
+      // Both surfaces declare scopes as plain strings on output so that a
+      // retired scope left on a key degrades to a listing, not a 500.
+      mockService.list.mockResolvedValueOnce({
+        items: [
+          {
+            id: KEY_ID,
+            name: 'Legacy Key',
+            scopes: ['submissions:read', 'payments:read'],
+            keyPrefix: 'col_live_',
+            createdAt: new Date(),
+            expiresAt: null,
+            lastUsedAt: null,
+            revokedAt: null,
+          },
+        ],
+        total: 1,
+        page: 1,
+        limit: 20,
+        totalPages: 1,
+      });
+
+      const call = client(apiKeysRouter.list, orgContext(['READER']));
+      const result = await call({ page: 1, limit: 20 });
+
+      expect(result.items[0]?.scopes).toEqual([
+        'submissions:read',
+        'payments:read',
+      ]);
+    });
   });
 
   // -------------------------------------------------------------------------
