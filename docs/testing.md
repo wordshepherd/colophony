@@ -401,7 +401,36 @@ pnpm --filter @colophony/web test:e2e    # Auto-starts API + Web dev servers
 pnpm --filter @colophony/web test:e2e:ui # Interactive UI mode
 ```
 
-The `playwright.config.ts` `webServer` config auto-starts API (port 4010) and Web (port 3010) dev servers on dedicated E2E ports. The `submissions` project requires no Zitadel, Garage, or Redis (`VIRUS_SCAN_ENABLED=false` in API webServer env).
+The `playwright.config.ts` `webServer` config auto-starts API (port 4010) and Web (port 3010) servers on dedicated E2E ports. The `submissions` project requires no Zitadel, Garage, or Redis (`VIRUS_SCAN_ENABLED=false` in API webServer env).
+
+##### Dev server locally, production build in CI
+
+The web server runs in one of two modes:
+
+|                  | Command            | `NEXT_PUBLIC_*` come from   |
+| ---------------- | ------------------ | --------------------------- |
+| Local (default)  | `next dev --turbo` | `webServer.env`, at runtime |
+| CI (`CI` is set) | `next start`       | `next build`, inlined       |
+
+CI uses a build because `next dev --turbo` compiles a route on its first request, and between 2026-07-25 and 2026-07-28 four CI jobs got a genuine Next 404 from a route at that boundary while sibling routes served 200 from the same process — each passing on rerun. `next start` serves an ahead-of-time build, so there is no first-request compile boundary to lose a route at. Every Playwright CI job therefore runs `pnpm --filter @colophony/web build:e2e` first.
+
+Local runs stay on the dev server for hot reload and to avoid a build per iteration.
+
+To reproduce CI's mode locally, **build first** — `E2E_PROD_BUILD` only selects the server command, so on its own it runs against whatever `.next` happens to be there:
+
+```bash
+pnpm --filter @colophony/web build:e2e
+E2E_PROD_BUILD=1 pnpm --filter @colophony/web test:e2e
+```
+
+The `oidc` suite needs its own build: its Zitadel authority and client id are baked in and differ from the other nine, so it cannot share one.
+
+```bash
+OIDC_E2E=true pnpm --filter @colophony/web build:e2e
+E2E_PROD_BUILD=1 pnpm --filter @colophony/web test:e2e:oidc
+```
+
+`apps/web/e2e/e2e-env.ts` is the single source for the ports and the public env, imported by `playwright.config.ts`, `scripts/build-e2e.ts`, and `e2e/helpers/auth.ts`. The OIDC authority and client id must be identical across all three — `oidc-client-ts` derives the localStorage session key from them, so a mismatch fails every authenticated suite at once.
 
 #### Upload E2E Tests (uploads project)
 

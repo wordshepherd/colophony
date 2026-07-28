@@ -684,6 +684,8 @@ jobs:
         run: |
           echo 'DATABASE_URL="postgresql://colophony:password@localhost:5432/colophony"' > packages/db/.env
           pnpm db:seed
+      - name: Build web for E2E
+        run: pnpm --filter @colophony/web build:e2e
       - name: Install Playwright browsers
         run: pnpm --filter @colophony/web exec playwright install --with-deps chromium
       - name: Run Playwright E2E tests
@@ -770,6 +772,8 @@ jobs:
         run: |
           echo 'DATABASE_URL="postgresql://colophony:password@localhost:5432/colophony"' > packages/db/.env
           pnpm db:seed
+      - name: Build web for E2E
+        run: pnpm --filter @colophony/web build:e2e
       - name: Install Playwright browsers
         run: pnpm --filter @colophony/web exec playwright install --with-deps chromium
       - name: Run Playwright embed E2E tests
@@ -856,6 +860,8 @@ jobs:
         run: |
           echo 'DATABASE_URL="postgresql://colophony:password@localhost:5432/colophony"' > packages/db/.env
           pnpm db:seed
+      - name: Build web for E2E
+        run: pnpm --filter @colophony/web build:e2e
       - name: Install Playwright browsers
         run: pnpm --filter @colophony/web exec playwright install --with-deps chromium
       - name: Run Playwright Slate E2E tests
@@ -942,6 +948,8 @@ jobs:
         run: |
           echo 'DATABASE_URL="postgresql://colophony:password@localhost:5432/colophony"' > packages/db/.env
           pnpm db:seed
+      - name: Build web for E2E
+        run: pnpm --filter @colophony/web build:e2e
       - name: Install Playwright browsers
         run: pnpm --filter @colophony/web exec playwright install --with-deps chromium
       - name: Run Playwright Workspace E2E tests
@@ -1028,6 +1036,8 @@ jobs:
         run: |
           echo 'DATABASE_URL="postgresql://colophony:password@localhost:5432/colophony"' > packages/db/.env
           pnpm db:seed
+      - name: Build web for E2E
+        run: pnpm --filter @colophony/web build:e2e
       - name: Install Playwright browsers
         run: pnpm --filter @colophony/web exec playwright install --with-deps chromium
       - name: Run Playwright Forms E2E tests
@@ -1114,6 +1124,8 @@ jobs:
         run: |
           echo 'DATABASE_URL="postgresql://colophony:password@localhost:5432/colophony"' > packages/db/.env
           pnpm db:seed
+      - name: Build web for E2E
+        run: pnpm --filter @colophony/web build:e2e
       - name: Install Playwright browsers
         run: pnpm --filter @colophony/web exec playwright install --with-deps chromium
       - name: Run Playwright Organization E2E tests
@@ -1199,6 +1211,8 @@ jobs:
         run: |
           echo 'DATABASE_URL="postgresql://colophony:password@localhost:5432/colophony"' > packages/db/.env
           pnpm db:seed
+      - name: Build web for E2E
+        run: pnpm --filter @colophony/web build:e2e
       - name: Install Playwright browsers
         run: pnpm --filter @colophony/web exec playwright install --with-deps chromium
       - name: Run Playwright Analytics E2E tests
@@ -1285,6 +1299,8 @@ jobs:
         run: |
           echo 'DATABASE_URL="postgresql://colophony:password@localhost:5432/colophony"' > packages/db/.env
           pnpm db:seed
+      - name: Build web for E2E
+        run: pnpm --filter @colophony/web build:e2e
       - name: Install Playwright browsers
         run: pnpm --filter @colophony/web exec playwright install --with-deps chromium
       - name: Run Playwright Federation E2E tests
@@ -1442,6 +1458,8 @@ jobs:
             sleep 5
           done
           timeout 15 bash -c 'until curl -sf http://localhost:1080; do sleep 2; done'
+      - name: Build web for E2E
+        run: pnpm --filter @colophony/web build:e2e
       - name: Install Playwright browsers
         run: pnpm --filter @colophony/web exec playwright install --with-deps chromium
       - name: Run Playwright uploads E2E tests
@@ -1577,6 +1595,10 @@ jobs:
           DATABASE_URL: postgresql://colophony:password@localhost:5432/colophony
           ZITADEL_URL: http://localhost:8080
           ZITADEL_PAT_PATH: ${{ github.workspace }}/.docker/zitadel/machinekey/admin.pat
+      - name: Build web for E2E
+        run: pnpm --filter @colophony/web build:e2e
+        env:
+          OIDC_E2E: "true"
       - name: Install Playwright browsers
         run: pnpm --filter @colophony/web exec playwright install --with-deps chromium
       - name: Run Playwright OIDC E2E tests

@@ -12,8 +12,15 @@ import { getServerEnv } from "./src/env";
 const serverEnv = getServerEnv();
 
 const nextConfig: NextConfig = {
-  // Standalone output for Docker deployment
-  output: "standalone",
+  // Standalone output for Docker deployment.
+  //
+  // Dropped for the E2E build (scripts/build-e2e.ts sets NEXT_E2E_BUILD): CI serves
+  // that build with `next start`, which logs `"next start" does not work with
+  // "output: standalone"` and points at node .next/standalone/server.js. It does in
+  // fact serve correctly — standalone is an additional output and .next/ is fully
+  // populated either way — but the E2E build has no use for the standalone bundle,
+  // so emitting it only buys a warning in ten CI job logs.
+  output: process.env.NEXT_E2E_BUILD ? undefined : "standalone",
   // Disable type checking during build (run separately with `pnpm type-check`)
   // Required because Next.js type-checks API code via tRPC shared types
   typescript: {
