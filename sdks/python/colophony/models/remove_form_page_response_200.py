@@ -1,42 +1,35 @@
 from __future__ import annotations
 
+import datetime
 from collections.abc import Mapping
-from typing import Any, TypeVar, BinaryIO, TextIO, TYPE_CHECKING, Generator
+from typing import TYPE_CHECKING, Any, TypeVar, cast
+from uuid import UUID
 
 from attrs import define as _attrs_define
 from attrs import field as _attrs_field
 
-from ..types import UNSET, Unset
-
-from dateutil.parser import isoparse
-from typing import cast
-from uuid import UUID
-import datetime
-
 if TYPE_CHECKING:
-  from ..models.remove_form_page_response_200_branching_rules_type_0_item import RemoveFormPageResponse200BranchingRulesType0Item
-
-
-
+    from ..models.remove_form_page_response_200_branching_rules_type_0_item import (
+        RemoveFormPageResponse200BranchingRulesType0Item,
+    )
 
 
 T = TypeVar("T", bound="RemoveFormPageResponse200")
 
 
-
 @_attrs_define
 class RemoveFormPageResponse200:
-    """ 
-        Attributes:
-            id (UUID):
-            form_definition_id (UUID):
-            title (str):
-            description (None | str):
-            sort_order (int):
-            branching_rules (list[RemoveFormPageResponse200BranchingRulesType0Item] | None):
-            created_at (datetime.datetime):
-            updated_at (datetime.datetime):
-     """
+    """
+    Attributes:
+        id (UUID):
+        form_definition_id (UUID):
+        title (str):
+        description (None | str):
+        sort_order (int):
+        branching_rules (list[RemoveFormPageResponse200BranchingRulesType0Item] | None):
+        created_at (datetime.datetime):
+        updated_at (datetime.datetime):
+    """
 
     id: UUID
     form_definition_id: UUID
@@ -48,12 +41,7 @@ class RemoveFormPageResponse200:
     updated_at: datetime.datetime
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
-
-
-
-
     def to_dict(self) -> dict[str, Any]:
-        from ..models.remove_form_page_response_200_branching_rules_type_0_item import RemoveFormPageResponse200BranchingRulesType0Item
         id = str(self.id)
 
         form_definition_id = str(self.form_definition_id)
@@ -72,7 +60,6 @@ class RemoveFormPageResponse200:
                 branching_rules_type_0_item = branching_rules_type_0_item_data.to_dict()
                 branching_rules.append(branching_rules_type_0_item)
 
-
         else:
             branching_rules = self.branching_rules
 
@@ -80,37 +67,33 @@ class RemoveFormPageResponse200:
 
         updated_at = self.updated_at.isoformat()
 
-
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
-        field_dict.update({
-            "id": id,
-            "formDefinitionId": form_definition_id,
-            "title": title,
-            "description": description,
-            "sortOrder": sort_order,
-            "branchingRules": branching_rules,
-            "createdAt": created_at,
-            "updatedAt": updated_at,
-        })
+        field_dict.update(
+            {
+                "id": id,
+                "formDefinitionId": form_definition_id,
+                "title": title,
+                "description": description,
+                "sortOrder": sort_order,
+                "branchingRules": branching_rules,
+                "createdAt": created_at,
+                "updatedAt": updated_at,
+            }
+        )
 
         return field_dict
 
-
-
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.remove_form_page_response_200_branching_rules_type_0_item import RemoveFormPageResponse200BranchingRulesType0Item
+        from ..models.remove_form_page_response_200_branching_rules_type_0_item import (
+            RemoveFormPageResponse200BranchingRulesType0Item,
+        )
+
         d = dict(src_dict)
         id = UUID(d.pop("id"))
 
-
-
-
         form_definition_id = UUID(d.pop("formDefinitionId"))
-
-
-
 
         title = d.pop("title")
 
@@ -120,7 +103,6 @@ class RemoveFormPageResponse200:
             return cast(None | str, data)
 
         description = _parse_description(d.pop("description"))
-
 
         sort_order = d.pop("sortOrder")
 
@@ -132,10 +114,10 @@ class RemoveFormPageResponse200:
                     raise TypeError()
                 branching_rules_type_0 = []
                 _branching_rules_type_0 = data
-                for branching_rules_type_0_item_data in (_branching_rules_type_0):
-                    branching_rules_type_0_item = RemoveFormPageResponse200BranchingRulesType0Item.from_dict(branching_rules_type_0_item_data)
-
-
+                for branching_rules_type_0_item_data in _branching_rules_type_0:
+                    branching_rules_type_0_item = RemoveFormPageResponse200BranchingRulesType0Item.from_dict(
+                        branching_rules_type_0_item_data
+                    )
 
                     branching_rules_type_0.append(branching_rules_type_0_item)
 
@@ -146,16 +128,9 @@ class RemoveFormPageResponse200:
 
         branching_rules = _parse_branching_rules(d.pop("branchingRules"))
 
+        created_at = datetime.datetime.fromisoformat(d.pop("createdAt"))
 
-        created_at = isoparse(d.pop("createdAt"))
-
-
-
-
-        updated_at = isoparse(d.pop("updatedAt"))
-
-
-
+        updated_at = datetime.datetime.fromisoformat(d.pop("updatedAt"))
 
         remove_form_page_response_200 = cls(
             id=id,
@@ -167,7 +142,6 @@ class RemoveFormPageResponse200:
             created_at=created_at,
             updated_at=updated_at,
         )
-
 
         remove_form_page_response_200.additional_properties = d
         return remove_form_page_response_200

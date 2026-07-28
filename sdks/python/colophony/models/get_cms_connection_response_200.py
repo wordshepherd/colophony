@@ -1,45 +1,37 @@
 from __future__ import annotations
 
+import datetime
 from collections.abc import Mapping
-from typing import Any, TypeVar, BinaryIO, TextIO, TYPE_CHECKING, Generator
+from typing import TYPE_CHECKING, Any, TypeVar, cast
+from uuid import UUID
 
 from attrs import define as _attrs_define
 from attrs import field as _attrs_field
 
-from ..types import UNSET, Unset
-
 from ..models.get_cms_connection_response_200_adapter_type import GetCmsConnectionResponse200AdapterType
-from dateutil.parser import isoparse
-from typing import cast
-from uuid import UUID
-import datetime
 
 if TYPE_CHECKING:
-  from ..models.get_cms_connection_response_200_config import GetCmsConnectionResponse200Config
-
-
-
+    from ..models.get_cms_connection_response_200_config import GetCmsConnectionResponse200Config
 
 
 T = TypeVar("T", bound="GetCmsConnectionResponse200")
 
 
-
 @_attrs_define
 class GetCmsConnectionResponse200:
-    """ 
-        Attributes:
-            id (UUID):
-            organization_id (UUID):
-            publication_id (None | UUID):
-            adapter_type (GetCmsConnectionResponse200AdapterType):
-            name (str):
-            config (GetCmsConnectionResponse200Config):
-            is_active (bool):
-            last_sync_at (datetime.datetime | None):
-            created_at (datetime.datetime):
-            updated_at (datetime.datetime):
-     """
+    """
+    Attributes:
+        id (UUID):
+        organization_id (UUID):
+        publication_id (None | UUID):
+        adapter_type (GetCmsConnectionResponse200AdapterType):
+        name (str):
+        config (GetCmsConnectionResponse200Config):
+        is_active (bool):
+        last_sync_at (datetime.datetime | None):
+        created_at (datetime.datetime):
+        updated_at (datetime.datetime):
+    """
 
     id: UUID
     organization_id: UUID
@@ -53,12 +45,7 @@ class GetCmsConnectionResponse200:
     updated_at: datetime.datetime
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
-
-
-
-
     def to_dict(self) -> dict[str, Any]:
-        from ..models.get_cms_connection_response_200_config import GetCmsConnectionResponse200Config
         id = str(self.id)
 
         organization_id = str(self.organization_id)
@@ -87,39 +74,33 @@ class GetCmsConnectionResponse200:
 
         updated_at = self.updated_at.isoformat()
 
-
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
-        field_dict.update({
-            "id": id,
-            "organizationId": organization_id,
-            "publicationId": publication_id,
-            "adapterType": adapter_type,
-            "name": name,
-            "config": config,
-            "isActive": is_active,
-            "lastSyncAt": last_sync_at,
-            "createdAt": created_at,
-            "updatedAt": updated_at,
-        })
+        field_dict.update(
+            {
+                "id": id,
+                "organizationId": organization_id,
+                "publicationId": publication_id,
+                "adapterType": adapter_type,
+                "name": name,
+                "config": config,
+                "isActive": is_active,
+                "lastSyncAt": last_sync_at,
+                "createdAt": created_at,
+                "updatedAt": updated_at,
+            }
+        )
 
         return field_dict
-
-
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
         from ..models.get_cms_connection_response_200_config import GetCmsConnectionResponse200Config
+
         d = dict(src_dict)
         id = UUID(d.pop("id"))
 
-
-
-
         organization_id = UUID(d.pop("organizationId"))
-
-
-
 
         def _parse_publication_id(data: object) -> None | UUID:
             if data is None:
@@ -129,8 +110,6 @@ class GetCmsConnectionResponse200:
                     raise TypeError()
                 publication_id_type_0 = UUID(data)
 
-
-
                 return publication_id_type_0
             except (TypeError, ValueError, AttributeError, KeyError):
                 pass
@@ -138,18 +117,11 @@ class GetCmsConnectionResponse200:
 
         publication_id = _parse_publication_id(d.pop("publicationId"))
 
-
         adapter_type = GetCmsConnectionResponse200AdapterType(d.pop("adapterType"))
-
-
-
 
         name = d.pop("name")
 
         config = GetCmsConnectionResponse200Config.from_dict(d.pop("config"))
-
-
-
 
         is_active = d.pop("isActive")
 
@@ -159,9 +131,7 @@ class GetCmsConnectionResponse200:
             try:
                 if not isinstance(data, str):
                     raise TypeError()
-                last_sync_at_type_0 = isoparse(data)
-
-
+                last_sync_at_type_0 = datetime.datetime.fromisoformat(data)
 
                 return last_sync_at_type_0
             except (TypeError, ValueError, AttributeError, KeyError):
@@ -170,16 +140,9 @@ class GetCmsConnectionResponse200:
 
         last_sync_at = _parse_last_sync_at(d.pop("lastSyncAt"))
 
+        created_at = datetime.datetime.fromisoformat(d.pop("createdAt"))
 
-        created_at = isoparse(d.pop("createdAt"))
-
-
-
-
-        updated_at = isoparse(d.pop("updatedAt"))
-
-
-
+        updated_at = datetime.datetime.fromisoformat(d.pop("updatedAt"))
 
         get_cms_connection_response_200 = cls(
             id=id,
@@ -193,7 +156,6 @@ class GetCmsConnectionResponse200:
             created_at=created_at,
             updated_at=updated_at,
         )
-
 
         get_cms_connection_response_200.additional_properties = d
         return get_cms_connection_response_200

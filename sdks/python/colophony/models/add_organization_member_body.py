@@ -1,72 +1,63 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from typing import Any, TypeVar, BinaryIO, TextIO, TYPE_CHECKING, Generator
+from typing import Any, TypeVar
 
 from attrs import define as _attrs_define
 from attrs import field as _attrs_field
 
-from ..types import UNSET, Unset
-
-from ..models.add_organization_member_body_role import AddOrganizationMemberBodyRole
-
-
-
-
-
+from ..models.add_organization_member_body_roles_item import AddOrganizationMemberBodyRolesItem
 
 T = TypeVar("T", bound="AddOrganizationMemberBody")
 
 
-
 @_attrs_define
 class AddOrganizationMemberBody:
-    """ 
-        Attributes:
-            email (str): Email address of the user to invite
-            role (AddOrganizationMemberBodyRole): Role to assign to the new member
-     """
+    """
+    Attributes:
+        email (str): Email address of the user to invite
+        roles (list[AddOrganizationMemberBodyRolesItem]): Roles to assign to the new member
+    """
 
     email: str
-    role: AddOrganizationMemberBodyRole
+    roles: list[AddOrganizationMemberBodyRolesItem]
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
-
-
-
-
 
     def to_dict(self) -> dict[str, Any]:
         email = self.email
 
-        role = self.role.value
-
+        roles = []
+        for roles_item_data in self.roles:
+            roles_item = roles_item_data.value
+            roles.append(roles_item)
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
-        field_dict.update({
-            "email": email,
-            "role": role,
-        })
+        field_dict.update(
+            {
+                "email": email,
+                "roles": roles,
+            }
+        )
 
         return field_dict
-
-
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
         d = dict(src_dict)
         email = d.pop("email")
 
-        role = AddOrganizationMemberBodyRole(d.pop("role"))
+        roles = []
+        _roles = d.pop("roles")
+        for roles_item_data in _roles:
+            roles_item = AddOrganizationMemberBodyRolesItem(roles_item_data)
 
-
-
+            roles.append(roles_item)
 
         add_organization_member_body = cls(
             email=email,
-            role=role,
+            roles=roles,
         )
-
 
         add_organization_member_body.additional_properties = d
         return add_organization_member_body

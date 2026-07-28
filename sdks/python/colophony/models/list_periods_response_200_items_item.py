@@ -1,44 +1,47 @@
 from __future__ import annotations
 
+import datetime
 from collections.abc import Mapping
-from typing import Any, TypeVar, BinaryIO, TextIO, TYPE_CHECKING, Generator
+from typing import TYPE_CHECKING, Any, TypeVar, cast
+from uuid import UUID
 
 from attrs import define as _attrs_define
 from attrs import field as _attrs_field
 
-from ..types import UNSET, Unset
+from ..models.list_periods_response_200_items_item_blind_review_mode import (
+    ListPeriodsResponse200ItemsItemBlindReviewMode,
+)
 
-from dateutil.parser import isoparse
-from typing import cast
-from uuid import UUID
-import datetime
-
-
-
-
+if TYPE_CHECKING:
+    from ..models.list_periods_response_200_items_item_sim_sub_policy import ListPeriodsResponse200ItemsItemSimSubPolicy
 
 
 T = TypeVar("T", bound="ListPeriodsResponse200ItemsItem")
 
 
-
 @_attrs_define
 class ListPeriodsResponse200ItemsItem:
-    """ 
-        Attributes:
-            id (UUID): Unique identifier for the submission period
-            organization_id (UUID): ID of the owning organization
-            name (str): Display name of the period
-            description (None | str): Optional description of the period
-            opens_at (datetime.datetime): When submissions open
-            closes_at (datetime.datetime): When submissions close
-            fee (float | None): Submission fee in cents (null = free)
-            max_submissions (float | None): Max submissions allowed (null = unlimited)
-            form_definition_id (None | UUID): ID of the form definition linked to this period
-            sim_sub_prohibited (bool): Whether simultaneous submissions are prohibited
-            created_at (datetime.datetime): When the period was created
-            updated_at (datetime.datetime): When the period was last updated
-     """
+    """
+    Attributes:
+        id (UUID): Unique identifier for the submission period
+        organization_id (UUID): ID of the owning organization
+        name (str): Display name of the period
+        description (None | str): Optional description of the period
+        opens_at (datetime.datetime): When submissions open
+        closes_at (datetime.datetime): When submissions close
+        fee (float | None): Submission fee in cents (null = free)
+        max_submissions (float | None): Max submissions allowed (null = unlimited)
+        form_definition_id (None | UUID): ID of the form definition linked to this period
+        sim_sub_policy (ListPeriodsResponse200ItemsItemSimSubPolicy): Sim-sub policy for this period
+        blind_review_mode (ListPeriodsResponse200ItemsItemBlindReviewMode): Blind review mode for the submission period
+        is_contest (bool): Whether this period is a contest
+        contest_prize (None | str): Prize description for contests
+        contest_winners_announced_at (datetime.datetime | None): When contest winners will be announced
+        contest_group_id (None | UUID): Contest group this period belongs to
+        contest_round (int | None): Round number within the contest group
+        created_at (datetime.datetime): When the period was created
+        updated_at (datetime.datetime): When the period was last updated
+    """
 
     id: UUID
     organization_id: UUID
@@ -49,14 +52,16 @@ class ListPeriodsResponse200ItemsItem:
     fee: float | None
     max_submissions: float | None
     form_definition_id: None | UUID
-    sim_sub_prohibited: bool
+    sim_sub_policy: ListPeriodsResponse200ItemsItemSimSubPolicy
+    blind_review_mode: ListPeriodsResponse200ItemsItemBlindReviewMode
+    is_contest: bool
+    contest_prize: None | str
+    contest_winners_announced_at: datetime.datetime | None
+    contest_group_id: None | UUID
+    contest_round: int | None
     created_at: datetime.datetime
     updated_at: datetime.datetime
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
-
-
-
-
 
     def to_dict(self) -> dict[str, Any]:
         id = str(self.id)
@@ -84,46 +89,71 @@ class ListPeriodsResponse200ItemsItem:
         else:
             form_definition_id = self.form_definition_id
 
-        sim_sub_prohibited = self.sim_sub_prohibited
+        sim_sub_policy = self.sim_sub_policy.to_dict()
+
+        blind_review_mode = self.blind_review_mode.value
+
+        is_contest = self.is_contest
+
+        contest_prize: None | str
+        contest_prize = self.contest_prize
+
+        contest_winners_announced_at: None | str
+        if isinstance(self.contest_winners_announced_at, datetime.datetime):
+            contest_winners_announced_at = self.contest_winners_announced_at.isoformat()
+        else:
+            contest_winners_announced_at = self.contest_winners_announced_at
+
+        contest_group_id: None | str
+        if isinstance(self.contest_group_id, UUID):
+            contest_group_id = str(self.contest_group_id)
+        else:
+            contest_group_id = self.contest_group_id
+
+        contest_round: int | None
+        contest_round = self.contest_round
 
         created_at = self.created_at.isoformat()
 
         updated_at = self.updated_at.isoformat()
 
-
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
-        field_dict.update({
-            "id": id,
-            "organizationId": organization_id,
-            "name": name,
-            "description": description,
-            "opensAt": opens_at,
-            "closesAt": closes_at,
-            "fee": fee,
-            "maxSubmissions": max_submissions,
-            "formDefinitionId": form_definition_id,
-            "simSubProhibited": sim_sub_prohibited,
-            "createdAt": created_at,
-            "updatedAt": updated_at,
-        })
+        field_dict.update(
+            {
+                "id": id,
+                "organizationId": organization_id,
+                "name": name,
+                "description": description,
+                "opensAt": opens_at,
+                "closesAt": closes_at,
+                "fee": fee,
+                "maxSubmissions": max_submissions,
+                "formDefinitionId": form_definition_id,
+                "simSubPolicy": sim_sub_policy,
+                "blindReviewMode": blind_review_mode,
+                "isContest": is_contest,
+                "contestPrize": contest_prize,
+                "contestWinnersAnnouncedAt": contest_winners_announced_at,
+                "contestGroupId": contest_group_id,
+                "contestRound": contest_round,
+                "createdAt": created_at,
+                "updatedAt": updated_at,
+            }
+        )
 
         return field_dict
 
-
-
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
+        from ..models.list_periods_response_200_items_item_sim_sub_policy import (
+            ListPeriodsResponse200ItemsItemSimSubPolicy,
+        )
+
         d = dict(src_dict)
         id = UUID(d.pop("id"))
 
-
-
-
         organization_id = UUID(d.pop("organizationId"))
-
-
-
 
         name = d.pop("name")
 
@@ -134,16 +164,9 @@ class ListPeriodsResponse200ItemsItem:
 
         description = _parse_description(d.pop("description"))
 
+        opens_at = datetime.datetime.fromisoformat(d.pop("opensAt"))
 
-        opens_at = isoparse(d.pop("opensAt"))
-
-
-
-
-        closes_at = isoparse(d.pop("closesAt"))
-
-
-
+        closes_at = datetime.datetime.fromisoformat(d.pop("closesAt"))
 
         def _parse_fee(data: object) -> float | None:
             if data is None:
@@ -152,14 +175,12 @@ class ListPeriodsResponse200ItemsItem:
 
         fee = _parse_fee(d.pop("fee"))
 
-
         def _parse_max_submissions(data: object) -> float | None:
             if data is None:
                 return data
             return cast(float | None, data)
 
         max_submissions = _parse_max_submissions(d.pop("maxSubmissions"))
-
 
         def _parse_form_definition_id(data: object) -> None | UUID:
             if data is None:
@@ -169,8 +190,6 @@ class ListPeriodsResponse200ItemsItem:
                     raise TypeError()
                 form_definition_id_type_0 = UUID(data)
 
-
-
                 return form_definition_id_type_0
             except (TypeError, ValueError, AttributeError, KeyError):
                 pass
@@ -178,18 +197,59 @@ class ListPeriodsResponse200ItemsItem:
 
         form_definition_id = _parse_form_definition_id(d.pop("formDefinitionId"))
 
+        sim_sub_policy = ListPeriodsResponse200ItemsItemSimSubPolicy.from_dict(d.pop("simSubPolicy"))
 
-        sim_sub_prohibited = d.pop("simSubProhibited")
+        blind_review_mode = ListPeriodsResponse200ItemsItemBlindReviewMode(d.pop("blindReviewMode"))
 
-        created_at = isoparse(d.pop("createdAt"))
+        is_contest = d.pop("isContest")
 
+        def _parse_contest_prize(data: object) -> None | str:
+            if data is None:
+                return data
+            return cast(None | str, data)
 
+        contest_prize = _parse_contest_prize(d.pop("contestPrize"))
 
+        def _parse_contest_winners_announced_at(data: object) -> datetime.datetime | None:
+            if data is None:
+                return data
+            try:
+                if not isinstance(data, str):
+                    raise TypeError()
+                contest_winners_announced_at_type_0 = datetime.datetime.fromisoformat(data)
 
-        updated_at = isoparse(d.pop("updatedAt"))
+                return contest_winners_announced_at_type_0
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(datetime.datetime | None, data)
 
+        contest_winners_announced_at = _parse_contest_winners_announced_at(d.pop("contestWinnersAnnouncedAt"))
 
+        def _parse_contest_group_id(data: object) -> None | UUID:
+            if data is None:
+                return data
+            try:
+                if not isinstance(data, str):
+                    raise TypeError()
+                contest_group_id_type_0 = UUID(data)
 
+                return contest_group_id_type_0
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(None | UUID, data)
+
+        contest_group_id = _parse_contest_group_id(d.pop("contestGroupId"))
+
+        def _parse_contest_round(data: object) -> int | None:
+            if data is None:
+                return data
+            return cast(int | None, data)
+
+        contest_round = _parse_contest_round(d.pop("contestRound"))
+
+        created_at = datetime.datetime.fromisoformat(d.pop("createdAt"))
+
+        updated_at = datetime.datetime.fromisoformat(d.pop("updatedAt"))
 
         list_periods_response_200_items_item = cls(
             id=id,
@@ -201,11 +261,16 @@ class ListPeriodsResponse200ItemsItem:
             fee=fee,
             max_submissions=max_submissions,
             form_definition_id=form_definition_id,
-            sim_sub_prohibited=sim_sub_prohibited,
+            sim_sub_policy=sim_sub_policy,
+            blind_review_mode=blind_review_mode,
+            is_contest=is_contest,
+            contest_prize=contest_prize,
+            contest_winners_announced_at=contest_winners_announced_at,
+            contest_group_id=contest_group_id,
+            contest_round=contest_round,
             created_at=created_at,
             updated_at=updated_at,
         )
-
 
         list_periods_response_200_items_item.additional_properties = d
         return list_periods_response_200_items_item

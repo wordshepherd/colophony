@@ -1,63 +1,47 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from typing import Any, TypeVar, BinaryIO, TextIO, TYPE_CHECKING, Generator
+from typing import Any, Literal, TypeVar, cast
 
 from attrs import define as _attrs_define
 from attrs import field as _attrs_field
 
-from ..types import UNSET, Unset
-
-from typing import Literal, cast
-
-
-
-
-
-
 T = TypeVar("T", bound="DeleteFileResponse200")
-
 
 
 @_attrs_define
 class DeleteFileResponse200:
-    """ 
-        Attributes:
-            success (Literal[True]): Always true on success
-     """
+    """
+    Attributes:
+        success (Literal[True]): Always true on success
+    """
 
     success: Literal[True]
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
-
-
-
-
     def to_dict(self) -> dict[str, Any]:
         success = self.success
 
-
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
-        field_dict.update({
-            "success": success,
-        })
+        field_dict.update(
+            {
+                "success": success,
+            }
+        )
 
         return field_dict
-
-
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
         d = dict(src_dict)
-        success = cast(Literal[True] , d.pop("success"))
+        success = cast(Literal[True], d.pop("success"))
         if success != True:
             raise ValueError(f"success must match const True, got '{success}'")
 
         delete_file_response_200 = cls(
             success=success,
         )
-
 
         delete_file_response_200.additional_properties = d
         return delete_file_response_200

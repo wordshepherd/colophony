@@ -1,45 +1,37 @@
 from __future__ import annotations
 
+import datetime
 from collections.abc import Mapping
-from typing import Any, TypeVar, BinaryIO, TextIO, TYPE_CHECKING, Generator
+from typing import TYPE_CHECKING, Any, TypeVar, cast
+from uuid import UUID
 
 from attrs import define as _attrs_define
 from attrs import field as _attrs_field
 
-from ..types import UNSET, Unset
-
 from ..models.update_publication_response_200_status import UpdatePublicationResponse200Status
-from dateutil.parser import isoparse
-from typing import cast
-from uuid import UUID
-import datetime
 
 if TYPE_CHECKING:
-  from ..models.update_publication_response_200_settings_type_0 import UpdatePublicationResponse200SettingsType0
-
-
-
+    from ..models.update_publication_response_200_settings_type_0 import UpdatePublicationResponse200SettingsType0
 
 
 T = TypeVar("T", bound="UpdatePublicationResponse200")
 
 
-
 @_attrs_define
 class UpdatePublicationResponse200:
-    """ 
-        Attributes:
-            id (UUID): Unique identifier for the publication
-            organization_id (UUID): ID of the owning organization
-            name (str): Display name of the publication
-            slug (str): URL-friendly slug (unique per org)
-            description (None | str): Optional description of the publication
-            settings (None | UpdatePublicationResponse200SettingsType0): Publication settings (default contract template,
-                CMS config)
-            status (UpdatePublicationResponse200Status): Current status of the publication
-            created_at (datetime.datetime): When the publication was created
-            updated_at (datetime.datetime): When the publication was last updated
-     """
+    """
+    Attributes:
+        id (UUID): Unique identifier for the publication
+        organization_id (UUID): ID of the owning organization
+        name (str): Display name of the publication
+        slug (str): URL-friendly slug (unique per org)
+        description (None | str): Optional description of the publication
+        settings (None | UpdatePublicationResponse200SettingsType0): Publication settings (default contract template,
+            CMS config)
+        status (UpdatePublicationResponse200Status): Current status of the publication
+        created_at (datetime.datetime): When the publication was created
+        updated_at (datetime.datetime): When the publication was last updated
+    """
 
     id: UUID
     organization_id: UUID
@@ -52,12 +44,9 @@ class UpdatePublicationResponse200:
     updated_at: datetime.datetime
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
-
-
-
-
     def to_dict(self) -> dict[str, Any]:
         from ..models.update_publication_response_200_settings_type_0 import UpdatePublicationResponse200SettingsType0
+
         id = str(self.id)
 
         organization_id = str(self.organization_id)
@@ -81,38 +70,32 @@ class UpdatePublicationResponse200:
 
         updated_at = self.updated_at.isoformat()
 
-
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
-        field_dict.update({
-            "id": id,
-            "organizationId": organization_id,
-            "name": name,
-            "slug": slug,
-            "description": description,
-            "settings": settings,
-            "status": status,
-            "createdAt": created_at,
-            "updatedAt": updated_at,
-        })
+        field_dict.update(
+            {
+                "id": id,
+                "organizationId": organization_id,
+                "name": name,
+                "slug": slug,
+                "description": description,
+                "settings": settings,
+                "status": status,
+                "createdAt": created_at,
+                "updatedAt": updated_at,
+            }
+        )
 
         return field_dict
-
-
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
         from ..models.update_publication_response_200_settings_type_0 import UpdatePublicationResponse200SettingsType0
+
         d = dict(src_dict)
         id = UUID(d.pop("id"))
 
-
-
-
         organization_id = UUID(d.pop("organizationId"))
-
-
-
 
         name = d.pop("name")
 
@@ -125,7 +108,6 @@ class UpdatePublicationResponse200:
 
         description = _parse_description(d.pop("description"))
 
-
         def _parse_settings(data: object) -> None | UpdatePublicationResponse200SettingsType0:
             if data is None:
                 return data
@@ -134,8 +116,6 @@ class UpdatePublicationResponse200:
                     raise TypeError()
                 settings_type_0 = UpdatePublicationResponse200SettingsType0.from_dict(data)
 
-
-
                 return settings_type_0
             except (TypeError, ValueError, AttributeError, KeyError):
                 pass
@@ -143,21 +123,11 @@ class UpdatePublicationResponse200:
 
         settings = _parse_settings(d.pop("settings"))
 
-
         status = UpdatePublicationResponse200Status(d.pop("status"))
 
+        created_at = datetime.datetime.fromisoformat(d.pop("createdAt"))
 
-
-
-        created_at = isoparse(d.pop("createdAt"))
-
-
-
-
-        updated_at = isoparse(d.pop("updatedAt"))
-
-
-
+        updated_at = datetime.datetime.fromisoformat(d.pop("updatedAt"))
 
         update_publication_response_200 = cls(
             id=id,
@@ -170,7 +140,6 @@ class UpdatePublicationResponse200:
             created_at=created_at,
             updated_at=updated_at,
         )
-
 
         update_publication_response_200.additional_properties = d
         return update_publication_response_200

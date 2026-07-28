@@ -1,5 +1,6 @@
 from enum import Enum
 
+
 class GetSubmissionResponse200FilesItemScanStatus(str, Enum):
     CLEAN = "CLEAN"
     FAILED = "FAILED"

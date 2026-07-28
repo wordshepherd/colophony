@@ -1,82 +1,61 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from typing import Any, TypeVar, BinaryIO, TextIO, TYPE_CHECKING, Generator
+from typing import TYPE_CHECKING, Any, TypeVar
 
 from attrs import define as _attrs_define
 from attrs import field as _attrs_field
 
-from ..types import UNSET, Unset
-
-from typing import cast
-
 if TYPE_CHECKING:
-  from ..models.withdraw_submission_response_200_history_entry import WithdrawSubmissionResponse200HistoryEntry
-  from ..models.withdraw_submission_response_200_submission import WithdrawSubmissionResponse200Submission
-
-
-
+    from ..models.withdraw_submission_response_200_history_entry import WithdrawSubmissionResponse200HistoryEntry
+    from ..models.withdraw_submission_response_200_submission import WithdrawSubmissionResponse200Submission
 
 
 T = TypeVar("T", bound="WithdrawSubmissionResponse200")
 
 
-
 @_attrs_define
 class WithdrawSubmissionResponse200:
-    """ 
-        Attributes:
-            submission (WithdrawSubmissionResponse200Submission):
-            history_entry (WithdrawSubmissionResponse200HistoryEntry):
-     """
+    """
+    Attributes:
+        submission (WithdrawSubmissionResponse200Submission):
+        history_entry (WithdrawSubmissionResponse200HistoryEntry):
+    """
 
     submission: WithdrawSubmissionResponse200Submission
     history_entry: WithdrawSubmissionResponse200HistoryEntry
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
-
-
-
-
     def to_dict(self) -> dict[str, Any]:
-        from ..models.withdraw_submission_response_200_submission import WithdrawSubmissionResponse200Submission
-        from ..models.withdraw_submission_response_200_history_entry import WithdrawSubmissionResponse200HistoryEntry
         submission = self.submission.to_dict()
 
         history_entry = self.history_entry.to_dict()
 
-
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
-        field_dict.update({
-            "submission": submission,
-            "historyEntry": history_entry,
-        })
+        field_dict.update(
+            {
+                "submission": submission,
+                "historyEntry": history_entry,
+            }
+        )
 
         return field_dict
-
-
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
         from ..models.withdraw_submission_response_200_history_entry import WithdrawSubmissionResponse200HistoryEntry
         from ..models.withdraw_submission_response_200_submission import WithdrawSubmissionResponse200Submission
+
         d = dict(src_dict)
         submission = WithdrawSubmissionResponse200Submission.from_dict(d.pop("submission"))
 
-
-
-
         history_entry = WithdrawSubmissionResponse200HistoryEntry.from_dict(d.pop("historyEntry"))
-
-
-
 
         withdraw_submission_response_200 = cls(
             submission=submission,
             history_entry=history_entry,
         )
-
 
         withdraw_submission_response_200.additional_properties = d
         return withdraw_submission_response_200

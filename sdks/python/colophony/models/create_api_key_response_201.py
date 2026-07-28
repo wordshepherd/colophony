@@ -1,41 +1,30 @@
 from __future__ import annotations
 
+import datetime
 from collections.abc import Mapping
-from typing import Any, TypeVar, BinaryIO, TextIO, TYPE_CHECKING, Generator
+from typing import Any, TypeVar, cast
+from uuid import UUID
 
 from attrs import define as _attrs_define
 from attrs import field as _attrs_field
 
-from ..types import UNSET, Unset
-
-from dateutil.parser import isoparse
-from typing import cast
-from uuid import UUID
-import datetime
-
-
-
-
-
-
 T = TypeVar("T", bound="CreateApiKeyResponse201")
-
 
 
 @_attrs_define
 class CreateApiKeyResponse201:
-    """ 
-        Attributes:
-            id (UUID):
-            name (str):
-            scopes (list[str]):
-            key_prefix (str):
-            created_at (datetime.datetime):
-            expires_at (datetime.datetime | None):
-            last_used_at (datetime.datetime | None):
-            revoked_at (datetime.datetime | None):
-            plain_text_key (str):
-     """
+    """
+    Attributes:
+        id (UUID):
+        name (str):
+        scopes (list[str]):
+        key_prefix (str):
+        created_at (datetime.datetime):
+        expires_at (datetime.datetime | None):
+        last_used_at (datetime.datetime | None):
+        revoked_at (datetime.datetime | None):
+        plain_text_key (str):
+    """
 
     id: UUID
     name: str
@@ -48,18 +37,12 @@ class CreateApiKeyResponse201:
     plain_text_key: str
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
-
-
-
-
     def to_dict(self) -> dict[str, Any]:
         id = str(self.id)
 
         name = self.name
 
         scopes = self.scopes
-
-
 
         key_prefix = self.key_prefix
 
@@ -85,44 +68,36 @@ class CreateApiKeyResponse201:
 
         plain_text_key = self.plain_text_key
 
-
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
-        field_dict.update({
-            "id": id,
-            "name": name,
-            "scopes": scopes,
-            "keyPrefix": key_prefix,
-            "createdAt": created_at,
-            "expiresAt": expires_at,
-            "lastUsedAt": last_used_at,
-            "revokedAt": revoked_at,
-            "plainTextKey": plain_text_key,
-        })
+        field_dict.update(
+            {
+                "id": id,
+                "name": name,
+                "scopes": scopes,
+                "keyPrefix": key_prefix,
+                "createdAt": created_at,
+                "expiresAt": expires_at,
+                "lastUsedAt": last_used_at,
+                "revokedAt": revoked_at,
+                "plainTextKey": plain_text_key,
+            }
+        )
 
         return field_dict
-
-
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
         d = dict(src_dict)
         id = UUID(d.pop("id"))
 
-
-
-
         name = d.pop("name")
 
         scopes = cast(list[str], d.pop("scopes"))
 
-
         key_prefix = d.pop("keyPrefix")
 
-        created_at = isoparse(d.pop("createdAt"))
-
-
-
+        created_at = datetime.datetime.fromisoformat(d.pop("createdAt"))
 
         def _parse_expires_at(data: object) -> datetime.datetime | None:
             if data is None:
@@ -130,9 +105,7 @@ class CreateApiKeyResponse201:
             try:
                 if not isinstance(data, str):
                     raise TypeError()
-                expires_at_type_0 = isoparse(data)
-
-
+                expires_at_type_0 = datetime.datetime.fromisoformat(data)
 
                 return expires_at_type_0
             except (TypeError, ValueError, AttributeError, KeyError):
@@ -141,16 +114,13 @@ class CreateApiKeyResponse201:
 
         expires_at = _parse_expires_at(d.pop("expiresAt"))
 
-
         def _parse_last_used_at(data: object) -> datetime.datetime | None:
             if data is None:
                 return data
             try:
                 if not isinstance(data, str):
                     raise TypeError()
-                last_used_at_type_0 = isoparse(data)
-
-
+                last_used_at_type_0 = datetime.datetime.fromisoformat(data)
 
                 return last_used_at_type_0
             except (TypeError, ValueError, AttributeError, KeyError):
@@ -159,16 +129,13 @@ class CreateApiKeyResponse201:
 
         last_used_at = _parse_last_used_at(d.pop("lastUsedAt"))
 
-
         def _parse_revoked_at(data: object) -> datetime.datetime | None:
             if data is None:
                 return data
             try:
                 if not isinstance(data, str):
                     raise TypeError()
-                revoked_at_type_0 = isoparse(data)
-
-
+                revoked_at_type_0 = datetime.datetime.fromisoformat(data)
 
                 return revoked_at_type_0
             except (TypeError, ValueError, AttributeError, KeyError):
@@ -176,7 +143,6 @@ class CreateApiKeyResponse201:
             return cast(datetime.datetime | None, data)
 
         revoked_at = _parse_revoked_at(d.pop("revokedAt"))
-
 
         plain_text_key = d.pop("plainTextKey")
 
@@ -191,7 +157,6 @@ class CreateApiKeyResponse201:
             revoked_at=revoked_at,
             plain_text_key=plain_text_key,
         )
-
 
         create_api_key_response_201.additional_properties = d
         return create_api_key_response_201

@@ -1,19 +1,16 @@
 from http import HTTPStatus
-from typing import Any, cast
-from urllib.parse import quote
+from typing import Any
+from uuid import UUID
 
 import httpx
 
-from ...client import AuthenticatedClient, Client
-from ...types import Response, UNSET
 from ... import errors
-
+from ...client import AuthenticatedClient, Client
 from ...models.list_submissions_response_200 import ListSubmissionsResponse200
+from ...models.list_submissions_sort_by import ListSubmissionsSortBy
+from ...models.list_submissions_sort_order import ListSubmissionsSortOrder
 from ...models.list_submissions_status import ListSubmissionsStatus
-from ...types import UNSET, Unset
-from typing import cast
-from uuid import UUID
-
+from ...types import UNSET, Response, Unset
 
 
 def _get_kwargs(
@@ -21,13 +18,11 @@ def _get_kwargs(
     status: ListSubmissionsStatus | Unset = UNSET,
     submission_period_id: UUID | Unset = UNSET,
     search: str | Unset = UNSET,
+    sort_by: ListSubmissionsSortBy | Unset = ListSubmissionsSortBy.CREATEDAT,
+    sort_order: ListSubmissionsSortOrder | Unset = ListSubmissionsSortOrder.DESC,
     page: int | Unset = 1,
     limit: int | Unset = 20,
-
 ) -> dict[str, Any]:
-    
-
-    
 
     params: dict[str, Any] = {}
 
@@ -44,13 +39,23 @@ def _get_kwargs(
 
     params["search"] = search
 
+    json_sort_by: str | Unset = UNSET
+    if not isinstance(sort_by, Unset):
+        json_sort_by = sort_by.value
+
+    params["sortBy"] = json_sort_by
+
+    json_sort_order: str | Unset = UNSET
+    if not isinstance(sort_order, Unset):
+        json_sort_order = sort_order.value
+
+    params["sortOrder"] = json_sort_order
+
     params["page"] = page
 
     params["limit"] = limit
 
-
     params = {k: v for k, v in params.items() if v is not UNSET and v is not None}
-
 
     _kwargs: dict[str, Any] = {
         "method": "get",
@@ -58,16 +63,14 @@ def _get_kwargs(
         "params": params,
     }
 
-
     return _kwargs
 
 
-
-def _parse_response(*, client: AuthenticatedClient | Client, response: httpx.Response) -> ListSubmissionsResponse200 | None:
+def _parse_response(
+    *, client: AuthenticatedClient | Client, response: httpx.Response
+) -> ListSubmissionsResponse200 | None:
     if response.status_code == 200:
         response_200 = ListSubmissionsResponse200.from_dict(response.json())
-
-
 
         return response_200
 
@@ -77,7 +80,9 @@ def _parse_response(*, client: AuthenticatedClient | Client, response: httpx.Res
         return None
 
 
-def _build_response(*, client: AuthenticatedClient | Client, response: httpx.Response) -> Response[ListSubmissionsResponse200]:
+def _build_response(
+    *, client: AuthenticatedClient | Client, response: httpx.Response
+) -> Response[ListSubmissionsResponse200]:
     return Response(
         status_code=HTTPStatus(response.status_code),
         content=response.content,
@@ -92,11 +97,12 @@ def sync_detailed(
     status: ListSubmissionsStatus | Unset = UNSET,
     submission_period_id: UUID | Unset = UNSET,
     search: str | Unset = UNSET,
+    sort_by: ListSubmissionsSortBy | Unset = ListSubmissionsSortBy.CREATEDAT,
+    sort_order: ListSubmissionsSortOrder | Unset = ListSubmissionsSortOrder.DESC,
     page: int | Unset = 1,
     limit: int | Unset = 20,
-
 ) -> Response[ListSubmissionsResponse200]:
-    """ List all submissions
+    """List all submissions
 
      Returns all submissions in the organization. Requires EDITOR or ADMIN role.
 
@@ -104,6 +110,10 @@ def sync_detailed(
         status (ListSubmissionsStatus | Unset): Filter by submission status
         submission_period_id (UUID | Unset): Filter by submission period
         search (str | Unset): Full-text search query (max 200 chars)
+        sort_by (ListSubmissionsSortBy | Unset): Sort field Default:
+            ListSubmissionsSortBy.CREATEDAT.
+        sort_order (ListSubmissionsSortOrder | Unset): Sort direction Default:
+            ListSubmissionsSortOrder.DESC.
         page (int | Unset): Page number (1-based) Default: 1.
         limit (int | Unset): Items per page (1-100, default 20) Default: 20.
 
@@ -113,16 +123,16 @@ def sync_detailed(
 
     Returns:
         Response[ListSubmissionsResponse200]
-     """
-
+    """
 
     kwargs = _get_kwargs(
         status=status,
-submission_period_id=submission_period_id,
-search=search,
-page=page,
-limit=limit,
-
+        submission_period_id=submission_period_id,
+        search=search,
+        sort_by=sort_by,
+        sort_order=sort_order,
+        page=page,
+        limit=limit,
     )
 
     response = client.get_httpx_client().request(
@@ -131,17 +141,19 @@ limit=limit,
 
     return _build_response(client=client, response=response)
 
+
 def sync(
     *,
     client: AuthenticatedClient | Client,
     status: ListSubmissionsStatus | Unset = UNSET,
     submission_period_id: UUID | Unset = UNSET,
     search: str | Unset = UNSET,
+    sort_by: ListSubmissionsSortBy | Unset = ListSubmissionsSortBy.CREATEDAT,
+    sort_order: ListSubmissionsSortOrder | Unset = ListSubmissionsSortOrder.DESC,
     page: int | Unset = 1,
     limit: int | Unset = 20,
-
 ) -> ListSubmissionsResponse200 | None:
-    """ List all submissions
+    """List all submissions
 
      Returns all submissions in the organization. Requires EDITOR or ADMIN role.
 
@@ -149,6 +161,10 @@ def sync(
         status (ListSubmissionsStatus | Unset): Filter by submission status
         submission_period_id (UUID | Unset): Filter by submission period
         search (str | Unset): Full-text search query (max 200 chars)
+        sort_by (ListSubmissionsSortBy | Unset): Sort field Default:
+            ListSubmissionsSortBy.CREATEDAT.
+        sort_order (ListSubmissionsSortOrder | Unset): Sort direction Default:
+            ListSubmissionsSortOrder.DESC.
         page (int | Unset): Page number (1-based) Default: 1.
         limit (int | Unset): Items per page (1-100, default 20) Default: 20.
 
@@ -158,18 +174,19 @@ def sync(
 
     Returns:
         ListSubmissionsResponse200
-     """
-
+    """
 
     return sync_detailed(
         client=client,
-status=status,
-submission_period_id=submission_period_id,
-search=search,
-page=page,
-limit=limit,
-
+        status=status,
+        submission_period_id=submission_period_id,
+        search=search,
+        sort_by=sort_by,
+        sort_order=sort_order,
+        page=page,
+        limit=limit,
     ).parsed
+
 
 async def asyncio_detailed(
     *,
@@ -177,11 +194,12 @@ async def asyncio_detailed(
     status: ListSubmissionsStatus | Unset = UNSET,
     submission_period_id: UUID | Unset = UNSET,
     search: str | Unset = UNSET,
+    sort_by: ListSubmissionsSortBy | Unset = ListSubmissionsSortBy.CREATEDAT,
+    sort_order: ListSubmissionsSortOrder | Unset = ListSubmissionsSortOrder.DESC,
     page: int | Unset = 1,
     limit: int | Unset = 20,
-
 ) -> Response[ListSubmissionsResponse200]:
-    """ List all submissions
+    """List all submissions
 
      Returns all submissions in the organization. Requires EDITOR or ADMIN role.
 
@@ -189,6 +207,10 @@ async def asyncio_detailed(
         status (ListSubmissionsStatus | Unset): Filter by submission status
         submission_period_id (UUID | Unset): Filter by submission period
         search (str | Unset): Full-text search query (max 200 chars)
+        sort_by (ListSubmissionsSortBy | Unset): Sort field Default:
+            ListSubmissionsSortBy.CREATEDAT.
+        sort_order (ListSubmissionsSortOrder | Unset): Sort direction Default:
+            ListSubmissionsSortOrder.DESC.
         page (int | Unset): Page number (1-based) Default: 1.
         limit (int | Unset): Items per page (1-100, default 20) Default: 20.
 
@@ -198,23 +220,22 @@ async def asyncio_detailed(
 
     Returns:
         Response[ListSubmissionsResponse200]
-     """
-
+    """
 
     kwargs = _get_kwargs(
         status=status,
-submission_period_id=submission_period_id,
-search=search,
-page=page,
-limit=limit,
-
+        submission_period_id=submission_period_id,
+        search=search,
+        sort_by=sort_by,
+        sort_order=sort_order,
+        page=page,
+        limit=limit,
     )
 
-    response = await client.get_async_httpx_client().request(
-        **kwargs
-    )
+    response = await client.get_async_httpx_client().request(**kwargs)
 
     return _build_response(client=client, response=response)
+
 
 async def asyncio(
     *,
@@ -222,11 +243,12 @@ async def asyncio(
     status: ListSubmissionsStatus | Unset = UNSET,
     submission_period_id: UUID | Unset = UNSET,
     search: str | Unset = UNSET,
+    sort_by: ListSubmissionsSortBy | Unset = ListSubmissionsSortBy.CREATEDAT,
+    sort_order: ListSubmissionsSortOrder | Unset = ListSubmissionsSortOrder.DESC,
     page: int | Unset = 1,
     limit: int | Unset = 20,
-
 ) -> ListSubmissionsResponse200 | None:
-    """ List all submissions
+    """List all submissions
 
      Returns all submissions in the organization. Requires EDITOR or ADMIN role.
 
@@ -234,6 +256,10 @@ async def asyncio(
         status (ListSubmissionsStatus | Unset): Filter by submission status
         submission_period_id (UUID | Unset): Filter by submission period
         search (str | Unset): Full-text search query (max 200 chars)
+        sort_by (ListSubmissionsSortBy | Unset): Sort field Default:
+            ListSubmissionsSortBy.CREATEDAT.
+        sort_order (ListSubmissionsSortOrder | Unset): Sort direction Default:
+            ListSubmissionsSortOrder.DESC.
         page (int | Unset): Page number (1-based) Default: 1.
         limit (int | Unset): Items per page (1-100, default 20) Default: 20.
 
@@ -243,15 +269,17 @@ async def asyncio(
 
     Returns:
         ListSubmissionsResponse200
-     """
+    """
 
-
-    return (await asyncio_detailed(
-        client=client,
-status=status,
-submission_period_id=submission_period_id,
-search=search,
-page=page,
-limit=limit,
-
-    )).parsed
+    return (
+        await asyncio_detailed(
+            client=client,
+            status=status,
+            submission_period_id=submission_period_id,
+            search=search,
+            sort_by=sort_by,
+            sort_order=sort_order,
+            page=page,
+            limit=limit,
+        )
+    ).parsed

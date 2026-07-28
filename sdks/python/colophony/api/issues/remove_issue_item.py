@@ -1,57 +1,51 @@
 from http import HTTPStatus
 from typing import Any, cast
 from urllib.parse import quote
+from uuid import UUID
 
 import httpx
 
-from ...client import AuthenticatedClient, Client
-from ...types import Response, UNSET
 from ... import errors
-
-from ...models.remove_issue_item_body import RemoveIssueItemBody
-from ...models.remove_issue_item_response_200 import RemoveIssueItemResponse200
-from ...types import UNSET, Unset
-from typing import cast
-from uuid import UUID
-
+from ...client import AuthenticatedClient, Client
+from ...models.remove_issue_item_response_200_type_0 import RemoveIssueItemResponse200Type0
+from ...types import Response
 
 
 def _get_kwargs(
     id: UUID,
     item_id: UUID,
-    *,
-    body: RemoveIssueItemBody | Unset = UNSET,
-
 ) -> dict[str, Any]:
-    headers: dict[str, Any] = {}
-
-
-    
-
-    
 
     _kwargs: dict[str, Any] = {
         "method": "delete",
-        "url": "/issues/{id}/items/{item_id}".format(id=quote(str(id), safe=""),item_id=quote(str(item_id), safe=""),),
+        "url": "/issues/{id}/items/{item_id}".format(
+            id=quote(str(id), safe=""),
+            item_id=quote(str(item_id), safe=""),
+        ),
     }
 
-    
-    if not isinstance(body, Unset):
-        _kwargs["json"] = body.to_dict()
-
-
-    headers["Content-Type"] = "application/json"
-
-    _kwargs["headers"] = headers
     return _kwargs
 
 
-
-def _parse_response(*, client: AuthenticatedClient | Client, response: httpx.Response) -> RemoveIssueItemResponse200 | None:
+def _parse_response(
+    *, client: AuthenticatedClient | Client, response: httpx.Response
+) -> None | RemoveIssueItemResponse200Type0 | None:
     if response.status_code == 200:
-        response_200 = RemoveIssueItemResponse200.from_dict(response.json())
 
+        def _parse_response_200(data: object) -> None | RemoveIssueItemResponse200Type0:
+            if data is None:
+                return data
+            try:
+                if not isinstance(data, dict):
+                    raise TypeError()
+                response_200_type_0 = RemoveIssueItemResponse200Type0.from_dict(data)
 
+                return response_200_type_0
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(None | RemoveIssueItemResponse200Type0, data)
+
+        response_200 = _parse_response_200(response.json())
 
         return response_200
 
@@ -61,7 +55,9 @@ def _parse_response(*, client: AuthenticatedClient | Client, response: httpx.Res
         return None
 
 
-def _build_response(*, client: AuthenticatedClient | Client, response: httpx.Response) -> Response[RemoveIssueItemResponse200]:
+def _build_response(
+    *, client: AuthenticatedClient | Client, response: httpx.Response
+) -> Response[None | RemoveIssueItemResponse200Type0]:
     return Response(
         status_code=HTTPStatus(response.status_code),
         content=response.content,
@@ -75,32 +71,26 @@ def sync_detailed(
     item_id: UUID,
     *,
     client: AuthenticatedClient | Client,
-    body: RemoveIssueItemBody | Unset = UNSET,
-
-) -> Response[RemoveIssueItemResponse200]:
-    """ Remove item from issue
+) -> Response[None | RemoveIssueItemResponse200Type0]:
+    """Remove item from issue
 
      Remove a pipeline item from an issue.
 
     Args:
         id (UUID):
         item_id (UUID):
-        body (RemoveIssueItemBody | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
         httpx.TimeoutException: If the request takes longer than Client.timeout.
 
     Returns:
-        Response[RemoveIssueItemResponse200]
-     """
-
+        Response[None | RemoveIssueItemResponse200Type0]
+    """
 
     kwargs = _get_kwargs(
         id=id,
-item_id=item_id,
-body=body,
-
+        item_id=item_id,
     )
 
     response = client.get_httpx_client().request(
@@ -109,109 +99,94 @@ body=body,
 
     return _build_response(client=client, response=response)
 
+
 def sync(
     id: UUID,
     item_id: UUID,
     *,
     client: AuthenticatedClient | Client,
-    body: RemoveIssueItemBody | Unset = UNSET,
-
-) -> RemoveIssueItemResponse200 | None:
-    """ Remove item from issue
+) -> None | RemoveIssueItemResponse200Type0 | None:
+    """Remove item from issue
 
      Remove a pipeline item from an issue.
 
     Args:
         id (UUID):
         item_id (UUID):
-        body (RemoveIssueItemBody | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
         httpx.TimeoutException: If the request takes longer than Client.timeout.
 
     Returns:
-        RemoveIssueItemResponse200
-     """
-
+        None | RemoveIssueItemResponse200Type0
+    """
 
     return sync_detailed(
         id=id,
-item_id=item_id,
-client=client,
-body=body,
-
+        item_id=item_id,
+        client=client,
     ).parsed
+
 
 async def asyncio_detailed(
     id: UUID,
     item_id: UUID,
     *,
     client: AuthenticatedClient | Client,
-    body: RemoveIssueItemBody | Unset = UNSET,
-
-) -> Response[RemoveIssueItemResponse200]:
-    """ Remove item from issue
+) -> Response[None | RemoveIssueItemResponse200Type0]:
+    """Remove item from issue
 
      Remove a pipeline item from an issue.
 
     Args:
         id (UUID):
         item_id (UUID):
-        body (RemoveIssueItemBody | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
         httpx.TimeoutException: If the request takes longer than Client.timeout.
 
     Returns:
-        Response[RemoveIssueItemResponse200]
-     """
-
+        Response[None | RemoveIssueItemResponse200Type0]
+    """
 
     kwargs = _get_kwargs(
         id=id,
-item_id=item_id,
-body=body,
-
+        item_id=item_id,
     )
 
-    response = await client.get_async_httpx_client().request(
-        **kwargs
-    )
+    response = await client.get_async_httpx_client().request(**kwargs)
 
     return _build_response(client=client, response=response)
+
 
 async def asyncio(
     id: UUID,
     item_id: UUID,
     *,
     client: AuthenticatedClient | Client,
-    body: RemoveIssueItemBody | Unset = UNSET,
-
-) -> RemoveIssueItemResponse200 | None:
-    """ Remove item from issue
+) -> None | RemoveIssueItemResponse200Type0 | None:
+    """Remove item from issue
 
      Remove a pipeline item from an issue.
 
     Args:
         id (UUID):
         item_id (UUID):
-        body (RemoveIssueItemBody | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
         httpx.TimeoutException: If the request takes longer than Client.timeout.
 
     Returns:
-        RemoveIssueItemResponse200
-     """
+        None | RemoveIssueItemResponse200Type0
+    """
 
-
-    return (await asyncio_detailed(
-        id=id,
-item_id=item_id,
-client=client,
-body=body,
-
-    )).parsed
+    return (
+        await asyncio_detailed(
+            id=id,
+            item_id=item_id,
+            client=client,
+        )
+    ).parsed

@@ -1,42 +1,34 @@
 from __future__ import annotations
 
+import datetime
 from collections.abc import Mapping
-from typing import Any, TypeVar, BinaryIO, TextIO, TYPE_CHECKING, Generator
+from typing import Any, TypeVar, cast
+from uuid import UUID
 
 from attrs import define as _attrs_define
 from attrs import field as _attrs_field
 
-from ..types import UNSET, Unset
-
-from ..models.get_submission_history_response_200_item_from_status_type_0 import GetSubmissionHistoryResponse200ItemFromStatusType0
+from ..models.get_submission_history_response_200_item_from_status_type_0 import (
+    GetSubmissionHistoryResponse200ItemFromStatusType0,
+)
 from ..models.get_submission_history_response_200_item_to_status import GetSubmissionHistoryResponse200ItemToStatus
-from dateutil.parser import isoparse
-from typing import cast
-from uuid import UUID
-import datetime
-
-
-
-
-
 
 T = TypeVar("T", bound="GetSubmissionHistoryResponse200Item")
 
 
-
 @_attrs_define
 class GetSubmissionHistoryResponse200Item:
-    """ 
-        Attributes:
-            id (UUID): History entry ID
-            submission_id (UUID): ID of the submission
-            from_status (GetSubmissionHistoryResponse200ItemFromStatusType0 | None): Previous status (null for initial
-                creation)
-            to_status (GetSubmissionHistoryResponse200ItemToStatus): New status after the transition
-            changed_by (None | UUID): ID of the user who made the change
-            comment (None | str): Optional comment explaining the status change
-            changed_at (datetime.datetime): When the status change occurred
-     """
+    """
+    Attributes:
+        id (UUID): History entry ID
+        submission_id (UUID): ID of the submission
+        from_status (GetSubmissionHistoryResponse200ItemFromStatusType0 | None): Previous status (null for initial
+            creation)
+        to_status (GetSubmissionHistoryResponse200ItemToStatus): New status after the transition
+        changed_by (None | UUID): ID of the user who made the change
+        comment (None | str): Optional comment explaining the status change
+        changed_at (datetime.datetime): When the status change occurred
+    """
 
     id: UUID
     submission_id: UUID
@@ -46,10 +38,6 @@ class GetSubmissionHistoryResponse200Item:
     comment: None | str
     changed_at: datetime.datetime
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
-
-
-
-
 
     def to_dict(self) -> dict[str, Any]:
         id = str(self.id)
@@ -75,35 +63,28 @@ class GetSubmissionHistoryResponse200Item:
 
         changed_at = self.changed_at.isoformat()
 
-
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
-        field_dict.update({
-            "id": id,
-            "submissionId": submission_id,
-            "fromStatus": from_status,
-            "toStatus": to_status,
-            "changedBy": changed_by,
-            "comment": comment,
-            "changedAt": changed_at,
-        })
+        field_dict.update(
+            {
+                "id": id,
+                "submissionId": submission_id,
+                "fromStatus": from_status,
+                "toStatus": to_status,
+                "changedBy": changed_by,
+                "comment": comment,
+                "changedAt": changed_at,
+            }
+        )
 
         return field_dict
-
-
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
         d = dict(src_dict)
         id = UUID(d.pop("id"))
 
-
-
-
         submission_id = UUID(d.pop("submissionId"))
-
-
-
 
         def _parse_from_status(data: object) -> GetSubmissionHistoryResponse200ItemFromStatusType0 | None:
             if data is None:
@@ -113,8 +94,6 @@ class GetSubmissionHistoryResponse200Item:
                     raise TypeError()
                 from_status_type_0 = GetSubmissionHistoryResponse200ItemFromStatusType0(data)
 
-
-
                 return from_status_type_0
             except (TypeError, ValueError, AttributeError, KeyError):
                 pass
@@ -122,11 +101,7 @@ class GetSubmissionHistoryResponse200Item:
 
         from_status = _parse_from_status(d.pop("fromStatus"))
 
-
         to_status = GetSubmissionHistoryResponse200ItemToStatus(d.pop("toStatus"))
-
-
-
 
         def _parse_changed_by(data: object) -> None | UUID:
             if data is None:
@@ -136,15 +111,12 @@ class GetSubmissionHistoryResponse200Item:
                     raise TypeError()
                 changed_by_type_0 = UUID(data)
 
-
-
                 return changed_by_type_0
             except (TypeError, ValueError, AttributeError, KeyError):
                 pass
             return cast(None | UUID, data)
 
         changed_by = _parse_changed_by(d.pop("changedBy"))
-
 
         def _parse_comment(data: object) -> None | str:
             if data is None:
@@ -153,11 +125,7 @@ class GetSubmissionHistoryResponse200Item:
 
         comment = _parse_comment(d.pop("comment"))
 
-
-        changed_at = isoparse(d.pop("changedAt"))
-
-
-
+        changed_at = datetime.datetime.fromisoformat(d.pop("changedAt"))
 
         get_submission_history_response_200_item = cls(
             id=id,
@@ -168,7 +136,6 @@ class GetSubmissionHistoryResponse200Item:
             comment=comment,
             changed_at=changed_at,
         )
-
 
         get_submission_history_response_200_item.additional_properties = d
         return get_submission_history_response_200_item

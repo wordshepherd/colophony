@@ -1,48 +1,42 @@
 from __future__ import annotations
 
+import datetime
 from collections.abc import Mapping
-from typing import Any, TypeVar, BinaryIO, TextIO, TYPE_CHECKING, Generator
+from typing import TYPE_CHECKING, Any, TypeVar, cast
+from uuid import UUID
 
 from attrs import define as _attrs_define
 from attrs import field as _attrs_field
 
-from ..types import UNSET, Unset
-
 from ..models.list_contracts_response_200_items_item_status import ListContractsResponse200ItemsItemStatus
-from dateutil.parser import isoparse
-from typing import cast
-from uuid import UUID
-import datetime
 
 if TYPE_CHECKING:
-  from ..models.list_contracts_response_200_items_item_merge_data_type_0 import ListContractsResponse200ItemsItemMergeDataType0
-
-
-
+    from ..models.list_contracts_response_200_items_item_merge_data_type_0 import (
+        ListContractsResponse200ItemsItemMergeDataType0,
+    )
 
 
 T = TypeVar("T", bound="ListContractsResponse200ItemsItem")
 
 
-
 @_attrs_define
 class ListContractsResponse200ItemsItem:
-    """ 
-        Attributes:
-            id (UUID): Contract ID
-            organization_id (UUID): Organization ID
-            pipeline_item_id (UUID): Pipeline item ID
-            contract_template_id (None | UUID): Source template ID
-            status (ListContractsResponse200ItemsItemStatus): Current status of the contract
-            rendered_body (str): Contract body with merge fields resolved
-            merge_data (ListContractsResponse200ItemsItemMergeDataType0 | None): Merge field values used
-            documenso_document_id (None | str): Documenso document ID
-            signed_at (datetime.datetime | None): When the contract was signed
-            countersigned_at (datetime.datetime | None): When the contract was countersigned
-            completed_at (datetime.datetime | None): When the contract was completed
-            created_at (datetime.datetime): When the contract was created
-            updated_at (datetime.datetime): When the contract was last updated
-     """
+    """
+    Attributes:
+        id (UUID): Contract ID
+        organization_id (UUID): Organization ID
+        pipeline_item_id (UUID): Pipeline item ID
+        contract_template_id (None | UUID): Source template ID
+        status (ListContractsResponse200ItemsItemStatus): Current status of the contract
+        rendered_body (str): Contract body with merge fields resolved
+        merge_data (ListContractsResponse200ItemsItemMergeDataType0 | None): Merge field values used
+        documenso_document_id (None | str): Documenso document ID
+        signed_at (datetime.datetime | None): When the contract was signed
+        countersigned_at (datetime.datetime | None): When the contract was countersigned
+        completed_at (datetime.datetime | None): When the contract was completed
+        created_at (datetime.datetime): When the contract was created
+        updated_at (datetime.datetime): When the contract was last updated
+    """
 
     id: UUID
     organization_id: UUID
@@ -59,12 +53,11 @@ class ListContractsResponse200ItemsItem:
     updated_at: datetime.datetime
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
-
-
-
-
     def to_dict(self) -> dict[str, Any]:
-        from ..models.list_contracts_response_200_items_item_merge_data_type_0 import ListContractsResponse200ItemsItemMergeDataType0
+        from ..models.list_contracts_response_200_items_item_merge_data_type_0 import (
+            ListContractsResponse200ItemsItemMergeDataType0,
+        )
+
         id = str(self.id)
 
         organization_id = str(self.organization_id)
@@ -112,47 +105,40 @@ class ListContractsResponse200ItemsItem:
 
         updated_at = self.updated_at.isoformat()
 
-
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
-        field_dict.update({
-            "id": id,
-            "organizationId": organization_id,
-            "pipelineItemId": pipeline_item_id,
-            "contractTemplateId": contract_template_id,
-            "status": status,
-            "renderedBody": rendered_body,
-            "mergeData": merge_data,
-            "documensoDocumentId": documenso_document_id,
-            "signedAt": signed_at,
-            "countersignedAt": countersigned_at,
-            "completedAt": completed_at,
-            "createdAt": created_at,
-            "updatedAt": updated_at,
-        })
+        field_dict.update(
+            {
+                "id": id,
+                "organizationId": organization_id,
+                "pipelineItemId": pipeline_item_id,
+                "contractTemplateId": contract_template_id,
+                "status": status,
+                "renderedBody": rendered_body,
+                "mergeData": merge_data,
+                "documensoDocumentId": documenso_document_id,
+                "signedAt": signed_at,
+                "countersignedAt": countersigned_at,
+                "completedAt": completed_at,
+                "createdAt": created_at,
+                "updatedAt": updated_at,
+            }
+        )
 
         return field_dict
 
-
-
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.list_contracts_response_200_items_item_merge_data_type_0 import ListContractsResponse200ItemsItemMergeDataType0
+        from ..models.list_contracts_response_200_items_item_merge_data_type_0 import (
+            ListContractsResponse200ItemsItemMergeDataType0,
+        )
+
         d = dict(src_dict)
         id = UUID(d.pop("id"))
 
-
-
-
         organization_id = UUID(d.pop("organizationId"))
 
-
-
-
         pipeline_item_id = UUID(d.pop("pipelineItemId"))
-
-
-
 
         def _parse_contract_template_id(data: object) -> None | UUID:
             if data is None:
@@ -162,8 +148,6 @@ class ListContractsResponse200ItemsItem:
                     raise TypeError()
                 contract_template_id_type_0 = UUID(data)
 
-
-
                 return contract_template_id_type_0
             except (TypeError, ValueError, AttributeError, KeyError):
                 pass
@@ -171,11 +155,7 @@ class ListContractsResponse200ItemsItem:
 
         contract_template_id = _parse_contract_template_id(d.pop("contractTemplateId"))
 
-
         status = ListContractsResponse200ItemsItemStatus(d.pop("status"))
-
-
-
 
         rendered_body = d.pop("renderedBody")
 
@@ -187,15 +167,12 @@ class ListContractsResponse200ItemsItem:
                     raise TypeError()
                 merge_data_type_0 = ListContractsResponse200ItemsItemMergeDataType0.from_dict(data)
 
-
-
                 return merge_data_type_0
             except (TypeError, ValueError, AttributeError, KeyError):
                 pass
             return cast(ListContractsResponse200ItemsItemMergeDataType0 | None, data)
 
         merge_data = _parse_merge_data(d.pop("mergeData"))
-
 
         def _parse_documenso_document_id(data: object) -> None | str:
             if data is None:
@@ -204,16 +181,13 @@ class ListContractsResponse200ItemsItem:
 
         documenso_document_id = _parse_documenso_document_id(d.pop("documensoDocumentId"))
 
-
         def _parse_signed_at(data: object) -> datetime.datetime | None:
             if data is None:
                 return data
             try:
                 if not isinstance(data, str):
                     raise TypeError()
-                signed_at_type_0 = isoparse(data)
-
-
+                signed_at_type_0 = datetime.datetime.fromisoformat(data)
 
                 return signed_at_type_0
             except (TypeError, ValueError, AttributeError, KeyError):
@@ -222,16 +196,13 @@ class ListContractsResponse200ItemsItem:
 
         signed_at = _parse_signed_at(d.pop("signedAt"))
 
-
         def _parse_countersigned_at(data: object) -> datetime.datetime | None:
             if data is None:
                 return data
             try:
                 if not isinstance(data, str):
                     raise TypeError()
-                countersigned_at_type_0 = isoparse(data)
-
-
+                countersigned_at_type_0 = datetime.datetime.fromisoformat(data)
 
                 return countersigned_at_type_0
             except (TypeError, ValueError, AttributeError, KeyError):
@@ -240,16 +211,13 @@ class ListContractsResponse200ItemsItem:
 
         countersigned_at = _parse_countersigned_at(d.pop("countersignedAt"))
 
-
         def _parse_completed_at(data: object) -> datetime.datetime | None:
             if data is None:
                 return data
             try:
                 if not isinstance(data, str):
                     raise TypeError()
-                completed_at_type_0 = isoparse(data)
-
-
+                completed_at_type_0 = datetime.datetime.fromisoformat(data)
 
                 return completed_at_type_0
             except (TypeError, ValueError, AttributeError, KeyError):
@@ -258,16 +226,9 @@ class ListContractsResponse200ItemsItem:
 
         completed_at = _parse_completed_at(d.pop("completedAt"))
 
+        created_at = datetime.datetime.fromisoformat(d.pop("createdAt"))
 
-        created_at = isoparse(d.pop("createdAt"))
-
-
-
-
-        updated_at = isoparse(d.pop("updatedAt"))
-
-
-
+        updated_at = datetime.datetime.fromisoformat(d.pop("updatedAt"))
 
         list_contracts_response_200_items_item = cls(
             id=id,
@@ -284,7 +245,6 @@ class ListContractsResponse200ItemsItem:
             created_at=created_at,
             updated_at=updated_at,
         )
-
 
         list_contracts_response_200_items_item.additional_properties = d
         return list_contracts_response_200_items_item

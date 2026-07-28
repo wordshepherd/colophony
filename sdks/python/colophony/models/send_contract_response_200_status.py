@@ -1,5 +1,6 @@
 from enum import Enum
 
+
 class SendContractResponse200Status(str, Enum):
     COMPLETED = "COMPLETED"
     COUNTERSIGNED = "COUNTERSIGNED"

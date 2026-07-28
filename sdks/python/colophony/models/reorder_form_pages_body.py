@@ -1,38 +1,24 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from typing import Any, TypeVar, BinaryIO, TextIO, TYPE_CHECKING, Generator
+from typing import Any, TypeVar
+from uuid import UUID
 
 from attrs import define as _attrs_define
 from attrs import field as _attrs_field
 
-from ..types import UNSET, Unset
-
-from typing import cast
-from uuid import UUID
-
-
-
-
-
-
 T = TypeVar("T", bound="ReorderFormPagesBody")
-
 
 
 @_attrs_define
 class ReorderFormPagesBody:
-    """ 
-        Attributes:
-            page_ids (list[UUID]):
-     """
+    """
+    Attributes:
+        page_ids (list[UUID]):
+    """
 
     page_ids: list[UUID]
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
-
-
-
-
 
     def to_dict(self) -> dict[str, Any]:
         page_ids = []
@@ -40,36 +26,29 @@ class ReorderFormPagesBody:
             page_ids_item = str(page_ids_item_data)
             page_ids.append(page_ids_item)
 
-
-
-
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
-        field_dict.update({
-            "pageIds": page_ids,
-        })
+        field_dict.update(
+            {
+                "pageIds": page_ids,
+            }
+        )
 
         return field_dict
-
-
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
         d = dict(src_dict)
         page_ids = []
         _page_ids = d.pop("pageIds")
-        for page_ids_item_data in (_page_ids):
+        for page_ids_item_data in _page_ids:
             page_ids_item = UUID(page_ids_item_data)
 
-
-
             page_ids.append(page_ids_item)
-
 
         reorder_form_pages_body = cls(
             page_ids=page_ids,
         )
-
 
         reorder_form_pages_body.additional_properties = d
         return reorder_form_pages_body

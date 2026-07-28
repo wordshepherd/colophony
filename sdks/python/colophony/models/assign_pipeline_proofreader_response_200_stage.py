@@ -1,5 +1,6 @@
 from enum import Enum
 
+
 class AssignPipelineProofreaderResponse200Stage(str, Enum):
     AUTHOR_REVIEW = "AUTHOR_REVIEW"
     COPYEDIT_IN_PROGRESS = "COPYEDIT_IN_PROGRESS"

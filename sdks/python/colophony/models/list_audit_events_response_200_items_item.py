@@ -1,46 +1,36 @@
 from __future__ import annotations
 
+import datetime
 from collections.abc import Mapping
-from typing import Any, TypeVar, BinaryIO, TextIO, TYPE_CHECKING, Generator
+from typing import Any, TypeVar, cast
+from uuid import UUID
 
 from attrs import define as _attrs_define
 from attrs import field as _attrs_field
 
 from ..types import UNSET, Unset
 
-from ..types import UNSET, Unset
-from dateutil.parser import isoparse
-from typing import cast
-from uuid import UUID
-import datetime
-
-
-
-
-
-
 T = TypeVar("T", bound="ListAuditEventsResponse200ItemsItem")
-
 
 
 @_attrs_define
 class ListAuditEventsResponse200ItemsItem:
-    """ 
-        Attributes:
-            id (UUID): Unique identifier for the audit event
-            action (str): Action that was performed (e.g. ORG_CREATED)
-            resource (str): Resource type that was affected (e.g. organization)
-            resource_id (None | UUID): ID of the affected resource
-            actor_id (None | UUID): ID of the user who performed the action
-            ip_address (None | str): IP address of the request
-            user_agent (None | str): User-Agent header from the request
-            request_id (None | str): Correlation ID for the request
-            method (None | str): HTTP method of the request
-            route (None | str): API route that was called
-            created_at (datetime.datetime): When the audit event was recorded
-            old_value (Any | None | Unset): Previous state before the change
-            new_value (Any | None | Unset): New state after the change
-     """
+    """
+    Attributes:
+        id (UUID): Unique identifier for the audit event
+        action (str): Action that was performed (e.g. ORG_CREATED)
+        resource (str): Resource type that was affected (e.g. organization)
+        resource_id (None | UUID): ID of the affected resource
+        actor_id (None | UUID): ID of the user who performed the action
+        ip_address (None | str): IP address of the request
+        user_agent (None | str): User-Agent header from the request
+        request_id (None | str): Correlation ID for the request
+        method (None | str): HTTP method of the request
+        route (None | str): API route that was called
+        created_at (datetime.datetime): When the audit event was recorded
+        old_value (Any | None | Unset): Previous state before the change
+        new_value (Any | None | Unset): New state after the change
+    """
 
     id: UUID
     action: str
@@ -56,10 +46,6 @@ class ListAuditEventsResponse200ItemsItem:
     old_value: Any | None | Unset = UNSET
     new_value: Any | None | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
-
-
-
-
 
     def to_dict(self) -> dict[str, Any]:
         id = str(self.id)
@@ -109,22 +95,23 @@ class ListAuditEventsResponse200ItemsItem:
         else:
             new_value = self.new_value
 
-
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
-        field_dict.update({
-            "id": id,
-            "action": action,
-            "resource": resource,
-            "resourceId": resource_id,
-            "actorId": actor_id,
-            "ipAddress": ip_address,
-            "userAgent": user_agent,
-            "requestId": request_id,
-            "method": method,
-            "route": route,
-            "createdAt": created_at,
-        })
+        field_dict.update(
+            {
+                "id": id,
+                "action": action,
+                "resource": resource,
+                "resourceId": resource_id,
+                "actorId": actor_id,
+                "ipAddress": ip_address,
+                "userAgent": user_agent,
+                "requestId": request_id,
+                "method": method,
+                "route": route,
+                "createdAt": created_at,
+            }
+        )
         if old_value is not UNSET:
             field_dict["oldValue"] = old_value
         if new_value is not UNSET:
@@ -132,15 +119,10 @@ class ListAuditEventsResponse200ItemsItem:
 
         return field_dict
 
-
-
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
         d = dict(src_dict)
         id = UUID(d.pop("id"))
-
-
-
 
         action = d.pop("action")
 
@@ -154,15 +136,12 @@ class ListAuditEventsResponse200ItemsItem:
                     raise TypeError()
                 resource_id_type_0 = UUID(data)
 
-
-
                 return resource_id_type_0
             except (TypeError, ValueError, AttributeError, KeyError):
                 pass
             return cast(None | UUID, data)
 
         resource_id = _parse_resource_id(d.pop("resourceId"))
-
 
         def _parse_actor_id(data: object) -> None | UUID:
             if data is None:
@@ -172,15 +151,12 @@ class ListAuditEventsResponse200ItemsItem:
                     raise TypeError()
                 actor_id_type_0 = UUID(data)
 
-
-
                 return actor_id_type_0
             except (TypeError, ValueError, AttributeError, KeyError):
                 pass
             return cast(None | UUID, data)
 
         actor_id = _parse_actor_id(d.pop("actorId"))
-
 
         def _parse_ip_address(data: object) -> None | str:
             if data is None:
@@ -189,14 +165,12 @@ class ListAuditEventsResponse200ItemsItem:
 
         ip_address = _parse_ip_address(d.pop("ipAddress"))
 
-
         def _parse_user_agent(data: object) -> None | str:
             if data is None:
                 return data
             return cast(None | str, data)
 
         user_agent = _parse_user_agent(d.pop("userAgent"))
-
 
         def _parse_request_id(data: object) -> None | str:
             if data is None:
@@ -205,14 +179,12 @@ class ListAuditEventsResponse200ItemsItem:
 
         request_id = _parse_request_id(d.pop("requestId"))
 
-
         def _parse_method(data: object) -> None | str:
             if data is None:
                 return data
             return cast(None | str, data)
 
         method = _parse_method(d.pop("method"))
-
 
         def _parse_route(data: object) -> None | str:
             if data is None:
@@ -221,11 +193,7 @@ class ListAuditEventsResponse200ItemsItem:
 
         route = _parse_route(d.pop("route"))
 
-
-        created_at = isoparse(d.pop("createdAt"))
-
-
-
+        created_at = datetime.datetime.fromisoformat(d.pop("createdAt"))
 
         def _parse_old_value(data: object) -> Any | None | Unset:
             if data is None:
@@ -236,7 +204,6 @@ class ListAuditEventsResponse200ItemsItem:
 
         old_value = _parse_old_value(d.pop("oldValue", UNSET))
 
-
         def _parse_new_value(data: object) -> Any | None | Unset:
             if data is None:
                 return data
@@ -245,7 +212,6 @@ class ListAuditEventsResponse200ItemsItem:
             return cast(Any | None | Unset, data)
 
         new_value = _parse_new_value(d.pop("newValue", UNSET))
-
 
         list_audit_events_response_200_items_item = cls(
             id=id,
@@ -262,7 +228,6 @@ class ListAuditEventsResponse200ItemsItem:
             old_value=old_value,
             new_value=new_value,
         )
-
 
         list_audit_events_response_200_items_item.additional_properties = d
         return list_audit_events_response_200_items_item

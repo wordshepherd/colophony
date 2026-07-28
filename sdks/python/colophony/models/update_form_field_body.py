@@ -1,42 +1,37 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from typing import Any, TypeVar, BinaryIO, TextIO, TYPE_CHECKING, Generator
+from typing import TYPE_CHECKING, Any, TypeVar, cast
+from uuid import UUID
 
 from attrs import define as _attrs_define
 from attrs import field as _attrs_field
 
 from ..types import UNSET, Unset
 
-from ..types import UNSET, Unset
-from typing import cast
-from uuid import UUID
-
 if TYPE_CHECKING:
-  from ..models.update_form_field_body_conditional_rules_type_0_item import UpdateFormFieldBodyConditionalRulesType0Item
-  from ..models.update_form_field_body_config import UpdateFormFieldBodyConfig
-
-
-
+    from ..models.update_form_field_body_conditional_rules_type_0_item import (
+        UpdateFormFieldBodyConditionalRulesType0Item,
+    )
+    from ..models.update_form_field_body_config import UpdateFormFieldBodyConfig
 
 
 T = TypeVar("T", bound="UpdateFormFieldBody")
 
 
-
 @_attrs_define
 class UpdateFormFieldBody:
-    """ 
-        Attributes:
-            label (str | Unset): New label
-            description (str | Unset): New help text
-            placeholder (str | Unset): New placeholder
-            required (bool | Unset): New required state
-            config (UpdateFormFieldBodyConfig | Unset): New configuration
-            conditional_rules (list[UpdateFormFieldBodyConditionalRulesType0Item] | None | Unset): Conditional display rules
-            branch_id (None | Unset | UUID): Branch ID to assign this field to
-            page_id (None | Unset | UUID): Page to assign this field to
-     """
+    """
+    Attributes:
+        label (str | Unset): New label
+        description (str | Unset): New help text
+        placeholder (str | Unset): New placeholder
+        required (bool | Unset): New required state
+        config (UpdateFormFieldBodyConfig | Unset): New configuration
+        conditional_rules (list[UpdateFormFieldBodyConditionalRulesType0Item] | None | Unset): Conditional display rules
+        branch_id (None | Unset | UUID): Branch ID to assign this field to
+        page_id (None | Unset | UUID): Page to assign this field to
+    """
 
     label: str | Unset = UNSET
     description: str | Unset = UNSET
@@ -48,13 +43,7 @@ class UpdateFormFieldBody:
     page_id: None | Unset | UUID = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
-
-
-
-
     def to_dict(self) -> dict[str, Any]:
-        from ..models.update_form_field_body_conditional_rules_type_0_item import UpdateFormFieldBodyConditionalRulesType0Item
-        from ..models.update_form_field_body_config import UpdateFormFieldBodyConfig
         label = self.label
 
         description = self.description
@@ -76,7 +65,6 @@ class UpdateFormFieldBody:
                 conditional_rules_type_0_item = conditional_rules_type_0_item_data.to_dict()
                 conditional_rules.append(conditional_rules_type_0_item)
 
-
         else:
             conditional_rules = self.conditional_rules
 
@@ -96,11 +84,9 @@ class UpdateFormFieldBody:
         else:
             page_id = self.page_id
 
-
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
-        field_dict.update({
-        })
+        field_dict.update({})
         if label is not UNSET:
             field_dict["label"] = label
         if description is not UNSET:
@@ -120,12 +106,13 @@ class UpdateFormFieldBody:
 
         return field_dict
 
-
-
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.update_form_field_body_conditional_rules_type_0_item import UpdateFormFieldBodyConditionalRulesType0Item
+        from ..models.update_form_field_body_conditional_rules_type_0_item import (
+            UpdateFormFieldBodyConditionalRulesType0Item,
+        )
         from ..models.update_form_field_body_config import UpdateFormFieldBodyConfig
+
         d = dict(src_dict)
         label = d.pop("label", UNSET)
 
@@ -137,13 +124,10 @@ class UpdateFormFieldBody:
 
         _config = d.pop("config", UNSET)
         config: UpdateFormFieldBodyConfig | Unset
-        if isinstance(_config,  Unset):
+        if isinstance(_config, Unset):
             config = UNSET
         else:
             config = UpdateFormFieldBodyConfig.from_dict(_config)
-
-
-
 
         def _parse_conditional_rules(data: object) -> list[UpdateFormFieldBodyConditionalRulesType0Item] | None | Unset:
             if data is None:
@@ -155,10 +139,10 @@ class UpdateFormFieldBody:
                     raise TypeError()
                 conditional_rules_type_0 = []
                 _conditional_rules_type_0 = data
-                for conditional_rules_type_0_item_data in (_conditional_rules_type_0):
-                    conditional_rules_type_0_item = UpdateFormFieldBodyConditionalRulesType0Item.from_dict(conditional_rules_type_0_item_data)
-
-
+                for conditional_rules_type_0_item_data in _conditional_rules_type_0:
+                    conditional_rules_type_0_item = UpdateFormFieldBodyConditionalRulesType0Item.from_dict(
+                        conditional_rules_type_0_item_data
+                    )
 
                     conditional_rules_type_0.append(conditional_rules_type_0_item)
 
@@ -168,7 +152,6 @@ class UpdateFormFieldBody:
             return cast(list[UpdateFormFieldBodyConditionalRulesType0Item] | None | Unset, data)
 
         conditional_rules = _parse_conditional_rules(d.pop("conditionalRules", UNSET))
-
 
         def _parse_branch_id(data: object) -> None | Unset | UUID:
             if data is None:
@@ -180,15 +163,12 @@ class UpdateFormFieldBody:
                     raise TypeError()
                 branch_id_type_0 = UUID(data)
 
-
-
                 return branch_id_type_0
             except (TypeError, ValueError, AttributeError, KeyError):
                 pass
             return cast(None | Unset | UUID, data)
 
         branch_id = _parse_branch_id(d.pop("branchId", UNSET))
-
 
         def _parse_page_id(data: object) -> None | Unset | UUID:
             if data is None:
@@ -200,15 +180,12 @@ class UpdateFormFieldBody:
                     raise TypeError()
                 page_id_type_0 = UUID(data)
 
-
-
                 return page_id_type_0
             except (TypeError, ValueError, AttributeError, KeyError):
                 pass
             return cast(None | Unset | UUID, data)
 
         page_id = _parse_page_id(d.pop("pageId", UNSET))
-
 
         update_form_field_body = cls(
             label=label,
@@ -220,7 +197,6 @@ class UpdateFormFieldBody:
             branch_id=branch_id,
             page_id=page_id,
         )
-
 
         update_form_field_body.additional_properties = d
         return update_form_field_body

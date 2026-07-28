@@ -1,5 +1,5 @@
+"""A client library for accessing Colophony API"""
 
-""" A client library for accessing Colophony API """
 from .client import AuthenticatedClient, Client
 
 __all__ = (

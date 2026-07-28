@@ -1,40 +1,32 @@
 from http import HTTPStatus
-from typing import Any, cast
+from typing import Any
 from urllib.parse import quote
+from uuid import UUID
 
 import httpx
 
-from ...client import AuthenticatedClient, Client
-from ...types import Response, UNSET
 from ... import errors
-
+from ...client import AuthenticatedClient, Client
 from ...models.reorder_form_pages_body import ReorderFormPagesBody
 from ...models.reorder_form_pages_response_200_item import ReorderFormPagesResponse200Item
-from typing import cast
-from uuid import UUID
-
+from ...types import Response
 
 
 def _get_kwargs(
     id: UUID,
     *,
     body: ReorderFormPagesBody,
-
 ) -> dict[str, Any]:
     headers: dict[str, Any] = {}
 
-
-    
-
-    
-
     _kwargs: dict[str, Any] = {
         "method": "put",
-        "url": "/forms/{id}/pages/order".format(id=quote(str(id), safe=""),),
+        "url": "/forms/{id}/pages/order".format(
+            id=quote(str(id), safe=""),
+        ),
     }
 
     _kwargs["json"] = body.to_dict()
-
 
     headers["Content-Type"] = "application/json"
 
@@ -42,15 +34,14 @@ def _get_kwargs(
     return _kwargs
 
 
-
-def _parse_response(*, client: AuthenticatedClient | Client, response: httpx.Response) -> list[ReorderFormPagesResponse200Item] | None:
+def _parse_response(
+    *, client: AuthenticatedClient | Client, response: httpx.Response
+) -> list[ReorderFormPagesResponse200Item] | None:
     if response.status_code == 200:
         response_200 = []
         _response_200 = response.json()
-        for response_200_item_data in (_response_200):
+        for response_200_item_data in _response_200:
             response_200_item = ReorderFormPagesResponse200Item.from_dict(response_200_item_data)
-
-
 
             response_200.append(response_200_item)
 
@@ -62,7 +53,9 @@ def _parse_response(*, client: AuthenticatedClient | Client, response: httpx.Res
         return None
 
 
-def _build_response(*, client: AuthenticatedClient | Client, response: httpx.Response) -> Response[list[ReorderFormPagesResponse200Item]]:
+def _build_response(
+    *, client: AuthenticatedClient | Client, response: httpx.Response
+) -> Response[list[ReorderFormPagesResponse200Item]]:
     return Response(
         status_code=HTTPStatus(response.status_code),
         content=response.content,
@@ -76,9 +69,8 @@ def sync_detailed(
     *,
     client: AuthenticatedClient | Client,
     body: ReorderFormPagesBody,
-
 ) -> Response[list[ReorderFormPagesResponse200Item]]:
-    """ Reorder pages
+    """Reorder pages
 
      Set the display order of pages in a DRAFT form definition.
 
@@ -92,13 +84,11 @@ def sync_detailed(
 
     Returns:
         Response[list[ReorderFormPagesResponse200Item]]
-     """
-
+    """
 
     kwargs = _get_kwargs(
         id=id,
-body=body,
-
+        body=body,
     )
 
     response = client.get_httpx_client().request(
@@ -107,14 +97,14 @@ body=body,
 
     return _build_response(client=client, response=response)
 
+
 def sync(
     id: UUID,
     *,
     client: AuthenticatedClient | Client,
     body: ReorderFormPagesBody,
-
 ) -> list[ReorderFormPagesResponse200Item] | None:
-    """ Reorder pages
+    """Reorder pages
 
      Set the display order of pages in a DRAFT form definition.
 
@@ -128,24 +118,22 @@ def sync(
 
     Returns:
         list[ReorderFormPagesResponse200Item]
-     """
-
+    """
 
     return sync_detailed(
         id=id,
-client=client,
-body=body,
-
+        client=client,
+        body=body,
     ).parsed
+
 
 async def asyncio_detailed(
     id: UUID,
     *,
     client: AuthenticatedClient | Client,
     body: ReorderFormPagesBody,
-
 ) -> Response[list[ReorderFormPagesResponse200Item]]:
-    """ Reorder pages
+    """Reorder pages
 
      Set the display order of pages in a DRAFT form definition.
 
@@ -159,29 +147,25 @@ async def asyncio_detailed(
 
     Returns:
         Response[list[ReorderFormPagesResponse200Item]]
-     """
-
+    """
 
     kwargs = _get_kwargs(
         id=id,
-body=body,
-
+        body=body,
     )
 
-    response = await client.get_async_httpx_client().request(
-        **kwargs
-    )
+    response = await client.get_async_httpx_client().request(**kwargs)
 
     return _build_response(client=client, response=response)
+
 
 async def asyncio(
     id: UUID,
     *,
     client: AuthenticatedClient | Client,
     body: ReorderFormPagesBody,
-
 ) -> list[ReorderFormPagesResponse200Item] | None:
-    """ Reorder pages
+    """Reorder pages
 
      Set the display order of pages in a DRAFT form definition.
 
@@ -195,12 +179,12 @@ async def asyncio(
 
     Returns:
         list[ReorderFormPagesResponse200Item]
-     """
+    """
 
-
-    return (await asyncio_detailed(
-        id=id,
-client=client,
-body=body,
-
-    )).parsed
+    return (
+        await asyncio_detailed(
+            id=id,
+            client=client,
+            body=body,
+        )
+    ).parsed

@@ -1,56 +1,52 @@
 from __future__ import annotations
 
+import datetime
 from collections.abc import Mapping
-from typing import Any, TypeVar, BinaryIO, TextIO, TYPE_CHECKING, Generator
+from typing import TYPE_CHECKING, Any, TypeVar, cast
+from uuid import UUID
 
 from attrs import define as _attrs_define
 from attrs import field as _attrs_field
 
-from ..types import UNSET, Unset
-
 from ..models.create_pipeline_item_response_201_stage import CreatePipelineItemResponse201Stage
 from ..types import UNSET, Unset
-from dateutil.parser import isoparse
-from typing import cast
-from uuid import UUID
-import datetime
 
 if TYPE_CHECKING:
-  from ..models.create_pipeline_item_response_201_assigned_copyeditor import CreatePipelineItemResponse201AssignedCopyeditor
-  from ..models.create_pipeline_item_response_201_assigned_proofreader import CreatePipelineItemResponse201AssignedProofreader
-  from ..models.create_pipeline_item_response_201_publication import CreatePipelineItemResponse201Publication
-  from ..models.create_pipeline_item_response_201_submission import CreatePipelineItemResponse201Submission
-
-
-
+    from ..models.create_pipeline_item_response_201_assigned_copyeditor import (
+        CreatePipelineItemResponse201AssignedCopyeditor,
+    )
+    from ..models.create_pipeline_item_response_201_assigned_proofreader import (
+        CreatePipelineItemResponse201AssignedProofreader,
+    )
+    from ..models.create_pipeline_item_response_201_publication import CreatePipelineItemResponse201Publication
+    from ..models.create_pipeline_item_response_201_submission import CreatePipelineItemResponse201Submission
 
 
 T = TypeVar("T", bound="CreatePipelineItemResponse201")
 
 
-
 @_attrs_define
 class CreatePipelineItemResponse201:
-    """ 
-        Attributes:
-            id (UUID): Pipeline item ID
-            organization_id (UUID): Organization ID
-            submission_id (UUID): Linked submission ID
-            publication_id (None | UUID): Target publication ID
-            stage (CreatePipelineItemResponse201Stage): Current pipeline stage for the piece
-            assigned_copyeditor_id (None | UUID): Assigned copyeditor user ID
-            assigned_proofreader_id (None | UUID): Assigned proofreader user ID
-            copyedit_due_at (datetime.datetime | None): Copyedit deadline
-            proofread_due_at (datetime.datetime | None): Proofread deadline
-            author_review_due_at (datetime.datetime | None): Author review deadline
-            inngest_run_id (None | str): Active Inngest workflow run ID
-            created_at (datetime.datetime): When the item entered the pipeline
-            updated_at (datetime.datetime): When the item was last updated
-            submission (CreatePipelineItemResponse201Submission | Unset):
-            publication (CreatePipelineItemResponse201Publication | Unset):
-            assigned_copyeditor (CreatePipelineItemResponse201AssignedCopyeditor | Unset):
-            assigned_proofreader (CreatePipelineItemResponse201AssignedProofreader | Unset):
-     """
+    """
+    Attributes:
+        id (UUID): Pipeline item ID
+        organization_id (UUID): Organization ID
+        submission_id (UUID): Linked submission ID
+        publication_id (None | UUID): Target publication ID
+        stage (CreatePipelineItemResponse201Stage): Current pipeline stage for the piece
+        assigned_copyeditor_id (None | UUID): Assigned copyeditor user ID
+        assigned_proofreader_id (None | UUID): Assigned proofreader user ID
+        copyedit_due_at (datetime.datetime | None): Copyedit deadline
+        proofread_due_at (datetime.datetime | None): Proofread deadline
+        author_review_due_at (datetime.datetime | None): Author review deadline
+        inngest_run_id (None | str): Active Inngest workflow run ID
+        created_at (datetime.datetime): When the item entered the pipeline
+        updated_at (datetime.datetime): When the item was last updated
+        submission (CreatePipelineItemResponse201Submission | Unset):
+        publication (CreatePipelineItemResponse201Publication | Unset):
+        assigned_copyeditor (CreatePipelineItemResponse201AssignedCopyeditor | Unset):
+        assigned_proofreader (CreatePipelineItemResponse201AssignedProofreader | Unset):
+    """
 
     id: UUID
     organization_id: UUID
@@ -71,15 +67,7 @@ class CreatePipelineItemResponse201:
     assigned_proofreader: CreatePipelineItemResponse201AssignedProofreader | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
-
-
-
-
     def to_dict(self) -> dict[str, Any]:
-        from ..models.create_pipeline_item_response_201_assigned_copyeditor import CreatePipelineItemResponse201AssignedCopyeditor
-        from ..models.create_pipeline_item_response_201_assigned_proofreader import CreatePipelineItemResponse201AssignedProofreader
-        from ..models.create_pipeline_item_response_201_submission import CreatePipelineItemResponse201Submission
-        from ..models.create_pipeline_item_response_201_publication import CreatePipelineItemResponse201Publication
         id = str(self.id)
 
         organization_id = str(self.organization_id)
@@ -147,24 +135,25 @@ class CreatePipelineItemResponse201:
         if not isinstance(self.assigned_proofreader, Unset):
             assigned_proofreader = self.assigned_proofreader.to_dict()
 
-
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
-        field_dict.update({
-            "id": id,
-            "organizationId": organization_id,
-            "submissionId": submission_id,
-            "publicationId": publication_id,
-            "stage": stage,
-            "assignedCopyeditorId": assigned_copyeditor_id,
-            "assignedProofreaderId": assigned_proofreader_id,
-            "copyeditDueAt": copyedit_due_at,
-            "proofreadDueAt": proofread_due_at,
-            "authorReviewDueAt": author_review_due_at,
-            "inngestRunId": inngest_run_id,
-            "createdAt": created_at,
-            "updatedAt": updated_at,
-        })
+        field_dict.update(
+            {
+                "id": id,
+                "organizationId": organization_id,
+                "submissionId": submission_id,
+                "publicationId": publication_id,
+                "stage": stage,
+                "assignedCopyeditorId": assigned_copyeditor_id,
+                "assignedProofreaderId": assigned_proofreader_id,
+                "copyeditDueAt": copyedit_due_at,
+                "proofreadDueAt": proofread_due_at,
+                "authorReviewDueAt": author_review_due_at,
+                "inngestRunId": inngest_run_id,
+                "createdAt": created_at,
+                "updatedAt": updated_at,
+            }
+        )
         if submission is not UNSET:
             field_dict["submission"] = submission
         if publication is not UNSET:
@@ -176,29 +165,23 @@ class CreatePipelineItemResponse201:
 
         return field_dict
 
-
-
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.create_pipeline_item_response_201_assigned_copyeditor import CreatePipelineItemResponse201AssignedCopyeditor
-        from ..models.create_pipeline_item_response_201_assigned_proofreader import CreatePipelineItemResponse201AssignedProofreader
+        from ..models.create_pipeline_item_response_201_assigned_copyeditor import (
+            CreatePipelineItemResponse201AssignedCopyeditor,
+        )
+        from ..models.create_pipeline_item_response_201_assigned_proofreader import (
+            CreatePipelineItemResponse201AssignedProofreader,
+        )
         from ..models.create_pipeline_item_response_201_publication import CreatePipelineItemResponse201Publication
         from ..models.create_pipeline_item_response_201_submission import CreatePipelineItemResponse201Submission
+
         d = dict(src_dict)
         id = UUID(d.pop("id"))
 
-
-
-
         organization_id = UUID(d.pop("organizationId"))
 
-
-
-
         submission_id = UUID(d.pop("submissionId"))
-
-
-
 
         def _parse_publication_id(data: object) -> None | UUID:
             if data is None:
@@ -208,8 +191,6 @@ class CreatePipelineItemResponse201:
                     raise TypeError()
                 publication_id_type_0 = UUID(data)
 
-
-
                 return publication_id_type_0
             except (TypeError, ValueError, AttributeError, KeyError):
                 pass
@@ -217,11 +198,7 @@ class CreatePipelineItemResponse201:
 
         publication_id = _parse_publication_id(d.pop("publicationId"))
 
-
         stage = CreatePipelineItemResponse201Stage(d.pop("stage"))
-
-
-
 
         def _parse_assigned_copyeditor_id(data: object) -> None | UUID:
             if data is None:
@@ -231,15 +208,12 @@ class CreatePipelineItemResponse201:
                     raise TypeError()
                 assigned_copyeditor_id_type_0 = UUID(data)
 
-
-
                 return assigned_copyeditor_id_type_0
             except (TypeError, ValueError, AttributeError, KeyError):
                 pass
             return cast(None | UUID, data)
 
         assigned_copyeditor_id = _parse_assigned_copyeditor_id(d.pop("assignedCopyeditorId"))
-
 
         def _parse_assigned_proofreader_id(data: object) -> None | UUID:
             if data is None:
@@ -249,8 +223,6 @@ class CreatePipelineItemResponse201:
                     raise TypeError()
                 assigned_proofreader_id_type_0 = UUID(data)
 
-
-
                 return assigned_proofreader_id_type_0
             except (TypeError, ValueError, AttributeError, KeyError):
                 pass
@@ -258,16 +230,13 @@ class CreatePipelineItemResponse201:
 
         assigned_proofreader_id = _parse_assigned_proofreader_id(d.pop("assignedProofreaderId"))
 
-
         def _parse_copyedit_due_at(data: object) -> datetime.datetime | None:
             if data is None:
                 return data
             try:
                 if not isinstance(data, str):
                     raise TypeError()
-                copyedit_due_at_type_0 = isoparse(data)
-
-
+                copyedit_due_at_type_0 = datetime.datetime.fromisoformat(data)
 
                 return copyedit_due_at_type_0
             except (TypeError, ValueError, AttributeError, KeyError):
@@ -276,16 +245,13 @@ class CreatePipelineItemResponse201:
 
         copyedit_due_at = _parse_copyedit_due_at(d.pop("copyeditDueAt"))
 
-
         def _parse_proofread_due_at(data: object) -> datetime.datetime | None:
             if data is None:
                 return data
             try:
                 if not isinstance(data, str):
                     raise TypeError()
-                proofread_due_at_type_0 = isoparse(data)
-
-
+                proofread_due_at_type_0 = datetime.datetime.fromisoformat(data)
 
                 return proofread_due_at_type_0
             except (TypeError, ValueError, AttributeError, KeyError):
@@ -294,16 +260,13 @@ class CreatePipelineItemResponse201:
 
         proofread_due_at = _parse_proofread_due_at(d.pop("proofreadDueAt"))
 
-
         def _parse_author_review_due_at(data: object) -> datetime.datetime | None:
             if data is None:
                 return data
             try:
                 if not isinstance(data, str):
                     raise TypeError()
-                author_review_due_at_type_0 = isoparse(data)
-
-
+                author_review_due_at_type_0 = datetime.datetime.fromisoformat(data)
 
                 return author_review_due_at_type_0
             except (TypeError, ValueError, AttributeError, KeyError):
@@ -312,7 +275,6 @@ class CreatePipelineItemResponse201:
 
         author_review_due_at = _parse_author_review_due_at(d.pop("authorReviewDueAt"))
 
-
         def _parse_inngest_run_id(data: object) -> None | str:
             if data is None:
                 return data
@@ -320,56 +282,37 @@ class CreatePipelineItemResponse201:
 
         inngest_run_id = _parse_inngest_run_id(d.pop("inngestRunId"))
 
+        created_at = datetime.datetime.fromisoformat(d.pop("createdAt"))
 
-        created_at = isoparse(d.pop("createdAt"))
-
-
-
-
-        updated_at = isoparse(d.pop("updatedAt"))
-
-
-
+        updated_at = datetime.datetime.fromisoformat(d.pop("updatedAt"))
 
         _submission = d.pop("submission", UNSET)
         submission: CreatePipelineItemResponse201Submission | Unset
-        if isinstance(_submission,  Unset):
+        if isinstance(_submission, Unset):
             submission = UNSET
         else:
             submission = CreatePipelineItemResponse201Submission.from_dict(_submission)
 
-
-
-
         _publication = d.pop("publication", UNSET)
         publication: CreatePipelineItemResponse201Publication | Unset
-        if isinstance(_publication,  Unset):
+        if isinstance(_publication, Unset):
             publication = UNSET
         else:
             publication = CreatePipelineItemResponse201Publication.from_dict(_publication)
 
-
-
-
         _assigned_copyeditor = d.pop("assignedCopyeditor", UNSET)
         assigned_copyeditor: CreatePipelineItemResponse201AssignedCopyeditor | Unset
-        if isinstance(_assigned_copyeditor,  Unset):
+        if isinstance(_assigned_copyeditor, Unset):
             assigned_copyeditor = UNSET
         else:
             assigned_copyeditor = CreatePipelineItemResponse201AssignedCopyeditor.from_dict(_assigned_copyeditor)
 
-
-
-
         _assigned_proofreader = d.pop("assignedProofreader", UNSET)
         assigned_proofreader: CreatePipelineItemResponse201AssignedProofreader | Unset
-        if isinstance(_assigned_proofreader,  Unset):
+        if isinstance(_assigned_proofreader, Unset):
             assigned_proofreader = UNSET
         else:
             assigned_proofreader = CreatePipelineItemResponse201AssignedProofreader.from_dict(_assigned_proofreader)
-
-
-
 
         create_pipeline_item_response_201 = cls(
             id=id,
@@ -390,7 +333,6 @@ class CreatePipelineItemResponse201:
             assigned_copyeditor=assigned_copyeditor,
             assigned_proofreader=assigned_proofreader,
         )
-
 
         create_pipeline_item_response_201.additional_properties = d
         return create_pipeline_item_response_201

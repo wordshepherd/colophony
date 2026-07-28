@@ -1,43 +1,33 @@
 from http import HTTPStatus
-from typing import Any, cast
+from typing import Any
 from urllib.parse import quote
+from uuid import UUID
 
 import httpx
 
-from ...client import AuthenticatedClient, Client
-from ...types import Response, UNSET
 from ... import errors
-
+from ...client import AuthenticatedClient, Client
 from ...models.update_cms_connection_body import UpdateCmsConnectionBody
 from ...models.update_cms_connection_response_200 import UpdateCmsConnectionResponse200
-from ...types import UNSET, Unset
-from typing import cast
-from uuid import UUID
-
+from ...types import UNSET, Response, Unset
 
 
 def _get_kwargs(
     id: UUID,
     *,
     body: UpdateCmsConnectionBody | Unset = UNSET,
-
 ) -> dict[str, Any]:
     headers: dict[str, Any] = {}
 
-
-    
-
-    
-
     _kwargs: dict[str, Any] = {
         "method": "patch",
-        "url": "/cms-connections/{id}".format(id=quote(str(id), safe=""),),
+        "url": "/cms-connections/{id}".format(
+            id=quote(str(id), safe=""),
+        ),
     }
 
-    
     if not isinstance(body, Unset):
         _kwargs["json"] = body.to_dict()
-
 
     headers["Content-Type"] = "application/json"
 
@@ -45,12 +35,11 @@ def _get_kwargs(
     return _kwargs
 
 
-
-def _parse_response(*, client: AuthenticatedClient | Client, response: httpx.Response) -> UpdateCmsConnectionResponse200 | None:
+def _parse_response(
+    *, client: AuthenticatedClient | Client, response: httpx.Response
+) -> UpdateCmsConnectionResponse200 | None:
     if response.status_code == 200:
         response_200 = UpdateCmsConnectionResponse200.from_dict(response.json())
-
-
 
         return response_200
 
@@ -60,7 +49,9 @@ def _parse_response(*, client: AuthenticatedClient | Client, response: httpx.Res
         return None
 
 
-def _build_response(*, client: AuthenticatedClient | Client, response: httpx.Response) -> Response[UpdateCmsConnectionResponse200]:
+def _build_response(
+    *, client: AuthenticatedClient | Client, response: httpx.Response
+) -> Response[UpdateCmsConnectionResponse200]:
     return Response(
         status_code=HTTPStatus(response.status_code),
         content=response.content,
@@ -74,9 +65,8 @@ def sync_detailed(
     *,
     client: AuthenticatedClient | Client,
     body: UpdateCmsConnectionBody | Unset = UNSET,
-
 ) -> Response[UpdateCmsConnectionResponse200]:
-    """ Update a CMS connection
+    """Update a CMS connection
 
      Update a CMS connection by ID.
 
@@ -90,13 +80,11 @@ def sync_detailed(
 
     Returns:
         Response[UpdateCmsConnectionResponse200]
-     """
-
+    """
 
     kwargs = _get_kwargs(
         id=id,
-body=body,
-
+        body=body,
     )
 
     response = client.get_httpx_client().request(
@@ -105,14 +93,14 @@ body=body,
 
     return _build_response(client=client, response=response)
 
+
 def sync(
     id: UUID,
     *,
     client: AuthenticatedClient | Client,
     body: UpdateCmsConnectionBody | Unset = UNSET,
-
 ) -> UpdateCmsConnectionResponse200 | None:
-    """ Update a CMS connection
+    """Update a CMS connection
 
      Update a CMS connection by ID.
 
@@ -126,24 +114,22 @@ def sync(
 
     Returns:
         UpdateCmsConnectionResponse200
-     """
-
+    """
 
     return sync_detailed(
         id=id,
-client=client,
-body=body,
-
+        client=client,
+        body=body,
     ).parsed
+
 
 async def asyncio_detailed(
     id: UUID,
     *,
     client: AuthenticatedClient | Client,
     body: UpdateCmsConnectionBody | Unset = UNSET,
-
 ) -> Response[UpdateCmsConnectionResponse200]:
-    """ Update a CMS connection
+    """Update a CMS connection
 
      Update a CMS connection by ID.
 
@@ -157,29 +143,25 @@ async def asyncio_detailed(
 
     Returns:
         Response[UpdateCmsConnectionResponse200]
-     """
-
+    """
 
     kwargs = _get_kwargs(
         id=id,
-body=body,
-
+        body=body,
     )
 
-    response = await client.get_async_httpx_client().request(
-        **kwargs
-    )
+    response = await client.get_async_httpx_client().request(**kwargs)
 
     return _build_response(client=client, response=response)
+
 
 async def asyncio(
     id: UUID,
     *,
     client: AuthenticatedClient | Client,
     body: UpdateCmsConnectionBody | Unset = UNSET,
-
 ) -> UpdateCmsConnectionResponse200 | None:
-    """ Update a CMS connection
+    """Update a CMS connection
 
      Update a CMS connection by ID.
 
@@ -193,12 +175,12 @@ async def asyncio(
 
     Returns:
         UpdateCmsConnectionResponse200
-     """
+    """
 
-
-    return (await asyncio_detailed(
-        id=id,
-client=client,
-body=body,
-
-    )).parsed
+    return (
+        await asyncio_detailed(
+            id=id,
+            client=client,
+            body=body,
+        )
+    ).parsed

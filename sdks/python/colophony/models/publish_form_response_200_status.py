@@ -1,5 +1,6 @@
 from enum import Enum
 
+
 class PublishFormResponse200Status(str, Enum):
     ARCHIVED = "ARCHIVED"
     DRAFT = "DRAFT"

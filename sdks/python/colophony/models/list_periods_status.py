@@ -1,5 +1,6 @@
 from enum import Enum
 
+
 class ListPeriodsStatus(str, Enum):
     CLOSED = "CLOSED"
     OPEN = "OPEN"

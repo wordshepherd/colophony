@@ -1,5 +1,6 @@
 from enum import Enum
 
+
 class GetFormResponse200PagesItemBranchingRulesType0ItemConditionRulesItemComparator(str, Enum):
     CONTAINS = "contains"
     ENDS_WITH = "ends_with"

@@ -1,43 +1,33 @@
 from http import HTTPStatus
-from typing import Any, cast
+from typing import Any
 from urllib.parse import quote
+from uuid import UUID
 
 import httpx
 
-from ...client import AuthenticatedClient, Client
-from ...types import Response, UNSET
 from ... import errors
-
+from ...client import AuthenticatedClient, Client
 from ...models.create_manuscript_version_body import CreateManuscriptVersionBody
 from ...models.create_manuscript_version_response_200 import CreateManuscriptVersionResponse200
-from ...types import UNSET, Unset
-from typing import cast
-from uuid import UUID
-
+from ...types import UNSET, Response, Unset
 
 
 def _get_kwargs(
     manuscript_id: UUID,
     *,
     body: CreateManuscriptVersionBody | Unset = UNSET,
-
 ) -> dict[str, Any]:
     headers: dict[str, Any] = {}
 
-
-    
-
-    
-
     _kwargs: dict[str, Any] = {
         "method": "post",
-        "url": "/manuscripts/{manuscript_id}/versions".format(manuscript_id=quote(str(manuscript_id), safe=""),),
+        "url": "/manuscripts/{manuscript_id}/versions".format(
+            manuscript_id=quote(str(manuscript_id), safe=""),
+        ),
     }
 
-    
     if not isinstance(body, Unset):
         _kwargs["json"] = body.to_dict()
-
 
     headers["Content-Type"] = "application/json"
 
@@ -45,12 +35,11 @@ def _get_kwargs(
     return _kwargs
 
 
-
-def _parse_response(*, client: AuthenticatedClient | Client, response: httpx.Response) -> CreateManuscriptVersionResponse200 | None:
+def _parse_response(
+    *, client: AuthenticatedClient | Client, response: httpx.Response
+) -> CreateManuscriptVersionResponse200 | None:
     if response.status_code == 200:
         response_200 = CreateManuscriptVersionResponse200.from_dict(response.json())
-
-
 
         return response_200
 
@@ -60,7 +49,9 @@ def _parse_response(*, client: AuthenticatedClient | Client, response: httpx.Res
         return None
 
 
-def _build_response(*, client: AuthenticatedClient | Client, response: httpx.Response) -> Response[CreateManuscriptVersionResponse200]:
+def _build_response(
+    *, client: AuthenticatedClient | Client, response: httpx.Response
+) -> Response[CreateManuscriptVersionResponse200]:
     return Response(
         status_code=HTTPStatus(response.status_code),
         content=response.content,
@@ -74,9 +65,8 @@ def sync_detailed(
     *,
     client: AuthenticatedClient | Client,
     body: CreateManuscriptVersionBody | Unset = UNSET,
-
 ) -> Response[CreateManuscriptVersionResponse200]:
-    """ Create version
+    """Create version
 
      Creates a new version of a manuscript.
 
@@ -90,13 +80,11 @@ def sync_detailed(
 
     Returns:
         Response[CreateManuscriptVersionResponse200]
-     """
-
+    """
 
     kwargs = _get_kwargs(
         manuscript_id=manuscript_id,
-body=body,
-
+        body=body,
     )
 
     response = client.get_httpx_client().request(
@@ -105,14 +93,14 @@ body=body,
 
     return _build_response(client=client, response=response)
 
+
 def sync(
     manuscript_id: UUID,
     *,
     client: AuthenticatedClient | Client,
     body: CreateManuscriptVersionBody | Unset = UNSET,
-
 ) -> CreateManuscriptVersionResponse200 | None:
-    """ Create version
+    """Create version
 
      Creates a new version of a manuscript.
 
@@ -126,24 +114,22 @@ def sync(
 
     Returns:
         CreateManuscriptVersionResponse200
-     """
-
+    """
 
     return sync_detailed(
         manuscript_id=manuscript_id,
-client=client,
-body=body,
-
+        client=client,
+        body=body,
     ).parsed
+
 
 async def asyncio_detailed(
     manuscript_id: UUID,
     *,
     client: AuthenticatedClient | Client,
     body: CreateManuscriptVersionBody | Unset = UNSET,
-
 ) -> Response[CreateManuscriptVersionResponse200]:
-    """ Create version
+    """Create version
 
      Creates a new version of a manuscript.
 
@@ -157,29 +143,25 @@ async def asyncio_detailed(
 
     Returns:
         Response[CreateManuscriptVersionResponse200]
-     """
-
+    """
 
     kwargs = _get_kwargs(
         manuscript_id=manuscript_id,
-body=body,
-
+        body=body,
     )
 
-    response = await client.get_async_httpx_client().request(
-        **kwargs
-    )
+    response = await client.get_async_httpx_client().request(**kwargs)
 
     return _build_response(client=client, response=response)
+
 
 async def asyncio(
     manuscript_id: UUID,
     *,
     client: AuthenticatedClient | Client,
     body: CreateManuscriptVersionBody | Unset = UNSET,
-
 ) -> CreateManuscriptVersionResponse200 | None:
-    """ Create version
+    """Create version
 
      Creates a new version of a manuscript.
 
@@ -193,12 +175,12 @@ async def asyncio(
 
     Returns:
         CreateManuscriptVersionResponse200
-     """
+    """
 
-
-    return (await asyncio_detailed(
-        manuscript_id=manuscript_id,
-client=client,
-body=body,
-
-    )).parsed
+    return (
+        await asyncio_detailed(
+            manuscript_id=manuscript_id,
+            client=client,
+            body=body,
+        )
+    ).parsed

@@ -1,5 +1,6 @@
 from enum import Enum
 
+
 class UpdateFormFieldResponse200ConditionalRulesType0ItemEffect(str, Enum):
     HIDE = "HIDE"
     REQUIRE = "REQUIRE"

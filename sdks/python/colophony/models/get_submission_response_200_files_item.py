@@ -1,42 +1,32 @@
 from __future__ import annotations
 
+import datetime
 from collections.abc import Mapping
-from typing import Any, TypeVar, BinaryIO, TextIO, TYPE_CHECKING, Generator
+from typing import Any, TypeVar, cast
+from uuid import UUID
 
 from attrs import define as _attrs_define
 from attrs import field as _attrs_field
 
-from ..types import UNSET, Unset
-
 from ..models.get_submission_response_200_files_item_scan_status import GetSubmissionResponse200FilesItemScanStatus
-from dateutil.parser import isoparse
-from typing import cast
-from uuid import UUID
-import datetime
-
-
-
-
-
 
 T = TypeVar("T", bound="GetSubmissionResponse200FilesItem")
 
 
-
 @_attrs_define
 class GetSubmissionResponse200FilesItem:
-    """ 
-        Attributes:
-            id (UUID): Unique identifier for the file
-            manuscript_version_id (UUID): ID of the manuscript version this file belongs to
-            filename (str): Original filename as uploaded
-            mime_type (str): MIME type of the file (e.g. application/pdf)
-            size (float): File size in bytes
-            storage_key (str): Object storage key
-            scan_status (GetSubmissionResponse200FilesItemScanStatus): Virus scan status for an uploaded file
-            scanned_at (datetime.datetime | None): When the virus scan completed
-            uploaded_at (datetime.datetime): When the file was uploaded
-     """
+    """
+    Attributes:
+        id (UUID): Unique identifier for the file
+        manuscript_version_id (UUID): ID of the manuscript version this file belongs to
+        filename (str): Original filename as uploaded
+        mime_type (str): MIME type of the file (e.g. application/pdf)
+        size (float): File size in bytes
+        storage_key (str): Object storage key
+        scan_status (GetSubmissionResponse200FilesItemScanStatus): Virus scan status for an uploaded file
+        scanned_at (datetime.datetime | None): When the virus scan completed
+        uploaded_at (datetime.datetime): When the file was uploaded
+    """
 
     id: UUID
     manuscript_version_id: UUID
@@ -48,10 +38,6 @@ class GetSubmissionResponse200FilesItem:
     scanned_at: datetime.datetime | None
     uploaded_at: datetime.datetime
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
-
-
-
-
 
     def to_dict(self) -> dict[str, Any]:
         id = str(self.id)
@@ -76,37 +62,30 @@ class GetSubmissionResponse200FilesItem:
 
         uploaded_at = self.uploaded_at.isoformat()
 
-
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
-        field_dict.update({
-            "id": id,
-            "manuscriptVersionId": manuscript_version_id,
-            "filename": filename,
-            "mimeType": mime_type,
-            "size": size,
-            "storageKey": storage_key,
-            "scanStatus": scan_status,
-            "scannedAt": scanned_at,
-            "uploadedAt": uploaded_at,
-        })
+        field_dict.update(
+            {
+                "id": id,
+                "manuscriptVersionId": manuscript_version_id,
+                "filename": filename,
+                "mimeType": mime_type,
+                "size": size,
+                "storageKey": storage_key,
+                "scanStatus": scan_status,
+                "scannedAt": scanned_at,
+                "uploadedAt": uploaded_at,
+            }
+        )
 
         return field_dict
-
-
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
         d = dict(src_dict)
         id = UUID(d.pop("id"))
 
-
-
-
         manuscript_version_id = UUID(d.pop("manuscriptVersionId"))
-
-
-
 
         filename = d.pop("filename")
 
@@ -118,18 +97,13 @@ class GetSubmissionResponse200FilesItem:
 
         scan_status = GetSubmissionResponse200FilesItemScanStatus(d.pop("scanStatus"))
 
-
-
-
         def _parse_scanned_at(data: object) -> datetime.datetime | None:
             if data is None:
                 return data
             try:
                 if not isinstance(data, str):
                     raise TypeError()
-                scanned_at_type_0 = isoparse(data)
-
-
+                scanned_at_type_0 = datetime.datetime.fromisoformat(data)
 
                 return scanned_at_type_0
             except (TypeError, ValueError, AttributeError, KeyError):
@@ -138,11 +112,7 @@ class GetSubmissionResponse200FilesItem:
 
         scanned_at = _parse_scanned_at(d.pop("scannedAt"))
 
-
-        uploaded_at = isoparse(d.pop("uploadedAt"))
-
-
-
+        uploaded_at = datetime.datetime.fromisoformat(d.pop("uploadedAt"))
 
         get_submission_response_200_files_item = cls(
             id=id,
@@ -155,7 +125,6 @@ class GetSubmissionResponse200FilesItem:
             scanned_at=scanned_at,
             uploaded_at=uploaded_at,
         )
-
 
         get_submission_response_200_files_item.additional_properties = d
         return get_submission_response_200_files_item

@@ -1,56 +1,35 @@
 from http import HTTPStatus
-from typing import Any, cast
+from typing import Any
 from urllib.parse import quote
+from uuid import UUID
 
 import httpx
 
-from ...client import AuthenticatedClient, Client
-from ...types import Response, UNSET
 from ... import errors
-
-from ...models.delete_cms_connection_body import DeleteCmsConnectionBody
+from ...client import AuthenticatedClient, Client
 from ...models.delete_cms_connection_response_200 import DeleteCmsConnectionResponse200
-from ...types import UNSET, Unset
-from typing import cast
-from uuid import UUID
-
+from ...types import Response
 
 
 def _get_kwargs(
     id: UUID,
-    *,
-    body: DeleteCmsConnectionBody | Unset = UNSET,
-
 ) -> dict[str, Any]:
-    headers: dict[str, Any] = {}
-
-
-    
-
-    
 
     _kwargs: dict[str, Any] = {
         "method": "delete",
-        "url": "/cms-connections/{id}".format(id=quote(str(id), safe=""),),
+        "url": "/cms-connections/{id}".format(
+            id=quote(str(id), safe=""),
+        ),
     }
 
-    
-    if not isinstance(body, Unset):
-        _kwargs["json"] = body.to_dict()
-
-
-    headers["Content-Type"] = "application/json"
-
-    _kwargs["headers"] = headers
     return _kwargs
 
 
-
-def _parse_response(*, client: AuthenticatedClient | Client, response: httpx.Response) -> DeleteCmsConnectionResponse200 | None:
+def _parse_response(
+    *, client: AuthenticatedClient | Client, response: httpx.Response
+) -> DeleteCmsConnectionResponse200 | None:
     if response.status_code == 200:
         response_200 = DeleteCmsConnectionResponse200.from_dict(response.json())
-
-
 
         return response_200
 
@@ -60,7 +39,9 @@ def _parse_response(*, client: AuthenticatedClient | Client, response: httpx.Res
         return None
 
 
-def _build_response(*, client: AuthenticatedClient | Client, response: httpx.Response) -> Response[DeleteCmsConnectionResponse200]:
+def _build_response(
+    *, client: AuthenticatedClient | Client, response: httpx.Response
+) -> Response[DeleteCmsConnectionResponse200]:
     return Response(
         status_code=HTTPStatus(response.status_code),
         content=response.content,
@@ -73,16 +54,13 @@ def sync_detailed(
     id: UUID,
     *,
     client: AuthenticatedClient | Client,
-    body: DeleteCmsConnectionBody | Unset = UNSET,
-
 ) -> Response[DeleteCmsConnectionResponse200]:
-    """ Delete a CMS connection
+    """Delete a CMS connection
 
      Delete a CMS connection by ID.
 
     Args:
         id (UUID): Resource UUID
-        body (DeleteCmsConnectionBody | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -90,13 +68,10 @@ def sync_detailed(
 
     Returns:
         Response[DeleteCmsConnectionResponse200]
-     """
-
+    """
 
     kwargs = _get_kwargs(
         id=id,
-body=body,
-
     )
 
     response = client.get_httpx_client().request(
@@ -105,20 +80,18 @@ body=body,
 
     return _build_response(client=client, response=response)
 
+
 def sync(
     id: UUID,
     *,
     client: AuthenticatedClient | Client,
-    body: DeleteCmsConnectionBody | Unset = UNSET,
-
 ) -> DeleteCmsConnectionResponse200 | None:
-    """ Delete a CMS connection
+    """Delete a CMS connection
 
      Delete a CMS connection by ID.
 
     Args:
         id (UUID): Resource UUID
-        body (DeleteCmsConnectionBody | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -126,30 +99,25 @@ def sync(
 
     Returns:
         DeleteCmsConnectionResponse200
-     """
-
+    """
 
     return sync_detailed(
         id=id,
-client=client,
-body=body,
-
+        client=client,
     ).parsed
+
 
 async def asyncio_detailed(
     id: UUID,
     *,
     client: AuthenticatedClient | Client,
-    body: DeleteCmsConnectionBody | Unset = UNSET,
-
 ) -> Response[DeleteCmsConnectionResponse200]:
-    """ Delete a CMS connection
+    """Delete a CMS connection
 
      Delete a CMS connection by ID.
 
     Args:
         id (UUID): Resource UUID
-        body (DeleteCmsConnectionBody | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -157,35 +125,28 @@ async def asyncio_detailed(
 
     Returns:
         Response[DeleteCmsConnectionResponse200]
-     """
-
+    """
 
     kwargs = _get_kwargs(
         id=id,
-body=body,
-
     )
 
-    response = await client.get_async_httpx_client().request(
-        **kwargs
-    )
+    response = await client.get_async_httpx_client().request(**kwargs)
 
     return _build_response(client=client, response=response)
+
 
 async def asyncio(
     id: UUID,
     *,
     client: AuthenticatedClient | Client,
-    body: DeleteCmsConnectionBody | Unset = UNSET,
-
 ) -> DeleteCmsConnectionResponse200 | None:
-    """ Delete a CMS connection
+    """Delete a CMS connection
 
      Delete a CMS connection by ID.
 
     Args:
         id (UUID): Resource UUID
-        body (DeleteCmsConnectionBody | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -193,12 +154,11 @@ async def asyncio(
 
     Returns:
         DeleteCmsConnectionResponse200
-     """
+    """
 
-
-    return (await asyncio_detailed(
-        id=id,
-client=client,
-body=body,
-
-    )).parsed
+    return (
+        await asyncio_detailed(
+            id=id,
+            client=client,
+        )
+    ).parsed

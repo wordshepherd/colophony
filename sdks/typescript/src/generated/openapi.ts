@@ -90,8 +90,8 @@ export interface paths {
     get: operations["listOrganizationMembers"];
     put?: never;
     /**
-     * Add a member
-     * @description Invite a user to the organization by email. The user must already have an account. Requires ADMIN role.
+     * Add or invite a member
+     * @description Add a user to the organization by email. If the user does not have an account, sends an invitation email. Requires ADMIN role.
      */
     post: operations["addOrganizationMember"];
     delete?: never;
@@ -118,10 +118,94 @@ export interface paths {
     options?: never;
     head?: never;
     /**
-     * Update member role
-     * @description Change a member's role within the organization. Requires ADMIN role.
+     * Update member roles
+     * @description Change a member's roles within the organization. Requires ADMIN role.
      */
-    patch: operations["updateOrganizationMemberRole"];
+    patch: operations["updateOrganizationMemberRoles"];
+    trace?: never;
+  };
+  "/organizations/{orgId}/invitations": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * List pending invitations
+     * @description Returns pending invitations for the specified organization. Requires ADMIN role.
+     */
+    get: operations["listOrganizationInvitations"];
+    put?: never;
+    /**
+     * Create an invitation
+     * @description Create and send an email invitation to join the organization. Revokes any existing pending invitation for the same email. Requires ADMIN role.
+     */
+    post: operations["createOrganizationInvitation"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/organizations/{orgId}/invitations/{invitationId}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    /**
+     * Revoke an invitation
+     * @description Revoke a pending invitation. Requires ADMIN role.
+     */
+    delete: operations["revokeOrganizationInvitation"];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/organizations/{orgId}/invitations/{invitationId}/resend": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Resend an invitation
+     * @description Revoke the existing invitation and send a new one with a fresh token and expiry. Requires ADMIN role.
+     */
+    post: operations["resendOrganizationInvitation"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/invitations/accept": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Accept an invitation
+     * @description Accept a pending invitation using the token from the invitation email. Adds the authenticated user as a member of the inviting organization.
+     */
+    post: operations["acceptInvitation"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
     trace?: never;
   };
   "/submissions/mine": {
@@ -216,6 +300,26 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/submissions/{id}/resubmit": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Resubmit with a new manuscript version
+     * @description Resubmit a submission that is in REVISE_AND_RESUBMIT status with a new manuscript version. Only the submitter can resubmit.
+     */
+    post: operations["resubmitSubmission"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/submissions/{id}/withdraw": {
     parameters: {
       query?: never;
@@ -270,6 +374,302 @@ export interface paths {
     get: operations["getSubmissionHistory"];
     put?: never;
     post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/submissions/{id}/reviewers": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * List submission reviewers
+     * @description Returns reviewers assigned to a submission. Visible to the submitter and editors/admins.
+     */
+    get: operations["listSubmissionReviewers"];
+    put?: never;
+    /**
+     * Assign reviewers
+     * @description Assign one or more org members as reviewers on a submission. Requires EDITOR or ADMIN role.
+     */
+    post: operations["assignSubmissionReviewers"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/submissions/{id}/reviewers/{reviewerUserId}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    /**
+     * Unassign a reviewer
+     * @description Remove a reviewer from a submission. Requires EDITOR or ADMIN role.
+     */
+    delete: operations["unassignSubmissionReviewer"];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/submissions/{id}/reviewers/mark-read": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Mark submission as read
+     * @description Mark the current user as having read the submission. Idempotent — no-op if not a reviewer or already read.
+     */
+    post: operations["markSubmissionReviewerRead"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/submissions/{id}/discussions": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * List internal discussion comments
+     * @description List all internal discussion comments on a submission. Only accessible to editors, admins, and assigned reviewers.
+     */
+    get: operations["listSubmissionDiscussions"];
+    put?: never;
+    /**
+     * Add a discussion comment
+     * @description Add an internal discussion comment on a submission. Only accessible to editors, admins, and assigned reviewers.
+     */
+    post: operations["addSubmissionDiscussion"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/submissions/{id}/votes": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * List submission votes
+     * @description List all votes on a submission. Accessible to editors, admins, and assigned reviewers.
+     */
+    get: operations["listSubmissionVotes"];
+    put?: never;
+    /**
+     * Cast or update a vote
+     * @description Cast or update a vote on a submission. One vote per user per submission (upsert).
+     */
+    post: operations["castSubmissionVote"];
+    /**
+     * Delete your vote
+     * @description Remove the current user's vote on a submission.
+     */
+    delete: operations["deleteSubmissionVote"];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/submissions/{id}/votes/summary": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Get vote summary
+     * @description Get aggregated vote tallies and average score for a submission. Editor/admin only.
+     */
+    get: operations["getSubmissionVoteSummary"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/submissions/analytics/overview": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Submission analytics overview
+     * @description Returns key submission statistics: totals, acceptance rate, avg response time, and month-over-month counts.
+     */
+    get: operations["getSubmissionAnalyticsOverview"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/submissions/analytics/status-breakdown": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Submission status breakdown
+     * @description Returns the count of submissions grouped by status.
+     */
+    get: operations["getSubmissionAnalyticsStatusBreakdown"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/submissions/analytics/funnel": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Submission funnel
+     * @description Returns distinct submission counts at each workflow stage for funnel visualization.
+     */
+    get: operations["getSubmissionAnalyticsFunnel"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/submissions/analytics/time-series": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Submission time series
+     * @description Returns submission counts over time, grouped by the specified granularity.
+     */
+    get: operations["getSubmissionAnalyticsTimeSeries"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/submissions/analytics/response-time": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Response time distribution
+     * @description Returns a histogram of response times (days to first ACCEPTED/REJECTED) and the median.
+     */
+    get: operations["getSubmissionAnalyticsResponseTime"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/submissions/analytics/aging": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Aging submissions
+     * @description Returns non-terminal submissions older than the threshold, grouped by age bracket.
+     */
+    get: operations["getSubmissionAnalyticsAging"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/submissions/batch/status": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Batch update submission status
+     * @description Transition multiple submissions to a new status in one request. Requires EDITOR or ADMIN role.
+     */
+    post: operations["batchUpdateSubmissionStatus"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/submissions/batch/assign-reviewers": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Batch assign reviewers
+     * @description Assign reviewers to multiple submissions in one request. Requires EDITOR or ADMIN role.
+     */
+    post: operations["batchAssignReviewers"];
     delete?: never;
     options?: never;
     head?: never;
@@ -1488,6 +1888,166 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/csr/export": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Export CSR
+     * @description Exports the full Colophony Submission Record for the authenticated user as JSON.
+     */
+    get: operations["exportCsr"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/csr/import": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Import CSR
+     * @description Imports external submission records and correspondence from a JSON payload.
+     */
+    post: operations["importCsr"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/collections": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * List collections
+     * @description Returns a paginated list of collections visible to the current user.
+     */
+    get: operations["listCollections"];
+    put?: never;
+    /**
+     * Create a collection
+     * @description Create a new workspace collection.
+     */
+    post: operations["createCollection"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/collections/{id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Get a collection
+     * @description Retrieve a collection by ID.
+     */
+    get: operations["getCollection"];
+    put?: never;
+    post?: never;
+    /**
+     * Delete a collection
+     * @description Delete a collection and all its items.
+     */
+    delete: operations["deleteCollection"];
+    options?: never;
+    head?: never;
+    /**
+     * Update a collection
+     * @description Update collection name, description, visibility, or type.
+     */
+    patch: operations["updateCollection"];
+    trace?: never;
+  };
+  "/collections/{id}/items": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Get collection items
+     * @description Retrieve all items in a collection, ordered by position.
+     */
+    get: operations["getCollectionItems"];
+    put?: never;
+    /**
+     * Add item to collection
+     * @description Add a submission to a collection.
+     */
+    post: operations["addCollectionItem"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/collections/{id}/items/{itemId}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    /**
+     * Remove item from collection
+     * @description Remove a submission from a collection.
+     */
+    delete: operations["removeCollectionItem"];
+    options?: never;
+    head?: never;
+    /**
+     * Update collection item
+     * @description Update notes, color, or icon on a collection item.
+     */
+    patch: operations["updateCollectionItem"];
+    trace?: never;
+  };
+  "/collections/{id}/items/reorder": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    /**
+     * Reorder collection items
+     * @description Update the sort positions of items in a collection.
+     */
+    put: operations["reorderCollectionItems"];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1525,11 +2085,10 @@ export interface operations {
             name: string;
             /** @description URL-friendly identifier */
             slug: string;
-            /**
-             * @description Member role within an organization
-             * @enum {unknown}
-             */
-            role: "ADMIN" | "EDITOR" | "READER";
+            /** @description Roles assigned to an organization member */
+            roles: (
+              "ADMIN" | "EDITOR" | "READER" | "PRODUCTION" | "BUSINESS_OPS"
+            )[];
           }[];
         };
       };
@@ -1580,11 +2139,10 @@ export interface operations {
               organizationId: string;
               /** Format: uuid */
               userId: string;
-              /**
-               * @description Member role within an organization
-               * @enum {unknown}
-               */
-              role: "ADMIN" | "EDITOR" | "READER";
+              /** @description Roles assigned to an organization member */
+              roles: (
+                "ADMIN" | "EDITOR" | "READER" | "PRODUCTION" | "BUSINESS_OPS"
+              )[];
               /** Format: date-time */
               createdAt: string;
               /** Format: date-time */
@@ -1664,11 +2222,7 @@ export interface operations {
       };
       cookie?: never;
     };
-    requestBody?: {
-      content: {
-        "application/json": Record<string, never>;
-      };
-    };
+    requestBody?: never;
     responses: {
       /** @description OK */
       200: {
@@ -1703,7 +2257,14 @@ export interface operations {
           name?: string;
           /** @description Organization settings (max 50 keys) */
           settings?: {
-            [key: string]: string | number | boolean | null;
+            [key: string]:
+              | string
+              | number
+              | boolean
+              | null
+              | {
+                  [key: string]: string;
+                };
           };
         };
       };
@@ -1770,11 +2331,10 @@ export interface operations {
                * @description Email address of the member
                */
               email: string;
-              /**
-               * @description Member role within an organization
-               * @enum {unknown}
-               */
-              role: "ADMIN" | "EDITOR" | "READER";
+              /** @description Roles assigned to an organization member */
+              roles: (
+                "ADMIN" | "EDITOR" | "READER" | "PRODUCTION" | "BUSINESS_OPS"
+              )[];
               /**
                * Format: date-time
                * @description When the member was added
@@ -1811,11 +2371,10 @@ export interface operations {
            * @description Email address of the user to invite
            */
           email: string;
-          /**
-           * @description Role to assign to the new member
-           * @enum {unknown}
-           */
-          role: "ADMIN" | "EDITOR" | "READER";
+          /** @description Roles to assign to the new member */
+          roles: (
+            "ADMIN" | "EDITOR" | "READER" | "PRODUCTION" | "BUSINESS_OPS"
+          )[];
         };
       };
     };
@@ -1826,38 +2385,94 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          "application/json": {
-            /**
-             * Format: uuid
-             * @description Membership record ID
-             */
-            id: string;
-            /**
-             * Format: uuid
-             * @description ID of the organization
-             */
-            organizationId: string;
-            /**
-             * Format: uuid
-             * @description ID of the member user
-             */
-            userId: string;
-            /**
-             * @description Member role within an organization
-             * @enum {unknown}
-             */
-            role: "ADMIN" | "EDITOR" | "READER";
-            /**
-             * Format: date-time
-             * @description When the membership was created
-             */
-            createdAt: string;
-            /**
-             * Format: date-time
-             * @description When the membership was last updated
-             */
-            updatedAt: string;
-          };
+          "application/json":
+            | {
+                /** @constant */
+                type: "member_added";
+                member: {
+                  /**
+                   * Format: uuid
+                   * @description Membership record ID
+                   */
+                  id: string;
+                  /**
+                   * Format: uuid
+                   * @description ID of the organization
+                   */
+                  organizationId: string;
+                  /**
+                   * Format: uuid
+                   * @description ID of the member user
+                   */
+                  userId: string;
+                  /** @description Roles assigned to an organization member */
+                  roles: (
+                    | "ADMIN"
+                    | "EDITOR"
+                    | "READER"
+                    | "PRODUCTION"
+                    | "BUSINESS_OPS"
+                  )[];
+                  /**
+                   * Format: date-time
+                   * @description When the membership was created
+                   */
+                  createdAt: string;
+                  /**
+                   * Format: date-time
+                   * @description When the membership was last updated
+                   */
+                  updatedAt: string;
+                };
+              }
+            | {
+                /** @constant */
+                type: "invitation_sent";
+                invitation: {
+                  /**
+                   * Format: uuid
+                   * @description Invitation record ID
+                   */
+                  id: string;
+                  /**
+                   * Format: uuid
+                   * @description ID of the organization
+                   */
+                  organizationId: string;
+                  /**
+                   * Format: email
+                   * @description Invitee email address
+                   */
+                  email: string;
+                  /** @description Roles assigned to an organization member */
+                  roles: (
+                    | "ADMIN"
+                    | "EDITOR"
+                    | "READER"
+                    | "PRODUCTION"
+                    | "BUSINESS_OPS"
+                  )[];
+                  /**
+                   * @description Lifecycle status of an organization invitation
+                   * @enum {string}
+                   */
+                  status: "PENDING" | "ACCEPTED" | "REVOKED" | "EXPIRED";
+                  /** @description Token prefix for identification */
+                  tokenPrefix: string;
+                  /** @description ID of the user who sent the invite (null if inviter was deleted) */
+                  invitedBy: string | null;
+                  /**
+                   * Format: date-time
+                   * @description When the invitation expires
+                   */
+                  expiresAt: string;
+                  /**
+                   * Format: date-time
+                   * @description When the invitation was created
+                   */
+                  createdAt: string;
+                };
+              };
         };
       };
     };
@@ -1872,11 +2487,7 @@ export interface operations {
       };
       cookie?: never;
     };
-    requestBody?: {
-      content: {
-        "application/json": Record<string, never>;
-      };
-    };
+    requestBody?: never;
     responses: {
       /** @description OK */
       200: {
@@ -1895,7 +2506,7 @@ export interface operations {
       };
     };
   };
-  updateOrganizationMemberRole: {
+  updateOrganizationMemberRoles: {
     parameters: {
       query?: never;
       header?: never;
@@ -1908,11 +2519,10 @@ export interface operations {
     requestBody: {
       content: {
         "application/json": {
-          /**
-           * @description Member role within an organization
-           * @enum {unknown}
-           */
-          role: "ADMIN" | "EDITOR" | "READER";
+          /** @description Roles assigned to an organization member */
+          roles: (
+            "ADMIN" | "EDITOR" | "READER" | "PRODUCTION" | "BUSINESS_OPS"
+          )[];
         };
       };
     };
@@ -1939,11 +2549,10 @@ export interface operations {
              * @description ID of the member user
              */
             userId: string;
-            /**
-             * @description Member role within an organization
-             * @enum {unknown}
-             */
-            role: "ADMIN" | "EDITOR" | "READER";
+            /** @description Roles assigned to an organization member */
+            roles: (
+              "ADMIN" | "EDITOR" | "READER" | "PRODUCTION" | "BUSINESS_OPS"
+            )[];
             /**
              * Format: date-time
              * @description When the membership was created
@@ -1959,6 +2568,276 @@ export interface operations {
       };
     };
   };
+  listOrganizationInvitations: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        orgId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": {
+            /**
+             * Format: uuid
+             * @description Invitation record ID
+             */
+            id: string;
+            /**
+             * Format: uuid
+             * @description ID of the organization
+             */
+            organizationId: string;
+            /**
+             * Format: email
+             * @description Invitee email address
+             */
+            email: string;
+            /** @description Roles assigned to an organization member */
+            roles: (
+              "ADMIN" | "EDITOR" | "READER" | "PRODUCTION" | "BUSINESS_OPS"
+            )[];
+            /**
+             * @description Lifecycle status of an organization invitation
+             * @enum {string}
+             */
+            status: "PENDING" | "ACCEPTED" | "REVOKED" | "EXPIRED";
+            /** @description Token prefix for identification */
+            tokenPrefix: string;
+            /** @description ID of the user who sent the invite (null if inviter was deleted) */
+            invitedBy: string | null;
+            /**
+             * Format: date-time
+             * @description When the invitation expires
+             */
+            expiresAt: string;
+            /**
+             * Format: date-time
+             * @description When the invitation was created
+             */
+            createdAt: string;
+          }[];
+        };
+      };
+    };
+  };
+  createOrganizationInvitation: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        orgId: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": {
+          /**
+           * Format: email
+           * @description Email address to invite
+           */
+          email: string;
+          /** @description Roles to assign on acceptance */
+          roles: (
+            "ADMIN" | "EDITOR" | "READER" | "PRODUCTION" | "BUSINESS_OPS"
+          )[];
+          /**
+           * @description Days until invitation expires (1-30, default 7)
+           * @default 7
+           */
+          expiresInDays?: number;
+        };
+      };
+    };
+    responses: {
+      /** @description OK */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": {
+            /**
+             * Format: uuid
+             * @description Invitation record ID
+             */
+            id: string;
+            /**
+             * Format: uuid
+             * @description ID of the organization
+             */
+            organizationId: string;
+            /**
+             * Format: email
+             * @description Invitee email address
+             */
+            email: string;
+            /** @description Roles assigned to an organization member */
+            roles: (
+              "ADMIN" | "EDITOR" | "READER" | "PRODUCTION" | "BUSINESS_OPS"
+            )[];
+            /**
+             * @description Lifecycle status of an organization invitation
+             * @enum {string}
+             */
+            status: "PENDING" | "ACCEPTED" | "REVOKED" | "EXPIRED";
+            /** @description Token prefix for identification */
+            tokenPrefix: string;
+            /** @description ID of the user who sent the invite (null if inviter was deleted) */
+            invitedBy: string | null;
+            /**
+             * Format: date-time
+             * @description When the invitation expires
+             */
+            expiresAt: string;
+            /**
+             * Format: date-time
+             * @description When the invitation was created
+             */
+            createdAt: string;
+          };
+        };
+      };
+    };
+  };
+  revokeOrganizationInvitation: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        orgId: string;
+        invitationId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": {
+            /**
+             * @description Always true on success
+             * @constant
+             */
+            success: true;
+          };
+        };
+      };
+    };
+  };
+  resendOrganizationInvitation: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        orgId: string;
+        invitationId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": {
+            /**
+             * Format: uuid
+             * @description Invitation record ID
+             */
+            id: string;
+            /**
+             * Format: uuid
+             * @description ID of the organization
+             */
+            organizationId: string;
+            /**
+             * Format: email
+             * @description Invitee email address
+             */
+            email: string;
+            /** @description Roles assigned to an organization member */
+            roles: (
+              "ADMIN" | "EDITOR" | "READER" | "PRODUCTION" | "BUSINESS_OPS"
+            )[];
+            /**
+             * @description Lifecycle status of an organization invitation
+             * @enum {string}
+             */
+            status: "PENDING" | "ACCEPTED" | "REVOKED" | "EXPIRED";
+            /** @description Token prefix for identification */
+            tokenPrefix: string;
+            /** @description ID of the user who sent the invite (null if inviter was deleted) */
+            invitedBy: string | null;
+            /**
+             * Format: date-time
+             * @description When the invitation expires
+             */
+            expiresAt: string;
+            /**
+             * Format: date-time
+             * @description When the invitation was created
+             */
+            createdAt: string;
+          };
+        };
+      };
+    };
+  };
+  acceptInvitation: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": {
+          /** @description Plain-text invitation token */
+          token: string;
+        };
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": {
+            /** Format: uuid */
+            invitationId: string;
+            /** Format: uuid */
+            organizationId: string;
+            /** Format: uuid */
+            memberId: string;
+            /** @description Roles assigned to an organization member */
+            roles: (
+              "ADMIN" | "EDITOR" | "READER" | "PRODUCTION" | "BUSINESS_OPS"
+            )[];
+          };
+        };
+      };
+    };
+  };
   listMySubmissions: {
     parameters: {
       query?: {
@@ -1969,9 +2848,13 @@ export interface operations {
           | "ACCEPTED"
           | "REJECTED"
           | "HOLD"
-          | "WITHDRAWN";
+          | "WITHDRAWN"
+          | "REVISE_AND_RESUBMIT";
         submissionPeriodId?: string;
         search?: string;
+        sortBy?:
+          "title" | "submitterEmail" | "submittedAt" | "status" | "createdAt";
+        sortOrder?: "asc" | "desc";
         page?: number;
         limit?: number;
       };
@@ -2020,7 +2903,7 @@ export interface operations {
               manuscriptVersionId: string | null;
               /**
                * @description Current status in the submission workflow
-               * @enum {unknown}
+               * @enum {string}
                */
               status:
                 | "DRAFT"
@@ -2029,7 +2912,8 @@ export interface operations {
                 | "ACCEPTED"
                 | "REJECTED"
                 | "HOLD"
-                | "WITHDRAWN";
+                | "WITHDRAWN"
+                | "REVISE_AND_RESUBMIT";
               /** @description When the submission was formally submitted */
               submittedAt: string | null;
               /**
@@ -2042,6 +2926,16 @@ export interface operations {
                * @description When the submission was last updated
                */
               updatedAt: string;
+              /** @description Policy requirement recorded when sim-sub conflict detected under allowed_notify/allowed_withdraw */
+              simSubPolicyRequirement?: {
+                /** @enum {string} */
+                type: "notify" | "withdraw";
+                windowHours?: number;
+                /** Format: date-time */
+                acknowledgedAt?: string;
+                /** Format: date-time */
+                dueAt?: string;
+              } | null;
             }[];
             /** @description Total number of items across all pages */
             total: number;
@@ -2066,9 +2960,13 @@ export interface operations {
           | "ACCEPTED"
           | "REJECTED"
           | "HOLD"
-          | "WITHDRAWN";
+          | "WITHDRAWN"
+          | "REVISE_AND_RESUBMIT";
         submissionPeriodId?: string;
         search?: string;
+        sortBy?:
+          "title" | "submitterEmail" | "submittedAt" | "status" | "createdAt";
+        sortOrder?: "asc" | "desc";
         page?: number;
         limit?: number;
       };
@@ -2117,7 +3015,7 @@ export interface operations {
               manuscriptVersionId: string | null;
               /**
                * @description Current status in the submission workflow
-               * @enum {unknown}
+               * @enum {string}
                */
               status:
                 | "DRAFT"
@@ -2126,7 +3024,8 @@ export interface operations {
                 | "ACCEPTED"
                 | "REJECTED"
                 | "HOLD"
-                | "WITHDRAWN";
+                | "WITHDRAWN"
+                | "REVISE_AND_RESUBMIT";
               /** @description When the submission was formally submitted */
               submittedAt: string | null;
               /**
@@ -2139,6 +3038,16 @@ export interface operations {
                * @description When the submission was last updated
                */
               updatedAt: string;
+              /** @description Policy requirement recorded when sim-sub conflict detected under allowed_notify/allowed_withdraw */
+              simSubPolicyRequirement?: {
+                /** @enum {string} */
+                type: "notify" | "withdraw";
+                windowHours?: number;
+                /** Format: date-time */
+                acknowledgedAt?: string;
+                /** Format: date-time */
+                dueAt?: string;
+              } | null;
             }[];
             /** @description Total number of items across all pages */
             total: number;
@@ -2229,7 +3138,7 @@ export interface operations {
             manuscriptVersionId: string | null;
             /**
              * @description Current status in the submission workflow
-             * @enum {unknown}
+             * @enum {string}
              */
             status:
               | "DRAFT"
@@ -2238,7 +3147,8 @@ export interface operations {
               | "ACCEPTED"
               | "REJECTED"
               | "HOLD"
-              | "WITHDRAWN";
+              | "WITHDRAWN"
+              | "REVISE_AND_RESUBMIT";
             /** @description When the submission was formally submitted */
             submittedAt: string | null;
             /**
@@ -2251,6 +3161,16 @@ export interface operations {
              * @description When the submission was last updated
              */
             updatedAt: string;
+            /** @description Policy requirement recorded when sim-sub conflict detected under allowed_notify/allowed_withdraw */
+            simSubPolicyRequirement?: {
+              /** @enum {string} */
+              type: "notify" | "withdraw";
+              windowHours?: number;
+              /** Format: date-time */
+              acknowledgedAt?: string;
+              /** Format: date-time */
+              dueAt?: string;
+            } | null;
           };
         };
       };
@@ -2304,7 +3224,7 @@ export interface operations {
             manuscriptVersionId: string | null;
             /**
              * @description Current status in the submission workflow
-             * @enum {unknown}
+             * @enum {string}
              */
             status:
               | "DRAFT"
@@ -2313,7 +3233,8 @@ export interface operations {
               | "ACCEPTED"
               | "REJECTED"
               | "HOLD"
-              | "WITHDRAWN";
+              | "WITHDRAWN"
+              | "REVISE_AND_RESUBMIT";
             /** @description When the submission was formally submitted */
             submittedAt: string | null;
             /**
@@ -2326,6 +3247,16 @@ export interface operations {
              * @description When the submission was last updated
              */
             updatedAt: string;
+            /** @description Policy requirement recorded when sim-sub conflict detected under allowed_notify/allowed_withdraw */
+            simSubPolicyRequirement?: {
+              /** @enum {string} */
+              type: "notify" | "withdraw";
+              windowHours?: number;
+              /** Format: date-time */
+              acknowledgedAt?: string;
+              /** Format: date-time */
+              dueAt?: string;
+            } | null;
             files: {
               /**
                * Format: uuid
@@ -2347,7 +3278,7 @@ export interface operations {
               storageKey: string;
               /**
                * @description Virus scan status for an uploaded file
-               * @enum {unknown}
+               * @enum {string}
                */
               scanStatus:
                 "PENDING" | "SCANNING" | "CLEAN" | "INFECTED" | "FAILED";
@@ -2374,11 +3305,7 @@ export interface operations {
       };
       cookie?: never;
     };
-    requestBody?: {
-      content: {
-        "application/json": Record<string, never>;
-      };
-    };
+    requestBody?: never;
     responses: {
       /** @description OK */
       200: {
@@ -2460,7 +3387,7 @@ export interface operations {
             manuscriptVersionId: string | null;
             /**
              * @description Current status in the submission workflow
-             * @enum {unknown}
+             * @enum {string}
              */
             status:
               | "DRAFT"
@@ -2469,7 +3396,8 @@ export interface operations {
               | "ACCEPTED"
               | "REJECTED"
               | "HOLD"
-              | "WITHDRAWN";
+              | "WITHDRAWN"
+              | "REVISE_AND_RESUBMIT";
             /** @description When the submission was formally submitted */
             submittedAt: string | null;
             /**
@@ -2482,6 +3410,16 @@ export interface operations {
              * @description When the submission was last updated
              */
             updatedAt: string;
+            /** @description Policy requirement recorded when sim-sub conflict detected under allowed_notify/allowed_withdraw */
+            simSubPolicyRequirement?: {
+              /** @enum {string} */
+              type: "notify" | "withdraw";
+              windowHours?: number;
+              /** Format: date-time */
+              acknowledgedAt?: string;
+              /** Format: date-time */
+              dueAt?: string;
+            } | null;
           };
         };
       };
@@ -2496,9 +3434,147 @@ export interface operations {
       };
       cookie?: never;
     };
-    requestBody?: {
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": {
+            submission: {
+              /**
+               * Format: uuid
+               * @description Unique identifier for the submission
+               */
+              id: string;
+              /**
+               * Format: uuid
+               * @description ID of the organization this submission belongs to
+               */
+              organizationId: string;
+              /** @description ID of the user who created the submission */
+              submitterId: string | null;
+              /** @description ID of the submission period, if applicable */
+              submissionPeriodId: string | null;
+              /** @description Title of the submission */
+              title: string | null;
+              /** @description Body content of the submission */
+              content: string | null;
+              /** @description Optional cover letter */
+              coverLetter: string | null;
+              /** @description ID of the form definition used, if applicable */
+              formDefinitionId: string | null;
+              /** @description Structured form data keyed by field key */
+              formData: {
+                [key: string]: unknown;
+              } | null;
+              /** @description ID of the manuscript version attached to this submission */
+              manuscriptVersionId: string | null;
+              /**
+               * @description Current status in the submission workflow
+               * @enum {string}
+               */
+              status:
+                | "DRAFT"
+                | "SUBMITTED"
+                | "UNDER_REVIEW"
+                | "ACCEPTED"
+                | "REJECTED"
+                | "HOLD"
+                | "WITHDRAWN"
+                | "REVISE_AND_RESUBMIT";
+              /** @description When the submission was formally submitted */
+              submittedAt: string | null;
+              /**
+               * Format: date-time
+               * @description When the submission was created
+               */
+              createdAt: string;
+              /**
+               * Format: date-time
+               * @description When the submission was last updated
+               */
+              updatedAt: string;
+              /** @description Policy requirement recorded when sim-sub conflict detected under allowed_notify/allowed_withdraw */
+              simSubPolicyRequirement?: {
+                /** @enum {string} */
+                type: "notify" | "withdraw";
+                windowHours?: number;
+                /** Format: date-time */
+                acknowledgedAt?: string;
+                /** Format: date-time */
+                dueAt?: string;
+              } | null;
+            };
+            historyEntry: {
+              /**
+               * Format: uuid
+               * @description History entry ID
+               */
+              id: string;
+              /**
+               * Format: uuid
+               * @description ID of the submission
+               */
+              submissionId: string;
+              /** @description Previous status (null for initial creation) */
+              fromStatus:
+                | (
+                    | "DRAFT"
+                    | "SUBMITTED"
+                    | "UNDER_REVIEW"
+                    | "ACCEPTED"
+                    | "REJECTED"
+                    | "HOLD"
+                    | "WITHDRAWN"
+                    | "REVISE_AND_RESUBMIT"
+                  )
+                | null;
+              /**
+               * @description New status after the transition
+               * @enum {string}
+               */
+              toStatus:
+                | "DRAFT"
+                | "SUBMITTED"
+                | "UNDER_REVIEW"
+                | "ACCEPTED"
+                | "REJECTED"
+                | "HOLD"
+                | "WITHDRAWN"
+                | "REVISE_AND_RESUBMIT";
+              /** @description ID of the user who made the change */
+              changedBy: string | null;
+              /** @description Optional comment explaining the status change */
+              comment: string | null;
+              /**
+               * Format: date-time
+               * @description When the status change occurred
+               */
+              changedAt: string;
+            };
+          };
+        };
+      };
+    };
+  };
+  resubmitSubmission: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
       content: {
-        "application/json": Record<string, never>;
+        "application/json": {
+          /** Format: uuid */
+          manuscriptVersionId: string;
+        };
       };
     };
     responses: {
@@ -2540,7 +3616,7 @@ export interface operations {
               manuscriptVersionId: string | null;
               /**
                * @description Current status in the submission workflow
-               * @enum {unknown}
+               * @enum {string}
                */
               status:
                 | "DRAFT"
@@ -2549,7 +3625,8 @@ export interface operations {
                 | "ACCEPTED"
                 | "REJECTED"
                 | "HOLD"
-                | "WITHDRAWN";
+                | "WITHDRAWN"
+                | "REVISE_AND_RESUBMIT";
               /** @description When the submission was formally submitted */
               submittedAt: string | null;
               /**
@@ -2562,6 +3639,16 @@ export interface operations {
                * @description When the submission was last updated
                */
               updatedAt: string;
+              /** @description Policy requirement recorded when sim-sub conflict detected under allowed_notify/allowed_withdraw */
+              simSubPolicyRequirement?: {
+                /** @enum {string} */
+                type: "notify" | "withdraw";
+                windowHours?: number;
+                /** Format: date-time */
+                acknowledgedAt?: string;
+                /** Format: date-time */
+                dueAt?: string;
+              } | null;
             };
             historyEntry: {
               /**
@@ -2584,11 +3671,12 @@ export interface operations {
                     | "REJECTED"
                     | "HOLD"
                     | "WITHDRAWN"
+                    | "REVISE_AND_RESUBMIT"
                   )
                 | null;
               /**
                * @description New status after the transition
-               * @enum {unknown}
+               * @enum {string}
                */
               toStatus:
                 | "DRAFT"
@@ -2597,7 +3685,8 @@ export interface operations {
                 | "ACCEPTED"
                 | "REJECTED"
                 | "HOLD"
-                | "WITHDRAWN";
+                | "WITHDRAWN"
+                | "REVISE_AND_RESUBMIT";
               /** @description ID of the user who made the change */
               changedBy: string | null;
               /** @description Optional comment explaining the status change */
@@ -2622,11 +3711,7 @@ export interface operations {
       };
       cookie?: never;
     };
-    requestBody?: {
-      content: {
-        "application/json": Record<string, never>;
-      };
-    };
+    requestBody?: never;
     responses: {
       /** @description OK */
       200: {
@@ -2666,7 +3751,7 @@ export interface operations {
               manuscriptVersionId: string | null;
               /**
                * @description Current status in the submission workflow
-               * @enum {unknown}
+               * @enum {string}
                */
               status:
                 | "DRAFT"
@@ -2675,7 +3760,8 @@ export interface operations {
                 | "ACCEPTED"
                 | "REJECTED"
                 | "HOLD"
-                | "WITHDRAWN";
+                | "WITHDRAWN"
+                | "REVISE_AND_RESUBMIT";
               /** @description When the submission was formally submitted */
               submittedAt: string | null;
               /**
@@ -2688,6 +3774,16 @@ export interface operations {
                * @description When the submission was last updated
                */
               updatedAt: string;
+              /** @description Policy requirement recorded when sim-sub conflict detected under allowed_notify/allowed_withdraw */
+              simSubPolicyRequirement?: {
+                /** @enum {string} */
+                type: "notify" | "withdraw";
+                windowHours?: number;
+                /** Format: date-time */
+                acknowledgedAt?: string;
+                /** Format: date-time */
+                dueAt?: string;
+              } | null;
             };
             historyEntry: {
               /**
@@ -2710,11 +3806,12 @@ export interface operations {
                     | "REJECTED"
                     | "HOLD"
                     | "WITHDRAWN"
+                    | "REVISE_AND_RESUBMIT"
                   )
                 | null;
               /**
                * @description New status after the transition
-               * @enum {unknown}
+               * @enum {string}
                */
               toStatus:
                 | "DRAFT"
@@ -2723,7 +3820,8 @@ export interface operations {
                 | "ACCEPTED"
                 | "REJECTED"
                 | "HOLD"
-                | "WITHDRAWN";
+                | "WITHDRAWN"
+                | "REVISE_AND_RESUBMIT";
               /** @description ID of the user who made the change */
               changedBy: string | null;
               /** @description Optional comment explaining the status change */
@@ -2753,7 +3851,7 @@ export interface operations {
         "application/json": {
           /**
            * @description Target status for the transition
-           * @enum {unknown}
+           * @enum {string}
            */
           status:
             | "DRAFT"
@@ -2762,9 +3860,12 @@ export interface operations {
             | "ACCEPTED"
             | "REJECTED"
             | "HOLD"
-            | "WITHDRAWN";
+            | "WITHDRAWN"
+            | "REVISE_AND_RESUBMIT";
           /** @description Optional comment for the status change (max 1,000 chars) */
           comment?: string;
+          /** @description Include forwarded reader feedback in the rejection email */
+          includeFeedback?: boolean;
         };
       };
     };
@@ -2807,7 +3908,7 @@ export interface operations {
               manuscriptVersionId: string | null;
               /**
                * @description Current status in the submission workflow
-               * @enum {unknown}
+               * @enum {string}
                */
               status:
                 | "DRAFT"
@@ -2816,7 +3917,8 @@ export interface operations {
                 | "ACCEPTED"
                 | "REJECTED"
                 | "HOLD"
-                | "WITHDRAWN";
+                | "WITHDRAWN"
+                | "REVISE_AND_RESUBMIT";
               /** @description When the submission was formally submitted */
               submittedAt: string | null;
               /**
@@ -2829,6 +3931,16 @@ export interface operations {
                * @description When the submission was last updated
                */
               updatedAt: string;
+              /** @description Policy requirement recorded when sim-sub conflict detected under allowed_notify/allowed_withdraw */
+              simSubPolicyRequirement?: {
+                /** @enum {string} */
+                type: "notify" | "withdraw";
+                windowHours?: number;
+                /** Format: date-time */
+                acknowledgedAt?: string;
+                /** Format: date-time */
+                dueAt?: string;
+              } | null;
             };
             historyEntry: {
               /**
@@ -2851,11 +3963,12 @@ export interface operations {
                     | "REJECTED"
                     | "HOLD"
                     | "WITHDRAWN"
+                    | "REVISE_AND_RESUBMIT"
                   )
                 | null;
               /**
                * @description New status after the transition
-               * @enum {unknown}
+               * @enum {string}
                */
               toStatus:
                 | "DRAFT"
@@ -2864,7 +3977,8 @@ export interface operations {
                 | "ACCEPTED"
                 | "REJECTED"
                 | "HOLD"
-                | "WITHDRAWN";
+                | "WITHDRAWN"
+                | "REVISE_AND_RESUBMIT";
               /** @description ID of the user who made the change */
               changedBy: string | null;
               /** @description Optional comment explaining the status change */
@@ -2918,11 +4032,12 @@ export interface operations {
                   | "REJECTED"
                   | "HOLD"
                   | "WITHDRAWN"
+                  | "REVISE_AND_RESUBMIT"
                 )
               | null;
             /**
              * @description New status after the transition
-             * @enum {unknown}
+             * @enum {string}
              */
             toStatus:
               | "DRAFT"
@@ -2931,7 +4046,8 @@ export interface operations {
               | "ACCEPTED"
               | "REJECTED"
               | "HOLD"
-              | "WITHDRAWN";
+              | "WITHDRAWN"
+              | "REVISE_AND_RESUBMIT";
             /** @description ID of the user who made the change */
             changedBy: string | null;
             /** @description Optional comment explaining the status change */
@@ -2942,6 +4058,664 @@ export interface operations {
              */
             changedAt: string;
           }[];
+        };
+      };
+    };
+  };
+  listSubmissionReviewers: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            submissionId: string;
+            /** Format: uuid */
+            reviewerUserId: string;
+            reviewerEmail: string | null;
+            /** @enum {string} */
+            reviewerRole:
+              "ADMIN" | "EDITOR" | "READER" | "PRODUCTION" | "BUSINESS_OPS";
+            assignedBy: string | null;
+            /** Format: date-time */
+            assignedAt: string;
+            readAt: string | null;
+          }[];
+        };
+      };
+    };
+  };
+  assignSubmissionReviewers: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": {
+          reviewerUserIds: string[];
+        };
+      };
+    };
+    responses: {
+      /** @description OK */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            submissionId: string;
+            /** Format: uuid */
+            reviewerUserId: string;
+            reviewerEmail: string | null;
+            /** @enum {string} */
+            reviewerRole:
+              "ADMIN" | "EDITOR" | "READER" | "PRODUCTION" | "BUSINESS_OPS";
+            assignedBy: string | null;
+            /** Format: date-time */
+            assignedAt: string;
+            readAt: string | null;
+          }[];
+        };
+      };
+    };
+  };
+  unassignSubmissionReviewer: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+        reviewerUserId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": {
+            /**
+             * @description Always true on success
+             * @constant
+             */
+            success: true;
+          };
+        };
+      };
+    };
+  };
+  markSubmissionReviewerRead: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": {
+            /**
+             * @description Always true on success
+             * @constant
+             */
+            success: true;
+          };
+        };
+      };
+    };
+  };
+  listSubmissionDiscussions: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            submissionId: string;
+            authorId: string | null;
+            authorEmail: string | null;
+            parentId: string | null;
+            content: string;
+            /** Format: date-time */
+            createdAt: string;
+            updatedAt: string | null;
+          }[];
+        };
+      };
+    };
+  };
+  addSubmissionDiscussion: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": {
+          /** Format: uuid */
+          parentId?: string;
+          content: string;
+        };
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            submissionId: string;
+            authorId: string | null;
+            authorEmail: string | null;
+            parentId: string | null;
+            content: string;
+            /** Format: date-time */
+            createdAt: string;
+            updatedAt: string | null;
+          };
+        };
+      };
+    };
+  };
+  listSubmissionVotes: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            submissionId: string;
+            /** Format: uuid */
+            voterUserId: string;
+            voterEmail: string | null;
+            /** @enum {string} */
+            decision: "ACCEPT" | "REJECT" | "MAYBE";
+            score: number | null;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+          }[];
+        };
+      };
+    };
+  };
+  castSubmissionVote: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": {
+          /** @enum {string} */
+          decision: "ACCEPT" | "REJECT" | "MAYBE";
+          score?: number;
+        };
+      };
+    };
+    responses: {
+      /** @description OK */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            submissionId: string;
+            /** Format: uuid */
+            voterUserId: string;
+            voterEmail: string | null;
+            /** @enum {string} */
+            decision: "ACCEPT" | "REJECT" | "MAYBE";
+            score: number | null;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+          };
+        };
+      };
+    };
+  };
+  deleteSubmissionVote: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": {
+            /**
+             * @description Always true on success
+             * @constant
+             */
+            success: true;
+          };
+        };
+      };
+    };
+  };
+  getSubmissionVoteSummary: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": {
+            acceptCount: number;
+            rejectCount: number;
+            maybeCount: number;
+            totalVotes: number;
+            averageScore: number | null;
+          };
+        };
+      };
+    };
+  };
+  getSubmissionAnalyticsOverview: {
+    parameters: {
+      query?: {
+        startDate?: string;
+        endDate?: string;
+        submissionPeriodId?: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": {
+            totalSubmissions: number;
+            acceptanceRate: number;
+            avgResponseTimeDays: number | null;
+            pendingCount: number;
+            submissionsThisMonth: number;
+            submissionsLastMonth: number;
+          };
+        };
+      };
+    };
+  };
+  getSubmissionAnalyticsStatusBreakdown: {
+    parameters: {
+      query?: {
+        startDate?: string;
+        endDate?: string;
+        submissionPeriodId?: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": {
+            breakdown: {
+              status: string;
+              count: number;
+            }[];
+          };
+        };
+      };
+    };
+  };
+  getSubmissionAnalyticsFunnel: {
+    parameters: {
+      query?: {
+        startDate?: string;
+        endDate?: string;
+        submissionPeriodId?: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": {
+            stages: {
+              stage: string;
+              count: number;
+            }[];
+          };
+        };
+      };
+    };
+  };
+  getSubmissionAnalyticsTimeSeries: {
+    parameters: {
+      query?: {
+        startDate?: string;
+        endDate?: string;
+        submissionPeriodId?: string;
+        granularity?: "daily" | "weekly" | "monthly";
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": {
+            /** @enum {string} */
+            granularity: "daily" | "weekly" | "monthly";
+            points: {
+              date: string;
+              count: number;
+            }[];
+          };
+        };
+      };
+    };
+  };
+  getSubmissionAnalyticsResponseTime: {
+    parameters: {
+      query?: {
+        startDate?: string;
+        endDate?: string;
+        submissionPeriodId?: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": {
+            buckets: {
+              label: string;
+              count: number;
+              minDays: number;
+              maxDays: number;
+            }[];
+            medianDays: number | null;
+          };
+        };
+      };
+    };
+  };
+  getSubmissionAnalyticsAging: {
+    parameters: {
+      query?: {
+        startDate?: string;
+        endDate?: string;
+        submissionPeriodId?: string;
+        thresholdDays?: number;
+        maxPerBracket?: number;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": {
+            brackets: {
+              label: string;
+              count: number;
+              submissions: {
+                /** Format: uuid */
+                id: string;
+                title: string | null;
+                status: string;
+                submittedAt: string | null;
+                daysPending: number;
+              }[];
+            }[];
+            totalAging: number;
+          };
+        };
+      };
+    };
+  };
+  batchUpdateSubmissionStatus: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": {
+          submissionIds: string[];
+          /**
+           * @description Current status in the submission workflow
+           * @enum {string}
+           */
+          status:
+            | "DRAFT"
+            | "SUBMITTED"
+            | "UNDER_REVIEW"
+            | "ACCEPTED"
+            | "REJECTED"
+            | "HOLD"
+            | "WITHDRAWN"
+            | "REVISE_AND_RESUBMIT";
+          comment?: string;
+        };
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": {
+            succeeded: {
+              /** Format: uuid */
+              submissionId: string;
+              /**
+               * @description Current status in the submission workflow
+               * @enum {string}
+               */
+              previousStatus:
+                | "DRAFT"
+                | "SUBMITTED"
+                | "UNDER_REVIEW"
+                | "ACCEPTED"
+                | "REJECTED"
+                | "HOLD"
+                | "WITHDRAWN"
+                | "REVISE_AND_RESUBMIT";
+              /**
+               * @description Current status in the submission workflow
+               * @enum {string}
+               */
+              status:
+                | "DRAFT"
+                | "SUBMITTED"
+                | "UNDER_REVIEW"
+                | "ACCEPTED"
+                | "REJECTED"
+                | "HOLD"
+                | "WITHDRAWN"
+                | "REVISE_AND_RESUBMIT";
+            }[];
+            failed: {
+              /** Format: uuid */
+              submissionId: string;
+              error: string;
+            }[];
+          };
+        };
+      };
+    };
+  };
+  batchAssignReviewers: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": {
+          submissionIds: string[];
+          reviewerUserIds: string[];
+        };
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": {
+            succeeded: {
+              /** Format: uuid */
+              submissionId: string;
+              assignedCount: number;
+            }[];
+            failed: {
+              /** Format: uuid */
+              submissionId: string;
+              error: string;
+            }[];
+          };
         };
       };
     };
@@ -3145,7 +4919,7 @@ export interface operations {
                 storageKey: string;
                 /**
                  * @description Virus scan status for an uploaded file
-                 * @enum {unknown}
+                 * @enum {string}
                  */
                 scanStatus:
                   "PENDING" | "SCANNING" | "CLEAN" | "INFECTED" | "FAILED";
@@ -3172,11 +4946,7 @@ export interface operations {
       };
       cookie?: never;
     };
-    requestBody?: {
-      content: {
-        "application/json": Record<string, never>;
-      };
-    };
+    requestBody?: never;
     responses: {
       /** @description OK */
       200: {
@@ -3420,7 +5190,7 @@ export interface operations {
             storageKey: string;
             /**
              * @description Virus scan status for an uploaded file
-             * @enum {unknown}
+             * @enum {string}
              */
             scanStatus:
               "PENDING" | "SCANNING" | "CLEAN" | "INFECTED" | "FAILED";
@@ -3471,11 +5241,7 @@ export interface operations {
       };
       cookie?: never;
     };
-    requestBody?: {
-      content: {
-        "application/json": Record<string, never>;
-      };
-    };
+    requestBody?: never;
     responses: {
       /** @description OK */
       200: {
@@ -3521,11 +5287,10 @@ export interface operations {
               id: string;
               name: string;
               slug: string;
-              /**
-               * @description Member role within an organization
-               * @enum {unknown}
-               */
-              role: "ADMIN" | "EDITOR" | "READER";
+              /** @description Roles assigned to an organization member */
+              roles: (
+                "ADMIN" | "EDITOR" | "READER" | "PRODUCTION" | "BUSINESS_OPS"
+              )[];
             }[];
           };
         };
@@ -3607,6 +5372,9 @@ export interface operations {
             | "api-keys:read"
             | "api-keys:manage"
             | "payments:read"
+            | "notifications:read"
+            | "notifications:write"
+            | "webhooks:read"
             | "webhooks:manage"
             | "publications:read"
             | "publications:write"
@@ -3618,7 +5386,34 @@ export interface operations {
             | "issues:write"
             | "cms:read"
             | "cms:write"
+            | "email_templates:read"
+            | "email_templates:write"
+            | "csr:read"
+            | "csr:write"
+            | "external-submissions:read"
+            | "external-submissions:write"
+            | "writer-profiles:read"
+            | "writer-profiles:write"
+            | "journal-directory:read"
+            | "correspondence:read"
+            | "correspondence:write"
             | "audit:read"
+            | "collections:read"
+            | "collections:write"
+            | "contributors:read"
+            | "contributors:write"
+            | "rights:read"
+            | "rights:write"
+            | "payment-transactions:read"
+            | "payment-transactions:write"
+            | "contests:read"
+            | "contests:write"
+            | "simsub-groups:read"
+            | "simsub-groups:write"
+            | "portfolio:read"
+            | "portfolio:write"
+            | "reader-feedback:read"
+            | "reader-feedback:write"
           )[];
           /**
            * Format: date-time
@@ -3661,11 +5456,7 @@ export interface operations {
       };
       cookie?: never;
     };
-    requestBody?: {
-      content: {
-        "application/json": Record<string, never>;
-      };
-    };
+    requestBody?: never;
     responses: {
       /** @description OK */
       200: {
@@ -3697,11 +5488,7 @@ export interface operations {
       };
       cookie?: never;
     };
-    requestBody?: {
-      content: {
-        "application/json": Record<string, never>;
-      };
-    };
+    requestBody?: never;
     responses: {
       /** @description OK */
       200: {
@@ -3759,7 +5546,7 @@ export interface operations {
               description: string | null;
               /**
                * @description Current status of the form definition
-               * @enum {unknown}
+               * @enum {string}
                */
               status: "DRAFT" | "PUBLISHED" | "ARCHIVED";
               /** @description Version number */
@@ -3837,7 +5624,7 @@ export interface operations {
             description: string | null;
             /**
              * @description Current status of the form definition
-             * @enum {unknown}
+             * @enum {string}
              */
             status: "DRAFT" | "PUBLISHED" | "ARCHIVED";
             /** @description Version number */
@@ -3899,7 +5686,7 @@ export interface operations {
             description: string | null;
             /**
              * @description Current status of the form definition
-             * @enum {unknown}
+             * @enum {string}
              */
             status: "DRAFT" | "PUBLISHED" | "ARCHIVED";
             /** @description Version number */
@@ -3938,7 +5725,7 @@ export interface operations {
               fieldKey: string;
               /**
                * @description Type of form field
-               * @enum {unknown}
+               * @enum {string}
                */
               fieldType:
                 | "text"
@@ -3973,14 +5760,14 @@ export interface operations {
               /** @description Conditional display rules */
               conditionalRules:
                 | {
-                    /** @enum {unknown} */
+                    /** @enum {string} */
                     effect: "SHOW" | "HIDE" | "REQUIRE";
                     condition: {
-                      /** @enum {unknown} */
+                      /** @enum {string} */
                       operator: "AND" | "OR";
                       rules: {
                         field: string;
-                        /** @enum {unknown} */
+                        /** @enum {string} */
                         comparator:
                           | "eq"
                           | "neq"
@@ -4030,11 +5817,11 @@ export interface operations {
                     /** Format: uuid */
                     targetPageId: string;
                     condition: {
-                      /** @enum {unknown} */
+                      /** @enum {string} */
                       operator: "AND" | "OR";
                       rules: {
                         field: string;
-                        /** @enum {unknown} */
+                        /** @enum {string} */
                         comparator:
                           | "eq"
                           | "neq"
@@ -4074,11 +5861,7 @@ export interface operations {
       };
       cookie?: never;
     };
-    requestBody?: {
-      content: {
-        "application/json": Record<string, never>;
-      };
-    };
+    requestBody?: never;
     responses: {
       /** @description OK */
       200: {
@@ -4140,7 +5923,7 @@ export interface operations {
             description: string | null;
             /**
              * @description Current status of the form definition
-             * @enum {unknown}
+             * @enum {string}
              */
             status: "DRAFT" | "PUBLISHED" | "ARCHIVED";
             /** @description Version number */
@@ -4177,11 +5960,7 @@ export interface operations {
       };
       cookie?: never;
     };
-    requestBody?: {
-      content: {
-        "application/json": Record<string, never>;
-      };
-    };
+    requestBody?: never;
     responses: {
       /** @description OK */
       200: {
@@ -4206,7 +5985,7 @@ export interface operations {
             description: string | null;
             /**
              * @description Current status of the form definition
-             * @enum {unknown}
+             * @enum {string}
              */
             status: "DRAFT" | "PUBLISHED" | "ARCHIVED";
             /** @description Version number */
@@ -4243,11 +6022,7 @@ export interface operations {
       };
       cookie?: never;
     };
-    requestBody?: {
-      content: {
-        "application/json": Record<string, never>;
-      };
-    };
+    requestBody?: never;
     responses: {
       /** @description OK */
       200: {
@@ -4272,7 +6047,7 @@ export interface operations {
             description: string | null;
             /**
              * @description Current status of the form definition
-             * @enum {unknown}
+             * @enum {string}
              */
             status: "DRAFT" | "PUBLISHED" | "ARCHIVED";
             /** @description Version number */
@@ -4309,11 +6084,7 @@ export interface operations {
       };
       cookie?: never;
     };
-    requestBody?: {
-      content: {
-        "application/json": Record<string, never>;
-      };
-    };
+    requestBody?: never;
     responses: {
       /** @description OK */
       201: {
@@ -4338,7 +6109,7 @@ export interface operations {
             description: string | null;
             /**
              * @description Current status of the form definition
-             * @enum {unknown}
+             * @enum {string}
              */
             status: "DRAFT" | "PUBLISHED" | "ARCHIVED";
             /** @description Version number */
@@ -4377,7 +6148,7 @@ export interface operations {
               fieldKey: string;
               /**
                * @description Type of form field
-               * @enum {unknown}
+               * @enum {string}
                */
               fieldType:
                 | "text"
@@ -4412,14 +6183,14 @@ export interface operations {
               /** @description Conditional display rules */
               conditionalRules:
                 | {
-                    /** @enum {unknown} */
+                    /** @enum {string} */
                     effect: "SHOW" | "HIDE" | "REQUIRE";
                     condition: {
-                      /** @enum {unknown} */
+                      /** @enum {string} */
                       operator: "AND" | "OR";
                       rules: {
                         field: string;
-                        /** @enum {unknown} */
+                        /** @enum {string} */
                         comparator:
                           | "eq"
                           | "neq"
@@ -4469,11 +6240,11 @@ export interface operations {
                     /** Format: uuid */
                     targetPageId: string;
                     condition: {
-                      /** @enum {unknown} */
+                      /** @enum {string} */
                       operator: "AND" | "OR";
                       rules: {
                         field: string;
-                        /** @enum {unknown} */
+                        /** @enum {string} */
                         comparator:
                           | "eq"
                           | "neq"
@@ -4520,7 +6291,7 @@ export interface operations {
           fieldKey: string;
           /**
            * @description Type of form field
-           * @enum {unknown}
+           * @enum {string}
            */
           fieldType:
             | "text"
@@ -4590,7 +6361,7 @@ export interface operations {
             fieldKey: string;
             /**
              * @description Type of form field
-             * @enum {unknown}
+             * @enum {string}
              */
             fieldType:
               | "text"
@@ -4625,14 +6396,14 @@ export interface operations {
             /** @description Conditional display rules */
             conditionalRules:
               | {
-                  /** @enum {unknown} */
+                  /** @enum {string} */
                   effect: "SHOW" | "HIDE" | "REQUIRE";
                   condition: {
-                    /** @enum {unknown} */
+                    /** @enum {string} */
                     operator: "AND" | "OR";
                     rules: {
                       field: string;
-                      /** @enum {unknown} */
+                      /** @enum {string} */
                       comparator:
                         | "eq"
                         | "neq"
@@ -4682,11 +6453,7 @@ export interface operations {
       };
       cookie?: never;
     };
-    requestBody?: {
-      content: {
-        "application/json": Record<string, never>;
-      };
-    };
+    requestBody?: never;
     responses: {
       /** @description OK */
       200: {
@@ -4709,7 +6476,7 @@ export interface operations {
             fieldKey: string;
             /**
              * @description Type of form field
-             * @enum {unknown}
+             * @enum {string}
              */
             fieldType:
               | "text"
@@ -4744,14 +6511,14 @@ export interface operations {
             /** @description Conditional display rules */
             conditionalRules:
               | {
-                  /** @enum {unknown} */
+                  /** @enum {string} */
                   effect: "SHOW" | "HIDE" | "REQUIRE";
                   condition: {
-                    /** @enum {unknown} */
+                    /** @enum {string} */
                     operator: "AND" | "OR";
                     rules: {
                       field: string;
-                      /** @enum {unknown} */
+                      /** @enum {string} */
                       comparator:
                         | "eq"
                         | "neq"
@@ -4822,14 +6589,14 @@ export interface operations {
           /** @description Conditional display rules */
           conditionalRules?:
             | {
-                /** @enum {unknown} */
+                /** @enum {string} */
                 effect: "SHOW" | "HIDE" | "REQUIRE";
                 condition: {
-                  /** @enum {unknown} */
+                  /** @enum {string} */
                   operator: "AND" | "OR";
                   rules: {
                     field: string;
-                    /** @enum {unknown} */
+                    /** @enum {string} */
                     comparator:
                       | "eq"
                       | "neq"
@@ -4879,7 +6646,7 @@ export interface operations {
             fieldKey: string;
             /**
              * @description Type of form field
-             * @enum {unknown}
+             * @enum {string}
              */
             fieldType:
               | "text"
@@ -4914,14 +6681,14 @@ export interface operations {
             /** @description Conditional display rules */
             conditionalRules:
               | {
-                  /** @enum {unknown} */
+                  /** @enum {string} */
                   effect: "SHOW" | "HIDE" | "REQUIRE";
                   condition: {
-                    /** @enum {unknown} */
+                    /** @enum {string} */
                     operator: "AND" | "OR";
                     rules: {
                       field: string;
-                      /** @enum {unknown} */
+                      /** @enum {string} */
                       comparator:
                         | "eq"
                         | "neq"
@@ -5000,7 +6767,7 @@ export interface operations {
             fieldKey: string;
             /**
              * @description Type of form field
-             * @enum {unknown}
+             * @enum {string}
              */
             fieldType:
               | "text"
@@ -5035,14 +6802,14 @@ export interface operations {
             /** @description Conditional display rules */
             conditionalRules:
               | {
-                  /** @enum {unknown} */
+                  /** @enum {string} */
                   effect: "SHOW" | "HIDE" | "REQUIRE";
                   condition: {
-                    /** @enum {unknown} */
+                    /** @enum {string} */
                     operator: "AND" | "OR";
                     rules: {
                       field: string;
-                      /** @enum {unknown} */
+                      /** @enum {string} */
                       comparator:
                         | "eq"
                         | "neq"
@@ -5120,11 +6887,11 @@ export interface operations {
                   /** Format: uuid */
                   targetPageId: string;
                   condition: {
-                    /** @enum {unknown} */
+                    /** @enum {string} */
                     operator: "AND" | "OR";
                     rules: {
                       field: string;
-                      /** @enum {unknown} */
+                      /** @enum {string} */
                       comparator:
                         | "eq"
                         | "neq"
@@ -5164,11 +6931,7 @@ export interface operations {
       };
       cookie?: never;
     };
-    requestBody?: {
-      content: {
-        "application/json": Record<string, never>;
-      };
-    };
+    requestBody?: never;
     responses: {
       /** @description OK */
       200: {
@@ -5189,11 +6952,11 @@ export interface operations {
                   /** Format: uuid */
                   targetPageId: string;
                   condition: {
-                    /** @enum {unknown} */
+                    /** @enum {string} */
                     operator: "AND" | "OR";
                     rules: {
                       field: string;
-                      /** @enum {unknown} */
+                      /** @enum {string} */
                       comparator:
                         | "eq"
                         | "neq"
@@ -5243,11 +7006,11 @@ export interface operations {
                 /** Format: uuid */
                 targetPageId: string;
                 condition: {
-                  /** @enum {unknown} */
+                  /** @enum {string} */
                   operator: "AND" | "OR";
                   rules: {
                     field: string;
-                    /** @enum {unknown} */
+                    /** @enum {string} */
                     comparator:
                       | "eq"
                       | "neq"
@@ -5291,11 +7054,11 @@ export interface operations {
                   /** Format: uuid */
                   targetPageId: string;
                   condition: {
-                    /** @enum {unknown} */
+                    /** @enum {string} */
                     operator: "AND" | "OR";
                     rules: {
                       field: string;
-                      /** @enum {unknown} */
+                      /** @enum {string} */
                       comparator:
                         | "eq"
                         | "neq"
@@ -5361,11 +7124,11 @@ export interface operations {
                   /** Format: uuid */
                   targetPageId: string;
                   condition: {
-                    /** @enum {unknown} */
+                    /** @enum {string} */
                     operator: "AND" | "OR";
                     rules: {
                       field: string;
-                      /** @enum {unknown} */
+                      /** @enum {string} */
                       comparator:
                         | "eq"
                         | "neq"
@@ -5448,8 +7211,55 @@ export interface operations {
               maxSubmissions: number | null;
               /** @description ID of the form definition linked to this period */
               formDefinitionId: string | null;
-              /** @description Whether simultaneous submissions are prohibited */
-              simSubProhibited: boolean;
+              /** @description Sim-sub policy for this period */
+              simSubPolicy: {
+                /** @enum {string} */
+                type:
+                  | "prohibited"
+                  | "allowed"
+                  | "allowed_notify"
+                  | "allowed_withdraw";
+                notifyWindowHours?: number;
+                genreOverrides?: {
+                  /**
+                   * @description Primary genre classification
+                   * @enum {string}
+                   */
+                  genre:
+                    | "poetry"
+                    | "fiction"
+                    | "creative_nonfiction"
+                    | "nonfiction"
+                    | "drama"
+                    | "translation"
+                    | "visual_art"
+                    | "comics"
+                    | "audio"
+                    | "other";
+                  /** @enum {string} */
+                  type:
+                    | "prohibited"
+                    | "allowed"
+                    | "allowed_notify"
+                    | "allowed_withdraw";
+                }[];
+                notes?: string;
+              };
+              /**
+               * @description Blind review mode for the submission period
+               * @enum {string}
+               */
+              blindReviewMode: "none" | "single_blind" | "double_blind";
+              /** @description Whether this period is a contest */
+              isContest: boolean;
+              /** @description Prize description for contests */
+              contestPrize: string | null;
+              /** @description When contest winners will be announced */
+              contestWinnersAnnouncedAt: string | null;
+              /** @description Contest group this period belongs to */
+              contestGroupId: string | null;
+              /** @description Round number within the contest group */
+              contestRound: number | null;
               /**
                * Format: date-time
                * @description When the period was created
@@ -5507,8 +7317,58 @@ export interface operations {
            * @description Form definition to link to this period
            */
           formDefinitionId?: string;
-          /** @description Whether simultaneous submissions are prohibited (default: false) */
-          simSubProhibited?: boolean;
+          /** @description Sim-sub policy (default: allowed) */
+          simSubPolicy?: {
+            /** @enum {string} */
+            type:
+              "prohibited" | "allowed" | "allowed_notify" | "allowed_withdraw";
+            notifyWindowHours?: number;
+            genreOverrides?: {
+              /**
+               * @description Primary genre classification
+               * @enum {string}
+               */
+              genre:
+                | "poetry"
+                | "fiction"
+                | "creative_nonfiction"
+                | "nonfiction"
+                | "drama"
+                | "translation"
+                | "visual_art"
+                | "comics"
+                | "audio"
+                | "other";
+              /** @enum {string} */
+              type:
+                | "prohibited"
+                | "allowed"
+                | "allowed_notify"
+                | "allowed_withdraw";
+            }[];
+            notes?: string;
+          };
+          /**
+           * @description Blind review mode: none, single_blind, or double_blind (default: none)
+           * @enum {string}
+           */
+          blindReviewMode?: "none" | "single_blind" | "double_blind";
+          /** @description Whether this period is a contest (default: false) */
+          isContest?: boolean;
+          /** @description Prize description for contests (max 500 chars) */
+          contestPrize?: string;
+          /**
+           * Format: date-time
+           * @description When contest winners will be announced (ISO-8601)
+           */
+          contestWinnersAnnouncedAt?: string;
+          /**
+           * Format: uuid
+           * @description Contest group to associate with
+           */
+          contestGroupId?: string;
+          /** @description Round number within the contest group */
+          contestRound?: number;
         };
       };
     };
@@ -5550,8 +7410,55 @@ export interface operations {
             maxSubmissions: number | null;
             /** @description ID of the form definition linked to this period */
             formDefinitionId: string | null;
-            /** @description Whether simultaneous submissions are prohibited */
-            simSubProhibited: boolean;
+            /** @description Sim-sub policy for this period */
+            simSubPolicy: {
+              /** @enum {string} */
+              type:
+                | "prohibited"
+                | "allowed"
+                | "allowed_notify"
+                | "allowed_withdraw";
+              notifyWindowHours?: number;
+              genreOverrides?: {
+                /**
+                 * @description Primary genre classification
+                 * @enum {string}
+                 */
+                genre:
+                  | "poetry"
+                  | "fiction"
+                  | "creative_nonfiction"
+                  | "nonfiction"
+                  | "drama"
+                  | "translation"
+                  | "visual_art"
+                  | "comics"
+                  | "audio"
+                  | "other";
+                /** @enum {string} */
+                type:
+                  | "prohibited"
+                  | "allowed"
+                  | "allowed_notify"
+                  | "allowed_withdraw";
+              }[];
+              notes?: string;
+            };
+            /**
+             * @description Blind review mode for the submission period
+             * @enum {string}
+             */
+            blindReviewMode: "none" | "single_blind" | "double_blind";
+            /** @description Whether this period is a contest */
+            isContest: boolean;
+            /** @description Prize description for contests */
+            contestPrize: string | null;
+            /** @description When contest winners will be announced */
+            contestWinnersAnnouncedAt: string | null;
+            /** @description Contest group this period belongs to */
+            contestGroupId: string | null;
+            /** @description Round number within the contest group */
+            contestRound: number | null;
             /**
              * Format: date-time
              * @description When the period was created
@@ -5615,8 +7522,55 @@ export interface operations {
             maxSubmissions: number | null;
             /** @description ID of the form definition linked to this period */
             formDefinitionId: string | null;
-            /** @description Whether simultaneous submissions are prohibited */
-            simSubProhibited: boolean;
+            /** @description Sim-sub policy for this period */
+            simSubPolicy: {
+              /** @enum {string} */
+              type:
+                | "prohibited"
+                | "allowed"
+                | "allowed_notify"
+                | "allowed_withdraw";
+              notifyWindowHours?: number;
+              genreOverrides?: {
+                /**
+                 * @description Primary genre classification
+                 * @enum {string}
+                 */
+                genre:
+                  | "poetry"
+                  | "fiction"
+                  | "creative_nonfiction"
+                  | "nonfiction"
+                  | "drama"
+                  | "translation"
+                  | "visual_art"
+                  | "comics"
+                  | "audio"
+                  | "other";
+                /** @enum {string} */
+                type:
+                  | "prohibited"
+                  | "allowed"
+                  | "allowed_notify"
+                  | "allowed_withdraw";
+              }[];
+              notes?: string;
+            };
+            /**
+             * @description Blind review mode for the submission period
+             * @enum {string}
+             */
+            blindReviewMode: "none" | "single_blind" | "double_blind";
+            /** @description Whether this period is a contest */
+            isContest: boolean;
+            /** @description Prize description for contests */
+            contestPrize: string | null;
+            /** @description When contest winners will be announced */
+            contestWinnersAnnouncedAt: string | null;
+            /** @description Contest group this period belongs to */
+            contestGroupId: string | null;
+            /** @description Round number within the contest group */
+            contestRound: number | null;
             /**
              * Format: date-time
              * @description When the period was created
@@ -5641,11 +7595,7 @@ export interface operations {
       };
       cookie?: never;
     };
-    requestBody?: {
-      content: {
-        "application/json": Record<string, never>;
-      };
-    };
+    requestBody?: never;
     responses: {
       /** @description OK */
       200: {
@@ -5696,8 +7646,58 @@ export interface operations {
           maxSubmissions?: number;
           /** @description Form definition to link (null to unlink) */
           formDefinitionId?: string | null;
-          /** @description Whether simultaneous submissions are prohibited (default: false) */
-          simSubProhibited?: boolean;
+          /** @description Sim-sub policy (default: allowed) */
+          simSubPolicy?: {
+            /** @enum {string} */
+            type:
+              "prohibited" | "allowed" | "allowed_notify" | "allowed_withdraw";
+            notifyWindowHours?: number;
+            genreOverrides?: {
+              /**
+               * @description Primary genre classification
+               * @enum {string}
+               */
+              genre:
+                | "poetry"
+                | "fiction"
+                | "creative_nonfiction"
+                | "nonfiction"
+                | "drama"
+                | "translation"
+                | "visual_art"
+                | "comics"
+                | "audio"
+                | "other";
+              /** @enum {string} */
+              type:
+                | "prohibited"
+                | "allowed"
+                | "allowed_notify"
+                | "allowed_withdraw";
+            }[];
+            notes?: string;
+          };
+          /**
+           * @description Blind review mode: none, single_blind, or double_blind (default: none)
+           * @enum {string}
+           */
+          blindReviewMode?: "none" | "single_blind" | "double_blind";
+          /** @description Whether this period is a contest (default: false) */
+          isContest?: boolean;
+          /** @description Prize description for contests (max 500 chars) */
+          contestPrize?: string;
+          /**
+           * Format: date-time
+           * @description When contest winners will be announced (ISO-8601)
+           */
+          contestWinnersAnnouncedAt?: string;
+          /**
+           * Format: uuid
+           * @description Contest group to associate with
+           */
+          contestGroupId?: string;
+          /** @description Round number within the contest group */
+          contestRound?: number;
         };
       };
     };
@@ -5739,8 +7739,55 @@ export interface operations {
             maxSubmissions: number | null;
             /** @description ID of the form definition linked to this period */
             formDefinitionId: string | null;
-            /** @description Whether simultaneous submissions are prohibited */
-            simSubProhibited: boolean;
+            /** @description Sim-sub policy for this period */
+            simSubPolicy: {
+              /** @enum {string} */
+              type:
+                | "prohibited"
+                | "allowed"
+                | "allowed_notify"
+                | "allowed_withdraw";
+              notifyWindowHours?: number;
+              genreOverrides?: {
+                /**
+                 * @description Primary genre classification
+                 * @enum {string}
+                 */
+                genre:
+                  | "poetry"
+                  | "fiction"
+                  | "creative_nonfiction"
+                  | "nonfiction"
+                  | "drama"
+                  | "translation"
+                  | "visual_art"
+                  | "comics"
+                  | "audio"
+                  | "other";
+                /** @enum {string} */
+                type:
+                  | "prohibited"
+                  | "allowed"
+                  | "allowed_notify"
+                  | "allowed_withdraw";
+              }[];
+              notes?: string;
+            };
+            /**
+             * @description Blind review mode for the submission period
+             * @enum {string}
+             */
+            blindReviewMode: "none" | "single_blind" | "double_blind";
+            /** @description Whether this period is a contest */
+            isContest: boolean;
+            /** @description Prize description for contests */
+            contestPrize: string | null;
+            /** @description When contest winners will be announced */
+            contestWinnersAnnouncedAt: string | null;
+            /** @description Contest group this period belongs to */
+            contestGroupId: string | null;
+            /** @description Round number within the contest group */
+            contestRound: number | null;
             /**
              * Format: date-time
              * @description When the period was created
@@ -5761,6 +7808,7 @@ export interface operations {
       query?: {
         action?:
           | "USER_CREATED"
+          | "USER_JIT_PROVISIONED"
           | "USER_UPDATED"
           | "USER_DEACTIVATED"
           | "USER_REACTIVATED"
@@ -5778,6 +7826,10 @@ export interface operations {
           | "SUBMISSION_STATUS_CHANGED"
           | "SUBMISSION_DELETED"
           | "SUBMISSION_WITHDRAWN"
+          | "REVIEWER_ASSIGNED"
+          | "REVIEWER_UNASSIGNED"
+          | "REVIEWER_READ"
+          | "SUBMISSION_EXPORTED"
           | "FILE_UPLOADED"
           | "FILE_DELETED"
           | "FILE_SCAN_CLEAN"
@@ -5793,6 +7845,7 @@ export interface operations {
           | "API_KEY_AUTH_SUCCESS"
           | "API_KEY_AUTH_FAILED"
           | "API_KEY_SCOPE_DENIED"
+          | "API_KEY_INTERNAL_ROUTE"
           | "PERIOD_CREATED"
           | "PERIOD_UPDATED"
           | "PERIOD_DELETED"
@@ -5814,11 +7867,15 @@ export interface operations {
           | "MANUSCRIPT_UPDATED"
           | "MANUSCRIPT_DELETED"
           | "MANUSCRIPT_VERSION_CREATED"
+          | "CONTENT_EXTRACT_COMPLETE"
+          | "CONTENT_EXTRACT_FAILED"
+          | "CONTENT_EXTRACT_UNSUPPORTED"
           | "PAYMENT_SUCCEEDED"
           | "PAYMENT_EXPIRED"
           | "EMBED_TOKEN_CREATED"
           | "EMBED_TOKEN_REVOKED"
           | "EMBED_SUBMISSION_CREATED"
+          | "EMBED_SUBMISSION_RESUBMITTED"
           | "GUEST_USER_CREATED"
           | "USER_GDPR_DELETED"
           | "S3_CLEANUP_COMPLETED"
@@ -5831,6 +7888,8 @@ export interface operations {
           | "CONTRACT_TEMPLATE_DELETED"
           | "CONTRACT_GENERATED"
           | "CONTRACT_SENT"
+          | "CONTRACT_SIGNED"
+          | "CONTRACT_COMPLETED"
           | "CONTRACT_VOIDED"
           | "ISSUE_CREATED"
           | "ISSUE_UPDATED"
@@ -5843,6 +7902,9 @@ export interface operations {
           | "PIPELINE_COPYEDITOR_ASSIGNED"
           | "PIPELINE_PROOFREADER_ASSIGNED"
           | "PIPELINE_COMMENT_ADDED"
+          | "PIPELINE_COPYEDIT_SAVED"
+          | "PIPELINE_COPYEDIT_EXPORTED"
+          | "PIPELINE_COPYEDIT_IMPORTED"
           | "CMS_CONNECTION_CREATED"
           | "CMS_CONNECTION_UPDATED"
           | "CMS_CONNECTION_DELETED"
@@ -5883,6 +7945,7 @@ export interface operations {
           | "FEDERATION_TRUST_REVOKED"
           | "FEDERATION_TRUST_RECEIVED"
           | "FEDERATION_TRUST_AUTO_ACCEPTED"
+          | "FEDERATION_CONFIG_UPDATED"
           | "HUB_INSTANCE_REGISTERED"
           | "HUB_INSTANCE_SUSPENDED"
           | "HUB_INSTANCE_REVOKED"
@@ -5905,7 +7968,76 @@ export interface operations {
           | "WEBHOOK_DELIVERY_FAILED"
           | "WEBHOOK_DELIVERY_RETRIED"
           | "WEBHOOK_ENDPOINT_AUTO_DISABLED"
-          | "AUDIT_ACCESSED";
+          | "CORRESPONDENCE_SENT"
+          | "CORRESPONDENCE_AUTO_CAPTURED"
+          | "CORRESPONDENCE_MANUAL_LOGGED"
+          | "SUBMISSION_VOTE_CAST"
+          | "SUBMISSION_VOTE_UPDATED"
+          | "SUBMISSION_VOTE_DELETED"
+          | "DISCUSSION_COMMENT_ADDED"
+          | "EMAIL_TEMPLATE_CREATED"
+          | "EMAIL_TEMPLATE_UPDATED"
+          | "EMAIL_TEMPLATE_DELETED"
+          | "EXTERNAL_SUBMISSION_CREATED"
+          | "EXTERNAL_SUBMISSION_UPDATED"
+          | "EXTERNAL_SUBMISSION_DELETED"
+          | "WRITER_PROFILE_CREATED"
+          | "WRITER_PROFILE_UPDATED"
+          | "WRITER_PROFILE_DELETED"
+          | "CSR_EXPORTED"
+          | "CSR_IMPORTED"
+          | "AUDIT_ACCESSED"
+          | "INVITATION_CREATED"
+          | "INVITATION_REVOKED"
+          | "INVITATION_ACCEPTED"
+          | "INVITATION_RESENT"
+          | "COLLECTION_CREATED"
+          | "COLLECTION_UPDATED"
+          | "COLLECTION_DELETED"
+          | "COLLECTION_ITEM_ADDED"
+          | "COLLECTION_ITEM_REMOVED"
+          | "COLLECTION_ITEM_UPDATED"
+          | "CONTRIBUTOR_CREATED"
+          | "CONTRIBUTOR_UPDATED"
+          | "CONTRIBUTOR_DELETED"
+          | "CONTRIBUTOR_LINKED"
+          | "CONTRIBUTOR_UNLINKED"
+          | "CONTRIBUTOR_PUBLICATION_ADDED"
+          | "CONTRIBUTOR_PUBLICATION_REMOVED"
+          | "RIGHTS_AGREEMENT_CREATED"
+          | "RIGHTS_AGREEMENT_UPDATED"
+          | "RIGHTS_AGREEMENT_SENT"
+          | "RIGHTS_AGREEMENT_SIGNED"
+          | "RIGHTS_AGREEMENT_ACTIVATED"
+          | "RIGHTS_AGREEMENT_REVERTED"
+          | "RIGHTS_AGREEMENT_DELETED"
+          | "PAYMENT_TRANSACTION_CREATED"
+          | "PAYMENT_TRANSACTION_UPDATED"
+          | "PAYMENT_TRANSACTION_STATUS_CHANGED"
+          | "PAYMENT_TRANSACTION_DELETED"
+          | "CONTEST_GROUP_CREATED"
+          | "CONTEST_GROUP_UPDATED"
+          | "CONTEST_GROUP_DELETED"
+          | "CONTEST_JUDGE_ASSIGNED"
+          | "CONTEST_JUDGE_UPDATED"
+          | "CONTEST_JUDGE_REMOVED"
+          | "CONTEST_RESULT_CREATED"
+          | "CONTEST_RESULT_UPDATED"
+          | "CONTEST_RESULT_DELETED"
+          | "CONTEST_WINNERS_ANNOUNCED"
+          | "CONTEST_PRIZE_DISBURSED"
+          | "SIMSUB_GROUP_CREATED"
+          | "SIMSUB_GROUP_UPDATED"
+          | "SIMSUB_GROUP_DELETED"
+          | "SIMSUB_GROUP_SUBMISSION_ADDED"
+          | "SIMSUB_GROUP_SUBMISSION_REMOVED"
+          | "PORTFOLIO_ENTRY_CREATED"
+          | "PORTFOLIO_ENTRY_UPDATED"
+          | "PORTFOLIO_ENTRY_DELETED"
+          | "READER_FEEDBACK_CREATED"
+          | "READER_FEEDBACK_FORWARDED"
+          | "READER_FEEDBACK_BULK_FORWARDED"
+          | "READER_FEEDBACK_DELETED";
         resource?:
           | "user"
           | "organization"
@@ -5934,7 +8066,23 @@ export interface operations {
           | "notification_preference"
           | "webhook_endpoint"
           | "webhook_delivery"
-          | "audit";
+          | "external_submission"
+          | "writer_profile"
+          | "correspondence"
+          | "email_template"
+          | "csr"
+          | "audit"
+          | "collection"
+          | "invitation"
+          | "contributor"
+          | "contributor_publication"
+          | "rights_agreement"
+          | "payment_transaction"
+          | "contest"
+          | "contest_group"
+          | "simsub_group"
+          | "portfolio_entry"
+          | "reader_feedback";
         actorId?: string;
         resourceId?: string;
         from?: string;
@@ -6103,7 +8251,7 @@ export interface operations {
               } | null;
               /**
                * @description Current status of the publication
-               * @enum {unknown}
+               * @enum {string}
                */
               status: "ACTIVE" | "ARCHIVED";
               /**
@@ -6183,7 +8331,7 @@ export interface operations {
             } | null;
             /**
              * @description Current status of the publication
-             * @enum {unknown}
+             * @enum {string}
              */
             status: "ACTIVE" | "ARCHIVED";
             /**
@@ -6241,7 +8389,7 @@ export interface operations {
             } | null;
             /**
              * @description Current status of the publication
-             * @enum {unknown}
+             * @enum {string}
              */
             status: "ACTIVE" | "ARCHIVED";
             /**
@@ -6314,7 +8462,7 @@ export interface operations {
             } | null;
             /**
              * @description Current status of the publication
-             * @enum {unknown}
+             * @enum {string}
              */
             status: "ACTIVE" | "ARCHIVED";
             /**
@@ -6341,11 +8489,7 @@ export interface operations {
       };
       cookie?: never;
     };
-    requestBody?: {
-      content: {
-        "application/json": Record<string, never>;
-      };
-    };
+    requestBody?: never;
     responses: {
       /** @description OK */
       200: {
@@ -6376,7 +8520,7 @@ export interface operations {
             } | null;
             /**
              * @description Current status of the publication
-             * @enum {unknown}
+             * @enum {string}
              */
             status: "ACTIVE" | "ARCHIVED";
             /**
@@ -6446,7 +8590,7 @@ export interface operations {
               publicationId: string | null;
               /**
                * @description Current pipeline stage for the piece
-               * @enum {unknown}
+               * @enum {string}
                */
               stage:
                 | "COPYEDIT_PENDING"
@@ -6554,7 +8698,7 @@ export interface operations {
             publicationId: string | null;
             /**
              * @description Current pipeline stage for the piece
-             * @enum {unknown}
+             * @enum {string}
              */
             stage:
               | "COPYEDIT_PENDING"
@@ -6640,7 +8784,7 @@ export interface operations {
             publicationId: string | null;
             /**
              * @description Current pipeline stage for the piece
-             * @enum {unknown}
+             * @enum {string}
              */
             stage:
               | "COPYEDIT_PENDING"
@@ -6703,7 +8847,7 @@ export interface operations {
         "application/json": {
           /**
            * @description Target stage
-           * @enum {unknown}
+           * @enum {string}
            */
           stage:
             | "COPYEDIT_PENDING"
@@ -6745,7 +8889,7 @@ export interface operations {
             publicationId: string | null;
             /**
              * @description Current pipeline stage for the piece
-             * @enum {unknown}
+             * @enum {string}
              */
             stage:
               | "COPYEDIT_PENDING"
@@ -6841,7 +8985,7 @@ export interface operations {
             publicationId: string | null;
             /**
              * @description Current pipeline stage for the piece
-             * @enum {unknown}
+             * @enum {string}
              */
             stage:
               | "COPYEDIT_PENDING"
@@ -6937,7 +9081,7 @@ export interface operations {
             publicationId: string | null;
             /**
              * @description Current pipeline stage for the piece
-             * @enum {unknown}
+             * @enum {string}
              */
             stage:
               | "COPYEDIT_PENDING"
@@ -7012,7 +9156,7 @@ export interface operations {
             content: string;
             /**
              * @description Current pipeline stage for the piece
-             * @enum {unknown}
+             * @enum {string}
              */
             stage:
               | "COPYEDIT_PENDING"
@@ -7062,7 +9206,7 @@ export interface operations {
             content: string;
             /**
              * @description Current pipeline stage for the piece
-             * @enum {unknown}
+             * @enum {string}
              */
             stage:
               | "COPYEDIT_PENDING"
@@ -7114,7 +9258,7 @@ export interface operations {
               | null;
             /**
              * @description Current pipeline stage for the piece
-             * @enum {unknown}
+             * @enum {string}
              */
             toStage:
               | "COPYEDIT_PENDING"
@@ -7180,7 +9324,7 @@ export interface operations {
                     label: string;
                     /**
                      * @description Whether the field is auto-populated or manually entered
-                     * @enum {unknown}
+                     * @enum {string}
                      */
                     source: "auto" | "manual";
                     /** @description Default value if not provided */
@@ -7237,7 +9381,7 @@ export interface operations {
             label: string;
             /**
              * @description Whether the field is auto-populated or manually entered
-             * @enum {unknown}
+             * @enum {string}
              */
             source: "auto" | "manual";
             /** @description Default value if not provided */
@@ -7281,7 +9425,7 @@ export interface operations {
                   label: string;
                   /**
                    * @description Whether the field is auto-populated or manually entered
-                   * @enum {unknown}
+                   * @enum {string}
                    */
                   source: "auto" | "manual";
                   /** @description Default value if not provided */
@@ -7348,7 +9492,7 @@ export interface operations {
                   label: string;
                   /**
                    * @description Whether the field is auto-populated or manually entered
-                   * @enum {unknown}
+                   * @enum {string}
                    */
                   source: "auto" | "manual";
                   /** @description Default value if not provided */
@@ -7381,11 +9525,7 @@ export interface operations {
       };
       cookie?: never;
     };
-    requestBody?: {
-      content: {
-        "application/json": Record<string, never>;
-      };
-    };
+    requestBody?: never;
     responses: {
       /** @description OK */
       200: {
@@ -7419,7 +9559,7 @@ export interface operations {
                   label: string;
                   /**
                    * @description Whether the field is auto-populated or manually entered
-                   * @enum {unknown}
+                   * @enum {string}
                    */
                   source: "auto" | "manual";
                   /** @description Default value if not provided */
@@ -7470,7 +9610,7 @@ export interface operations {
                 label: string;
                 /**
                  * @description Whether the field is auto-populated or manually entered
-                 * @enum {unknown}
+                 * @enum {string}
                  */
                 source: "auto" | "manual";
                 /** @description Default value if not provided */
@@ -7515,7 +9655,7 @@ export interface operations {
                   label: string;
                   /**
                    * @description Whether the field is auto-populated or manually entered
-                   * @enum {unknown}
+                   * @enum {string}
                    */
                   source: "auto" | "manual";
                   /** @description Default value if not provided */
@@ -7588,7 +9728,7 @@ export interface operations {
               contractTemplateId: string | null;
               /**
                * @description Current status of the contract
-               * @enum {unknown}
+               * @enum {string}
                */
               status:
                 | "DRAFT"
@@ -7690,7 +9830,7 @@ export interface operations {
             contractTemplateId: string | null;
             /**
              * @description Current status of the contract
-             * @enum {unknown}
+             * @enum {string}
              */
             status:
               | "DRAFT"
@@ -7766,7 +9906,7 @@ export interface operations {
             contractTemplateId: string | null;
             /**
              * @description Current status of the contract
-             * @enum {unknown}
+             * @enum {string}
              */
             status:
               | "DRAFT"
@@ -7842,7 +9982,7 @@ export interface operations {
             contractTemplateId: string | null;
             /**
              * @description Current status of the contract
-             * @enum {unknown}
+             * @enum {string}
              */
             status:
               | "DRAFT"
@@ -7890,11 +10030,7 @@ export interface operations {
       };
       cookie?: never;
     };
-    requestBody?: {
-      content: {
-        "application/json": Record<string, never>;
-      };
-    };
+    requestBody?: never;
     responses: {
       /** @description OK */
       200: {
@@ -7922,7 +10058,7 @@ export interface operations {
             contractTemplateId: string | null;
             /**
              * @description Current status of the contract
-             * @enum {unknown}
+             * @enum {string}
              */
             status:
               | "DRAFT"
@@ -7970,11 +10106,7 @@ export interface operations {
       };
       cookie?: never;
     };
-    requestBody?: {
-      content: {
-        "application/json": Record<string, never>;
-      };
-    };
+    requestBody?: never;
     responses: {
       /** @description OK */
       200: {
@@ -8002,7 +10134,7 @@ export interface operations {
             contractTemplateId: string | null;
             /**
              * @description Current status of the contract
-             * @enum {unknown}
+             * @enum {string}
              */
             status:
               | "DRAFT"
@@ -8094,7 +10226,7 @@ export interface operations {
               coverImageUrl: string | null;
               /**
                * @description Current status of the issue
-               * @enum {unknown}
+               * @enum {string}
                */
               status:
                 "PLANNING" | "ASSEMBLING" | "READY" | "PUBLISHED" | "ARCHIVED";
@@ -8201,7 +10333,7 @@ export interface operations {
             coverImageUrl: string | null;
             /**
              * @description Current status of the issue
-             * @enum {unknown}
+             * @enum {string}
              */
             status:
               "PLANNING" | "ASSEMBLING" | "READY" | "PUBLISHED" | "ARCHIVED";
@@ -8273,7 +10405,7 @@ export interface operations {
             coverImageUrl: string | null;
             /**
              * @description Current status of the issue
-             * @enum {unknown}
+             * @enum {string}
              */
             status:
               "PLANNING" | "ASSEMBLING" | "READY" | "PUBLISHED" | "ARCHIVED";
@@ -8362,7 +10494,7 @@ export interface operations {
             coverImageUrl: string | null;
             /**
              * @description Current status of the issue
-             * @enum {unknown}
+             * @enum {string}
              */
             status:
               "PLANNING" | "ASSEMBLING" | "READY" | "PUBLISHED" | "ARCHIVED";
@@ -8604,11 +10736,7 @@ export interface operations {
       };
       cookie?: never;
     };
-    requestBody?: {
-      content: {
-        "application/json": Record<string, never>;
-      };
-    };
+    requestBody?: never;
     responses: {
       /** @description OK */
       200: {
@@ -8644,7 +10772,7 @@ export interface operations {
             coverImageUrl: string | null;
             /**
              * @description Current status of the issue
-             * @enum {unknown}
+             * @enum {string}
              */
             status:
               "PLANNING" | "ASSEMBLING" | "READY" | "PUBLISHED" | "ARCHIVED";
@@ -8680,11 +10808,7 @@ export interface operations {
       };
       cookie?: never;
     };
-    requestBody?: {
-      content: {
-        "application/json": Record<string, never>;
-      };
-    };
+    requestBody?: never;
     responses: {
       /** @description OK */
       200: {
@@ -8720,7 +10844,7 @@ export interface operations {
             coverImageUrl: string | null;
             /**
              * @description Current status of the issue
-             * @enum {unknown}
+             * @enum {string}
              */
             status:
               "PLANNING" | "ASSEMBLING" | "READY" | "PUBLISHED" | "ARCHIVED";
@@ -8757,11 +10881,7 @@ export interface operations {
       };
       cookie?: never;
     };
-    requestBody?: {
-      content: {
-        "application/json": Record<string, never>;
-      };
-    };
+    requestBody?: never;
     responses: {
       /** @description OK */
       200: {
@@ -8795,7 +10915,7 @@ export interface operations {
              */
             createdAt: string;
             submissionTitle?: string | null;
-          };
+          } | null;
         };
       };
     };
@@ -8869,11 +10989,7 @@ export interface operations {
       };
       cookie?: never;
     };
-    requestBody?: {
-      content: {
-        "application/json": Record<string, never>;
-      };
-    };
+    requestBody?: never;
     responses: {
       /** @description OK */
       200: {
@@ -8901,7 +11017,7 @@ export interface operations {
              * @description When the section was created
              */
             createdAt: string;
-          };
+          } | null;
         };
       };
     };
@@ -8933,7 +11049,7 @@ export interface operations {
               /** Format: uuid */
               organizationId: string;
               publicationId: string | null;
-              /** @enum {unknown} */
+              /** @enum {string} */
               adapterType: "WORDPRESS" | "GHOST";
               name: string;
               config: {
@@ -8976,7 +11092,7 @@ export interface operations {
           publicationId?: string;
           /**
            * @description CMS adapter type (WORDPRESS or GHOST)
-           * @enum {unknown}
+           * @enum {string}
            */
           adapterType: "WORDPRESS" | "GHOST";
           /** @description Display name for this connection */
@@ -9001,7 +11117,7 @@ export interface operations {
             /** Format: uuid */
             organizationId: string;
             publicationId: string | null;
-            /** @enum {unknown} */
+            /** @enum {string} */
             adapterType: "WORDPRESS" | "GHOST";
             name: string;
             config: {
@@ -9041,7 +11157,7 @@ export interface operations {
             /** Format: uuid */
             organizationId: string;
             publicationId: string | null;
-            /** @enum {unknown} */
+            /** @enum {string} */
             adapterType: "WORDPRESS" | "GHOST";
             name: string;
             config: {
@@ -9067,11 +11183,7 @@ export interface operations {
       };
       cookie?: never;
     };
-    requestBody?: {
-      content: {
-        "application/json": Record<string, never>;
-      };
-    };
+    requestBody?: never;
     responses: {
       /** @description OK */
       200: {
@@ -9085,7 +11197,7 @@ export interface operations {
             /** Format: uuid */
             organizationId: string;
             publicationId: string | null;
-            /** @enum {unknown} */
+            /** @enum {string} */
             adapterType: "WORDPRESS" | "GHOST";
             name: string;
             config: {
@@ -9135,7 +11247,7 @@ export interface operations {
             /** Format: uuid */
             organizationId: string;
             publicationId: string | null;
-            /** @enum {unknown} */
+            /** @enum {string} */
             adapterType: "WORDPRESS" | "GHOST";
             name: string;
             config: {
@@ -9161,11 +11273,7 @@ export interface operations {
       };
       cookie?: never;
     };
-    requestBody?: {
-      content: {
-        "application/json": Record<string, never>;
-      };
-    };
+    requestBody?: never;
     responses: {
       /** @description OK */
       200: {
@@ -9177,6 +11285,1051 @@ export interface operations {
             success: boolean;
             message?: string;
           };
+        };
+      };
+    };
+  };
+  exportCsr: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": {
+            /** @constant */
+            version: "1.0";
+            /** Format: date-time */
+            exportedAt: string;
+            identity: {
+              /** Format: uuid */
+              userId: string;
+              /** Format: email */
+              email: string;
+              displayName: string | null;
+            };
+            nativeSubmissions: {
+              /** Format: uuid */
+              originSubmissionId: string;
+              title: string | null;
+              genre: {
+                /**
+                 * @description Primary genre classification
+                 * @enum {string}
+                 */
+                primary:
+                  | "poetry"
+                  | "fiction"
+                  | "creative_nonfiction"
+                  | "nonfiction"
+                  | "drama"
+                  | "translation"
+                  | "visual_art"
+                  | "comics"
+                  | "audio"
+                  | "other";
+                /** @description Freetext subgenre (e.g., 'flash', 'lyric essay') */
+                sub: string | null;
+                /** @description Additional primary genres for hybrid work */
+                hybrid: (
+                  | "poetry"
+                  | "fiction"
+                  | "creative_nonfiction"
+                  | "nonfiction"
+                  | "drama"
+                  | "translation"
+                  | "visual_art"
+                  | "comics"
+                  | "audio"
+                  | "other"
+                )[];
+              } | null;
+              coverLetter: string | null;
+              /**
+               * @description Harmonized submission status across systems
+               * @enum {string}
+               */
+              status:
+                | "draft"
+                | "sent"
+                | "in_review"
+                | "hold"
+                | "accepted"
+                | "rejected"
+                | "withdrawn"
+                | "no_response"
+                | "revise"
+                | "unknown";
+              formData: {
+                [key: string]: unknown;
+              } | null;
+              submittedAt: string | null;
+              decidedAt: string | null;
+              publicationName: string | null;
+              periodName: string | null;
+              statusHistory: {
+                from:
+                  | (
+                      | "draft"
+                      | "sent"
+                      | "in_review"
+                      | "hold"
+                      | "accepted"
+                      | "rejected"
+                      | "withdrawn"
+                      | "no_response"
+                      | "revise"
+                      | "unknown"
+                    )
+                  | null;
+                /**
+                 * @description Harmonized submission status across systems
+                 * @enum {string}
+                 */
+                to:
+                  | "draft"
+                  | "sent"
+                  | "in_review"
+                  | "hold"
+                  | "accepted"
+                  | "rejected"
+                  | "withdrawn"
+                  | "no_response"
+                  | "revise"
+                  | "unknown";
+                /** Format: date-time */
+                changedAt: string;
+                comment: string | null;
+              }[];
+            }[];
+            externalSubmissions: {
+              /** Format: uuid */
+              id: string;
+              manuscriptId: string | null;
+              journalDirectoryId: string | null;
+              journalName: string;
+              /**
+               * @description Harmonized submission status across systems
+               * @enum {string}
+               */
+              status:
+                | "draft"
+                | "sent"
+                | "in_review"
+                | "hold"
+                | "accepted"
+                | "rejected"
+                | "withdrawn"
+                | "no_response"
+                | "revise"
+                | "unknown";
+              sentAt: string | null;
+              respondedAt: string | null;
+              method: string | null;
+              notes: string | null;
+              importedFrom: string | null;
+              /** Format: date-time */
+              createdAt: string;
+              /** Format: date-time */
+              updatedAt: string;
+            }[];
+            correspondence: {
+              /** Format: uuid */
+              id: string;
+              submissionId: string | null;
+              externalSubmissionId: string | null;
+              /** @enum {string} */
+              direction: "inbound" | "outbound";
+              /** @enum {string} */
+              channel: "email" | "portal" | "in_app" | "other";
+              /** Format: date-time */
+              sentAt: string;
+              subject: string | null;
+              body: string;
+              senderName: string | null;
+              senderEmail: string | null;
+              isPersonalized: boolean;
+              /** @enum {string} */
+              source: "colophony" | "manual";
+              /** Format: date-time */
+              capturedAt: string;
+            }[];
+            writerProfiles: {
+              /** Format: uuid */
+              id: string;
+              platform: string;
+              externalId: string | null;
+              profileUrl: string | null;
+            }[];
+            manuscripts: {
+              /** Format: uuid */
+              id: string;
+              title: string | null;
+              genre: {
+                /**
+                 * @description Primary genre classification
+                 * @enum {string}
+                 */
+                primary:
+                  | "poetry"
+                  | "fiction"
+                  | "creative_nonfiction"
+                  | "nonfiction"
+                  | "drama"
+                  | "translation"
+                  | "visual_art"
+                  | "comics"
+                  | "audio"
+                  | "other";
+                /** @description Freetext subgenre (e.g., 'flash', 'lyric essay') */
+                sub: string | null;
+                /** @description Additional primary genres for hybrid work */
+                hybrid: (
+                  | "poetry"
+                  | "fiction"
+                  | "creative_nonfiction"
+                  | "nonfiction"
+                  | "drama"
+                  | "translation"
+                  | "visual_art"
+                  | "comics"
+                  | "audio"
+                  | "other"
+                )[];
+              } | null;
+              /** Format: date-time */
+              createdAt: string;
+            }[];
+          };
+        };
+      };
+    };
+  };
+  importCsr: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": {
+          submissions: {
+            journalName: string;
+            /** Format: uuid */
+            journalDirectoryId?: string;
+            /**
+             * @description Harmonized submission status across systems
+             * @default sent
+             * @enum {string}
+             */
+            status?:
+              | "draft"
+              | "sent"
+              | "in_review"
+              | "hold"
+              | "accepted"
+              | "rejected"
+              | "withdrawn"
+              | "no_response"
+              | "revise"
+              | "unknown";
+            /** Format: date-time */
+            sentAt?: string;
+            /** Format: date-time */
+            respondedAt?: string;
+            method?: string;
+            notes?: string;
+            importedFrom?: string;
+          }[];
+          /** @default [] */
+          correspondence?: {
+            externalSubmissionIndex: number;
+            /** @enum {string} */
+            direction: "inbound" | "outbound";
+            /**
+             * @default email
+             * @enum {string}
+             */
+            channel?: "email" | "portal" | "in_app" | "other";
+            /** Format: date-time */
+            sentAt: string;
+            subject?: string;
+            body: string;
+            senderName?: string;
+            /** Format: email */
+            senderEmail?: string;
+            /** @default false */
+            isPersonalized?: boolean;
+          }[];
+          /** @default csr_import */
+          importedFrom?: string;
+        };
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": {
+            submissionsCreated: number;
+            correspondenceCreated: number;
+          };
+        };
+      };
+    };
+  };
+  listCollections: {
+    parameters: {
+      query?: {
+        typeHint?:
+          "holds" | "reading_list" | "comparison" | "issue_planning" | "custom";
+        visibility?: "private" | "team" | "collaborators";
+        search?: string;
+        page?: number;
+        limit?: number;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": {
+            /** @description Items on the current page */
+            items: {
+              /**
+               * Format: uuid
+               * @description Collection ID
+               */
+              id: string;
+              /**
+               * Format: uuid
+               * @description Organization ID
+               */
+              organizationId: string;
+              /**
+               * Format: uuid
+               * @description Owner user ID
+               */
+              ownerId: string;
+              /** @description Collection name */
+              name: string;
+              /** @description Collection description */
+              description: string | null;
+              /**
+               * @description Visibility scope of the collection
+               * @enum {string}
+               */
+              visibility: "private" | "team" | "collaborators";
+              /**
+               * @description Purpose hint for the collection
+               * @enum {string}
+               */
+              typeHint:
+                | "holds"
+                | "reading_list"
+                | "comparison"
+                | "issue_planning"
+                | "custom";
+              /**
+               * Format: date-time
+               * @description When the collection was created
+               */
+              createdAt: string;
+              /**
+               * Format: date-time
+               * @description When the collection was last updated
+               */
+              updatedAt: string;
+            }[];
+            /** @description Total number of items across all pages */
+            total: number;
+            /** @description Current page number */
+            page: number;
+            /** @description Items per page */
+            limit: number;
+            /** @description Total number of pages */
+            totalPages: number;
+          };
+        };
+      };
+    };
+  };
+  createCollection: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": {
+          /** @description Collection name */
+          name: string;
+          /** @description Collection description */
+          description?: string;
+          /**
+           * @description Visibility scope
+           * @enum {string}
+           */
+          visibility?: "private" | "team" | "collaborators";
+          /**
+           * @description Collection purpose
+           * @enum {string}
+           */
+          typeHint?:
+            | "holds"
+            | "reading_list"
+            | "comparison"
+            | "issue_planning"
+            | "custom";
+        };
+      };
+    };
+    responses: {
+      /** @description OK */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": {
+            /**
+             * Format: uuid
+             * @description Collection ID
+             */
+            id: string;
+            /**
+             * Format: uuid
+             * @description Organization ID
+             */
+            organizationId: string;
+            /**
+             * Format: uuid
+             * @description Owner user ID
+             */
+            ownerId: string;
+            /** @description Collection name */
+            name: string;
+            /** @description Collection description */
+            description: string | null;
+            /**
+             * @description Visibility scope of the collection
+             * @enum {string}
+             */
+            visibility: "private" | "team" | "collaborators";
+            /**
+             * @description Purpose hint for the collection
+             * @enum {string}
+             */
+            typeHint:
+              | "holds"
+              | "reading_list"
+              | "comparison"
+              | "issue_planning"
+              | "custom";
+            /**
+             * Format: date-time
+             * @description When the collection was created
+             */
+            createdAt: string;
+            /**
+             * Format: date-time
+             * @description When the collection was last updated
+             */
+            updatedAt: string;
+          };
+        };
+      };
+    };
+  };
+  getCollection: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": {
+            /**
+             * Format: uuid
+             * @description Collection ID
+             */
+            id: string;
+            /**
+             * Format: uuid
+             * @description Organization ID
+             */
+            organizationId: string;
+            /**
+             * Format: uuid
+             * @description Owner user ID
+             */
+            ownerId: string;
+            /** @description Collection name */
+            name: string;
+            /** @description Collection description */
+            description: string | null;
+            /**
+             * @description Visibility scope of the collection
+             * @enum {string}
+             */
+            visibility: "private" | "team" | "collaborators";
+            /**
+             * @description Purpose hint for the collection
+             * @enum {string}
+             */
+            typeHint:
+              | "holds"
+              | "reading_list"
+              | "comparison"
+              | "issue_planning"
+              | "custom";
+            /**
+             * Format: date-time
+             * @description When the collection was created
+             */
+            createdAt: string;
+            /**
+             * Format: date-time
+             * @description When the collection was last updated
+             */
+            updatedAt: string;
+          };
+        };
+      };
+    };
+  };
+  deleteCollection: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": {
+            /**
+             * Format: uuid
+             * @description Collection ID
+             */
+            id: string;
+            /**
+             * Format: uuid
+             * @description Organization ID
+             */
+            organizationId: string;
+            /**
+             * Format: uuid
+             * @description Owner user ID
+             */
+            ownerId: string;
+            /** @description Collection name */
+            name: string;
+            /** @description Collection description */
+            description: string | null;
+            /**
+             * @description Visibility scope of the collection
+             * @enum {string}
+             */
+            visibility: "private" | "team" | "collaborators";
+            /**
+             * @description Purpose hint for the collection
+             * @enum {string}
+             */
+            typeHint:
+              | "holds"
+              | "reading_list"
+              | "comparison"
+              | "issue_planning"
+              | "custom";
+            /**
+             * Format: date-time
+             * @description When the collection was created
+             */
+            createdAt: string;
+            /**
+             * Format: date-time
+             * @description When the collection was last updated
+             */
+            updatedAt: string;
+          };
+        };
+      };
+    };
+  };
+  updateCollection: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: {
+      content: {
+        "application/json": {
+          /** @description Collection name */
+          name?: string;
+          /** @description Collection description */
+          description?: string;
+          /**
+           * @description Visibility scope
+           * @enum {string}
+           */
+          visibility?: "private" | "team" | "collaborators";
+          /**
+           * @description Collection purpose
+           * @enum {string}
+           */
+          typeHint?:
+            | "holds"
+            | "reading_list"
+            | "comparison"
+            | "issue_planning"
+            | "custom";
+        };
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": {
+            /**
+             * Format: uuid
+             * @description Collection ID
+             */
+            id: string;
+            /**
+             * Format: uuid
+             * @description Organization ID
+             */
+            organizationId: string;
+            /**
+             * Format: uuid
+             * @description Owner user ID
+             */
+            ownerId: string;
+            /** @description Collection name */
+            name: string;
+            /** @description Collection description */
+            description: string | null;
+            /**
+             * @description Visibility scope of the collection
+             * @enum {string}
+             */
+            visibility: "private" | "team" | "collaborators";
+            /**
+             * @description Purpose hint for the collection
+             * @enum {string}
+             */
+            typeHint:
+              | "holds"
+              | "reading_list"
+              | "comparison"
+              | "issue_planning"
+              | "custom";
+            /**
+             * Format: date-time
+             * @description When the collection was created
+             */
+            createdAt: string;
+            /**
+             * Format: date-time
+             * @description When the collection was last updated
+             */
+            updatedAt: string;
+          };
+        };
+      };
+    };
+  };
+  getCollectionItems: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": {
+            /**
+             * Format: uuid
+             * @description Item ID
+             */
+            id: string;
+            /**
+             * Format: uuid
+             * @description Collection ID
+             */
+            collectionId: string;
+            /**
+             * Format: uuid
+             * @description Submission ID
+             */
+            submissionId: string;
+            /** @description Sort position within collection */
+            position: number;
+            /** @description Private editor notes */
+            notes: string | null;
+            /** @description Label color */
+            color: string | null;
+            /** @description Item icon */
+            icon: string | null;
+            /** @description Reading position anchor (deferred) */
+            readingAnchor?: unknown | null;
+            /**
+             * Format: date-time
+             * @description When the item was added
+             */
+            addedAt: string;
+            /**
+             * Format: date-time
+             * @description When the item was last touched
+             */
+            touchedAt: string;
+            submissionTitle?: string | null;
+          }[];
+        };
+      };
+    };
+  };
+  addCollectionItem: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": {
+          /**
+           * Format: uuid
+           * @description Submission to add
+           */
+          submissionId: string;
+          /** @description Sort position */
+          position?: number;
+          /** @description Private notes */
+          notes?: string;
+          /** @description Label color */
+          color?: string;
+          /** @description Item icon */
+          icon?: string;
+        };
+      };
+    };
+    responses: {
+      /** @description OK */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": {
+            /**
+             * Format: uuid
+             * @description Item ID
+             */
+            id: string;
+            /**
+             * Format: uuid
+             * @description Collection ID
+             */
+            collectionId: string;
+            /**
+             * Format: uuid
+             * @description Submission ID
+             */
+            submissionId: string;
+            /** @description Sort position within collection */
+            position: number;
+            /** @description Private editor notes */
+            notes: string | null;
+            /** @description Label color */
+            color: string | null;
+            /** @description Item icon */
+            icon: string | null;
+            /** @description Reading position anchor (deferred) */
+            readingAnchor?: unknown | null;
+            /**
+             * Format: date-time
+             * @description When the item was added
+             */
+            addedAt: string;
+            /**
+             * Format: date-time
+             * @description When the item was last touched
+             */
+            touchedAt: string;
+            submissionTitle?: string | null;
+          };
+        };
+      };
+    };
+  };
+  removeCollectionItem: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+        itemId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": {
+            /**
+             * Format: uuid
+             * @description Item ID
+             */
+            id: string;
+            /**
+             * Format: uuid
+             * @description Collection ID
+             */
+            collectionId: string;
+            /**
+             * Format: uuid
+             * @description Submission ID
+             */
+            submissionId: string;
+            /** @description Sort position within collection */
+            position: number;
+            /** @description Private editor notes */
+            notes: string | null;
+            /** @description Label color */
+            color: string | null;
+            /** @description Item icon */
+            icon: string | null;
+            /** @description Reading position anchor (deferred) */
+            readingAnchor?: unknown | null;
+            /**
+             * Format: date-time
+             * @description When the item was added
+             */
+            addedAt: string;
+            /**
+             * Format: date-time
+             * @description When the item was last touched
+             */
+            touchedAt: string;
+            submissionTitle?: string | null;
+          } | null;
+        };
+      };
+    };
+  };
+  updateCollectionItem: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+        itemId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: {
+      content: {
+        "application/json": {
+          /** @description Private notes */
+          notes?: string | null;
+          /** @description Label color */
+          color?: string | null;
+          /** @description Item icon */
+          icon?: string | null;
+          /** @description Reading position anchor — persisted only in collection context */
+          readingAnchor?: {
+            nodeIndex: number;
+            charOffset: number;
+          } | null;
+        };
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": {
+            /**
+             * Format: uuid
+             * @description Item ID
+             */
+            id: string;
+            /**
+             * Format: uuid
+             * @description Collection ID
+             */
+            collectionId: string;
+            /**
+             * Format: uuid
+             * @description Submission ID
+             */
+            submissionId: string;
+            /** @description Sort position within collection */
+            position: number;
+            /** @description Private editor notes */
+            notes: string | null;
+            /** @description Label color */
+            color: string | null;
+            /** @description Item icon */
+            icon: string | null;
+            /** @description Reading position anchor (deferred) */
+            readingAnchor?: unknown | null;
+            /**
+             * Format: date-time
+             * @description When the item was added
+             */
+            addedAt: string;
+            /**
+             * Format: date-time
+             * @description When the item was last touched
+             */
+            touchedAt: string;
+            submissionTitle?: string | null;
+          };
+        };
+      };
+    };
+  };
+  reorderCollectionItems: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": {
+          /** @description Items with new positions */
+          items: {
+            /**
+             * Format: uuid
+             * @description Item ID
+             */
+            id: string;
+            /** @description New position */
+            position: number;
+          }[];
+        };
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": {
+            /**
+             * Format: uuid
+             * @description Item ID
+             */
+            id: string;
+            /**
+             * Format: uuid
+             * @description Collection ID
+             */
+            collectionId: string;
+            /**
+             * Format: uuid
+             * @description Submission ID
+             */
+            submissionId: string;
+            /** @description Sort position within collection */
+            position: number;
+            /** @description Private editor notes */
+            notes: string | null;
+            /** @description Label color */
+            color: string | null;
+            /** @description Item icon */
+            icon: string | null;
+            /** @description Reading position anchor (deferred) */
+            readingAnchor?: unknown | null;
+            /**
+             * Format: date-time
+             * @description When the item was added
+             */
+            addedAt: string;
+            /**
+             * Format: date-time
+             * @description When the item was last touched
+             */
+            touchedAt: string;
+            submissionTitle?: string | null;
+          }[];
         };
       };
     };

@@ -1,52 +1,48 @@
 from __future__ import annotations
 
+import datetime
 from collections.abc import Mapping
-from typing import Any, TypeVar, BinaryIO, TextIO, TYPE_CHECKING, Generator
+from typing import TYPE_CHECKING, Any, TypeVar, cast
+from uuid import UUID
 
 from attrs import define as _attrs_define
 from attrs import field as _attrs_field
 
-from ..types import UNSET, Unset
-
 from ..models.duplicate_form_response_201_fields_item_field_type import DuplicateFormResponse201FieldsItemFieldType
-from dateutil.parser import isoparse
-from typing import cast
-from uuid import UUID
-import datetime
 
 if TYPE_CHECKING:
-  from ..models.duplicate_form_response_201_fields_item_conditional_rules_type_0_item import DuplicateFormResponse201FieldsItemConditionalRulesType0Item
-  from ..models.duplicate_form_response_201_fields_item_config_type_0 import DuplicateFormResponse201FieldsItemConfigType0
-
-
-
+    from ..models.duplicate_form_response_201_fields_item_conditional_rules_type_0_item import (
+        DuplicateFormResponse201FieldsItemConditionalRulesType0Item,
+    )
+    from ..models.duplicate_form_response_201_fields_item_config_type_0 import (
+        DuplicateFormResponse201FieldsItemConfigType0,
+    )
 
 
 T = TypeVar("T", bound="DuplicateFormResponse201FieldsItem")
 
 
-
 @_attrs_define
 class DuplicateFormResponse201FieldsItem:
-    """ 
-        Attributes:
-            id (UUID): Unique identifier for the field
-            form_definition_id (UUID): ID of the parent form definition
-            field_key (str): Machine name for the field (unique per form)
-            field_type (DuplicateFormResponse201FieldsItemFieldType): Type of form field
-            label (str): Human-readable label
-            description (None | str): Help text for the field
-            placeholder (None | str): Placeholder text for input fields
-            required (bool): Whether the field is required for submission
-            sort_order (int): Display order within the form
-            config (DuplicateFormResponse201FieldsItemConfigType0 | None): Type-specific configuration for the field
-            conditional_rules (list[DuplicateFormResponse201FieldsItemConditionalRulesType0Item] | None): Conditional
-                display rules
-            branch_id (None | str): Branch ID this field belongs to (from source field config)
-            page_id (None | UUID): Page this field belongs to
-            created_at (datetime.datetime): When the field was created
-            updated_at (datetime.datetime): When the field was last updated
-     """
+    """
+    Attributes:
+        id (UUID): Unique identifier for the field
+        form_definition_id (UUID): ID of the parent form definition
+        field_key (str): Machine name for the field (unique per form)
+        field_type (DuplicateFormResponse201FieldsItemFieldType): Type of form field
+        label (str): Human-readable label
+        description (None | str): Help text for the field
+        placeholder (None | str): Placeholder text for input fields
+        required (bool): Whether the field is required for submission
+        sort_order (int): Display order within the form
+        config (DuplicateFormResponse201FieldsItemConfigType0 | None): Type-specific configuration for the field
+        conditional_rules (list[DuplicateFormResponse201FieldsItemConditionalRulesType0Item] | None): Conditional
+            display rules
+        branch_id (None | str): Branch ID this field belongs to (from source field config)
+        page_id (None | UUID): Page this field belongs to
+        created_at (datetime.datetime): When the field was created
+        updated_at (datetime.datetime): When the field was last updated
+    """
 
     id: UUID
     form_definition_id: UUID
@@ -65,13 +61,11 @@ class DuplicateFormResponse201FieldsItem:
     updated_at: datetime.datetime
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
-
-
-
-
     def to_dict(self) -> dict[str, Any]:
-        from ..models.duplicate_form_response_201_fields_item_conditional_rules_type_0_item import DuplicateFormResponse201FieldsItemConditionalRulesType0Item
-        from ..models.duplicate_form_response_201_fields_item_config_type_0 import DuplicateFormResponse201FieldsItemConfigType0
+        from ..models.duplicate_form_response_201_fields_item_config_type_0 import (
+            DuplicateFormResponse201FieldsItemConfigType0,
+        )
+
         id = str(self.id)
 
         form_definition_id = str(self.form_definition_id)
@@ -105,7 +99,6 @@ class DuplicateFormResponse201FieldsItem:
                 conditional_rules_type_0_item = conditional_rules_type_0_item_data.to_dict()
                 conditional_rules.append(conditional_rules_type_0_item)
 
-
         else:
             conditional_rules = self.conditional_rules
 
@@ -122,52 +115,47 @@ class DuplicateFormResponse201FieldsItem:
 
         updated_at = self.updated_at.isoformat()
 
-
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
-        field_dict.update({
-            "id": id,
-            "formDefinitionId": form_definition_id,
-            "fieldKey": field_key,
-            "fieldType": field_type,
-            "label": label,
-            "description": description,
-            "placeholder": placeholder,
-            "required": required,
-            "sortOrder": sort_order,
-            "config": config,
-            "conditionalRules": conditional_rules,
-            "branchId": branch_id,
-            "pageId": page_id,
-            "createdAt": created_at,
-            "updatedAt": updated_at,
-        })
+        field_dict.update(
+            {
+                "id": id,
+                "formDefinitionId": form_definition_id,
+                "fieldKey": field_key,
+                "fieldType": field_type,
+                "label": label,
+                "description": description,
+                "placeholder": placeholder,
+                "required": required,
+                "sortOrder": sort_order,
+                "config": config,
+                "conditionalRules": conditional_rules,
+                "branchId": branch_id,
+                "pageId": page_id,
+                "createdAt": created_at,
+                "updatedAt": updated_at,
+            }
+        )
 
         return field_dict
 
-
-
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.duplicate_form_response_201_fields_item_conditional_rules_type_0_item import DuplicateFormResponse201FieldsItemConditionalRulesType0Item
-        from ..models.duplicate_form_response_201_fields_item_config_type_0 import DuplicateFormResponse201FieldsItemConfigType0
+        from ..models.duplicate_form_response_201_fields_item_conditional_rules_type_0_item import (
+            DuplicateFormResponse201FieldsItemConditionalRulesType0Item,
+        )
+        from ..models.duplicate_form_response_201_fields_item_config_type_0 import (
+            DuplicateFormResponse201FieldsItemConfigType0,
+        )
+
         d = dict(src_dict)
         id = UUID(d.pop("id"))
 
-
-
-
         form_definition_id = UUID(d.pop("formDefinitionId"))
-
-
-
 
         field_key = d.pop("fieldKey")
 
         field_type = DuplicateFormResponse201FieldsItemFieldType(d.pop("fieldType"))
-
-
-
 
         label = d.pop("label")
 
@@ -178,14 +166,12 @@ class DuplicateFormResponse201FieldsItem:
 
         description = _parse_description(d.pop("description"))
 
-
         def _parse_placeholder(data: object) -> None | str:
             if data is None:
                 return data
             return cast(None | str, data)
 
         placeholder = _parse_placeholder(d.pop("placeholder"))
-
 
         required = d.pop("required")
 
@@ -199,8 +185,6 @@ class DuplicateFormResponse201FieldsItem:
                     raise TypeError()
                 config_type_0 = DuplicateFormResponse201FieldsItemConfigType0.from_dict(data)
 
-
-
                 return config_type_0
             except (TypeError, ValueError, AttributeError, KeyError):
                 pass
@@ -208,8 +192,9 @@ class DuplicateFormResponse201FieldsItem:
 
         config = _parse_config(d.pop("config"))
 
-
-        def _parse_conditional_rules(data: object) -> list[DuplicateFormResponse201FieldsItemConditionalRulesType0Item] | None:
+        def _parse_conditional_rules(
+            data: object,
+        ) -> list[DuplicateFormResponse201FieldsItemConditionalRulesType0Item] | None:
             if data is None:
                 return data
             try:
@@ -217,10 +202,12 @@ class DuplicateFormResponse201FieldsItem:
                     raise TypeError()
                 conditional_rules_type_0 = []
                 _conditional_rules_type_0 = data
-                for conditional_rules_type_0_item_data in (_conditional_rules_type_0):
-                    conditional_rules_type_0_item = DuplicateFormResponse201FieldsItemConditionalRulesType0Item.from_dict(conditional_rules_type_0_item_data)
-
-
+                for conditional_rules_type_0_item_data in _conditional_rules_type_0:
+                    conditional_rules_type_0_item = (
+                        DuplicateFormResponse201FieldsItemConditionalRulesType0Item.from_dict(
+                            conditional_rules_type_0_item_data
+                        )
+                    )
 
                     conditional_rules_type_0.append(conditional_rules_type_0_item)
 
@@ -231,14 +218,12 @@ class DuplicateFormResponse201FieldsItem:
 
         conditional_rules = _parse_conditional_rules(d.pop("conditionalRules"))
 
-
         def _parse_branch_id(data: object) -> None | str:
             if data is None:
                 return data
             return cast(None | str, data)
 
         branch_id = _parse_branch_id(d.pop("branchId"))
-
 
         def _parse_page_id(data: object) -> None | UUID:
             if data is None:
@@ -248,8 +233,6 @@ class DuplicateFormResponse201FieldsItem:
                     raise TypeError()
                 page_id_type_0 = UUID(data)
 
-
-
                 return page_id_type_0
             except (TypeError, ValueError, AttributeError, KeyError):
                 pass
@@ -257,16 +240,9 @@ class DuplicateFormResponse201FieldsItem:
 
         page_id = _parse_page_id(d.pop("pageId"))
 
+        created_at = datetime.datetime.fromisoformat(d.pop("createdAt"))
 
-        created_at = isoparse(d.pop("createdAt"))
-
-
-
-
-        updated_at = isoparse(d.pop("updatedAt"))
-
-
-
+        updated_at = datetime.datetime.fromisoformat(d.pop("updatedAt"))
 
         duplicate_form_response_201_fields_item = cls(
             id=id,
@@ -285,7 +261,6 @@ class DuplicateFormResponse201FieldsItem:
             created_at=created_at,
             updated_at=updated_at,
         )
-
 
         duplicate_form_response_201_fields_item.additional_properties = d
         return duplicate_form_response_201_fields_item

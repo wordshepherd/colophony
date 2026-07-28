@@ -1,40 +1,32 @@
 from http import HTTPStatus
-from typing import Any, cast
+from typing import Any
 from urllib.parse import quote
+from uuid import UUID
 
 import httpx
 
-from ...client import AuthenticatedClient, Client
-from ...types import Response, UNSET
 from ... import errors
-
+from ...client import AuthenticatedClient, Client
 from ...models.add_issue_item_body import AddIssueItemBody
 from ...models.add_issue_item_response_201 import AddIssueItemResponse201
-from typing import cast
-from uuid import UUID
-
+from ...types import Response
 
 
 def _get_kwargs(
     id: UUID,
     *,
     body: AddIssueItemBody,
-
 ) -> dict[str, Any]:
     headers: dict[str, Any] = {}
 
-
-    
-
-    
-
     _kwargs: dict[str, Any] = {
         "method": "post",
-        "url": "/issues/{id}/items".format(id=quote(str(id), safe=""),),
+        "url": "/issues/{id}/items".format(
+            id=quote(str(id), safe=""),
+        ),
     }
 
     _kwargs["json"] = body.to_dict()
-
 
     headers["Content-Type"] = "application/json"
 
@@ -42,12 +34,11 @@ def _get_kwargs(
     return _kwargs
 
 
-
-def _parse_response(*, client: AuthenticatedClient | Client, response: httpx.Response) -> AddIssueItemResponse201 | None:
+def _parse_response(
+    *, client: AuthenticatedClient | Client, response: httpx.Response
+) -> AddIssueItemResponse201 | None:
     if response.status_code == 201:
         response_201 = AddIssueItemResponse201.from_dict(response.json())
-
-
 
         return response_201
 
@@ -57,7 +48,9 @@ def _parse_response(*, client: AuthenticatedClient | Client, response: httpx.Res
         return None
 
 
-def _build_response(*, client: AuthenticatedClient | Client, response: httpx.Response) -> Response[AddIssueItemResponse201]:
+def _build_response(
+    *, client: AuthenticatedClient | Client, response: httpx.Response
+) -> Response[AddIssueItemResponse201]:
     return Response(
         status_code=HTTPStatus(response.status_code),
         content=response.content,
@@ -71,9 +64,8 @@ def sync_detailed(
     *,
     client: AuthenticatedClient | Client,
     body: AddIssueItemBody,
-
 ) -> Response[AddIssueItemResponse201]:
-    """ Add item to issue
+    """Add item to issue
 
      Add a pipeline item to an issue.
 
@@ -87,13 +79,11 @@ def sync_detailed(
 
     Returns:
         Response[AddIssueItemResponse201]
-     """
-
+    """
 
     kwargs = _get_kwargs(
         id=id,
-body=body,
-
+        body=body,
     )
 
     response = client.get_httpx_client().request(
@@ -102,14 +92,14 @@ body=body,
 
     return _build_response(client=client, response=response)
 
+
 def sync(
     id: UUID,
     *,
     client: AuthenticatedClient | Client,
     body: AddIssueItemBody,
-
 ) -> AddIssueItemResponse201 | None:
-    """ Add item to issue
+    """Add item to issue
 
      Add a pipeline item to an issue.
 
@@ -123,24 +113,22 @@ def sync(
 
     Returns:
         AddIssueItemResponse201
-     """
-
+    """
 
     return sync_detailed(
         id=id,
-client=client,
-body=body,
-
+        client=client,
+        body=body,
     ).parsed
+
 
 async def asyncio_detailed(
     id: UUID,
     *,
     client: AuthenticatedClient | Client,
     body: AddIssueItemBody,
-
 ) -> Response[AddIssueItemResponse201]:
-    """ Add item to issue
+    """Add item to issue
 
      Add a pipeline item to an issue.
 
@@ -154,29 +142,25 @@ async def asyncio_detailed(
 
     Returns:
         Response[AddIssueItemResponse201]
-     """
-
+    """
 
     kwargs = _get_kwargs(
         id=id,
-body=body,
-
+        body=body,
     )
 
-    response = await client.get_async_httpx_client().request(
-        **kwargs
-    )
+    response = await client.get_async_httpx_client().request(**kwargs)
 
     return _build_response(client=client, response=response)
+
 
 async def asyncio(
     id: UUID,
     *,
     client: AuthenticatedClient | Client,
     body: AddIssueItemBody,
-
 ) -> AddIssueItemResponse201 | None:
-    """ Add item to issue
+    """Add item to issue
 
      Add a pipeline item to an issue.
 
@@ -190,12 +174,12 @@ async def asyncio(
 
     Returns:
         AddIssueItemResponse201
-     """
+    """
 
-
-    return (await asyncio_detailed(
-        id=id,
-client=client,
-body=body,
-
-    )).parsed
+    return (
+        await asyncio_detailed(
+            id=id,
+            client=client,
+            body=body,
+        )
+    ).parsed

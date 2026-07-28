@@ -1,5 +1,6 @@
 from enum import Enum
 
+
 class VoidContractResponse200Status(str, Enum):
     COMPLETED = "COMPLETED"
     COUNTERSIGNED = "COUNTERSIGNED"

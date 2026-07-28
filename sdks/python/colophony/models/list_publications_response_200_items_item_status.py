@@ -1,5 +1,6 @@
 from enum import Enum
 
+
 class ListPublicationsResponse200ItemsItemStatus(str, Enum):
     ACTIVE = "ACTIVE"
     ARCHIVED = "ARCHIVED"

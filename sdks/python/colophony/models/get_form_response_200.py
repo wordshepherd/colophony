@@ -1,50 +1,42 @@
 from __future__ import annotations
 
+import datetime
 from collections.abc import Mapping
-from typing import Any, TypeVar, BinaryIO, TextIO, TYPE_CHECKING, Generator
+from typing import TYPE_CHECKING, Any, TypeVar, cast
+from uuid import UUID
 
 from attrs import define as _attrs_define
 from attrs import field as _attrs_field
 
-from ..types import UNSET, Unset
-
 from ..models.get_form_response_200_status import GetFormResponse200Status
-from dateutil.parser import isoparse
-from typing import cast
-from uuid import UUID
-import datetime
 
 if TYPE_CHECKING:
-  from ..models.get_form_response_200_fields_item import GetFormResponse200FieldsItem
-  from ..models.get_form_response_200_pages_item import GetFormResponse200PagesItem
-
-
-
+    from ..models.get_form_response_200_fields_item import GetFormResponse200FieldsItem
+    from ..models.get_form_response_200_pages_item import GetFormResponse200PagesItem
 
 
 T = TypeVar("T", bound="GetFormResponse200")
 
 
-
 @_attrs_define
 class GetFormResponse200:
-    """ 
-        Attributes:
-            id (UUID): Unique identifier for the form definition
-            organization_id (UUID): ID of the owning organization
-            name (str): Display name of the form
-            description (None | str): Description of the form
-            status (GetFormResponse200Status): Current status of the form definition
-            version (int): Version number
-            duplicated_from_id (None | UUID): ID of the form this was duplicated from
-            created_by (None | UUID): ID of the user who created the form
-            published_at (datetime.datetime | None): When the form was published
-            archived_at (datetime.datetime | None): When the form was archived
-            created_at (datetime.datetime): When the form was created
-            updated_at (datetime.datetime): When the form was last updated
-            fields (list[GetFormResponse200FieldsItem]): Fields in this form, ordered by sortOrder
-            pages (list[GetFormResponse200PagesItem]): Pages in this form, ordered by sortOrder
-     """
+    """
+    Attributes:
+        id (UUID): Unique identifier for the form definition
+        organization_id (UUID): ID of the owning organization
+        name (str): Display name of the form
+        description (None | str): Description of the form
+        status (GetFormResponse200Status): Current status of the form definition
+        version (int): Version number
+        duplicated_from_id (None | UUID): ID of the form this was duplicated from
+        created_by (None | UUID): ID of the user who created the form
+        published_at (datetime.datetime | None): When the form was published
+        archived_at (datetime.datetime | None): When the form was archived
+        created_at (datetime.datetime): When the form was created
+        updated_at (datetime.datetime): When the form was last updated
+        fields (list[GetFormResponse200FieldsItem]): Fields in this form, ordered by sortOrder
+        pages (list[GetFormResponse200PagesItem]): Pages in this form, ordered by sortOrder
+    """
 
     id: UUID
     organization_id: UUID
@@ -62,13 +54,7 @@ class GetFormResponse200:
     pages: list[GetFormResponse200PagesItem]
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
-
-
-
-
     def to_dict(self) -> dict[str, Any]:
-        from ..models.get_form_response_200_pages_item import GetFormResponse200PagesItem
-        from ..models.get_form_response_200_fields_item import GetFormResponse200FieldsItem
         id = str(self.id)
 
         organization_id = str(self.organization_id)
@@ -115,53 +101,43 @@ class GetFormResponse200:
             fields_item = fields_item_data.to_dict()
             fields.append(fields_item)
 
-
-
         pages = []
         for pages_item_data in self.pages:
             pages_item = pages_item_data.to_dict()
             pages.append(pages_item)
 
-
-
-
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
-        field_dict.update({
-            "id": id,
-            "organizationId": organization_id,
-            "name": name,
-            "description": description,
-            "status": status,
-            "version": version,
-            "duplicatedFromId": duplicated_from_id,
-            "createdBy": created_by,
-            "publishedAt": published_at,
-            "archivedAt": archived_at,
-            "createdAt": created_at,
-            "updatedAt": updated_at,
-            "fields": fields,
-            "pages": pages,
-        })
+        field_dict.update(
+            {
+                "id": id,
+                "organizationId": organization_id,
+                "name": name,
+                "description": description,
+                "status": status,
+                "version": version,
+                "duplicatedFromId": duplicated_from_id,
+                "createdBy": created_by,
+                "publishedAt": published_at,
+                "archivedAt": archived_at,
+                "createdAt": created_at,
+                "updatedAt": updated_at,
+                "fields": fields,
+                "pages": pages,
+            }
+        )
 
         return field_dict
-
-
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
         from ..models.get_form_response_200_fields_item import GetFormResponse200FieldsItem
         from ..models.get_form_response_200_pages_item import GetFormResponse200PagesItem
+
         d = dict(src_dict)
         id = UUID(d.pop("id"))
 
-
-
-
         organization_id = UUID(d.pop("organizationId"))
-
-
-
 
         name = d.pop("name")
 
@@ -172,11 +148,7 @@ class GetFormResponse200:
 
         description = _parse_description(d.pop("description"))
 
-
         status = GetFormResponse200Status(d.pop("status"))
-
-
-
 
         version = d.pop("version")
 
@@ -188,15 +160,12 @@ class GetFormResponse200:
                     raise TypeError()
                 duplicated_from_id_type_0 = UUID(data)
 
-
-
                 return duplicated_from_id_type_0
             except (TypeError, ValueError, AttributeError, KeyError):
                 pass
             return cast(None | UUID, data)
 
         duplicated_from_id = _parse_duplicated_from_id(d.pop("duplicatedFromId"))
-
 
         def _parse_created_by(data: object) -> None | UUID:
             if data is None:
@@ -206,8 +175,6 @@ class GetFormResponse200:
                     raise TypeError()
                 created_by_type_0 = UUID(data)
 
-
-
                 return created_by_type_0
             except (TypeError, ValueError, AttributeError, KeyError):
                 pass
@@ -215,16 +182,13 @@ class GetFormResponse200:
 
         created_by = _parse_created_by(d.pop("createdBy"))
 
-
         def _parse_published_at(data: object) -> datetime.datetime | None:
             if data is None:
                 return data
             try:
                 if not isinstance(data, str):
                     raise TypeError()
-                published_at_type_0 = isoparse(data)
-
-
+                published_at_type_0 = datetime.datetime.fromisoformat(data)
 
                 return published_at_type_0
             except (TypeError, ValueError, AttributeError, KeyError):
@@ -233,16 +197,13 @@ class GetFormResponse200:
 
         published_at = _parse_published_at(d.pop("publishedAt"))
 
-
         def _parse_archived_at(data: object) -> datetime.datetime | None:
             if data is None:
                 return data
             try:
                 if not isinstance(data, str):
                     raise TypeError()
-                archived_at_type_0 = isoparse(data)
-
-
+                archived_at_type_0 = datetime.datetime.fromisoformat(data)
 
                 return archived_at_type_0
             except (TypeError, ValueError, AttributeError, KeyError):
@@ -251,36 +212,23 @@ class GetFormResponse200:
 
         archived_at = _parse_archived_at(d.pop("archivedAt"))
 
+        created_at = datetime.datetime.fromisoformat(d.pop("createdAt"))
 
-        created_at = isoparse(d.pop("createdAt"))
-
-
-
-
-        updated_at = isoparse(d.pop("updatedAt"))
-
-
-
+        updated_at = datetime.datetime.fromisoformat(d.pop("updatedAt"))
 
         fields = []
         _fields = d.pop("fields")
-        for fields_item_data in (_fields):
+        for fields_item_data in _fields:
             fields_item = GetFormResponse200FieldsItem.from_dict(fields_item_data)
-
-
 
             fields.append(fields_item)
 
-
         pages = []
         _pages = d.pop("pages")
-        for pages_item_data in (_pages):
+        for pages_item_data in _pages:
             pages_item = GetFormResponse200PagesItem.from_dict(pages_item_data)
 
-
-
             pages.append(pages_item)
-
 
         get_form_response_200 = cls(
             id=id,
@@ -298,7 +246,6 @@ class GetFormResponse200:
             fields=fields,
             pages=pages,
         )
-
 
         get_form_response_200.additional_properties = d
         return get_form_response_200
