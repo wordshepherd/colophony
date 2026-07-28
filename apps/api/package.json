@@ -78,7 +78,7 @@
     "@types/clamscan": "2.4.1",
     "@types/ioredis-mock": "8.2.7",
     "@types/mjml": "5.0.0",
-    "@types/node": "25.5.0",
+    "@types/node": "26.1.2",
     "@types/nodemailer": "7.0.11",
     "@types/pg": "8.20.0",
     "@types/sanitize-html": "2.16.1",
