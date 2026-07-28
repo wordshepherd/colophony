@@ -6,10 +6,17 @@ import { defineConfig, devices } from "@playwright/test";
 /**
  * Playwright configuration for browser E2E tests.
  *
- * Three projects:
- * - submissions: existing tests (fake OIDC + API key interception, no external services)
+ * Ten projects. Most need nothing beyond Postgres and seed data; three have
+ * external prerequisites:
  * - uploads: requires tusd + Garage (docker-compose.e2e.yml)
  * - oidc: requires Zitadel (docker-compose --profile auth)
+ * - embed: public embed forms, no authenticated principal
+ *
+ * Auth model: every suite except `oidc` and `embed` authenticates through the
+ * API's interactive test path (`x-test-user-id`, apps/api/src/hooks/auth.ts).
+ * That path is gated on NODE_ENV=test AND the absence of a JWKS verifier, so
+ * the API webServer below sets both. `oidc` drives a real Zitadel login and
+ * therefore keeps the verifier.
  *
  * IMPORTANT: Playwright's webServer.env replaces process.env entirely for child
  * processes. We must load .env files and spread process.env to ensure DATABASE_URL
@@ -165,6 +172,15 @@ export default defineConfig({
         // Raise rate limits for E2E: tests × ~5 requests each can exceed default 60/min
         RATE_LIMIT_DEFAULT_MAX: "1000",
         RATE_LIMIT_AUTH_MAX: "1000",
+        // Enable the interactive test-auth path (x-test-user-id). It requires
+        // BOTH NODE_ENV=test and no JWKS verifier — see hooks/auth.ts. The
+        // empty ZITADEL_AUTHORITY is load-bearing: apps/api/.env sets a real
+        // one, which reaches this process via dotenv above and the API's own
+        // --env-file-if-exists. Its zod schema maps '' -> undefined before the
+        // .url() check, so this clears it rather than failing validation.
+        // Node's --env-file does not override an already-set variable, so this
+        // wins over apps/api/.env.
+        ...(isOidcE2e ? {} : { NODE_ENV: "test", ZITADEL_AUTHORITY: "" }),
         ...(isOidcE2e && {
           ZITADEL_AUTHORITY: oidcAuthority,
           // Zitadel JWT aud contains the project_id as the resource audience

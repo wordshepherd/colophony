@@ -78,6 +78,7 @@
 - [ ] Add `tseslint.configs.recommendedTypeChecked` to `apps/web/eslint.config.mjs` — the web app is currently unlinted for `no-floating-promises`, `no-misused-promises`, `await-thenable`, and the `no-unsafe-*` family, unlike `apps/api`. Expect a large first-run count; start the noisiest rules at `warn` — (DEVLOG 2026-07-25)
 - [ ] [P2] Stop passing `SENTRY_AUTH_TOKEN` as a Docker build ARG — `apps/web/Dockerfile` lines 34–35 take it as `ARG` then promote it to `ENV`. Build ARGs are recorded in image history, so the token is recoverable from any built image; `docker build` warns about this (`SecretsUsedInArgOrEnv`). Use a BuildKit secret mount (`RUN --mount=type=secret,id=sentry_auth_token`) and pass it via `--secret` from the deploy workflow instead — (DEVLOG 2026-07-26)
 - [ ] [P3] Spot-check rendered email output after the mjml 5 upgrade — 5.0.0 replaced `html-minifier`/`js-beautify` with `htmlnano` + `cssnano`, so the emitted HTML differs in whitespace and minification from 4.x. Unit tests and the staging smoke suite both pass, which covers the render path but not client rendering; send one templated email and one custom template through the email queue and compare against a 4.x capture — (DEVLOG 2026-07-26b)
+- [ ] [P3] Seed data ages out of a long-lived dev database, and `db:seed` will not repair it. Submission periods are seeded at fixed offsets from the seed date, so `quarterly-review` eventually has no open period — which fails 11 of 13 `embed` tests with `No open period found`. `pnpm db:seed` is idempotent-by-skip, so it is a no-op once data exists; only the destructive `db:reset` refreshes the dates. CI is unaffected (it seeds fresh each run), so this only ever bites locally, and it looks like a code regression rather than stale data. Either make the seed refresh period dates when they have closed, or have `global-setup.ts` fail with a "run `pnpm db:reset`" message when no open period exists for the seed org — (found 2026-07-27 while verifying the E2E auth rework)
 
 ---
 
@@ -145,27 +146,36 @@ Ordered as the design doc's Phase 0/D.
         any key until P0.5. The suite's last test pins the enforced behaviour across all
         29 so the gap stays visible.
   - [ ] **P0.5** — flip `TRPC_INTERNAL_ONLY_ENFORCE` to `true` after the observation
-        window; decide `payments:read`. **Blocked on the E2E auth model** — see below.
-  - [ ] **[P1] Playwright suites authenticate as API keys, which blocks P0.5.**
-        `e2e/helpers/*-fixtures.ts` mint a real `col_test_` key per suite and set it as
-        a browser header, so every E2E request carries `authMethod: 'apikey'` rather
-        than an interactive session. Consequences: (1) every scope added to a tRPC
-        procedure must also be added to each suite's `*_E2E_SCOPES` array — this is
-        what broke CI on the P0.1b branch; (2) `federation-admin.spec.ts` and the
-        `/settings` account-deletion path drive `internalOnly` routers, so they pass
-        only while the boundary is log-only and **will 403 the moment P0.5 flips it**.
-        Fix by having the fixtures use the interactive test-auth path
-        (`x-test-user-id`, already supported in `hooks/auth.ts`) instead of a key, so
-        E2E exercises the same auth class the web app actually uses. —
-        (discovered 2026-07-27 during P0.1b)
-        **(3) The `*_E2E_SCOPES` naming convention is not universal, so grepping for it
-        is not a reliable audit.** `organization-fixtures.ts` mints a _second_ key inline
-        for the `inviteePage` fixture with its own scope array — deliberately, since the
-        invitee is a lower-privilege principal than the org admin. Adding
-        `organizations:write` to `invitations.accept` in P0.4 broke four accept-side
-        tests until that inline array was updated too. `scopes:` is the search key that
-        finds every grant; there are nine across `apps/web/e2e/helpers/`. The rework
-        should collapse both onto the interactive path. — (found 2026-07-27 during P0.4)
+        window; decide `payments:read`. **No longer blocked** — the E2E rework landed
+        2026-07-27. The window is the only remaining gate: the design doc prescribes
+        querying `audit_events` for `API_KEY_INTERNAL_ROUTE` after ~a month of
+        observation (i.e. from 2026-07-27), shipping REST equivalents for anything real
+        that turns up, then flipping. Verified the flip is safe: the federation suite
+        passes 16/16 with `TRPC_INTERNAL_ONLY_ENFORCE=true`, against 4/16 on the
+        pre-rework tree.
+  - [x] **[P1] Playwright suites authenticated as API keys, which blocked P0.5.**
+        Every suite minted a `col_test_` key and set it as a browser header, so E2E ran
+        as `authMethod: 'apikey'`. The fixtures now use the interactive test path
+        (`x-test-user-id` → `authMethod: 'test'`), so scopes are a no-op, all ten scope
+        arrays are gone, and `internalOnly` routers admit the suites. Privilege is
+        expressed through `organization_members` roles instead. — done 2026-07-27
+        **Three things the original entry got wrong, worth keeping:**
+        (1) The count was **ten** grant sites, not nine — the nine counted raw `scopes:`
+        hits inside `helpers/` (two of which were plumbing in `db.ts`) and missed
+        `analytics/fixtures.ts`, `federation/fixtures.ts`, and a spec-local copy in
+        `organization/org-delete.spec.ts` entirely.
+        (2) `x-test-user-id` was "already supported" but **not reachable** — it needs
+        `NODE_ENV=test` AND no JWKS verifier, and `apps/api/.env` supplies a
+        `ZITADEL_AUTHORITY` that reached the E2E server. Opening it also required
+        adding the header to CORS `allowedHeaders` and to tusd's forwarded-header list.
+        (3) `inviteeOrg` was **not** an API-key artefact and could not be deleted — the
+        `organization_members` check in org-context applies identically to interactive
+        auth.
+        **The two auth modes are mutually exclusive.** `NODE_ENV=test` makes the auth
+        hook return before the `X-Api-Key` branch, so a test-mode app cannot
+        authenticate keys at all. Key admission moved to
+        `apps/api/src/__tests__/security/scope-enforcement.test.ts`, plus a tusd
+        API-key case in `tusd-webhook.test.ts`.
 - [x] **[P0] The CI "SDK Drift Check" validated the wrong direction.** It regenerated the TS
       SDK _from_ the committed spec and diffed that — never checking the spec against
       `apps/api/src/rest/routers/`. Green on every run for five months while the spec fell 36

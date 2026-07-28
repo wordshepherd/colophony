@@ -5,7 +5,6 @@
  * to bypass RLS for creating test orgs, memberships, and other fixtures.
  */
 
-import { randomBytes, createHash } from "crypto";
 import { Pool } from "pg";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { eq, and, lte, gte } from "drizzle-orm";
@@ -13,7 +12,6 @@ import {
   organizations,
   users,
   organizationMembers,
-  apiKeys,
   submissions,
   submissionPeriods,
   manuscripts,
@@ -170,52 +168,6 @@ export async function createUser(data: {
       email: users.email,
     });
   return row;
-}
-
-/**
- * Create an API key for testing.
- * Returns the plain key for use in test auth headers.
- */
-export async function createApiKey(data: {
-  orgId: string;
-  userId: string;
-  scopes: string[];
-  name?: string;
-}): Promise<{ id: string; plainKey: string }> {
-  const db = getDb();
-  const rawKey = randomBytes(32).toString("hex");
-  const plainKey = `col_test_${rawKey}`;
-  const keyHash = createHash("sha256").update(plainKey).digest("hex");
-  const keyPrefix = plainKey.slice(0, 12);
-
-  const [row] = await db
-    .insert(apiKeys)
-    .values({
-      organizationId: data.orgId,
-      createdBy: data.userId,
-      name: data.name ?? `e2e-test-key-${Date.now()}`,
-      keyHash,
-      keyPrefix,
-      scopes: data.scopes,
-    })
-    .returning({
-      id: apiKeys.id,
-    });
-
-  return { id: row.id, plainKey };
-}
-
-/**
- * Delete an API key by ID.
- */
-export async function deleteApiKey(keyId: string): Promise<void> {
-  const db = getDb();
-  await db
-    .delete(apiKeys)
-    .where(eq(apiKeys.id, keyId))
-    .catch(() => {
-      // Ignore if already deleted
-    });
 }
 
 /**

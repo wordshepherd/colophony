@@ -1,41 +1,20 @@
 /**
  * Organization deletion E2E tests.
  *
- * These tests create disposable orgs because:
- * 1. We can't delete the seed org (it's used by other suites)
- * 2. API keys are org-scoped — the seed org key won't work for a different org
+ * These tests create disposable orgs because we can't delete the seed org —
+ * it is used by every other suite.
  *
- * Each test creates its own disposable org + API key + authedPage.
+ * Each test creates its own disposable org + authedPage. The admin must be an
+ * ADMIN member of the disposable org: org-context resolves the
+ * X-Organization-Id header against `organization_members` and 403s otherwise.
  */
 
-import { test as base, expect, devices, type Browser } from "@playwright/test";
-import { buildStorageState, setupPageAuth } from "../helpers/auth";
-import {
-  createOrg,
-  deleteOrg,
-  addMember,
-  getUserByEmail,
-  createApiKey,
-  deleteApiKey,
-} from "../helpers/db";
-
-/** Admin user profile (ADMIN role) */
-const ADMIN_USER_PROFILE = {
-  sub: "seed-zitadel-admin-001",
-  email: "editor@quarterlyreview.org",
-  name: "Test Admin",
-};
-
-const ORG_E2E_SCOPES = [
-  "notifications:read",
-  "notifications:write",
-  "organizations:read",
-  "organizations:write",
-  "users:read",
-];
+import { test as base, expect, type Browser } from "@playwright/test";
+import { createAuthedContext, ADMIN_USER_PROFILE } from "../helpers/auth";
+import { createOrg, deleteOrg, addMember, getUserByEmail } from "../helpers/db";
 
 /**
- * Create a disposable org with admin membership and API key,
+ * Create a disposable org with admin membership,
  * returning an authedPage bound to that org.
  */
 async function createDisposableOrgContext(browser: Browser, baseURL: string) {
@@ -54,32 +33,22 @@ async function createDisposableOrgContext(browser: Browser, baseURL: string) {
   if (!admin) throw new Error("Seed admin not found");
   await addMember(org.id, admin.id, "ADMIN");
 
-  // Create API key scoped to this org
-  const apiKey = await createApiKey({
-    orgId: org.id,
-    userId: admin.id,
-    scopes: ORG_E2E_SCOPES,
-    name: `e2e-delete-${suffix}`,
-  });
-
-  // Create authed browser context
-  const context = await browser.newContext({
-    ...devices["Desktop Chrome"],
+  const { context, page } = await createAuthedContext(
+    browser,
     baseURL,
-    storageState: buildStorageState(org.id, ADMIN_USER_PROFILE),
-  });
+    org.id,
+    admin.id,
+    ADMIN_USER_PROFILE,
+  );
 
-  const page = await context.newPage();
-  await setupPageAuth(page, org.id, apiKey.plainKey, ADMIN_USER_PROFILE);
-
-  return { org, apiKey, page, context };
+  return { org, page, context };
 }
 
 base.describe("Delete Organization", () => {
   base(
     "delete button disabled until org name typed",
     async ({ browser, baseURL }) => {
-      const { org, apiKey, page, context } = await createDisposableOrgContext(
+      const { org, page, context } = await createDisposableOrgContext(
         browser,
         baseURL ?? "http://localhost:3010",
       );
@@ -112,14 +81,13 @@ base.describe("Delete Organization", () => {
         await expect(confirmButton).toBeEnabled();
       } finally {
         await context.close();
-        await deleteApiKey(apiKey.id);
         await deleteOrg(org.id);
       }
     },
   );
 
   base("deletes org after confirmation", async ({ browser, baseURL }) => {
-    const { org, apiKey, page, context } = await createDisposableOrgContext(
+    const { org, page, context } = await createDisposableOrgContext(
       browser,
       baseURL ?? "http://localhost:3010",
     );
@@ -147,7 +115,6 @@ base.describe("Delete Organization", () => {
       await page.waitForURL("**/", { timeout: 10000 });
     } finally {
       await context.close();
-      await deleteApiKey(apiKey.id);
       // Idempotent — org may already be deleted by the test
       await deleteOrg(org.id);
     }

@@ -9,13 +9,11 @@
  * with automatic cleanup in teardown.
  */
 
-import { test as base, expect, type Page, devices } from "@playwright/test";
-import { buildStorageState, setupPageAuth } from "./auth";
+import { test as base, expect, type Page } from "@playwright/test";
+import { createAuthedContext, ADMIN_USER_PROFILE } from "./auth";
 import {
   getOrgBySlug,
   getUserByEmail,
-  createApiKey,
-  deleteApiKey,
   createSubmission,
   deleteSubmission,
 } from "./db";
@@ -29,31 +27,6 @@ import {
   cleanupSlateData,
 } from "./slate-db";
 
-/** Admin user profile (ADMIN role in quarterly-review org) */
-const ADMIN_USER_PROFILE = {
-  sub: "seed-zitadel-admin-001",
-  email: "editor@quarterlyreview.org",
-  name: "Test Admin",
-};
-
-/** All scopes needed for Slate E2E tests */
-const SLATE_E2E_SCOPES = [
-  "notifications:read",
-  "publications:read",
-  "publications:write",
-  "pipeline:read",
-  "pipeline:write",
-  "issues:read",
-  "issues:write",
-  "contracts:read",
-  "contracts:write",
-  "cms:read",
-  "cms:write",
-  "submissions:read",
-  "users:read",
-  "organizations:read",
-];
-
 interface SeedOrg {
   id: string;
   name: string;
@@ -63,11 +36,6 @@ interface SeedOrg {
 interface SeedUser {
   id: string;
   email: string;
-}
-
-interface TestApiKey {
-  id: string;
-  plainKey: string;
 }
 
 interface SlateData {
@@ -83,7 +51,6 @@ interface SlateData {
 export const test = base.extend<{
   seedOrg: SeedOrg;
   seedAdmin: SeedUser;
-  testApiKey: TestApiKey;
   authedPage: Page;
   slateData: SlateData;
 }>({
@@ -107,32 +74,12 @@ export const test = base.extend<{
     await use(user);
   },
 
-  testApiKey: async ({ seedOrg, seedAdmin }, use) => {
-    const key = await createApiKey({
-      orgId: seedOrg.id,
-      userId: seedAdmin.id,
-      scopes: SLATE_E2E_SCOPES,
-      name: `e2e-slate-${Date.now()}`,
-    });
-
-    await use(key);
-
-    await deleteApiKey(key.id);
-  },
-
-  authedPage: async ({ browser, seedOrg, testApiKey, baseURL }, use) => {
-    const context = await browser.newContext({
-      ...devices["Desktop Chrome"],
-      baseURL: baseURL ?? undefined,
-      storageState: buildStorageState(seedOrg.id, ADMIN_USER_PROFILE),
-    });
-
-    const page = await context.newPage();
-
-    await setupPageAuth(
-      page,
+  authedPage: async ({ browser, seedOrg, seedAdmin, baseURL }, use) => {
+    const { context, page } = await createAuthedContext(
+      browser,
+      baseURL ?? undefined,
       seedOrg.id,
-      testApiKey.plainKey,
+      seedAdmin.id,
       ADMIN_USER_PROFILE,
     );
 

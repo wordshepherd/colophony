@@ -63,8 +63,10 @@ test.describe("Federation Overview", () => {
     // Capabilities list
     await expect(page.getByText("Capabilities")).toBeVisible();
 
-    // Public key area
-    await expect(page.getByText("Public Key")).toBeVisible();
+    // Public key area. `exact` matters: getByText does case-insensitive
+    // substring matching, so a bare "Public Key" also matches the rendered PEM
+    // body ("-----BEGIN PUBLIC KEY-----") and trips strict mode.
+    await expect(page.getByText("Public Key", { exact: true })).toBeVisible();
   });
 });
 

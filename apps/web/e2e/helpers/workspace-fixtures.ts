@@ -8,36 +8,14 @@
  * and correspondence for test use, with automatic cleanup in teardown.
  */
 
-import { test as base, expect, type Page, devices } from "@playwright/test";
-import { buildStorageState, setupPageAuth } from "./auth";
-import { getOrgBySlug, getUserByEmail, createApiKey, deleteApiKey } from "./db";
+import { test as base, expect, type Page } from "@playwright/test";
+import { createAuthedContext, WRITER_USER_PROFILE } from "./auth";
+import { getOrgBySlug, getUserByEmail } from "./db";
 import {
   createExternalSubmission,
   createCorrespondence,
   cleanupWorkspaceData,
 } from "./workspace-db";
-
-/** Writer user profile (READER role in quarterly-review org) */
-const WRITER_USER_PROFILE = {
-  sub: "seed-zitadel-writer-001",
-  email: "writer@example.com",
-  name: "Test Writer",
-};
-
-/** All scopes needed for Workspace E2E tests */
-const WORKSPACE_E2E_SCOPES = [
-  "notifications:read",
-  "external-submissions:read",
-  "external-submissions:write",
-  "correspondence:read",
-  "correspondence:write",
-  "csr:read",
-  "csr:write",
-  "manuscripts:read",
-  "journal-directory:read",
-  "users:read",
-  "organizations:read",
-];
 
 interface SeedOrg {
   id: string;
@@ -50,11 +28,6 @@ interface SeedUser {
   email: string;
 }
 
-interface TestApiKey {
-  id: string;
-  plainKey: string;
-}
-
 interface WorkspaceData {
   externalSubmission: { id: string; journalName: string; status: string };
   correspondence: { id: string };
@@ -63,7 +36,6 @@ interface WorkspaceData {
 export const test = base.extend<{
   seedOrg: SeedOrg;
   seedWriter: SeedUser;
-  testApiKey: TestApiKey;
   authedPage: Page;
   workspaceData: WorkspaceData;
 }>({
@@ -87,32 +59,12 @@ export const test = base.extend<{
     await use(user);
   },
 
-  testApiKey: async ({ seedOrg, seedWriter }, use) => {
-    const key = await createApiKey({
-      orgId: seedOrg.id,
-      userId: seedWriter.id,
-      scopes: WORKSPACE_E2E_SCOPES,
-      name: `e2e-workspace-${Date.now()}`,
-    });
-
-    await use(key);
-
-    await deleteApiKey(key.id);
-  },
-
-  authedPage: async ({ browser, seedOrg, testApiKey, baseURL }, use) => {
-    const context = await browser.newContext({
-      ...devices["Desktop Chrome"],
-      baseURL: baseURL ?? undefined,
-      storageState: buildStorageState(seedOrg.id, WRITER_USER_PROFILE),
-    });
-
-    const page = await context.newPage();
-
-    await setupPageAuth(
-      page,
+  authedPage: async ({ browser, seedOrg, seedWriter, baseURL }, use) => {
+    const { context, page } = await createAuthedContext(
+      browser,
+      baseURL ?? undefined,
       seedOrg.id,
-      testApiKey.plainKey,
+      seedWriter.id,
       WRITER_USER_PROFILE,
     );
 

@@ -8,29 +8,9 @@
  * all Playwright suites via detect-changes.sh shared prefix matching.
  */
 
-import { test as base, expect, type Page, devices } from "@playwright/test";
-import { buildStorageState, setupPageAuth } from "../helpers/auth";
-import {
-  getOrgBySlug,
-  getUserByEmail,
-  createApiKey,
-  deleteApiKey,
-} from "../helpers/db";
-
-/** Editor user profile (EDITOR role in quarterly-review org) */
-const EDITOR_USER_PROFILE = {
-  sub: "seed-zitadel-editor-001",
-  email: "reader@quarterlyreview.org",
-  name: "Test Editor",
-};
-
-/** All scopes needed for Analytics E2E tests */
-const ANALYTICS_SCOPES = [
-  "submissions:read",
-  "organizations:read",
-  "periods:read",
-  "users:read",
-];
+import { test as base, expect, type Page } from "@playwright/test";
+import { createAuthedContext, EDITOR_USER_PROFILE } from "../helpers/auth";
+import { getOrgBySlug, getUserByEmail } from "../helpers/db";
 
 interface SeedOrg {
   id: string;
@@ -43,15 +23,9 @@ interface SeedUser {
   email: string;
 }
 
-interface TestApiKey {
-  id: string;
-  plainKey: string;
-}
-
 export const test = base.extend<{
   seedOrg: SeedOrg;
   seedEditor: SeedUser;
-  testApiKey: TestApiKey;
   authedPage: Page;
 }>({
   seedOrg: async ({}, use) => {
@@ -74,32 +48,12 @@ export const test = base.extend<{
     await use(user);
   },
 
-  testApiKey: async ({ seedOrg, seedEditor }, use) => {
-    const key = await createApiKey({
-      orgId: seedOrg.id,
-      userId: seedEditor.id,
-      scopes: ANALYTICS_SCOPES,
-      name: `e2e-analytics-${Date.now()}`,
-    });
-
-    await use(key);
-
-    await deleteApiKey(key.id);
-  },
-
-  authedPage: async ({ browser, seedOrg, testApiKey, baseURL }, use) => {
-    const context = await browser.newContext({
-      ...devices["Desktop Chrome"],
-      baseURL: baseURL ?? undefined,
-      storageState: buildStorageState(seedOrg.id, EDITOR_USER_PROFILE),
-    });
-
-    const page = await context.newPage();
-
-    await setupPageAuth(
-      page,
+  authedPage: async ({ browser, seedOrg, seedEditor, baseURL }, use) => {
+    const { context, page } = await createAuthedContext(
+      browser,
+      baseURL ?? undefined,
       seedOrg.id,
-      testApiKey.plainKey,
+      seedEditor.id,
       EDITOR_USER_PROFILE,
     );
 

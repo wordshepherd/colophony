@@ -8,35 +8,17 @@
  * invite/remove tests, with automatic cleanup in teardown.
  */
 
-import { test as base, expect, type Page, devices } from "@playwright/test";
-import { buildStorageState, setupPageAuth } from "./auth";
+import { test as base, expect, type Page } from "@playwright/test";
+import { createAuthedContext, ADMIN_USER_PROFILE } from "./auth";
 import {
   getOrgBySlug,
   getUserByEmail,
-  createApiKey,
-  deleteApiKey,
   createUser,
   deleteUser,
   createOrg,
   deleteOrg,
   addMember,
 } from "./db";
-
-/** Admin user profile (ADMIN role in quarterly-review org) */
-const ADMIN_USER_PROFILE = {
-  sub: "seed-zitadel-admin-001",
-  email: "editor@quarterlyreview.org",
-  name: "Test Admin",
-};
-
-/** All scopes needed for Organization E2E tests */
-const ORG_E2E_SCOPES = [
-  "notifications:read",
-  "notifications:write",
-  "organizations:read",
-  "organizations:write",
-  "users:read",
-];
 
 interface SeedOrg {
   id: string;
@@ -49,11 +31,6 @@ interface SeedUser {
   email: string;
 }
 
-interface TestApiKey {
-  id: string;
-  plainKey: string;
-}
-
 interface InviteTarget {
   id: string;
   email: string;
@@ -62,7 +39,6 @@ interface InviteTarget {
 export const test = base.extend<{
   seedOrg: SeedOrg;
   seedAdmin: SeedUser;
-  testApiKey: TestApiKey;
   authedPage: Page;
   inviteTarget: InviteTarget;
   inviteeOrg: SeedOrg;
@@ -88,32 +64,12 @@ export const test = base.extend<{
     await use(user);
   },
 
-  testApiKey: async ({ seedOrg, seedAdmin }, use) => {
-    const key = await createApiKey({
-      orgId: seedOrg.id,
-      userId: seedAdmin.id,
-      scopes: ORG_E2E_SCOPES,
-      name: `e2e-org-${Date.now()}`,
-    });
-
-    await use(key);
-
-    await deleteApiKey(key.id);
-  },
-
-  authedPage: async ({ browser, seedOrg, testApiKey, baseURL }, use) => {
-    const context = await browser.newContext({
-      ...devices["Desktop Chrome"],
-      baseURL: baseURL ?? undefined,
-      storageState: buildStorageState(seedOrg.id, ADMIN_USER_PROFILE),
-    });
-
-    const page = await context.newPage();
-
-    await setupPageAuth(
-      page,
+  authedPage: async ({ browser, seedOrg, seedAdmin, baseURL }, use) => {
+    const { context, page } = await createAuthedContext(
+      browser,
+      baseURL ?? undefined,
       seedOrg.id,
-      testApiKey.plainKey,
+      seedAdmin.id,
       ADMIN_USER_PROFILE,
     );
 
@@ -136,12 +92,18 @@ export const test = base.extend<{
   },
 
   /**
-   * Separate org for invitee API key auth.
+   * Separate org so the invitee has somewhere to be a member of.
    *
-   * The org-context hook requires the API key creator to be a member of
-   * the key's org. The invitee isn't a member of the seed org, so we
-   * create a dedicated org where the invitee IS a member. The accept
-   * endpoint uses SECURITY DEFINER functions that operate cross-org.
+   * The org-context hook resolves `X-Organization-Id` against
+   * `organization_members` and returns 403 not_a_member if the user has no
+   * roles there. The invitee is by definition not yet a member of the seed
+   * org, so without this they could not load the dashboard chrome at all
+   * (the notification bell alone calls an org-scoped procedure). The accept
+   * endpoint itself is a `userProcedure` and works cross-org via SECURITY
+   * DEFINER functions.
+   *
+   * This is not an API-key artefact — the same membership check applies to
+   * interactive auth.
    */
   inviteeOrg: async ({ inviteTarget }, use) => {
     const org = await createOrg({
@@ -155,39 +117,30 @@ export const test = base.extend<{
 
   /**
    * Playwright page authenticated as the inviteTarget user.
-   * Used for accept-side invitation tests.
+   *
+   * Used for accept-side invitation tests. The invitee is deliberately a
+   * lower-privilege principal than the org admin — that distinction now rides
+   * entirely on their READER membership in `inviteeOrg`, which is how the real
+   * product expresses it.
    */
   inviteePage: async ({ browser, inviteeOrg, inviteTarget, baseURL }, use) => {
-    const apiKey = await createApiKey({
-      orgId: inviteeOrg.id,
-      userId: inviteTarget.id,
-      // organizations:write is required by invitations.accept, which this page
-      // is built to drive. Kept inline rather than folded into ORG_E2E_SCOPES
-      // because the invitee is deliberately a different, lower-privilege
-      // principal than the org admin.
-      scopes: ["organizations:read", "organizations:write", "users:read"],
-      name: `e2e-invitee-${Date.now()}`,
-    });
-
     const inviteeProfile = {
       sub: `e2e-zitadel-invite-${inviteTarget.id}`,
       email: inviteTarget.email,
       name: "Test Invitee",
     };
 
-    const context = await browser.newContext({
-      ...devices["Desktop Chrome"],
-      baseURL: baseURL ?? undefined,
-      storageState: buildStorageState(inviteeOrg.id, inviteeProfile),
-    });
-
-    const page = await context.newPage();
-    await setupPageAuth(page, inviteeOrg.id, apiKey.plainKey, inviteeProfile);
+    const { context, page } = await createAuthedContext(
+      browser,
+      baseURL ?? undefined,
+      inviteeOrg.id,
+      inviteTarget.id,
+      inviteeProfile,
+    );
 
     await use(page);
 
     await context.close();
-    await deleteApiKey(apiKey.id);
   },
 });
 

@@ -172,6 +172,12 @@ export async function buildApp(env: Env): Promise<FastifyInstance> {
       'X-Request-Id',
       'X-Api-Key',
       'X-Demo-User-Id',
+      // Interactive test auth (hooks/auth.ts). Only honoured when
+      // NODE_ENV=test and no JWKS verifier is configured; listing them here
+      // is what lets the cross-origin E2E browser send them at all.
+      'X-Test-User-Id',
+      'X-Test-Email',
+      'X-Test-Zitadel-Id',
     ],
     exposedHeaders: [
       'X-RateLimit-Limit',

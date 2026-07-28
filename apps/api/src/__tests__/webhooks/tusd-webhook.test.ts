@@ -36,9 +36,15 @@ vi.mock('../../queues/file-scan.queue.js', () => ({
   enqueueFileScan: vi.fn().mockResolvedValue(undefined),
 }));
 
+// Hoisted so the mock fn is a plain vi.fn() rather than an unbound method
+// reference — the same pattern as mockMoveBetweenBuckets below.
+const { mockVerifyKey } = vi.hoisted(() => ({
+  mockVerifyKey: vi.fn(),
+}));
+
 vi.mock('../../services/api-key.service.js', () => ({
   apiKeyService: {
-    verifyKey: vi.fn().mockResolvedValue(null),
+    verifyKey: mockVerifyKey,
     touchLastUsed: vi.fn(),
   },
 }));
@@ -67,6 +73,34 @@ vi.mock('../../adapters/registry-accessor.js', () => ({
 
 import { enqueueFileScan } from '../../queues/file-scan.queue.js';
 const mockEnqueueFileScan = vi.mocked(enqueueFileScan);
+
+// Default: no key resolves. Individual tests queue a result with
+// mockResolvedValueOnce. clearAllMocks() keeps implementations, so this
+// survives beforeEach.
+mockVerifyKey.mockResolvedValue(null);
+
+/** Shape returned by apiKeyService.verifyKey for a healthy key. */
+function validKeyResult(userId: string, scopes: string[]) {
+  return {
+    apiKey: {
+      id: 'a0000000-0000-4000-8000-000000000001',
+      organizationId: 'b0000000-0000-4000-8000-000000000001',
+      createdBy: userId,
+      name: 'tusd-test-key',
+      scopes,
+      expiresAt: null,
+      revokedAt: null,
+      lastUsedAt: null,
+      createdAt: new Date(),
+    },
+    creator: {
+      id: userId,
+      email: 'key-creator@example.com',
+      emailVerified: true,
+      deletedAt: null,
+    },
+  };
+}
 
 function adminDb() {
   return drizzle(getAdminPool());
@@ -199,6 +233,57 @@ describe('tusd webhook integration', () => {
       const body = res.json();
       expect(body.RejectUpload).toBe(true);
       expect(body.HTTPResponse.StatusCode).toBe(401);
+    });
+
+    // The uploads Playwright suite used to be the only thing exercising this
+    // branch end to end; it now authenticates via X-Test-User-Id, so the
+    // API-key path needs coverage here. Note the branch sits ABOVE the
+    // NODE_ENV==='test' one in tusd.webhook.ts, so it stays reachable even
+    // though this app runs with NODE_ENV=test.
+    it('forwarded X-Api-Key with files:write → resolves the creator and allows', async () => {
+      const { org, user, version } = await createManuscriptScenario();
+      mockVerifyKey.mockResolvedValueOnce(
+        validKeyResult(user.id, ['files:write', 'files:read']),
+      );
+
+      const payload = createPreCreatePayload({
+        manuscriptVersionId: version.id,
+        orgId: org.id,
+      });
+      payload.Event.HTTPRequest.Header = {
+        'X-Api-Key': ['col_live_whatever'],
+        'X-Organization-Id':
+          payload.Event.HTTPRequest.Header['X-Organization-Id'],
+      } as unknown as typeof payload.Event.HTTPRequest.Header;
+
+      const res = await postTusd(payload);
+      expect(res.statusCode).toBe(200);
+      // Allowed: the creator resolved to the manuscript-version owner.
+      expect(res.json()).toEqual({});
+      expect(mockVerifyKey).toHaveBeenCalledWith('col_live_whatever');
+    });
+
+    it('forwarded X-Api-Key without files:write → RejectUpload 403', async () => {
+      const { org, version } = await createManuscriptScenario();
+      mockVerifyKey.mockResolvedValueOnce(
+        validKeyResult('c0000000-0000-4000-8000-000000000001', ['files:read']),
+      );
+
+      const payload = createPreCreatePayload({
+        manuscriptVersionId: version.id,
+        orgId: org.id,
+      });
+      payload.Event.HTTPRequest.Header = {
+        'X-Api-Key': ['col_live_underscoped'],
+        'X-Organization-Id':
+          payload.Event.HTTPRequest.Header['X-Organization-Id'],
+      } as unknown as typeof payload.Event.HTTPRequest.Header;
+
+      const res = await postTusd(payload);
+      expect(res.statusCode).toBe(200);
+      const body = res.json();
+      expect(body.RejectUpload).toBe(true);
+      expect(body.HTTPResponse.StatusCode).toBe(403);
     });
 
     it('missing manuscript-version-id → RejectUpload 400', async () => {
