@@ -141,9 +141,13 @@ jobs:
             docker image prune -af
             df -h / | tail -1
 
-            AVAIL_G=$(df -BG --output=avail / | tail -1 | tr -dc '0-9')
-            if [ "${AVAIL_G:-0}" -lt 20 ]; then
-              echo "::error::Only ${AVAIL_G}G free after pruning; need 20G to build. Investigate before retrying."
+            # Compare bytes, not `df -BG`: that rounds UP, so 19.1GiB free
+            # reports as "20G" and passes a `-lt 20` test — the guard would wave
+            # through exactly the build it exists to stop.
+            AVAIL_B=$(df -B1 --output=avail / | tail -1 | tr -dc '0-9')
+            MIN_B=$((20 * 1024 * 1024 * 1024))
+            if [ "${AVAIL_B:-0}" -lt "$MIN_B" ]; then
+              echo "::error::Only $((${AVAIL_B:-0} / 1024 / 1024 / 1024))G free after pruning; need 20G to build. Investigate before retrying."
               exit 1
             fi
 
@@ -248,9 +252,13 @@ jobs:
             docker image prune -af
             df -h / | tail -1
 
-            AVAIL_G=$(df -BG --output=avail / | tail -1 | tr -dc '0-9')
-            if [ "${AVAIL_G:-0}" -lt 20 ]; then
-              echo "::error::Only ${AVAIL_G}G free after pruning; need 20G to build. Investigate before retrying."
+            # Compare bytes, not `df -BG`: that rounds UP, so 19.1GiB free
+            # reports as "20G" and passes a `-lt 20` test — the guard would wave
+            # through exactly the build it exists to stop.
+            AVAIL_B=$(df -B1 --output=avail / | tail -1 | tr -dc '0-9')
+            MIN_B=$((20 * 1024 * 1024 * 1024))
+            if [ "${AVAIL_B:-0}" -lt "$MIN_B" ]; then
+              echo "::error::Only $((${AVAIL_B:-0} / 1024 / 1024 / 1024))G free after pruning; need 20G to build. Investigate before retrying."
               exit 1
             fi
 
