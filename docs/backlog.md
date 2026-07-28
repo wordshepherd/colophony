@@ -166,23 +166,39 @@ Ordered as the design doc's Phase 0/D.
         tests until that inline array was updated too. `scopes:` is the search key that
         finds every grant; there are nine across `apps/web/e2e/helpers/`. The rework
         should collapse both onto the interactive path. — (found 2026-07-27 during P0.4)
-- [ ] **[P0] The CI "SDK Drift Check" validates the wrong direction.** `ci.yml:1610`
-      regenerates the TS SDK _from_ the committed spec and diffs that — it never checks the
-      spec against `apps/api/src/rest/routers/`. Green on every run for five months while the
-      spec fell 36 operations behind. Fix: invert it. — (design doc §0.1(b), §1.6 M3, P0.3)
-- [ ] **[P1] `sdks/openapi.json` is stale.** 67 paths / 103 operations committed vs 93 / 139
-      in source. Whole routers missing from the published contract: `collections` (10), `csr`
-      (2), all invitations, submission discussions/resubmit/reviewers/votes/batch, six
-      analytics endpoints. Blocked on making export offline. — (design doc §0.1(a))
-      **Also now behind on the scope enum:** P0.1b added `notifications:read`,
-      `notifications:write`, and `webhooks:read`, which do not appear in the committed spec
-      or either generated SDK. Server-side validation uses the live Zod schema, so the
-      scopes work today — only a generated-SDK client constructing a create-API-key call is
-      affected, and the REST routes needing them do not exist until P1.1/P1.2.
-- [ ] **[P1] `scripts/export-openapi.ts` requires a running dev server.** Fetches
-      `/v1/openapi.json` over HTTP, so it cannot run in CI — the root cause of the two items
-      above. `@orpc/openapi@1.14.10` exports `OpenAPIGenerator`; build the spec in-process
-      from the router objects. — (design doc §1.6 M2, P0.2)
+- [x] **[P0] The CI "SDK Drift Check" validated the wrong direction.** It regenerated the TS
+      SDK _from_ the committed spec and diffed that — never checking the spec against
+      `apps/api/src/rest/routers/`. Green on every run for five months while the spec fell 36
+      operations behind. `sdk-check` now gates three directions: source → spec
+      (`pnpm sdk:check-spec`), spec → TS SDK, spec → Python SDK. — (design doc §0.1(b),
+      §1.6 M3, P0.3; done 2026-07-27)
+      **The job now needs a workspace build** (`@colophony/db`, `types`, `api-contracts`)
+      because the export imports the routers, which resolve those through `exports` → `dist/`.
+      **`openapi-python-client` is pinned at 0.29.0** — generated Python output is
+      version-sensitive, so a bump requires regenerating `sdks/python/colophony/` in the same
+      change. The Python check uses `git status --porcelain`, not `git diff`: a new operation
+      adds new untracked files that `git diff` does not see.
+- [x] **[P1] `sdks/openapi.json` was stale.** 67 paths / 103 operations committed vs 93 / 139
+      in source. Regenerated: `collections` (10), `csr` (2), all invitations, submission
+      discussions/resubmit/reviewers/votes/batch, and six analytics endpoints are now in the
+      published contract, along with the `notifications:read`, `notifications:write`, and
+      `webhooks:read` scopes added in P0.1b. Verified against the running server — the served
+      and exported specs are identical. — (design doc §0.1(a); done 2026-07-27)
+- [x] **[P1] `scripts/export-openapi.ts` required a running dev server.** Now builds the
+      document in-process via `@orpc/openapi`'s `OpenAPIGenerator`. `restRouter` and the
+      document metadata moved to `apps/api/src/rest/openapi-spec.ts` so the spec can be
+      generated without the Fastify adapter; `router.ts` passes the same options object to
+      `OpenAPIReferencePlugin`, which runs the same generator underneath, so the served and
+      exported specs cannot drift. — (design doc §1.6 M2, P0.2; done 2026-07-27)
+      **Three latent faults surfaced during the first regeneration in five months**, all
+      fixed here: `generate-sdks.ts` overwrote `sdks/python/pyproject.toml` and `README.md`
+      with generator output (discarding the hand-added pytest dev group and `testpaths`, and
+      desynchronising the Dependabot-maintained `poetry.lock`) — it now replaces only
+      `colophony/`; `generate-sdks.ts` omitted the prettier pass `sdk-check` performs on the
+      TS SDK, so local regeneration produced output CI would reformat and call drift; and
+      `sdks/openapi.json` is not in `.prettierignore`, so the pre-commit hook formats it —
+      the export now writes prettier-formatted output to keep `--check`'s byte comparison
+      valid.
 - [ ] **[P1] No per-key rate limits.** `hooks/rate-limit-auth.ts:57` keys the authenticated
       window on `userId`, which for key auth is the key's _creator_ — so all of an admin's
       keys share one bucket with each other and with that admin's browser session. Key on
@@ -209,6 +225,13 @@ Ordered as the design doc's Phase 0/D.
       (design doc §0.1(e); updated 2026-07-27)
 - [ ] **[P2] REST spec coverage.** Only 7 of 17 REST routers have a `.spec.ts`. —
       (design doc §1.8)
+- [ ] **[P3] Three OpenAPI tags are used but never declared.** Operations carry
+      `Collections`, `Submission Analytics`, and `Submission Votes`, but
+      `openApiDocumentConfig.tags` in `apps/api/src/rest/openapi-spec.ts` declares only 17
+      tags and omits all three — so they render in `/v1/docs` with no description while the
+      other 17 have one. Add the three descriptions and regenerate the spec. Cosmetic, but
+      it is the kind of gap the spec-vs-source gate cannot catch, since both sides agree. —
+      (found 2026-07-27 during P0.2)
 - [ ] **[P3] Two RLS idioms in the schema.** `notifications`, `notifications-inbox`,
       `webhook-endpoints`, `transfers` use raw `current_setting('app.current_org')::uuid`
       (raises when unset); the other 24 use `current_org_id()` (returns NULL). Both
