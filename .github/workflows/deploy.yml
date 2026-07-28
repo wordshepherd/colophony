@@ -129,6 +129,24 @@ jobs:
             git clean -fd
             echo "Checked out: $(git rev-parse HEAD)"
 
+            # Builds run with --no-cache, so every deploy writes a fresh set of
+            # layers and leaves the previous set unreferenced. Without this the
+            # disk fills silently and the deploy dies mid `pnpm install` with
+            # ENOSPC. Build cache is referenced by nothing, and `image prune`
+            # keeps any image still held by a container, so neither can remove
+            # something the running stack needs.
+            echo "=== Reclaiming disk ==="
+            df -h / | tail -1
+            docker builder prune -af
+            docker image prune -af
+            df -h / | tail -1
+
+            AVAIL_G=$(df -BG --output=avail / | tail -1 | tr -dc '0-9')
+            if [ "${AVAIL_G:-0}" -lt 20 ]; then
+              echo "::error::Only ${AVAIL_G}G free after pruning; need 20G to build. Investigate before retrying."
+              exit 1
+            fi
+
             echo "=== Building images ==="
             docker compose -f docker-compose.prod.yml --env-file .env.staging --profile demo build --no-cache
 
@@ -143,6 +161,12 @@ jobs:
             echo "Waiting for services..."
             sleep 15
             docker compose -f docker-compose.prod.yml --env-file .env.staging --profile demo ps
+
+            # The previous version's images are unreferenced now that the new
+            # containers are up.
+            echo "=== Reclaiming disk (post-deploy) ==="
+            docker image prune -af
+            df -h / | tail -1
 
       - name: Verify deployment
         run: |
@@ -216,6 +240,20 @@ jobs:
             git clean -fd
             echo "Checked out: $(git rev-parse HEAD)"
 
+            # See the staging job for why this is here: --no-cache builds leave
+            # the previous layer set unreferenced, and nothing else reclaims it.
+            echo "=== Reclaiming disk ==="
+            df -h / | tail -1
+            docker builder prune -af
+            docker image prune -af
+            df -h / | tail -1
+
+            AVAIL_G=$(df -BG --output=avail / | tail -1 | tr -dc '0-9')
+            if [ "${AVAIL_G:-0}" -lt 20 ]; then
+              echo "::error::Only ${AVAIL_G}G free after pruning; need 20G to build. Investigate before retrying."
+              exit 1
+            fi
+
             echo "=== Building images ==="
             docker compose -f docker-compose.prod.yml --env-file .env.prod build --no-cache
 
@@ -237,6 +275,10 @@ jobs:
             echo "Waiting for health checks..."
             sleep 15
             docker compose -f docker-compose.prod.yml ps
+
+            echo "=== Reclaiming disk (post-deploy) ==="
+            docker image prune -af
+            df -h / | tail -1
 
       - name: Verify deployment
         run: |

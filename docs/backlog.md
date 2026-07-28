@@ -78,6 +78,25 @@
 - [ ] Add `tseslint.configs.recommendedTypeChecked` to `apps/web/eslint.config.mjs` — the web app is currently unlinted for `no-floating-promises`, `no-misused-promises`, `await-thenable`, and the `no-unsafe-*` family, unlike `apps/api`. Expect a large first-run count; start the noisiest rules at `warn` — (DEVLOG 2026-07-25)
 - [ ] [P2] Stop passing `SENTRY_AUTH_TOKEN` as a Docker build ARG — `apps/web/Dockerfile` lines 34–35 take it as `ARG` then promote it to `ENV`. Build ARGs are recorded in image history, so the token is recoverable from any built image; `docker build` warns about this (`SecretsUsedInArgOrEnv`). Use a BuildKit secret mount (`RUN --mount=type=secret,id=sentry_auth_token`) and pass it via `--secret` from the deploy workflow instead — (DEVLOG 2026-07-26)
 - [ ] [P3] Spot-check rendered email output after the mjml 5 upgrade — 5.0.0 replaced `html-minifier`/`js-beautify` with `htmlnano` + `cssnano`, so the emitted HTML differs in whitespace and minification from 4.x. Unit tests and the staging smoke suite both pass, which covers the render path but not client rendering; send one templated email and one custom template through the email queue and compare against a 4.x capture — (DEVLOG 2026-07-26b)
+- [ ] [P1] No disk alerting, and the monitoring stack cannot report its own host failing.
+      Staging filled its 150G disk on 2026-07-27 and nothing warned: all six rules in
+      `docker/prometheus/alert-rules.yml` are application-level (error rate, queue depth, DB
+      pool, health endpoint, latency, job failures), there is no node-exporter, and no
+      filesystem metric is scraped. `HealthEndpointDown` would have been the closest match,
+      but Prometheus, Loki and Grafana were themselves in a restart loop from the same full
+      disk — the stack is co-located with what it monitors, so it fails exactly when needed.
+      Wants node-exporter plus a `DiskSpaceLow` rule, and an external check that does not run
+      on the box it watches. — (found 2026-07-27 during the staging outage)
+- [ ] [P2] Reconsider `--no-cache` on every deploy build (`deploy.yml` staging and
+      production). It guarantees maximum layer churn — each deploy writes a fresh set and
+      strands the previous one — which is what filled the staging disk. Pruning now runs
+      either side of the build, so this is no longer urgent, but the flag buys little on a
+      tree that already changes every deploy and costs a full rebuild each time. Removing it
+      changes build semantics, so it wants its own PR. — (found 2026-07-27)
+- [ ] [P3] Confirm whether staging is meant to have database backups.
+      `walg-entrypoint: WALG_S3_PREFIX not set — backups disabled` appears on every staging
+      postgres start. If that is deliberate for staging, note it in `docs/deployment.md`; if
+      not, it is a gap that has been silent for months. — (found 2026-07-27)
 - [ ] [P3] Seed data ages out of a long-lived dev database, and `db:seed` will not repair it. Submission periods are seeded at fixed offsets from the seed date, so `quarterly-review` eventually has no open period — which fails 11 of 13 `embed` tests with `No open period found`. `pnpm db:seed` is idempotent-by-skip, so it is a no-op once data exists; only the destructive `db:reset` refreshes the dates. CI is unaffected (it seeds fresh each run), so this only ever bites locally, and it looks like a code regression rather than stale data. Either make the seed refresh period dates when they have closed, or have `global-setup.ts` fail with a "run `pnpm db:reset`" message when no open period exists for the seed org — (found 2026-07-27 while verifying the E2E auth rework)
 
 ---
@@ -140,19 +159,53 @@ Ordered as the design doc's Phase 0/D.
         REST-parity name-matching, which this does not attempt, and seeding a
         "has REST equivalent" list from a spec 36 operations stale would bake in wrong
         data. Per-procedure parity classification moves to P1.1–P1.4.
-        **Note the gate asserts declaration, not denial.** `requireScopes` declares and
-        enforces in one step; `internalOnly` only declares while
-        `TRPC_INTERNAL_ONLY_ENFORCE` is `false`, so those 29 procedures stay reachable by
-        any key until P0.5. The suite's last test pins the enforced behaviour across all
-        29 so the gap stays visible.
-  - [ ] **P0.5** — flip `TRPC_INTERNAL_ONLY_ENFORCE` to `true` after the observation
-        window; decide `payments:read`. **No longer blocked** — the E2E rework landed
-        2026-07-27. The window is the only remaining gate: the design doc prescribes
-        querying `audit_events` for `API_KEY_INTERNAL_ROUTE` after ~a month of
-        observation (i.e. from 2026-07-27), shipping REST equivalents for anything real
-        that turns up, then flipping. Verified the flip is safe: the federation suite
-        passes 16/16 with `TRPC_INTERNAL_ONLY_ENFORCE=true`, against 4/16 on the
-        pre-rework tree.
+        **The gate asserted declaration, not denial** — which mattered while the two
+        guards differed: `requireScopes` declares and enforces in one step, whereas
+        `internalOnly` only declared while `TRPC_INTERNAL_ONLY_ENFORCE` was `false`,
+        leaving those 29 procedures reachable by any key. P0.5 closed that on
+        2026-07-27; the suite's last test pins the enforced behaviour across all 29, so
+        a revert to log-only cannot pass silently.
+  - [x] **P0.5** — `TRPC_INTERNAL_ONLY_ENFORCE` now defaults to `true`; an API key
+        calling any of the 29 internal procedures gets a 403. The variable is also
+        threaded into `docker-compose.prod.yml` for both `api` and `api-demo`, which
+        previously enumerated every other var and omitted this one — so before this
+        change there was no way to set it in a deployed container at all.
+        **The month-long observation window was closed early, deliberately.** It was
+        prescribed to find real API-key usage of these routes, but nothing could
+        generate any: the design doc already conceded it would "very probably return
+        nothing" (§4), and the evidence below is stronger than a calendar. Note what it
+        does and does not show — it is a _compatibility_ inventory, not a reachability
+        proof. The auth hook accepts `X-Api-Key` on any non-public route
+        (`apps/api/src/hooks/auth.ts:264`), so a hand-rolled request reaches
+        `federation.getConfig` today. That is precisely the hole this closes. - **Staging, the only deployed environment** — `api_keys` holds **zero rows**,
+        so no key has ever existed there, across an `audit_events` history running
+        2026-04-08 → 2026-07-27. No `API_KEY_*` event of any kind was ever recorded.
+        This is the decisive evidence: not "nothing was logged", but "no credential
+        capable of it ever existed". - **No shipped client sends a key to `/trpc/*`** — `packages/api-client`
+        (`src/client.ts:89`) and `sdks/typescript` (`src/client.ts:76`) set
+        `X-Api-Key` but are REST-only with no tRPC transport; `sdks/python` is
+        generated from the same REST spec; `scripts/simsub-qa.ts` uses a key against
+        `/federation/sim-sub/*` REST paths; the web tRPC client sends only
+        `Authorization` / `X-Demo-User-Id` / `x-organization-id`
+        (`apps/web/src/lib/trpc.ts:83-105`), both allowlisted. - **Playwright** authenticates interactively since #515, and `NODE_ENV=test`
+        makes key auth unreachable. The federation suite passes 16/16 under
+        enforcement, against 4/16 on the pre-rework tree. - **Dev DB** held 71 `API_KEY_INTERNAL_ROUTE` events, 67 of them stamped
+        `enforced: true` — i.e. emitted by the tests that pin enforced behaviour. The
+        window was observing the test suite observing itself.
+        `apps/api/src/__tests__/security/scope-enforcement.test.ts` now pins the
+        default with the variable unset, so a silent revert to log-only fails the
+        build. — done 2026-07-27
+  - [ ] **P0.5b** — remove the dead `payments:read` scope. **Decision taken
+        2026-07-27: remove it.** It is enforced nowhere, and every payment-adjacent
+        guard uses the distinct `payment-transactions:*` scope
+        (`apps/api/src/trpc/routers/payment-transactions.ts`). Split out of P0.5
+        because it is materially larger than the flag flip: `packages/types/src/api-key.ts:24`,
+        the seeded read-only key at `packages/db/src/seed.ts:444`, and three CI-gated
+        generated artefacts (`sdks/openapi.json`, `sdks/typescript/src/generated/`,
+        `sdks/python/colophony/models/`) that `sdk-check` diffs in all three directions.
+        Note the latent break: `apiKeyResponseSchema` validates `scopes` on the
+        `apiKeys.list` output, so any pre-existing DB row still holding the scope throws
+        after removal — the seed row must go in the same change.
   - [x] **[P1] Playwright suites authenticated as API keys, which blocked P0.5.**
         Every suite minted a `col_test_` key and set it as a browser header, so E2E ran
         as `authMethod: 'apikey'`. The fixtures now use the interactive test path
@@ -230,7 +283,8 @@ Ordered as the design doc's Phase 0/D.
       (`webhook.service.ts:222`) has no unique constraint per endpoint/event, so Inngest
       retries or replayed events can duplicate deliveries. — (design review 2026-07-27)
 - [ ] **[P2] One dead scope left.** `payments:read` is declared in `apiKeyScopeSchema` and
-      enforced nowhere; it needs a decision (P0.5). `webhooks:manage` was consumed by the
+      enforced nowhere. **Decision taken 2026-07-27: remove it** — tracked as P0.5b above,
+      where the removal's real cost is scoped. `webhooks:manage` was consumed by the
       tRPC webhooks router in P0.1b rather than waiting for REST P1.1. —
       (design doc §0.1(e); updated 2026-07-27)
 - [ ] **[P2] REST spec coverage.** Only 7 of 17 REST routers have a `.spec.ts`. —

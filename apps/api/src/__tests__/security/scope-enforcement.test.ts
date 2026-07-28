@@ -159,8 +159,11 @@ describe('requireScopes — real API key through the tRPC router', () => {
   });
 });
 
-describe('internalOnly — the boundary P0.5 will enforce', () => {
-  it('admits an API key while TRPC_INTERNAL_ONLY_ENFORCE is false', async () => {
+describe('internalOnly — the boundary enforced since P0.5', () => {
+  // Enforcement is the default since 2026-07-27. This pins the log-only
+  // fallback that TRPC_INTERNAL_ONLY_ENFORCE=false still buys — the revert
+  // path has to keep working, or the flag is not a lever.
+  it('falls back to admitting an API key when explicitly set to false', async () => {
     setInternalOnlyEnforce(false);
     app = await buildApiKeyApp();
     const { org, user } = await seedOrgWithAdmin();
@@ -188,6 +191,32 @@ describe('internalOnly — the boundary P0.5 will enforce', () => {
 
   it('rejects an API key with 403 once enforcement is on', async () => {
     setInternalOnlyEnforce(true);
+    app = await buildApiKeyApp();
+    const { org, user } = await seedOrgWithAdmin();
+    const key = await insertApiKey({
+      orgId: org.id,
+      userId: user.id,
+      scopes: ['submissions:read'],
+    });
+
+    const res = await app.inject({
+      method: 'GET',
+      url: `${INTERNAL_ROUTE}?input=${INTERNAL_INPUT}`,
+      headers: {
+        'x-api-key': key.plainKey,
+        'x-organization-id': org.id,
+      },
+    });
+
+    expect(res.statusCode).toBe(403);
+    expect(res.body).toContain('not available to API keys');
+  });
+
+  // The other cases here all set the flag explicitly, so none of them would
+  // notice the schema default silently reverting to 'false'. This one pins the
+  // deployed behaviour: unset must mean enforcing.
+  it('enforces by default when the variable is not set at all', async () => {
+    delete process.env.TRPC_INTERNAL_ONLY_ENFORCE;
     app = await buildApiKeyApp();
     const { org, user } = await seedOrgWithAdmin();
     const key = await insertApiKey({

@@ -110,11 +110,13 @@ const envSchema = z
     // Status token TTL
     STATUS_TOKEN_TTL_DAYS: z.coerce.number().int().positive().default(90),
 
-    // tRPC internal-only boundary. False = log attempts and allow them through
-    // (observation window). True = reject non-interactive credentials.
+    // tRPC internal-only boundary. True = reject non-interactive credentials
+    // on the seven operator-console routers. False reverts to log-only, which
+    // records the attempt as an API_KEY_INTERNAL_ROUTE audit event and lets it
+    // through — the observation window, closed 2026-07-27.
     TRPC_INTERNAL_ONLY_ENFORCE: z
       .enum(['true', 'false'])
-      .default('false')
+      .default('true')
       .transform((v) => v === 'true'),
 
     FEDERATION_RATE_LIMIT_FAIL_MODE: z
