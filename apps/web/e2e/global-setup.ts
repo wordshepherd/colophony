@@ -35,18 +35,26 @@ function getRequestedProjects(): Set<string> {
     }
   }
 
-  // If no --project flag, all projects will run
+  // No --project flag: every project the config exposes will run. The config
+  // partitions those on OIDC_E2E (see playwright.config.ts) because one API
+  // server cannot hold both auth modes at once, so mirror that partition here.
+  // Listing all ten unconditionally would demand infrastructure for suites the
+  // run will not execute — Zitadel for a non-OIDC pass, tusd and Garage for the
+  // OIDC one — and fail the run before a single test executes.
   if (projects.size === 0) {
-    projects.add("submissions");
-    projects.add("uploads");
-    projects.add("oidc");
-    projects.add("embed");
-    projects.add("slate");
-    projects.add("workspace");
-    projects.add("forms");
-    projects.add("organization");
-    projects.add("analytics");
-    projects.add("federation");
+    if (process.env.OIDC_E2E === "true") {
+      projects.add("oidc");
+    } else {
+      projects.add("submissions");
+      projects.add("uploads");
+      projects.add("embed");
+      projects.add("slate");
+      projects.add("workspace");
+      projects.add("forms");
+      projects.add("organization");
+      projects.add("analytics");
+      projects.add("federation");
+    }
   }
 
   return projects;
