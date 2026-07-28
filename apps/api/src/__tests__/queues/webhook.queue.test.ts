@@ -68,7 +68,8 @@ import {
   createWebhookEndpoint,
   createWebhookDelivery,
 } from './helpers/queue-factories';
-import { webhookDeliveries, eq } from '@colophony/db';
+import crypto from 'node:crypto';
+import { webhookDeliveries, webhookEndpoints, eq } from '@colophony/db';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { getAdminPool } from '../rls/helpers/db-setup';
 
@@ -104,17 +105,12 @@ describe('webhook queue integration', () => {
     mockAuditLog.mockResolvedValue(undefined);
   });
 
-  function buildJobData(
-    orgId: string,
-    deliveryId: string,
-    endpointUrl: string,
-    secret: string,
-  ): WebhookJobData {
+  // The job carries no endpoint URL or secret — the worker reads both from the
+  // database immediately before each send.
+  function buildJobData(orgId: string, deliveryId: string): WebhookJobData {
     return {
       deliveryId,
       orgId,
-      endpointUrl,
-      secret,
       payload: {
         id: deliveryId,
         event: 'submission.created',
@@ -136,12 +132,7 @@ describe('webhook queue integration', () => {
       async () => new Response('OK', { status: 200 }),
     );
 
-    const jobData = buildJobData(
-      org.id,
-      delivery.id,
-      endpoint.url,
-      endpoint.secret,
-    );
+    const jobData = buildJobData(org.id, delivery.id);
     await queue.add('deliver', jobData, { jobId: delivery.id });
     await waitForJobCompletion(queue, delivery.id);
 
@@ -172,12 +163,7 @@ describe('webhook queue integration', () => {
       return new Response('OK', { status: 200 });
     });
 
-    const jobData = buildJobData(
-      org.id,
-      delivery.id,
-      endpoint.url,
-      endpoint.secret,
-    );
+    const jobData = buildJobData(org.id, delivery.id);
     await queue.add('deliver', jobData, {
       jobId: delivery.id,
       attempts: 2,
@@ -206,12 +192,7 @@ describe('webhook queue integration', () => {
       async () => new Response('Server Error', { status: 500 }),
     );
 
-    const jobData = buildJobData(
-      org.id,
-      delivery.id,
-      endpoint.url,
-      endpoint.secret,
-    );
+    const jobData = buildJobData(org.id, delivery.id);
     await queue.add('deliver', jobData, {
       jobId: delivery.id,
       attempts: 1,
@@ -244,12 +225,7 @@ describe('webhook queue integration', () => {
       new Error('URL validation failed: hostname resolves to private IP'),
     );
 
-    const jobData = buildJobData(
-      org.id,
-      delivery.id,
-      endpoint.url,
-      endpoint.secret,
-    );
+    const jobData = buildJobData(org.id, delivery.id);
     await queue.add('deliver', jobData, { jobId: delivery.id });
     // SSRF failures don't throw — job completes (returns early, permanent fail)
     await waitForJobCompletion(queue, delivery.id);
@@ -264,5 +240,161 @@ describe('webhook queue integration', () => {
     expect(updated.errorMessage).toContain('URL validation');
     // fetch should NOT have been called
     expect(mockFetch).not.toHaveBeenCalled();
+  });
+
+  describe('pre-send re-validation', () => {
+    it('cancels a queued delivery when the endpoint is disabled mid-flight', async () => {
+      const org = await createOrganization();
+      const user = await createUser();
+      await createOrgMember(org.id, user.id);
+      const endpoint = await createWebhookEndpoint(org.id);
+      const delivery = await createWebhookDelivery(org.id, endpoint.id);
+
+      const db = adminDb();
+      // Disable AFTER the delivery row exists — i.e. while the job is queued.
+      await db
+        .update(webhookEndpoints)
+        .set({ status: 'DISABLED' })
+        .where(eq(webhookEndpoints.id, endpoint.id));
+
+      await queue.add('deliver', buildJobData(org.id, delivery.id), {
+        jobId: delivery.id,
+      });
+      await waitForJobCompletion(queue, delivery.id);
+
+      const [updated] = await db
+        .select()
+        .from(webhookDeliveries)
+        .where(eq(webhookDeliveries.id, delivery.id));
+
+      expect(updated.status).toBe('CANCELLED');
+      expect(updated.errorMessage).toContain('disabled');
+      expect(mockFetch).not.toHaveBeenCalled();
+    });
+
+    it('cancels when the endpoint no longer subscribes to the event', async () => {
+      const org = await createOrganization();
+      const user = await createUser();
+      await createOrgMember(org.id, user.id);
+      const endpoint = await createWebhookEndpoint(org.id);
+      const delivery = await createWebhookDelivery(org.id, endpoint.id);
+
+      const db = adminDb();
+      // Unsubscribe from submission.created, which buildJobData sends.
+      await db
+        .update(webhookEndpoints)
+        .set({ eventTypes: ['submission.updated'] })
+        .where(eq(webhookEndpoints.id, endpoint.id));
+
+      await queue.add('deliver', buildJobData(org.id, delivery.id), {
+        jobId: delivery.id,
+      });
+      await waitForJobCompletion(queue, delivery.id);
+
+      const [updated] = await db
+        .select()
+        .from(webhookDeliveries)
+        .where(eq(webhookDeliveries.id, delivery.id));
+
+      expect(updated.status).toBe('CANCELLED');
+      expect(mockFetch).not.toHaveBeenCalled();
+    });
+
+    it('a retry after cancellation actually re-runs, despite the retained job id', async () => {
+      const org = await createOrganization();
+      const user = await createUser();
+      await createOrgMember(org.id, user.id);
+      const endpoint = await createWebhookEndpoint(org.id);
+      const delivery = await createWebhookDelivery(org.id, endpoint.id);
+
+      const db = adminDb();
+      await db
+        .update(webhookEndpoints)
+        .set({ status: 'DISABLED' })
+        .where(eq(webhookEndpoints.id, endpoint.id));
+
+      await queue.add('deliver', buildJobData(org.id, delivery.id), {
+        jobId: delivery.id,
+      });
+      await waitForJobCompletion(queue, delivery.id);
+
+      // Re-enable and re-add with the SAME jobId, exactly as retryDelivery does.
+      await db
+        .update(webhookEndpoints)
+        .set({ status: 'ACTIVE' })
+        .where(eq(webhookEndpoints.id, endpoint.id));
+      await db
+        .update(webhookDeliveries)
+        .set({ status: 'QUEUED' })
+        .where(eq(webhookDeliveries.id, delivery.id));
+
+      mockFetch.mockImplementation(
+        async () => new Response('OK', { status: 200 }),
+      );
+
+      // A plain re-add is deduped against the retained completed job and never runs;
+      // the retry helper drops it first. Exercise the helper's semantics here.
+      await queue.remove(delivery.id).catch(() => undefined);
+      await queue.add('deliver', buildJobData(org.id, delivery.id), {
+        jobId: delivery.id,
+      });
+      await waitForJobCompletion(queue, delivery.id);
+
+      const [after] = await db
+        .select()
+        .from(webhookDeliveries)
+        .where(eq(webhookDeliveries.id, delivery.id));
+
+      expect(after.status).toBe('DELIVERED');
+      expect(mockFetch).toHaveBeenCalled();
+    });
+
+    it('signs with the rotated secret and posts to the edited URL, not the enqueued ones', async () => {
+      const org = await createOrganization();
+      const user = await createUser();
+      await createOrgMember(org.id, user.id);
+      const endpoint = await createWebhookEndpoint(org.id);
+      const delivery = await createWebhookDelivery(org.id, endpoint.id);
+
+      const db = adminDb();
+      // Rotate both AFTER enqueue — a job carrying stale values could not know these.
+      await db
+        .update(webhookEndpoints)
+        .set({
+          url: 'https://rotated.example.com/hook',
+          secret: 'rotated-secret-value',
+        })
+        .where(eq(webhookEndpoints.id, endpoint.id));
+
+      mockFetch.mockImplementation(
+        async () => new Response('OK', { status: 200 }),
+      );
+
+      const jobData = buildJobData(org.id, delivery.id);
+      await queue.add('deliver', jobData, { jobId: delivery.id });
+      await waitForJobCompletion(queue, delivery.id);
+
+      const expectedSig =
+        'sha256=' +
+        crypto
+          .createHmac('sha256', 'rotated-secret-value')
+          .update(JSON.stringify(jobData.payload))
+          .digest('hex');
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        'https://rotated.example.com/hook',
+        expect.objectContaining({
+          headers: expect.objectContaining({
+            'X-Webhook-Signature': expectedSig,
+          }),
+        }),
+      );
+
+      const [updated] = await db
+        .select()
+        .from(webhookDeliveries)
+        .where(eq(webhookDeliveries.id, delivery.id));
+      expect(updated.status).toBe('DELIVERED');
+    });
   });
 });

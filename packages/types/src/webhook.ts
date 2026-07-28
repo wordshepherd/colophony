@@ -85,7 +85,7 @@ export const webhookDeliveryResponseSchema = z.object({
   eventType: z.string(),
   eventId: z.string(),
   payload: z.unknown(),
-  status: z.enum(["QUEUED", "DELIVERING", "DELIVERED", "FAILED"]),
+  status: z.enum(["QUEUED", "DELIVERING", "DELIVERED", "FAILED", "CANCELLED"]),
   httpStatusCode: z.number().nullable(),
   responseBody: z.string().nullable(),
   errorMessage: z.string().nullable(),
@@ -106,7 +106,9 @@ export type WebhookDeliveryResponse = z.infer<
 export const listWebhookDeliveriesSchema = z.object({
   endpointId: z.string().uuid().optional(),
   eventType: z.string().optional(),
-  status: z.enum(["QUEUED", "DELIVERING", "DELIVERED", "FAILED"]).optional(),
+  status: z
+    .enum(["QUEUED", "DELIVERING", "DELIVERED", "FAILED", "CANCELLED"])
+    .optional(),
   page: z.number().int().min(1).default(1),
   limit: z.number().int().min(1).max(100).default(20),
 });

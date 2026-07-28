@@ -477,6 +477,13 @@
       "when": 1782600000000,
       "tag": "0067_drop_payments_read_scope",
       "breakpoints": true
+    },
+    {
+      "idx": 68,
+      "version": "7",
+      "when": 1782800000000,
+      "tag": "0068_webhook_delivery_cancelled",
+      "breakpoints": true
     }
   ]
 }

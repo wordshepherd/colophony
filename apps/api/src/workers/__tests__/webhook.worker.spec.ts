@@ -22,6 +22,7 @@ vi.mock('bullmq', () => ({
 const mockUpdateDeliveryStatus = vi.fn();
 const mockCountRecentFailures = vi.fn();
 const mockUpdateEndpoint = vi.fn();
+const mockGetEndpointForDelivery = vi.fn();
 vi.mock('../../services/webhook.service.js', () => ({
   webhookService: {
     updateDeliveryStatus: (...args: unknown[]) =>
@@ -29,8 +30,20 @@ vi.mock('../../services/webhook.service.js', () => ({
     countRecentFailures: (...args: unknown[]) =>
       mockCountRecentFailures(...args),
     updateEndpoint: (...args: unknown[]) => mockUpdateEndpoint(...args),
+    getEndpointForDelivery: (...args: unknown[]) =>
+      mockGetEndpointForDelivery(...args),
   },
 }));
+
+// The endpoint state the worker re-reads before each send. Tests override this to
+// exercise the deleted / disabled / unsubscribed branches.
+const ACTIVE_ENDPOINT = {
+  endpointId: 'ep-1',
+  url: 'https://example.com/webhook',
+  secret: 'test-secret-hex',
+  status: 'ACTIVE' as const,
+  eventTypes: ['hopper/submission.submitted'],
+};
 
 const mockAuditLog = vi.fn();
 vi.mock('../../services/audit.service.js', () => ({
@@ -92,8 +105,6 @@ const makeJob = (overrides = {}) => ({
   data: {
     deliveryId: 'del-123',
     orgId: 'org-1',
-    endpointUrl: 'https://example.com/webhook',
-    secret: 'test-secret-hex',
     payload: {
       id: 'del-123',
       event: 'hopper/submission.submitted',
@@ -114,6 +125,7 @@ describe('webhook worker', () => {
     mockWithRls.mockImplementation(
       (_ctx: unknown, fn: (tx: unknown) => unknown) => fn('mock-tx'),
     );
+    mockGetEndpointForDelivery.mockResolvedValue(ACTIVE_ENDPOINT);
     startWebhookWorker(testEnv);
   });
 
@@ -247,23 +259,7 @@ describe('webhook worker', () => {
     const job = makeJob({ attemptsMade: 8 });
     const err = new Error('HTTP 500');
 
-    mockWithRls.mockImplementation(
-      (_ctx: unknown, fn: (tx: unknown) => unknown) => {
-        const mockTx = {
-          select: vi.fn().mockReturnValue({
-            from: vi.fn().mockReturnValue({
-              where: vi.fn().mockReturnValue({
-                limit: vi
-                  .fn()
-                  .mockResolvedValue([{ webhookEndpointId: 'ep-1' }]),
-              }),
-            }),
-          }),
-        };
-        return fn(mockTx);
-      },
-    );
-
+    // The endpoint is resolved through the service join, not a raw select on tx.
     mockCountRecentFailures.mockResolvedValueOnce(5); // At threshold
 
     await failedCallback(job, err);
@@ -275,6 +271,137 @@ describe('webhook worker', () => {
       'org-1',
       { status: 'DISABLED' },
     );
+  });
+
+  describe('pre-send re-validation', () => {
+    it('cancels without sending when the endpoint is disabled', async () => {
+      mockGetEndpointForDelivery.mockResolvedValue({
+        ...ACTIVE_ENDPOINT,
+        status: 'DISABLED',
+      });
+      const mockFetch = vi.fn();
+      vi.stubGlobal('fetch', mockFetch);
+
+      await workerCallback(makeJob());
+
+      expect(mockFetch).not.toHaveBeenCalled();
+      expect(mockUpdateDeliveryStatus).toHaveBeenCalledWith(
+        'mock-tx',
+        'del-123',
+        'CANCELLED',
+        { errorMessage: expect.stringContaining('disabled') },
+      );
+      // Never entered DELIVERING — the attempt was not burned
+      expect(mockUpdateDeliveryStatus).not.toHaveBeenCalledWith(
+        'mock-tx',
+        'del-123',
+        'DELIVERING',
+        expect.anything(),
+      );
+    });
+
+    it('discards the job without any status write when the endpoint is gone', async () => {
+      mockGetEndpointForDelivery.mockResolvedValue(null);
+      const mockFetch = vi.fn();
+      vi.stubGlobal('fetch', mockFetch);
+
+      await workerCallback(makeJob());
+
+      expect(mockFetch).not.toHaveBeenCalled();
+      // The delivery row cascaded away with the endpoint; nothing left to mark
+      expect(mockUpdateDeliveryStatus).not.toHaveBeenCalled();
+    });
+
+    it('cancels when the endpoint no longer subscribes to the event', async () => {
+      mockGetEndpointForDelivery.mockResolvedValue({
+        ...ACTIVE_ENDPOINT,
+        eventTypes: ['hopper/submission.withdrawn'],
+      });
+      const mockFetch = vi.fn();
+      vi.stubGlobal('fetch', mockFetch);
+
+      await workerCallback(makeJob());
+
+      expect(mockFetch).not.toHaveBeenCalled();
+      expect(mockUpdateDeliveryStatus).toHaveBeenCalledWith(
+        'mock-tx',
+        'del-123',
+        'CANCELLED',
+        { errorMessage: expect.stringContaining('no longer subscribes') },
+      );
+    });
+
+    it('delivers a webhook.test event even though it is never in event_types', async () => {
+      mockGetEndpointForDelivery.mockResolvedValue(ACTIVE_ENDPOINT);
+      const mockFetch = vi.fn().mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        text: () => Promise.resolve('OK'),
+      });
+      vi.stubGlobal('fetch', mockFetch);
+
+      const job = makeJob();
+      job.data.payload.event = 'webhook.test';
+      await workerCallback(job);
+
+      expect(mockFetch).toHaveBeenCalled();
+      expect(mockUpdateDeliveryStatus).toHaveBeenCalledWith(
+        'mock-tx',
+        'del-123',
+        'DELIVERED',
+        expect.anything(),
+      );
+    });
+
+    it('signs with the freshly-read secret and posts to the freshly-read URL', async () => {
+      // Both differ from what a stale job would have carried.
+      mockGetEndpointForDelivery.mockResolvedValue({
+        ...ACTIVE_ENDPOINT,
+        url: 'https://rotated.example.com/hook',
+        secret: 'rotated-secret',
+      });
+      const mockFetch = vi.fn().mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        text: () => Promise.resolve('OK'),
+      });
+      vi.stubGlobal('fetch', mockFetch);
+
+      const job = makeJob();
+      const body = JSON.stringify(job.data.payload);
+      const expectedSig =
+        'sha256=' +
+        crypto
+          .createHmac('sha256', 'rotated-secret')
+          .update(body)
+          .digest('hex');
+
+      await workerCallback(job);
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        'https://rotated.example.com/hook',
+        expect.objectContaining({
+          headers: expect.objectContaining({
+            'X-Webhook-Signature': expectedSig,
+          }),
+        }),
+      );
+    });
+
+    it('skips auto-disable and omits the URL when the endpoint is gone on final failure', async () => {
+      mockGetEndpointForDelivery.mockResolvedValue(null);
+
+      await failedCallback(makeJob({ attemptsMade: 8 }), new Error('HTTP 500'));
+
+      expect(mockCountRecentFailures).not.toHaveBeenCalled();
+      expect(mockUpdateEndpoint).not.toHaveBeenCalled();
+      expect(mockAuditLog).toHaveBeenCalledWith(
+        'mock-tx',
+        expect.objectContaining({
+          newValue: expect.objectContaining({ endpointUrl: undefined }),
+        }),
+      );
+    });
   });
 
   it('stops worker cleanly', async () => {

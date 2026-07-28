@@ -26,6 +26,9 @@ vi.mock('@colophony/db', () => {
     },
     webhookDeliveries: {
       id: 'id',
+      // Distinct from the endpoint's column stub so tests can assert that the
+      // org predicate is applied to BOTH tables in a join, not just one.
+      organizationId: 'delivery_organization_id',
       webhookEndpointId: 'webhook_endpoint_id',
       eventType: 'event_type',
       status: 'status',
@@ -198,6 +201,56 @@ describe('webhookService', () => {
     expect(andArgs[0]).toEqual({
       type: 'eq',
       args: ['organization_id', orgId],
+    });
+  });
+
+  describe('getEndpointForDelivery', () => {
+    function mockJoinTx(rows: unknown[]) {
+      const mockLimit = vi.fn().mockResolvedValue(rows);
+      const mockWhere = vi.fn().mockReturnValue({ limit: mockLimit });
+      const mockInnerJoin = vi.fn().mockReturnValue({ where: mockWhere });
+      const mockFrom = vi.fn().mockReturnValue({ innerJoin: mockInnerJoin });
+      const mockSelect = vi.fn().mockReturnValue({ from: mockFrom });
+      return { select: mockSelect } as never;
+    }
+
+    it('filters on the delivery id and the org id of BOTH tables', async () => {
+      const tx = mockJoinTx([]);
+
+      await webhookService.getEndpointForDelivery(tx, 'del-1', 'org-123');
+
+      expect(eqFn).toHaveBeenCalledWith('id', 'del-1');
+      // The org predicate must be applied to the delivery AND the endpoint —
+      // the FK guarantees the endpoint exists, not that it shares the org.
+      expect(eqFn).toHaveBeenCalledWith('delivery_organization_id', 'org-123');
+      expect(eqFn).toHaveBeenCalledWith('organization_id', 'org-123');
+    });
+
+    it('returns null when the join yields no row', async () => {
+      const tx = mockJoinTx([]);
+      await expect(
+        webhookService.getEndpointForDelivery(tx, 'del-1', 'org-123'),
+      ).resolves.toBeNull();
+    });
+
+    it('returns the unredacted secret so the worker can sign', async () => {
+      const tx = mockJoinTx([
+        {
+          endpointId: 'ep-1',
+          url: 'https://example.com/hook',
+          secret: 'live-secret',
+          status: 'ACTIVE',
+          eventTypes: ['submission.created'],
+        },
+      ]);
+
+      const row = await webhookService.getEndpointForDelivery(
+        tx,
+        'del-1',
+        'org-123',
+      );
+
+      expect(row?.secret).toBe('live-secret');
     });
   });
 });

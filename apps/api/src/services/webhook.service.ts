@@ -20,6 +20,13 @@ export class WebhookUrlValidationError extends Error {
   }
 }
 
+/**
+ * Derived from the schema enum rather than hand-written, so adding a value to
+ * `webhookDeliveryStatusEnum` cannot leave this union silently behind.
+ */
+export type WebhookDeliveryStatus =
+  (typeof webhookDeliveries.status.enumValues)[number];
+
 interface CreateEndpointParams {
   organizationId: string;
   url: string;
@@ -46,7 +53,7 @@ interface ListDeliveriesParams {
   organizationId?: string;
   endpointId?: string;
   eventType?: string;
-  status?: 'QUEUED' | 'DELIVERING' | 'DELIVERED' | 'FAILED';
+  status?: WebhookDeliveryStatus;
   page: number;
   limit: number;
 }
@@ -219,6 +226,49 @@ export const webhookService = {
       );
   },
 
+  /**
+   * Resolve the endpoint a queued delivery belongs to, for re-validation at send time.
+   *
+   * Deliberately NOT redacted — the worker needs the current signing secret, so this
+   * cannot reuse `getEndpoint`, which strips `secret` from both the value and the type.
+   * Same posture as `rotateSecret` and `getActiveEndpointsForEvent`.
+   *
+   * Filters `organizationId` on BOTH tables. The FK guarantees the endpoint exists, not
+   * that it shares the delivery's org, so this join is the only explicit org-affinity
+   * check between the two.
+   *
+   * Returns null when the endpoint has been deleted: the delivery row is removed with it
+   * via ON DELETE CASCADE, so there is nothing left to mark.
+   */
+  async getEndpointForDelivery(
+    tx: DrizzleDb,
+    deliveryId: string,
+    organizationId: string,
+  ) {
+    const [row] = await tx
+      .select({
+        endpointId: webhookEndpoints.id,
+        url: webhookEndpoints.url,
+        secret: webhookEndpoints.secret,
+        status: webhookEndpoints.status,
+        eventTypes: webhookEndpoints.eventTypes,
+      })
+      .from(webhookDeliveries)
+      .innerJoin(
+        webhookEndpoints,
+        eq(webhookDeliveries.webhookEndpointId, webhookEndpoints.id),
+      )
+      .where(
+        and(
+          eq(webhookDeliveries.id, deliveryId),
+          eq(webhookDeliveries.organizationId, organizationId),
+          eq(webhookEndpoints.organizationId, organizationId),
+        ),
+      )
+      .limit(1);
+    return row ?? null;
+  },
+
   async createDelivery(tx: DrizzleDb, params: CreateDeliveryParams) {
     const [row] = await tx
       .insert(webhookDeliveries)
@@ -237,7 +287,7 @@ export const webhookService = {
   async updateDeliveryStatus(
     tx: DrizzleDb,
     id: string,
-    status: 'QUEUED' | 'DELIVERING' | 'DELIVERED' | 'FAILED',
+    status: WebhookDeliveryStatus,
     params?: {
       httpStatusCode?: number;
       responseBody?: string;

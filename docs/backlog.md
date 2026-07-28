@@ -280,14 +280,45 @@ Ordered as the design doc's Phase 0/D.
       the human's own actions are recorded identically. Add `principal_id` / `principal_type`
       (also the prerequisite for acting-as). Requires updating `insert_audit_event()`. —
       (design doc §0.1(d), P2.2)
-- [ ] **[P1] Webhook deliveries are not revalidated before send.** The Inngest fan-out
-      serialises endpoint URL and secret into the BullMQ job (`webhook-delivery.ts:44,63`)
-      and the worker sends what the job carries without re-reading the endpoint
-      (`webhook.worker.ts:23`). With 8 retries backing off to 1h, a deleted or disabled
-      endpoint — or a rotated secret — keeps receiving events for up to an hour. The worker
-      already re-runs `validateOutboundUrl()` per attempt for this same reason;
-      authorisation belongs in the same place. Blast radius is one org today; it becomes
-      cross-tenant if instance subscriptions land first. — (design doc §1.9, P2.-1)
+- [x] **[P1] Webhook deliveries are not revalidated before send.** The worker now re-reads
+      the endpoint through `webhookService.getEndpointForDelivery` as its first phase, before
+      the `DELIVERING` write, and takes the URL and secret from that row rather than the job.
+      A disabled endpoint, or one that no longer subscribes to the event, marks the delivery
+      `CANCELLED` and returns; a deleted endpoint discards the job (`ON DELETE CASCADE` has
+      already removed the delivery row, so there is nothing to mark). — (design doc §1.9,
+      P2.-1; done 2026-07-28)
+      **`endpointUrl` and `secret` were removed from `WebhookJobData` entirely**, not merely
+      left unread. A signing secret was sitting in Redis for up to 7 days (`removeOnFail`),
+      and leaving the fields in place invites a future edit to reach for them again. All
+      three enqueue sites changed — the Inngest fan-out plus the `test` and `retryDelivery`
+      tRPC mutations, both of which had hand-rolled raw selects purely to fetch the secret.
+      **`CANCELLED`, not `FAILED`** — `countRecentFailures` counts `FAILED` over 24h and feeds
+      the auto-disable threshold, so recording a cancellation as a failure would push an
+      endpoint further toward disable for declining to send to it. Migration `0068` adds the
+      enum value; **two Zod schemas and two hand-written TS unions duplicated that enum** and
+      had to move in lockstep, the same shape of trap as `payments:read` on 2026-07-27. The
+      service union is now derived from `webhookDeliveries.status.enumValues` so it cannot
+      drift again.
+      **Three things worth keeping:**
+      (1) `webhook.test` is exempt from the subscription check — the `test` mutation sends
+      `eventType: 'webhook.test'`, which is never in an endpoint's `event_types`, so a naive
+      re-check cancelled every test send. The mutation now also rejects a `DISABLED` endpoint
+      up front, so the operator gets an error rather than a silent cancellation.
+      (2) `retryDelivery`'s endpoint select could not just be deleted. The FK guarantees the
+      endpoint exists, not that it shares the delivery's org — that select was the only
+      explicit delivery↔endpoint org-affinity check. It now calls `getEndpointForDelivery`,
+      which filters org on **both** tables.
+      (3) The UI already had a `STATUS_COLORS` map and a retry button gated on `FAILED`;
+      `CANCELLED` would have rendered in the in-progress blue with no way to re-send.
+      **Fixed a pre-existing bug this surfaced: `retryDelivery` never re-ran anything.**
+      `jobId` is the delivery id, and BullMQ treats a re-added jobId as a duplicate while
+      the previous job is retained — 24h for completed, 7 days for failed. Every state a
+      retry is offered from leaves such a job behind, so retry set the row back to `QUEUED`
+      and then silently did nothing, reporting success. Confirmed against real Redis before
+      fixing: the delivery stayed `QUEUED` with zero fetches. New `enqueueWebhookRetry`
+      drops the retained job first; `retryDelivery` uses it, and an integration test covers
+      the cancel → re-enable → retry → delivered round trip. This was live for `FAILED`
+      retries too, not just the `CANCELLED` path added here.
 - [ ] **[P2] No dedup constraint on `webhook_deliveries`.** `createDelivery`
       (`webhook.service.ts:222`) has no unique constraint per endpoint/event, so Inngest
       retries or replayed events can duplicate deliveries. — (design review 2026-07-27)

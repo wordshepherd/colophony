@@ -41,18 +41,16 @@ describe('webhook queue', () => {
     await enqueueWebhook(testEnv, {
       deliveryId: 'del-123',
       orgId: 'org-1',
-      endpointUrl: 'https://example.com/webhook',
-      secret: 'test-secret',
       payload,
     });
 
+    // The endpoint URL and secret are deliberately absent — the worker reads both
+    // from the database at send time so they never sit in Redis.
     expect(mockAdd).toHaveBeenCalledWith(
       'deliver',
       {
         deliveryId: 'del-123',
         orgId: 'org-1',
-        endpointUrl: 'https://example.com/webhook',
-        secret: 'test-secret',
         payload,
       },
       { jobId: 'del-123' },
@@ -64,8 +62,6 @@ describe('webhook queue', () => {
     await enqueueWebhook(testEnv, {
       deliveryId: 'del-456',
       orgId: 'org-1',
-      endpointUrl: 'https://example.com',
-      secret: 'secret',
       payload: {
         id: 'del-456',
         event: 'webhook.test',

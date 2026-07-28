@@ -192,4 +192,34 @@ describe('SSRF validation — federation services', () => {
       expect(validateIdx).toBeLessThan(fetchIdx);
     });
   });
+
+  describe('webhook.worker.ts', () => {
+    const fp = path.join(workersDir, 'webhook.worker.ts');
+
+    it('imports validateOutboundUrl', () => {
+      expect(importsValidation(fp)).toBe(true);
+    });
+
+    it('delivery fetch has upstream SSRF check', () => {
+      const source = fs.readFileSync(fp, 'utf8');
+      const validateIdx = source.indexOf('await validateOutboundUrl(');
+      const fetchIdx = source.indexOf('await fetch(');
+      expect(validateIdx).toBeGreaterThan(-1);
+      expect(fetchIdx).toBeGreaterThan(-1);
+      expect(validateIdx).toBeLessThan(fetchIdx);
+    });
+
+    it('validates the endpoint URL re-read from the database, not the job payload', () => {
+      const source = fs.readFileSync(fp, 'utf8');
+      // The URL must be resolved from the endpoint row before it is validated,
+      // otherwise a stale job payload could carry a URL past the SSRF check.
+      const lookupIdx = source.indexOf('getEndpointForDelivery(');
+      const validateIdx = source.indexOf('await validateOutboundUrl(');
+      expect(lookupIdx).toBeGreaterThan(-1);
+      expect(lookupIdx).toBeLessThan(validateIdx);
+      // And the job payload must no longer carry a URL or secret at all.
+      expect(source).not.toMatch(/job\.data\.endpointUrl/);
+      expect(source).not.toMatch(/job\.data\.secret/);
+    });
+  });
 });

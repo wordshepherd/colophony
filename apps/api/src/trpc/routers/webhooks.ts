@@ -6,7 +6,6 @@ import {
   AuditActions,
   AuditResources,
 } from '@colophony/types';
-import { webhookEndpoints, eq, and } from '@colophony/db';
 import {
   adminProcedure,
   orgProcedure,
@@ -14,7 +13,10 @@ import {
   createRouter,
 } from '../init.js';
 import { webhookService } from '../../services/webhook.service.js';
-import { enqueueWebhook } from '../../queues/webhook.queue.js';
+import {
+  enqueueWebhook,
+  enqueueWebhookRetry,
+} from '../../queues/webhook.queue.js';
 import { validateEnv } from '../../config/env.js';
 
 export const webhooksRouter = createRouter({
@@ -126,20 +128,24 @@ export const webhooksRouter = createRouter({
       const env = validateEnv();
       const orgId = ctx.authContext.orgId;
 
-      // Get the endpoint (including secret for delivery)
-      const [endpoint] = await ctx.dbTx
-        .select()
-        .from(webhookEndpoints)
-        .where(
-          and(
-            eq(webhookEndpoints.id, input.id),
-            eq(webhookEndpoints.organizationId, orgId),
-          ),
-        )
-        .limit(1);
+      // The worker re-reads url/secret at send time, so only existence and status
+      // are needed here — the redacted read is sufficient.
+      const endpoint = await webhookService.getEndpoint(
+        ctx.dbTx,
+        input.id,
+        orgId,
+      );
 
       if (!endpoint) {
         throw new Error('Webhook endpoint not found');
+      }
+
+      // The worker cancels sends to a disabled endpoint, so reject here rather than
+      // enqueueing a delivery that is guaranteed to be cancelled without explanation.
+      if (endpoint.status === 'DISABLED') {
+        throw new Error(
+          'Cannot test a disabled webhook endpoint — re-enable it first',
+        );
       }
 
       const delivery = await webhookService.createDelivery(ctx.dbTx, {
@@ -167,8 +173,6 @@ export const webhooksRouter = createRouter({
       await enqueueWebhook(env, {
         deliveryId: delivery.id,
         orgId,
-        endpointUrl: endpoint.url,
-        secret: endpoint.secret,
         payload,
       });
 
@@ -205,17 +209,14 @@ export const webhooksRouter = createRouter({
         throw new Error('Delivery not found');
       }
 
-      // Get the endpoint for the delivery
-      const [endpoint] = await ctx.dbTx
-        .select()
-        .from(webhookEndpoints)
-        .where(
-          and(
-            eq(webhookEndpoints.id, delivery.webhookEndpointId),
-            eq(webhookEndpoints.organizationId, orgId),
-          ),
-        )
-        .limit(1);
+      // Confirm the delivery's endpoint is still present and belongs to the same org.
+      // The FK guarantees existence, not org affinity — this join is the only check.
+      // The worker re-reads url/secret itself, so nothing is taken from here.
+      const endpoint = await webhookService.getEndpointForDelivery(
+        ctx.dbTx,
+        input.deliveryId,
+        orgId,
+      );
 
       if (!endpoint) {
         throw new Error('Webhook endpoint not found');
@@ -229,11 +230,11 @@ export const webhooksRouter = createRouter({
         data: delivery.payload as Record<string, unknown>,
       };
 
-      await enqueueWebhook(env, {
+      // Retry, not a fresh enqueue: the previous job is still retained under this
+      // delivery id and would dedup a plain add into a no-op.
+      await enqueueWebhookRetry(env, {
         deliveryId: delivery.id,
         orgId,
-        endpointUrl: endpoint.url,
-        secret: endpoint.secret,
         payload,
       });
 
