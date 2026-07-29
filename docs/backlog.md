@@ -381,6 +381,26 @@ Ordered as the design doc's Phase 0/D.
       the human's own actions are recorded identically. Add `principal_id` / `principal_type`
       (also the prerequisite for acting-as). Requires updating `insert_audit_event()`. —
       (design doc §0.1(d), P2.2)
+- [ ] **[P2] Honour `X-Act-As-User` on ordinary org-scoped API keys.** `hooks/auth.ts:314`
+      unconditionally sets `userId: creator.id` for `authMethod: 'apikey'`, so every action a
+      `col_live_` key takes is attributed to whoever minted it — including `submitterId` and
+      user-scoped RLS, not just the audit row. An integrator filing on behalf of several of
+      its own users has no way to say so.
+      **Not covered by the existing acting-as plan.** Design doc §"Acting-as" and P3.1 specify
+      `X-Act-As-User`, but gated on _principal capability_ — that is the cross-org `col_svc_`
+      instance principal, which does not exist yet and sits behind all of Phase 2. The
+      org-pinned case is simpler and independently useful: the key already carries exactly one
+      `organizationId`, so there is no grant check to order against and no cross-org escalation
+      surface. Resolve the header to a local user, require membership of the key's own org, and
+      apply the same intersection rule §"Acting-as" specifies — the target user's role must
+      narrow the key's authority, never widen it.
+      **Reject, never degrade.** An unknown, non-member, or deactivated user id must 403. The
+      failure mode to avoid is falling back to the key creator, because the caller would then
+      get a 2xx for a write attributed to the wrong person and never learn the header was
+      ignored. Same reasoning as the `requireScopes` default-deny.
+      Depends on the `principal_id` / `principal_type` audit work above to record both
+      identities; landing it before that would attribute the action to the target user with no
+      record of which key acted. — (raised 2026-07-28)
 - [x] **[P1] Webhook deliveries are not revalidated before send.** The worker now re-reads
       the endpoint through `webhookService.getEndpointForDelivery` as its first phase, before
       the `DELIVERING` write, and takes the URL and secret from that row rather than the job.
