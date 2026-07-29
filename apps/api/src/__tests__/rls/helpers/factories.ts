@@ -22,7 +22,6 @@ import {
   submissionDiscussions,
   submissionVotes,
   submissionReviewers,
-  portfolioEntries,
   type Organization,
   type User,
   type OrganizationMember,
@@ -355,7 +354,6 @@ export async function createWriterProfile(
 export type SubmissionDiscussionRow = typeof submissionDiscussions.$inferSelect;
 export type SubmissionVoteRow = typeof submissionVotes.$inferSelect;
 export type SubmissionReviewerRow = typeof submissionReviewers.$inferSelect;
-export type PortfolioEntryRow = typeof portfolioEntries.$inferSelect;
 
 export async function createSubmissionDiscussion(
   organizationId: string,
@@ -416,28 +414,10 @@ export async function createSubmissionReviewer(
   return reviewer;
 }
 
-/**
- * `portfolio_entries` is user-scoped (`user_id = current_user_id()`), not
- * org-scoped — it carries no `organization_id` column at all. Reads of it
- * therefore need `userId` in the RLS context, not `orgId`.
- */
-export async function createPortfolioEntry(
-  userId: string,
-  overrides?: Partial<PortfolioEntryRow>,
-): Promise<PortfolioEntryRow> {
-  const db = adminDb();
-  const [entry] = await db
-    .insert(portfolioEntries)
-    .values({
-      userId,
-      type: 'external',
-      title: faker.lorem.sentence(),
-      publicationName: faker.company.name(),
-      ...overrides,
-    })
-    .returning();
-  return entry;
-}
+// No `createPortfolioEntry` here on purpose: `portfolioService.list` reads
+// `submissions` and `external_submissions`, never `portfolio_entries`, so a
+// fixture for that table would seed rows no assertion observes. Add one when a
+// suite actually exercises `portfolio_entries_user_owner`.
 
 export interface TwoOrgScenario {
   orgA: Organization;

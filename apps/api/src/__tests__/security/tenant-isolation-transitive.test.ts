@@ -36,7 +36,6 @@ import {
   createSubmissionDiscussion,
   createSubmissionVote,
   createSubmissionReviewer,
-  createPortfolioEntry,
 } from '../rls/helpers/factories.js';
 import { organizationService } from '../../services/organization.service.js';
 import { submissionService } from '../../services/submission.service.js';
@@ -87,7 +86,6 @@ async function seedOrg(label: string): Promise<Fixture> {
     decision: 'ACCEPT',
   });
   await createSubmissionReviewer(org.id, submission.id, user.id);
-  await createPortfolioEntry(user.id, { title: `${label} portfolio piece` });
 
   return {
     orgId: org.id,
@@ -215,11 +213,18 @@ describe('transitive tenant isolation (RLS is the only defense)', () => {
   });
 
   /**
-   * portfolio_entries_user_owner — `user_id = current_user_id()`, not org.
-   * Classified USER-SCOPED rather than TRANSITIVE: the native half carries an
-   * explicit `s.submitter_id = userId` predicate (`portfolio.service.ts:52`),
-   * while the `organizations` join at `:95` surfaces journal names and is
-   * searchable. Both halves are checked.
+   * submissions_org_isolation, reached through a raw-SQL join.
+   *
+   * Despite the name, `portfolioService.list` never queries `portfolio_entries`
+   * — it reads `submissions` and `external_submissions`, and `LEFT JOIN`s
+   * `organizations` at `:95` purely to surface journal names (which are also a
+   * search target at `:65`). So what is under test here is that join: the only
+   * predicate on the native half is `s.submitter_id = userId` (`:52`), and the
+   * org name of a submission belonging to another tenant must not appear.
+   *
+   * Classified USER-SCOPED for that reason — an explicit predicate, just not an
+   * org one. This does NOT cover `portfolio_entries_user_owner`; no service
+   * method in this suite reads that table.
    */
   it('portfolioService.list is user-scoped and leaks no other org journal name', async () => {
     const result = await withTestRls({ userId: a.userId }, (tx) =>

@@ -38,10 +38,17 @@ const API_SRC = path.resolve(__dirname, '../..');
  *   - `alias(users, 'copyeditors')` — `pipeline.service.ts` does this ×6, and a
  *     bare-name grep for `from(users)` misses every one
  *   - `db.query.users.findFirst` — the relational API
- *   - raw `FROM users` / `JOIN organizations` inside `sql` blocks
+ *   - raw SQL inside `sql` blocks and `client.query(...)`
+ *
+ * The raw-SQL branch must cover writes as well as reads. `FROM` / `JOIN` alone
+ * catches `SELECT … FROM users` and `DELETE FROM users` (both present in
+ * `gdpr.service.ts`), but `UPDATE users SET …` and `INSERT INTO organizations …`
+ * have neither keyword, and the Drizzle branch does not apply because raw SQL
+ * has no `update(` / `into(` call. Those are writes to unprotected tables — the
+ * accesses that most need review — so they are matched explicitly.
  */
 const ACCESS_PATTERN =
-  /(?:from|innerJoin|leftJoin|rightJoin|fullJoin|alias|update|delete|into)\(\s*(?:users|organizations)\b|(?:db|tx)\.query\.(?:users|organizations)\b|(?:FROM|JOIN)\s+(?:users|organizations)\b/;
+  /(?:from|innerJoin|leftJoin|rightJoin|fullJoin|alias|update|delete|into)\(\s*(?:users|organizations)\b|(?:db|tx)\.query\.(?:users|organizations)\b|(?:FROM|JOIN|INTO|UPDATE)\s+(?:users|organizations)\b/i;
 
 /**
  * Files known to read or write `users` / `organizations`, each classified in
