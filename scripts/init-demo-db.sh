@@ -48,4 +48,11 @@ GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA public TO $APP_USER;
 ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT EXECUTE ON FUNCTIONS TO $APP_USER;
 SQL
 
+# Restrict what the blanket GRANT above just handed out. This must run AFTER it:
+# GRANT is additive, so it reverses any REVOKE applied earlier.
+# packages/db/privileges.sql is the canonical list; do not add REVOKEs here.
+echo "Applying restricted table permissions..."
+psql -U "$PGUSER" -d "$DEMO_DB" -v ON_ERROR_STOP=1 -f - \
+  < "$(dirname "$0")/../packages/db/privileges.sql"
+
 echo "=== Demo database provisioned ==="

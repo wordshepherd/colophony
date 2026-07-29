@@ -48,23 +48,11 @@ docker exec "$CONTAINER" psql -U "$DB_USER" -d "$DB_NAME" -c "
   ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT USAGE, SELECT ON SEQUENCES TO app_user;
 "
 
+# Restrict what the blanket GRANT above just handed out. This must run AFTER it:
+# GRANT is additive, so it reverses the REVOKEs the migrations applied.
+# packages/db/privileges.sql is the canonical list; do not add REVOKEs here.
 echo "Restoring restricted table permissions..."
-docker exec "$CONTAINER" psql -U "$DB_USER" -d "$DB_NAME" <<-'EOSQL'
-  DO $$ DECLARE tbl TEXT;
-  BEGIN
-    FOREACH tbl IN ARRAY ARRAY['user_keys','trusted_peers','sim_sub_checks','inbound_transfers','documenso_webhook_events']
-    LOOP
-      IF EXISTS (SELECT 1 FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace WHERE n.nspname = 'public' AND c.relname = tbl) THEN
-        EXECUTE format('REVOKE DELETE ON %I FROM app_user', tbl);
-      END IF;
-    END LOOP;
-    FOREACH tbl IN ARRAY ARRAY['journal_directory','audit_events']
-    LOOP
-      IF EXISTS (SELECT 1 FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace WHERE n.nspname = 'public' AND c.relname = tbl) THEN
-        EXECUTE format('REVOKE INSERT, UPDATE, DELETE ON %I FROM app_user', tbl);
-      END IF;
-    END LOOP;
-  END $$;
-EOSQL
+docker exec -i "$CONTAINER" psql -U "$DB_USER" -d "$DB_NAME" -v ON_ERROR_STOP=1 -f - \
+  < "$(dirname "$0")/../packages/db/privileges.sql"
 
 echo "Database reset complete. Zitadel database preserved."

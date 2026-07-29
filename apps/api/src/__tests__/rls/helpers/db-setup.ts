@@ -10,6 +10,12 @@ const migrationsFolder = path.resolve(
   '../../../../../../packages/db/migrations',
 );
 
+/** Canonical app_user privileges — the same file every provisioning path applies. */
+const privilegesManifest = path.resolve(
+  __dirname,
+  '../../../../../../packages/db/privileges.sql',
+);
+
 const ADMIN_URL =
   process.env.DATABASE_TEST_URL ??
   'postgresql://test:test@localhost:5433/colophony_test';
@@ -124,17 +130,13 @@ export async function globalSetup(): Promise<void> {
     'ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT USAGE, SELECT ON SEQUENCES TO app_user',
   );
 
-  // Revoke direct DML on audit_events from app_user (migration 0010 does this,
-  // but the broad GRANT above re-grants it — must revoke after)
-  await admin.query(
-    'REVOKE INSERT, UPDATE, DELETE ON "audit_events" FROM app_user',
-  );
-
-  // Revoke DML on journal_directory (migration 0036 grants SELECT only,
-  // but the broad GRANT above re-grants it — must revoke after)
-  await admin.query(
-    'REVOKE INSERT, UPDATE, DELETE ON "journal_directory" FROM app_user',
-  );
+  // Restrict what the blanket GRANT above just handed out. This must run AFTER
+  // it: GRANT is additive, so it reverses the REVOKEs the migrations applied.
+  // Applying the same manifest the deployed environments use is what keeps this
+  // database's privileges identical to staging's — rls-infrastructure.test.ts
+  // asserts the resulting matrix, so a divergence here would make that suite
+  // pin local state rather than deployed state.
+  await admin.query(fs.readFileSync(privilegesManifest, 'utf8'));
 
   // Verify app_user is NOSUPERUSER and NOBYPASSRLS
   const { rows } = await admin.query<{

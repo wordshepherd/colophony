@@ -68,24 +68,13 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE O
 ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT USAGE, SELECT ON SEQUENCES TO app_user;
 GRANT EXECUTE ON FUNCTION current_org_id() TO app_user;
 GRANT EXECUTE ON FUNCTION current_user_id() TO app_user;
-
--- Revoke DELETE on append-only/immutable tables.
--- ALTER DEFAULT PRIVILEGES grants full DML to all tables; these tables
--- need explicit REVOKE to enforce immutability. Keep in sync with
--- migration 0052_revoke_delete_restricted_tables.sql.
-REVOKE DELETE ON "user_keys" FROM app_user;
-REVOKE DELETE ON "trusted_peers" FROM app_user;
-REVOKE DELETE ON "sim_sub_checks" FROM app_user;
-REVOKE DELETE ON "inbound_transfers" FROM app_user;
-REVOKE DELETE ON "documenso_webhook_events" FROM app_user;
-
--- Revoke INSERT, UPDATE, DELETE on SELECT-only tables.
--- journal_directory: writes via superuser pool only.
--- audit_events: writes via insert_audit_event() SECURITY DEFINER only.
--- Keep in sync with migration 0054_revoke_journal_audit_permissions.sql.
-REVOKE INSERT, UPDATE, DELETE ON "journal_directory" FROM app_user;
-REVOKE INSERT, UPDATE, DELETE ON "audit_events" FROM app_user;
 EOSQL
+
+# Restrict what the blanket GRANT above just handed out. This must run AFTER it:
+# GRANT is additive, so it reverses any REVOKE that ran earlier — including the
+# ones in the migrations applied in Step 1. packages/db/privileges.sql is the
+# canonical list; do not add REVOKEs here.
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f /app/packages/db/privileges.sql
 
 echo "Permissions granted."
 

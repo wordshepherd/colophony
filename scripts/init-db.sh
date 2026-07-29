@@ -32,42 +32,13 @@ psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-E
     ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO app_user;
     ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT USAGE, SELECT ON SEQUENCES TO app_user;
 
-    -- Revoke DELETE on append-only/immutable tables (if they exist).
-    -- ALTER DEFAULT PRIVILEGES grants full DML to all tables; these tables
-    -- need explicit REVOKE to enforce immutability. Keep in sync with
-    -- migration 0052_revoke_delete_restricted_tables.sql.
-    -- Guarded: init-db.sh runs before migrations, so tables may not exist yet.
-    -- The migration itself applies the REVOKE on first run; this block covers
-    -- subsequent container restarts (tables already created by prior migrations).
-    DO \$\$
-    DECLARE
-        tbl TEXT;
-    BEGIN
-        FOREACH tbl IN ARRAY ARRAY['user_keys','trusted_peers','sim_sub_checks','inbound_transfers','documenso_webhook_events']
-        LOOP
-            IF EXISTS (SELECT 1 FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace WHERE n.nspname = 'public' AND c.relname = tbl) THEN
-                EXECUTE format('REVOKE DELETE ON %I FROM app_user', tbl);
-            END IF;
-        END LOOP;
-    END
-    \$\$;
-
-    -- Revoke INSERT, UPDATE, DELETE on SELECT-only tables (if they exist).
-    -- journal_directory: writes via superuser pool only.
-    -- audit_events: writes via insert_audit_event() SECURITY DEFINER only.
-    -- Keep in sync with migration 0054_revoke_journal_audit_permissions.sql.
-    DO \$\$
-    DECLARE
-        tbl TEXT;
-    BEGIN
-        FOREACH tbl IN ARRAY ARRAY['journal_directory','audit_events']
-        LOOP
-            IF EXISTS (SELECT 1 FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace WHERE n.nspname = 'public' AND c.relname = tbl) THEN
-                EXECUTE format('REVOKE INSERT, UPDATE, DELETE ON %I FROM app_user', tbl);
-            END IF;
-        END LOOP;
-    END
-    \$\$;
+    -- Restrict what the blanket GRANT above just handed out. This must run
+    -- AFTER it: GRANT is additive, so it reverses any REVOKE applied earlier.
+    -- The manifest is guarded on table existence, so it is a no-op on a truly
+    -- fresh database (this script runs before migrations) and does the real work
+    -- on subsequent container restarts. packages/db/privileges.sql is the
+    -- canonical list; do not add REVOKEs here.
+    \i /opt/colophony/privileges.sql
 
     -- Create audit_writer role for tamper-proof audit trail
     -- NOLOGIN: only used as SECURITY DEFINER function owner, never connects directly

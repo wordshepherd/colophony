@@ -113,6 +113,12 @@ function computeFingerprint(
 
 const migrationsFolder = path.resolve(__dirname, "../packages/db/migrations");
 
+/** Canonical app_user privileges — the same file every provisioning path applies. */
+const privilegesManifest = path.resolve(
+  __dirname,
+  "../packages/db/privileges.sql",
+);
+
 async function applyMigrations(pool: Pool): Promise<void> {
   const journalPath = path.join(migrationsFolder, "meta", "_journal.json");
   const journal = JSON.parse(fs.readFileSync(journalPath, "utf8")) as {
@@ -179,10 +185,10 @@ async function setupDbB(pool: Pool): Promise<void> {
   await pool.query(
     "ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT USAGE, SELECT ON SEQUENCES TO app_user",
   );
-  // Revoke audit direct writes (same as RLS test setup)
-  await pool.query(
-    'REVOKE INSERT, UPDATE, DELETE ON "audit_events" FROM app_user',
-  );
+  // Restrict what the blanket GRANT above just handed out. This must run AFTER
+  // it: GRANT is additive, so it reverses the REVOKEs the migrations applied.
+  // packages/db/privileges.sql is the canonical list; do not add REVOKEs here.
+  await pool.query(fs.readFileSync(privilegesManifest, "utf8"));
 }
 
 interface SeedIds {

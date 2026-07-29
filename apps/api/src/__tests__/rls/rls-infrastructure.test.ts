@@ -87,115 +87,109 @@ const RLS_TABLES_FULL_DML = RLS_TABLES.filter(
   (t) => t !== 'audit_events' && t !== 'journal_directory',
 );
 
+/** The four privileges `ALTER DEFAULT PRIVILEGES` hands out by default. */
+interface AppUserPrivileges {
+  select: boolean;
+  insert: boolean;
+  update: boolean;
+  delete: boolean;
+}
+
+const FULL_DML: AppUserPrivileges = {
+  select: true,
+  insert: true,
+  update: true,
+  delete: true,
+};
+const NO_ACCESS: AppUserPrivileges = {
+  select: false,
+  insert: false,
+  update: false,
+  delete: false,
+};
+
 /**
  * Tables with no row-level security. On these, cross-tenant isolation depends
  * either on an explicit `WHERE` clause in the service layer or on a table-level
  * `REVOKE` — never on the database's own policy machinery.
  *
- * `expectedAppUserSelect` records which of the two is doing the work, and is
- * asserted below. "No RLS" is only safe when something else is; see
- * `docs/tenant-isolation-audit.md` and the per-site classification there.
+ * `appUser` records which of the two is doing the work, and every one of the
+ * four privileges is asserted below. Asserting only SELECT is not enough: it
+ * cannot express `outbox_events`, which must keep INSERT while losing the rest.
+ *
+ * These expectations are the end state of `packages/db/privileges.sql`. That
+ * manifest is the only place to change app_user's privileges — it is applied as
+ * the last privilege step in every provisioning path, including this suite's
+ * `helpers/db-setup.ts`, so what this asserts is what staging has.
+ *
+ * See `docs/tenant-isolation-audit.md` for the per-site read/write
+ * classification behind each row.
  */
 const NON_RLS_TABLES: ReadonlyArray<{
   table: string;
-  expectedAppUserSelect: boolean;
+  appUser: AppUserPrivileges;
   why: string;
 }> = [
   {
     table: 'organizations',
-    expectedAppUserSelect: true,
+    appUser: FULL_DML,
     why: 'Read before org context exists. Service-layer predicate only.',
   },
   {
     table: 'users',
-    expectedAppUserSelect: true,
+    appUser: FULL_DML,
     why: 'No organization_id column; scoped via org-bearing join partners.',
   },
   {
     table: 'dsar_requests',
-    expectedAppUserSelect: true,
+    appUser: FULL_DML,
     why: 'User-scoped, not org-scoped.',
   },
   {
-    table: 'demo_requests',
-    expectedAppUserSelect: true,
-    why: 'Public intake. KNOWN GAP: no RLS and no REVOKE — it postdates migration 0052, so ALTER DEFAULT PRIVILEGES left app_user full DML. Tracked in docs/backlog.md; flip this to false when the revoke lands.',
-  },
-  {
     table: 'stripe_webhook_events',
-    expectedAppUserSelect: true,
+    appUser: FULL_DML,
     why: 'Inbound dedup, written pre-auth.',
   },
   {
     table: 'zitadel_webhook_events',
-    expectedAppUserSelect: true,
+    appUser: FULL_DML,
     why: 'Inbound dedup, written pre-auth.',
   },
   {
     table: 'documenso_webhook_events',
-    expectedAppUserSelect: true,
-    why: 'Inbound dedup, written pre-auth. DELETE revoked by migration 0052.',
+    appUser: { select: true, insert: true, update: true, delete: false },
+    why: 'Inbound dedup, written pre-auth. Append-only: DELETE revoked (migration 0052).',
+  },
+  {
+    table: 'demo_requests',
+    appUser: NO_ACCESS,
+    why: 'Public intake, written through the superuser pool (routes/public.routes.ts). It postdates migration 0052 and so never had a REVOKE until the manifest.',
   },
   {
     table: 'outbox_events',
-    expectedAppUserSelect: true,
-    why: 'KNOWN GAP: migration 0022\'s comment claims "SELECT is not granted — only the superuser outbox poller reads/updates events", but app_user holds SELECT, INSERT, UPDATE and DELETE. GRANT is additive and removes nothing; ALTER DEFAULT PRIVILEGES in init-db.sh had already granted full DML — the same additive-GRANT trap already documented for DELETE on the append-only tables. Needs an explicit REVOKE, three-place discipline. Tracked in docs/backlog.md; flip this to false when it lands.',
+    appUser: { select: false, insert: true, update: false, delete: false },
+    why: "Transactional outbox. app_user INSERTs inside the producer's own RLS transaction (services/outbox.ts); the superuser poller reads, updates and retries (workers/outbox-poller.worker.ts). INSERT is the only privilege it may hold — and enqueueOutboxEvent must never gain a .returning(), which would read the row back via SELECT.",
   },
-  // The three tables below are the ones documented as safe without RLS
-  // "because of a revoke". They are not. See REVOKES_DO_NOT_SURVIVE below.
+  // Instance-level tables, reached only through the superuser pool. These are
+  // the ones migrations 0023/0029 always meant to close; the blanket GRANT that
+  // every provisioning path issued afterwards silently reopened them until
+  // packages/db/privileges.sql started running last.
   {
     table: 'federation_config',
-    expectedAppUserSelect: true,
-    why: 'KNOWN GAP: migration 0023 revokes ALL, but the revoke does not survive provisioning. See REVOKES_DO_NOT_SURVIVE.',
+    appUser: NO_ACCESS,
+    why: 'Holds the instance federation signing private key and hub attestation token. Read only through the superuser pool (services/federation.service.ts). app_user SELECT here is credential exposure, not a tenancy question.',
   },
   {
     table: 'hub_registered_instances',
-    expectedAppUserSelect: true,
-    why: 'KNOWN GAP: migration 0029 revokes ALL, but the revoke does not survive provisioning. See REVOKES_DO_NOT_SURVIVE.',
+    appUser: NO_ACCESS,
+    why: 'Instance-level hub registry, read only through the superuser pool (services/hub.service.ts).',
   },
   {
     table: 'hub_fingerprint_index',
-    expectedAppUserSelect: true,
-    why: 'KNOWN GAP: migration 0029 revokes ALL, but the revoke does not survive provisioning. See REVOKES_DO_NOT_SURVIVE.',
+    appUser: NO_ACCESS,
+    why: 'Instance-level, cross-instance by construction. Superuser pool only (services/hub.service.ts).',
   },
 ];
-
-/**
- * REVOKES_DO_NOT_SURVIVE — the finding this file's privilege assertion exposed.
- *
- * `federation_config`, `hub_registered_instances` and `hub_fingerprint_index` are
- * documented as safe despite having no RLS, on the grounds that migration
- * `0029_hub_tables.sql:67` explicitly does `REVOKE ALL … FROM app_user`.
- * Measured, `app_user` holds SELECT, INSERT, UPDATE and DELETE on all three, in
- * both the test database and the dev database.
- *
- * The revokes are real; they are undone afterwards, in every provisioning path:
- *
- *   - `scripts/init-prod.sh` — Step 1 runs the migrations (applying the revokes),
- *     then Step 2 issues `GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN
- *     SCHEMA public TO app_user` and re-revokes only the seven tables from
- *     migrations 0052 and 0054. These three are not among them.
- *   - `helpers/db-setup.ts` — same shape: blanket grant after migrations, then
- *     re-revokes `audit_events` and `journal_directory` only. Its own comments
- *     ("the broad GRANT above re-grants it — must revoke after") show the hazard
- *     was known; the list was just incomplete.
- *   - `pnpm db:reset` — uses `drizzle-kit push`, which syncs schema and never
- *     executes migration SQL, so the revoke statements do not run at all.
- *
- * Consequence for P2.1: the design doc's `service_principals` recommendation is
- * "no RLS **plus** REVOKE ALL, reads via SECURITY DEFINER", justified by the hub
- * precedent being safe. Copying that pattern as written would leave the table of
- * hashed cross-org credentials fully readable by `app_user` — precisely the
- * instance-wide credential enumeration the recommendation exists to prevent.
- *
- * The expectations above therefore encode measured reality, not intent, so the
- * gap is visible rather than assumed away. Flip each to `false` when a fix lands
- * in all three places. Tracked in docs/backlog.md.
- *
- * NOT YET VERIFIED ON STAGING OR PRODUCTION — the reasoning above is a reading of
- * `init-prod.sh` plus measurement of two local databases. Confirm against the
- * deployed database before deciding severity.
- */
 
 const NON_RLS_TABLE_NAMES = NON_RLS_TABLES.map((t) => t.table);
 
@@ -282,21 +276,36 @@ describe('RLS Infrastructure', () => {
 
     /**
      * "No RLS" is a decision to use table privileges instead. This asserts that
-     * decision was actually made rather than defaulted into — `init-db.sh` sets
-     * `ALTER DEFAULT PRIVILEGES ... GRANT SELECT, INSERT, UPDATE, DELETE`, so a
-     * new table is fully readable by `app_user` unless a migration revokes it.
+     * decision was actually made rather than defaulted into — every provisioning
+     * path sets `ALTER DEFAULT PRIVILEGES ... GRANT SELECT, INSERT, UPDATE,
+     * DELETE`, so a new table is fully reachable by `app_user` unless
+     * `packages/db/privileges.sql` revokes it.
+     *
+     * All four privileges are checked, not just SELECT. A SELECT-only assertion
+     * passes on a table that has lost SELECT but kept DELETE, and cannot express
+     * `outbox_events` at all.
      */
-    it('should match the recorded app_user SELECT privilege on each non-RLS table', async () => {
+    it('should match the recorded app_user privileges on each non-RLS table', async () => {
       const admin = getAdminPool();
-      for (const { table, expectedAppUserSelect, why } of NON_RLS_TABLES) {
-        const { rows } = await admin.query<{ has_priv: boolean }>(
-          `SELECT has_table_privilege('app_user', $1, 'SELECT') as has_priv`,
+      for (const { table, appUser, why } of NON_RLS_TABLES) {
+        const { rows } = await admin.query<{
+          select: boolean;
+          insert: boolean;
+          update: boolean;
+          delete: boolean;
+        }>(
+          `SELECT has_table_privilege('app_user', $1, 'SELECT') as select,
+                  has_table_privilege('app_user', $1, 'INSERT') as insert,
+                  has_table_privilege('app_user', $1, 'UPDATE') as update,
+                  has_table_privilege('app_user', $1, 'DELETE') as delete`,
           [table],
         );
         expect(
-          rows[0].has_priv,
-          `${table}: expected app_user SELECT = ${expectedAppUserSelect}. ${why}`,
-        ).toBe(expectedAppUserSelect);
+          rows[0],
+          `${table}: app_user privileges differ from the recorded set. ${why} ` +
+            `Change packages/db/privileges.sql, not this expectation, unless the ` +
+            `table's access path itself changed.`,
+        ).toEqual(appUser);
       }
     });
   });

@@ -723,9 +723,11 @@ therefore:
 - `service_principal_grants`: **RLS enabled with `FORCE`**, plus an explicit
   `organization_id` filter in every service method (defence in depth, per the project rule).
   This table is org-scoped precisely so the org-facing views in §2.5 can read it safely.
-- Same three-place `REVOKE` discipline the codebase already uses for append-only tables:
-  migration, `scripts/init-db.sh`, `scripts/init-prod.sh` — `GRANT` is additive, so a
-  per-migration grant that merely omits a privilege is a no-op.
+- The `REVOKE` goes in `packages/db/privileges.sql`, the single manifest every provisioning
+  path applies as its last privilege step. `GRANT` is additive, so a per-migration grant that
+  merely omits a privilege is a no-op, and a per-migration `REVOKE` is undone by the blanket
+  grant that follows it. Add a migration as well for already-provisioned databases, but the
+  manifest is what enforces.
 
 _For:_ the two credential classes are never confusable — in code, in logs, in the UI, or in
 a leaked-secret scanner. Management routes can be registered only when the feature is
@@ -994,13 +996,16 @@ Called out per the brief's instruction to flag rather than paper over.
    **Resolved 2026-07-28 — [`tenant-isolation-audit.md`](tenant-isolation-audit.md).** All 73
    sites classified. The estimate moves in both directions: the predicate work on those two
    tables is _smaller_ than feared (5 methods, 2 files), but the audit invalidated the premise
-   of P2.1. `federation_config` and both `hub_*` tables are documented as safe "because of a
-   revoke"; measured, `app_user` holds full DML on all three, because every provisioning path
-   issues a blanket `GRANT … ON ALL TABLES` after migrations and re-revokes only seven tables.
-   **P2.1 proposes exactly that pattern for `service_principals`** — implemented as written, the
-   hashed-credential table would be readable by `app_user`. Fix the three-place discipline and
-   assert it before P2.1 ships; §2.4's "the hub precedent is safe _because_ of a revoke" is not
-   currently true.
+   of P2.1. `federation_config` and both `hub_*` tables were documented as safe "because of a
+   revoke"; measured — on staging as well as locally — `app_user` held full DML on all three,
+   because every provisioning path issues a blanket `GRANT … ON ALL TABLES` after migrations and
+   re-revoked only a hand-copied subset. **P2.1 proposes exactly that pattern for
+   `service_principals`.**
+   **Resolved 2026-07-28.** The mechanism was sound; the lists had drifted. `app_user`
+   privileges now live in `packages/db/privileges.sql`, applied last by every provisioning path
+   and asserted per-table by `rls-infrastructure.test.ts`. §2.4's "the hub precedent is safe
+   _because_ of a revoke" is true again, and P2.1 proceeds as designed — put the
+   `service_principals` revoke in the manifest.
 2. **Whether `PgBouncer` transaction pooling interacts with leaving `app.user_id` unset.**
    The `SET LOCAL` contract is sound in transaction mode, but I have not tested the
    specific case of setting `app.current_org` without `app.user_id` on a pooled connection.

@@ -204,34 +204,39 @@ Both surfaced while building the gate in
 safe without RLS on the grounds that migration `0029_hub_tables.sql:67` explicitly does
 `REVOKE ALL … FROM app_user`.
 
-Measured, `app_user` holds `SELECT, INSERT, UPDATE, DELETE` on all three — in the test database
-and the dev database. The revokes execute; they are undone afterwards, in every path:
+Measured, `app_user` held `SELECT, INSERT, UPDATE, DELETE` on all three. The revokes execute;
+they were undone afterwards, in every path, by the blanket
+`GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO app_user` that each
+provisioning path issues once migrations have run. `GRANT` is additive and removes nothing, so
+only a `REVOKE` placed _after_ that grant survives. Seven paths each re-revoked a hand-copied
+subset, and those subsets had drifted: `init-prod.sh` and `db-reset.sh` restored seven tables,
+`db-setup.ts` two, `simsub-qa.ts` one, and `init-demo-db.sh` none.
 
-- `scripts/init-prod.sh` — Step 1 runs migrations (applying the revokes), Step 2 then issues
-  `GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO app_user` (`:63`) and
-  re-revokes only the seven tables from migrations 0052 and 0054 (`:76-87`). These three are not
-  among them.
-- `apps/api/src/__tests__/rls/helpers/db-setup.ts` — same shape; re-revokes `audit_events` and
-  `journal_directory` only. Its own comments ("the broad GRANT above re-grants it — must revoke
-  after") show the hazard was understood; the list was incomplete.
-- `pnpm db:reset` — uses `drizzle-kit push`, which syncs schema and never executes migration SQL,
-  so the revokes do not run at all.
+`outbox_events` failed the same way for a different reason: migration `0022`'s comment says
+"SELECT is not granted — only the superuser outbox poller reads/updates events", but it only
+issued a `GRANT INSERT`, which withholds nothing, and `ALTER DEFAULT PRIVILEGES` had already
+granted full DML. This is the additive-`GRANT` trap already documented for `DELETE` on the
+append-only tables, reappearing for `SELECT`.
 
-`outbox_events` fails the same way for a different reason: migration `0022`'s comment says
-"SELECT is not granted — only the superuser outbox poller reads/updates events", but `GRANT` is
-additive and removes nothing, and `ALTER DEFAULT PRIVILEGES` had already granted full DML. This is
-the additive-`GRANT` trap already documented for `DELETE` on the append-only tables, reappearing
-for `SELECT`.
+**Confirmed on staging, 2026-07-28.** Measured against `colophony_staging`: all four tables
+carried full DML, as did `demo_requests`. The seven tables that _were_ on the re-revoke lists
+held correctly, which localises the fault to the lists rather than the mechanism. Production is
+not affected — it has never been deployed (`production` is not a configured GitHub
+environment). No key material was exposed: `federation_config` had zero rows, federation being
+disabled on staging.
 
-**Consequence for P2.1.** The design doc's `service_principals` recommendation is "no RLS **plus**
-`REVOKE ALL … FROM app_user`, reads via SECURITY DEFINER", justified explicitly by the hub
-precedent being safe. Implemented as written, the table holding hashed cross-org credentials would
-be fully readable by `app_user` — the instance-wide credential enumeration that recommendation
-exists to prevent. **P2.1 must not copy this pattern until the three-place discipline is fixed and
-asserted.**
+**Consequence for P2.1 — resolved, no redesign needed.** The design doc's `service_principals`
+recommendation is "no RLS **plus** `REVOKE ALL … FROM app_user`, reads via SECURITY DEFINER",
+justified by the hub precedent. Because the mechanism is sound and only the lists had drifted,
+the pattern delivers what it promises once privileges live in a single manifest. Every reader
+of these tables already goes through the superuser pool (`db` in `packages/db/src/client.ts`
+wraps `pool`, not `appPool`), so closing them broke nothing.
 
-Not yet verified against staging or production. The reasoning is a reading of `init-prod.sh` plus
-measurement of two local databases; confirm against the deployed database before setting severity.
+**Fixed.** `packages/db/privileges.sql` is now the sole definition of `app_user`'s table
+privileges, applied last by all seven paths; migration `0069` carries the same revokes for
+already-provisioned databases; and `rls-infrastructure.test.ts` asserts the full
+`SELECT/INSERT/UPDATE/DELETE` matrix per table rather than SELECT alone, which is what makes
+`outbox_events` (INSERT only) expressible.
 
 ### 6.2 Two tables were classified by nothing
 
@@ -250,9 +255,11 @@ appear in exactly one list.
 - **Smaller than feared for `users`/`organizations`.** The predicate work is 5 methods across 2
   service files, not a sweep of 66 modules. Most sites are BY-ID-ONLY or already scoped. Call it
   one to two days including tests, split as P1 and P2 in the backlog.
-- **Larger than scoped for the privilege model.** §6.1 invalidates the premise of P2.1's table
-  design. Fixing the three-place discipline, adding assertions, and re-validating the
-  `service_principals` approach is new work that Phase 2 assumed it already had.
+- **Bounded for the privilege model.** §6.1 initially looked like it invalidated the premise of
+  P2.1's table design. On verification it did not: the `REVOKE` mechanism works, and only the
+  hand-copied lists had drifted. Consolidating them into `packages/db/privileges.sql` and
+  widening the privilege assertion was roughly a day, and `service_principals` proceeds as
+  designed.
 
 The P1 items must merge before the instance principal ships; the backlog records that as a
 precondition on the Phase 2 entry.
