@@ -76,6 +76,32 @@ interface ResolvedEnv {
 }
 
 /**
+ * The part of a connection string that decides whether two pools are the same
+ * connection: role, host, port, database. Query parameters are deliberately
+ * dropped — `?application_name=vitest` makes two URLs differ as strings while
+ * `pg` still authenticates both as the same role, which is the collapse this
+ * gate exists to catch. Comparing raw strings would pass that; comparing this
+ * does not.
+ *
+ * Throws on a malformed URL rather than returning something incomparable, so a
+ * typo fails the gate instead of quietly satisfying it.
+ */
+function connectionIdentity(url: string, label: string): string {
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    throw new Error(`${label} is not a parseable connection URL: ${url}`);
+  }
+  return [
+    parsed.username,
+    parsed.hostname,
+    parsed.port,
+    parsed.pathname, // "/colophony_test"
+  ].join('|');
+}
+
+/**
  * Import a config and return the `test.env` it actually resolves to.
  *
  * The base exports `integrationBase` as a named export; the suites default-export
@@ -136,14 +162,18 @@ describe('vitest configs keep the superuser and app pools separate', () => {
           'DATABASE_URL and every withRls() call bypasses the policies it tests.',
       ).toBeDefined();
 
+      // Compare role/host/port/database, not the raw strings — see
+      // connectionIdentity above for why a string comparison is not enough.
       expect(
-        env?.DATABASE_URL,
+        connectionIdentity(env!.DATABASE_URL!, `${name} DATABASE_URL`),
         `${name} resolves both pools to the same connection. The superuser paths ` +
           '(hooks/auth.ts, hooks/org-context.ts, the webhook handlers, ' +
           'outbox-poller.worker, public.routes) would run under RLS and never be ' +
           'exercised as written — the defect that hid the outbox poller running ' +
           'as app_user. Derive DATABASE_URL from DATABASE_TEST_URL.',
-      ).not.toBe(env?.DATABASE_APP_URL);
+      ).not.toBe(
+        connectionIdentity(env!.DATABASE_APP_URL!, `${name} DATABASE_APP_URL`),
+      );
     },
   );
 
