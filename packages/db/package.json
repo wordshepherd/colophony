@@ -19,7 +19,7 @@
     "build": "tsc",
     "clean": "rm -rf dist",
     "generate": "drizzle-kit generate",
-    "push": "drizzle-kit push --force",
+    "push": "drizzle-kit push --force && pnpm privileges",
     "migrate": "drizzle-kit migrate && pnpm privileges",
     "privileges": "tsx --env-file-if-exists=.env src/apply-privileges.ts",
     "check": "drizzle-kit check",

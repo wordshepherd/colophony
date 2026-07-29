@@ -26,6 +26,11 @@
 -- Safe to run at any point: each statement is guarded on table existence, so it
 -- may run before migrations (init-db.sh) or after (everywhere else). Idempotent
 -- — revoking an absent privilege is a no-op.
+--
+-- Anything that CREATES tables must apply this afterwards, not just anything
+-- that grants. `ALTER DEFAULT PRIVILEGES` gives every newly created table full
+-- DML, so `drizzle-kit push` reopens these tables even though it issues no
+-- GRANT of its own — which is why `db:push` chains `pnpm privileges` too.
 
 DO $$
 DECLARE
