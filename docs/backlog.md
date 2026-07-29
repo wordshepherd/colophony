@@ -400,10 +400,23 @@ Ordered as the design doc's Phase 0/D.
       submission to them. Deliberate — it is how a known writer submitting through an embed gets
       linked — but it wants a decision on identity semantics, not a patch. — (found 2026-07-28
       during the P2.0 audit)
-- [ ] **[P1] No per-key rate limits.** `hooks/rate-limit-auth.ts:57` keys the authenticated
+- [x] **[P1] No per-key rate limits.** `hooks/rate-limit-auth.ts:57` keyed the authenticated
       window on `userId`, which for key auth is the key's _creator_ — so all of an admin's
-      keys share one bucket with each other and with that admin's browser session. Key on
-      the credential instead. — (design doc §0.1(c), P2.4)
+      keys shared one bucket with each other and with that admin's browser session. Now keyed
+      on the credential: `auth:key:<apiKeyId>` or `auth:user:<userId>`, both at
+      `RATE_LIMIT_AUTH_MAX` (no new variable). The discriminator is the **presence** of
+      `apiKeyId`, not `authMethod`, so the planned `col_svc_` principal needs an explicit
+      branch rather than inheriting one; a test sets `apiKeyId` under a non-`apikey`
+      `authMethod` to pin exactly that. This is change (1) of the three in the design doc's
+      "Rate limiting" section — (2) and (3) stay open because both are instance-principal
+      concerns. — (design doc §0.1(c), P2.4; done 2026-07-29)
+- [ ] **[P3] No aggregate ceiling per human, and no cap on key creation.** Per-credential
+      rate limiting (above) deliberately traded the per-creator ceiling for isolation
+      between keys, so a creator with N keys can now spend N × `RATE_LIMIT_AUTH_MAX` per
+      window. Nothing bounds that: the IP limiter keys on `request.ip` — a source, not a
+      principal — and fails open when Redis is unreachable, and `apiKeyService.create`
+      enforces no per-org or per-creator key count. Either a creator-level umbrella bucket
+      or a key-count cap would close it.
 - [ ] **[P1] Audit cannot distinguish an API key from its creator.** `audit_events` has a
       single `actor_id` and `BaseAuditParams` carries no `apiKeyId`, so a key's actions and
       the human's own actions are recorded identically. Add `principal_id` / `principal_type`

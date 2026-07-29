@@ -19,12 +19,13 @@ function shouldSkip(request: FastifyRequest): boolean {
 }
 
 /**
- * Second-pass rate limiting: user-based, runs after auth.
+ * Second-pass rate limiting: credential-based, runs after auth.
  *
  * Hook order: ... → auth → **rate-limit-auth** → org-context → ...
  *
- * Only applies to authenticated requests. Uses userId as identifier with
- * AUTH_MAX limit (higher than the IP-based DEFAULT_MAX). Overrides the
+ * Only applies to authenticated requests. Each credential gets its own window at
+ * the AUTH_MAX limit (higher than the IP-based DEFAULT_MAX): an API key is keyed
+ * on its own id, an interactive session on the user id. Overrides the
  * X-RateLimit-* headers set by the first-pass plugin with the higher values.
  *
  * Shares Redis instance with first-pass plugin via app.rateLimitRedis.
@@ -48,13 +49,25 @@ export default fp(
         if (shouldSkip(request)) return;
 
         // Only run for authenticated requests
-        const userId = request.authContext?.userId;
-        if (!userId) return;
+        const auth = request.authContext;
+        if (!auth?.userId) return;
 
         const redis = app.rateLimitRedis;
         if (!redis) return;
 
-        const key = `${prefix}:auth:${userId}`;
+        // Key on the credential, not the creator. For API-key auth `userId` is
+        // the key's *creator* (auth.ts:314), so keying on it would put every key
+        // that admin made — and their browser session — in one bucket.
+        //
+        // Branch on the presence of `apiKeyId`, never on `authMethod`: the same
+        // allowlist-not-denylist rule that governs `internalOnly` in trpc/init.ts.
+        // A future `col_svc_` principal gets an explicit branch here rather than
+        // silently inheriting whichever bucket an authMethod test happened to pick.
+        const { scope, identifier } = auth.apiKeyId
+          ? ({ scope: 'key', identifier: auth.apiKeyId } as const)
+          : ({ scope: 'user', identifier: auth.userId } as const);
+
+        const key = `${prefix}:auth:${scope}:${identifier}`;
         const nowMs = Date.now();
         const requestId = `${nowMs}:${Math.random().toString(36).slice(2, 8)}`;
 
@@ -102,7 +115,8 @@ export default fp(
 
           request.log.warn(
             {
-              identifier: userId,
+              identifier,
+              credential: scope,
               path: request.url,
               count,
               limit,
