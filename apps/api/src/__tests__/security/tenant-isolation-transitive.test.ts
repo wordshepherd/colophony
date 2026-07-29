@@ -6,10 +6,19 @@
  *
  * WHAT THIS DOES NOT PROVE: that these methods satisfy the house defense-in-depth
  * rule for tenant queries — always include an explicit `WHERE organization_id =
- * orgId`, never rely solely on RLS. They do not. Every method below is on
- * the fix list in `docs/tenant-isolation-audit.md` precisely because the database
- * is the only thing separating tenants in it. A green run here means the backstop
- * is intact — it is not permission to leave the predicate out.
+ * orgId`, never rely solely on RLS. Most do not. They are on the fix list in
+ * `docs/tenant-isolation-audit.md` precisely because the database is the only
+ * thing separating tenants in them. A green run here means the backstop is intact
+ * — it is not permission to leave the predicate out.
+ *
+ * ONE EXCEPTION: `organizationService.listMembers` now carries an explicit
+ * predicate on both its queries, and is deliberately kept here anyway. Scoping it
+ * did not make the policy behind it less worth pinning — a regression in
+ * `organization_members`' RLS would otherwise be invisible, since the predicate
+ * would mask it. The predicate's own coverage lives in
+ * `__tests__/rls/organization-service.test.ts`, over the RLS-bypassing admin pool.
+ * Adding a predicate to any other method below should follow the same pattern:
+ * keep the case here, add an admin-pool mirror there.
  *
  * Every query therefore runs over the APP pool via `withTestRls`, which connects
  * as `app_user` (`NOSUPERUSER`, `NOBYPASSRLS`) and sets `app.current_org` /
@@ -114,14 +123,15 @@ describe('transitive tenant isolation (RLS is the only defense)', () => {
   it('organizationService.listMembers returns only the current org, in items and total', async () => {
     const result = await withTestRls(
       { orgId: a.orgId, userId: a.userId },
-      (tx) => organizationService.listMembers(tx, PAGINATION),
+      (tx) => organizationService.listMembers(tx, PAGINATION, a.orgId),
     );
 
     expect(result.items.length).toBeGreaterThan(0);
     expect(result.items.map((m) => m.userId)).toEqual([a.userId]);
     expect(result.items.map((m) => m.userId)).not.toContain(b.userId);
-    // The count query has no predicate either — if the policy stopped covering
-    // it, `total` would report both orgs while `items` stayed correct.
+    // Both queries now carry the predicate, so this pins the policy *behind* it
+    // rather than instead of it. The predicate's own coverage is in
+    // `__tests__/rls/organization-service.test.ts`, over the admin pool.
     expect(result.total).toBe(1);
   });
 

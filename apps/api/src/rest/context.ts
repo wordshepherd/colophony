@@ -3,7 +3,7 @@ import type { AuthContext, Role, ApiKeyScope } from '@colophony/types';
 import { AuditActions, AuditResources } from '@colophony/types';
 import type { DrizzleDb } from '@colophony/db';
 import type { AuditFn } from '../services/types.js';
-import { checkApiKeyScopes } from '../services/scope-check.js';
+import { checkApiKeyScopes, markGuard } from '../services/scope-check.js';
 
 /**
  * Initial oRPC context populated by Fastify hooks.
@@ -215,33 +215,39 @@ export const requireProduction = restBase.middleware(
  * Must be chained after requireAuth or requireOrgContext.
  */
 export function requireScopes(...scopes: ApiKeyScope[]) {
-  return restBase.middleware(async ({ context, next }) => {
-    if (!context.authContext) {
-      throw new ORPCError('UNAUTHORIZED', {
-        message: 'Not authenticated',
-      });
-    }
+  // Tagged so `rest/guard-coverage.spec.ts` can see it on the built procedure's
+  // middleware chain. A new guard middleware on this surface must be tagged the
+  // same way or the gate will read the procedure as unguarded.
+  return markGuard(
+    restBase.middleware(async ({ context, next }) => {
+      if (!context.authContext) {
+        throw new ORPCError('UNAUTHORIZED', {
+          message: 'Not authenticated',
+        });
+      }
 
-    const result = checkApiKeyScopes(context.authContext, scopes);
-    if (!result.allowed) {
-      await context.audit({
-        action: AuditActions.API_KEY_SCOPE_DENIED,
-        resource: AuditResources.API_KEY,
-        resourceId: context.authContext.apiKeyId,
-        newValue: { required: scopes, missing: result.missing },
-      });
-      throw new ORPCError('FORBIDDEN', {
-        message: 'Insufficient API key scope',
-        data: {
-          error: 'insufficient_scope',
-          required: scopes,
-          missing: result.missing,
-        },
-      });
-    }
+      const result = checkApiKeyScopes(context.authContext, scopes);
+      if (!result.allowed) {
+        await context.audit({
+          action: AuditActions.API_KEY_SCOPE_DENIED,
+          resource: AuditResources.API_KEY,
+          resourceId: context.authContext.apiKeyId,
+          newValue: { required: scopes, missing: result.missing },
+        });
+        throw new ORPCError('FORBIDDEN', {
+          message: 'Insufficient API key scope',
+          data: {
+            error: 'insufficient_scope',
+            required: scopes,
+            missing: result.missing,
+          },
+        });
+      }
 
-    return next({});
-  });
+      return next({});
+    }),
+    { kind: 'scopes', scopes },
+  );
 }
 
 // Procedure builders (analogous to tRPC procedure builders)

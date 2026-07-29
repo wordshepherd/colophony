@@ -51,7 +51,11 @@ const membersRouter = createRouter({
     .input(paginationSchema)
     .output(paginatedResponseSchema(organizationMemberSchema))
     .query(async ({ ctx, input }) => {
-      return organizationService.listMembers(ctx.dbTx, input);
+      return organizationService.listMembers(
+        ctx.dbTx,
+        input,
+        ctx.authContext.orgId,
+      );
     }),
 
   add: adminProcedure

@@ -153,6 +153,30 @@ export async function globalSetup(): Promise<void> {
   if (rows[0].usesuper) throw new Error('app_user must not be superuser');
   if (rows[0].rolbypassrls) throw new Error('app_user must not bypass RLS');
 
+  // The mirror of the check above, and it is load-bearing for a different set of
+  // suites. `api-key-service.test.ts` and the admin-pool cases in
+  // `organization-service.test.ts` prove that an explicit WHERE clause isolates
+  // tenants *without* RLS — which only means anything if this connection really
+  // does bypass RLS. ADMIN_URL comes straight from DATABASE_TEST_URL, so pointing
+  // it at a non-superuser would make those suites pass under RLS and assert
+  // nothing, while still reporting green.
+  const { rows: adminRoles } = await admin.query<{
+    rolsuper: boolean;
+    rolbypassrls: boolean;
+  }>(
+    'SELECT rolsuper, rolbypassrls FROM pg_roles WHERE rolname = current_user',
+  );
+
+  if (adminRoles.length === 0) {
+    throw new Error('admin role not found after setup');
+  }
+  if (!adminRoles[0].rolsuper && !adminRoles[0].rolbypassrls) {
+    throw new Error(
+      'admin pool must bypass RLS (needs rolsuper or rolbypassrls) — ' +
+        'predicate-only suites are meaningless without it',
+    );
+  }
+
   isSetUp = true;
 }
 

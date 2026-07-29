@@ -159,11 +159,23 @@ export const organizationService = {
   },
 
   /**
-   * List members of the current organization (RLS filters by org context).
+   * List members of an organization. Filters on organizationId explicitly, with
+   * RLS as the backstop rather than the only defence.
+   *
+   * The count query carries the predicate too — without it, `total` reports every
+   * org's member count while `items` is correctly scoped.
+   *
+   * `users` has no organizationId of its own, so the predicate lands on the
+   * org-bearing join partner; that scopes the joined user rows as well.
+   *
+   * Note the argument order: `orgId` goes last, following the house
+   * `(tx, id|input, orgId)` convention and `apiKeyService.list`, even though the
+   * neighbouring methods in this file take it second.
    */
-  async listMembers(tx: DrizzleDb, pagination: PaginationInput) {
+  async listMembers(tx: DrizzleDb, pagination: PaginationInput, orgId: string) {
     const { page, limit } = pagination;
     const offset = (page - 1) * limit;
+    const where = eq(organizationMembers.organizationId, orgId);
 
     const [members, countResult] = await Promise.all([
       tx
@@ -176,12 +188,14 @@ export const organizationService = {
         })
         .from(organizationMembers)
         .innerJoin(users, eq(organizationMembers.userId, users.id))
+        .where(where)
         .orderBy(organizationMembers.createdAt)
         .limit(limit)
         .offset(offset),
       tx
         .select({ count: sql<number>`count(*)::int` })
-        .from(organizationMembers),
+        .from(organizationMembers)
+        .where(where),
     ]);
 
     const total = countResult[0]?.count ?? 0;

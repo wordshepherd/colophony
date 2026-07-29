@@ -131,7 +131,7 @@
 Full analysis and sequencing: [`docs/api-integration-design.md`](api-integration-design.md).
 Ordered as the design doc's Phase 0/D.
 
-- [ ] **[P0] tRPC is reachable by API keys, and 10 routers enforce no scopes.** Nothing
+- [x] **[P0] tRPC is reachable by API keys, and 10 routers enforce no scopes.** Nothing
       restricts `X-Api-Key` to the REST surface, and `requireScopes` is opt-in per procedure.
       `federation`, `gdpr`, `hub`, `migration`, `notification-preferences`, `notifications`,
       `ops`, `simsub`, `transfer`, `webhooks` called it zero times — so a key scoped
@@ -307,7 +307,7 @@ Ordered as the design doc's Phase 0/D.
       `push` (`scripts/db-reset.sh:32`, since `fb857743`) — the migration REVOKEs did run and
       were then clobbered, rather than never running. — (found 2026-07-28 during the P2.0 audit;
       done 2026-07-28)
-- [ ] **[P1] `organizationService.listMembers` has no org predicate on either query.**
+- [x] **[P1] `organizationService.listMembers` has no org predicate on either query.**
       `apps/api/src/services/organization.service.ts:168` (page) and `:182` (`count(*)`) carry
       no `WHERE` clause on any table — the only read of `users` in the codebase in that state.
       RLS on `organization_members` is the sole defense. The direct analogue of #521, and the
@@ -315,15 +315,43 @@ Ordered as the design doc's Phase 0/D.
       `eq(organizationMembers.organizationId, orgId)` on a join it performs anyway, plus an
       `orgId` parameter threaded from `ctx.authContext.orgId` / `context.authContext.orgId`.
       **Both halves** — scoping only the page query leaves `total` reporting every org's member
-      count. — (found 2026-07-28 during the P2.0 audit)
-- [ ] **[P1] REST `POST /v1/invitations/accept` declares no scopes.**
+      count. — (found 2026-07-28 during the P2.0 audit; done 2026-07-28)
+      Fixed as `listMembers(tx, pagination, orgId)` with `orgId` required and last, matching
+      `apiKeyService.list`. One hoisted `eq(organizationMembers.organizationId, orgId)` is reused
+      by both queries, so page and count cannot drift apart. Pinned by an admin-pool block in
+      `__tests__/rls/organization-service.test.ts` — the predicate is the only isolation there —
+      plus argument assertions in both router specs and a predicate assertion in the service spec.
+      The app-pool case in `tenant-isolation-transitive.test.ts` was **kept**, not moved: a
+      predicate would otherwise mask a regression in `organization_members`' policy. Verified the
+      asymmetry by hand — removing the predicate fails the admin-pool block and the service spec
+      while the app-pool suite still passes 41/41.
+      Also closed a latent hole in the harness: `globalSetup()` asserted `app_user` is not a
+      superuser but never asserted the **admin** connection bypasses RLS, so an overridden
+      `DATABASE_TEST_URL` would have made every predicate-only suite pass under RLS while
+      reporting green. That covers `api-key-service.test.ts` from #521 too, which asserted the
+      property in prose only.
+- [x] **[P1] REST `POST /v1/invitations/accept` declares no scopes.**
       `apps/api/src/rest/routers/organizations.ts:333` uses `userProcedure` with no
       `requireScopes(...)`, while its tRPC twin (`trpc/routers/organizations.ts:157`) declares
       `organizations:write`. The route is authenticated but scope-unconstrained and it writes
       membership. `trpc/guard-coverage.spec.ts` reads the tRPC router only, so REST has no
       equivalent build-time check — worth adding the mirror gate alongside the fix, since this
       is the second REST/tRPC parity gap found in two sessions. — (found 2026-07-28 during the
-      P2.0 audit)
+      P2.0 audit; done 2026-07-28)
+      The route now declares `organizations:write`, matching its twin. The mirror gate shipped
+      alongside as `apps/api/src/rest/guard-coverage.spec.ts`: it walks the nested `restRouter`
+      recursively using oRPC's `isProcedure` as the leaf test and reads guard tags off
+      `procedure['~orpc'].middlewares`. Five tests — a >130 count canary against an `'~orpc'`
+      rename, coverage, no-vacuous-`requireScopes()`, scope strings valid against
+      `apiKeyScopeSchema`, and allowlist reverse-staleness. It reports offenders as
+      `POST /invitations/accept (acceptInvitation)` rather than a dotted key, since oRPC carries
+      `route` metadata the tRPC gate has no equivalent of. `accept` was the **only** unscoped
+      procedure on the surface (139 declarations, 138 guards, `restBase` never used directly in a
+      router), so the gate went green immediately; verified it can fail by reverting the fix.
+      The guard-tag primitive (`GUARD_TAG`, `markGuard`, `readGuardTags`) moved to
+      `services/scope-check.ts`, which both surfaces already imported for `checkApiKeyScopes` — a
+      per-surface copy is how the declarations drifted apart to begin with. The tRPC gate's seven
+      tests pass unchanged.
 - [ ] **[P2] `submission.service` list/export methods carry no org predicate.** `listAll`
       (`:290`), `exportAll` (`:392`, up to 10 000 rows) and `listAgingByOrg` (`:1526`) build
       their `where` from `status` / `period` / `search` / date only. `listAgingByOrg` is named

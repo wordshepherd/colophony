@@ -367,6 +367,15 @@ describe('organizations REST router', () => {
       const call = client(organizationsRouter.members.list, orgContext());
       const result = await call({ orgId: ORG_ID, page: 1, limit: 20 });
       expect(result.items).toHaveLength(1);
+
+      // The org ID must reach the service — it carries the explicit tenant
+      // predicate, so a dropped argument silently widens the query to RLS alone.
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(mockService.listMembers).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({ page: 1, limit: 20 }),
+        ORG_ID,
+      );
     });
   });
 
@@ -547,6 +556,21 @@ describe('organizations REST router', () => {
       const ctx = apiKeyAuthedContext(['submissions:read']);
       const call = client(organizationsRouter.list, ctx);
       await expect(call({})).rejects.toThrow('Insufficient API key scope');
+    });
+
+    // This route shipped with no scope guard at all, so any key could accept an
+    // invitation and write a membership row.
+    //
+    // `apiKeyContext`, not `apiKeyAuthedContext`: `accept` is a `userProcedure`,
+    // and `requireUserContext` runs before the scope guard and rejects a null
+    // `dbTx` first — so the authed-level fixture would fail on
+    // "Database transaction not available" and prove nothing about scopes.
+    it('denies invitations.accept with only read scope', async () => {
+      const ctx = apiKeyContext(['organizations:read']);
+      const call = client(organizationsRouter.invitations.accept, ctx);
+      await expect(call({ token: 'some-invitation-token' })).rejects.toThrow(
+        'Insufficient API key scope',
+      );
     });
 
     it('allows API key with correct read scope', async () => {

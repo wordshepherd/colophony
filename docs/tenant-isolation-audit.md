@@ -87,8 +87,6 @@ RLS-only. Ordered by exposure.
 
 | Site                                            | Method                      | Predicate present                   | Disposition |
 | ----------------------------------------------- | --------------------------- | ----------------------------------- | ----------- |
-| `services/organization.service.ts:168`          | `listMembers` page query    | **none**                            | fix — P1    |
-| `services/organization.service.ts:182`          | `listMembers` count query   | **none**                            | fix — P1    |
 | `services/submission.service.ts:290`            | `listAll`                   | `status` / `period` / `search` only | fix — P2    |
 | `services/submission.service.ts:392`            | `exportAll` (10 000 rows)   | same                                | fix — P2    |
 | `services/submission.service.ts:1526`           | `listAgingByOrg`            | date + status only                  | fix — P2    |
@@ -105,9 +103,11 @@ RLS-only. Ordered by exposure.
 | `services/csr.service.ts:99`                    | export org names            | ids from a `submitter_id` read      | ok          |
 | `services/migration-bundle.service.ts:99`       | bundle org names            | same                                | ok          |
 
-`organization.service.ts:168`/`:182` is the only site in the codebase reading `users` with **no
-`WHERE` clause on any table in the query**. Both halves need the predicate; scoping only the page
-query leaves `total` reporting every organization's member count.
+`organization.service.ts` `listMembers` **was** the only site in the codebase reading `users` with
+no `WHERE` clause on any table in the query. Fixed 2026-07-28 — it now carries one hoisted
+`eq(organizationMembers.organizationId, orgId)` reused by both the page and count queries, so the
+two cannot drift apart, and it has moved to §4.5. No site in the fix list below reads `users`
+entirely unfiltered any longer.
 
 `listAgingByOrg` is named for a scoping it does not perform. Its caller supplies the org through
 `withRls({ orgId })` (`inngest/functions/submission-response-reminder.ts:64`), so it is correct in
@@ -173,6 +173,12 @@ name reads (`submission-notifications.ts:41`, `slate-notifications.ts:131`,
 `discussion-notifications.ts:34`, `submission-vote.service.ts:144`, and others), org-bearing join
 conditions in `contest.service.ts:386`/`:594`/`:635`, `pipeline.service.ts:129`/`:188`/`:997`, and
 `invitation.service.ts:166`.
+
+Joined here 2026-07-28 by `organization.service.ts` `listMembers` (page and count), the first item
+off the §4.1 fix list. It is the worked example of the §2 rule: `users` has no `organizationId`, so
+the predicate lands on the org-bearing join partner — a join the method already performed. The
+predicate is hoisted once and applied to both queries, which is what makes it impossible to scope
+the page and leave the count reporting every organization's member total.
 
 ## 5. Legitimately cross-tenant families
 
@@ -262,7 +268,10 @@ appear in exactly one list.
   designed.
 
 The P1 items must merge before the instance principal ships; the backlog records that as a
-precondition on the Phase 2 entry.
+precondition on the Phase 2 entry. **`listMembers` and the REST `invitations/accept` scope gap both
+merged 2026-07-28**, clearing the two P1s this audit raised. The two remaining Track 2 P1s
+(per-key rate limits, `principal_id` in `audit_events`) are from the integration-surface review, not
+from here.
 
 ## 8. What keeps this true
 
@@ -271,7 +280,15 @@ precondition on the Phase 2 entry.
   against a recorded expectation, so a silent re-grant fails the build.
 - `apps/api/src/__tests__/security/tenant-isolation-transitive.test.ts` — per-method proof that
   RLS covers each §4.1 path, with a non-zero own-org assertion so the checks cannot pass against
-  empty tables.
+  empty tables. `listMembers` is deliberately retained here after being scoped: an explicit
+  predicate would otherwise mask a regression in `organization_members`' policy. **The pattern for
+  the remaining §4.1 fixes** is therefore to keep the app-pool case here and add an admin-pool
+  mirror, not to move the case.
+- `apps/api/src/__tests__/rls/organization-service.test.ts` and `.../api-key-service.test.ts` —
+  the other direction. Both drive the RLS-**bypassing** admin pool so an explicit `WHERE` is the
+  only isolation under test; a deleted predicate fails these while everything else stays green.
+  `globalSetup()` asserts that the admin connection really does bypass RLS, so neither can quietly
+  degrade into an RLS-backed test that passes either way.
 - `apps/api/src/__tests__/security/unprotected-table-callsites.test.ts` — file-level tripwire. A
   `users` or `organizations` query in a new file fails until it is classified here. A nudge to
   the reviewer, not a security boundary: a new query in an already-listed file passes.

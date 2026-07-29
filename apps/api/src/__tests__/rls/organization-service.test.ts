@@ -10,6 +10,7 @@ import {
   createOrgMember,
 } from './helpers/factories';
 import { withTestRls } from './helpers/rls-context';
+import { organizationService } from '../../services/organization.service.js';
 
 describe('Organization Service RLS Integration', () => {
   beforeAll(async () => {
@@ -193,7 +194,11 @@ describe('Organization Service RLS Integration', () => {
     });
   });
 
-  describe('listMembers RLS isolation', () => {
+  // Named for the policy, not the method: this queries `organization_members`
+  // directly and never calls `listMembers`. The service-level counterpart is the
+  // admin-pool block at the bottom of this file, which isolates the WHERE clause
+  // instead of the policy.
+  describe('organization_members policy isolation', () => {
     it('org A context sees only org A members', async () => {
       const orgA = await createOrganization();
       const orgB = await createOrganization();
@@ -318,5 +323,96 @@ describe('Organization Service RLS Integration', () => {
         .where(eq(organizationMembers.id, memberA.id));
       expect(verified.roles).toEqual(['ADMIN']); // unchanged from factory default
     });
+  });
+});
+
+/**
+ * Defense-in-depth: `listMembers`' explicit organization predicate.
+ *
+ * The deliberate mirror of `__tests__/security/tenant-isolation-transitive.test.ts`,
+ * which proves RLS isolates this path. Here we prove the other layer: that the
+ * explicit filter isolates tenants when RLS is not there to help.
+ *
+ * That is why these queries run over the ADMIN pool. It connects as role `test`
+ * (`rolsuper = t, rolbypassrls = t`), so RLS does not apply — the only thing
+ * separating org A's members from org B's is the
+ * `WHERE organization_id = $orgId` clause in the service. `globalSetup()` asserts
+ * that property of the connection, so this cannot quietly degrade into an
+ * RLS-backed test.
+ *
+ * Consequence: if someone deletes that predicate, this block fails while every
+ * other test in the repo still passes. Do not "fix" it by switching to the app
+ * pool — that reinstates RLS and the suite would pass with or without the
+ * predicate, testing nothing.
+ */
+describe('organizationService.listMembers defense-in-depth (RLS bypassed)', () => {
+  const PAGINATION = { page: 1, limit: 20 };
+
+  let orgA: Awaited<ReturnType<typeof createOrganization>>;
+  let orgB: Awaited<ReturnType<typeof createOrganization>>;
+  let userA: Awaited<ReturnType<typeof createUser>>;
+  let userB: Awaited<ReturnType<typeof createUser>>;
+
+  /**
+   * A Drizzle handle over the RLS-bypassing admin pool, shaped as the service's
+   * `tx`. No cast needed — unlike the other suites in this tree, this file's
+   * drizzle resolution already matches `listMembers`' parameter type.
+   */
+  function adminTx(): Parameters<typeof organizationService.listMembers>[0] {
+    return drizzle(getAdminPool());
+  }
+
+  beforeAll(async () => {
+    await globalSetup();
+    await truncateAllTables();
+
+    orgA = await createOrganization({ name: 'Org Alpha' });
+    orgB = await createOrganization({ name: 'Org Beta' });
+    userA = await createUser();
+    userB = await createUser();
+    await createOrgMember(orgA.id, userA.id, { roles: ['ADMIN'] });
+    await createOrgMember(orgB.id, userB.id, { roles: ['ADMIN'] });
+  });
+
+  afterAll(async () => {
+    await truncateAllTables();
+  });
+
+  it("returns only the caller's org members", async () => {
+    const result = await organizationService.listMembers(
+      adminTx(),
+      PAGINATION,
+      orgA.id,
+    );
+
+    expect(result.items.map((m) => m.userId)).toEqual([userA.id]);
+    expect(result.items.map((m) => m.userId)).not.toContain(userB.id);
+  });
+
+  it('scopes the total count to the org', async () => {
+    // Without a predicate on the count query, `total` reports every org's members
+    // even when `items` is correctly filtered — the pagination metadata leaks a
+    // row count across tenants.
+    const result = await organizationService.listMembers(
+      adminTx(),
+      PAGINATION,
+      orgA.id,
+    );
+
+    expect(result.total).toBe(1);
+    expect(result.totalPages).toBe(1);
+  });
+
+  it('scopes the joined user rows, not just the membership rows', async () => {
+    // `users` has no organizationId, so the predicate lands on the join partner.
+    // If it were dropped, org B's member email would surface here.
+    const result = await organizationService.listMembers(
+      adminTx(),
+      PAGINATION,
+      orgA.id,
+    );
+
+    expect(result.items.map((m) => m.email)).toEqual([userA.email]);
+    expect(result.items.map((m) => m.email)).not.toContain(userB.email);
   });
 });
