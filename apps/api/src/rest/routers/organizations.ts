@@ -123,10 +123,12 @@ const membersList = orgProcedure
   .output(paginatedMembersSchema)
   .handler(async ({ input, context }) => {
     assertOrgIdMatch(input.orgId, context.authContext.orgId);
-    return organizationService.listMembers(context.dbTx, {
-      page: input.page,
-      limit: input.limit,
-    });
+    return organizationService.listMembers(
+      context.dbTx,
+      { page: input.page, limit: input.limit },
+      // The header is the authority; assertOrgIdMatch above makes them equal.
+      context.authContext.orgId,
+    );
   });
 
 const membersAdd = adminProcedure
@@ -331,6 +333,7 @@ const invitationsCreate = adminProcedure
   });
 
 const invitationsAccept = userProcedure
+  .use(requireScopes('organizations:write'))
   .route({
     method: 'POST',
     path: '/invitations/accept',

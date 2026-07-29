@@ -89,6 +89,7 @@ vi.mock('drizzle-orm/node-postgres', () => ({
   })),
 }));
 
+import { eq, organizationMembers } from '@colophony/db';
 import {
   organizationService,
   UserNotFoundError,
@@ -247,6 +248,81 @@ describe('organizationService', () => {
           'READER',
         ]),
       ).rejects.toThrow(UserNotFoundError);
+    });
+  });
+
+  /**
+   * These assert the *predicate*, not the results. The mock `tx` returns whatever
+   * it is told regardless of the WHERE clause, so a "wrong org returns nothing"
+   * test here would pass with the filter removed. Asserting on the mocked `eq()`
+   * and on what reaches `.where()` is what actually fails when it goes missing.
+   *
+   * The real proof lives in `src/__tests__/rls/organization-service.test.ts`,
+   * which runs this query against Postgres over an RLS-bypassing connection.
+   */
+  describe('defense-in-depth: listMembers organization predicate', () => {
+    const PREDICATE = Symbol('org-predicate');
+
+    /**
+     * `listMembers` calls `tx.select()` twice under Promise.all — once for the page
+     * (from → innerJoin → where → orderBy → limit → offset) and once for the count
+     * (from → where). Returning a different chain per call is what lets both
+     * resolve to their own shape; `wheres` collects what each was filtered on.
+     */
+    function makeListMembersTx(wheres: unknown[]) {
+      let callCount = 0;
+      return {
+        select: vi.fn().mockImplementation(() => {
+          callCount++;
+          if (callCount === 1) {
+            return {
+              from: vi.fn().mockReturnValue({
+                innerJoin: vi.fn().mockReturnValue({
+                  where: vi.fn().mockImplementation((w: unknown) => {
+                    wheres.push(w);
+                    return {
+                      orderBy: vi.fn().mockReturnValue({
+                        limit: vi.fn().mockReturnValue({
+                          offset: vi.fn().mockResolvedValue([]),
+                        }),
+                      }),
+                    };
+                  }),
+                }),
+              }),
+            };
+          }
+          return {
+            from: vi.fn().mockReturnValue({
+              where: vi.fn().mockImplementation((w: unknown) => {
+                wheres.push(w);
+                return Promise.resolve([{ count: 0 }]);
+              }),
+            }),
+          };
+        }),
+      } as unknown as Parameters<typeof organizationService.listMembers>[0];
+    }
+
+    it('filters both the page and the count query on the same org predicate', async () => {
+      vi.mocked(eq).mockReturnValue(PREDICATE as never);
+      const wheres: unknown[] = [];
+
+      await organizationService.listMembers(
+        makeListMembersTx(wheres),
+        { page: 1, limit: 20 },
+        'org-1',
+      );
+
+      expect(eq).toHaveBeenCalledWith(
+        organizationMembers.organizationId,
+        'org-1',
+      );
+
+      // Both halves, and both the *same* predicate. The service hoists one `eq`
+      // and reuses it, so page and count cannot drift apart — a count query
+      // without it would report every org's member total.
+      expect(wheres).toEqual([PREDICATE, PREDICATE]);
     });
   });
 });

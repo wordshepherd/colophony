@@ -2,7 +2,13 @@ import { initTRPC, TRPCError } from '@trpc/server';
 import type { ApiKeyScope } from '@colophony/types';
 import { AuditActions, AuditResources } from '@colophony/types';
 import type { TRPCContext } from './context.js';
-import { checkApiKeyScopes } from '../services/scope-check.js';
+import {
+  checkApiKeyScopes,
+  markGuard,
+  readGuardTags,
+  GUARD_TAG,
+  type GuardTag,
+} from '../services/scope-check.js';
 import { validateEnv } from '../config/env.js';
 
 export const t = initTRPC.context<TRPCContext>().create({
@@ -206,25 +212,17 @@ const isBusinessOps = t.middleware(({ ctx, next }) => {
 // ---------------------------------------------------------------------------
 
 /**
- * Marks a middleware as one of the two guards that keep a tRPC procedure out of
- * an API key's reach. Read by `guard-coverage.spec.ts`, which fails the build on
- * a procedure declaring neither.
- *
- * Tagging is necessary because neither guard is identifiable by reference:
- * `requireScopes` mints a fresh closure per call, and both are anonymous inside
- * `t.middleware(...)`. tRPC keeps the function object itself in
- * `procedure._def.middlewares`, so a non-enumerable property on it survives
- * builder composition intact.
+ * The guard tag itself is shared with the REST surface — see
+ * `services/scope-check.ts`. Both gates read the same symbol, so a guard added on
+ * either surface is visible to its own coverage test without further wiring.
  */
-export const TRPC_GUARD = Symbol.for('colophony.trpc.guard');
-
-export type GuardTag =
-  { kind: 'scopes'; scopes: readonly ApiKeyScope[] } | { kind: 'internal' };
+export { GUARD_TAG, readGuardTags, type GuardTag };
 
 /**
  * Tags the underlying function of a middleware builder, returning the builder
  * unchanged. Takes the builder rather than the raw function so the middleware
- * body keeps tRPC's parameter inference.
+ * body keeps tRPC's parameter inference — oRPC needs no such wrapper, because
+ * `restBase.middleware(...)` hands back the function directly.
  */
 function tagGuard<TBuilder extends { _middlewares: readonly unknown[] }>(
   middleware: TBuilder,
@@ -235,16 +233,8 @@ function tagGuard<TBuilder extends { _middlewares: readonly unknown[] }>(
   if (typeof fn !== 'function') {
     throw new Error('Cannot tag guard: middleware builder has no function');
   }
-  Object.defineProperty(fn, TRPC_GUARD, { value: tag, enumerable: false });
+  markGuard(fn, tag);
   return middleware;
-}
-
-/** Reads the guard tags declared on a built procedure's middleware chain. */
-export function readGuardTags(middlewares: readonly unknown[]): GuardTag[] {
-  return middlewares
-    .filter((mw): mw is object => typeof mw === 'function')
-    .map((mw) => (mw as Record<symbol, GuardTag | undefined>)[TRPC_GUARD])
-    .filter((tag): tag is GuardTag => tag !== undefined);
 }
 
 /**

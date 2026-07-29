@@ -367,6 +367,15 @@ describe('organizations tRPC router', () => {
         limit: 20,
       });
       expect(result.items).toHaveLength(1);
+
+      // The org ID must reach the service — it carries the explicit tenant
+      // predicate, so a dropped argument silently widens the query to RLS alone.
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(mockService.listMembers).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({ page: 1, limit: 20 }),
+        ORG_ID,
+      );
     });
   });
 
