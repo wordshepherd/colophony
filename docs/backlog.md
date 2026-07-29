@@ -284,27 +284,29 @@ Ordered as the design doc's Phase 0/D.
       instead of asserting it, with non-zero own-org guards so the checks cannot pass against
       empty tables. Three gates keep the audit true; each was verified to fail before being
       trusted. The predicate fixes are the items below.
-- [ ] **[P0] The `REVOKE`-based privilege model does not survive provisioning — and P2.1
-      depends on it.** The database package's RLS notes and design doc §2.4 both hold that
+- [x] **[P0] The `REVOKE`-based privilege model does not survive provisioning — and P2.1
+      depends on it.** The database package's RLS notes and design doc §2.4 both held that
       `federation_config`, `hub_registered_instances` and `hub_fingerprint_index` are safe
-      without RLS "because of a revoke" (migrations 0023, 0029). Measured, `app_user` holds
-      `SELECT, INSERT, UPDATE, DELETE` on all three, in both the test and dev databases. The
-      revokes run and are then undone: `init-prod.sh` issues
-      `GRANT … ON ALL TABLES … TO app_user` (`:63`) _after_ migrations and re-revokes only the
-      seven tables from 0052/0054; `helpers/db-setup.ts` re-revokes only `audit_events` and
-      `journal_directory`; `db:reset` uses `drizzle-kit push`, which never executes migration
-      SQL at all. `outbox_events` fails the same way for a different reason — migration 0022's
-      comment claims SELECT is withheld, but `GRANT` is additive and `ALTER DEFAULT PRIVILEGES`
-      had already granted full DML.
-      **This is why it is P0 rather than P2:** P2.1 specifies "no RLS **plus** `REVOKE ALL`,
-      reads via SECURITY DEFINER" for `service_principals`, justified explicitly by the hub
-      precedent. Built as written, the table of hashed cross-org credentials would be fully
-      readable by `app_user` — the instance-wide credential enumeration the design exists to
-      prevent. Fix the three-place discipline, then flip the pinned expectations in
-      `rls-infrastructure.test.ts`.
-      **Not yet verified on staging or production** — the finding is a reading of `init-prod.sh`
-      plus measurement of two local databases. Confirm against the deployed database first; that
-      check sets the severity. — (found 2026-07-28 during the P2.0 audit)
+      without RLS "because of a revoke" (migrations 0023, 0029). Measured, `app_user` held
+      `SELECT, INSERT, UPDATE, DELETE` on all three. The revokes run and were then undone by the
+      blanket `GRANT … ON ALL TABLES … TO app_user` every provisioning path issues after
+      migrations; each re-revoked a hand-copied subset, and the subsets had drifted.
+      `outbox_events` failed the same way for a different reason — migration 0022 issued only a
+      `GRANT INSERT`, which withholds nothing.
+      **Confirmed on staging 2026-07-28** — all four tables carried full DML there, plus
+      `demo_requests`; production has never been deployed. No exposure: `federation_config` had
+      zero rows. The seven tables that _were_ on the lists held correctly, which localised the
+      fault to the lists rather than the mechanism.
+      **Resolved: `service_principals` needs no redesign.** Every reader of these tables already
+      uses the superuser pool, so closing them broke nothing, and P2.1's "no RLS + `REVOKE ALL`"
+      pattern is sound once privileges live in one place. Fixed by `packages/db/privileges.sql`
+      (canonical manifest, applied last by all seven provisioning paths), migration 0069 for
+      already-provisioned databases, and a widened privilege assertion in
+      `rls-infrastructure.test.ts` covering all four privileges rather than SELECT alone.
+      Also corrected a stale claim in four files: `db:reset` runs `drizzle-kit migrate`, not
+      `push` (`scripts/db-reset.sh:32`, since `fb857743`) — the migration REVOKEs did run and
+      were then clobbered, rather than never running. — (found 2026-07-28 during the P2.0 audit;
+      done 2026-07-28)
 - [ ] **[P1] `organizationService.listMembers` has no org predicate on either query.**
       `apps/api/src/services/organization.service.ts:168` (page) and `:182` (`count(*)`) carry
       no `WHERE` clause on any table — the only read of `users` in the codebase in that state.
@@ -341,10 +343,12 @@ Ordered as the design doc's Phase 0/D.
       `isNull(deletedAt)` **and** `eq(isGuest, false)`. Both are unauthenticated federation
       discovery endpoints, so a deleted or guest account is discoverable through one and not
       the other. The asymmetry looks unintended. — (found 2026-07-28 during the P2.0 audit)
-- [ ] **[P2] `demo_requests` has neither RLS nor a `REVOKE`.** It postdates migration 0052, so
+- [x] **[P2] `demo_requests` has neither RLS nor a `REVOKE`.** It postdates migration 0052, so
       `ALTER DEFAULT PRIVILEGES` left `app_user` full DML and no later migration narrowed it.
-      Needs a revoke with the three-place discipline; `rls-infrastructure.test.ts` pins the
-      current state so the fix flips an expectation. — (found 2026-07-28 during the P2.0 audit)
+      Fixed alongside the P0 above: it is written through the superuser pool
+      (`routes/public.routes.ts:117`), so `REVOKE ALL` was safe and is now carried by
+      `packages/db/privileges.sql` and migration 0069. — (found 2026-07-28 during the P2.0
+      audit; done 2026-07-28)
 - [ ] **[P3] Delete `organizationService.addMemberWithAudit`.** Zero production callers
       (`organization.service.ts:321`); the only three references are `vi.fn()` stubs in
       `trpc/routers/organizations.spec.ts:17`, `trpc/routers/gdpr.spec.ts:35` and

@@ -20,6 +20,7 @@
     "db:generate": "pnpm --filter @colophony/db generate",
     "db:push": "pnpm --filter @colophony/db push",
     "db:migrate": "node scripts/validate-migrations.mjs && pnpm --filter @colophony/db migrate",
+    "db:privileges": "pnpm --filter @colophony/db privileges",
     "db:validate-migrations": "node scripts/validate-migrations.mjs",
     "db:validate-migrations:fix": "node scripts/validate-migrations.mjs --fix",
     "db:add-migration": "node scripts/add-migration-journal.mjs",

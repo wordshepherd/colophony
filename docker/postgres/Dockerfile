@@ -8,14 +8,21 @@ RUN apk add --no-cache bash dcron gcompat \
        "https://github.com/wal-g/wal-g/releases/download/${WALG_VERSION}/wal-g-pg-ubuntu-20.04-amd64" \
     && chmod +x /usr/local/bin/wal-g
 
-COPY docker-entrypoint-walg.sh /usr/local/bin/docker-entrypoint-walg.sh
+COPY docker/postgres/docker-entrypoint-walg.sh /usr/local/bin/docker-entrypoint-walg.sh
 RUN chmod +x /usr/local/bin/docker-entrypoint-walg.sh
 
-COPY crontab /etc/crontabs/walg-crontab
+COPY docker/postgres/crontab /etc/crontabs/walg-crontab
 
-# Embed init-db.sh in the image (bind-mount doesn't work with Coolify)
-COPY init-db.sh /docker-entrypoint-initdb.d/init-db.sh
+# Embed init-db.sh in the image (bind-mount doesn't work with Coolify).
+# Copied from scripts/ rather than kept as a second copy here — the two used to
+# be maintained by hand and nothing enforced that they matched.
+COPY scripts/init-db.sh /docker-entrypoint-initdb.d/init-db.sh
 RUN chmod +x /docker-entrypoint-initdb.d/init-db.sh
+
+# init-db.sh sources this. Deliberately NOT in /docker-entrypoint-initdb.d/ —
+# postgres executes every .sql it finds there, which would run the manifest a
+# second time, standalone.
+COPY packages/db/privileges.sql /opt/colophony/privileges.sql
 
 ENTRYPOINT ["docker-entrypoint-walg.sh"]
 CMD ["postgres"]

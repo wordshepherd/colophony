@@ -234,8 +234,10 @@ services:
   # PostgreSQL database (custom image with WAL-G + cron for continuous backups)
   postgres:
     build:
-      context: ./docker/postgres
-      dockerfile: Dockerfile
+      # Repo-root context so the image can embed scripts/init-db.sh and
+      # packages/db/privileges.sql directly, rather than keeping copies here.
+      context: .
+      dockerfile: docker/postgres/Dockerfile
     container_name: colophony-postgres
     expose:
       - "5432"
@@ -274,6 +276,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./scripts/init-db.sh:/docker-entrypoint-initdb.d/init-db.sh:ro
+      - ./packages/db/privileges.sql:/opt/colophony/privileges.sql:ro
     restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-colophony}"]
@@ -443,6 +446,7 @@ services:
     volumes:
       - ./scripts/init-prod.sh:/app/scripts/init-prod.sh:ro
       - ./scripts/verify-rls.sh:/app/scripts/verify-rls.sh:ro
+      - ./packages/db/privileges.sql:/app/packages/db/privileges.sql:ro
     depends_on:
       postgres:
         condition: service_healthy
@@ -572,6 +576,7 @@ services:
     volumes:
       - ./scripts/init-prod.sh:/app/scripts/init-prod.sh:ro
       - ./scripts/verify-rls.sh:/app/scripts/verify-rls.sh:ro
+      - ./packages/db/privileges.sql:/app/packages/db/privileges.sql:ro
     depends_on:
       postgres:
         condition: service_healthy
