@@ -597,14 +597,26 @@ That is fail-closed and it is the right default.
 Five failure modes need explicit handling.
 
 **F1 — The un-RLS'd tables.** `users` and `organizations` have no RLS at all (alongside
-`federationConfig`, `hubRegisteredInstances`, `outboxEvents`, and the webhook-event
-dedup tables). Cross-org isolation on those two is enforced _only_ by explicit
+`federationConfig`, `hubRegisteredInstances`, `hubFingerprintIndex`, `outboxEvents`,
+`dsarRequests`, `demoRequests`, and the webhook-event dedup tables — 11 in total).
+Cross-org isolation on those two is enforced _only_ by explicit
 `WHERE` clauses in the service layer. Today that is adequate because every principal is
 already pinned to one org and the surface that reads them is small. An instance principal
 removes the pin. Any service method touching `users` or `organizations` that does not
 filter explicitly becomes a cross-tenant enumeration path the moment such a principal
 exists. **This must be audited method-by-method before (a) ships**, and it is the single
 largest correctness risk in this design.
+
+**Audited 2026-07-28 — [`tenant-isolation-audit.md`](tenant-isolation-audit.md).** 73 sites
+across 36 files: 18 SCOPED, 3 USER-SCOPED, 12 TRANSITIVE (RLS-only), 34 BY-ID-ONLY, 6 deliberately
+UNFILTERED. No live vulnerability — every TRANSITIVE path is isolated by RLS today, now proven
+per method rather than assumed. The predicate work is 5 methods across 2 files, smaller than §2.6(1)
+feared.
+
+One correction the audit forced: `users` has **no `organizationId` column**, so the explicit
+predicate cannot go on that table. It goes on an org-bearing join partner
+(`organization_members`, `submissions`) or an `EXISTS`. "Thread `orgId` into every query" does not
+compile; "`users` can only ever be RLS-only" is the opposite error and excuses the gap.
 
 **F2 — Wrong org selected.** Today the guard is the membership check in
 `org-context.ts:112–133`: the caller must have a row in `organization_members`. An
@@ -978,10 +990,17 @@ A single magazine running its own instance sees exactly what it sees today.
 
 Called out per the brief's instruction to flag rather than paper over.
 
-1. **The `users` / `organizations` no-RLS exposure (F1) is the biggest unknown.** I verified
-   the tables lack RLS and that isolation depends on service-layer filtering. I did **not**
-   audit all 66 service modules for unfiltered reads. That audit is a prerequisite for (a),
-   not a follow-up, and it may change the effort estimate materially.
+1. ~~**The `users` / `organizations` no-RLS exposure (F1) is the biggest unknown.**~~
+   **Resolved 2026-07-28 — [`tenant-isolation-audit.md`](tenant-isolation-audit.md).** All 73
+   sites classified. The estimate moves in both directions: the predicate work on those two
+   tables is _smaller_ than feared (5 methods, 2 files), but the audit invalidated the premise
+   of P2.1. `federation_config` and both `hub_*` tables are documented as safe "because of a
+   revoke"; measured, `app_user` holds full DML on all three, because every provisioning path
+   issues a blanket `GRANT … ON ALL TABLES` after migrations and re-revokes only seven tables.
+   **P2.1 proposes exactly that pattern for `service_principals`** — implemented as written, the
+   hashed-credential table would be readable by `app_user`. Fix the three-place discipline and
+   assert it before P2.1 ships; §2.4's "the hub precedent is safe _because_ of a revoke" is not
+   currently true.
 2. **Whether `PgBouncer` transaction pooling interacts with leaving `app.user_id` unset.**
    The `SET LOCAL` contract is sound in transaction mode, but I have not tested the
    specific case of setting `app.current_org` without `app.user_id` on a pooled connection.
@@ -1260,8 +1279,10 @@ REST surface in Phase 4.
    but submitters have no org membership by design, so the v1 membership check excludes
    them. Needs a consent model that does not exist. Possibly a Register concern given
    federated identity already models cross-instance user agency.
-3. **The `users` / `organizations` no-RLS audit** (§2.6(1)) — scoped as P2.0, but its size
-   is unknown until someone reads the 66 service modules. May change Phase 2's estimate.
+3. ~~**The `users` / `organizations` no-RLS audit** (§2.6(1))~~ — **done 2026-07-28**,
+   [`tenant-isolation-audit.md`](tenant-isolation-audit.md). Replaced by a narrower open
+   question: the `REVOKE`-based privilege model does not survive provisioning (§2.6(1)), which
+   P2.1 depends on. Not yet verified against staging or production.
 4. **Normalising the two RLS idioms** (F6) — four schema files raise where twenty-four
    return NULL. Not urgent, not a vulnerability, but it should be a decision rather than an
    accident.
