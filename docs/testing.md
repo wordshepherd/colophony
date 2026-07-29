@@ -465,12 +465,26 @@ The setup script creates a Zitadel project, OIDC app (Authorization Code + PKCE)
 
 **CI environment variables:**
 
-| Variable            | Purpose                              | CI Value                                                           |
-| ------------------- | ------------------------------------ | ------------------------------------------------------------------ |
-| `DATABASE_TEST_URL` | Superuser connection (test setup)    | `postgresql://test:test@localhost:5433/colophony_test`             |
-| `DATABASE_APP_URL`  | Non-superuser connection (RLS tests) | `postgresql://app_user:app_password@localhost:5433/colophony_test` |
+| Variable            | Purpose                                             | CI Value                                                           |
+| ------------------- | --------------------------------------------------- | ------------------------------------------------------------------ |
+| `DATABASE_TEST_URL` | Superuser connection (test setup)                   | `postgresql://test:test@localhost:5433/colophony_test`             |
+| `DATABASE_APP_URL`  | Non-superuser connection (RLS tests, `appPool`)     | `postgresql://app_user:app_password@localhost:5433/colophony_test` |
+| `DATABASE_URL`      | Superuser connection read by `@colophony/db`'s `db` | Not set in CI — derived from `DATABASE_TEST_URL` by the configs    |
 
-**Important:** `DATABASE_APP_URL` must be separate from `DATABASE_TEST_URL`. RLS tests connect as `app_user` (non-superuser, NOBYPASSRLS). If it falls back to `DATABASE_TEST_URL`, both clients are superuser and RLS is silently bypassed.
+**Important — this is a three-way separation, and the third one is the one that broke.** Two different pairs of variables are in play:
+
+- The **test helpers** in `apps/api/src/__tests__/rls/helpers/db-setup.ts` read `DATABASE_TEST_URL` (admin) and `DATABASE_APP_URL` (app). These were always separate.
+- The **library** in `packages/db/src/client.ts` reads `DATABASE_URL` for the superuser pool (`db`/`pool`) and `DATABASE_APP_URL` for `appPool`. CI does not set `DATABASE_URL`, so the vitest configs supply it.
+
+`vitest.config.integration-base.ts` used to derive `DATABASE_URL` from `DATABASE_APP_URL`, which made `db` and `appPool` the same non-superuser connection for the `rls`, `webhooks`, `security` and `services` suites. Every code path that uses the superuser pool _in order to bypass RLS_ then ran under RLS instead. Nothing warned: `client.ts` suppresses its `[SECURITY WARNING]` when `NODE_ENV=test`, and `appPool` falls back to `DATABASE_URL` when `DATABASE_APP_URL` is missing, so the collapse survives an unset variable in either direction.
+
+Three guards now enforce the split, and none of them should be removed:
+
+| Guard             | Location                                                                 | Catches                                                                                             |
+| ----------------- | ------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------- |
+| String inequality | `src/__tests__/helpers/assert-pool-separation.ts` (a `setupFiles` entry) | Both URLs unset, or set to the same string — before any query runs                                  |
+| Role identity     | `globalSetup()` in `rls/helpers/db-setup.ts`                             | Two URLs that differ as strings but resolve to the same PostgreSQL role                             |
+| Config shape      | `src/__tests__/vitest-config-pools.spec.ts` (unit suite, no DB)          | A config that derives one URL from the other, or a new config that does not merge `integrationBase` |
 
 #### Embed E2E Tests (embed project)
 

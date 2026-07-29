@@ -14,7 +14,16 @@ import { registerWebhookHealthRoute } from '../../../webhooks/webhook-health.rou
  */
 export function createTestEnv(overrides?: Partial<Env>): Env {
   return {
+    // Mirrors the split in vitest.config.integration-base.ts: DATABASE_URL is
+    // the superuser connection, DATABASE_APP_URL the app_user one. Nothing in
+    // apps/api reads these off `Env` today — the pools in
+    // packages/db/src/client.ts read process.env directly — but handing the
+    // handlers an Env whose DATABASE_URL is app_user would be a trap for the
+    // first route that does.
     DATABASE_URL:
+      process.env.DATABASE_TEST_URL ??
+      'postgresql://test:test@localhost:5433/colophony_test',
+    DATABASE_APP_URL:
       process.env.DATABASE_APP_URL ??
       'postgresql://app_user:app_password@localhost:5433/colophony_test',
     DB_SSL: 'false' as const,
