@@ -271,6 +271,94 @@ Ordered as the design doc's Phase 0/D.
       `sdks/openapi.json` is not in `.prettierignore`, so the pre-commit hook formats it —
       the export now writes prettier-formatted output to keep `--check`'s byte comparison
       valid.
+- [x] **[P2.0 audit half] Tenant-isolation audit of `users` and `organizations`.** All 73 read
+      and write sites across 36 files classified in
+      [`docs/tenant-isolation-audit.md`](tenant-isolation-audit.md): 18 SCOPED, 3 USER-SCOPED,
+      12 TRANSITIVE (RLS-only), 34 BY-ID-ONLY, 6 deliberately UNFILTERED. Closes design doc
+      §2.6(1) and §8 item 3. — (design doc §5 Phase 2 P2.0; done 2026-07-28)
+      **`users` has no `organizationId` column**, so its explicit predicate goes on an
+      org-bearing join partner, not the table. Both naive readings are wrong: "thread `orgId`
+      everywhere" does not compile, and "`users` can only be RLS-only" excuses the gap.
+      **No live vulnerability** — every TRANSITIVE path is isolated by RLS today, and
+      `__tests__/security/tenant-isolation-transitive.test.ts` now proves that per method
+      instead of asserting it, with non-zero own-org guards so the checks cannot pass against
+      empty tables. Three gates keep the audit true; each was verified to fail before being
+      trusted. The predicate fixes are the items below.
+- [ ] **[P0] The `REVOKE`-based privilege model does not survive provisioning — and P2.1
+      depends on it.** The database package's RLS notes and design doc §2.4 both hold that
+      `federation_config`, `hub_registered_instances` and `hub_fingerprint_index` are safe
+      without RLS "because of a revoke" (migrations 0023, 0029). Measured, `app_user` holds
+      `SELECT, INSERT, UPDATE, DELETE` on all three, in both the test and dev databases. The
+      revokes run and are then undone: `init-prod.sh` issues
+      `GRANT … ON ALL TABLES … TO app_user` (`:63`) _after_ migrations and re-revokes only the
+      seven tables from 0052/0054; `helpers/db-setup.ts` re-revokes only `audit_events` and
+      `journal_directory`; `db:reset` uses `drizzle-kit push`, which never executes migration
+      SQL at all. `outbox_events` fails the same way for a different reason — migration 0022's
+      comment claims SELECT is withheld, but `GRANT` is additive and `ALTER DEFAULT PRIVILEGES`
+      had already granted full DML.
+      **This is why it is P0 rather than P2:** P2.1 specifies "no RLS **plus** `REVOKE ALL`,
+      reads via SECURITY DEFINER" for `service_principals`, justified explicitly by the hub
+      precedent. Built as written, the table of hashed cross-org credentials would be fully
+      readable by `app_user` — the instance-wide credential enumeration the design exists to
+      prevent. Fix the three-place discipline, then flip the pinned expectations in
+      `rls-infrastructure.test.ts`.
+      **Not yet verified on staging or production** — the finding is a reading of `init-prod.sh`
+      plus measurement of two local databases. Confirm against the deployed database first; that
+      check sets the severity. — (found 2026-07-28 during the P2.0 audit)
+- [ ] **[P1] `organizationService.listMembers` has no org predicate on either query.**
+      `apps/api/src/services/organization.service.ts:168` (page) and `:182` (`count(*)`) carry
+      no `WHERE` clause on any table — the only read of `users` in the codebase in that state.
+      RLS on `organization_members` is the sole defense. The direct analogue of #521, and the
+      first fix PR: the method already joins `organization_members`, so the fix is
+      `eq(organizationMembers.organizationId, orgId)` on a join it performs anyway, plus an
+      `orgId` parameter threaded from `ctx.authContext.orgId` / `context.authContext.orgId`.
+      **Both halves** — scoping only the page query leaves `total` reporting every org's member
+      count. — (found 2026-07-28 during the P2.0 audit)
+- [ ] **[P1] REST `POST /v1/invitations/accept` declares no scopes.**
+      `apps/api/src/rest/routers/organizations.ts:333` uses `userProcedure` with no
+      `requireScopes(...)`, while its tRPC twin (`trpc/routers/organizations.ts:157`) declares
+      `organizations:write`. The route is authenticated but scope-unconstrained and it writes
+      membership. `trpc/guard-coverage.spec.ts` reads the tRPC router only, so REST has no
+      equivalent build-time check — worth adding the mirror gate alongside the fix, since this
+      is the second REST/tRPC parity gap found in two sessions. — (found 2026-07-28 during the
+      P2.0 audit)
+- [ ] **[P2] `submission.service` list/export methods carry no org predicate.** `listAll`
+      (`:290`), `exportAll` (`:392`, up to 10 000 rows) and `listAgingByOrg` (`:1526`) build
+      their `where` from `status` / `period` / `search` / date only. `listAgingByOrg` is named
+      for a scoping it does not perform — its caller supplies the org through
+      `withRls({ orgId })` at `inngest/functions/submission-response-reminder.ts:64`, so it is
+      correct in practice and misleading to read. — (found 2026-07-28 during the P2.0 audit)
+- [ ] **[P2] `pipeline.service.ts:309` `updateStage` filters the read but not the write.** The
+      guard is `getById(tx, id, orgId)`; the `UPDATE` that follows is
+      `.where(eq(pipelineItems.id, id))` with no org predicate. Read-then-write with the
+      predicate on only one half. — (found 2026-07-28 during the P2.0 audit)
+- [ ] **[P2] `issue.service.ts:65,122` take `orgId?` as optional and apply the predicate
+      conditionally.** An optional org id is a silent bypass: omit the argument and the query
+      is unscoped, with nothing at the type level to flag it. Make it required, matching the
+      house `(tx, id|input, orgId)` convention. — (found 2026-07-28 during the P2.0 audit)
+- [ ] **[P2] `federation.service.ts:437` `resolveWebFinger` is laxer than its sibling.** It
+      filters on `email` alone, while `getUserDidDocument` (`:523`) filters `email` **and**
+      `isNull(deletedAt)` **and** `eq(isGuest, false)`. Both are unauthenticated federation
+      discovery endpoints, so a deleted or guest account is discoverable through one and not
+      the other. The asymmetry looks unintended. — (found 2026-07-28 during the P2.0 audit)
+- [ ] **[P2] `demo_requests` has neither RLS nor a `REVOKE`.** It postdates migration 0052, so
+      `ALTER DEFAULT PRIVILEGES` left `app_user` full DML and no later migration narrowed it.
+      Needs a revoke with the three-place discipline; `rls-infrastructure.test.ts` pins the
+      current state so the fix flips an expectation. — (found 2026-07-28 during the P2.0 audit)
+- [ ] **[P3] Delete `organizationService.addMemberWithAudit`.** Zero production callers
+      (`organization.service.ts:321`); the only three references are `vi.fn()` stubs in
+      `trpc/routers/organizations.spec.ts:17`, `trpc/routers/gdpr.spec.ts:35` and
+      `rest/routers/organizations.spec.ts:16` — spec files mocking a method their subject never
+      invokes. `inviteOrAddMemberWithAudit` reaches `addMember` directly at `:349`. Same shape
+      as the `getById` #521 deleted rather than fixed. — (found 2026-07-28 during the P2.0 audit)
+- [ ] **[P3] Email is a cross-tenant lookup key in eight places, four unauthenticated.**
+      `organization.service.ts:203`, `embed-submission.service.ts:92`/`:121`/`:138`,
+      `federation.service.ts:437`/`:523`, `simsub.service.ts:324`, `migration.service.ts:494`,
+      `auth.ts:456`. Sharpest edge: `embed-submission.service.ts:92` returns an existing user id
+      on an email match even when that account belongs to another tenant, attributing the embed
+      submission to them. Deliberate — it is how a known writer submitting through an embed gets
+      linked — but it wants a decision on identity semantics, not a patch. — (found 2026-07-28
+      during the P2.0 audit)
 - [ ] **[P1] No per-key rate limits.** `hooks/rate-limit-auth.ts:57` keys the authenticated
       window on `userId`, which for key auth is the key's _creator_ — so all of an admin's
       keys share one bucket with each other and with that admin's browser session. Key on
@@ -409,6 +497,13 @@ invitations were assumed missing and are in fact already exposed — see §0 of 
       recommendation is a separate `service_principals` table, flat capability strings with
       tenancy in a grant table, and org-visible/org-revocable grants. Four decisions gate the
       work (D1–D4, §5 Phase D). Not started.
+      **Hard preconditions, from the 2026-07-28 P2.0 audit — both must merge first:**
+      (1) the P0 `REVOKE`-does-not-survive-provisioning fix, because P2.1's table design is
+      built on a precedent that does not currently hold and would leave hashed cross-org
+      credentials readable by `app_user`; (2) every P1 explicit-predicate item above, because
+      the instance principal is precisely what removes the one-org pin those paths rely on.
+      Shipping the principal ahead of either turns a documented, contained gap into a reachable
+      one.
 - [x] Submitter role architecture: per-org role assignment vs global identity with per-org role bindings — **Resolved 2026-02-19:** Submitter is a global user capability, not an org role. Staff roles (`ADMIN/EDITOR/READER`) unchanged. Manuscript library is user-owned and cross-org. Follow/subscribe for org-to-writer comms. — (architecture doc Open Question #1)
 - [x] Self-serve org creation: managed hosting provisioning model vs self-hosted admin — **Partially resolved 2026-02-19:** Self-serve in both contexts. Managed hosting: free tier with quotas, paid upgrade, all features on all tiers. Self-hosted: no billing. Managed hosting infra deferred to post-Track 3. — (architecture doc Open Question #2)
 

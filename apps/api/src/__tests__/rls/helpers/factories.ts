@@ -19,6 +19,10 @@ import {
   externalSubmissions,
   correspondence,
   writerProfiles,
+  submissionDiscussions,
+  submissionVotes,
+  submissionReviewers,
+  portfolioEntries,
   type Organization,
   type User,
   type OrganizationMember,
@@ -336,6 +340,103 @@ export async function createWriterProfile(
     })
     .returning();
   return profile;
+}
+
+// ---------------------------------------------------------------------------
+// Submission-child fixtures.
+//
+// `createTwoOrgScenario` deliberately does not seed these — they are only
+// needed by suites that exercise the per-submission list methods. Without
+// them those suites assert "no org B rows" against an empty table, which is
+// true for the wrong reason. Seed explicitly and assert a non-zero org A
+// count first.
+// ---------------------------------------------------------------------------
+
+export type SubmissionDiscussionRow = typeof submissionDiscussions.$inferSelect;
+export type SubmissionVoteRow = typeof submissionVotes.$inferSelect;
+export type SubmissionReviewerRow = typeof submissionReviewers.$inferSelect;
+export type PortfolioEntryRow = typeof portfolioEntries.$inferSelect;
+
+export async function createSubmissionDiscussion(
+  organizationId: string,
+  submissionId: string,
+  authorId: string,
+  overrides?: Partial<SubmissionDiscussionRow>,
+): Promise<SubmissionDiscussionRow> {
+  const db = adminDb();
+  const [discussion] = await db
+    .insert(submissionDiscussions)
+    .values({
+      organizationId,
+      submissionId,
+      authorId,
+      content: faker.lorem.paragraph(),
+      ...overrides,
+    })
+    .returning();
+  return discussion;
+}
+
+export async function createSubmissionVote(
+  organizationId: string,
+  submissionId: string,
+  voterUserId: string,
+  overrides?: Partial<SubmissionVoteRow>,
+): Promise<SubmissionVoteRow> {
+  const db = adminDb();
+  const [vote] = await db
+    .insert(submissionVotes)
+    .values({
+      organizationId,
+      submissionId,
+      voterUserId,
+      decision: 'ACCEPT',
+      ...overrides,
+    })
+    .returning();
+  return vote;
+}
+
+export async function createSubmissionReviewer(
+  organizationId: string,
+  submissionId: string,
+  reviewerUserId: string,
+  overrides?: Partial<SubmissionReviewerRow>,
+): Promise<SubmissionReviewerRow> {
+  const db = adminDb();
+  const [reviewer] = await db
+    .insert(submissionReviewers)
+    .values({
+      organizationId,
+      submissionId,
+      reviewerUserId,
+      ...overrides,
+    })
+    .returning();
+  return reviewer;
+}
+
+/**
+ * `portfolio_entries` is user-scoped (`user_id = current_user_id()`), not
+ * org-scoped — it carries no `organization_id` column at all. Reads of it
+ * therefore need `userId` in the RLS context, not `orgId`.
+ */
+export async function createPortfolioEntry(
+  userId: string,
+  overrides?: Partial<PortfolioEntryRow>,
+): Promise<PortfolioEntryRow> {
+  const db = adminDb();
+  const [entry] = await db
+    .insert(portfolioEntries)
+    .values({
+      userId,
+      type: 'external',
+      title: faker.lorem.sentence(),
+      publicationName: faker.company.name(),
+      ...overrides,
+    })
+    .returning();
+  return entry;
 }
 
 export interface TwoOrgScenario {
