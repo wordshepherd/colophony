@@ -351,6 +351,15 @@ Ordered as the design doc's Phase 0/D.
       `rest/routers/organizations.spec.ts:16` — spec files mocking a method their subject never
       invokes. `inviteOrAddMemberWithAudit` reaches `addMember` directly at `:349`. Same shape
       as the `getById` #521 deleted rather than fixed. — (found 2026-07-28 during the P2.0 audit)
+- [ ] **[P3] Widen the schema gate to policy semantics and schema↔migration consistency.**
+      `rls-infrastructure.test.ts` now asserts, per table, that classification is exhaustive,
+      that RLS and `FORCE` are on where expected, and that `app_user`'s SELECT privilege matches
+      a recorded expectation. It does **not** check that a policy says the right thing — a table
+      could carry a policy scoped to the wrong column, or a `USING` clause with the raising
+      `current_setting(...)::uuid` idiom where `current_org_id()` was intended, and pass. Nor
+      does it check that the Drizzle schema and the migration SQL agree, which is the class of
+      drift `db:verify` catches for FK constraints only. Deliberately left out of the P2.0 audit
+      as a separate concern from F1 and too large to ride inside it. — (plan review 2026-07-28)
 - [ ] **[P3] Email is a cross-tenant lookup key in eight places, four unauthenticated.**
       `organization.service.ts:203`, `embed-submission.service.ts:92`/`:121`/`:138`,
       `federation.service.ts:437`/`:523`, `simsub.service.ts:324`, `migration.service.ts:494`,
