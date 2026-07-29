@@ -95,12 +95,16 @@ in-process generation) a hard prerequisite rather than a convenience. Under D4 t
 SDK-regeneration half of this job disappears entirely, since generated SDKs stop being
 committed.
 
-**(c) There are no per-key rate limits.** `apps/api/src/hooks/rate-limit-auth.ts:57` keys
-the authenticated window on `${prefix}:auth:${userId}`. For API-key auth, `userId` is the
-key's _creator_. So today every key created by one admin already shares a single bucket
-with every other key that admin created **and** with that admin's interactive browser
-session. The brief's premise — "per-key limits assume one org's traffic" — overstates the
-current state; there is nothing per-key to change, there is something per-key to add.
+**(c) There are no per-key rate limits.** — **Closed 2026-07-29.**
+`apps/api/src/hooks/rate-limit-auth.ts:57` keyed the authenticated window on
+`${prefix}:auth:${userId}`. For API-key auth, `userId` is the key's _creator_. So every key
+created by one admin shared a single bucket with every other key that admin created **and**
+with that admin's interactive browser session. The brief's premise — "per-key limits assume
+one org's traffic" — overstated the state; there was nothing per-key to change, there was
+something per-key to add.
+
+It is now keyed per credential: `auth:key:<apiKeyId>` or `auth:user:<userId>`. See the
+"Rate limiting" section below for what shipped and what did not.
 
 **(d) The audit trail cannot distinguish a key from its creator today.** `audit_events`
 (`packages/db/src/schema/audit.ts:24`) has a single `actor_id`, and `BaseAuditParams`
@@ -920,12 +924,18 @@ truth for every historical row.
 
 #### Rate limiting
 
-Three changes to `hooks/rate-limit-auth.ts`:
+Three changes to `hooks/rate-limit-auth.ts`. **(1) shipped 2026-07-29; (2) and (3) remain
+open, and will stay open until the `col_svc_` instance principal exists — both are
+principal-specific and neither applies to an org-bound `col_live_` key.**
 
-1. **Key on the credential, not the creator.** When `apiKeyId` (or `principalId`) is
-   present, use it in the Redis key instead of `userId`. This introduces per-key limits,
-   which do not exist today (finding (c)), and stops a key from consuming its creator's
-   interactive budget.
+1. ~~**Key on the credential, not the creator.**~~ **Done.** When `apiKeyId` (or
+   `principalId`) is present, use it in the Redis key instead of `userId`. This introduced
+   per-key limits, which did not exist (finding (c)), and stops a key from consuming its
+   creator's interactive budget. Shipped as a presence check on `apiKeyId` — deliberately
+   _not_ `authMethod === 'apikey'`, so a future principal must be admitted explicitly.
+   Note what this gives up: with no per-creator bucket left, and no cap on key creation in
+   `apiKeyService.create`, the aggregate per-human ceiling is unbounded. The IP limiter does
+   not substitute — it keys on source address and fails open.
 2. **Key instance principals on the `(principal, org)` pair.** Otherwise one busy tenant
    exhausts the shared window and the failure presents as an outage for every other org the
    integrator serves.
@@ -1095,11 +1105,11 @@ byte-identical behaviour.
 
 Three changes do touch existing keys, and each is independently safe:
 
-| Change                                             | Effect on existing keys                                                                                                               | Compatibility                                                                                      |
-| -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
-| `audit_events.principal_id` / `principal_type`     | Their actions become _correctly_ attributed to the key rather than ambiguously to the creator                                         | Additive. Historical rows keep NULL, which is accurate. No behaviour change.                       |
-| Rate-limit key changes from `userId` to `apiKeyId` | Each key gets its own bucket instead of sharing the creator's                                                                         | Strictly loosening for the key holder. A creator with several keys sees _more_ headroom, not less. |
-| M1 (`internalOnly` on 7 tRPC routers)              | A key calling `webhooks.*`, `federation.*`, `hub.*`, `transfer.*`, `migration.*`, `simsub.*`, or `ops.*` over tRPC starts getting 403 | **This is the one breaking change.** It is also the point.                                         |
+| Change                                                                      | Effect on existing keys                                                                                                               | Compatibility                                                                                      |
+| --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| `audit_events.principal_id` / `principal_type`                              | Their actions become _correctly_ attributed to the key rather than ambiguously to the creator                                         | Additive. Historical rows keep NULL, which is accurate. No behaviour change.                       |
+| Rate-limit key changes from `userId` to `apiKeyId` **(shipped 2026-07-29)** | Each key gets its own bucket instead of sharing the creator's                                                                         | Strictly loosening for the key holder. A creator with several keys sees _more_ headroom, not less. |
+| M1 (`internalOnly` on 7 tRPC routers)                                       | A key calling `webhooks.*`, `federation.*`, `hub.*`, `transfer.*`, `migration.*`, `simsub.*`, or `ops.*` over tRPC starts getting 403 | **This is the one breaking change.** It is also the point.                                         |
 
 M1 needs handling, not just announcing:
 

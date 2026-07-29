@@ -34,7 +34,16 @@ import fp from 'fastify-plugin';
 import rateLimitPlugin from './rate-limit.js';
 import rateLimitAuthPlugin from './rate-limit-auth.js';
 
-/** Minimal auth stub — satisfies colophony-auth dependency without real auth logic. */
+/**
+ * Minimal auth stub — satisfies colophony-auth dependency without real auth logic.
+ *
+ * `apiKeyId` and `authMethod` come from *independent* headers on purpose. In
+ * production the two always travel together (auth.ts:313–321), so a fixture that
+ * emitted them as a pair could not tell presence-based keying apart from an
+ * `authMethod === 'apikey'` implementation — every per-credential test would pass
+ * against either. Decoupling them lets one case set `apiKeyId` without the
+ * matching method, which is the only case that pins the discriminator.
+ */
 const fakeAuthPlugin = fp(
   async function fakeAuth(app: FastifyInstance) {
     app.decorateRequest('authContext', null);
@@ -42,13 +51,18 @@ const fakeAuthPlugin = fp(
       const testUserId = request.headers['x-test-user-id'] as
         string | undefined;
       if (testUserId) {
+        const apiKeyId = request.headers['x-test-api-key-id'] as
+          string | undefined;
+        const authMethod = (request.headers['x-test-auth-method'] ??
+          'test') as AuthContext['authMethod'];
         request.authContext = {
           userId: testUserId,
           zitadelUserId: testUserId,
           email:
             (request.headers['x-test-email'] as string) ?? 'test@example.com',
           emailVerified: true,
-          authMethod: 'test',
+          authMethod,
+          ...(apiKeyId ? { apiKeyId } : {}),
         } satisfies AuthContext;
       }
     });
@@ -239,6 +253,82 @@ describe('rate-limit-auth plugin (second-pass)', () => {
         headers: { 'x-test-user-id': 'user-2' },
       });
       expect(response.statusCode).toBe(200);
+    });
+  });
+
+  describe('per-credential bucketing', () => {
+    let app: FastifyInstance;
+    let redis: InstanceType<typeof RedisMock>;
+
+    /** An API key as production presents it: apiKeyId *and* authMethod together. */
+    const key = (keyId: string, creator: string) => ({
+      'x-test-user-id': creator,
+      'x-test-api-key-id': keyId,
+      'x-test-auth-method': 'apikey',
+    });
+
+    /** An interactive session — no credential id. */
+    const session = (userId: string) => ({ 'x-test-user-id': userId });
+
+    const get = (headers: Record<string, string>) =>
+      app.inject({ method: 'GET', url: '/api/test', headers });
+
+    /** Spend the whole window for `headers`, asserting each request is allowed. */
+    async function exhaust(headers: Record<string, string>) {
+      for (let i = 0; i < 3; i++) {
+        expect((await get(headers)).statusCode).toBe(200);
+      }
+      expect((await get(headers)).statusCode).toBe(429);
+    }
+
+    beforeEach(async () => {
+      const result = await buildApp({
+        RATE_LIMIT_DEFAULT_MAX: 100, // High IP limit so first-pass never blocks
+        RATE_LIMIT_AUTH_MAX: 3,
+      });
+      app = result.app;
+      redis = result.redis;
+    });
+
+    afterEach(async () => {
+      await app.close();
+      await redis.flushall();
+    });
+
+    it('a single key still enforces its own limit', async () => {
+      await exhaust(key('key-a', 'user-1'));
+    });
+
+    it('two keys from the same creator have independent limits', async () => {
+      await exhaust(key('key-a', 'user-1'));
+
+      // Same creator, different credential — must have its own window.
+      expect((await get(key('key-b', 'user-1'))).statusCode).toBe(200);
+    });
+
+    it('a key does not consume its creator’s interactive budget', async () => {
+      await exhaust(key('key-a', 'user-1'));
+
+      expect((await get(session('user-1'))).statusCode).toBe(200);
+    });
+
+    it('an interactive session does not consume its keys’ budget', async () => {
+      await exhaust(session('user-1'));
+
+      expect((await get(key('key-a', 'user-1'))).statusCode).toBe(200);
+    });
+
+    it('keys on apiKeyId presence, not on authMethod', async () => {
+      // `apiKeyId` set but authMethod left at 'test' — models the planned
+      // `col_svc_` principal, which will carry a credential id under a different
+      // authMethod. This is the only case that fails an implementation branching
+      // on `authMethod === 'apikey'`; the four above pass against either.
+      await exhaust({
+        'x-test-user-id': 'user-1',
+        'x-test-api-key-id': 'key-a',
+      });
+
+      expect((await get(session('user-1'))).statusCode).toBe(200);
     });
   });
 
