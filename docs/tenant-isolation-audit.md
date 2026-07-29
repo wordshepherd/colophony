@@ -118,8 +118,14 @@ practice and misleading to read.
 | Site                               | Method                               | Predicate                         | Disposition                                       |
 | ---------------------------------- | ------------------------------------ | --------------------------------- | ------------------------------------------------- |
 | `services/portfolio.service.ts:95` | `list` — `LEFT JOIN organizations o` | `s.submitter_id = userId` (`:52`) | ok — journal name is also a search target (`:65`) |
-| `services/user.service.ts:17`      | `getProfile`                         | `users.id = $1`, caller's own id  | ok                                                |
-| `services/gdpr.service.ts:46`      | `deleteUser` existence check         | `users.id = $1`                   | ok                                                |
+
+Despite its name, `portfolioService.list` never reads `portfolio_entries`; it queries
+`submissions` and `external_submissions` and joins `organizations` only to surface journal
+names. `portfolio_entries` (user-scoped, `user_id = current_user_id()`) has no service method in
+this audit's scope, so nothing here covers its policy.
+
+| `services/user.service.ts:17` | `getProfile` | `users.id = $1`, caller's own id | ok |
+| `services/gdpr.service.ts:46` | `deleteUser` existence check | `users.id = $1` | ok |
 
 ### 4.3 UNFILTERED
 
