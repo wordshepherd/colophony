@@ -543,6 +543,25 @@ Ordered as the design doc's Phase 0/D.
       fail closed, so not a vulnerability — but a request with no org context gets a 500
       rather than an empty result on those four. Normalise deliberately. —
       (design doc §2.3 F6)
+- [ ] **[P1] `GET /api/notifications/stream` declares no scope guard, and neither
+      coverage gate can see it.** It is a plain Fastify route
+      (`apps/api/src/sse/notification-stream.ts:52`), not a tRPC or oRPC procedure, so
+      `requireScopes` never runs — and both `trpc/guard-coverage.spec.ts` and
+      `rest/guard-coverage.spec.ts` are structurally blind to it, because they walk
+      `appRouter` and `restRouter` respectively. The route is not in `auth.ts`'s public
+      allowlist, so default-deny still applies, but any valid API key with **any** scope
+      can open the stream and receive the org's in-app notifications. Its sibling tRPC
+      procedures all require `notifications:read`.
+      **The narrow fix is one scope check in the handler; the question worth answering
+      first is how wide the blindspot is.** Every hand-rolled Fastify route is equally
+      invisible to both gates — `routes/embed.routes.ts`, `routes/public.routes.ts`, the
+      federation admin routes under `federation/`, and `webhooks/webhook-health.route.ts`.
+      Some are deliberately public and some are not, and nothing currently distinguishes
+      them mechanically. A third gate that walks Fastify's own route table against an
+      allowlist would cover the class rather than this instance.
+      Also note the connection cap (`MAX_CONNECTIONS_PER_USER = 5`) is an in-process
+      `Map`, not Redis-backed, so it does not hold across replicas. —
+      (found 2026-07-29 while adding the REST notification surface)
 
 ### Blocking REST gaps (integrator workflow)
 

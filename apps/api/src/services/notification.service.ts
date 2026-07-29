@@ -40,13 +40,19 @@ export const notificationService = {
       page: number;
       limit: number;
     },
+    orgId: string,
   ) {
-    const conditions = [eq(notificationsInbox.userId, params.userId)];
+    const conditions = [
+      eq(notificationsInbox.organizationId, orgId),
+      eq(notificationsInbox.userId, params.userId),
+    ];
     if (params.unreadOnly) {
       conditions.push(isNull(notificationsInbox.readAt));
     }
 
-    const where = conditions.length === 1 ? conditions[0] : and(...conditions);
+    // One hoisted condition, reused by both queries. Filtering only the page
+    // query leaves `total` counting every org's rows.
+    const where = and(...conditions);
 
     const [items, [{ total }]] = await Promise.all([
       tx
@@ -59,15 +65,26 @@ export const notificationService = {
       tx.select({ total: count() }).from(notificationsInbox).where(where),
     ]);
 
-    return { items, total };
+    return {
+      items,
+      total,
+      page: params.page,
+      limit: params.limit,
+      totalPages: Math.ceil(total / params.limit),
+    };
   },
 
-  async unreadCount(tx: DrizzleDb, userId: string): Promise<number> {
+  async unreadCount(
+    tx: DrizzleDb,
+    userId: string,
+    orgId: string,
+  ): Promise<number> {
     const [row] = await tx
       .select({ count: count() })
       .from(notificationsInbox)
       .where(
         and(
+          eq(notificationsInbox.organizationId, orgId),
           eq(notificationsInbox.userId, userId),
           isNull(notificationsInbox.readAt),
         ),
@@ -75,13 +92,19 @@ export const notificationService = {
     return row.count;
   },
 
-  async markRead(tx: DrizzleDb, id: string, userId: string): Promise<boolean> {
+  async markRead(
+    tx: DrizzleDb,
+    id: string,
+    userId: string,
+    orgId: string,
+  ): Promise<boolean> {
     const result = await tx
       .update(notificationsInbox)
       .set({ readAt: new Date() })
       .where(
         and(
           eq(notificationsInbox.id, id),
+          eq(notificationsInbox.organizationId, orgId),
           eq(notificationsInbox.userId, userId),
           isNull(notificationsInbox.readAt),
         ),
@@ -90,12 +113,17 @@ export const notificationService = {
     return result.length > 0;
   },
 
-  async markAllRead(tx: DrizzleDb, userId: string): Promise<number> {
+  async markAllRead(
+    tx: DrizzleDb,
+    userId: string,
+    orgId: string,
+  ): Promise<number> {
     const result = await tx
       .update(notificationsInbox)
       .set({ readAt: new Date() })
       .where(
         and(
+          eq(notificationsInbox.organizationId, orgId),
           eq(notificationsInbox.userId, userId),
           isNull(notificationsInbox.readAt),
         ),

@@ -21,12 +21,16 @@ export const notificationsRouter = createRouter({
       }),
     )
     .query(async ({ ctx, input }) => {
-      return notificationService.list(ctx.dbTx, {
-        userId: ctx.authContext.userId,
-        unreadOnly: input.unreadOnly,
-        page: input.page,
-        limit: input.limit,
-      });
+      return notificationService.list(
+        ctx.dbTx,
+        {
+          userId: ctx.authContext.userId,
+          unreadOnly: input.unreadOnly,
+          page: input.page,
+          limit: input.limit,
+        },
+        ctx.authContext.orgId,
+      );
     }),
 
   unreadCount: orgProcedure
@@ -36,6 +40,7 @@ export const notificationsRouter = createRouter({
       const count = await notificationService.unreadCount(
         ctx.dbTx,
         ctx.authContext.userId,
+        ctx.authContext.orgId,
       );
       return { count };
     }),
@@ -49,6 +54,7 @@ export const notificationsRouter = createRouter({
         ctx.dbTx,
         input.id,
         ctx.authContext.userId,
+        ctx.authContext.orgId,
       );
       if (success) {
         await ctx.audit({
@@ -67,6 +73,7 @@ export const notificationsRouter = createRouter({
       const count = await notificationService.markAllRead(
         ctx.dbTx,
         ctx.authContext.userId,
+        ctx.authContext.orgId,
       );
       if (count > 0) {
         await ctx.audit({

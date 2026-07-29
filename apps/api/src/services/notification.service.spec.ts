@@ -86,14 +86,21 @@ describe('notificationService', () => {
           }),
       };
 
-      const result = await notificationService.list(mockTx as any, {
-        userId: 'user-1',
-        unreadOnly: false,
-        page: 1,
-        limit: 20,
-      });
+      const result = await notificationService.list(
+        mockTx as any,
+        {
+          userId: 'user-1',
+          unreadOnly: false,
+          page: 1,
+          limit: 20,
+        },
+        'org-1',
+      );
       expect(result.items).toHaveLength(2);
       expect(result.total).toBe(2);
+      expect(result.page).toBe(1);
+      expect(result.limit).toBe(20);
+      expect(result.totalPages).toBe(1);
     });
 
     it('filters unread only when flag set', async () => {
@@ -118,14 +125,19 @@ describe('notificationService', () => {
           }),
       };
 
-      const result = await notificationService.list(mockTx as any, {
-        userId: 'user-1',
-        unreadOnly: true,
-        page: 1,
-        limit: 20,
-      });
+      const result = await notificationService.list(
+        mockTx as any,
+        {
+          userId: 'user-1',
+          unreadOnly: true,
+          page: 1,
+          limit: 20,
+        },
+        'org-1',
+      );
       expect(result.items).toHaveLength(0);
       expect(result.total).toBe(0);
+      expect(result.totalPages).toBe(0);
     });
   });
 
@@ -140,6 +152,7 @@ describe('notificationService', () => {
       const result = await notificationService.unreadCount(
         mockTx as any,
         'user-1',
+        'org-1',
       );
       expect(result).toBe(5);
     });
@@ -158,6 +171,7 @@ describe('notificationService', () => {
         mockTx as any,
         'notif-1',
         'user-1',
+        'org-1',
       );
       expect(result).toBe(true);
     });
@@ -174,6 +188,7 @@ describe('notificationService', () => {
         mockTx as any,
         'notif-999',
         'user-1',
+        'org-1',
       );
       expect(result).toBe(false);
     });
@@ -193,6 +208,7 @@ describe('notificationService', () => {
       const result = await notificationService.markAllRead(
         mockTx as any,
         'user-1',
+        'org-1',
       );
       expect(result).toBe(3);
     });
