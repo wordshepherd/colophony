@@ -6,10 +6,12 @@
  * updates, outbox event emission, and ownership enforcement.
  *
  * The service uses `db` from @colophony/db for cross-org superuser queries.
- * In the test env, DATABASE_URL points to app_user (RLS-enforced), so we
- * mock @colophony/db to re-export the admin pool's drizzle instance as `db`.
+ * This file used to mock that module to re-point `db` at the admin pool, because
+ * the suite's DATABASE_URL was the app_user connection. It is the superuser
+ * connection now (see vitest.config.integration-base.ts), so `db` is already
+ * what the mock was faking and the real singleton is exercised instead.
  */
-import { describe, it, expect, beforeAll, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeAll, afterEach } from 'vitest';
 import { submissions, submissionHistory, outboxEvents } from '@colophony/db';
 import { eq } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/node-postgres';
@@ -23,22 +25,6 @@ import {
   createManuscript,
   createManuscriptVersion,
 } from '../rls/helpers/factories.js';
-
-// Patch `db` to use the admin (superuser) pool so cross-org queries work.
-// The service's cross-org queries use the superuser `db` singleton, but the
-// test env's DATABASE_URL points to app_user (RLS-enforced).
-vi.mock('@colophony/db', async (importOriginal) => {
-  const original = await importOriginal();
-  const mod: Record<string, unknown> = { ...(original as object) };
-  const pg = await import('pg');
-  const orm = await import('drizzle-orm/node-postgres');
-  const adminUrl =
-    process.env.DATABASE_TEST_URL ??
-    'postgresql://test:test@localhost:5433/colophony_test';
-  const adminPool = new pg.Pool({ connectionString: adminUrl, max: 3 });
-  mod.db = orm.drizzle(adminPool);
-  return mod;
-});
 
 let submissionService: Awaited<
   typeof import('../../services/submission.service.js')
