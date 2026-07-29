@@ -1,12 +1,30 @@
 /**
  * Integration tests for auditService.logDirect() and auditService.log()
- * against PostgreSQL with RLS policies enforced.
+ * against a real PostgreSQL instance with RLS policies enabled.
  *
- * Note: logDirect() was previously only unit-tested with mocked DB.
- * These tests exercise the actual service methods as app_user with RLS.
+ * Note: logDirect() was previously only unit-tested with a mocked DB.
+ *
+ * The two methods run on different connections, deliberately, and this suite
+ * exercises each on the one it uses in production:
+ *
+ *   - `logDirect()` calls `db.execute(...)` — the **superuser** singleton from
+ *     packages/db/src/client.ts. That is the point of the method: it records
+ *     events that happen before any per-request transaction exists (auth
+ *     failures, API key rejections), so there is no RLS context to write under.
+ *     It reaches `audit_events` through the `insert_audit_event()` SECURITY
+ *     DEFINER function, which is also why app_user holds no INSERT there —
+ *     see packages/db/privileges.sql.
+ *   - `log()` runs inside an RLS transaction, and is driven here over the **app**
+ *     pool via `withTestRls`, which is what proves the policies apply.
+ *
+ * Reads-back use the admin pool (`adminDb()`) so assertions see every row
+ * regardless of policy.
  *
  * Requires: postgres-test container running on port 5433
- * Config:   vitest.config.rls.ts sets DATABASE_URL → app_user test DB
+ * Config:   vitest.config.integration-base.ts sets DATABASE_URL → superuser and
+ *           DATABASE_APP_URL → app_user. Before 2026-07-29 it pointed both at
+ *           app_user, so `logDirect()` silently ran as app_user here and its
+ *           documented superuser path was never exercised.
  */
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 import { drizzle } from 'drizzle-orm/node-postgres';
