@@ -11,3 +11,5 @@ export { usersContract } from "./users.js";
 export { apiKeysContract } from "./api-keys.js";
 export { formsContract } from "./forms.js";
 export { restListAuditEventsQuery } from "./audit.js";
+export { restListNotificationsQuery } from "./notifications.js";
+export type { RestListNotificationsQuery } from "./notifications.js";

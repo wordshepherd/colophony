@@ -2048,6 +2048,130 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/notifications": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * List notifications
+     * @description Returns a paginated list of in-app notifications, newest first. Returns the inbox of the user this credential acts as. An API key acts as the user who created it, so this is that person’s notifications, not an organization-wide feed. To receive organization-level events, register a webhook endpoint instead.
+     */
+    get: operations["listNotifications"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/notifications/unread-count": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Get unread notification count
+     * @description Returns the number of unread in-app notifications. Returns the inbox of the user this credential acts as. An API key acts as the user who created it, so this is that person’s notifications, not an organization-wide feed. To receive organization-level events, register a webhook endpoint instead.
+     */
+    get: operations["getUnreadNotificationCount"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/notifications/{id}/read": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Mark a notification as read
+     * @description Marks a single unread notification as read. Returns `success: false` rather than an error when nothing matched, so re-sending is safe.
+     */
+    post: operations["markNotificationRead"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/notifications/read-all": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Mark all notifications as read
+     * @description Marks every unread notification as read and returns how many changed. Returns the inbox of the user this credential acts as. An API key acts as the user who created it, so this is that person’s notifications, not an organization-wide feed. To receive organization-level events, register a webhook endpoint instead.
+     */
+    post: operations["markAllNotificationsRead"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/notification-preferences": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * List notification preferences
+     * @description Returns the per-channel, per-event notification preferences for the current user in this organization. Unpaginated: the set is bounded by the number of event types and channels. An event type with no stored row is enabled by default.
+     */
+    get: operations["listNotificationPreferences"];
+    /**
+     * Set a notification preference
+     * @description Creates or updates one preference. Identity is the (channel, eventType) pair carried in the body, so this is idempotent — repeating a call with the same pair overwrites rather than duplicating.
+     */
+    put: operations["upsertNotificationPreference"];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/notification-preferences/batch": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    /**
+     * Set notification preferences in bulk
+     * @description Creates or updates up to 50 preferences in one request. Applied inside a single transaction, so the batch either lands whole or not at all.
+     */
+    put: operations["bulkUpsertNotificationPreferences"];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -12328,6 +12452,248 @@ export interface operations {
              */
             touchedAt: string;
             submissionTitle?: string | null;
+          }[];
+        };
+      };
+    };
+  };
+  listNotifications: {
+    parameters: {
+      query?: {
+        page?: number;
+        limit?: number;
+        unreadOnly?: boolean;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": {
+            /** @description Items on the current page */
+            items: {
+              /** Format: uuid */
+              id: string;
+              eventType: string;
+              title: string;
+              body: string | null;
+              link: string | null;
+              readAt: string | null;
+              /** Format: date-time */
+              createdAt: string;
+            }[];
+            /** @description Total number of items across all pages */
+            total: number;
+            /** @description Current page number */
+            page: number;
+            /** @description Items per page */
+            limit: number;
+            /** @description Total number of pages */
+            totalPages: number;
+          };
+        };
+      };
+    };
+  };
+  getUnreadNotificationCount: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": {
+            count: number;
+          };
+        };
+      };
+    };
+  };
+  markNotificationRead: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": {
+            /** @description False when no unread notification matched — either it does not exist, belongs to another user or organization, or was already read. */
+            success: boolean;
+          };
+        };
+      };
+    };
+  };
+  markAllNotificationsRead: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": {
+            /** @description Number of notifications marked read */
+            count: number;
+          };
+        };
+      };
+    };
+  };
+  listNotificationPreferences: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": {
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            channel: "email" | "in_app";
+            eventType: string;
+            enabled: boolean;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+          }[];
+        };
+      };
+    };
+  };
+  upsertNotificationPreference: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": {
+          /** @enum {string} */
+          channel: "email" | "in_app";
+          /** @enum {string} */
+          eventType:
+            | "submission.received"
+            | "submission.accepted"
+            | "submission.rejected"
+            | "submission.withdrawn"
+            | "contract.ready"
+            | "copyeditor.assigned";
+          enabled: boolean;
+        };
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": {
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            channel: "email" | "in_app";
+            eventType: string;
+            enabled: boolean;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+          };
+        };
+      };
+    };
+  };
+  bulkUpsertNotificationPreferences: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": {
+          preferences: {
+            /** @enum {string} */
+            channel: "email" | "in_app";
+            /** @enum {string} */
+            eventType:
+              | "submission.received"
+              | "submission.accepted"
+              | "submission.rejected"
+              | "submission.withdrawn"
+              | "contract.ready"
+              | "copyeditor.assigned";
+            enabled: boolean;
+          }[];
+        };
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": {
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            channel: "email" | "in_app";
+            eventType: string;
+            enabled: boolean;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
           }[];
         };
       };

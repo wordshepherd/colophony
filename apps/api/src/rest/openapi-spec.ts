@@ -18,6 +18,7 @@ import { issuesRouter } from './routers/issues.js';
 import { cmsConnectionsRouter } from './routers/cms-connections.js';
 import { csrRouter } from './routers/csr.js';
 import { collectionsRouter } from './routers/collections.js';
+import { notificationsRouter } from './routers/notifications.js';
 
 /**
  * The oRPC routers composing the `/v1` REST surface.
@@ -44,6 +45,10 @@ export const restRouter = {
   cmsConnections: cmsConnectionsRouter,
   csr: csrRouter,
   collections: collectionsRouter,
+  // Appended, not inserted: key order sets operation order in the generated
+  // document, so slotting a router mid-list reshuffles the whole spec and both
+  // SDKs for no benefit.
+  notifications: notificationsRouter,
 };
 
 /**
@@ -161,6 +166,11 @@ export const openApiDocumentConfig: OpenAPIGeneratorGenerateOptions = {
       name: 'Audit',
       description:
         'Query the audit log for security and compliance. Admin-only.',
+    },
+    {
+      name: 'Notifications',
+      description:
+        'Read in-app notifications and manage delivery preferences. The inbox belongs to the user a credential acts as, not to the organization — use webhooks for organization-level events.',
     },
   ],
   externalDocs: {

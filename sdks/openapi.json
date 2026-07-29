@@ -85,6 +85,10 @@
     {
       "name": "Audit",
       "description": "Query the audit log for security and compliance. Admin-only."
+    },
+    {
+      "name": "Notifications",
+      "description": "Read in-app notifications and manage delivery preferences. The inbox belongs to the user a credential acts as, not to the organization — use webhooks for organization-level events."
     }
   ],
   "externalDocs": {
@@ -23189,6 +23193,484 @@
                       "icon",
                       "addedAt",
                       "touchedAt"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/notifications": {
+      "get": {
+        "operationId": "listNotifications",
+        "summary": "List notifications",
+        "description": "Returns a paginated list of in-app notifications, newest first. Returns the inbox of the user this credential acts as. An API key acts as the user who created it, so this is that person’s notifications, not an organization-wide feed. To receive organization-level events, register a webhook endpoint instead.",
+        "tags": ["Notifications"],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991,
+              "default": 1,
+              "description": "Page number (1-based)"
+            },
+            "allowEmptyValue": true,
+            "allowReserved": true
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "default": 20,
+              "description": "Items per page (1-50, default 20)"
+            },
+            "allowEmptyValue": true,
+            "allowReserved": true
+          },
+          {
+            "name": "unreadOnly",
+            "in": "query",
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "description": "Return only notifications that have not been read"
+            },
+            "allowEmptyValue": true,
+            "allowReserved": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "eventType": {
+                            "type": "string"
+                          },
+                          "title": {
+                            "type": "string"
+                          },
+                          "body": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "link": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "readAt": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "format": "date-time",
+                                "x-native-type": "date"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "createdAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "x-native-type": "date"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "eventType",
+                          "title",
+                          "body",
+                          "link",
+                          "readAt",
+                          "createdAt"
+                        ]
+                      },
+                      "description": "Items on the current page"
+                    },
+                    "total": {
+                      "type": "number",
+                      "description": "Total number of items across all pages"
+                    },
+                    "page": {
+                      "type": "number",
+                      "description": "Current page number"
+                    },
+                    "limit": {
+                      "type": "number",
+                      "description": "Items per page"
+                    },
+                    "totalPages": {
+                      "type": "number",
+                      "description": "Total number of pages"
+                    }
+                  },
+                  "required": ["items", "total", "page", "limit", "totalPages"]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/notifications/unread-count": {
+      "get": {
+        "operationId": "getUnreadNotificationCount",
+        "summary": "Get unread notification count",
+        "description": "Returns the number of unread in-app notifications. Returns the inbox of the user this credential acts as. An API key acts as the user who created it, so this is that person’s notifications, not an organization-wide feed. To receive organization-level events, register a webhook endpoint instead.",
+        "tags": ["Notifications"],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "count": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    }
+                  },
+                  "required": ["count"]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/notifications/{id}/read": {
+      "post": {
+        "operationId": "markNotificationRead",
+        "summary": "Mark a notification as read",
+        "description": "Marks a single unread notification as read. Returns `success: false` rather than an error when nothing matched, so re-sending is safe.",
+        "tags": ["Notifications"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Resource UUID"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "description": "False when no unread notification matched — either it does not exist, belongs to another user or organization, or was already read."
+                    }
+                  },
+                  "required": ["success"]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/notifications/read-all": {
+      "post": {
+        "operationId": "markAllNotificationsRead",
+        "summary": "Mark all notifications as read",
+        "description": "Marks every unread notification as read and returns how many changed. Returns the inbox of the user this credential acts as. An API key acts as the user who created it, so this is that person’s notifications, not an organization-wide feed. To receive organization-level events, register a webhook endpoint instead.",
+        "tags": ["Notifications"],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "count": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991,
+                      "description": "Number of notifications marked read"
+                    }
+                  },
+                  "required": ["count"]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/notification-preferences": {
+      "get": {
+        "operationId": "listNotificationPreferences",
+        "summary": "List notification preferences",
+        "description": "Returns the per-channel, per-event notification preferences for the current user in this organization. Unpaginated: the set is bounded by the number of event types and channels. An event type with no stored row is enabled by default.",
+        "tags": ["Notifications"],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "channel": {
+                        "enum": ["email", "in_app"],
+                        "type": "string"
+                      },
+                      "eventType": {
+                        "type": "string"
+                      },
+                      "enabled": {
+                        "type": "boolean"
+                      },
+                      "createdAt": {
+                        "type": "string",
+                        "format": "date-time",
+                        "x-native-type": "date"
+                      },
+                      "updatedAt": {
+                        "type": "string",
+                        "format": "date-time",
+                        "x-native-type": "date"
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "channel",
+                      "eventType",
+                      "enabled",
+                      "createdAt",
+                      "updatedAt"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "operationId": "upsertNotificationPreference",
+        "summary": "Set a notification preference",
+        "description": "Creates or updates one preference. Identity is the (channel, eventType) pair carried in the body, so this is idempotent — repeating a call with the same pair overwrites rather than duplicating.",
+        "tags": ["Notifications"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "channel": {
+                    "enum": ["email", "in_app"],
+                    "type": "string"
+                  },
+                  "eventType": {
+                    "enum": [
+                      "submission.received",
+                      "submission.accepted",
+                      "submission.rejected",
+                      "submission.withdrawn",
+                      "contract.ready",
+                      "copyeditor.assigned"
+                    ],
+                    "type": "string"
+                  },
+                  "enabled": {
+                    "type": "boolean"
+                  }
+                },
+                "required": ["channel", "eventType", "enabled"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "channel": {
+                      "enum": ["email", "in_app"],
+                      "type": "string"
+                    },
+                    "eventType": {
+                      "type": "string"
+                    },
+                    "enabled": {
+                      "type": "boolean"
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "x-native-type": "date"
+                    },
+                    "updatedAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "x-native-type": "date"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "channel",
+                    "eventType",
+                    "enabled",
+                    "createdAt",
+                    "updatedAt"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/notification-preferences/batch": {
+      "put": {
+        "operationId": "bulkUpsertNotificationPreferences",
+        "summary": "Set notification preferences in bulk",
+        "description": "Creates or updates up to 50 preferences in one request. Applied inside a single transaction, so the batch either lands whole or not at all.",
+        "tags": ["Notifications"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "preferences": {
+                    "type": "array",
+                    "minItems": 1,
+                    "maxItems": 50,
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "channel": {
+                          "enum": ["email", "in_app"],
+                          "type": "string"
+                        },
+                        "eventType": {
+                          "enum": [
+                            "submission.received",
+                            "submission.accepted",
+                            "submission.rejected",
+                            "submission.withdrawn",
+                            "contract.ready",
+                            "copyeditor.assigned"
+                          ],
+                          "type": "string"
+                        },
+                        "enabled": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": ["channel", "eventType", "enabled"]
+                    }
+                  }
+                },
+                "required": ["preferences"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "channel": {
+                        "enum": ["email", "in_app"],
+                        "type": "string"
+                      },
+                      "eventType": {
+                        "type": "string"
+                      },
+                      "enabled": {
+                        "type": "boolean"
+                      },
+                      "createdAt": {
+                        "type": "string",
+                        "format": "date-time",
+                        "x-native-type": "date"
+                      },
+                      "updatedAt": {
+                        "type": "string",
+                        "format": "date-time",
+                        "x-native-type": "date"
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "channel",
+                      "eventType",
+                      "enabled",
+                      "createdAt",
+                      "updatedAt"
                     ]
                   }
                 }

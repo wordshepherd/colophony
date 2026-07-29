@@ -103,8 +103,11 @@ describe('generateOpenApiDocument', () => {
   });
 
   it('includes the API key scopes added in P0.1b', () => {
-    // notifications:read/write and webhooks:read are enforced by the tRPC
-    // routers but never reached the committed spec.
+    // webhooks:read is still enforced only by its tRPC router and reaches the
+    // spec solely through the create-API-key request body. notifications:read
+    // and notifications:write are now also carried by real routes, so this
+    // assertion no longer stands alone for them — keep it anyway, since it is
+    // what catches a scope silently dropped from the enum.
     const serialized = JSON.stringify(doc);
     expect(serialized).toContain('notifications:read');
     expect(serialized).toContain('notifications:write');
