@@ -104,6 +104,17 @@
       postgres start. If that is deliberate for staging, note it in `docs/deployment.md`; if
       not, it is a gap that has been silent for months. — (found 2026-07-27)
 - [ ] [P3] CI lost per-request E2E server logging when the Playwright jobs moved to `next start`. The `GET /route 200 in Nms (next.js: …)` lines are a **dev-server** feature; a production server logs startup and errors only. So `apps/web/next-e2e.log` — added in PR #512 specifically to make E2E failures diagnosable — is now about six lines in CI and carries no request history (confirmed on run 30375890460). It still catches server-side crashes, and the request trace is reproducible locally in dev mode, so this is a real but bounded loss. If a future CI-only failure needs the trace, options are a request-logging middleware active only under an E2E flag, or `--experimental-cpu-prof`-style instrumentation on the failing job. Do not solve it by reverting CI to the dev server — that reinstates the route-group 404 — (2026-07-28, while mitigating the `(dashboard)` 404)
+- [ ] [P2] `docs/repo-hygiene-audit.md` enumerates, in tracked and therefore public content,
+      the local-only tooling paths that the repo deliberately keeps out of the remote. Naming
+      them defeats the point of excluding them: the exclusion lives in `.git/info/exclude`
+      rather than `.gitignore` precisely so the list itself never ships, and this document
+      re-publishes it. Sections around lines 271–288 are the ones to rework.
+      This is the failure mode the hygiene rules in root and per-directory guidance already
+      warn about — a document _describing_ the policy leaks by quoting what the policy hides —
+      and it is easy to reproduce, so worth fixing rather than tolerating. Two fresh instances
+      were caught and reworded before landing on 2026-07-30, which is what surfaced the
+      pre-existing ones. Rewrite to describe the mechanism and the rationale without listing
+      the paths; the audit's conclusions survive that edit intact. — (found 2026-07-30)
 - [ ] [P3] Seed data ages out of a long-lived dev database, and `db:seed` will not repair it. Submission periods are seeded at fixed offsets from the seed date, so `quarterly-review` eventually has no open period — which fails 11 of 13 `embed` tests with `No open period found`. `pnpm db:seed` is idempotent-by-skip, so it is a no-op once data exists; only the destructive `db:reset` refreshes the dates. CI is unaffected (it seeds fresh each run), so this only ever bites locally, and it looks like a code regression rather than stale data. Either make the seed refresh period dates when they have closed, or have `global-setup.ts` fail with a "run `pnpm db:reset`" message when no open period exists for the seed org — (found 2026-07-27 while verifying the E2E auth rework)
 
 ---
@@ -579,9 +590,24 @@ Ordered as the design doc's Phase 0/D.
       drops the retained job first; `retryDelivery` uses it, and an integration test covers
       the cancel → re-enable → retry → delivered round trip. This was live for `FAILED`
       retries too, not just the `CANCELLED` path added here.
-- [ ] **[P2] No dedup constraint on `webhook_deliveries`.** `createDelivery`
-      (`webhook.service.ts:222`) has no unique constraint per endpoint/event, so Inngest
-      retries or replayed events can duplicate deliveries. — (design review 2026-07-27)
+- [ ] **[P2] `webhook_deliveries` has no dedup constraint — but a constraint alone would not
+      dedup anything.** The absence is real: the table declares three plain indexes and no
+      unique constraint (`packages/db/src/schema/webhook-endpoints.ts`, migration `0033`), and
+      `createDelivery` (now `webhook.service.ts:272`, not `:222`) is a plain insert with no
+      `onConflict`.
+      **The originally proposed fix does not work, which is why this is still open.** A unique
+      constraint on `(webhook_endpoint_id, event_id)` would never collide, because `event_id`
+      is freshly generated at both call sites rather than carried from the source event:
+      `inngest/functions/webhook-delivery.ts:50` falls back to `crypto.randomUUID()` whenever
+      the Inngest event has no id, and `trpc/routers/webhooks.ts:155` always generates one.
+      Two deliveries of the "same" event therefore get different `event_id`s and the
+      constraint passes.
+      So the work is ordered: **establish a stable, source-derived event id first**, then add
+      the constraint. Without that, adding the constraint yields a schema change that looks
+      like idempotency and provides none — worse than the current state, which at least does
+      not claim to dedup. Worth checking what identifier the Inngest event actually carries
+      before assuming one exists. — (design review 2026-07-27; premise corrected 2026-07-30
+      after verifying against the code)
 - [x] **[P1] `apiKeyService` carries no explicit `organizationId` predicate.** `list`
       (`apps/api/src/services/api-key.service.ts:71`), `revoke` (`:129`) and `delete`
       (`:145`) relied on RLS alone, and no caller passed an org ID
