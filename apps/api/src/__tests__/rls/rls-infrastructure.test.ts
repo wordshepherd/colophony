@@ -457,14 +457,59 @@ describe('RLS Infrastructure', () => {
       expect(delRows[0].has_priv).toBe(false);
 
       // EXECUTE on insert_audit_event: yes
+      // NOTE: has_function_privilege RAISES undefined_function for a signature
+      // with no matching function — it does not return false. So this string
+      // must track migration 0070's 14-arg signature exactly, or the suite
+      // errors rather than failing with a useful message.
       const { rows: execRows } = await admin.query<{ has_priv: boolean }>(
         `SELECT has_function_privilege(
           'app_user',
-          'insert_audit_event(varchar, varchar, uuid, uuid, uuid, text, text, varchar, text, varchar, varchar, varchar)',
+          'insert_audit_event(varchar, varchar, uuid, uuid, uuid, text, text, varchar, text, varchar, varchar, varchar, uuid, varchar)',
           'EXECUTE'
         ) as has_priv`,
       );
       expect(execRows[0].has_priv).toBe(true);
+    });
+
+    /**
+     * The privilege check above passes with a stray second overload present and
+     * with PUBLIC holding EXECUTE — i.e. it cannot see the exact hazard that
+     * makes migration 0070 use DROP + CREATE rather than CREATE OR REPLACE.
+     *
+     * A changed parameter list creates a NEW function. The old one keeps
+     * standing, and the new one is owned by whoever ran the migration (the
+     * superuser) with EXECUTE granted to PUBLIC by default — a SECURITY DEFINER
+     * function that bypasses RLS, which is precisely what the ownership
+     * transfer to audit_writer exists to prevent.
+     */
+    it('has exactly one insert_audit_event, owned by audit_writer, not PUBLIC-executable', async () => {
+      const admin = getAdminPool();
+
+      const { rows } = await admin.query<{
+        owner: string;
+        arg_count: number;
+        is_security_definer: boolean;
+        public_can_execute: boolean;
+      }>(
+        `SELECT
+           r.rolname   AS owner,
+           p.pronargs  AS arg_count,
+           p.prosecdef AS is_security_definer,
+           has_function_privilege('public', p.oid, 'EXECUTE') AS public_can_execute
+         FROM pg_proc p
+         JOIN pg_roles r ON r.oid = p.proowner
+         JOIN pg_namespace n ON n.oid = p.pronamespace
+         WHERE p.proname = 'insert_audit_event' AND n.nspname = 'public'`,
+      );
+
+      // More than one row means a CREATE OR REPLACE added an overload instead
+      // of replacing the function.
+      expect(rows).toHaveLength(1);
+      expect(rows[0].owner).toBe('audit_writer');
+      expect(rows[0].is_security_definer).toBe(true);
+      expect(rows[0].public_can_execute).toBe(false);
+      // 12 original params + principal_id + principal_type
+      expect(Number(rows[0].arg_count)).toBe(14);
     });
   });
 

@@ -1,12 +1,20 @@
 import fp from 'fastify-plugin';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
-import { auditService } from '../services/audit.service.js';
+import {
+  auditService,
+  principalFromAuthContext,
+} from '../services/audit.service.js';
 import type { AuditLogParams } from '@colophony/types';
 
 type RequestAuditFn = (
   params: Omit<
     AuditLogParams,
-    'actorId' | 'organizationId' | 'ipAddress' | 'userAgent'
+    | 'actorId'
+    | 'organizationId'
+    | 'ipAddress'
+    | 'userAgent'
+    | 'principalId'
+    | 'principalType'
   >,
 ) => Promise<void>;
 
@@ -43,6 +51,12 @@ export default fp(
         const requestId = String(request.id);
         const method = request.method;
         const route = request.routeOptions?.url ?? request.url.split('?')[0];
+        // The acting credential, distinct from actorId. Must stay identical to
+        // the fallback path in hooks/fastify-guards.ts — rows from either are
+        // meant to be indistinguishable.
+        const { principalId, principalType } = principalFromAuthContext(
+          request.authContext,
+        );
 
         request.audit = async (params) => {
           await auditService.log(tx, {
@@ -54,6 +68,8 @@ export default fp(
             requestId,
             method,
             route,
+            principalId,
+            principalType,
           } as AuditLogParams);
         };
       },

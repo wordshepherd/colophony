@@ -384,6 +384,21 @@ export const AuditResources = {
 export type AuditResource =
   (typeof AuditResources)[keyof typeof AuditResources];
 
+/**
+ * Kinds of acting credential recorded in `audit_events.principal_type`.
+ *
+ * A const object rather than a pgEnum, matching `AuditResources` above: the
+ * column is a plain varchar, so admitting `service_principal` when that lands
+ * needs no migration.
+ */
+export const AuditPrincipalTypes = {
+  API_KEY: "api_key",
+  SERVICE_PRINCIPAL: "service_principal",
+} as const;
+
+export type AuditPrincipalType =
+  (typeof AuditPrincipalTypes)[keyof typeof AuditPrincipalTypes];
+
 // ---------------------------------------------------------------------------
 // Discriminated union — enforces valid action↔resource pairs
 // ---------------------------------------------------------------------------
@@ -392,6 +407,7 @@ interface BaseAuditParams {
   resourceId?: string;
   oldValue?: unknown;
   newValue?: unknown;
+  /** The effective user — for an API key, the key's creator. */
   actorId?: string;
   organizationId?: string;
   ipAddress?: string;
@@ -399,6 +415,13 @@ interface BaseAuditParams {
   requestId?: string;
   method?: string;
   route?: string;
+  /**
+   * The acting credential, distinct from `actorId`. Derived at the request
+   * boundary (`hooks/audit.ts`, `hooks/fastify-guards.ts`) — never supplied by
+   * callers, which is why the audit-fn types omit both fields.
+   */
+  principalId?: string;
+  principalType?: AuditPrincipalType;
 }
 
 export interface UserAuditParams extends BaseAuditParams {
@@ -918,6 +941,13 @@ export const listAuditEventsSchema = z.object({
     .uuid()
     .optional()
     .describe("Filter by the affected resource ID"),
+  principalId: z
+    .string()
+    .uuid()
+    .optional()
+    .describe(
+      "Filter by the acting credential (API key ID) rather than the effective user",
+    ),
   from: z.coerce.date().optional().describe("Start of date range (ISO-8601)"),
   to: z.coerce.date().optional().describe("End of date range (ISO-8601)"),
   page: z.number().int().min(1).default(1).describe("Page number (1-based)"),
@@ -948,7 +978,23 @@ export const auditEventResponseSchema = z.object({
     .string()
     .uuid()
     .nullable()
-    .describe("ID of the user who performed the action"),
+    .describe(
+      "Effective user who performed the action — for an API key, the key's creator",
+    ),
+  principalId: z
+    .string()
+    .uuid()
+    .nullable()
+    .describe(
+      "Acting credential (API key ID), or null when a user acted directly",
+    ),
+  // Deliberately z.string(), not the AuditPrincipalTypes enum — same reasoning
+  // as apiKeyResponseSchema.scopes: this is read back from a varchar column, so
+  // a value that has since left the enum must still list rather than 500.
+  principalType: z
+    .string()
+    .nullable()
+    .describe("Kind of acting credential (e.g. api_key), or null"),
   oldValue: z.unknown().nullable().describe("Previous state before the change"),
   newValue: z.unknown().nullable().describe("New state after the change"),
   ipAddress: z.string().nullable().describe("IP address of the request"),

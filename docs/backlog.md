@@ -441,11 +441,74 @@ Ordered as the design doc's Phase 0/D.
       plugin registration order across files. The query was wrong about the route being
       unguarded; it was incidentally near this, which is the real issue. —
       (found 2026-07-29 while triaging that alert)
-- [ ] **[P1] Audit cannot distinguish an API key from its creator.** `audit_events` has a
+- [x] **[P1] Audit cannot distinguish an API key from its creator.** `audit_events` has a
       single `actor_id` and `BaseAuditParams` carries no `apiKeyId`, so a key's actions and
       the human's own actions are recorded identically. Add `principal_id` / `principal_type`
       (also the prerequisite for acting-as). Requires updating `insert_audit_event()`. —
-      (design doc §0.1(d), P2.2)
+      (design doc §0.1(d), P2.2; done 2026-07-30)
+      `actor_id` keeps meaning the **effective user**; `principal_id`/`principal_type` record
+      the **acting credential**. Migration `0070`. The two cases that exist today are
+      implemented (direct human → principal NULL; org key → principal = key, actor = creator);
+      the two instance-principal cases need no further schema work. Backfill was a no-op —
+      NULL correctly means "we do not know" for every historical row.
+      **The migration had to `DROP` and re-`CREATE` `insert_audit_event()`, for a reason the
+      familiar trap does not cover.** The known rule is that `CREATE OR REPLACE` cannot change a
+      _return type_ — the reason migrations 0047, 0055 and 0060 each drop first. This function
+      returns `void` and always will, so that rule never fires. The actual hazard is that a
+      changed **parameter list makes a new overload**:
+      `CREATE OR REPLACE` with 14 args would have left the 12-arg function standing, owned by
+      the migration runner (superuser) with `EXECUTE` to `PUBLIC` by default — a SECURITY
+      DEFINER function that bypasses RLS, which is exactly what 0010's ownership transfer to
+      `audit_writer` exists to prevent. No prior migration had ever added a parameter, so there
+      was no precedent; the three existing `DROP FUNCTION` migrations all drop for return-type
+      changes and keep their parameter lists identical.
+      **`rls-infrastructure.test.ts` now pins the invariant rather than the privilege.** The
+      old assertion only checked that `app_user` _has_ EXECUTE, which passes with a stray
+      overload present and with `PUBLIC` holding EXECUTE — it could not see this failure at
+      all. The new one asserts exactly **one** `insert_audit_event`, owned by `audit_writer`,
+      `prosecdef`, 14 args, no `PUBLIC` EXECUTE. Verified non-vacuous by injecting the overload
+      inside the test body: it fails, and reports `owner: 'test'` (the superuser). Note the
+      injection must happen _in_ the test — `globalSetup` re-provisions the schema, so an
+      overload created beforehand is wiped before the assertion runs and the check passes
+      misleadingly.
+      Also note `has_function_privilege` **raises `undefined_function`** for a signature with
+      no matching function rather than returning false, so the hardcoded signature string in
+      that file errors the suite rather than failing it — update it in lockstep.
+      **The two new params are appended last with `DEFAULT NULL`**, so all three existing call
+      arities still bind unchanged (12-arg in `gdpr.service.ts`, 2-arg in
+      `rls-no-context.test.ts`); verified against the real database.
+      Derivation lives in `principalFromAuthContext` and is called from the only two places
+      that enrich from an `AuthContext` — `hooks/audit.ts` and the `withRls` fallback in
+      `hooks/fastify-guards.ts` (the SSE route, which has no request transaction). The ~110
+      `*WithAudit` service methods and `services/context.ts` needed no change at all.
+      **The discriminator is the presence of `apiKeyId`, never `authMethod === 'apikey'`** —
+      same allowlist rule as `internalOnly` and the per-credential rate limiter. Pinned twice
+      (unit + end-to-end); verified an `authMethod`-based implementation fails only that one
+      case out of six.
+- [ ] **[P1] `auditService.list` and `getById` carry no explicit `organizationId` predicate.**
+      `apps/api/src/services/audit.service.ts` builds `list`'s `where` from
+      action/resource/actor/resource-id/principal/date only, and `getById` filters on `id`
+      alone — RLS is the sole defense on both. The same shape as `apiKeyService` (#521),
+      `organizationService.listMembers` (#527) and `notificationService` (#531), and it is the
+      only remaining read of a tenant table in that state on this surface.
+      Fix is the house convention `(tx, input, orgId)` with **one hoisted condition reused by
+      the page and count queries** — filtering only the page leaves `total` reporting every
+      org's event count — plus an admin-pool test mirroring
+      `__tests__/rls/api-key-service.test.ts`, since the existing router specs mock the service
+      outright and would pass with or without a predicate. Callers to thread: the REST and tRPC
+      audit routers (both `adminProcedure`, so `orgId` is already resolved).
+      **Deliberately not bundled into the principal-attribution PR**, following the precedent
+      set when `apiKeyService`'s predicate fix was left out of P0.5b so a multi-tenancy change
+      would not ride inside an unrelated one. — (found 2026-07-30 by the plan review for the
+      principal-attribution work)
+- [ ] **[P3] The federation audit log viewer's date filters are silently dropped.**
+      `apps/web/src/components/federation/audit-log-viewer.tsx` sends `dateFrom`/`dateTo` in
+      its query input, but `listAuditEventsSchema` declares `from`/`to`, so both are discarded
+      server-side and the From/To inputs do nothing. The user gets a full unfiltered result set
+      and no error. The same component also re-declares its own `AuditEvent` interface rather
+      than importing from `@colophony/types`, which is why the mismatch type-checks — fixing
+      that import would have caught this. — (found 2026-07-30 while mapping the audit read
+      surface)
 - [ ] **[P2] Honour `X-Act-As-User` on ordinary org-scoped API keys.** `hooks/auth.ts:314`
       unconditionally sets `userId: creator.id` for `authMethod: 'apikey'`, so every action a
       `col_live_` key takes is attributed to whoever minted it — including `submitterId` and

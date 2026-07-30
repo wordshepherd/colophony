@@ -30,11 +30,19 @@ vi.mock('@colophony/db', () => ({
 }));
 
 const mockAuditLog = vi.fn();
-vi.mock('../services/audit.service.js', () => ({
-  auditService: {
-    log: (...args: unknown[]) => mockAuditLog(...args),
-  },
-}));
+// `principalFromAuthContext` is the real implementation on purpose — the
+// fallback path must derive the same principal the request-transaction path
+// does, and a stub here would assert nothing.
+vi.mock('../services/audit.service.js', async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import('../services/audit.service.js')>();
+  return {
+    auditService: {
+      log: (...args: unknown[]) => mockAuditLog(...args),
+    },
+    principalFromAuthContext: actual.principalFromAuthContext,
+  };
+});
 
 const apiKeyContext = {
   userId: '00000000-0000-4000-a000-000000000001',
@@ -340,6 +348,10 @@ describe('fastify-guards', () => {
           actorId: apiKeyContext.userId,
           route: '/probe',
           method: 'GET',
+          // Rows from this path must be indistinguishable from the
+          // request-transaction path, principal included.
+          principalId: apiKeyContext.apiKeyId,
+          principalType: 'api_key',
         }),
       );
       await app.close();

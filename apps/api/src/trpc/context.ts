@@ -5,7 +5,12 @@ import type { DrizzleDb } from '@colophony/db';
 type RequestAuditFn = (
   params: Omit<
     AuditLogParams,
-    'actorId' | 'organizationId' | 'ipAddress' | 'userAgent'
+    | 'actorId'
+    | 'organizationId'
+    | 'ipAddress'
+    | 'userAgent'
+    | 'principalId'
+    | 'principalType'
   >,
 ) => Promise<void>;
 

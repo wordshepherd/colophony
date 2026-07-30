@@ -55,9 +55,17 @@ vi.mock('drizzle-orm/node-postgres', () => ({
   drizzle: vi.fn(() => ({ __mock: true })),
 }));
 
-vi.mock('../services/audit.service.js', () => ({
-  auditService: { log: mockAuditLog },
-}));
+// `log` is mocked, but `principalFromAuthContext` is deliberately the real
+// implementation — the principal-derivation tests below would assert nothing
+// against a stub.
+vi.mock('../services/audit.service.js', async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import('../services/audit.service.js')>();
+  return {
+    auditService: { log: mockAuditLog },
+    principalFromAuthContext: actual.principalFromAuthContext,
+  };
+});
 
 import fp from 'fastify-plugin';
 import orgContextPlugin from './org-context.js';
@@ -72,12 +80,19 @@ const fakeAuthPlugin = fp(
       const testUserId = request.headers['x-test-user-id'] as
         string | undefined;
       if (testUserId) {
+        // `x-test-api-key-id` and `x-test-auth-method` let a case stand in for
+        // key auth (and for a credential whose authMethod is not 'apikey').
+        const apiKeyId = request.headers['x-test-api-key-id'] as
+          string | undefined;
+        const authMethod = (request.headers['x-test-auth-method'] ??
+          'test') as AuthContext['authMethod'];
         request.authContext = {
           userId: testUserId,
           zitadelUserId: testUserId,
           email: 'test@example.com',
           emailVerified: true,
-          authMethod: 'test',
+          authMethod,
+          ...(apiKeyId ? { apiKeyId } : {}),
         } satisfies AuthContext;
       }
     });
@@ -159,6 +174,66 @@ describe('audit plugin', () => {
     expect(params.method).toBe('GET');
     expect(params.route).toBe('/test');
     await app.close();
+  });
+
+  // -------------------------------------------------------------------------
+  // Principal attribution — the acting credential, distinct from the actor
+  // -------------------------------------------------------------------------
+
+  /** Register a route that logs one audit event, then call it. */
+  async function auditOnce(
+    headers: Record<string, string>,
+  ): Promise<Record<string, unknown>> {
+    const app = await buildApp();
+    app.get('/test', async (request) => {
+      await request.audit({ resource: 'user', action: 'USER_CREATED' });
+      return { ok: true };
+    });
+    const response = await app.inject({ method: 'GET', url: '/test', headers });
+    expect(response.statusCode).toBe(200);
+    expect(mockAuditLog).toHaveBeenCalledOnce();
+    const params = mockAuditLog.mock.calls[0][1] as Record<string, unknown>;
+    await app.close();
+    return params;
+  }
+
+  it('records the acting credential when the request is authenticated by an API key', async () => {
+    const params = await auditOnce({
+      'x-test-user-id': 'creator-1',
+      'x-test-api-key-id': 'key-abc',
+      'x-test-auth-method': 'apikey',
+    });
+
+    // The whole point: the key and its creator are now distinguishable.
+    expect(params.principalId).toBe('key-abc');
+    expect(params.principalType).toBe('api_key');
+    expect(params.actorId).toBe('creator-1');
+  });
+
+  it('records no principal when a user acts directly', async () => {
+    const params = await auditOnce({ 'x-test-user-id': 'user-42' });
+
+    expect(params.principalId).toBeUndefined();
+    expect(params.principalType).toBeUndefined();
+    expect(params.actorId).toBe('user-42');
+  });
+
+  /**
+   * Pins the discriminator: presence of `apiKeyId`, never
+   * `authMethod === 'apikey'`. An implementation keyed on `authMethod` passes
+   * every other case here and fails only this one — which is the point. The
+   * planned `col_svc_` service principal will carry a different `authMethod`
+   * while still being a credential, and must not silently lose attribution.
+   */
+  it('records the principal from apiKeyId even when authMethod is not apikey', async () => {
+    const params = await auditOnce({
+      'x-test-user-id': 'creator-1',
+      'x-test-api-key-id': 'key-xyz',
+      'x-test-auth-method': 'test',
+    });
+
+    expect(params.principalId).toBe('key-xyz');
+    expect(params.principalType).toBe('api_key');
   });
 
   it('propagates errors from auditService.log', async () => {

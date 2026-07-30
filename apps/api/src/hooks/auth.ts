@@ -8,8 +8,13 @@ import type {
   AuthAuditParams,
   ApiKeyAuditParams,
   ApiKeyScope,
+  AuditPrincipalType,
 } from '@colophony/types';
-import { AuditActions, AuditResources } from '@colophony/types';
+import {
+  AuditActions,
+  AuditResources,
+  AuditPrincipalTypes,
+} from '@colophony/types';
 import type { Env } from '../config/env.js';
 import { auditService } from '../services/audit.service.js';
 import { apiKeyService } from '../services/api-key.service.js';
@@ -154,12 +159,19 @@ export default fp(
       }
     }
 
-    /** Log an auth failure audit event. Never throws — swallows errors. */
+    /**
+     * Log an auth failure audit event. Never throws — swallows errors.
+     *
+     * `principal` is supplied only where the key row was resolved before being
+     * rejected (expired / revoked / creator deactivated). An unrecognised key
+     * has no id to record — only a prefix, which stays in `details`.
+     */
     async function logAuthFailure(
       request: FastifyRequest,
       action: AuthAuditParams['action'] | ApiKeyAuditParams['action'],
       details: Record<string, unknown>,
       actorId?: string,
+      principal?: { id: string; type: AuditPrincipalType },
     ): Promise<void> {
       recordAuthFailure(request.ip);
       try {
@@ -178,6 +190,8 @@ export default fp(
           requestId: String(request.id),
           method: request.method,
           route: request.routeOptions?.url ?? request.url.split('?')[0],
+          principalId: principal?.id,
+          principalType: principal?.type,
         } as AuthAuditParams | ApiKeyAuditParams);
       } catch (err) {
         request.log.warn({ err }, 'Failed to log auth failure audit event');
@@ -288,30 +302,39 @@ export default fp(
             }
             const { apiKey, creator } = result;
             if (apiKey.expiresAt && apiKey.expiresAt < new Date()) {
-              void logAuthFailure(request, AuditActions.API_KEY_AUTH_FAILED, {
-                reason: 'expired',
-                keyId: apiKey.id,
-              });
+              void logAuthFailure(
+                request,
+                AuditActions.API_KEY_AUTH_FAILED,
+                { reason: 'expired', keyId: apiKey.id },
+                undefined,
+                { id: apiKey.id, type: AuditPrincipalTypes.API_KEY },
+              );
               return reply.status(401).send({
                 error: 'unauthorized',
                 message: 'API key has expired',
               });
             }
             if (apiKey.revokedAt) {
-              void logAuthFailure(request, AuditActions.API_KEY_AUTH_FAILED, {
-                reason: 'revoked',
-                keyId: apiKey.id,
-              });
+              void logAuthFailure(
+                request,
+                AuditActions.API_KEY_AUTH_FAILED,
+                { reason: 'revoked', keyId: apiKey.id },
+                undefined,
+                { id: apiKey.id, type: AuditPrincipalTypes.API_KEY },
+              );
               return reply.status(401).send({
                 error: 'unauthorized',
                 message: 'API key has been revoked',
               });
             }
             if (creator.deletedAt) {
-              void logAuthFailure(request, AuditActions.API_KEY_AUTH_FAILED, {
-                reason: 'creator_deactivated',
-                keyId: apiKey.id,
-              });
+              void logAuthFailure(
+                request,
+                AuditActions.API_KEY_AUTH_FAILED,
+                { reason: 'creator_deactivated', keyId: apiKey.id },
+                undefined,
+                { id: apiKey.id, type: AuditPrincipalTypes.API_KEY },
+              );
               return reply.status(401).send({
                 error: 'unauthorized',
                 message: 'API key creator account has been deactivated',

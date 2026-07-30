@@ -4,12 +4,18 @@ import type { AuditLogParams, Role } from '@colophony/types';
 /**
  * Audit function compatible with the request-scoped `RequestAuditFn` from the
  * audit hook. The closure already enriches with HTTP metadata (actorId, orgId,
- * IP, user-agent), so callers only supply business-level fields.
+ * IP, user-agent) and the acting credential (principalId, principalType), so
+ * callers only supply business-level fields.
  */
 export type AuditFn = (
   params: Omit<
     AuditLogParams,
-    'actorId' | 'organizationId' | 'ipAddress' | 'userAgent'
+    | 'actorId'
+    | 'organizationId'
+    | 'ipAddress'
+    | 'userAgent'
+    | 'principalId'
+    | 'principalType'
   >,
 ) => Promise<void>;
 

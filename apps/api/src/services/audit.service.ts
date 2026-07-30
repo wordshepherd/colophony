@@ -9,7 +9,10 @@ import {
   type DrizzleDb,
 } from '@colophony/db';
 import { desc, count } from 'drizzle-orm';
+import { AuditPrincipalTypes } from '@colophony/types';
 import type {
+  AuditPrincipalType,
+  AuthContext,
   AuditLogParams,
   AuthAuditParams,
   ApiKeyAuditParams,
@@ -75,8 +78,33 @@ function insertAuditSql(params: AuditLogParams) {
     ${serializeValue(params.oldValue)}::text, ${serializeValue(params.newValue)}::text,
     ${params.ipAddress ?? null}::varchar, ${params.userAgent ?? null}::text,
     ${params.requestId ?? null}::varchar, ${params.method ?? null}::varchar,
-    ${params.route ?? null}::varchar
+    ${params.route ?? null}::varchar,
+    ${params.principalId ?? null}::uuid, ${params.principalType ?? null}::varchar
   )`;
+}
+
+/**
+ * Derive the acting credential from a request's auth context.
+ *
+ * The discriminator is the **presence of `apiKeyId`**, never
+ * `authMethod === 'apikey'` — the same allowlist-not-denylist rule as
+ * `internalOnly` and the per-credential rate limiter. A future `col_svc_`
+ * service principal must get an explicit branch here rather than silently
+ * inheriting the `api_key` label.
+ */
+export function principalFromAuthContext(
+  auth: AuthContext | null | undefined,
+): {
+  principalId?: string;
+  principalType?: AuditPrincipalType;
+} {
+  if (auth?.apiKeyId) {
+    return {
+      principalId: auth.apiKeyId,
+      principalType: AuditPrincipalTypes.API_KEY,
+    };
+  }
+  return {};
 }
 
 /**
@@ -109,6 +137,8 @@ function parseAuditRow(row: {
   requestId: string | null;
   method: string | null;
   route: string | null;
+  principalId: string | null;
+  principalType: string | null;
   createdAt: Date;
 }) {
   return {
@@ -117,6 +147,8 @@ function parseAuditRow(row: {
     resource: row.resource,
     resourceId: row.resourceId,
     actorId: row.actorId,
+    principalId: row.principalId,
+    principalType: row.principalType,
     oldValue: safeJsonParse(row.oldValue),
     newValue: safeJsonParse(row.newValue),
     ipAddress: row.ipAddress,
@@ -147,8 +179,17 @@ export const auditService = {
    * RLS handles org scoping automatically.
    */
   async list(tx: DrizzleDb, input: ListAuditEventsInput) {
-    const { page, limit, action, resource, actorId, resourceId, from, to } =
-      input;
+    const {
+      page,
+      limit,
+      action,
+      resource,
+      actorId,
+      resourceId,
+      principalId,
+      from,
+      to,
+    } = input;
     const offset = (page - 1) * limit;
 
     const conditions = [];
@@ -156,6 +197,7 @@ export const auditService = {
     if (resource) conditions.push(eq(auditEvents.resource, resource));
     if (actorId) conditions.push(eq(auditEvents.actorId, actorId));
     if (resourceId) conditions.push(eq(auditEvents.resourceId, resourceId));
+    if (principalId) conditions.push(eq(auditEvents.principalId, principalId));
     if (from) conditions.push(gte(auditEvents.createdAt, from));
     if (to) conditions.push(lte(auditEvents.createdAt, to));
 

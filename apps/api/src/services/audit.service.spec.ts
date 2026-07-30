@@ -32,7 +32,11 @@ vi.mock('@colophony/db', () => ({
   ),
 }));
 
-import { auditService, serializeValue } from './audit.service.js';
+import {
+  auditService,
+  serializeValue,
+  principalFromAuthContext,
+} from './audit.service.js';
 import type { DrizzleDb } from '@colophony/db';
 import type { AuditLogParams } from '@colophony/types';
 
@@ -124,6 +128,8 @@ describe('auditService.log', () => {
       requestId: 'req-abc',
       method: 'POST',
       route: '/api/users',
+      principalId: 'key-1',
+      principalType: 'api_key',
     };
 
     await auditService.log(tx, params);
@@ -142,6 +148,8 @@ describe('auditService.log', () => {
     expect(sqlObj.values).toContain('req-abc');
     expect(sqlObj.values).toContain('POST');
     expect(sqlObj.values).toContain('/api/users');
+    expect(sqlObj.values).toContain('key-1');
+    expect(sqlObj.values).toContain('api_key');
   });
 
   it('passes null for omitted optional fields', async () => {
@@ -187,6 +195,48 @@ describe('auditService.log', () => {
     await expect(auditService.log(tx, params)).rejects.toThrow(
       'DB write failed',
     );
+  });
+});
+
+describe('principalFromAuthContext', () => {
+  const base = {
+    userId: 'creator-1',
+    email: 'a@example.com',
+    emailVerified: true,
+  } as const;
+
+  it('returns the key as the principal when apiKeyId is present', () => {
+    expect(
+      principalFromAuthContext({
+        ...base,
+        authMethod: 'apikey',
+        apiKeyId: 'key-1',
+      }),
+    ).toEqual({ principalId: 'key-1', principalType: 'api_key' });
+  });
+
+  it('returns nothing for an interactive session', () => {
+    expect(principalFromAuthContext({ ...base, authMethod: 'oidc' })).toEqual(
+      {},
+    );
+  });
+
+  it('returns nothing when there is no auth context', () => {
+    expect(principalFromAuthContext(null)).toEqual({});
+    expect(principalFromAuthContext(undefined)).toEqual({});
+  });
+
+  // The discriminator is apiKeyId presence, never authMethod — so a future
+  // credential class cannot silently lose attribution. See hooks/audit.spec.ts
+  // for the same rule pinned end-to-end through the request.
+  it('keys on apiKeyId presence, not on authMethod', () => {
+    expect(
+      principalFromAuthContext({
+        ...base,
+        authMethod: 'test',
+        apiKeyId: 'key-2',
+      }),
+    ).toEqual({ principalId: 'key-2', principalType: 'api_key' });
   });
 });
 

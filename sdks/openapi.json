@@ -13463,6 +13463,17 @@
             "allowReserved": true
           },
           {
+            "name": "principalId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Filter by the acting credential (API key ID) rather than the effective user"
+            },
+            "allowEmptyValue": true,
+            "allowReserved": true
+          },
+          {
             "name": "from",
             "in": "query",
             "schema": {
@@ -13561,7 +13572,30 @@
                                 "type": "null"
                               }
                             ],
-                            "description": "ID of the user who performed the action"
+                            "description": "Effective user who performed the action — for an API key, the key's creator"
+                          },
+                          "principalId": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "Acting credential (API key ID), or null when a user acted directly"
+                          },
+                          "principalType": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "Kind of acting credential (e.g. api_key), or null"
                           },
                           "oldValue": {
                             "anyOf": [
@@ -13649,6 +13683,8 @@
                           "resource",
                           "resourceId",
                           "actorId",
+                          "principalId",
+                          "principalType",
                           "ipAddress",
                           "userAgent",
                           "requestId",
@@ -13745,7 +13781,30 @@
                           "type": "null"
                         }
                       ],
-                      "description": "ID of the user who performed the action"
+                      "description": "Effective user who performed the action — for an API key, the key's creator"
+                    },
+                    "principalId": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Acting credential (API key ID), or null when a user acted directly"
+                    },
+                    "principalType": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Kind of acting credential (e.g. api_key), or null"
                     },
                     "oldValue": {
                       "anyOf": [
@@ -13833,6 +13892,8 @@
                     "resource",
                     "resourceId",
                     "actorId",
+                    "principalId",
+                    "principalType",
                     "ipAddress",
                     "userAgent",
                     "requestId",

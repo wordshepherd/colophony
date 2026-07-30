@@ -21,7 +21,9 @@ class ListAuditEventsResponse200ItemsItem:
         action (str): Action that was performed (e.g. ORG_CREATED)
         resource (str): Resource type that was affected (e.g. organization)
         resource_id (None | UUID): ID of the affected resource
-        actor_id (None | UUID): ID of the user who performed the action
+        actor_id (None | UUID): Effective user who performed the action — for an API key, the key's creator
+        principal_id (None | UUID): Acting credential (API key ID), or null when a user acted directly
+        principal_type (None | str): Kind of acting credential (e.g. api_key), or null
         ip_address (None | str): IP address of the request
         user_agent (None | str): User-Agent header from the request
         request_id (None | str): Correlation ID for the request
@@ -37,6 +39,8 @@ class ListAuditEventsResponse200ItemsItem:
     resource: str
     resource_id: None | UUID
     actor_id: None | UUID
+    principal_id: None | UUID
+    principal_type: None | str
     ip_address: None | str
     user_agent: None | str
     request_id: None | str
@@ -65,6 +69,15 @@ class ListAuditEventsResponse200ItemsItem:
             actor_id = str(self.actor_id)
         else:
             actor_id = self.actor_id
+
+        principal_id: None | str
+        if isinstance(self.principal_id, UUID):
+            principal_id = str(self.principal_id)
+        else:
+            principal_id = self.principal_id
+
+        principal_type: None | str
+        principal_type = self.principal_type
 
         ip_address: None | str
         ip_address = self.ip_address
@@ -104,6 +117,8 @@ class ListAuditEventsResponse200ItemsItem:
                 "resource": resource,
                 "resourceId": resource_id,
                 "actorId": actor_id,
+                "principalId": principal_id,
+                "principalType": principal_type,
                 "ipAddress": ip_address,
                 "userAgent": user_agent,
                 "requestId": request_id,
@@ -157,6 +172,28 @@ class ListAuditEventsResponse200ItemsItem:
             return cast(None | UUID, data)
 
         actor_id = _parse_actor_id(d.pop("actorId"))
+
+        def _parse_principal_id(data: object) -> None | UUID:
+            if data is None:
+                return data
+            try:
+                if not isinstance(data, str):
+                    raise TypeError()
+                principal_id_type_0 = UUID(data)
+
+                return principal_id_type_0
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(None | UUID, data)
+
+        principal_id = _parse_principal_id(d.pop("principalId"))
+
+        def _parse_principal_type(data: object) -> None | str:
+            if data is None:
+                return data
+            return cast(None | str, data)
+
+        principal_type = _parse_principal_type(d.pop("principalType"))
 
         def _parse_ip_address(data: object) -> None | str:
             if data is None:
@@ -219,6 +256,8 @@ class ListAuditEventsResponse200ItemsItem:
             resource=resource,
             resource_id=resource_id,
             actor_id=actor_id,
+            principal_id=principal_id,
+            principal_type=principal_type,
             ip_address=ip_address,
             user_agent=user_agent,
             request_id=request_id,
