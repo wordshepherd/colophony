@@ -441,6 +441,17 @@ Ordered as the design doc's Phase 0/D.
       plugin registration order across files. The query was wrong about the route being
       unguarded; it was incidentally near this, which is the real issue. —
       (found 2026-07-29 while triaging that alert)
+      **Three alerts have now been dismissed on this one mechanism** — #45
+      (`hooks/db-context.ts`), #59 (`sse/notification-stream.ts`) and #60
+      (`hooks/audit.ts:35`, dismissed 2026-07-30). Expect a fourth: the rule fires whenever
+      changed code reads a credential field, which is its heuristic for "performs
+      authorization", and every `onRequest` hook in the chain sits behind
+      `rateLimitPlugin` (`main.ts:199`) and `rateLimitAuthPlugin` (`:201`). #60 fired purely
+      because principal derivation reads `apiKeyId` to label an audit row. Before dismissing
+      a fourth, re-confirm two things rather than pattern-matching: that the flagged code is
+      registered **after** both limiters in `main.ts`, and that it does not open its own pool
+      connection the way the SSE guard fallback does — that second caveat is what made #59
+      worth noting rather than purely spurious.
 - [x] **[P1] Audit cannot distinguish an API key from its creator.** `audit_events` has a
       single `actor_id` and `BaseAuditParams` carries no `apiKeyId`, so a key's actions and
       the human's own actions are recorded identically. Add `principal_id` / `principal_type`
