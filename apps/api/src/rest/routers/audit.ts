@@ -36,7 +36,11 @@ const list = adminProcedure
   .input(restListAuditEventsQuery)
   .output(paginatedAuditEventsSchema)
   .handler(async ({ input, context }) => {
-    const result = await auditService.list(context.dbTx, input);
+    const result = await auditService.list(
+      context.dbTx,
+      input,
+      context.authContext.orgId,
+    );
     await context.audit({
       action: AuditActions.AUDIT_ACCESSED,
       resource: AuditResources.AUDIT,
@@ -58,7 +62,11 @@ const getById = adminProcedure
   .input(idParamSchema)
   .output(auditEventResponseSchema)
   .handler(async ({ input, context }) => {
-    const event = await auditService.getById(context.dbTx, input.id);
+    const event = await auditService.getById(
+      context.dbTx,
+      input.id,
+      context.authContext.orgId,
+    );
     if (!event) {
       throw new ORPCError('NOT_FOUND', {
         message: 'Audit event not found',

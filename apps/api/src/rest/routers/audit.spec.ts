@@ -175,6 +175,7 @@ describe('audit REST router', () => {
           action: 'USER_CREATED',
           resource: 'user',
         }),
+        ORG_ID,
       );
     });
   });

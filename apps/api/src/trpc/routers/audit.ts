@@ -16,7 +16,11 @@ export const auditRouter = createRouter({
     .input(listAuditEventsSchema)
     .output(paginatedResponseSchema(auditEventResponseSchema))
     .query(async ({ ctx, input }) => {
-      const result = await auditService.list(ctx.dbTx, input);
+      const result = await auditService.list(
+        ctx.dbTx,
+        input,
+        ctx.authContext.orgId,
+      );
       await ctx.audit({
         action: AuditActions.AUDIT_ACCESSED,
         resource: AuditResources.AUDIT,
@@ -29,7 +33,11 @@ export const auditRouter = createRouter({
     .input(idParamSchema)
     .output(auditEventResponseSchema)
     .query(async ({ ctx, input }) => {
-      const event = await auditService.getById(ctx.dbTx, input.id);
+      const event = await auditService.getById(
+        ctx.dbTx,
+        input.id,
+        ctx.authContext.orgId,
+      );
       if (!event) {
         throw new TRPCError({
           code: 'NOT_FOUND',

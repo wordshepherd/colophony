@@ -11,6 +11,7 @@ vi.mock('@colophony/db', () => ({
   auditEvents: {
     _: 'audit_events_table_ref',
     id: 'id',
+    organizationId: 'organization_id',
     action: 'action',
     resource: 'resource',
     actorId: 'actor_id',
@@ -389,7 +390,7 @@ describe('auditService.list', () => {
     const row = makeRow();
     const tx = makeQueryTx([row], 1);
 
-    const result = await auditService.list(tx, { page: 1, limit: 20 });
+    const result = await auditService.list(tx, { page: 1, limit: 20 }, 'org-1');
 
     expect(result.items).toHaveLength(1);
     expect(result.total).toBe(1);
@@ -405,7 +406,7 @@ describe('auditService.list', () => {
     });
     const tx = makeQueryTx([row], 1);
 
-    const result = await auditService.list(tx, { page: 1, limit: 20 });
+    const result = await auditService.list(tx, { page: 1, limit: 20 }, 'org-1');
 
     expect(result.items[0].oldValue).toEqual({ name: 'Old' });
     expect(result.items[0].newValue).toEqual({ name: 'New' });
@@ -415,7 +416,7 @@ describe('auditService.list', () => {
     const row = makeRow({ newValue: 'not-valid-json{' });
     const tx = makeQueryTx([row], 1);
 
-    const result = await auditService.list(tx, { page: 1, limit: 20 });
+    const result = await auditService.list(tx, { page: 1, limit: 20 }, 'org-1');
 
     // Falls back to raw string
     expect(result.items[0].newValue).toBe('not-valid-json{');
@@ -425,7 +426,7 @@ describe('auditService.list', () => {
     const row = makeRow({ oldValue: null, newValue: null });
     const tx = makeQueryTx([row], 1);
 
-    const result = await auditService.list(tx, { page: 1, limit: 20 });
+    const result = await auditService.list(tx, { page: 1, limit: 20 }, 'org-1');
 
     expect(result.items[0].oldValue).toBeNull();
     expect(result.items[0].newValue).toBeNull();
@@ -434,7 +435,7 @@ describe('auditService.list', () => {
   it('computes totalPages correctly', async () => {
     const tx = makeQueryTx([makeRow()], 45);
 
-    const result = await auditService.list(tx, { page: 1, limit: 20 });
+    const result = await auditService.list(tx, { page: 1, limit: 20 }, 'org-1');
 
     expect(result.totalPages).toBe(3);
   });
@@ -442,7 +443,7 @@ describe('auditService.list', () => {
   it('returns empty results', async () => {
     const tx = makeQueryTx([], 0);
 
-    const result = await auditService.list(tx, { page: 1, limit: 20 });
+    const result = await auditService.list(tx, { page: 1, limit: 20 }, 'org-1');
 
     expect(result.items).toHaveLength(0);
     expect(result.total).toBe(0);
@@ -458,6 +459,7 @@ describe('auditService.getById', () => {
     const result = await auditService.getById(
       tx,
       'e0000000-0000-4000-a000-000000000001',
+      'org-1',
     );
 
     expect(result).not.toBeNull();
@@ -468,7 +470,7 @@ describe('auditService.getById', () => {
   it('returns null when not found', async () => {
     const tx = makeGetByIdTx(null);
 
-    const result = await auditService.getById(tx, 'nonexistent');
+    const result = await auditService.getById(tx, 'nonexistent', 'org-1');
 
     expect(result).toBeNull();
   });

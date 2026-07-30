@@ -143,6 +143,7 @@ describe('audit router', () => {
           page: 1,
           limit: 10,
         }),
+        'org-1',
       );
     });
 
