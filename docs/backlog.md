@@ -908,6 +908,23 @@ invitations were assumed missing and are in fact already exposed — see §0 of 
 - [ ] [P1] Stop the Deploy workflow reporting `success` on no-op runs — when `prepare` sets `skip`, Build and both deploy jobs are skipped and the run still concludes `success`. On 2026-07-25/26 four such runs interleaved with real failures, so a total deployment outage read as intermittent flakiness and went unnoticed for about seven hours. Either fail the run when `skip` is set for a `workflow_run` trigger on `main`, or surface "deployed / not deployed" somewhere that does not depend on reading each run's job list. Clean example to work from: run 30205582585 concluded `success` with a `prepare` log reading verbatim `CI did not succeed (conclusion: failure), skipping deploy` — (DEVLOG 2026-07-26)
 - [ ] [P2] Make Coverage Report a required status check — #494 reached `mergeStateStatus: CLEAN` with Coverage Report unresolved, so the job can fail without blocking a merge. That is how an infrastructure flake (or a real coverage regression) becomes invisible — (DEVLOG 2026-07-26)
 - [ ] [P3] Consider a registry pull-through cache or retry for service containers — Coverage Report failed on 2026-07-26 when Docker Hub timed out three times pulling `postgres:16-alpine`, killing `Initialize containers` before any test ran. Passed on retry — (DEVLOG 2026-07-26)
+- [ ] [P2] **Retargeting a stacked PR to `main` does not start CI, and the result is
+      indistinguishable from a queued run.** `ci.yml` declares `pull_request: branches: [main]`
+      with no `types:`, so it defaults to `[opened, synchronize, reopened]`. When the base of a
+      stacked PR merges, GitHub auto-retargets the PR to `main` — an `edited` action, which is
+      not in that set. So CI never fires, and because the checks are branch-protection
+      _required_, the PR sits on "Expected — Waiting for status to be reported" forever. Hit on
+      #532 on 2026-07-29: five required checks pending with **zero** runs behind them, which
+      renders identically to five queued runs. Only a subsequent push (`synchronize`) started it.
+      **Fix:** add `types: [opened, synchronize, reopened, edited]` to `ci.yml`'s
+      `pull_request` trigger. No workflow in the repo currently declares `types:`, so check
+      whether `secret-scan.yml` wants the same treatment — it uses `branches: ["**"]` and has
+      the same default.
+      **Verify with an actual stack**, not a single PR: open A off `main` and B off A, merge A,
+      and confirm B starts CI on the retarget alone with no push. The bug is invisible to any
+      test that pushes afterwards, since the push masks it.
+      Same family as the Deploy `success` item above and the `[gone]`-branch problem — the
+      failure is misreading which checks _exist_, not which passed. — (found 2026-07-29 on #532)
 
 ### Dev Environment
 
