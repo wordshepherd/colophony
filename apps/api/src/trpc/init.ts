@@ -7,6 +7,7 @@ import {
   markGuard,
   readGuardTags,
   GUARD_TAG,
+  INTERACTIVE_AUTH_METHODS,
   type GuardTag,
 } from '../services/scope-check.js';
 import { validateEnv } from '../config/env.js';
@@ -272,25 +273,13 @@ export function requireScopes(...scopes: ApiKeyScope[]) {
 }
 
 /**
- * Auth methods that represent an interactive human session.
- *
- * This is an ALLOWLIST, and the distinction is not stylistic. A denylist of
- * 'apikey' stays correct only until the next credential class exists — the
- * `col_svc_` service principal would carry a different authMethod and silently
- * readmit itself to `federation.updateConfig` and `hub.revokeInstance` with
- * broader tenancy than the credential the rule was written to exclude.
- * Written this way, every future auth method is excluded by construction and
- * has to be explicitly admitted here.
- *
- * See docs/api-integration-design.md §1.6 M1.
- */
-const INTERACTIVE_AUTH_METHODS: readonly string[] = ['oidc', 'demo', 'test'];
-
-/**
  * Restricts a procedure to interactive human sessions.
  *
+ * `INTERACTIVE_AUTH_METHODS` is shared with the Fastify surface — see
+ * `services/scope-check.ts` for why it must be an allowlist.
+ *
  * Enforcing by default: a non-interactive caller is audited and rejected with
- * 403. TRPC_INTERNAL_ONLY_ENFORCE=false reverts to log-only, auditing the
+ * 403. INTERNAL_ONLY_ENFORCE=false reverts to log-only, auditing the
  * crossing and letting it through — kept as a revert lever, not a normal
  * setting. An unauthenticated caller is rejected in both modes, unaudited.
  */
@@ -305,7 +294,7 @@ const internalOnlyMiddleware = t.middleware(async ({ ctx, path, next }) => {
 
   // validateEnv() is called here rather than at module level — a module-level
   // call breaks test imports.
-  const enforced = validateEnv().TRPC_INTERNAL_ONLY_ENFORCE;
+  const enforced = validateEnv().INTERNAL_ONLY_ENFORCE;
 
   await ctx.audit?.({
     action: AuditActions.API_KEY_INTERNAL_ROUTE,

@@ -2,6 +2,7 @@ import type { FastifyInstance } from 'fastify';
 import { hubInstanceListQuerySchema } from '@colophony/types';
 import { idParamSchema } from '@colophony/types';
 import type { Env } from '../config/env.js';
+import { guardScope, internalOnly } from '../hooks/fastify-guards.js';
 import {
   hubService,
   HubNotEnabledError,
@@ -9,14 +10,21 @@ import {
 } from '../services/hub.service.js';
 
 /**
- * Hub admin routes — OIDC + ADMIN role required.
+ * Hub admin routes — interactive sessions only, ADMIN role required.
  * Only functional when federation_config.mode = 'managed_hub'.
+ *
+ * Matches the tRPC twin (`hub.*`, all `internalAdminProcedure`). The header used
+ * to claim "OIDC + ADMIN" while nothing checked the auth method; `guardScope`
+ * below is what makes that true.
  */
 export async function registerHubAdminRoutes(
   app: FastifyInstance,
   opts: { env: Env },
 ): Promise<void> {
   const { env } = opts;
+
+  // Runs before the ADMIN check so a key is refused for being a key.
+  guardScope(app, internalOnly);
 
   // preHandler: require ADMIN role
   app.addHook('preHandler', async (request, reply) => {

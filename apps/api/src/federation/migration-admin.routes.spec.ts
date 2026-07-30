@@ -49,6 +49,10 @@ vi.mock('../config/env.js', () => ({
   validateEnv: vi.fn().mockReturnValue({
     FEDERATION_ENABLED: true,
     FEDERATION_DOMAIN: 'local.example.com',
+    // internalOnly reads this per request. Omitting it leaves `enforced`
+    // undefined, which is falsy — the guard silently degrades to log-only and an
+    // API-key rejection test passes with a 200.
+    INTERNAL_ONLY_ENFORCE: true,
   }),
 }));
 
@@ -63,6 +67,8 @@ const testEnv = {
 
 describe('migration-admin.routes', () => {
   let app: FastifyInstance;
+  /** Same user, authenticated as an API key rather than a session. */
+  let apiKeyApp: FastifyInstance;
 
   beforeAll(async () => {
     app = Fastify({ logger: false });
@@ -87,6 +93,50 @@ describe('migration-admin.routes', () => {
     });
 
     await app.ready();
+
+    // No applyGuardEnv here: this spec mocks config/env.js wholesale, so the
+    // guard reads INTERNAL_ONLY_ENFORCE from that mock rather than process.env.
+    apiKeyApp = Fastify({ logger: false });
+    apiKeyApp.decorateRequest('authContext', null);
+    apiKeyApp.addHook('preHandler', async (request) => {
+      request.authContext = {
+        userId: testUserId,
+        authMethod: 'apikey' as const,
+        apiKeyId: '00000000-0000-4000-a000-0000000000ff',
+        apiKeyScopes: [],
+        orgId: validUuid2,
+        roles: ['ADMIN'] as const,
+        email: 'admin@local.example.com',
+        emailVerified: true,
+      };
+    });
+    await apiKeyApp.register(async (scope) => {
+      await registerMigrationAdminRoutes(scope, { env: testEnv });
+    });
+    await apiKeyApp.ready();
+  });
+
+  it('rejects an API key on every route', async () => {
+    // These were the laxest routes on the surface before internalOnly: a bare
+    // `if (!request.authContext)` per handler, no role check, so any key with
+    // any scope could approve or cancel a migration as its creator.
+    const calls: Array<['GET' | 'POST', string]> = [
+      ['GET', '/federation/migrations'],
+      ['GET', '/federation/migrations/pending'],
+      ['GET', `/federation/migrations/${validUuid}`],
+      ['POST', '/federation/migrations/request'],
+      ['POST', `/federation/migrations/${validUuid}/approve`],
+      ['POST', `/federation/migrations/${validUuid}/reject`],
+      ['POST', `/federation/migrations/${validUuid}/cancel`],
+    ];
+
+    for (const [method, url] of calls) {
+      const res = await apiKeyApp.inject({ method, url });
+      expect(res.statusCode, `${method} ${url}`).toBe(403);
+      expect(res.json(), `${method} ${url}`).toMatchObject({
+        message: 'This route is not available to API keys',
+      });
+    }
   });
 
   beforeEach(() => {
@@ -95,6 +145,7 @@ describe('migration-admin.routes', () => {
 
   afterAll(async () => {
     await app.close();
+    await apiKeyApp.close();
   });
 
   describe('GET /federation/migrations', () => {

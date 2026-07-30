@@ -3,6 +3,7 @@ import type { FastifyInstance } from 'fastify';
 import { withRls, simSubChecks, eq } from '@colophony/db';
 import { desc } from 'drizzle-orm';
 import type { Env } from '../config/env.js';
+import { guardScope, internalOnly } from '../hooks/fastify-guards.js';
 import { simsubService } from '../services/simsub.service.js';
 
 const submissionIdParamSchema = z.object({
@@ -11,12 +12,18 @@ const submissionIdParamSchema = z.object({
 
 /**
  * Admin sim-sub management endpoints.
- * Behind normal auth hook chain — requires authenticated user with ADMIN role.
+ * Behind normal auth hook chain — interactive sessions only, ADMIN role.
+ *
+ * Matches the tRPC twin (`simsub.*`, all `internalAdminProcedure`). The ADMIN
+ * check alone would admit a key minted by an admin — see trust-admin.routes.ts.
  */
 export async function registerSimSubAdminRoutes(
   app: FastifyInstance,
   _opts: { env: Env },
 ): Promise<void> {
+  // Runs before the ADMIN check so a key is refused for being a key.
+  guardScope(app, internalOnly);
+
   // preHandler: require ADMIN role
   app.addHook('preHandler', async (request, reply) => {
     if (!request.authContext?.roles?.includes('ADMIN')) {

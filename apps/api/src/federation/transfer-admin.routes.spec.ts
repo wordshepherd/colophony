@@ -9,6 +9,7 @@ import {
 } from 'vitest';
 import Fastify, { type FastifyInstance } from 'fastify';
 import type { Env } from '../config/env.js';
+import { applyGuardEnv } from '../__tests__/helpers/guard-env.js';
 
 // Mock transfer service
 const mockListTransfersForOrg = vi.fn();
@@ -40,7 +41,7 @@ const testEnv: Env = {
   PORT: 0,
   HOST: '127.0.0.1',
   NODE_ENV: 'test',
-  TRPC_INTERNAL_ONLY_ENFORCE: false,
+  INTERNAL_ONLY_ENFORCE: false,
   LOG_LEVEL: 'fatal',
   REDIS_HOST: 'localhost',
   REDIS_PORT: 6379,
@@ -113,6 +114,18 @@ describe('transfer-admin.routes', () => {
     authMethod: 'oidc' as const,
   };
 
+  const apiKeyAuthContext = {
+    userId: validUuid,
+    orgId: validUuid,
+    roles: ['ADMIN'] as const,
+    authMethod: 'apikey' as const,
+    apiKeyId: '00000000-0000-4000-a000-0000000000ff',
+    apiKeyScopes: [] as string[],
+  };
+
+  let apiKeyApp: FastifyInstance;
+  let restoreEnv: () => void;
+
   beforeAll(async () => {
     adminApp = buildApp(adminAuthContext);
     const { registerTransferAdminRoutes } =
@@ -127,6 +140,13 @@ describe('transfer-admin.routes', () => {
       await registerTransferAdminRoutes(scope, { env: testEnv });
     });
     await readerApp.ready();
+
+    restoreEnv = applyGuardEnv({ INTERNAL_ONLY_ENFORCE: 'true' });
+    apiKeyApp = buildApp(apiKeyAuthContext);
+    await apiKeyApp.register(async (scope) => {
+      await registerTransferAdminRoutes(scope, { env: testEnv });
+    });
+    await apiKeyApp.ready();
   });
 
   beforeEach(() => {
@@ -136,6 +156,26 @@ describe('transfer-admin.routes', () => {
   afterAll(async () => {
     await adminApp.close();
     await readerApp.close();
+    await apiKeyApp.close();
+    restoreEnv();
+  });
+
+  it('rejects an API key on every route, even with an ADMIN creator', async () => {
+    // A key carries its creator's roles, so the ADMIN preHandler admits it.
+    // internalOnly is what closes these routes to keys, matching the tRPC twin.
+    const calls: Array<[string, string]> = [
+      ['GET', '/federation/transfers'],
+      ['GET', `/federation/transfers/${validUuid}`],
+      ['POST', `/federation/transfers/${validUuid}/cancel`],
+    ];
+
+    for (const [method, url] of calls) {
+      const res = await apiKeyApp.inject({ method: method as 'GET', url });
+      expect(res.statusCode, `${method} ${url}`).toBe(403);
+      expect(res.json(), `${method} ${url}`).toMatchObject({
+        message: 'This route is not available to API keys',
+      });
+    }
   });
 
   // ─── GET /federation/transfers ───

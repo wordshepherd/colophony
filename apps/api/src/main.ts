@@ -288,11 +288,11 @@ export async function buildApp(env: Env): Promise<FastifyInstance> {
     await app.register(async (scope) => {
       await registerHubRoutes(scope, { env });
     });
-    // Hub admin routes (OIDC + ADMIN)
+    // Hub admin routes (interactive-only via internalOnly, + ADMIN)
     await app.register(async (scope) => {
       await registerHubAdminRoutes(scope, { env });
     });
-    // Key admin routes (OIDC — user manages own DID keys)
+    // Key admin routes (interactive-only via internalOnly — own DID keys)
     await app.register(async (scope) => {
       await registerKeyAdminRoutes(scope, { env });
     });

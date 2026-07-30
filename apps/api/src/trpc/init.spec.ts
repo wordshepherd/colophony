@@ -3,7 +3,7 @@ import { TRPCError } from '@trpc/server';
 import { AuditActions } from '@colophony/types';
 
 const { envState } = vi.hoisted(() => ({
-  envState: { TRPC_INTERNAL_ONLY_ENFORCE: false },
+  envState: { INTERNAL_ONLY_ENFORCE: false },
 }));
 
 vi.mock('../config/env.js', () => ({
@@ -69,14 +69,14 @@ const call = (ctx: TRPCContext) =>
 describe('internalOnly middleware', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    envState.TRPC_INTERNAL_ONLY_ENFORCE = false;
+    envState.INTERNAL_ONLY_ENFORCE = false;
   });
 
   describe('interactive auth methods are admitted', () => {
     it.each(['oidc', 'demo', 'test'] as const)(
       'allows %s without auditing, even when enforcing',
       async (method) => {
-        envState.TRPC_INTERNAL_ONLY_ENFORCE = true;
+        envState.INTERNAL_ONLY_ENFORCE = true;
         const ctx = interactiveContext(method);
 
         await expect(call(ctx)).resolves.toBe('ok');
@@ -85,7 +85,7 @@ describe('internalOnly middleware', () => {
     );
   });
 
-  describe('log-only mode (TRPC_INTERNAL_ONLY_ENFORCE=false)', () => {
+  describe('log-only mode (INTERNAL_ONLY_ENFORCE=false)', () => {
     it('lets an API key through but records the attempt', async () => {
       const ctx = apiKeyContext();
 
@@ -115,9 +115,9 @@ describe('internalOnly middleware', () => {
     });
   });
 
-  describe('enforcing mode (TRPC_INTERNAL_ONLY_ENFORCE=true)', () => {
+  describe('enforcing mode (INTERNAL_ONLY_ENFORCE=true)', () => {
     beforeEach(() => {
-      envState.TRPC_INTERNAL_ONLY_ENFORCE = true;
+      envState.INTERNAL_ONLY_ENFORCE = true;
     });
 
     it('rejects an API key and records the attempt as enforced', async () => {
@@ -140,7 +140,7 @@ describe('internalOnly middleware', () => {
   // introduces exactly such a credential.
   describe('unknown credential classes', () => {
     it('is rejected when enforcing, without being named anywhere', async () => {
-      envState.TRPC_INTERNAL_ONLY_ENFORCE = true;
+      envState.INTERNAL_ONLY_ENFORCE = true;
       const ctx = futureCredentialContext();
 
       await expect(call(ctx)).rejects.toMatchObject({ code: 'FORBIDDEN' });

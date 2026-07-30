@@ -6,6 +6,7 @@ import {
   idParamSchema,
 } from '@colophony/types';
 import type { Env } from '../config/env.js';
+import { guardScope, internalOnly } from '../hooks/fastify-guards.js';
 import {
   trustService,
   TrustPeerNotFoundError,
@@ -16,13 +17,23 @@ import {
 
 /**
  * Admin federation trust management endpoints.
- * Behind normal auth hook chain — requires authenticated user with ADMIN role.
+ * Behind normal auth hook chain — interactive sessions only, ADMIN role.
+ *
+ * Matches the tRPC twin (`federation.*`, all `internalAdminProcedure`). The ADMIN
+ * check below is not sufficient on its own: `org-context` resolves roles from
+ * `organization_members` by user id regardless of auth method, and an API key
+ * carries its creator's user id, so a key minted by an admin arrives with
+ * `roles: ['ADMIN']`.
  */
 export async function registerFederationTrustAdminRoutes(
   app: FastifyInstance,
   opts: { env: Env },
 ): Promise<void> {
   const { env } = opts;
+
+  // Runs before the ADMIN check below, so a key is refused for being a key
+  // rather than incidentally on its role — the audit should say which.
+  guardScope(app, internalOnly);
 
   // preHandler: require ADMIN role
   app.addHook('preHandler', async (request, reply) => {

@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
 import Fastify, { type FastifyInstance } from 'fastify';
 import type { Env } from '../config/env.js';
+import { applyGuardEnv } from '../__tests__/helpers/guard-env.js';
 
 // Mock withRls and simSubChecks
 const mockWithRls = vi.fn();
@@ -35,7 +36,7 @@ const testEnv: Env = {
   PORT: 0,
   HOST: '127.0.0.1',
   NODE_ENV: 'test',
-  TRPC_INTERNAL_ONLY_ENFORCE: false,
+  INTERNAL_ONLY_ENFORCE: false,
   LOG_LEVEL: 'fatal',
   REDIS_HOST: 'localhost',
   REDIS_PORT: 6379,
@@ -83,31 +84,96 @@ const validUuid = '00000000-0000-4000-a000-000000000001';
 describe('simsub-admin.routes', () => {
   let app: FastifyInstance;
 
-  beforeAll(async () => {
-    app = Fastify({ logger: false });
+  /** Authenticated interactive session with no ADMIN role. */
+  let nonAdminApp: FastifyInstance;
+  /** Authenticated API key whose creator is an ADMIN. */
+  let apiKeyApp: FastifyInstance;
 
-    // Simulate auth context on requests
-    app.decorateRequest('authContext', null);
-
+  async function buildApp(
+    authContext: Record<string, unknown> | null,
+  ): Promise<FastifyInstance> {
+    const instance = Fastify({ logger: false });
+    instance.decorateRequest('authContext', null);
+    // Registered before the routes so it runs before their guards, standing in
+    // for the real auth + org-context hooks.
+    instance.addHook('preHandler', async (request) => {
+      request.authContext = authContext as never;
+    });
     const { registerSimSubAdminRoutes } =
       await import('./simsub-admin.routes.js');
-    await registerSimSubAdminRoutes(app, { env: testEnv });
-    await app.ready();
+    await registerSimSubAdminRoutes(instance, { env: testEnv });
+    await instance.ready();
+    return instance;
+  }
+
+  let restoreEnv: () => void;
+
+  beforeAll(async () => {
+    // internalOnly reads INTERNAL_ONLY_ENFORCE out of process.env per request.
+    restoreEnv = applyGuardEnv({ INTERNAL_ONLY_ENFORCE: 'true' });
+
+    // Unauthenticated.
+    app = await buildApp(null);
+
+    nonAdminApp = await buildApp({
+      userId: 'editor-user',
+      orgId: 'org-1',
+      roles: ['EDITOR'],
+      authMethod: 'oidc',
+    });
+
+    // An API key carries its creator's roles, so ADMIN here is realistic — it is
+    // exactly why the role check alone was insufficient.
+    apiKeyApp = await buildApp({
+      userId: 'admin-user',
+      orgId: 'org-1',
+      roles: ['ADMIN'],
+      authMethod: 'apikey',
+      apiKeyId: '00000000-0000-4000-a000-0000000000ff',
+      apiKeyScopes: ['simsub-groups:read', 'simsub-groups:write'],
+    });
   });
 
   afterAll(async () => {
-    await app.close();
+    await Promise.all([app.close(), nonAdminApp.close(), apiKeyApp.close()]);
+    restoreEnv();
   });
 
   describe('GET /federation/sim-sub/checks/:submissionId', () => {
-    it('returns 403 for non-admin', async () => {
+    it('returns 401 when unauthenticated', async () => {
       const res = await app.inject({
         method: 'GET',
         url: `/federation/sim-sub/checks/${validUuid}`,
         headers: {},
       });
 
+      expect(res.statusCode).toBe(401);
+    });
+
+    it('returns 403 for non-admin', async () => {
+      const res = await nonAdminApp.inject({
+        method: 'GET',
+        url: `/federation/sim-sub/checks/${validUuid}`,
+      });
+
       expect(res.statusCode).toBe(403);
+      expect(res.json()).toMatchObject({ message: 'ADMIN role required' });
+    });
+
+    it('rejects an API key even when its creator is an ADMIN', async () => {
+      // The role check alone admits this caller: org-context resolves roles from
+      // organization_members by user id regardless of auth method, and a key
+      // carries its creator's id. internalOnly is what closes it.
+      const res = await apiKeyApp.inject({
+        method: 'GET',
+        url: `/federation/sim-sub/checks/${validUuid}`,
+      });
+
+      expect(res.statusCode).toBe(403);
+      expect(res.json()).toMatchObject({
+        error: 'forbidden',
+        message: 'This route is not available to API keys',
+      });
     });
 
     it('returns check history for submission', async () => {
@@ -162,13 +228,35 @@ describe('simsub-admin.routes', () => {
   });
 
   describe('POST /federation/sim-sub/override/:submissionId', () => {
-    it('returns 403 for non-admin', async () => {
+    it('returns 401 when unauthenticated', async () => {
       const res = await app.inject({
         method: 'POST',
         url: `/federation/sim-sub/override/${validUuid}`,
       });
 
+      expect(res.statusCode).toBe(401);
+    });
+
+    it('returns 403 for non-admin', async () => {
+      const res = await nonAdminApp.inject({
+        method: 'POST',
+        url: `/federation/sim-sub/override/${validUuid}`,
+      });
+
       expect(res.statusCode).toBe(403);
+      expect(res.json()).toMatchObject({ message: 'ADMIN role required' });
+    });
+
+    it('rejects an API key even when its creator is an ADMIN', async () => {
+      const res = await apiKeyApp.inject({
+        method: 'POST',
+        url: `/federation/sim-sub/override/${validUuid}`,
+      });
+
+      expect(res.statusCode).toBe(403);
+      expect(res.json()).toMatchObject({
+        message: 'This route is not available to API keys',
+      });
     });
 
     it('grants override and returns success', async () => {

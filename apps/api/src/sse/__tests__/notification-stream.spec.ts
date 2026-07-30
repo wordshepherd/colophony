@@ -22,6 +22,7 @@ vi.mock('../redis-pubsub.js', () => ({
 }));
 
 import { registerNotificationStreamRoute } from '../notification-stream.js';
+import { readGuardTags } from '../../services/scope-check.js';
 
 function createTestHarness() {
   const mockGet = vi.fn();
@@ -35,21 +36,48 @@ function createTestHarness() {
   return { mockGet, mockApp, mockEnv };
 }
 
+/**
+ * The route handler is the last argument, whether or not a route-options object
+ * is passed. Indexing it positionally is what broke every test in this file when
+ * the scope guard added an options argument.
+ */
+function getHandler(mockGet: ReturnType<typeof vi.fn>) {
+  const args = mockGet.mock.calls[0];
+  return args[args.length - 1];
+}
+
+function getRouteOptions(mockGet: ReturnType<typeof vi.fn>) {
+  return mockGet.mock.calls[0][1];
+}
+
 describe('registerNotificationStreamRoute', () => {
   it('registers a GET route at /api/notifications/stream', async () => {
     const { mockGet, mockApp, mockEnv } = createTestHarness();
     await registerNotificationStreamRoute(mockApp, { env: mockEnv });
     expect(mockGet).toHaveBeenCalledWith(
       '/api/notifications/stream',
+      expect.objectContaining({ preHandler: [expect.any(Function)] }),
       expect.any(Function),
     );
+  });
+
+  it('declares the notifications:read scope guard', async () => {
+    // The route's only guard. Without it any API key with any scope could
+    // stream another surface's inbox — the gap this file's route was filed for.
+    const { mockGet, mockApp, mockEnv } = createTestHarness();
+    await registerNotificationStreamRoute(mockApp, { env: mockEnv });
+
+    const preHandler = getRouteOptions(mockGet).preHandler as unknown[];
+    expect(readGuardTags(preHandler)).toEqual([
+      { kind: 'scopes', scopes: ['notifications:read'] },
+    ]);
   });
 
   it('returns 401 when no auth context', async () => {
     const { mockGet, mockApp, mockEnv } = createTestHarness();
     await registerNotificationStreamRoute(mockApp, { env: mockEnv });
 
-    const handler = mockGet.mock.calls[0][1];
+    const handler = getHandler(mockGet);
     const mockRequest = { authContext: null };
     const mockReply = {
       status: vi.fn().mockReturnThis(),
@@ -64,7 +92,7 @@ describe('registerNotificationStreamRoute', () => {
     const { mockGet, mockApp, mockEnv } = createTestHarness();
     await registerNotificationStreamRoute(mockApp, { env: mockEnv });
 
-    const handler = mockGet.mock.calls[0][1];
+    const handler = getHandler(mockGet);
     const mockRequest = { authContext: { userId: 'user-1', orgId: null } };
     const mockReply = {
       status: vi.fn().mockReturnThis(),
@@ -79,7 +107,7 @@ describe('registerNotificationStreamRoute', () => {
     const { mockGet, mockApp, mockEnv } = createTestHarness();
     await registerNotificationStreamRoute(mockApp, { env: mockEnv });
 
-    const handler = mockGet.mock.calls[0][1];
+    const handler = getHandler(mockGet);
 
     // Exhaust 5 connection slots for this user
     for (let i = 0; i < 5; i++) {
@@ -116,7 +144,7 @@ describe('registerNotificationStreamRoute', () => {
     const { mockGet, mockApp, mockEnv } = createTestHarness();
     await registerNotificationStreamRoute(mockApp, { env: mockEnv });
 
-    const handler = mockGet.mock.calls[0][1];
+    const handler = getHandler(mockGet);
     const rawEnd = vi.fn();
     const mockRequest = {
       authContext: { userId: 'user-redis-fail', orgId: 'org-1' },
@@ -141,7 +169,7 @@ describe('registerNotificationStreamRoute', () => {
     const { mockGet, mockApp, mockEnv } = createTestHarness();
     await registerNotificationStreamRoute(mockApp, { env: mockEnv });
 
-    const handler = mockGet.mock.calls[0][1];
+    const handler = getHandler(mockGet);
     const writeHead = vi.fn();
     const mockRequest = {
       authContext: { userId: 'user-cors', orgId: 'org-1' },
@@ -170,7 +198,7 @@ describe('registerNotificationStreamRoute', () => {
     const { mockGet, mockApp, mockEnv } = createTestHarness();
     await registerNotificationStreamRoute(mockApp, { env: mockEnv });
 
-    const handler = mockGet.mock.calls[0][1];
+    const handler = getHandler(mockGet);
     const writeHead = vi.fn();
     const mockRequest = {
       authContext: { userId: 'user-cors-bad', orgId: 'org-1' },

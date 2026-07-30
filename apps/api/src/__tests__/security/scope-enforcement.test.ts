@@ -50,10 +50,10 @@ async function seedOrgWithAdmin() {
  * on the app would silently do nothing, so drive process.env instead.
  */
 function setInternalOnlyEnforce(value: boolean): void {
-  process.env.TRPC_INTERNAL_ONLY_ENFORCE = value ? 'true' : 'false';
+  process.env.INTERNAL_ONLY_ENFORCE = value ? 'true' : 'false';
 }
 
-const originalEnforce = process.env.TRPC_INTERNAL_ONLY_ENFORCE;
+const originalEnforce = process.env.INTERNAL_ONLY_ENFORCE;
 
 beforeAll(async () => {
   await globalSetup();
@@ -63,9 +63,9 @@ afterEach(async () => {
   await app?.close();
   await truncateAllTables();
   if (originalEnforce === undefined) {
-    delete process.env.TRPC_INTERNAL_ONLY_ENFORCE;
+    delete process.env.INTERNAL_ONLY_ENFORCE;
   } else {
-    process.env.TRPC_INTERNAL_ONLY_ENFORCE = originalEnforce;
+    process.env.INTERNAL_ONLY_ENFORCE = originalEnforce;
   }
 });
 
@@ -161,7 +161,7 @@ describe('requireScopes — real API key through the tRPC router', () => {
 
 describe('internalOnly — the boundary enforced since P0.5', () => {
   // Enforcement is the default since 2026-07-27. This pins the log-only
-  // fallback that TRPC_INTERNAL_ONLY_ENFORCE=false still buys — the revert
+  // fallback that INTERNAL_ONLY_ENFORCE=false still buys — the revert
   // path has to keep working, or the flag is not a lever.
   it('falls back to admitting an API key when explicitly set to false', async () => {
     setInternalOnlyEnforce(false);
@@ -216,7 +216,7 @@ describe('internalOnly — the boundary enforced since P0.5', () => {
   // notice the schema default silently reverting to 'false'. This one pins the
   // deployed behaviour: unset must mean enforcing.
   it('enforces by default when the variable is not set at all', async () => {
-    delete process.env.TRPC_INTERNAL_ONLY_ENFORCE;
+    delete process.env.INTERNAL_ONLY_ENFORCE;
     app = await buildApiKeyApp();
     const { org, user } = await seedOrgWithAdmin();
     const key = await insertApiKey({

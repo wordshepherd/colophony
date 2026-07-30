@@ -12,7 +12,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const { envState } = vi.hoisted(() => ({
   envState: {
-    TRPC_INTERNAL_ONLY_ENFORCE: false,
+    INTERNAL_ONLY_ENFORCE: false,
     REDIS_HOST: 'localhost',
     REDIS_PORT: 6379,
     REDIS_PASSWORD: '',
@@ -144,7 +144,7 @@ function oidcCaller() {
 describe('tRPC scope enforcement (P0.1b)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    envState.TRPC_INTERNAL_ONLY_ENFORCE = false;
+    envState.INTERNAL_ONLY_ENFORCE = false;
   });
 
   describe('webhooks', () => {
@@ -233,7 +233,7 @@ describe('tRPC scope enforcement (P0.1b)', () => {
     // Enforcement is the default since 2026-07-27; this covers the revert
     // path, not pending behaviour.
     it('lets an API key reach federation when explicitly set to log-only', async () => {
-      envState.TRPC_INTERNAL_ONLY_ENFORCE = false;
+      envState.INTERNAL_ONLY_ENFORCE = false;
 
       await expect(
         keyCaller(['manuscripts:read']).federation.getConfig(),
@@ -241,7 +241,7 @@ describe('tRPC scope enforcement (P0.1b)', () => {
     });
 
     it('denies an API key once enforcing, whatever scopes it holds', async () => {
-      envState.TRPC_INTERNAL_ONLY_ENFORCE = true;
+      envState.INTERNAL_ONLY_ENFORCE = true;
 
       await expect(
         keyCaller(['manuscripts:read']).federation.getConfig(),
@@ -249,7 +249,7 @@ describe('tRPC scope enforcement (P0.1b)', () => {
     });
 
     it('still admits an interactive session when enforcing', async () => {
-      envState.TRPC_INTERNAL_ONLY_ENFORCE = true;
+      envState.INTERNAL_ONLY_ENFORCE = true;
 
       await expect(oidcCaller().federation.getConfig()).resolves.toBeDefined();
     });

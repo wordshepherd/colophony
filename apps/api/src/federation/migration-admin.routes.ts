@@ -13,17 +13,25 @@ import {
   MigrationAlreadyActiveError,
 } from '../services/migration.service.js';
 import { validateEnv } from '../config/env.js';
+import { guardScope, internalOnly } from '../hooks/fastify-guards.js';
 
 /**
  * Migration management endpoints for authenticated users.
  *
  * No ADMIN role requirement — any authenticated user manages their own migrations.
  * User-scoped RLS provides isolation.
+ *
+ * Interactive sessions only, matching the tRPC twin (`migrations.*`, all
+ * `internalAuthedProcedure`). Without it these were the laxest routes on the
+ * surface: a bare `if (!request.authContext)` per handler, so any key with any
+ * scope could approve or cancel a migration as its creator.
  */
 export async function registerMigrationAdminRoutes(
   app: FastifyInstance,
   _opts: { env: Env },
 ): Promise<void> {
+  guardScope(app, internalOnly);
+
   /**
    * GET /federation/migrations
    *
