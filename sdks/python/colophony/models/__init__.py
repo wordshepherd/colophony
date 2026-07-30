@@ -118,6 +118,20 @@ from .batch_update_submission_status_response_200_succeeded_item_previous_status
 from .batch_update_submission_status_response_200_succeeded_item_status import (
     BatchUpdateSubmissionStatusResponse200SucceededItemStatus,
 )
+from .bulk_upsert_notification_preferences_body import BulkUpsertNotificationPreferencesBody
+from .bulk_upsert_notification_preferences_body_preferences_item import (
+    BulkUpsertNotificationPreferencesBodyPreferencesItem,
+)
+from .bulk_upsert_notification_preferences_body_preferences_item_channel import (
+    BulkUpsertNotificationPreferencesBodyPreferencesItemChannel,
+)
+from .bulk_upsert_notification_preferences_body_preferences_item_event_type import (
+    BulkUpsertNotificationPreferencesBodyPreferencesItemEventType,
+)
+from .bulk_upsert_notification_preferences_response_200_item import BulkUpsertNotificationPreferencesResponse200Item
+from .bulk_upsert_notification_preferences_response_200_item_channel import (
+    BulkUpsertNotificationPreferencesResponse200ItemChannel,
+)
 from .cast_submission_vote_body import CastSubmissionVoteBody
 from .cast_submission_vote_body_decision import CastSubmissionVoteBodyDecision
 from .cast_submission_vote_response_201 import CastSubmissionVoteResponse201
@@ -465,6 +479,7 @@ from .get_submission_response_200_sim_sub_policy_requirement_type_0_type import 
 )
 from .get_submission_response_200_status import GetSubmissionResponse200Status
 from .get_submission_vote_summary_response_200 import GetSubmissionVoteSummaryResponse200
+from .get_unread_notification_count_response_200 import GetUnreadNotificationCountResponse200
 from .import_csr_body import ImportCsrBody
 from .import_csr_body_correspondence_item import ImportCsrBodyCorrespondenceItem
 from .import_csr_body_correspondence_item_channel import ImportCsrBodyCorrespondenceItemChannel
@@ -537,6 +552,10 @@ from .list_my_submissions_response_200_items_item_status import ListMySubmission
 from .list_my_submissions_sort_by import ListMySubmissionsSortBy
 from .list_my_submissions_sort_order import ListMySubmissionsSortOrder
 from .list_my_submissions_status import ListMySubmissionsStatus
+from .list_notification_preferences_response_200_item import ListNotificationPreferencesResponse200Item
+from .list_notification_preferences_response_200_item_channel import ListNotificationPreferencesResponse200ItemChannel
+from .list_notifications_response_200 import ListNotificationsResponse200
+from .list_notifications_response_200_items_item import ListNotificationsResponse200ItemsItem
 from .list_organization_invitations_response_200_item import ListOrganizationInvitationsResponse200Item
 from .list_organization_invitations_response_200_item_roles_item import (
     ListOrganizationInvitationsResponse200ItemRolesItem,
@@ -603,6 +622,8 @@ from .list_submissions_response_200_items_item_status import ListSubmissionsResp
 from .list_submissions_sort_by import ListSubmissionsSortBy
 from .list_submissions_sort_order import ListSubmissionsSortOrder
 from .list_submissions_status import ListSubmissionsStatus
+from .mark_all_notifications_read_response_200 import MarkAllNotificationsReadResponse200
+from .mark_notification_read_response_200 import MarkNotificationReadResponse200
 from .mark_submission_reviewer_read_response_200 import MarkSubmissionReviewerReadResponse200
 from .publish_form_response_200 import PublishFormResponse200
 from .publish_form_response_200_status import PublishFormResponse200Status
@@ -919,6 +940,11 @@ from .update_submission_status_response_200_submission_sim_sub_policy_requiremen
     UpdateSubmissionStatusResponse200SubmissionSimSubPolicyRequirementType0Type,
 )
 from .update_submission_status_response_200_submission_status import UpdateSubmissionStatusResponse200SubmissionStatus
+from .upsert_notification_preference_body import UpsertNotificationPreferenceBody
+from .upsert_notification_preference_body_channel import UpsertNotificationPreferenceBodyChannel
+from .upsert_notification_preference_body_event_type import UpsertNotificationPreferenceBodyEventType
+from .upsert_notification_preference_response_200 import UpsertNotificationPreferenceResponse200
+from .upsert_notification_preference_response_200_channel import UpsertNotificationPreferenceResponse200Channel
 from .void_contract_response_200 import VoidContractResponse200
 from .void_contract_response_200_merge_data_type_0 import VoidContractResponse200MergeDataType0
 from .void_contract_response_200_status import VoidContractResponse200Status
@@ -1019,6 +1045,12 @@ __all__ = (
     "BatchUpdateSubmissionStatusResponse200SucceededItem",
     "BatchUpdateSubmissionStatusResponse200SucceededItemPreviousStatus",
     "BatchUpdateSubmissionStatusResponse200SucceededItemStatus",
+    "BulkUpsertNotificationPreferencesBody",
+    "BulkUpsertNotificationPreferencesBodyPreferencesItem",
+    "BulkUpsertNotificationPreferencesBodyPreferencesItemChannel",
+    "BulkUpsertNotificationPreferencesBodyPreferencesItemEventType",
+    "BulkUpsertNotificationPreferencesResponse200Item",
+    "BulkUpsertNotificationPreferencesResponse200ItemChannel",
     "CastSubmissionVoteBody",
     "CastSubmissionVoteBodyDecision",
     "CastSubmissionVoteResponse201",
@@ -1250,6 +1282,7 @@ __all__ = (
     "GetSubmissionResponse200SimSubPolicyRequirementType0Type",
     "GetSubmissionResponse200Status",
     "GetSubmissionVoteSummaryResponse200",
+    "GetUnreadNotificationCountResponse200",
     "ImportCsrBody",
     "ImportCsrBodyCorrespondenceItem",
     "ImportCsrBodyCorrespondenceItemChannel",
@@ -1308,6 +1341,10 @@ __all__ = (
     "ListMySubmissionsSortBy",
     "ListMySubmissionsSortOrder",
     "ListMySubmissionsStatus",
+    "ListNotificationPreferencesResponse200Item",
+    "ListNotificationPreferencesResponse200ItemChannel",
+    "ListNotificationsResponse200",
+    "ListNotificationsResponse200ItemsItem",
     "ListOrganizationInvitationsResponse200Item",
     "ListOrganizationInvitationsResponse200ItemRolesItem",
     "ListOrganizationInvitationsResponse200ItemStatus",
@@ -1354,6 +1391,8 @@ __all__ = (
     "ListSubmissionsStatus",
     "ListSubmissionVotesResponse200Item",
     "ListSubmissionVotesResponse200ItemDecision",
+    "MarkAllNotificationsReadResponse200",
+    "MarkNotificationReadResponse200",
     "MarkSubmissionReviewerReadResponse200",
     "PublishFormResponse200",
     "PublishFormResponse200Status",
@@ -1542,6 +1581,11 @@ __all__ = (
     "UpdateSubmissionStatusResponse200SubmissionSimSubPolicyRequirementType0",
     "UpdateSubmissionStatusResponse200SubmissionSimSubPolicyRequirementType0Type",
     "UpdateSubmissionStatusResponse200SubmissionStatus",
+    "UpsertNotificationPreferenceBody",
+    "UpsertNotificationPreferenceBodyChannel",
+    "UpsertNotificationPreferenceBodyEventType",
+    "UpsertNotificationPreferenceResponse200",
+    "UpsertNotificationPreferenceResponse200Channel",
     "VoidContractResponse200",
     "VoidContractResponse200MergeDataType0",
     "VoidContractResponse200Status",

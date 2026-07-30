@@ -571,14 +571,58 @@ invitations were assumed missing and are in fact already exposed — see §0 of 
 - [ ] **[P1] Webhook endpoint management over REST** (9 tRPC procs, `webhooks:manage`
       already exists). **Requires the subscription-model decision (D2) first** — per-org vs
       instance-level is a resource-model question, not a route question. — (design doc §1.9, P1.1)
-- [ ] **[P1] Notifications over REST** (list, unread-count, mark-read, mark-all-read + 3
+- [x] **[P1] Notifications over REST** (list, unread-count, mark-read, mark-all-read + 3
       preference procs). Only path today is SSE, unusable for consumers that cannot hold a
-      connection. — (design doc §1.7, P1.2)
+      connection. — (design doc §1.7, P1.2; done 2026-07-29, PR pending)
+      Seven operations, one router, `Notifications` declared as a tag. Both scopes already
+      existed from P0.1b, so no enum change. `orgProcedure` throughout — the
+      `notifications_inbox` policy uses the raising idiom, so no-org-context would 500
+      rather than return empty.
+      **The identity semantics are documented rather than deferred.** The inbox is per-user
+      and a key acts as its creator, so a key reads one person's notifications. Both read
+      routes say so and point at webhooks for org-level events; generalising it needs
+      acting-as, which sits behind the whole principal design.
+      **First boolean query param on the surface, and both obvious spellings are wrong.**
+      `z.coerce.boolean()` parses `"false"` as `true`; `z.stringbool()` renders as
+      `{"type":"string"}` so both SDKs type the field as a string. `z.preprocess` renders as
+      `{"type":"boolean"}` and takes both forms — now the house idiom, documented with the
+      measurements in `packages/api-contracts/src/notifications.ts`.
+- [x] **[P2] `notificationService` carried no org predicate.** All four read/write methods
+      filtered on `userId` alone while `notifications_inbox` has an `organization_id` column
+      they never touched — the `apiKeyService` shape from #521, and harder to spot because
+      `userId` looks like it is isolating. It is not: the same user id legitimately appears
+      in two orgs' inboxes whenever a writer submits to two magazines on one instance.
+      Landed ahead of the REST surface rather than inside it. Pinned by
+      `__tests__/rls/notification-service.test.ts` over the admin pool; verified non-vacuous
+      (6 of 7 fail with the predicates removed). Also a performance fix —
+      `notifications_inbox_user_unread_idx` leads on `organization_id`. —
+      (found 2026-07-29 while adding the REST surface; done 2026-07-29)
 - [ ] **[P1] File upload initiation under `/v1`.** Intake is incomplete: an integrator can
       create a submission but cannot attach a manuscript. `POST /embed/:token/prepare-upload`
       is a working template. — (design doc §1.7, P1.3)
 - [ ] **[P1] Public discovery of open submission periods.** `/v1/public/` has only
       `orgs/:slug/response-time` and the demo routes. — (design doc §1.7, P1.4)
+- [ ] **[P2] Make boolean query params work by default instead of by workaround.** P1.2 had to
+      hand-roll a `booleanQueryParam` helper because the two obvious spellings are both wrong:
+      `z.coerce.boolean()` parses `"false"` as `true`, and `z.stringbool()` renders as
+      `{"type":"string"}` so both generated SDKs type the field as a string. Only
+      `z.preprocess(...)` gives `{"type":"boolean"}` and accepts both forms. That is a
+      workaround living in one contract file, and the next person adding a boolean filter will
+      reach for `z.coerce.boolean()` and ship an inverted filter that type-checks and passes
+      tests. Three parts, in order of value:
+      (1) **Promote the helper to `packages/api-contracts/src/shared.ts`** beside
+      `restPaginationQuery`, so it is the thing in reach — the current location
+      (`notifications.ts`) is discoverable only by whoever already knows.
+      (2) **Investigate whether oRPC can coerce from the JSON-schema type** so a plain
+      `z.boolean()` just works on a query param. `OpenAPIHandler` knows the parameter is a
+      boolean; if its deserializer can be configured to act on that, the helper disappears
+      entirely and this stops being a thing to remember. Check the `@orpc/openapi` serializer
+      options before assuming not.
+      (3) **Gate it**: a lint rule or a spec asserting no `z.coerce.boolean()` appears in
+      `packages/api-contracts/` or `apps/api/src/rest/`. Cheap, and the failure it prevents is
+      silent in every other check.
+      Same reasoning as the guard-coverage gates — a convention that only lives in a doc gets
+      violated by the next person who does not read it. — (found 2026-07-29 during P1.2)
 - [ ] **[P2] Idempotency keys for integrator writes.** No `Idempotency-Key` on any `/v1`
       `POST`, including submission creation and the two batch operations. Contract surface,
       so it cannot be added cheaply later. — (design doc §1.10, D3)
@@ -840,6 +884,18 @@ invitations were assumed missing and are in fact already exposed — see §0 of 
 - [x] [P3] Flakiness and determinism CI checks — run unit tests with retries disabled and `--sequence.shuffle` on at least one CI lane; add quarantine convention (`.flaky.test.ts` suffix or skip marker) and fail PRs that introduce new flaky markers — (code review 2026-03-03; done 2026-03-04)
 - [x] [P3] Risk-based test matrix — audit coverage per domain (pipeline, federation, workspace, forms) and document minimum test layers per domain (unit + service integration + API route + E2E happy path) in `docs/testing.md`; identify high-risk low-coverage hotspots — (code review 2026-03-03; done 2026-03-04)
 - [ ] [P3] ESLint 9 → 10 upgrade — blocked by `eslint-plugin-react`, `eslint-plugin-react-hooks`, `eslint-plugin-jsx-a11y` (transitive via `eslint-config-next`); Dependabot canary will signal when unblocked; tracking issue #273 — (2026-03-16); canary verified 2026-03-22 (Dependabot PR #269 failed CI as expected, still blocked by eslint-plugin-react)
+- [ ] [P2] **`clearAllMocks` + `mockResolvedValueOnce` is seed-dependent, and specs are
+      relying on ordering luck.** `vi.clearAllMocks()` does not drain queued
+      `mockResolvedValueOnce` implementations, and this repo deliberately runs vitest with
+      `--sequence.shuffle` on a CI lane. A spec that queues a value per test therefore has
+      one test consume another's, and which one depends on the seed — a failure that
+      reproduces on some runs and not others. Hit live while writing
+      `rest/routers/notifications.spec.ts`, fixed there with `vi.resetAllMocks()`.
+      `rest/routers/audit.spec.ts` has the identical pattern and is currently passing on
+      ordering luck; sweep the other REST and tRPC router specs for it. The shuffle lane is
+      what makes this worth fixing rather than tolerating — it is designed to surface exactly
+      this, so a latent instance will eventually fail a PR that did not cause it. —
+      (found 2026-07-29 during P1.2)
 - [x] [P2] Diagnostic: plan review step dropped from workflow — root cause: plan mode system reminder's rigid Phase 5 overrides instruction; no mechanical enforcement existed. Fix: `PreToolUse` hook on `ExitPlanMode` blocks unless `code review plan` marker exists or plan is trivial — (2026-03-28, user-reported; done 2026-03-28)
 - [x] [P3] Skill update: code review should auto-add actionable out-of-scope findings to backlog — during both plan review and branch/diff review, any Important+ findings outside the current task scope should be appended to docs/backlog.md automatically — (workflow improvement 2026-03-03; done 2026-03-22 — enhanced /end-session Step 4b with systematic review finding extraction)
 - [x] [P4] Ephemeral DB/queue per test worker — standardize `TestContext` factory for isolated schemas per worker; replace ad-hoc Redis db 1 patching in `vitest-setup.ts`; add explicit contract tests around external boundaries (webhooks, auth, adapters) with fixture replay — (code review 2026-03-03; closed 2026-03-22 — current isolation via truncateAllTables, Redis db 1, singleFork is adequate)
