@@ -417,6 +417,30 @@ Ordered as the design doc's Phase 0/D.
       principal — and fails open when Redis is unreachable, and `apiKeyService.create`
       enforces no per-org or per-creator key count. Either a creator-level umbrella bucket
       or a key-count cap would close it.
+- [ ] **[P2] The main API rate limiter fails open on Redis error, and unlike federation's
+      it is not configurable.** `hooks/rate-limit.ts:137-143` catches any Redis failure,
+      logs `Rate limit Redis error — allowing request without rate limiting`, and returns —
+      so a Redis outage removes rate limiting from the entire API at once. Every request
+      then reaches `dbContextPlugin`, which opens a pooled connection and begins a
+      transaction per request, so the failure mode is not merely "unlimited requests" but
+      connection-pool exhaustion under load.
+      **The asymmetry is the tell.** Federation rate limiting already has
+      `FEDERATION_RATE_LIMIT_FAIL_MODE` (`open` / `closed` / `fallback`, with an in-process
+      fallback), added in PR #225 for exactly this concern. The main limiter — which guards
+      far more surface — never got the same treatment. Port the pattern rather than
+      inventing a second one.
+      Two related gaps worth deciding at the same time: `shouldSkip` exempts the whole
+      `/webhooks/` prefix from the global limiter (those handlers do hit the database; they
+      carry their own `webhookRateLimit` preHandler, so this is defensible but undocumented
+      as a deliberate choice), and the second-pass credential limiter in
+      `hooks/rate-limit-auth.ts` should be checked for the same fail-open behaviour.
+      **Note for anyone re-triaging CodeQL:** `js/missing-rate-limiting` on
+      `hooks/db-context.ts:38` (alert #45, opened 2026-02-26) was dismissed as a false
+      positive on 2026-07-29 — the limiter is a separate `fastify-plugin` registered at
+      `main.ts:199`, ahead of `dbContextPlugin` at `:203`, and CodeQL cannot follow Fastify
+      plugin registration order across files. The query was wrong about the route being
+      unguarded; it was incidentally near this, which is the real issue. —
+      (found 2026-07-29 while triaging that alert)
 - [ ] **[P1] Audit cannot distinguish an API key from its creator.** `audit_events` has a
       single `actor_id` and `BaseAuditParams` carries no `apiKeyId`, so a key's actions and
       the human's own actions are recorded identically. Add `principal_id` / `principal_type`
@@ -543,7 +567,7 @@ Ordered as the design doc's Phase 0/D.
       fail closed, so not a vulnerability — but a request with no org context gets a 500
       rather than an empty result on those four. Normalise deliberately. —
       (design doc §2.3 F6)
-- [ ] **[P1] `GET /api/notifications/stream` declares no scope guard, and neither
+- [x] **[P1] `GET /api/notifications/stream` declares no scope guard, and neither
       coverage gate can see it.** It is a plain Fastify route
       (`apps/api/src/sse/notification-stream.ts:52`), not a tRPC or oRPC procedure, so
       `requireScopes` never runs — and both `trpc/guard-coverage.spec.ts` and
@@ -561,7 +585,69 @@ Ordered as the design doc's Phase 0/D.
       allowlist would cover the class rather than this instance.
       Also note the connection cap (`MAX_CONNECTIONS_PER_USER = 5`) is an in-process
       `Map`, not Redis-backed, so it does not hold across replicas. —
-      (found 2026-07-29 while adding the REST notification surface)
+      (found 2026-07-29 while adding the REST notification surface;
+      **done 2026-07-29** — closed as the class, not the instance)
+      **What landed.** `hooks/fastify-guards.ts` supplies `requireScopes`,
+      `internalOnly` and `guardScope`, all tagged with the existing `markGuard` so
+      `hooks/fastify-guard-coverage.spec.ts` — the third gate — sees them. The SSE
+      route took `notifications:read`, matching its twins. The other 25 unguarded
+      routes took `internalOnly`: 23 match tRPC twins that were already
+      `internal*Procedure`, and `/federation/keys/*` took it on separate grounds
+      (no twin exists; DID key rotation from a key is privilege escalation) —
+      **a behaviour change, not parity**.
+      **Two things the audit missed.** The ADMIN `preHandler` on the four admin
+      modules never excluded keys at all: `org-context` resolves roles from
+      `organization_members` by user id regardless of `authMethod`, so a key minted
+      by an admin arrives with `roles: ['ADMIN']`. And `request.audit` is a
+      warn-only stub on the SSE route, because `db-context` skips its transaction —
+      so a scope denial there would have persisted nothing. The guards write through
+      a transaction-aware helper that falls back to `withRls`.
+      `guardScope` exists because Fastify's `onRoute` exposes only a route's _own_
+      `preHandler`, not hooks inherited from its plugin scope; it also runs before
+      the ADMIN check so the audit records why a call was actually refused.
+      The connection-cap-across-replicas note above is untouched and still open.
+- [ ] **[P2] The 23 Fastify federation admin routes appear to have no caller, and
+      duplicate tRPC procedures that do.** Every one of them has a tRPC twin
+      (`federation.*`, `transfers.*`, `simsub.*`, `hub.*`, `migrations.*`), and the
+      twin is what the web app uses — 20+ call sites across
+      `apps/web/src/components/federation/`. The `/federation/...` strings in the web
+      app are **Next.js page paths** (`router.push`, `<Link href>`), not API calls,
+      and `docs/manual-qa-plan.md` lists them as pages for the same reason. A search
+      for an HTTP caller — `fetch`/`axios` in `apps/web`, `apps/api`, `scripts/`,
+      `sdks/typescript/src` — found none.
+      **That is very likely why nobody noticed they were unguarded**: unused surface
+      generates no traffic and no complaints, while remaining fully reachable. They
+      are guarded now (2026-07-29), so the exposure is closed either way; the
+      question is whether they should exist.
+      Deleting them would also resolve the one asymmetry left behind: `key-admin`
+      (`POST /federation/keys/rotate`, `GET /federation/keys`) is the only pair with
+      no tRPC twin, so DID key management would need a tRPC home as part of the same
+      change — which is the right place for it anyway.
+      **Do not confuse these with the S2S routes.** `/federation/trust*` and
+      `/federation/v1/*` are called by remote instances over HTTP and cannot be tRPC.
+      Only the operator-console duplicates are in question.
+      **Before deleting, establish there is genuinely no external consumer** — an
+      operator runbook or curl script outside the repo would not show up in the
+      search above. Absence of an in-repo caller is suggestive, not conclusive. —
+      (found 2026-07-29 while adding the Fastify guard gate)
+- [ ] **[P3] `'/federation/trust'` in `PUBLIC_PREFIXES` is a bare prefix.**
+      `hooks/auth.ts` tests `path.startsWith(prefix)`, and the entry has no trailing
+      slash, so any future path merely _beginning_ with that string —
+      `/federation/trusted-peers`, say — becomes unauthenticated by accident. No
+      current path is affected; `/federation/trust` and `/federation/trust/*` are
+      genuinely public S2S endpoints. The fix is a trailing slash plus a separate
+      exact entry, but it needs checking against every `/federation/trust*` route
+      first. — (found 2026-07-29 while adding the Fastify guard gate)
+- [ ] **[P3] Two route modules have no per-route API-key rejection test.**
+      `hub-admin.routes.spec.ts` drives handlers directly through a synthetic mock
+      app with a `getHandler` helper, so it bypasses the Fastify hook chain entirely
+      and cannot exercise a `preHandler` guard without being rewritten against a real
+      instance; `key-admin.routes.ts` has no spec at all. Both are covered by
+      `hooks/fastify-guard-coverage.spec.ts` (their routes declare the guard) and by
+      `hooks/fastify-guards.spec.ts` (the guard rejects, and `guardScope` installs
+      what it declares), so the property holds by decomposition — but neither module
+      has the direct end-to-end assertion the other four now carry. —
+      (found 2026-07-29 while adding the Fastify guard gate)
 
 ### Blocking REST gaps (integrator workflow)
 

@@ -6,7 +6,7 @@
  *
  * Most of this suite drives `internalOnly` routers (federation, simsub,
  * transfer, migration, hub). Those admit only interactive auth methods, so the
- * suite passes under TRPC_INTERNAL_ONLY_ENFORCE=true precisely because it
+ * suite passes under INTERNAL_ONLY_ENFORCE=true precisely because it
  * authenticates as `authMethod: 'test'` rather than as an API key.
  *
  * Co-located in e2e/federation/ (not e2e/helpers/) to avoid triggering

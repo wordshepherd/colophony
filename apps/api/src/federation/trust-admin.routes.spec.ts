@@ -9,6 +9,7 @@ import {
 } from 'vitest';
 import Fastify, { type FastifyInstance } from 'fastify';
 import type { Env } from '../config/env.js';
+import { applyGuardEnv } from '../__tests__/helpers/guard-env.js';
 
 // Mock trust service
 const mockFetchRemoteMetadata = vi.fn();
@@ -64,7 +65,7 @@ const testEnv: Env = {
   PORT: 0,
   HOST: '127.0.0.1',
   NODE_ENV: 'test',
-  TRPC_INTERNAL_ONLY_ENFORCE: false,
+  INTERNAL_ONLY_ENFORCE: false,
   LOG_LEVEL: 'fatal',
   REDIS_HOST: 'localhost',
   REDIS_PORT: 6379,
@@ -141,6 +142,9 @@ const sampleMetadataPreview = {
 
 describe('trust-admin.routes', () => {
   let app: FastifyInstance;
+  /** Same ADMIN roles, but authenticated as an API key. */
+  let apiKeyApp: FastifyInstance;
+  let restoreEnv: () => void;
 
   beforeAll(async () => {
     const { registerFederationTrustAdminRoutes } =
@@ -162,10 +166,53 @@ describe('trust-admin.routes', () => {
 
     await registerFederationTrustAdminRoutes(app, { env: testEnv });
     await app.ready();
+
+    restoreEnv = applyGuardEnv({ INTERNAL_ONLY_ENFORCE: 'true' });
+    apiKeyApp = Fastify({ logger: false });
+    apiKeyApp.decorateRequest('authContext', null);
+    apiKeyApp.addHook('onRequest', async (request) => {
+      request.authContext = {
+        userId: testUserId,
+        email: 'admin@test.com',
+        emailVerified: true,
+        authMethod: 'apikey',
+        apiKeyId: '00000000-0000-4000-a000-0000000000ff',
+        apiKeyScopes: [],
+        orgId: testOrgId,
+        roles: ['ADMIN'],
+      } as any;
+    });
+    await registerFederationTrustAdminRoutes(apiKeyApp, { env: testEnv });
+    await apiKeyApp.ready();
   });
 
   afterAll(async () => {
     await app.close();
+    await apiKeyApp.close();
+    restoreEnv();
+  });
+
+  it('rejects an API key on every route, even with an ADMIN creator', async () => {
+    // The ADMIN preHandler admits a key minted by an admin, because org-context
+    // resolves roles by user id regardless of auth method. internalOnly closes
+    // it, matching the tRPC twin (`federation.*` is internalAdminProcedure).
+    const calls: Array<['GET' | 'POST', string]> = [
+      ['GET', '/federation/metadata/peer.example.com'],
+      ['GET', '/federation/peers'],
+      ['GET', `/federation/peers/${testPeerId}`],
+      ['POST', '/federation/peers/initiate'],
+      ['POST', `/federation/peers/${testPeerId}/accept`],
+      ['POST', `/federation/peers/${testPeerId}/reject`],
+      ['POST', `/federation/peers/${testPeerId}/revoke`],
+    ];
+
+    for (const [method, url] of calls) {
+      const res = await apiKeyApp.inject({ method, url });
+      expect(res.statusCode, `${method} ${url}`).toBe(403);
+      expect(res.json(), `${method} ${url}`).toMatchObject({
+        message: 'This route is not available to API keys',
+      });
+    }
   });
 
   beforeEach(() => {

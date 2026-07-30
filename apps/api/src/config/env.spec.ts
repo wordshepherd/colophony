@@ -220,4 +220,43 @@ describe('validateEnv', () => {
       expect(() => validateEnv({ ...validBase, [key]: invalid })).toThrow();
     });
   });
+
+  describe('renamed variables', () => {
+    it('rejects TRPC_INTERNAL_ONLY_ENFORCE and names the replacement', () => {
+      // Ignoring the old name would let the schema default silently overrule an
+      // operator who set `false` to keep an internal surface reachable.
+      expect(() =>
+        validateEnv({
+          ...validBase,
+          TRPC_INTERNAL_ONLY_ENFORCE: 'false',
+        }),
+      ).toThrow(/renamed to INTERNAL_ONLY_ENFORCE/);
+    });
+
+    it('rejects the old name even when set to the same value as the default', () => {
+      // The failure is about the name being unread, not about the value
+      // disagreeing — a `true` that happens to match is still a stale config.
+      expect(() =>
+        validateEnv({ ...validBase, TRPC_INTERNAL_ONLY_ENFORCE: 'true' }),
+      ).toThrow(/renamed/);
+    });
+
+    it('treats an empty old name as absent', () => {
+      // docker-compose.prod.yml passes the legacy name through as
+      // `${TRPC_INTERNAL_ONLY_ENFORCE:-}` so that a stale value reaches this
+      // check at all. Unset arrives as '', which must NOT throw or every
+      // already-migrated deployment fails to boot.
+      expect(() =>
+        validateEnv({ ...validBase, TRPC_INTERNAL_ONLY_ENFORCE: '' }),
+      ).not.toThrow();
+    });
+
+    it('still parses the new name normally', () => {
+      expect(
+        validateEnv({ ...validBase, INTERNAL_ONLY_ENFORCE: 'false' })
+          .INTERNAL_ONLY_ENFORCE,
+      ).toBe(false);
+      expect(validateEnv(validBase).INTERNAL_ONLY_ENFORCE).toBe(true);
+    });
+  });
 });

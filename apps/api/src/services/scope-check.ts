@@ -28,6 +28,30 @@ export function checkApiKeyScopes(
   return { allowed: false, missing };
 }
 
+/**
+ * Auth methods that represent an interactive human session.
+ *
+ * This is an ALLOWLIST, and the distinction is not stylistic. A denylist of
+ * 'apikey' stays correct only until the next credential class exists — the
+ * `col_svc_` service principal would carry a different authMethod and silently
+ * readmit itself to `federation.updateConfig` and `hub.revokeInstance` with
+ * broader tenancy than the credential the rule was written to exclude.
+ * Written this way, every future auth method is excluded by construction and
+ * has to be explicitly admitted here.
+ *
+ * Lives here rather than on either surface because all three now consume it —
+ * tRPC's `internalOnly`, and the Fastify `internalOnly` in
+ * `hooks/fastify-guards.ts`. A per-surface copy is the same mistake as a
+ * per-surface guard tag.
+ *
+ * See docs/api-integration-design.md §1.6 M1.
+ */
+export const INTERACTIVE_AUTH_METHODS: readonly string[] = [
+  'oidc',
+  'demo',
+  'test',
+];
+
 // ---------------------------------------------------------------------------
 // Guard tagging
 // ---------------------------------------------------------------------------

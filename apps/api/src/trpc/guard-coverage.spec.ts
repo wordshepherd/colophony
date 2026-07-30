@@ -14,7 +14,7 @@
  * DECLARES, not "is protected" — the distinction was load-bearing while the
  * two guards differed. A `requireScopes` declaration is also its enforcement;
  * `internalOnly` only declared, and audited the crossing, until P0.5 flipped
- * `TRPC_INTERNAL_ONLY_ENFORCE` to true on 2026-07-27. Both now enforce on
+ * `INTERNAL_ONLY_ENFORCE` to true on 2026-07-27. Both now enforce on
  * declaration. The last test pins that, so a revert to log-only cannot pass
  * silently.
  *
@@ -26,7 +26,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { apiKeyScopeSchema } from '@colophony/types';
 
 const { envState } = vi.hoisted(() => ({
-  envState: { TRPC_INTERNAL_ONLY_ENFORCE: false },
+  envState: { INTERNAL_ONLY_ENFORCE: false },
 }));
 
 vi.mock('../config/env.js', () => ({
@@ -89,7 +89,7 @@ function isUnguarded(entry: ProcedureEntry): boolean {
 
 describe('tRPC guard coverage (P0.4)', () => {
   beforeEach(() => {
-    envState.TRPC_INTERNAL_ONLY_ENFORCE = false;
+    envState.INTERNAL_ONLY_ENFORCE = false;
   });
 
   it('introspects a plausible number of procedures', () => {
@@ -188,7 +188,7 @@ describe('tRPC guard coverage (P0.4)', () => {
     // The behavioural counterpart to the declaration checks above: proves the
     // boundary actually rejects, for all internal procedures rather than the
     // single one scope-enforcement.spec.ts covers.
-    envState.TRPC_INTERNAL_ONLY_ENFORCE = true;
+    envState.INTERNAL_ONLY_ENFORCE = true;
 
     const context: TRPCContext = {
       authContext: {
@@ -247,7 +247,7 @@ describe('tRPC guard coverage (P0.4)', () => {
       admitted.length === 0
         ? ''
         : `These procedures declare internalOnly but did not reject an API ` +
-            `key under TRPC_INTERNAL_ONLY_ENFORCE=true:\n` +
+            `key under INTERNAL_ONLY_ENFORCE=true:\n` +
             admitted.map((p) => `  - ${p}`).join('\n'),
     ).toEqual([]);
   });

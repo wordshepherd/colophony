@@ -110,11 +110,16 @@ const envSchema = z
     // Status token TTL
     STATUS_TOKEN_TTL_DAYS: z.coerce.number().int().positive().default(90),
 
-    // tRPC internal-only boundary. True = reject non-interactive credentials
-    // on the seven operator-console routers. False reverts to log-only, which
-    // records the attempt as an API_KEY_INTERNAL_ROUTE audit event and lets it
-    // through — the observation window, closed 2026-07-27.
-    TRPC_INTERNAL_ONLY_ENFORCE: z
+    // Internal-only boundary, across BOTH surfaces: the seven operator-console
+    // tRPC routers and the hand-rolled Fastify federation routes. True = reject
+    // non-interactive credentials. False reverts to log-only, which records the
+    // attempt as an API_KEY_INTERNAL_ROUTE audit event and lets it through —
+    // the observation window, closed 2026-07-27.
+    //
+    // Carried a TRPC_ prefix until 2026-07-29, when the Fastify surface started
+    // using it too. validateEnv() rejects the old name outright rather than
+    // ignoring it — see RENAMED_ENV_VARS below.
+    INTERNAL_ONLY_ENFORCE: z
       .enum(['true', 'false'])
       .default('true')
       .transform((v) => v === 'true'),
@@ -220,8 +225,40 @@ const envSchema = z
 
 export type Env = z.infer<typeof envSchema>;
 
+/**
+ * Environment variables that were renamed, mapped to their replacement.
+ *
+ * A removed name that is merely ignored is worse than one that fails: the schema
+ * default silently takes over, so an operator who set the old variable to
+ * override a default finds the default back in force with nothing to indicate it.
+ * For INTERNAL_ONLY_ENFORCE specifically, that means someone who set `false` to
+ * keep a surface reachable gets it closed with no signal. Fail at startup
+ * instead, naming the replacement.
+ */
+const RENAMED_ENV_VARS: Record<string, string> = {
+  TRPC_INTERNAL_ONLY_ENFORCE: 'INTERNAL_ONLY_ENFORCE',
+};
+
 export function validateEnv(
   env: Record<string, string | undefined> = process.env,
 ): Env {
+  for (const [legacy, replacement] of Object.entries(RENAMED_ENV_VARS)) {
+    // Empty counts as absent, and that is load-bearing rather than defensive.
+    // Compose injects only the variables named in a service's `environment:`
+    // block, so `docker-compose.prod.yml` has to pass each legacy name through
+    // explicitly for this check to see it at all — and a pass-through of an unset
+    // variable arrives as `''`, not undefined. Treating `''` as set would throw
+    // on every deployment that had already migrated.
+    if ((env[legacy] ?? '') !== '') {
+      throw new Error(
+        `${legacy} has been renamed to ${replacement}. It is no longer read, ` +
+          `so leaving it set would silently restore the default — which for ` +
+          `INTERNAL_ONLY_ENFORCE means closing a surface an operator meant to ` +
+          `keep open. Rename it wherever it is set: your .env file, and the ` +
+          `${replacement} line in docker-compose.prod.yml.`,
+      );
+    }
+  }
+
   return envSchema.parse(env);
 }

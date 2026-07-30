@@ -141,8 +141,15 @@ services:
       FEDERATION_RATE_LIMIT_FAIL_MODE: ${FEDERATION_RATE_LIMIT_FAIL_MODE:-open}
       # Status tokens
       STATUS_TOKEN_TTL_DAYS: ${STATUS_TOKEN_TTL_DAYS:-90}
-      # Internal tRPC boundary. Set false only to revert to log-only.
-      TRPC_INTERNAL_ONLY_ENFORCE: ${TRPC_INTERNAL_ONLY_ENFORCE:-true}
+      # Internal boundary, tRPC + Fastify. Set false only to revert to log-only.
+      INTERNAL_ONLY_ENFORCE: ${INTERNAL_ONLY_ENFORCE:-true}
+      # Passed through ONLY so validateEnv() can reject it. Compose injects just
+      # the variables named here, so a stale TRPC_INTERNAL_ONLY_ENFORCE=false in
+      # .env.prod would otherwise never reach the container: the API would take
+      # the default `true` and silently close a surface the operator meant to
+      # keep open. Unset resolves to '', which validateEnv() treats as absent.
+      # Delete this line once no deployment sets the old name.
+      TRPC_INTERNAL_ONLY_ENFORCE: ${TRPC_INTERNAL_ONLY_ENFORCE:-}
       # Background jobs (Inngest)
       INNGEST_EVENT_KEY: ${INNGEST_EVENT_KEY:-}
       INNGEST_SIGNING_KEY: ${INNGEST_SIGNING_KEY:-}
@@ -630,7 +637,9 @@ services:
       # A no-op here in practice — the demo API authenticates as `demo`, which
       # is on the interactive allowlist — but set explicitly so the deployed
       # value never depends on the schema default.
-      TRPC_INTERNAL_ONLY_ENFORCE: ${TRPC_INTERNAL_ONLY_ENFORCE:-true}
+      INTERNAL_ONLY_ENFORCE: ${INTERNAL_ONLY_ENFORCE:-true}
+      # See the `api` service — passed through only so validateEnv() rejects it.
+      TRPC_INTERNAL_ONLY_ENFORCE: ${TRPC_INTERNAL_ONLY_ENFORCE:-}
     depends_on:
       demo-migrate:
         condition: service_completed_successfully

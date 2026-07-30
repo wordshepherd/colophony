@@ -8,6 +8,7 @@ import {
   type UserKeyListResponse,
 } from '@colophony/types';
 import type { Env } from '../config/env.js';
+import { guardScope, internalOnly } from '../hooks/fastify-guards.js';
 import {
   federationService,
   NoActiveKeyError,
@@ -18,12 +19,22 @@ import {
  *
  * No ADMIN role requirement — users manage their own DID keys.
  * User-scoped RLS provides isolation for the list endpoint.
+ *
+ * Interactive sessions only (since 2026-07-29). Unlike the other federation
+ * admin modules this has **no tRPC twin**, so the restriction is a deliberate
+ * judgement rather than parity: rotating a user's DID signing key is
+ * account-security critical, and an API key acts as its creator, so a key could
+ * otherwise rotate the key of the human who minted it. The nearest analogue —
+ * migration-admin, the other "user manages their own federation identity"
+ * surface — is `internalAuthedProcedure` on tRPC.
  */
 export async function registerKeyAdminRoutes(
   app: FastifyInstance,
   opts: { env: Env },
 ): Promise<void> {
   const { env } = opts;
+
+  guardScope(app, internalOnly);
 
   /**
    * POST /federation/keys/rotate

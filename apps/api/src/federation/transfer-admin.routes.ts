@@ -2,6 +2,7 @@ import { z } from 'zod';
 import type { FastifyInstance } from 'fastify';
 import { transferListQuerySchema } from '@colophony/types';
 import type { Env } from '../config/env.js';
+import { guardScope, internalOnly } from '../hooks/fastify-guards.js';
 import {
   transferService,
   TransferNotFoundError,
@@ -10,12 +11,18 @@ import {
 
 /**
  * Admin transfer management endpoints.
- * Behind normal auth hook chain — requires authenticated user with ADMIN role.
+ * Behind normal auth hook chain — interactive sessions only, ADMIN role.
+ *
+ * Matches the tRPC twin (`transfers.*`, all `internalAdminProcedure`). The ADMIN
+ * check alone would admit a key minted by an admin — see trust-admin.routes.ts.
  */
 export async function registerTransferAdminRoutes(
   app: FastifyInstance,
   _opts: { env: Env },
 ): Promise<void> {
+  // Runs before the ADMIN check so a key is refused for being a key.
+  guardScope(app, internalOnly);
+
   // preHandler: require ADMIN role
   app.addHook('preHandler', async (request, reply) => {
     if (!request.authContext?.roles?.includes('ADMIN')) {
