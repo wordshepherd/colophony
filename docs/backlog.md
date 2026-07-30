@@ -104,6 +104,17 @@
       postgres start. If that is deliberate for staging, note it in `docs/deployment.md`; if
       not, it is a gap that has been silent for months. — (found 2026-07-27)
 - [ ] [P3] CI lost per-request E2E server logging when the Playwright jobs moved to `next start`. The `GET /route 200 in Nms (next.js: …)` lines are a **dev-server** feature; a production server logs startup and errors only. So `apps/web/next-e2e.log` — added in PR #512 specifically to make E2E failures diagnosable — is now about six lines in CI and carries no request history (confirmed on run 30375890460). It still catches server-side crashes, and the request trace is reproducible locally in dev mode, so this is a real but bounded loss. If a future CI-only failure needs the trace, options are a request-logging middleware active only under an E2E flag, or `--experimental-cpu-prof`-style instrumentation on the failing job. Do not solve it by reverting CI to the dev server — that reinstates the route-group 404 — (2026-07-28, while mitigating the `(dashboard)` 404)
+- [ ] [P2] `docs/repo-hygiene-audit.md` enumerates, in tracked and therefore public content,
+      the local-only tooling paths that the repo deliberately keeps out of the remote. Naming
+      them defeats the point of excluding them: the exclusion lives in `.git/info/exclude`
+      rather than `.gitignore` precisely so the list itself never ships, and this document
+      re-publishes it. Sections around lines 271–288 are the ones to rework.
+      This is the failure mode the hygiene rules in root and per-directory guidance already
+      warn about — a document _describing_ the policy leaks by quoting what the policy hides —
+      and it is easy to reproduce, so worth fixing rather than tolerating. Two fresh instances
+      were caught and reworded before landing on 2026-07-30, which is what surfaced the
+      pre-existing ones. Rewrite to describe the mechanism and the rationale without listing
+      the paths; the audit's conclusions survive that edit intact. — (found 2026-07-30)
 - [ ] [P3] Seed data ages out of a long-lived dev database, and `db:seed` will not repair it. Submission periods are seeded at fixed offsets from the seed date, so `quarterly-review` eventually has no open period — which fails 11 of 13 `embed` tests with `No open period found`. `pnpm db:seed` is idempotent-by-skip, so it is a no-op once data exists; only the destructive `db:reset` refreshes the dates. CI is unaffected (it seeds fresh each run), so this only ever bites locally, and it looks like a code regression rather than stale data. Either make the seed refresh period dates when they have closed, or have `global-setup.ts` fail with a "run `pnpm db:reset`" message when no open period exists for the seed org — (found 2026-07-27 while verifying the E2E auth rework)
 
 ---
@@ -441,11 +452,85 @@ Ordered as the design doc's Phase 0/D.
       plugin registration order across files. The query was wrong about the route being
       unguarded; it was incidentally near this, which is the real issue. —
       (found 2026-07-29 while triaging that alert)
-- [ ] **[P1] Audit cannot distinguish an API key from its creator.** `audit_events` has a
+      **Three alerts have now been dismissed on this one mechanism** — #45
+      (`hooks/db-context.ts`), #59 (`sse/notification-stream.ts`) and #60
+      (`hooks/audit.ts:35`, dismissed 2026-07-30). Expect a fourth: the rule fires whenever
+      changed code reads a credential field, which is its heuristic for "performs
+      authorization", and every `onRequest` hook in the chain sits behind
+      `rateLimitPlugin` (`main.ts:199`) and `rateLimitAuthPlugin` (`:201`). #60 fired purely
+      because principal derivation reads `apiKeyId` to label an audit row. Before dismissing
+      a fourth, re-confirm two things rather than pattern-matching: that the flagged code is
+      registered **after** both limiters in `main.ts`, and that it does not open its own pool
+      connection the way the SSE guard fallback does — that second caveat is what made #59
+      worth noting rather than purely spurious.
+- [x] **[P1] Audit cannot distinguish an API key from its creator.** `audit_events` has a
       single `actor_id` and `BaseAuditParams` carries no `apiKeyId`, so a key's actions and
       the human's own actions are recorded identically. Add `principal_id` / `principal_type`
       (also the prerequisite for acting-as). Requires updating `insert_audit_event()`. —
-      (design doc §0.1(d), P2.2)
+      (design doc §0.1(d), P2.2; done 2026-07-30)
+      `actor_id` keeps meaning the **effective user**; `principal_id`/`principal_type` record
+      the **acting credential**. Migration `0070`. The two cases that exist today are
+      implemented (direct human → principal NULL; org key → principal = key, actor = creator);
+      the two instance-principal cases need no further schema work. Backfill was a no-op —
+      NULL correctly means "we do not know" for every historical row.
+      **The migration had to `DROP` and re-`CREATE` `insert_audit_event()`, for a reason the
+      familiar trap does not cover.** The known rule is that `CREATE OR REPLACE` cannot change a
+      _return type_ — the reason migrations 0047, 0055 and 0060 each drop first. This function
+      returns `void` and always will, so that rule never fires. The actual hazard is that a
+      changed **parameter list makes a new overload**:
+      `CREATE OR REPLACE` with 14 args would have left the 12-arg function standing, owned by
+      the migration runner (superuser) with `EXECUTE` to `PUBLIC` by default — a SECURITY
+      DEFINER function that bypasses RLS, which is exactly what 0010's ownership transfer to
+      `audit_writer` exists to prevent. No prior migration had ever added a parameter, so there
+      was no precedent; the three existing `DROP FUNCTION` migrations all drop for return-type
+      changes and keep their parameter lists identical.
+      **`rls-infrastructure.test.ts` now pins the invariant rather than the privilege.** The
+      old assertion only checked that `app_user` _has_ EXECUTE, which passes with a stray
+      overload present and with `PUBLIC` holding EXECUTE — it could not see this failure at
+      all. The new one asserts exactly **one** `insert_audit_event`, owned by `audit_writer`,
+      `prosecdef`, 14 args, no `PUBLIC` EXECUTE. Verified non-vacuous by injecting the overload
+      inside the test body: it fails, and reports `owner: 'test'` (the superuser). Note the
+      injection must happen _in_ the test — `globalSetup` re-provisions the schema, so an
+      overload created beforehand is wiped before the assertion runs and the check passes
+      misleadingly.
+      Also note `has_function_privilege` **raises `undefined_function`** for a signature with
+      no matching function rather than returning false, so the hardcoded signature string in
+      that file errors the suite rather than failing it — update it in lockstep.
+      **The two new params are appended last with `DEFAULT NULL`**, so all three existing call
+      arities still bind unchanged (12-arg in `gdpr.service.ts`, 2-arg in
+      `rls-no-context.test.ts`); verified against the real database.
+      Derivation lives in `principalFromAuthContext` and is called from the only two places
+      that enrich from an `AuthContext` — `hooks/audit.ts` and the `withRls` fallback in
+      `hooks/fastify-guards.ts` (the SSE route, which has no request transaction). The ~110
+      `*WithAudit` service methods and `services/context.ts` needed no change at all.
+      **The discriminator is the presence of `apiKeyId`, never `authMethod === 'apikey'`** —
+      same allowlist rule as `internalOnly` and the per-credential rate limiter. Pinned twice
+      (unit + end-to-end); verified an `authMethod`-based implementation fails only that one
+      case out of six.
+- [ ] **[P1] `auditService.list` and `getById` carry no explicit `organizationId` predicate.**
+      `apps/api/src/services/audit.service.ts` builds `list`'s `where` from
+      action/resource/actor/resource-id/principal/date only, and `getById` filters on `id`
+      alone — RLS is the sole defense on both. The same shape as `apiKeyService` (#521),
+      `organizationService.listMembers` (#527) and `notificationService` (#531), and it is the
+      only remaining read of a tenant table in that state on this surface.
+      Fix is the house convention `(tx, input, orgId)` with **one hoisted condition reused by
+      the page and count queries** — filtering only the page leaves `total` reporting every
+      org's event count — plus an admin-pool test mirroring
+      `__tests__/rls/api-key-service.test.ts`, since the existing router specs mock the service
+      outright and would pass with or without a predicate. Callers to thread: the REST and tRPC
+      audit routers (both `adminProcedure`, so `orgId` is already resolved).
+      **Deliberately not bundled into the principal-attribution PR**, following the precedent
+      set when `apiKeyService`'s predicate fix was left out of P0.5b so a multi-tenancy change
+      would not ride inside an unrelated one. — (found 2026-07-30 by the plan review for the
+      principal-attribution work)
+- [ ] **[P3] The federation audit log viewer's date filters are silently dropped.**
+      `apps/web/src/components/federation/audit-log-viewer.tsx` sends `dateFrom`/`dateTo` in
+      its query input, but `listAuditEventsSchema` declares `from`/`to`, so both are discarded
+      server-side and the From/To inputs do nothing. The user gets a full unfiltered result set
+      and no error. The same component also re-declares its own `AuditEvent` interface rather
+      than importing from `@colophony/types`, which is why the mismatch type-checks — fixing
+      that import would have caught this. — (found 2026-07-30 while mapping the audit read
+      surface)
 - [ ] **[P2] Honour `X-Act-As-User` on ordinary org-scoped API keys.** `hooks/auth.ts:314`
       unconditionally sets `userId: creator.id` for `authMethod: 'apikey'`, so every action a
       `col_live_` key takes is attributed to whoever minted it — including `submitterId` and
@@ -505,9 +590,24 @@ Ordered as the design doc's Phase 0/D.
       drops the retained job first; `retryDelivery` uses it, and an integration test covers
       the cancel → re-enable → retry → delivered round trip. This was live for `FAILED`
       retries too, not just the `CANCELLED` path added here.
-- [ ] **[P2] No dedup constraint on `webhook_deliveries`.** `createDelivery`
-      (`webhook.service.ts:222`) has no unique constraint per endpoint/event, so Inngest
-      retries or replayed events can duplicate deliveries. — (design review 2026-07-27)
+- [ ] **[P2] `webhook_deliveries` has no dedup constraint — but a constraint alone would not
+      dedup anything.** The absence is real: the table declares three plain indexes and no
+      unique constraint (`packages/db/src/schema/webhook-endpoints.ts`, migration `0033`), and
+      `createDelivery` (now `webhook.service.ts:272`, not `:222`) is a plain insert with no
+      `onConflict`.
+      **The originally proposed fix does not work, which is why this is still open.** A unique
+      constraint on `(webhook_endpoint_id, event_id)` would never collide, because `event_id`
+      is freshly generated at both call sites rather than carried from the source event:
+      `inngest/functions/webhook-delivery.ts:50` falls back to `crypto.randomUUID()` whenever
+      the Inngest event has no id, and `trpc/routers/webhooks.ts:155` always generates one.
+      Two deliveries of the "same" event therefore get different `event_id`s and the
+      constraint passes.
+      So the work is ordered: **establish a stable, source-derived event id first**, then add
+      the constraint. Without that, adding the constraint yields a schema change that looks
+      like idempotency and provides none — worse than the current state, which at least does
+      not claim to dedup. Worth checking what identifier the Inngest event actually carries
+      before assuming one exists. — (design review 2026-07-27; premise corrected 2026-07-30
+      after verifying against the code)
 - [x] **[P1] `apiKeyService` carries no explicit `organizationId` predicate.** `list`
       (`apps/api/src/services/api-key.service.ts:71`), `revoke` (`:129`) and `delete`
       (`:145`) relied on RLS alone, and no caller passed an org ID

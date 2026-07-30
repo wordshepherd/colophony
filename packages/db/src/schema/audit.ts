@@ -34,6 +34,16 @@ export const auditEvents = pgTable(
     requestId: varchar("request_id", { length: 255 }),
     method: varchar("method", { length: 10 }),
     route: varchar("route", { length: 512 }),
+    // The acting credential, as opposed to actorId (the effective user).
+    // An API key's writes carry principalId = the key and actorId = its creator;
+    // a direct human carries principalId NULL.
+    //
+    // Deliberately NO .references(): the column is polymorphic — api_keys.id
+    // today, service_principals.id later — so no single FK is expressible. A
+    // dangling id after key deletion is correct for an audit log; the record of
+    // what happened must outlive the credential. Do not "fix" this with an FK.
+    principalId: uuid("principal_id"),
+    principalType: varchar("principal_type", { length: 32 }),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
@@ -42,6 +52,10 @@ export const auditEvents = pgTable(
     index("audit_events_organization_id_idx").on(table.organizationId),
     index("audit_events_actor_id_idx").on(table.actorId),
     index("audit_events_actor_created_idx").on(table.actorId, table.createdAt),
+    index("audit_events_principal_created_idx").on(
+      table.principalId,
+      table.createdAt,
+    ),
     index("audit_events_org_created_idx").on(
       table.organizationId,
       table.createdAt,

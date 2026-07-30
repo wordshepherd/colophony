@@ -19,6 +19,7 @@ def _get_kwargs(
     resource: ListAuditEventsResource | Unset = UNSET,
     actor_id: UUID | Unset = UNSET,
     resource_id: UUID | Unset = UNSET,
+    principal_id: UUID | Unset = UNSET,
     from_: datetime.datetime | Unset = UNSET,
     to: datetime.datetime | Unset = UNSET,
     page: int | Unset = 1,
@@ -48,6 +49,11 @@ def _get_kwargs(
     if not isinstance(resource_id, Unset):
         json_resource_id = str(resource_id)
     params["resourceId"] = json_resource_id
+
+    json_principal_id: str | Unset = UNSET
+    if not isinstance(principal_id, Unset):
+        json_principal_id = str(principal_id)
+    params["principalId"] = json_principal_id
 
     json_from_: str | Unset = UNSET
     if not isinstance(from_, Unset):
@@ -106,6 +112,7 @@ def sync_detailed(
     resource: ListAuditEventsResource | Unset = UNSET,
     actor_id: UUID | Unset = UNSET,
     resource_id: UUID | Unset = UNSET,
+    principal_id: UUID | Unset = UNSET,
     from_: datetime.datetime | Unset = UNSET,
     to: datetime.datetime | Unset = UNSET,
     page: int | Unset = 1,
@@ -121,6 +128,8 @@ def sync_detailed(
         resource (ListAuditEventsResource | Unset): Filter by resource type (e.g. organization)
         actor_id (UUID | Unset): Filter by the user who performed the action
         resource_id (UUID | Unset): Filter by the affected resource ID
+        principal_id (UUID | Unset): Filter by the acting credential (API key ID) rather than the
+            effective user
         from_ (datetime.datetime | Unset): Start of date range (ISO-8601)
         to (datetime.datetime | Unset): End of date range (ISO-8601)
         page (int | Unset): Page number (1-based) Default: 1.
@@ -139,6 +148,7 @@ def sync_detailed(
         resource=resource,
         actor_id=actor_id,
         resource_id=resource_id,
+        principal_id=principal_id,
         from_=from_,
         to=to,
         page=page,
@@ -159,6 +169,7 @@ def sync(
     resource: ListAuditEventsResource | Unset = UNSET,
     actor_id: UUID | Unset = UNSET,
     resource_id: UUID | Unset = UNSET,
+    principal_id: UUID | Unset = UNSET,
     from_: datetime.datetime | Unset = UNSET,
     to: datetime.datetime | Unset = UNSET,
     page: int | Unset = 1,
@@ -174,6 +185,8 @@ def sync(
         resource (ListAuditEventsResource | Unset): Filter by resource type (e.g. organization)
         actor_id (UUID | Unset): Filter by the user who performed the action
         resource_id (UUID | Unset): Filter by the affected resource ID
+        principal_id (UUID | Unset): Filter by the acting credential (API key ID) rather than the
+            effective user
         from_ (datetime.datetime | Unset): Start of date range (ISO-8601)
         to (datetime.datetime | Unset): End of date range (ISO-8601)
         page (int | Unset): Page number (1-based) Default: 1.
@@ -193,6 +206,7 @@ def sync(
         resource=resource,
         actor_id=actor_id,
         resource_id=resource_id,
+        principal_id=principal_id,
         from_=from_,
         to=to,
         page=page,
@@ -207,6 +221,7 @@ async def asyncio_detailed(
     resource: ListAuditEventsResource | Unset = UNSET,
     actor_id: UUID | Unset = UNSET,
     resource_id: UUID | Unset = UNSET,
+    principal_id: UUID | Unset = UNSET,
     from_: datetime.datetime | Unset = UNSET,
     to: datetime.datetime | Unset = UNSET,
     page: int | Unset = 1,
@@ -222,6 +237,8 @@ async def asyncio_detailed(
         resource (ListAuditEventsResource | Unset): Filter by resource type (e.g. organization)
         actor_id (UUID | Unset): Filter by the user who performed the action
         resource_id (UUID | Unset): Filter by the affected resource ID
+        principal_id (UUID | Unset): Filter by the acting credential (API key ID) rather than the
+            effective user
         from_ (datetime.datetime | Unset): Start of date range (ISO-8601)
         to (datetime.datetime | Unset): End of date range (ISO-8601)
         page (int | Unset): Page number (1-based) Default: 1.
@@ -240,6 +257,7 @@ async def asyncio_detailed(
         resource=resource,
         actor_id=actor_id,
         resource_id=resource_id,
+        principal_id=principal_id,
         from_=from_,
         to=to,
         page=page,
@@ -258,6 +276,7 @@ async def asyncio(
     resource: ListAuditEventsResource | Unset = UNSET,
     actor_id: UUID | Unset = UNSET,
     resource_id: UUID | Unset = UNSET,
+    principal_id: UUID | Unset = UNSET,
     from_: datetime.datetime | Unset = UNSET,
     to: datetime.datetime | Unset = UNSET,
     page: int | Unset = 1,
@@ -273,6 +292,8 @@ async def asyncio(
         resource (ListAuditEventsResource | Unset): Filter by resource type (e.g. organization)
         actor_id (UUID | Unset): Filter by the user who performed the action
         resource_id (UUID | Unset): Filter by the affected resource ID
+        principal_id (UUID | Unset): Filter by the acting credential (API key ID) rather than the
+            effective user
         from_ (datetime.datetime | Unset): Start of date range (ISO-8601)
         to (datetime.datetime | Unset): End of date range (ISO-8601)
         page (int | Unset): Page number (1-based) Default: 1.
@@ -293,6 +314,7 @@ async def asyncio(
             resource=resource,
             actor_id=actor_id,
             resource_id=resource_id,
+            principal_id=principal_id,
             from_=from_,
             to=to,
             page=page,

@@ -8208,6 +8208,7 @@ export interface operations {
           | "reader_feedback";
         actorId?: string;
         resourceId?: string;
+        principalId?: string;
         from?: string;
         to?: string;
         page?: number;
@@ -8239,8 +8240,12 @@ export interface operations {
               resource: string;
               /** @description ID of the affected resource */
               resourceId: string | null;
-              /** @description ID of the user who performed the action */
+              /** @description Effective user who performed the action — for an API key, the key's creator */
               actorId: string | null;
+              /** @description Acting credential (API key ID), or null when a user acted directly */
+              principalId: string | null;
+              /** @description Kind of acting credential (e.g. api_key), or null */
+              principalType: string | null;
               /** @description Previous state before the change */
               oldValue?: unknown | null;
               /** @description New state after the change */
@@ -8303,8 +8308,12 @@ export interface operations {
             resource: string;
             /** @description ID of the affected resource */
             resourceId: string | null;
-            /** @description ID of the user who performed the action */
+            /** @description Effective user who performed the action — for an API key, the key's creator */
             actorId: string | null;
+            /** @description Acting credential (API key ID), or null when a user acted directly */
+            principalId: string | null;
+            /** @description Kind of acting credential (e.g. api_key), or null */
+            principalType: string | null;
             /** @description Previous state before the change */
             oldValue?: unknown | null;
             /** @description New state after the change */

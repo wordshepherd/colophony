@@ -42,7 +42,10 @@ import {
   INTERACTIVE_AUTH_METHODS,
   type GuardTag,
 } from '../services/scope-check.js';
-import { auditService } from '../services/audit.service.js';
+import {
+  auditService,
+  principalFromAuthContext,
+} from '../services/audit.service.js';
 import { validateEnv } from '../config/env.js';
 
 declare module 'fastify' {
@@ -67,6 +70,8 @@ type DenialParams = Omit<
   | 'requestId'
   | 'method'
   | 'route'
+  | 'principalId'
+  | 'principalType'
 >;
 
 /**
@@ -115,6 +120,7 @@ async function auditDenial(
         requestId: String(request.id),
         method: request.method,
         route: routeLabel(request),
+        ...principalFromAuthContext(auth),
       });
     });
   } catch (error) {
