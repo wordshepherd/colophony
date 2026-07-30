@@ -417,6 +417,30 @@ Ordered as the design doc's Phase 0/D.
       principal — and fails open when Redis is unreachable, and `apiKeyService.create`
       enforces no per-org or per-creator key count. Either a creator-level umbrella bucket
       or a key-count cap would close it.
+- [ ] **[P2] The main API rate limiter fails open on Redis error, and unlike federation's
+      it is not configurable.** `hooks/rate-limit.ts:137-143` catches any Redis failure,
+      logs `Rate limit Redis error — allowing request without rate limiting`, and returns —
+      so a Redis outage removes rate limiting from the entire API at once. Every request
+      then reaches `dbContextPlugin`, which opens a pooled connection and begins a
+      transaction per request, so the failure mode is not merely "unlimited requests" but
+      connection-pool exhaustion under load.
+      **The asymmetry is the tell.** Federation rate limiting already has
+      `FEDERATION_RATE_LIMIT_FAIL_MODE` (`open` / `closed` / `fallback`, with an in-process
+      fallback), added in PR #225 for exactly this concern. The main limiter — which guards
+      far more surface — never got the same treatment. Port the pattern rather than
+      inventing a second one.
+      Two related gaps worth deciding at the same time: `shouldSkip` exempts the whole
+      `/webhooks/` prefix from the global limiter (those handlers do hit the database; they
+      carry their own `webhookRateLimit` preHandler, so this is defensible but undocumented
+      as a deliberate choice), and the second-pass credential limiter in
+      `hooks/rate-limit-auth.ts` should be checked for the same fail-open behaviour.
+      **Note for anyone re-triaging CodeQL:** `js/missing-rate-limiting` on
+      `hooks/db-context.ts:38` (alert #45, opened 2026-02-26) was dismissed as a false
+      positive on 2026-07-29 — the limiter is a separate `fastify-plugin` registered at
+      `main.ts:199`, ahead of `dbContextPlugin` at `:203`, and CodeQL cannot follow Fastify
+      plugin registration order across files. The query was wrong about the route being
+      unguarded; it was incidentally near this, which is the real issue. —
+      (found 2026-07-29 while triaging that alert)
 - [ ] **[P1] Audit cannot distinguish an API key from its creator.** `audit_events` has a
       single `actor_id` and `BaseAuditParams` carries no `apiKeyId`, so a key's actions and
       the human's own actions are recorded identically. Add `principal_id` / `principal_type`
