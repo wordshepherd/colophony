@@ -25,7 +25,7 @@ Quick-reference index of important files across the codebase.
 | **Fastify hooks**          | `apps/api/src/hooks/` (auth, rate-limit, org-context, db-context, audit)                                        |
 | **Service layer**          | `apps/api/src/services/`                                                                                        |
 | **tRPC**                   | `apps/api/src/trpc/` — intended internal, but API keys reach it too (see `docs/api-integration-design.md` §0.1) |
-| **REST (oRPC, public)**    | `apps/api/src/rest/` (`context.ts` = procedure builders + `requireScopes`, `routers/` = 139 operations)         |
+| **REST (oRPC, public)**    | `apps/api/src/rest/` (`context.ts` = procedure builders + `requireScopes`, `routers/` = 146 operations)         |
 | **Zitadel webhook**        | `apps/api/src/webhooks/zitadel.webhook.ts`                                                                      |
 | **Stripe webhook**         | `apps/api/src/webhooks/stripe.webhook.ts`                                                                       |
 | **Documenso webhook**      | `apps/api/src/webhooks/documenso.webhook.ts`                                                                    |
@@ -102,14 +102,14 @@ Quick-reference index of important files across the codebase.
 
 ## SDKs & Scripts
 
-| What                | Path                                                                                                                                                                                                      |
-| ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **OpenAPI spec**    | `sdks/openapi.json` — **stale as of 2026-07-27:** 67 paths / 103 operations committed vs 93 / 139 in `apps/api/src/rest/routers/`. Last regenerated 2026-02-27. See `docs/api-integration-design.md` §0.1 |
-| **TypeScript SDK**  | `sdks/typescript/` (`@colophony/sdk` — openapi-fetch + generated types)                                                                                                                                   |
-| **Python SDK**      | `sdks/python/` (`colophony` — openapi-python-client generated)                                                                                                                                            |
-| **Spec export**     | `scripts/export-openapi.ts` (fetches `/v1/openapi.json` — **requires a running dev server**, so it cannot run in CI)                                                                                      |
-| **SDK generation**  | `scripts/generate-sdks.ts` (regenerate both SDKs from committed spec)                                                                                                                                     |
-| **SDK drift check** | `.github/workflows/ci.yml` `sdk-check` job — checks SDK ↔ spec, **not** spec ↔ source, so it cannot detect the staleness above                                                                            |
+| What                | Path                                                                                                                                                                                                                           |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **OpenAPI spec**    | `sdks/openapi.json` — 99 paths / 146 operations, current as of 2026-07-31. Was five months stale until 2026-07-27; `sdk-check` now gates three directions (source → spec, spec → TS SDK, spec → Python SDK), so drift fails CI |
+| **TypeScript SDK**  | `sdks/typescript/` (`@colophony/sdk` — openapi-fetch + generated types)                                                                                                                                                        |
+| **Python SDK**      | `sdks/python/` (`colophony` — openapi-python-client generated)                                                                                                                                                                 |
+| **Spec export**     | `scripts/export-openapi.ts` (builds the document in-process via `OpenAPIGenerator` — no server, database or Redis, so it runs in CI; `--check` fails on drift)                                                                 |
+| **SDK generation**  | `scripts/generate-sdks.ts` (regenerate both SDKs from committed spec)                                                                                                                                                          |
+| **SDK drift check** | `.github/workflows/ci.yml` `sdk-check` job — gates three directions since 2026-07-27: source → spec, spec → TS SDK, spec → Python SDK. Needs a workspace build first; detects Python drift with `git status`, not `git diff`   |
 
 ## Infrastructure & Ops
 
@@ -126,12 +126,12 @@ Quick-reference index of important files across the codebase.
 
 ## Documentation
 
-| What                       | Path                                                                                        |
-| -------------------------- | ------------------------------------------------------------------------------------------- |
-| **Backlog**                | `docs/backlog.md` (track-organized, drives session focus)                                   |
-| **API integration design** | `docs/api-integration-design.md` (REST parity inventory, cross-org service principal — RFC) |
-| **Design system**          | `docs/DESIGN_SYSTEM.md` (roles, density, navigation, typography, migration path)            |
-| **Manuscript format**      | `docs/manuscript-format.md` (ProseMirror JSON schema, conversion pipeline)                  |
-| **CSR format spec**        | `docs/csr-format.md`                                                                        |
-| **QA log**                 | `docs/qa-log.md`                                                                            |
-| **Release checklist**      | `docs/release-checklist.md`                                                                 |
+| What                       | Path                                                                                                                      |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| **Backlog**                | `docs/backlog.md` (track-organized, drives session focus)                                                                 |
+| **API integration design** | `docs/api-integration-design.md` (REST parity inventory, cross-org service principal; Phase D decisions taken 2026-07-31) |
+| **Design system**          | `docs/DESIGN_SYSTEM.md` (roles, density, navigation, typography, migration path)                                          |
+| **Manuscript format**      | `docs/manuscript-format.md` (ProseMirror JSON schema, conversion pipeline)                                                |
+| **CSR format spec**        | `docs/csr-format.md`                                                                                                      |
+| **QA log**                 | `docs/qa-log.md`                                                                                                          |
+| **Release checklist**      | `docs/release-checklist.md`                                                                                               |

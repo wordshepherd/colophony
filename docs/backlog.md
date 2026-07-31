@@ -332,6 +332,28 @@ Ordered as the design doc's Phase 0/D.
       `sdks/openapi.json` is not in `.prettierignore`, so the pre-commit hook formats it —
       the export now writes prettier-formatted output to keep `--check`'s byte comparison
       valid.
+- [ ] **[P2] Decide whether to stop committing the generated SDKs (D4 — recommended
+      2026-07-27, not adopted, re-opened 2026-07-31).** The design doc recommended committing
+      the spec and building the SDKs in CI, and P0.2 shipped without the deletion half — so it
+      is recorded as not adopted rather than taken. `sdks/` still carries 812 tracked files
+      under `sdks/python` (632 of them model files) and 9 under `sdks/typescript`, and
+      `sdk-check` gates all three directions against them.
+      **The case is weaker than when it was written.** D4's argument was that SDK bulk made
+      the drift check painful enough to skip, which is how the spec went 36 operations stale.
+      The check that actually catches that is `pnpm sdk:check-spec` — source → spec — and it
+      now runs in CI without touching the SDKs at all, so that failure mode is already closed
+      by other means. What is left is review noise, which is real: the Python SDK went from
+      447 model files to 632 in regenerations nobody read.
+      **The doc's "6.1 MB" is a working-tree figure, not a committed one.** Tracked content
+      under `sdks/python` is 2.42 MB. Re-measure before arguing from §1.8; the file counts are
+      both accurate and the stronger form of the point.
+      **Three things need new homes first**, all surfaced by P0.2: `python-sdk-tests` runs
+      against the committed output; `pyproject.toml` carries a hand-added pytest dev group and
+      `testpaths` the generator does not produce and once overwrote; `poetry.lock` is
+      Dependabot-maintained. Plus a release pipeline to publish what stops being committed.
+      Not a prerequisite for Phase 1 or Phase 2 — the "cannot wait" rationale was that P0.2
+      would otherwise do the work twice, and P0.2 is done. — (design doc §1.8, §6, §8;
+      re-opened 2026-07-31)
 - [x] **[P2.0 audit half] Tenant-isolation audit of `users` and `organizations`.** All 73 read
       and write sites across 36 files classified in
       [`docs/tenant-isolation-audit.md`](tenant-isolation-audit.md): 18 SCOPED, 3 USER-SCOPED,
@@ -816,6 +838,13 @@ Ordered as the design doc's Phase 0/D.
       drops the retained job first; `retryDelivery` uses it, and an integration test covers
       the cancel → re-enable → retry → delivered round trip. This was live for `FAILED`
       retries too, not just the `CANCELLED` path added here.
+      **Recorded 2026-07-31 with D2:** this pickup-time re-read is the revocation control for
+      the instance-principal path too, so P2.7 widens it to principal and grant state rather
+      than adding a mechanism. Proactively draining queued jobs is hygiene — queue occupancy
+      and one fewer `CANCELLED` row per orphaned job — not the safety property. The design
+      doc's §1.9 and its P2.7 row were reworded to match, and its "backoff out to 1 hour" was
+      corrected: the schedule is 8 attempts totalling about 3h12m, which is a figure about
+      how long a job can sit in Redis, not about exposure.
 - [ ] **[P2] `webhook_deliveries` has no dedup constraint — but a constraint alone would not
       dedup anything.** The absence is real: the table declares three plain indexes and no
       unique constraint (`packages/db/src/schema/webhook-endpoints.ts`, migration `0033`), and
@@ -1030,12 +1059,23 @@ Ordered as the design doc's Phase 0/D.
 
 ### Blocking REST gaps (integrator workflow)
 
-Gated on the design doc's Phase D decisions. Note that votes, reviewer assignment, and
-invitations were assumed missing and are in fact already exposed — see §0 of the design doc.
+**The Phase D decisions that gated this set were taken 2026-07-31** — nothing here is
+blocked on a decision any more. Note that votes, reviewer assignment, and invitations were
+assumed missing and are in fact already exposed — see §0 of the design doc.
 
 - [ ] **[P1] Webhook endpoint management over REST** (9 tRPC procs, `webhooks:manage`
-      already exists). **Requires the subscription-model decision (D2) first** — per-org vs
-      instance-level is a resource-model question, not a route question. — (design doc §1.9, P1.1)
+      already exists). **Unblocked 2026-07-31 — D2 taken:** per-org endpoints keep
+      `webhook_endpoints` unchanged and instance subscriptions get their own table, so the
+      nine procedures port with no change to their inputs or responses. None of them accepts
+      an `organizationId` and `webhookEndpointResponseSchema` declares none, so there is no
+      ownership discriminator to publish and nothing here has to change if instance
+      principals never ship. Per D3 the six mutating routes are manifest entries for
+      `Idempotency-Key` — not a prerequisite, since an optional header is additive, but they
+      should be listed rather than forgotten. Two things to fix on the way: four of the nine
+      procedures throw bare `Error` rather than domain error classes, and
+      `WebhookUrlValidationError` is absent from `rest/error-mapper.ts`, so an SSRF rejection
+      would 500 on REST. The new router is appended to `restRouter`, never inserted — key
+      order sets operation order in the spec. — (design doc §1.9, P1.1)
 - [x] **[P1] Notifications over REST** (list, unread-count, mark-read, mark-all-read + 3
       preference procs). Only path today is SSE, unusable for consumers that cannot hold a
       connection. — (design doc §1.7, P1.2; done 2026-07-29, PR pending)
@@ -1092,29 +1132,74 @@ invitations were assumed missing and are in fact already exposed — see §0 of 
       Same reasoning as the guard-coverage gates — a convention that only lives in a doc gets
       violated by the next person who does not read it. — (found 2026-07-29 during P1.2)
 - [ ] **[P2] Idempotency keys for integrator writes.** No `Idempotency-Key` on any `/v1`
-      `POST`, including submission creation and the two batch operations. Contract surface,
-      so it cannot be added cheaply later.
+      `POST`, including submission creation and the two batch operations.
       **A structural constraint worth knowing before estimating** (found 2026-07-30):
       `rest/router.ts:35-43` passes only `{ authContext, dbTx, audit }` into the oRPC context —
       the raw request never reaches it — so **no oRPC middleware can read a request header
       today**. This needs a context change first, not just a middleware, which makes it larger
       than the equivalent tRPC work would be. The only header-reading code on the whole surface
-      is in the Fastify hooks. — (design doc §1.10, D3)
+      is in the Fastify hooks.
+      **D3 taken 2026-07-31: every `/v1` `POST`, not only the blocking set.** The selective
+      rule was cheaper only under a cost model that assumed the header was already available,
+      and the constraint above removes that. Three things from the record. The context field
+      must be typed and explicitly enumerated — never the whole `FastifyRequest`, or every
+      procedure gains ambient header access and the "tenancy is server-supplied" property
+      D2's contract argument rests on goes with it. The completion write must run for
+      expected 4xx outcomes too: an `ORPCError` is converted to a reply and therefore
+      **commits**, so a key left `IN_PROGRESS` would 409 every retry until its TTL. And the
+      original "cannot be added cheaply later" framing was overstated — an optional header is
+      additive in OpenAPI and both SDKs; what gets expensive is retrofitting the rule across
+      forty routes. P1.2's two `POST` routes shipped ahead of the decision and are day-one
+      manifest entries, not grandfathered. — (design doc §1.10, D3)
 
 ### Design Decisions
 
 - [ ] **Cross-org service principal** — instance-scoped principal + acting-as. Approach and
       migration path in [`docs/api-integration-design.md`](api-integration-design.md);
       recommendation is a separate `service_principals` table, flat capability strings with
-      tenancy in a grant table, and org-visible/org-revocable grants. Four decisions gate the
-      work (D1–D4, §5 Phase D). Not started.
+      tenancy in a grant table, and org-visible/org-revocable grants.
+      **The four gating decisions (D1–D4, §5 Phase D) were taken 2026-07-31** as records only,
+      no code — see the four entries below. **The principal work itself is still not started**,
+      and the preconditions below are unchanged by the decisions being taken.
       **Hard preconditions, from the 2026-07-28 P2.0 audit — both must merge first:**
       (1) the P0 `REVOKE`-does-not-survive-provisioning fix, because P2.1's table design is
       built on a precedent that does not currently hold and would leave hashed cross-org
       credentials readable by `app_user`; (2) every P1 explicit-predicate item above, because
       the instance principal is precisely what removes the one-org pin those paths rely on.
       Shipping the principal ahead of either turns a documented, contained gap into a reachable
-      one.
+      one. Both are in fact satisfied — the `REVOKE` fix and all three P1 predicate items are
+      checked off above — so what holds this is that the work is unstarted, not that it is
+      blocked.
+- [x] **D1 — capability string shape** — **Resolved 2026-07-31:** flat capability strings,
+      tenancy on a separate axis carried by the grant row. Ratified unamended; it had already
+      been followed by default, since every scope minted since (`notifications:read`,
+      `notifications:write`, `webhooks:read`) is flat and `apiKeyScopeSchema` is a closed
+      enum that `guard-coverage.spec.ts` now depends on. **The binding half is not the string
+      shape but the fail-closed rule:** a principal-only caller carries no org role, so
+      `requireOrgContext`/`requireEditor`/`requireAdmin` must reject it until the procedure
+      behind them is re-expressed as a capability check. A synthetic `ADMIN` role would pass
+      every existing guard and fail open. — (design doc §2.5, §5 Phase D)
+- [x] **D2 — webhook subscription model** — **Resolved 2026-07-31:** a separate
+      `principal_subscriptions` table, `webhook_endpoints` untouched, one shared
+      `webhook_deliveries`. Unblocks P1.1. **Argument re-founded on the published contract**
+      rather than the RLS idiom: the nine webhook procedures accept no `organizationId` and
+      the response schema declares none, so P1.1's contract is unchanged either way. The
+      NULL-org row obstacle holds under _either_ RLS idiom, because `NULL = anything` is never
+      TRUE — so normalising the four raising policies is an independent cleanup that does not
+      reopen this. **One amendment carries into P2.7:** the revocation control is the
+      pickup-time re-read, not a queue drain. — (design doc §1.9, §5 Phase D)
+- [x] **D3 — idempotency scope** — **Resolved 2026-07-31:** `Idempotency-Key` on every `/v1`
+      `POST`, not only the integrator-facing set, with the two-step
+      `INSERT … ON CONFLICT DO NOTHING` protocol unchanged. Enforced by a manifest test
+      mirroring the REST guard-coverage walk. Needs the narrow oRPC context change first —
+      the "Idempotency keys for integrator writes" item in "Blocking REST gaps" above carries
+      the detail and the three traps. — (design doc §1.10, §5 Phase D)
+- [x] **D4 — generated-artefact policy** — **Recorded 2026-07-31 as NOT adopted**, and
+      re-opened as its own item in the findings section above rather than marked taken. The
+      recommendation was to stop committing the generated SDKs; P0.2 shipped without that
+      half, so the repository does the opposite of what the decision log said. It no longer
+      gates anything: the drift check it was meant to unblock is green by other means.
+      — (design doc §1.8, §6, §8)
 - [x] Submitter role architecture: per-org role assignment vs global identity with per-org role bindings — **Resolved 2026-02-19:** Submitter is a global user capability, not an org role. Staff roles (`ADMIN/EDITOR/READER`) unchanged. Manuscript library is user-owned and cross-org. Follow/subscribe for org-to-writer comms. — (architecture doc Open Question #1)
 - [x] Self-serve org creation: managed hosting provisioning model vs self-hosted admin — **Partially resolved 2026-02-19:** Self-serve in both contexts. Managed hosting: free tier with quotas, paid upgrade, all features on all tiers. Self-hosted: no billing. Managed hosting infra deferred to post-Track 3. — (architecture doc Open Question #2)
 
