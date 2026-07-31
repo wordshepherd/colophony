@@ -369,25 +369,52 @@ Ordered as the design doc's Phase 0/D.
       for a scoping it does not perform — its caller supplies the org through
       `withRls({ orgId })` at `inngest/functions/submission-response-reminder.ts:64`, so it is
       correct in practice and misleading to read. — (found 2026-07-28 during the P2.0 audit)
-- [ ] **[P2] `pipeline.service.ts` writes drop the org predicate — three methods, two shapes.**
-      `updateStage` (`:309`) filters the read but not the write: the guard is
-      `getById(tx, id, orgId)`, and the `UPDATE` that follows is
-      `.where(eq(pipelineItems.id, id))` with no org predicate. Read-then-write with the
-      predicate on only one half.
-      **`assignCopyeditor` (`:396`) and `assignProofreader` (`:435`) are worse**: they take no
-      `orgId` parameter at all, so there is no read guard to drop — just
-      `.where(eq(pipelineItems.id, id))` on the `UPDATE`, with RLS as the only defence. Their
-      `*WithAudit` wrappers check `assertEditorOrProductionOrAdmin` but never read the item
-      org-scoped first. Both are reachable from `rest/routers/pipeline.ts` and
-      `trpc/routers/pipeline.ts`.
-      Fix all three together — one file, one signature convention `(tx, id, input, orgId)`.
-      **No test drives `pipelineService` at all**: `rls-infrastructure.test.ts` asserts the
-      `pipeline_items` policy exists in the catalog, which is not the same as proving the
-      service's own `WHERE` isolates. Needs an admin-pool suite like
-      `__tests__/rls/audit-service.test.ts`. `saveCopyedit` (`:662`) is the counter-example
-      already doing it right — it carries the org predicate on both halves.
-      — (`updateStage` found 2026-07-28 during the P2.0 audit; the two assign methods found
-      2026-07-30 while verifying the backlog against the code)
+- [x] **[P2] `pipeline.service.ts` writes drop the org predicate.** Filed as three methods; it
+      was **five reachable defects**, and the two framed as "worse" were the only live ones.
+      `assignCopyeditor` (`:396`) and `assignProofreader` (`:435`) took no `orgId` at all —
+      bare `UPDATE … WHERE id = $1` with RLS as the sole defence. `create`'s
+      submission-existence read was unscoped, which is a cross-tenant **write** (attach an item
+      to another org's submission, then read its title back through the `list`/`getById`
+      joins) _and_ a status oracle, since `SubmissionNotAcceptedError` interpolates the status
+      of a submission the caller cannot see. `getBySubmissionId` was an unprojected `select()`
+      returning another org's whole row. `addComment` was unsafe called directly.
+      — (`updateStage` found 2026-07-28 during the P2.0 audit; the assign methods 2026-07-30;
+      the rest found 2026-07-30 while planning the fix; done 2026-07-30)
+      **`updateStage` was the least of them and is now defended twice**: the org-scoped
+      `getById` guard dominates the UPDATE, so no input distinguishes the two `WHERE` forms
+      while the guard stands. Both defences are kept, and **either alone is sufficient** —
+      measured by reverting each in turn. The `if (!updated) throw` beside the predicate is
+      load-bearing rather than tidying: the history insert after it is unconditional, so
+      adding the predicate _without_ the throw would let a zero-row update write history
+      against the other org's item, which `getHistory` returns to them.
+      **Scoping the uniqueness pre-check forced a `23505` mapping.**
+      `pipeline_items_submission_id_idx` is a **global** unique index on `submission_id`, so an
+      org-scoped pre-check cannot pre-empt it and a pre-existing mismatched row would surface
+      as a raw 500. `isUniqueViolation` walks the `cause` chain — Drizzle wraps the pg error,
+      so a direct `err.code === '23505'` check silently never matches. That was caught by the
+      test, not by review.
+      **Routers, contracts and SDKs were untouched**: the `*WithAudit` wrappers already held
+      `ctx.actor.orgId`, so only internal call sites moved.
+      Pinned by `__tests__/rls/pipeline-service.test.ts` over the admin pool — the first test of
+      any kind to drive this service against a database. The unit spec's `tx` is `{}` and it had
+      "proved" scoping with `Function.prototype.length` arity assertions, which pass whether or
+      not `orgId` is used and so were green throughout; deleted rather than kept.
+      **Two sites deliberately carry no predicate**, both recorded in comments: the manuscript
+      reads in `getCopyeditContent` (`manuscripts` is owner-scoped, `manuscript_versions` has no
+      org column — the library is user-owned and cross-org by design), and the `users` aliases.
+      One test is deliberately labelled non-proving: `list`'s search-subquery predicate cannot be
+      distinguished by any input, because the outer `inArray` already intersects against an
+      org-scoped set — it narrows what is scanned, not what is returned.
+- [ ] **[P3] `assignCopyeditor`/`assignProofreader` accept a non-member `userId`.** Both write
+      `input.userId` into `assigned_copyeditor_id` / `assigned_proofreader_id` with no check
+      that the user belongs to the item's org, and `users` carries no org column, so the org
+      predicate added 2026-07-30 does not cover it — it isolates the _item_, not the assignee.
+      Org A can therefore assign an org-B user to its own pipeline item, and `list` leftJoins
+      `users` and returns that person's email. Needs a membership lookup against
+      `organization_members`, not a predicate, which is why it was left out of the predicate
+      change. Decide the semantics first: guests, deactivated users, and staff who belong to
+      both orgs are all reachable cases, and the same question applies to
+      `submission-reviewer.service.ts`. — (found 2026-07-30 while scoping `pipelineService`)
 - [ ] **[P2] `issue.service.ts:65,122` take `orgId?` as optional and apply the predicate
       conditionally.** An optional org id is a silent bypass: omit the argument and the query
       is unscoped, with nothing at the type level to flag it. Make it required, matching the
