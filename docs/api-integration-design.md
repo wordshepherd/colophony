@@ -1,6 +1,10 @@
 # Colophony — Integration Surface Design
 
-> **Status:** Design / RFC — no implementation
+> **Status:** Phase D decisions **taken 2026-07-31** (§5, §6). Phase 0 shipped in full
+> (P0.1 → P0.5b); Phase 1 partially shipped (P1.2, notifications over REST, 2026-07-29);
+> Phase 2 partially shipped out of order (P2.-1, P2.0, P2.2). Phases 1–4 otherwise open.
+> Sections written before those landed describe a state the code has left — where that
+> matters the passage is struck through and dated rather than deleted.
 > **Created:** 2026-07-27
 > **Scope:** Two related problems that together determine whether Colophony can be
 > integrated against rather than only operated as a standalone product.
@@ -92,8 +96,8 @@ the gap is in what was checked, not whether checking happened.
 Consequences for the plan: M3 is not "add a drift check", it is **fix the direction of the
 existing one**. And it must run against the routers, which is what makes M2 (offline
 in-process generation) a hard prerequisite rather than a convenience. Under D4 the
-SDK-regeneration half of this job disappears entirely, since generated SDKs stop being
-committed.
+SDK-regeneration half of this job would disappear entirely — but D4 was not executed, so it
+remains, and `sdk-check` gates all three directions today.
 
 **(c) There are no per-key rate limits.** — **Closed 2026-07-29.**
 `apps/api/src/hooks/rate-limit-auth.ts:57` keyed the authenticated window on
@@ -307,9 +311,9 @@ behind the routers.
 
 Invert it: regenerate `sdks/openapi.json` from the router objects (M2) and
 `git diff --exit-code` **that**. This is what would have caught the 36-operation gap the day
-it opened. Under D4 the SDK-regeneration half of the job is deleted rather than fixed, since
-generated SDKs stop being committed — so the net change is a smaller job that checks the one
-thing that matters.
+it opened. Under D4 the SDK-regeneration half of the job would be deleted rather than fixed —
+but D4 was not executed, so the job grew instead of shrinking: it now checks source → spec
+_and_ both SDK directions.
 
 **M4 — Fail CI on coverage drift.**
 A test that asserts an explicit mapping. Every tRPC procedure must appear in exactly one
@@ -391,7 +395,44 @@ the correct treatment for generated code.
 This resolves the open question rather than deferring it, and it should land inside P0.2
 where the generation path is already being rewritten.
 
-### 1.9 Decision required before P1.1 — the cross-org webhook subscription model
+#### Status (2026-07-31): not adopted. Re-opened as a live question.
+
+P0.2 shipped without the deletion half. `sdks/` still carries **812 tracked files under
+`sdks/python`** (632 of them model files) and 9 under `sdks/typescript`, and `sdk-check`
+gates all three directions against them. The decision was not reversed — it was not
+executed. Recording it as taken would misdescribe the repository, which is the specific
+failure this document exists to prevent.
+
+**The measurements above are wrong, and the correction cuts both ways.** "6.1 MB" is a
+working-tree figure, not a measurement of what is committed: tracked content under
+`sdks/python` is **2.42 MB** today, so the byte argument is about a third as strong as
+stated. The file-count argument is stronger than stated — the count has gone from 447 model
+files to **632** since this was written, in regenerations nobody read. Re-measure before
+quoting this section.
+
+**The reason for the decision has since been addressed by other means, and that is the
+substantive change.** D4's argument was that SDK bulk made the drift check painful enough to
+skip, which is how the spec went 36 operations stale. The check that actually catches that
+is `pnpm sdk:check-spec` — source → spec — and it now runs in CI without involving the SDKs
+at all. The failure mode D4 was buying down is already closed, by M3, independently of this.
+What remains is review noise: real, but a smaller thing than the case as originally put.
+
+**And the cost of executing it has gone up.** `python-sdk-tests` runs against the committed
+output; `sdks/python/pyproject.toml` carries a hand-added pytest dev group and `testpaths`
+the generator does not produce and once overwrote; `poetry.lock` is Dependabot-maintained.
+All three need new homes, plus a release pipeline to publish what stops being committed.
+
+Filed as its own Track 2 backlog item. **Explicitly not a prerequisite for Phase 1 or Phase
+2** — D4's "cannot wait" rationale was that P0.2 would otherwise do the work twice, and P0.2
+is done.
+
+### 1.9 D2 — the cross-org webhook subscription model
+
+> **Taken 2026-07-31.** Ratified as recommended: a separate `principal_subscriptions`
+> table, `webhook_endpoints` untouched, one shared `webhook_deliveries`. The argument below
+> has been re-grounded against the code as it stands — the original rested part of its case
+> on the RLS idiom, which is not what makes the alternative unworkable, and part on a
+> delivery-path weakness that has since been fixed (P2.-1, #522). P1.1 is unblocked.
 
 Webhooks are simultaneously the highest-priority parity gap and the least-solved cross-org
 problem, and shipping the first without deciding the second publishes the wrong contract.
@@ -419,10 +460,27 @@ _resource model_, and the resource model is the contract.
 
 This is the same argument that chose Approach B over Approach A in §2.4, and it applies
 with more force here. Making `webhook_endpoints.organization_id` nullable would produce
-rows invisible to that table's own RLS policy — and this policy is stricter than most:
-it uses raw `current_setting('app.current_org')::uuid`, which **raises** when the setting is
-absent rather than returning NULL (see §2.3, F6). A NULL-org row would be unreachable
-through every existing management path.
+rows invisible to that table's own RLS policy. The policy is
+`USING (organization_id = current_setting('app.current_org')::uuid)`
+(`packages/db/src/schema/webhook-endpoints.ts:36-39`), and `NULL = anything` evaluates to
+NULL rather than TRUE, so a NULL-org row fails the `USING` clause and is unreachable through
+every existing management path.
+
+**That obstacle is permanent, and the first draft of this section obscured it** by pairing
+it with the observation that this policy uses the raw `current_setting('app.current_org')::uuid`
+form, which **raises** when the setting is absent rather than returning NULL (§2.3, F6).
+The two are unrelated and only one bears on D2:
+
+- **The NULL-row obstacle is idiom-independent.** Whether the policy calls `current_org_id()`
+  or the raw form, `organization_id = <anything>` is never TRUE for a NULL
+  `organization_id`. Normalising the four outlier policies onto `current_org_id()` — still
+  open, §8 item 4 — does **not** make nullable-org rows reachable and therefore does not
+  reopen this decision.
+- **The raising idiom is a separate wart.** It means a no-org-context request against these
+  four tables gets a 500 rather than a clean empty result. Worth fixing on its own merits;
+  irrelevant to the subscription model either way.
+
+Stated plainly so a future normalisation PR is not misread as having invalidated D2.
 
 The split has one property worth stating, because it is what makes it cheap:
 **`webhook_deliveries` does not change.** A delivery always concerns exactly one org, so
@@ -455,48 +513,111 @@ neither table is org-scoped. Consequences:
 - This is worth its own RLS/integration test: event for org A, principal granted only on
   org B, assert zero deliveries created.
 
-**Fan-out filtering alone is still not enough, and this is the sharpest hole in the
-design.** Checking grants at fan-out only prevents _new_ deliveries being created. The
-existing pipeline serialises the endpoint URL and secret into the BullMQ job payload
-(`webhook-delivery.ts:44,63`) and the worker sends what the job carries without
-re-reading anything (`webhook.worker.ts:23`). The webhook queue retries **8 times with
-backoff out to 1 hour** (`webhook.queue.ts`). So a revoked principal —
-or an org that has just withdrawn a grant — keeps receiving events from already-queued jobs
-for up to an hour after revocation, and nothing in the design as first written would stop
-it.
+**Fan-out filtering alone was not enough, and it was the sharpest hole in this design as
+first written. That hole is now closed on the org path.** Checking grants at fan-out only
+prevents _new_ deliveries being created. When this was written the pipeline serialised the
+endpoint URL and secret into the BullMQ job payload and the worker sent what the job
+carried without re-reading anything, so a revoked party kept receiving events from
+already-queued jobs — which directly undercut §2.5's central claim, revocability being the
+reason Approach B was chosen at all.
 
-That directly undercuts §2.5's central claim. Revocability is the reason Approach B was
-chosen; a control that leaves an hour of live delivery to a revoked party is not the
-property that argument promised. The requirement:
+**Fixed on the existing org-scoped path first, exactly as this section prescribed, in
+#522 (2026-07-28)** — see P2.-1 in §5. `WebhookJobData` carries neither URL nor secret
+(`apps/api/src/queues/webhook.queue.ts:12-22`). The worker re-reads the endpoint as its
+first phase, _before_ the `DELIVERING` write, so a delivery it declines to send never
+enters `DELIVERING` and never burns an attempt
+(`apps/api/src/workers/webhook.worker.ts:26-33`); URL and secret come from that row
+(`:75`, used at `:107-117`); a disabled or unsubscribed endpoint's delivery is marked
+`CANCELLED` and not retried (`:52-73`).
+
+The requirement, with what remains:
 
 - Persist `principal_id` / `subscription_id` on the delivery row, not only in the job
-  payload.
+  payload. — **still open, P2.7.** The org-path equivalent exists: the row carries
+  `organization_id` and `webhook_endpoint_id`, and the worker resolves through it rather
+  than through the payload.
 - **Revalidate immediately before every send** — subscription active, principal not
   revoked, grant present and unexpired, org revocation not set — and mark the delivery
-  `CANCELLED` rather than sending if any check fails. The worker already re-runs
-  `validateOutboundUrl()` per attempt for exactly this class of reason (a value captured
-  at enqueue time may no longer be trustworthy at send time); authorisation belongs in the
-  same place.
+  `CANCELLED` rather than sending if any check fails. — **built for endpoint state; must
+  be extended to principal and grant state.** This is the control, and P2.7's obligation is
+  to widen the existing phase-1 check rather than to invent one.
 - Look the URL and secret up at send time rather than trusting the job payload, so a
-  rotated secret or edited URL cannot be replayed from an old job.
-- On revocation, proactively drain pending jobs for that principal.
+  rotated secret or edited URL cannot be replayed from an old job. — **built.**
+- On revocation, proactively drain pending jobs for that principal. — **not built, and it
+  is hygiene rather than the safety property.** See the correction below.
 
-Note this is a **pre-existing weakness generalised**, not one the principal model invents:
-the same gap means today's org-scoped endpoint keeps receiving queued deliveries after it
-is deleted or disabled. It is worth fixing on the existing path first, where the blast
-radius is one org.
+**The drain is not the control, and this section originally implied it was.** With the
+pickup-time re-read in place, a job that outlives a revocation is cancelled when the worker
+reaches it, so a revoked party receives nothing however long the job sits in Redis. The
+retry schedule — 8 attempts at `[1s, 5s, 30s, 2m, 10m, 1h, 1h, 1h]`, about 3h12m end to end
+(`apps/api/src/queues/webhook.queue.ts:24-29,41-48`, and note that is longer than the "out
+to 1 hour" this section first claimed) — is therefore a figure about **queue occupancy**,
+not about exposure. Draining is still worth doing, to avoid holding retry slots and writing
+one `CANCELLED` row per orphaned job. It is not what makes revocation safe, and a reader
+must not infer from its absence that revocation leaks.
 
-**SSRF applies to the new subscription type too.** The existing path validates at
-registration (`webhook.service.ts:63`) _and_ again per delivery attempt
-(`webhook.worker.ts:37`, with failures treated as permanent so retries cannot amplify DNS
-rebinding). `principal_subscriptions` introduces another user-controlled outbound URL and
-must meet the same bar: `validateOutboundUrl()` on create, on update, and immediately
+Note this was a **pre-existing weakness generalised**, not one the principal model invented:
+the same gap meant an org-scoped endpoint kept receiving queued deliveries after it was
+deleted or disabled. Fixing it on the existing path first, where the blast radius is one
+org, is what leaves P2.7 generalising a mechanism that exists rather than building one.
+
+**SSRF applies to the new subscription type too.** The existing path validates on create
+(`webhook.service.ts:70-84`) and on update (`:106-120`), _and_ again per delivery attempt
+(`webhook.worker.ts:89-103`, with failures treated as permanent so retries cannot amplify
+DNS rebinding). `principal_subscriptions` introduces another user-controlled outbound URL
+and must meet the same bar: `validateOutboundUrl()` on create, on update, and immediately
 before every send. This is an acceptance criterion for P2.7, not an implementation detail.
 
-**What this means for sequencing.** P1.1 can ship its per-org routes unchanged _provided_
-this decision is taken first, because the recommendation leaves `webhook_endpoints` and its
-REST shape exactly as they are. If instead the nullable-org route were chosen, P1.1 would be
-publishing a contract that has to change. The decision is cheap; taking it late is not.
+#### Decision (2026-07-31): ratified, with the argument re-founded
+
+`principal_subscriptions` is a separate table; `webhook_endpoints` and `webhook_deliveries`
+are untouched; one delivery log, one signature scheme, one retry policy, one auto-disable
+rule. **P1.1 is unblocked and publishes the per-org resource model exactly as it stands.**
+
+**The load-bearing argument is the published contract, not the RLS idiom.** The nine tRPC
+webhook procedures accept **no `organizationId` in any input**, and
+`createWebhookEndpointSchema`, `updateWebhookEndpointSchema` and
+`webhookEndpointResponseSchema` (`packages/types/src/webhook.ts:29,41,59`) declare none —
+tenancy is supplied by the server from `ctx.authContext.orgId` at all nine call sites. So
+the REST port inherits those shapes unmodified and `POST /v1/webhooks` needs no contract
+change at all, now or after instance principals land.
+
+That is a property of this choice, not a disproof of the alternative — and the distinction
+is worth keeping, because the overstated version is tempting. Storage and route surface are
+separable: a nullable-`organization_id` table could keep the per-org route
+server-org-derived and register instance subscriptions on the principal management surface,
+so the alternative does not _necessarily_ force a discriminator into P1.1's request or
+response. The claim that holds is narrower and still sufficient — this choice makes the
+question impossible to get wrong, rather than the other choice being unable to avoid it.
+
+**The second argument is that ownership here is not a nullable attribute of one thing.** An
+org endpoint and an instance subscription differ in who may read them, who may rotate the
+secret, and what revokes them — loss of org membership, versus grant revocation or
+principal revocation. A nullable column asserts "the same entity with one field absent."
+These are two entities that share a delivery mechanism, and the delivery mechanism is
+already the thing the design shares.
+
+**Acceptance criteria for `principal_subscriptions`**, binding on P2.7 rather than left to
+implementation:
+
+- `validateOutboundUrl()` on create, on update, and immediately before every send, with
+  failures permanent — matching the org path cited above.
+- Audit on create, update and revoke, for both subscriptions and grants.
+- Delivery queries carry an explicit `organization_id` predicate in addition to RLS, per
+  the house defense-in-depth rule. `webhook_deliveries` stays org-scoped, so this is a
+  constraint the decision preserves rather than invents.
+- Tenant-touching delivery work runs in a transaction with `SET LOCAL` — `withRls({ orgId })`,
+  as `webhook.worker.ts:31-33` already does — never a session-level `SET`.
+- The subscription secret is readable no more broadly than the principal owning it.
+  `service_principals` is specified `REVOKE ALL … FROM app_user` with reads via
+  `SECURITY DEFINER` (§2.4); the subscription secret sits under the same regime.
+
+**One unstated consequence, worth recording.** `webhook_deliveries` carries the raising
+policy too (`packages/db/src/schema/webhook-endpoints.ts:80-83`), so "the delivery log does
+not change" holds for storage but not for reads: a principal reading its own delivery log
+across several orgs cannot do it in one query with no org context set — that raises. It
+needs a per-org `withRls` loop or a `SECURITY DEFINER` read. This does not affect the
+decision; it is a P2.7 implementation constraint that would otherwise be discovered late.
 
 ### 1.10 Decision required before Phase 1 — idempotency for integrator writes
 
@@ -508,8 +629,14 @@ are already public. A client that cannot safely retry a batch status transition 
 not retry (losing writes) or retry blind (duplicating them).
 
 It belongs with the other pre-Phase-1 decisions for the same reason webhooks do: an
-`Idempotency-Key` header is part of the published contract and of both generated SDKs, so
-adding it later is a contract change rather than an addition.
+`Idempotency-Key` header is part of the published contract and of both generated SDKs.
+~~so adding it later is a contract change rather than an addition.~~ **Overstated, corrected
+2026-07-31:** an _optional_ request header is additive in OpenAPI and in both generated
+SDKs — a new optional parameter breaks no existing client. What actually gets expensive
+late is the **rule**: retrofitting forty `POST` routes is a project where adding the
+middleware once is not, and integrators build their retry logic against whatever the
+surface offered on the day they integrated. The decision is still worth taking now; the
+reason is the rule, not a breaking change.
 
 **The codebase already has the pattern.** Stripe webhook handling uses two-step
 idempotency — INSERT the event row, check the `processed` flag, skip if already true
@@ -526,11 +653,17 @@ handlers do the same with their own keys. The shape generalises:
 - Scoped to the credential, never global, so one integrator cannot probe or collide with
   another's keys.
 
-Two things make this cheaper here than it looks. `dbContext` already wraps each request in
+One thing makes this cheaper here than it looks. `dbContext` already wraps each request in
 one transaction that commits on `onResponse` and rolls back on `onError`, so the
 idempotency record and the effect it guards commit or fail together — there is no
-distributed-commit problem to solve. And the header is available at `onRequest`, alongside
-org selection (F5), so it needs no new plumbing.
+distributed-commit problem to solve.
+
+~~And the header is available at `onRequest`, alongside org selection (F5), so it needs no
+new plumbing.~~ **Wrong, corrected 2026-07-31.** True of a Fastify hook and false of the
+surface this runs on: `rest/router.ts:35-43` builds the oRPC context from exactly three
+values (`authContext`, `dbTx`, `audit`), and the `FastifyRequest` is not among them, so **no
+oRPC middleware can read a request header today**. Idempotency needs a context change before
+it needs a middleware, and that is the largest single item in the work.
 
 **A unique key plus the request transaction is not by itself a protocol, though.** Two
 requests carrying the same key can both begin before either commits, and a plain
@@ -554,6 +687,41 @@ I am not confident about the scope. Applying it to every `POST` is the clean rul
 touches routes no integrator will use; applying it only to the blocking set is cheaper and
 leaves the contract inconsistent. My inclination is the clean rule, enforced by the same
 manifest test as M4 — but that is a decision to take, not an assumption to inherit.
+
+#### Decision (2026-07-31): mechanism ratified; scope is every `/v1` `POST`
+
+The two-step protocol above stands unchanged. Scope resolves to the clean rule.
+
+**The selective rule looked cheaper only under the cost model the correction above
+removes.** Once the context carries the header and the middleware exists, the marginal cost
+of one more route is zero — while the selective rule carries a cost that never goes away:
+_which_ routes honour the header becomes contract surface in its own right, documented per
+operation, and every new `POST` becomes a decision someone can get wrong in silence.
+Enforce it the way scope coverage is already enforced — a test that walks `restRouter` and
+fails a `POST` procedure without the middleware, mirroring `rest/guard-coverage.spec.ts`.
+
+**The context change must stay narrow, and that is a constraint rather than a preference.**
+Passing the whole `FastifyRequest` into the oRPC context is the one-line version, and it
+would quietly undo the property D2's contract argument rests on — that tenancy on this
+surface is server-supplied and no procedure reads it off the wire. Add a typed, explicitly
+enumerated field (`idempotencyKey: string | null`, or a `requestMeta` object naming every
+header it carries), populated in `router.ts` beside the other three. A procedure should not
+gain ambient header access as a side effect of one feature wanting one header.
+
+**One consequence of the shared transaction, written down before it is discovered.** Step 3
+must run for **every** outcome the handler returns, not only success. `db-context` commits
+on `onResponse` and rolls back on `onError`, and an `ORPCError` never reaches `onError` —
+the handler converts it into a normal reply, the same behaviour already documented for
+`TRPCError` on the tRPC surface. So a 5xx rolls the `IN_PROGRESS` row back and the key
+becomes retryable, which is right; but an _expected_ 4xx **commits** it, and if step 3 only
+runs on success the key is stranded `IN_PROGRESS` until its TTL and every retry gets a 409.
+A business error is a completed request with a 4xx response, stored and replayed like any
+other.
+
+**Two `POST` routes shipped ahead of this decision.** P1.2 published
+`POST /v1/notifications/{id}/read` and `POST /v1/notifications/read-all` (2026-07-29). Both
+are naturally idempotent, so the retrofit is semantically a no-op — but under the clean rule
+they are day-one entries on the manifest rather than grandfathered exceptions.
 
 ---
 
@@ -839,6 +1007,34 @@ an org and then operating it are two authorisations. That is slightly more frict
 is the right trade: it means a leaked provisioning credential creates junk orgs rather than
 reading existing ones.
 
+#### D1 decision (2026-07-31): ratified, unamended
+
+Nothing has moved against it and one thing has moved for it. Three scopes have been minted
+since this was written — `notifications:read`, `notifications:write`, `webhooks:read`, all
+in P0.1b — and all three are flat. `apiKeyScopeSchema` is still a closed `z.enum`
+(`packages/types/src/api-key.ts:7`), and it is load-bearing in a way it was not on
+2026-07-27: `trpc/guard-coverage.spec.ts` rejects a scope string absent from the enum, so
+opening the scope type to accommodate `org:<uuid>:submissions:read` would delete a build
+gate as a side effect. D1 has been followed by default; ratifying makes it deliberate.
+
+**The binding half of this decision is not the string shape.** Flat strings were never
+seriously at risk. What is still at risk is the second half: role guards must fail closed
+for a principal-only caller. The synthetic-`ADMIN` shortcut is available at every point P2.3
+touches, it would pass every existing test, and nothing in the codebase today distinguishes
+"has no role" from "is not required to have one". So the record fixes the rule rather than
+the syntax: **`requireOrgContext`, `requireEditor` and `requireAdmin` reject a
+principal-only caller until the procedure behind them has been re-expressed as a capability
+check.** A procedure not yet re-expressed is simply unavailable to principals. That is an
+acceptable Phase 2 surface and the only version that cannot silently escalate.
+
+**The discriminator already has three precedents, and the capability resolver is the
+fourth.** `internalOnly` (`trpc/init.ts`), the per-credential rate limiter
+(`hooks/rate-limit-auth.ts`) and `principalFromAuthContext` (`services/audit.service.ts`)
+all branch on the _presence of a credential id_, never on `authMethod === 'apikey'`, and
+each carries a test that sets `apiKeyId` under a non-`apikey` `authMethod` to pin it. The
+resolver must follow the same rule for the same reason: a new credential class should have
+to declare itself rather than inherit whatever the last branch happened to do.
+
 #### Grants must be visible and revocable by the organization, not only the operator
 
 A grant as described so far is created and revoked by the instance operator. In a
@@ -1031,8 +1227,9 @@ Called out per the brief's instruction to flag rather than paper over.
    generate support load; whether the friction is tuned or removed is worth revisiting once
    there are real tenants.
 
-_Resolved since first draft:_ acting-as on decisions (now §7 Q1, deny by default) and the
-generated-SDK question (now D4, stop committing them).
+_Resolved since first draft:_ acting-as on decisions (now §7 Q1, deny by default). The
+generated-SDK question became D4 and is **still open** — recommended, never executed, and
+re-opened 2026-07-31; see §1.8.
 
 ---
 
@@ -1148,28 +1345,28 @@ Sized so each is independently reviewable and independently revertible.
 
 ### Phase D — Decisions, no code
 
-Four commitments, taken together before Phase 1 opens. Each is a review conversation; none
-is more than an hour. Taking them as a block is the thing that keeps Phases 1 and 2
-parallel.
+**Taken 2026-07-31**, as records only. They were meant to precede Phase 1 and did not
+entirely: P1.2 shipped 2026-07-29 ahead of them. Only P1.1 was ever actually gated, and that
+gate held. Each decision is argued in its own section; the outcomes are indexed here.
 
-| #      | Decision                   | Recommendation                                                           | Why it cannot wait                                                           |
-| ------ | -------------------------- | ------------------------------------------------------------------------ | ---------------------------------------------------------------------------- |
-| **D1** | Capability string shape    | Flat, tenancy in the grant (§2.5)                                        | Scope strings minted before this become legacy in the contract and both SDKs |
-| **D2** | Webhook subscription model | Separate `principal_subscriptions`; `webhook_endpoints` untouched (§1.9) | P1.1 publishes the endpoint resource model                                   |
-| **D3** | Idempotency scope          | `Idempotency-Key` on `/v1` `POST` routes (§1.10)                         | Header is part of the contract and both SDKs                                 |
-| **D4** | Generated-artefact policy  | Spec committed; SDKs built in CI (§1.8)                                  | P0.2 rewrites the generation path; doing it twice is waste                   |
+| #      | Decision                   | Recommendation                                                           | Outcome (2026-07-31)                                                                                            |
+| ------ | -------------------------- | ------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------- |
+| **D1** | Capability string shape    | Flat, tenancy in the grant (§2.5)                                        | **Ratified.** Already followed in practice; the binding clause is fail-closed role guards, not the syntax       |
+| **D2** | Webhook subscription model | Separate `principal_subscriptions`; `webhook_endpoints` untouched (§1.9) | **Ratified**, argument re-founded on the published contract. P1.1 unblocked; amends P2.7's revocation criterion |
+| **D3** | Idempotency scope          | `Idempotency-Key` on `/v1` `POST` routes (§1.10)                         | **Ratified, every `POST`.** Needs a narrow oRPC context change first — middleware cannot read headers today     |
+| **D4** | Generated-artefact policy  | Spec committed; SDKs built in CI (§1.8)                                  | **Not adopted.** Re-opened as a standalone backlog item; no longer gates anything                               |
 
 ### Phase 0 — Make the current surface honest
 
-| PR        | Content                                                                                                                                                                                                                                                                                                                          | Risk                                              |
-| --------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------- |
-| **P0.1**  | `internalOnly` middleware in `trpc/init.ts` as an **allowlist** of interactive auth methods (§1.6), applied in log-only mode to the seven §1.5 routers. New audit action.                                                                                                                                                        | Low — logs only                                   |
-| **P0.1b** | **Scope the rest.** Add `requireScopes` to every tRPC procedure not covered by P0.1 — `notifications`, `notification-preferences`, and `webhooks` are unscoped and _not_ internal-only. Without this the bypass is narrowed, not closed.                                                                                         | Low — but P0, not deferrable                      |
-| **P0.2**  | Rewrite `scripts/export-openapi.ts` to use `OpenAPIGenerator` in-process. Regenerate `sdks/openapi.json` (+36 operations). **Per D4: stop committing generated SDKs, move generation to CI release.**                                                                                                                            | Low — large deletion, mechanical                  |
-| **P0.3**  | CI: **invert** the existing `sdk-check` job (`ci.yml:1610`) — diff the regenerated _spec_ against source, not the SDK against the spec. Per D4, delete the SDK-regeneration half.                                                                                                                                                | Low — a correction, not an addition (finding (b)) |
-| **P0.4**  | CI: coverage manifest test (M4). Seed the manifest from §1.2–1.5.                                                                                                                                                                                                                                                                | Low                                               |
-| **P0.5**  | Flip `internalOnly` to enforcing. **Done 2026-07-27**; the observation window was closed early on the evidence in §4. `webhooks:manage` was consumed by P0.1b; `payments:read` removal is split out as P0.5b.                                                                                                                    | Medium — behaviour change                         |
-| **P0.5b** | Remove the dead `payments:read` scope. **Done 2026-07-28**, completing Phase 0. Migration `0067` strips the value from stored `scopes` arrays, and `apiKeyResponseSchema` now declares `scopes` as plain strings so a retired scope on a key degrades to a listing rather than a 500 — matching what the REST router always did. | Low                                               |
+| PR        | Content                                                                                                                                                                                                                                                                                                                                                                     | Risk                                              |
+| --------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------- |
+| **P0.1**  | `internalOnly` middleware in `trpc/init.ts` as an **allowlist** of interactive auth methods (§1.6), applied in log-only mode to the seven §1.5 routers. New audit action.                                                                                                                                                                                                   | Low — logs only                                   |
+| **P0.1b** | **Scope the rest.** Add `requireScopes` to every tRPC procedure not covered by P0.1 — `notifications`, `notification-preferences`, and `webhooks` are unscoped and _not_ internal-only. Without this the bypass is narrowed, not closed.                                                                                                                                    | Low — but P0, not deferrable                      |
+| **P0.2**  | Rewrite `scripts/export-openapi.ts` to use `OpenAPIGenerator` in-process. Regenerate `sdks/openapi.json` (+36 operations). ~~**Per D4: stop committing generated SDKs, move generation to CI release.**~~ **Done 2026-07-27 — except the D4 half, which was never executed.** The SDKs are still committed; D4 is re-opened, see §1.8.                                      | Low — large deletion, mechanical                  |
+| **P0.3**  | CI: **invert** the existing `sdk-check` job — diff the regenerated _spec_ against source, not the SDK against the spec. ~~Per D4, delete the SDK-regeneration half.~~ **Done 2026-07-27**, but the job now gates **three** directions rather than one: source → spec, spec → TS SDK, spec → Python SDK. The SDK halves were kept, not deleted, because D4 was not executed. | Low — a correction, not an addition (finding (b)) |
+| **P0.4**  | CI: coverage manifest test (M4). Seed the manifest from §1.2–1.5.                                                                                                                                                                                                                                                                                                           | Low                                               |
+| **P0.5**  | Flip `internalOnly` to enforcing. **Done 2026-07-27**; the observation window was closed early on the evidence in §4. `webhooks:manage` was consumed by P0.1b; `payments:read` removal is split out as P0.5b.                                                                                                                                                               | Medium — behaviour change                         |
+| **P0.5b** | Remove the dead `payments:read` scope. **Done 2026-07-28**, completing Phase 0. Migration `0067` strips the value from stored `scopes` arrays, and `apiKeyResponseSchema` now declares `scopes` as plain strings so a retired scope on a key degrades to a listing rather than a 500 — matching what the REST router always did.                                            | Low                                               |
 
 _P0.1 is one middleware and it is the single highest-value change here; review it for the
 allowlist, not the router list. P0.2 is the largest diff and contains no logic — with D4 it
@@ -1186,17 +1383,17 @@ becomes mostly a deletion (6.1 MB, 447 Python files) rather than a regeneration.
 
 ### Phase 2 — Instance principal (capability (a))
 
-| PR        | Content                                                                                                                                                                                                                                                                                                                                                         | Risk                                                                                                                                                                           |
-| --------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **P2.-1** | **Fix queued-delivery revalidation on the existing org-scoped webhook path** (§1.9). Look URL and secret up at send time; cancel rather than send when the endpoint is deleted or disabled. Pre-existing gap, blast radius of one org today — fix it here, before P2.7 generalises it across tenants.                                                           | Medium — touches the delivery worker                                                                                                                                           |
-| **P2.0**  | **Audit every service method touching `users` / `organizations` for unfiltered reads (F1).** Add explicit `WHERE` clauses and RLS integration tests. **No new capability — this is a prerequisite.**                                                                                                                                                            | **High value, medium risk**                                                                                                                                                    |
-| **P2.1**  | Migration: `service_principals` (**no RLS + `REVOKE ALL … FROM app_user`**, three-place discipline; reads via `SECURITY DEFINER`) and `service_principal_grants` (**RLS + `FORCE`**, org-scoped). Hashed secret, one-time display, `expires_at`, `revoked_at`, IP-allowlist column. `SERVICE_PRINCIPALS_ENABLED` env, default false. No routes, no auth wiring. | Low — inert, but the `REVOKE` is load-bearing (§2.4)                                                                                                                           |
-| **P2.2**  | Migration: `audit_events.principal_id` / `principal_type` + updated `insert_audit_event()`. Wire `api_keys` into it (fixes finding (d) independently of anything else).                                                                                                                                                                                         | Medium — SECURITY DEFINER change                                                                                                                                               |
-| **P2.3**  | `auth.ts`: `col_svc_` branch behind the flag. `org-context.ts`: branch on **principal type**, resolve org from `X-Organization-Id` via grant lookup (F2, F3). `db-context.ts`: open the transaction on org id _or_ user id, leave `app.user_id` unset for principal-only requests (F4).                                                                         | **Highest risk in the plan.** Needs RLS integration tests for: no-org, granted-org, ungranted-org, expired-grant, revoked-principal.                                           |
-| **P2.4**  | Rate limiting, **two tiers**: credential-level in `rate-limit-auth.ts` (position unchanged); `(principal, org)` sub-limit in a **new check after `orgContext`**, since the org header is unvalidated at the current hook position (§2.5). Separate principal ceiling. Principal path fails closed on Redis outage (Q4).                                         | Medium                                                                                                                                                                         |
-| **P2.5**  | Management surface: create/list/revoke principals, grant/revoke per-org. Routes registered only when enabled. IP allowlist column + check. **Plus the org-facing side: `GET`/`DELETE /v1/organizations/{orgId}/grants`, RLS on `service_principal_grants`, and the sticky `revoked_by_org_at` column (§2.5).**                                                  | Medium                                                                                                                                                                         |
-| **P2.6**  | `orgs:provision` capability + provisioning route. Explicitly does not confer a grant on the created org.                                                                                                                                                                                                                                                        | Medium                                                                                                                                                                         |
-| **P2.7**  | Instance webhook subscriptions per D2: `principal_subscriptions` table, registration on the principal surface, grant-filtered fan-out in `inngest/functions/webhook-delivery.ts`, **per-send revalidation in `webhook.worker.ts`**, and `validateOutboundUrl()` on create/update/send. `webhook_deliveries` gains `principal_id`/`subscription_id`.             | **High.** Grant enforcement runs outside the request path. Tests: zero deliveries for an ungranted org; org-side revocation cancels _queued_ deliveries, not just future ones. |
+| PR        | Content                                                                                                                                                                                                                                                                                                                                                                                                                                                                     | Risk                                                                                                                                                                                                                                                                                |
+| --------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **P2.-1** | **Fix queued-delivery revalidation on the existing org-scoped webhook path** (§1.9). Look URL and secret up at send time; cancel rather than send when the endpoint is deleted or disabled. Pre-existing gap, blast radius of one org today — fix it here, before P2.7 generalises it across tenants. **Done 2026-07-28** (#522); `CANCELLED` added by migration `0068`.                                                                                                    | Medium — touches the delivery worker                                                                                                                                                                                                                                                |
+| **P2.0**  | **Audit every service method touching `users` / `organizations` for unfiltered reads (F1).** Add explicit `WHERE` clauses and RLS integration tests. **No new capability — this is a prerequisite.** **Done 2026-07-28** — all 73 sites classified in [`tenant-isolation-audit.md`](tenant-isolation-audit.md); the predicate fixes it identified are tracked individually.                                                                                                 | **High value, medium risk**                                                                                                                                                                                                                                                         |
+| **P2.1**  | Migration: `service_principals` (**no RLS + `REVOKE ALL … FROM app_user`**, three-place discipline; reads via `SECURITY DEFINER`) and `service_principal_grants` (**RLS + `FORCE`**, org-scoped). Hashed secret, one-time display, `expires_at`, `revoked_at`, IP-allowlist column. `SERVICE_PRINCIPALS_ENABLED` env, default false. No routes, no auth wiring.                                                                                                             | Low — inert, but the `REVOKE` is load-bearing (§2.4)                                                                                                                                                                                                                                |
+| **P2.2**  | Migration: `audit_events.principal_id` / `principal_type` + updated `insert_audit_event()`. Wire `api_keys` into it (fixes finding (d) independently of anything else). **Done 2026-07-30** (#535), migration `0070`. Changing that function's parameters needed `DROP` + `CREATE`, not `CREATE OR REPLACE` — a changed signature creates a second overload owned by the migration runner.                                                                                  | Medium — SECURITY DEFINER change                                                                                                                                                                                                                                                    |
+| **P2.3**  | `auth.ts`: `col_svc_` branch behind the flag. `org-context.ts`: branch on **principal type**, resolve org from `X-Organization-Id` via grant lookup (F2, F3). `db-context.ts`: open the transaction on org id _or_ user id, leave `app.user_id` unset for principal-only requests (F4).                                                                                                                                                                                     | **Highest risk in the plan.** Needs RLS integration tests for: no-org, granted-org, ungranted-org, expired-grant, revoked-principal.                                                                                                                                                |
+| **P2.4**  | Rate limiting, **two tiers**: credential-level in `rate-limit-auth.ts` (position unchanged); `(principal, org)` sub-limit in a **new check after `orgContext`**, since the org header is unvalidated at the current hook position (§2.5). Separate principal ceiling. Principal path fails closed on Redis outage (Q4).                                                                                                                                                     | Medium                                                                                                                                                                                                                                                                              |
+| **P2.5**  | Management surface: create/list/revoke principals, grant/revoke per-org. Routes registered only when enabled. IP allowlist column + check. **Plus the org-facing side: `GET`/`DELETE /v1/organizations/{orgId}/grants`, RLS on `service_principal_grants`, and the sticky `revoked_by_org_at` column (§2.5).**                                                                                                                                                              | Medium                                                                                                                                                                                                                                                                              |
+| **P2.6**  | `orgs:provision` capability + provisioning route. Explicitly does not confer a grant on the created org.                                                                                                                                                                                                                                                                                                                                                                    | Medium                                                                                                                                                                                                                                                                              |
+| **P2.7**  | Instance webhook subscriptions per D2: `principal_subscriptions` table, registration on the principal surface, grant-filtered fan-out in `inngest/functions/webhook-delivery.ts`, and `validateOutboundUrl()` on create/update/send. `webhook_deliveries` gains `principal_id`/`subscription_id`. **Per-send revalidation already exists** (P2.-1) — the work is to widen `webhook.worker.ts`'s phase-1 check to principal, grant and org-revocation state, not to add one. | **Medium-high**, down from high: grant enforcement still runs outside the request path, but on a mechanism that now exists and is tested. Tests: zero deliveries for an ungranted org; org-side revocation cancels a _queued_ delivery at pickup, without relying on a queue drain. |
 
 ### Phase 3 — Acting-as (capability (b))
 
@@ -1211,19 +1408,19 @@ becomes mostly a deletion (6.1 MB, 447 Python files) rather than a regeneration.
 Listed because several of these cross layers that no existing test touches, and because the
 failure modes are silent.
 
-| Case                                                                        | Asserts                          |
-| --------------------------------------------------------------------------- | -------------------------------- |
-| Direct query against **every** tenant table with wrong org / no org set     | F1, F6 fail-closed               |
-| No `SET LOCAL` leakage between pooled requests (PgBouncer transaction mode) | §2.6(2)                          |
-| Principal-only request (no acting-as) hitting a user-scoped table           | F4 — fails closed, no 500 loop   |
-| Ungranted org, expired grant, revoked principal, org-revoked grant          | F2 — each 403, not 200           |
-| `X-Act-As-User` × every combination of grant capability and target role     | intersection never widens        |
-| Read-only grant acting as an org `ADMIN`                                    | no escalation                    |
-| Procedure requiring a role, called by a principal with no role              | fails closed, no synthetic ADMIN |
-| Webhook event for org A, principal granted only on org B                    | zero deliveries created          |
-| Revocation while a delivery is **already queued**                           | delivery cancelled, not sent     |
-| Two concurrent requests with the same `Idempotency-Key`                     | one executes, one 409s           |
-| Same key, different body                                                    | 422                              |
+| Case                                                                        | Asserts                                                                |
+| --------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| Direct query against **every** tenant table with wrong org / no org set     | F1, F6 fail-closed                                                     |
+| No `SET LOCAL` leakage between pooled requests (PgBouncer transaction mode) | §2.6(2)                                                                |
+| Principal-only request (no acting-as) hitting a user-scoped table           | F4 — fails closed, no 500 loop                                         |
+| Ungranted org, expired grant, revoked principal, org-revoked grant          | F2 — each 403, not 200                                                 |
+| `X-Act-As-User` × every combination of grant capability and target role     | intersection never widens                                              |
+| Read-only grant acting as an org `ADMIN`                                    | no escalation                                                          |
+| Procedure requiring a role, called by a principal with no role              | fails closed, no synthetic ADMIN                                       |
+| Webhook event for org A, principal granted only on org B                    | zero deliveries created                                                |
+| Revocation while a delivery is **already queued**                           | cancelled at pickup against current grant state, without a queue drain |
+| Two concurrent requests with the same `Idempotency-Key`                     | one executes, one 409s                                                 |
+| Same key, different body                                                    | 422                                                                    |
 
 ### Phase 4 — Remaining parity
 
@@ -1234,27 +1431,27 @@ manifest entry. No ordering constraint between them.
 
 ## 6. Decision log
 
-| Decision                                  | Choice                                                                                         | Alternatives                                              | Rationale                                                                                                                                                                |
-| ----------------------------------------- | ---------------------------------------------------------------------------------------------- | --------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Principal model                           | Separate `service_principals` table + `col_svc_` prefix                                        | Widen `api_keys`; Zitadel client credentials              | Revocability. A NULL-org row is invisible to `api_keys`' own RLS policy; an external service should not own the grant model.                                             |
-| Scope shape                               | Flat capability strings, tenancy in a separate grant table                                     | Org-encoded scope strings; blanket instance access        | Keeps the Zod enum finite and the SDKs stable; per-org grants bound the blast radius.                                                                                    |
-| Org selection for instance principals     | Existing `X-Organization-Id` header                                                            | Body field; URL path segment                              | Every hook is `onRequest`; the body is not parsed yet (F5). Reuses one concept.                                                                                          |
-| Acting-as permissions                     | Intersection of grant and user role                                                            | User role alone                                           | Impersonation attributes an action; it must never acquire authority.                                                                                                     |
-| `app.user_id` for principal-only requests | Leave unset                                                                                    | Synthetic UUID; creator's id                              | Synthetic values can fail open on user-scoped RLS; the creator's id reintroduces the attribution problem.                                                                |
-| Boundary enforcement                      | `internalOnly` middleware + coverage manifest test + CI spec diff                              | Documentation; naming convention                          | tRPC is currently reachable by every API key — the policy needs a mechanism, not a note.                                                                                 |
-| `internalOnly` shape                      | **Allowlist of interactive auth methods**                                                      | Denylist of `apikey`                                      | A denylist silently readmits the next credential class — and P2.3 adds one. Same rule as F3: branch on what a principal is, not how it authenticated.                    |
-| Webhook subscription model                | Separate `principal_subscriptions`; `webhook_endpoints` untouched; shared `webhook_deliveries` | Nullable `organization_id`; two parallel delivery systems | A NULL-org row is unreachable through that table's own RLS, which uses the raising idiom (F6). Keeps one delivery log, one signature scheme, and P1.1's contract stable. |
-| Grant visibility                          | Org-visible and org-revocable, with sticky `revoked_by_org_at`                                 | Operator-only grants                                      | A tenant that cannot see who holds keys to its data does not have control of it. Non-sticky revocation is theatre.                                                       |
-| Idempotency                               | `Idempotency-Key` header, credential-scoped, replay-or-409                                     | None; server-side dedup heuristics                        | Retries are the normal condition for machine clients; the header is contract surface, so it cannot be added later cheaply.                                               |
-| Generated artefacts                       | Spec committed, SDKs built in CI                                                               | Commit both; commit neither                               | The spec is the contract M3 diffs. SDK bulk is the friction that let the spec go five months stale.                                                                      |
-| Acting-as on decisions                    | Denied by default, per-capability denylist                                                     | Allowed; hardcoded exception                              | A decision attributed to someone who did not make it destroys the audit trail's value — same trust property as blind review.                                             |
-| Sequencing                                | Close the bypass → four decisions → parity ∥ principal                                         | Problem 2 fully before Problem 1                          | Parallel where tenancy rides the request; coupled where tenancy is a resource. Webhooks are the only current case of the latter.                                         |
-| `service_principals` privileges           | No RLS **plus** `REVOKE ALL … FROM app_user`, reads via `SECURITY DEFINER`                     | "No RLS" alone, per the hub precedent                     | The hub precedent is safe _because_ of a revoke (`0029_hub_tables.sql:67`). Without it, one application-path mistake is instance-wide credential enumeration.            |
-| Grant table privileges                    | RLS + `FORCE` + explicit `organization_id` filters                                             | No RLS, like the principal table                          | It is genuinely org-scoped, which is what lets the org-facing views read it safely.                                                                                      |
-| Webhook revocation                        | Revalidate per send, not only at fan-out                                                       | Fan-out filtering alone                                   | Queued jobs carry URL and secret and retry for up to an hour; fan-out filtering leaves a revoked party receiving events.                                                 |
-| Principal capability storage              | Column on `service_principals`, intersected with the grant                                     | Grant-only; synthetic `ADMIN` role                        | A synthetic role passes every existing role guard regardless of the grant — fails open.                                                                                  |
-| Idempotency concurrency                   | `INSERT … ON CONFLICT DO NOTHING` first, then 409 / replay / 422                               | Unique key + request transaction                          | The transaction makes each request atomic but does not serialise two requests against each other.                                                                        |
-| Self-hoster default                       | `SERVICE_PRINCIPALS_ENABLED=false`, routes unregistered                                        | Always on with empty tables                               | Matches `FEDERATION_ENABLED`. Unregistered routes cannot be probed.                                                                                                      |
+| Decision                                  | Choice                                                                                                                        | Alternatives                                              | Rationale                                                                                                                                                                                                                                                                                                     |
+| ----------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Principal model                           | Separate `service_principals` table + `col_svc_` prefix                                                                       | Widen `api_keys`; Zitadel client credentials              | Revocability. A NULL-org row is invisible to `api_keys`' own RLS policy; an external service should not own the grant model.                                                                                                                                                                                  |
+| Scope shape                               | Flat capability strings, tenancy in a separate grant table — **ratified 2026-07-31 (D1)**                                     | Org-encoded scope strings; blanket instance access        | Keeps the Zod enum finite and the SDKs stable; per-org grants bound the blast radius. The binding clause is fail-closed role guards, not the syntax.                                                                                                                                                          |
+| Org selection for instance principals     | Existing `X-Organization-Id` header                                                                                           | Body field; URL path segment                              | Every hook is `onRequest`; the body is not parsed yet (F5). Reuses one concept.                                                                                                                                                                                                                               |
+| Acting-as permissions                     | Intersection of grant and user role                                                                                           | User role alone                                           | Impersonation attributes an action; it must never acquire authority.                                                                                                                                                                                                                                          |
+| `app.user_id` for principal-only requests | Leave unset                                                                                                                   | Synthetic UUID; creator's id                              | Synthetic values can fail open on user-scoped RLS; the creator's id reintroduces the attribution problem.                                                                                                                                                                                                     |
+| Boundary enforcement                      | `internalOnly` middleware + coverage manifest test + CI spec diff                                                             | Documentation; naming convention                          | tRPC is currently reachable by every API key — the policy needs a mechanism, not a note.                                                                                                                                                                                                                      |
+| `internalOnly` shape                      | **Allowlist of interactive auth methods**                                                                                     | Denylist of `apikey`                                      | A denylist silently readmits the next credential class — and P2.3 adds one. Same rule as F3: branch on what a principal is, not how it authenticated.                                                                                                                                                         |
+| Webhook subscription model                | Separate `principal_subscriptions`; `webhook_endpoints` untouched; shared `webhook_deliveries` — **ratified 2026-07-31 (D2)** | Nullable `organization_id`; two parallel delivery systems | The nine webhook procedures accept no `organizationId` and the response schema declares none, so P1.1's contract is unchanged. A NULL-org row is also unreachable through the table's own RLS, since `NULL = anything` is never TRUE — that holds under either idiom, so normalising F6 does not reopen this. |
+| Grant visibility                          | Org-visible and org-revocable, with sticky `revoked_by_org_at`                                                                | Operator-only grants                                      | A tenant that cannot see who holds keys to its data does not have control of it. Non-sticky revocation is theatre.                                                                                                                                                                                            |
+| Idempotency                               | `Idempotency-Key` header, credential-scoped, replay-or-409 — **ratified 2026-07-31 (D3), every `/v1` `POST`**                 | None; server-side dedup heuristics                        | Retries are the normal condition for machine clients. Needs a narrow, typed oRPC context field first: middleware cannot read request headers today.                                                                                                                                                           |
+| Generated artefacts                       | Spec committed, SDKs built in CI — **not adopted; re-opened 2026-07-31 (D4)**                                                 | Commit both; commit neither                               | The drift check it was meant to unblock is now green by other means (M3, source → spec), so the case is weaker than when written. Backlogged as its own item.                                                                                                                                                 |
+| Acting-as on decisions                    | Denied by default, per-capability denylist                                                                                    | Allowed; hardcoded exception                              | A decision attributed to someone who did not make it destroys the audit trail's value — same trust property as blind review.                                                                                                                                                                                  |
+| Sequencing                                | Close the bypass → four decisions → parity ∥ principal                                                                        | Problem 2 fully before Problem 1                          | Parallel where tenancy rides the request; coupled where tenancy is a resource. Webhooks are the only current case of the latter.                                                                                                                                                                              |
+| `service_principals` privileges           | No RLS **plus** `REVOKE ALL … FROM app_user`, reads via `SECURITY DEFINER`                                                    | "No RLS" alone, per the hub precedent                     | The hub precedent is safe _because_ of a revoke (`0029_hub_tables.sql:67`). Without it, one application-path mistake is instance-wide credential enumeration.                                                                                                                                                 |
+| Grant table privileges                    | RLS + `FORCE` + explicit `organization_id` filters                                                                            | No RLS, like the principal table                          | It is genuinely org-scoped, which is what lets the org-facing views read it safely.                                                                                                                                                                                                                           |
+| Webhook revocation                        | Revalidate per send, not only at fan-out — **shipped on the org path 2026-07-28 (#522)**                                      | Fan-out filtering alone                                   | Queued jobs outlive the state they were created from. The pickup-time re-read is the control; draining the queue is hygiene.                                                                                                                                                                                  |
+| Principal capability storage              | Column on `service_principals`, intersected with the grant                                                                    | Grant-only; synthetic `ADMIN` role                        | A synthetic role passes every existing role guard regardless of the grant — fails open.                                                                                                                                                                                                                       |
+| Idempotency concurrency                   | `INSERT … ON CONFLICT DO NOTHING` first, then 409 / replay / 422                                                              | Unique key + request transaction                          | The transaction makes each request atomic but does not serialise two requests against each other.                                                                                                                                                                                                             |
+| Self-hoster default                       | `SERVICE_PRINCIPALS_ENABLED=false`, routes unregistered                                                                       | Always on with empty tables                               | Matches `FEDERATION_ENABLED`. Unregistered routes cannot be probed.                                                                                                                                                                                                                                           |
 
 ---
 
@@ -1268,10 +1465,16 @@ reader believes something about who acted, and it is false. Implement as an expl
 middleware. Initial entries: submission status transitions (`PATCH /submissions/{id}/status`
 and both batch variants) and `gdpr.deleteAccount`. Ships with P3.1.
 
-**Q2 — Generated SDKs: stop committing them.** Resolved as D4 (§1.8). The spec is the
+**Q2 — Generated SDKs: stop committing them.** ~~Resolved as D4 (§1.8).~~ The spec is the
 contract and stays committed because M3 diffs it; the SDKs are derived, reviewed by nobody,
 and their bulk is what made the drift check feel expensive enough to skip. Build and publish
 from the committed spec in CI on release.
+**Reopened 2026-07-31 — this recommendation was never executed.** P0.2 shipped without the
+deletion half, so the SDKs remain committed and `sdk-check` gates them. Do **not** act on the
+paragraph above as though it were settled: it is the recommendation, not the state, and the
+argument behind it is weaker than when written now that `pnpm sdk:check-spec` catches
+source → spec drift without involving the SDKs at all. See §1.8's status block and the Track 2
+backlog item.
 
 **Q4 — Redis fail-open: change it for the principal path only.** Fail-open is defensible
 for a human's per-user window and indefensible for a credential aggregating many tenants.
@@ -1288,8 +1491,10 @@ REST surface in Phase 4.
 
 ## 8. Still open
 
-1. **Idempotency scope** (§1.10) — every `/v1` `POST`, or only the integrator-facing set?
-   Clean rule versus cheaper rule; this is D3 and wants deciding, not inheriting.
+1. ~~**Idempotency scope** (§1.10) — every `/v1` `POST`, or only the integrator-facing set?~~
+   — **resolved as D3, 2026-07-31**: every `/v1` `POST`. What is left is not a question but
+   work — the narrow oRPC context change that has to precede it, since no middleware on that
+   surface can read a request header today. Backlogged.
 2. **Submitter acting-as.** A host platform filing on a writer's behalf is a real use case,
    but submitters have no org membership by design, so the v1 membership check excludes
    them. Needs a consent model that does not exist. Possibly a Register concern given
@@ -1300,4 +1505,11 @@ REST surface in Phase 4.
    P2.1 depends on. Not yet verified against staging or production.
 4. **Normalising the two RLS idioms** (F6) — four schema files raise where twenty-four
    return NULL. Not urgent, not a vulnerability, but it should be a decision rather than an
-   accident.
+   accident. **D2 does not depend on this and normalising `webhook_endpoints` does not
+   reopen it** — the decision rests on the published contract shape, and the NULL-row
+   obstacle holds under either idiom because `NULL = anything` is never TRUE. Noted here
+   because whoever does this work will arrive by grepping for
+   `current_setting('app.current_org')`, not by reading §1.9.
+5. **Whether to stop committing the generated SDKs** — recommended in §1.8, never executed,
+   and re-opened 2026-07-31 as D4 rather than quietly dropped. Backlogged with the evidence
+   on both sides. Not a prerequisite for Phase 1 or Phase 2.
