@@ -393,8 +393,8 @@ Ordered as the design doc's Phase 0/D.
       (`schema/submissions.ts:186-189`) declares `submissions_submitter_read`
       (`using: submitter_id = current_user_id()`). Postgres OR-combines permissive policies,
       and `hooks/db-context.ts:41-44` sets `app.user_id` on **every** authenticated request —
-      so the effective SELECT predicate on an HTTP path is `organization_id =
-  current_org_id() OR submitter_id = current_user_id()`. An editor who has also submitted
+      so on an HTTP path the effective SELECT predicate becomes the org term ORed with the
+      submitter term, rather than the org term alone. An editor who has also submitted
       to another org on the same instance therefore sees their own foreign-org rows through
       `submissionService.listAll`/`exportAll`. The Inngest path is unaffected
       (`withRls({ orgId })` sets no user id). The existing coverage cannot catch this:
