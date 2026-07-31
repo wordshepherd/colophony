@@ -95,7 +95,7 @@ describe('REST guard coverage', () => {
   it('introspects a plausible number of procedures', () => {
     // Guards against the whole suite silently passing because `'~orpc'` was
     // renamed under an @orpc/server upgrade and every assertion below started
-    // iterating an empty list. 146 operations today.
+    // iterating an empty list. 155 operations today.
     expect(allProcedures().length).toBeGreaterThan(130);
   });
 

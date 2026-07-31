@@ -2172,6 +2172,138 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/webhooks": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * List webhook endpoints
+     * @description Returns the organization’s registered webhook endpoints, newest first. Signing secrets are never included.
+     */
+    get: operations["listWebhookEndpoints"];
+    put?: never;
+    /**
+     * Register a webhook endpoint
+     * @description Registers an HTTPS endpoint to receive the selected events. The URL is validated against SSRF rules — it must be a public HTTPS address. The signing secret is returned **only** by this operation and by endpoint creation — it cannot be read back afterwards. Store it before discarding the response.
+     */
+    post: operations["createWebhookEndpoint"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/webhooks/{id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Get a webhook endpoint
+     * @description Returns one webhook endpoint. Responds 404 for an endpoint belonging to another organization, which is indistinguishable from one that does not exist. The signing secret is never included.
+     */
+    get: operations["getWebhookEndpoint"];
+    put?: never;
+    post?: never;
+    /**
+     * Delete a webhook endpoint
+     * @description Deletes the endpoint and its delivery history. Responds 404 rather than reporting success for an endpoint that does not exist.
+     */
+    delete: operations["deleteWebhookEndpoint"];
+    options?: never;
+    head?: never;
+    /**
+     * Update a webhook endpoint
+     * @description Updates the URL, description, subscribed events, or status. A changed URL is re-validated against SSRF rules. Signing secrets are never included in the response — rotate the secret to obtain a new one.
+     */
+    patch: operations["updateWebhookEndpoint"];
+    trace?: never;
+  };
+  "/webhooks/{id}/rotate-secret": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Rotate a webhook signing secret
+     * @description Generates a new signing secret and invalidates the previous one. In-flight deliveries are signed with whichever secret is current when they are sent, so rotate during a quiet period if signature continuity matters. The signing secret is returned **only** by this operation and by endpoint creation — it cannot be read back afterwards. Store it before discarding the response.
+     */
+    post: operations["rotateWebhookEndpointSecret"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/webhooks/{id}/test": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Send a test delivery
+     * @description Queues a `webhook.test` delivery to the endpoint and returns its id. Delivery is asynchronous — poll `GET /webhook-deliveries` for the outcome. Rejected with 400 if the endpoint is disabled.
+     */
+    post: operations["testWebhookEndpoint"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/webhook-deliveries": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * List webhook deliveries
+     * @description Returns delivery attempts across the organization’s endpoints, newest first. Filter by endpoint, event type, or status to narrow it.
+     */
+    get: operations["listWebhookDeliveries"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/webhook-deliveries/{deliveryId}/retry": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Retry a webhook delivery
+     * @description Requeues a delivery, clearing the previous attempt’s status and error. Responds 404 if the delivery or its endpoint is not in this organization.
+     */
+    post: operations["retryWebhookDelivery"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -12704,6 +12836,385 @@ export interface operations {
             /** Format: date-time */
             updatedAt: string;
           }[];
+        };
+      };
+    };
+  };
+  listWebhookEndpoints: {
+    parameters: {
+      query?: {
+        page?: number;
+        limit?: number;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": {
+            /** @description Items on the current page */
+            items: {
+              /** Format: uuid */
+              id: string;
+              url: string;
+              description: string | null;
+              eventTypes: string[];
+              /** @enum {string} */
+              status: "ACTIVE" | "DISABLED";
+              /** Format: date-time */
+              createdAt: string;
+              /** Format: date-time */
+              updatedAt: string;
+            }[];
+            /** @description Total number of items across all pages */
+            total: number;
+            /** @description Current page number */
+            page: number;
+            /** @description Items per page */
+            limit: number;
+            /** @description Total number of pages */
+            totalPages: number;
+          };
+        };
+      };
+    };
+  };
+  createWebhookEndpoint: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": {
+          /** Format: uri */
+          url: string;
+          description?: string;
+          eventTypes: (
+            | "hopper/submission.submitted"
+            | "hopper/submission.accepted"
+            | "hopper/submission.rejected"
+            | "hopper/submission.withdrawn"
+            | "slate/pipeline.copyeditor-assigned"
+            | "slate/pipeline.copyedit-completed"
+            | "slate/pipeline.author-review-completed"
+            | "slate/pipeline.proofread-completed"
+            | "slate/contract.generated"
+            | "slate/issue.published"
+            | "webhook.test"
+          )[];
+        };
+      };
+    };
+    responses: {
+      /** @description OK */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": {
+            /** Format: uuid */
+            id: string;
+            url: string;
+            description: string | null;
+            eventTypes: string[];
+            /** @enum {string} */
+            status: "ACTIVE" | "DISABLED";
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+            secret: string;
+          };
+        };
+      };
+    };
+  };
+  getWebhookEndpoint: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": {
+            /** Format: uuid */
+            id: string;
+            url: string;
+            description: string | null;
+            eventTypes: string[];
+            /** @enum {string} */
+            status: "ACTIVE" | "DISABLED";
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+          };
+        };
+      };
+    };
+  };
+  deleteWebhookEndpoint: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": {
+            /**
+             * @description Always true on success
+             * @constant
+             */
+            success: true;
+          };
+        };
+      };
+    };
+  };
+  updateWebhookEndpoint: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: {
+      content: {
+        "application/json": {
+          /** Format: uri */
+          url?: string;
+          description?: string;
+          eventTypes?: (
+            | "hopper/submission.submitted"
+            | "hopper/submission.accepted"
+            | "hopper/submission.rejected"
+            | "hopper/submission.withdrawn"
+            | "slate/pipeline.copyeditor-assigned"
+            | "slate/pipeline.copyedit-completed"
+            | "slate/pipeline.author-review-completed"
+            | "slate/pipeline.proofread-completed"
+            | "slate/contract.generated"
+            | "slate/issue.published"
+            | "webhook.test"
+          )[];
+          /** @enum {string} */
+          status?: "ACTIVE" | "DISABLED";
+        };
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": {
+            /** Format: uuid */
+            id: string;
+            url: string;
+            description: string | null;
+            eventTypes: string[];
+            /** @enum {string} */
+            status: "ACTIVE" | "DISABLED";
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+          };
+        };
+      };
+    };
+  };
+  rotateWebhookEndpointSecret: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": {
+            /** Format: uuid */
+            id: string;
+            url: string;
+            description: string | null;
+            eventTypes: string[];
+            /** @enum {string} */
+            status: "ACTIVE" | "DISABLED";
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+            secret: string;
+          };
+        };
+      };
+    };
+  };
+  testWebhookEndpoint: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": {
+            /**
+             * Format: uuid
+             * @description The queued test delivery — poll it via GET /webhook-deliveries
+             */
+            deliveryId: string;
+          };
+        };
+      };
+    };
+  };
+  listWebhookDeliveries: {
+    parameters: {
+      query?: {
+        endpointId?: string;
+        eventType?: string;
+        status?: "QUEUED" | "DELIVERING" | "DELIVERED" | "FAILED" | "CANCELLED";
+        page?: number;
+        limit?: number;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": {
+            /** @description Items on the current page */
+            items: {
+              /** Format: uuid */
+              id: string;
+              /** Format: uuid */
+              webhookEndpointId: string;
+              eventType: string;
+              eventId: string;
+              payload?: unknown;
+              /** @enum {string} */
+              status:
+                "QUEUED" | "DELIVERING" | "DELIVERED" | "FAILED" | "CANCELLED";
+              httpStatusCode: number | null;
+              responseBody: string | null;
+              errorMessage: string | null;
+              attempts: number;
+              nextRetryAt: string | null;
+              deliveredAt: string | null;
+              /** Format: date-time */
+              createdAt: string;
+            }[];
+            /** @description Total number of items across all pages */
+            total: number;
+            /** @description Current page number */
+            page: number;
+            /** @description Items per page */
+            limit: number;
+            /** @description Total number of pages */
+            totalPages: number;
+          };
+        };
+      };
+    };
+  };
+  retryWebhookDelivery: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        deliveryId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            webhookEndpointId: string;
+            eventType: string;
+            eventId: string;
+            payload?: unknown;
+            /** @enum {string} */
+            status:
+              "QUEUED" | "DELIVERING" | "DELIVERED" | "FAILED" | "CANCELLED";
+            httpStatusCode: number | null;
+            responseBody: string | null;
+            errorMessage: string | null;
+            attempts: number;
+            nextRetryAt: string | null;
+            deliveredAt: string | null;
+            /** Format: date-time */
+            createdAt: string;
+          };
         };
       };
     };

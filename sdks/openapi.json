@@ -89,6 +89,10 @@
     {
       "name": "Notifications",
       "description": "Read in-app notifications and manage delivery preferences. The inbox belongs to the user a credential acts as, not to the organization — use webhooks for organization-level events."
+    },
+    {
+      "name": "Webhooks",
+      "description": "Register HTTPS endpoints to receive organization-level events, and inspect or retry their delivery history. Signing secrets are returned only on registration and rotation, and cannot be read back."
     }
   ],
   "externalDocs": {
@@ -23734,6 +23738,951 @@
                       "updatedAt"
                     ]
                   }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/webhooks": {
+      "get": {
+        "operationId": "listWebhookEndpoints",
+        "summary": "List webhook endpoints",
+        "description": "Returns the organization’s registered webhook endpoints, newest first. Signing secrets are never included.",
+        "tags": ["Webhooks"],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991,
+              "default": 1,
+              "description": "Page number (1-based)"
+            },
+            "allowEmptyValue": true,
+            "allowReserved": true
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "description": "Items per page (1-100, default 20)"
+            },
+            "allowEmptyValue": true,
+            "allowReserved": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "url": {
+                            "type": "string"
+                          },
+                          "description": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "eventTypes": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          },
+                          "status": {
+                            "enum": ["ACTIVE", "DISABLED"],
+                            "type": "string"
+                          },
+                          "createdAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "x-native-type": "date"
+                          },
+                          "updatedAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "x-native-type": "date"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "url",
+                          "description",
+                          "eventTypes",
+                          "status",
+                          "createdAt",
+                          "updatedAt"
+                        ]
+                      },
+                      "description": "Items on the current page"
+                    },
+                    "total": {
+                      "type": "number",
+                      "description": "Total number of items across all pages"
+                    },
+                    "page": {
+                      "type": "number",
+                      "description": "Current page number"
+                    },
+                    "limit": {
+                      "type": "number",
+                      "description": "Items per page"
+                    },
+                    "totalPages": {
+                      "type": "number",
+                      "description": "Total number of pages"
+                    }
+                  },
+                  "required": ["items", "total", "page", "limit", "totalPages"]
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "createWebhookEndpoint",
+        "summary": "Register a webhook endpoint",
+        "description": "Registers an HTTPS endpoint to receive the selected events. The URL is validated against SSRF rules — it must be a public HTTPS address. The signing secret is returned **only** by this operation and by endpoint creation — it cannot be read back afterwards. Store it before discarding the response.",
+        "tags": ["Webhooks"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "url": {
+                    "type": "string",
+                    "maxLength": 2048,
+                    "format": "uri"
+                  },
+                  "description": {
+                    "type": "string",
+                    "maxLength": 512
+                  },
+                  "eventTypes": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                      "enum": [
+                        "hopper/submission.submitted",
+                        "hopper/submission.accepted",
+                        "hopper/submission.rejected",
+                        "hopper/submission.withdrawn",
+                        "slate/pipeline.copyeditor-assigned",
+                        "slate/pipeline.copyedit-completed",
+                        "slate/pipeline.author-review-completed",
+                        "slate/pipeline.proofread-completed",
+                        "slate/contract.generated",
+                        "slate/issue.published",
+                        "webhook.test"
+                      ],
+                      "type": "string"
+                    }
+                  }
+                },
+                "required": ["url", "eventTypes"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "url": {
+                      "type": "string"
+                    },
+                    "description": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "eventTypes": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "status": {
+                      "enum": ["ACTIVE", "DISABLED"],
+                      "type": "string"
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "x-native-type": "date"
+                    },
+                    "updatedAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "x-native-type": "date"
+                    },
+                    "secret": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "url",
+                    "description",
+                    "eventTypes",
+                    "status",
+                    "createdAt",
+                    "updatedAt",
+                    "secret"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/webhooks/{id}": {
+      "get": {
+        "operationId": "getWebhookEndpoint",
+        "summary": "Get a webhook endpoint",
+        "description": "Returns one webhook endpoint. Responds 404 for an endpoint belonging to another organization, which is indistinguishable from one that does not exist. The signing secret is never included.",
+        "tags": ["Webhooks"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Resource UUID"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "url": {
+                      "type": "string"
+                    },
+                    "description": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "eventTypes": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "status": {
+                      "enum": ["ACTIVE", "DISABLED"],
+                      "type": "string"
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "x-native-type": "date"
+                    },
+                    "updatedAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "x-native-type": "date"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "url",
+                    "description",
+                    "eventTypes",
+                    "status",
+                    "createdAt",
+                    "updatedAt"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "operationId": "updateWebhookEndpoint",
+        "summary": "Update a webhook endpoint",
+        "description": "Updates the URL, description, subscribed events, or status. A changed URL is re-validated against SSRF rules. Signing secrets are never included in the response — rotate the secret to obtain a new one.",
+        "tags": ["Webhooks"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Resource UUID"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "url": {
+                    "type": "string",
+                    "maxLength": 2048,
+                    "format": "uri"
+                  },
+                  "description": {
+                    "type": "string",
+                    "maxLength": 512
+                  },
+                  "eventTypes": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                      "enum": [
+                        "hopper/submission.submitted",
+                        "hopper/submission.accepted",
+                        "hopper/submission.rejected",
+                        "hopper/submission.withdrawn",
+                        "slate/pipeline.copyeditor-assigned",
+                        "slate/pipeline.copyedit-completed",
+                        "slate/pipeline.author-review-completed",
+                        "slate/pipeline.proofread-completed",
+                        "slate/contract.generated",
+                        "slate/issue.published",
+                        "webhook.test"
+                      ],
+                      "type": "string"
+                    }
+                  },
+                  "status": {
+                    "enum": ["ACTIVE", "DISABLED"],
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "url": {
+                      "type": "string"
+                    },
+                    "description": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "eventTypes": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "status": {
+                      "enum": ["ACTIVE", "DISABLED"],
+                      "type": "string"
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "x-native-type": "date"
+                    },
+                    "updatedAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "x-native-type": "date"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "url",
+                    "description",
+                    "eventTypes",
+                    "status",
+                    "createdAt",
+                    "updatedAt"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deleteWebhookEndpoint",
+        "summary": "Delete a webhook endpoint",
+        "description": "Deletes the endpoint and its delivery history. Responds 404 rather than reporting success for an endpoint that does not exist.",
+        "tags": ["Webhooks"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Resource UUID"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "const": true,
+                      "description": "Always true on success"
+                    }
+                  },
+                  "required": ["success"]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/webhooks/{id}/rotate-secret": {
+      "post": {
+        "operationId": "rotateWebhookEndpointSecret",
+        "summary": "Rotate a webhook signing secret",
+        "description": "Generates a new signing secret and invalidates the previous one. In-flight deliveries are signed with whichever secret is current when they are sent, so rotate during a quiet period if signature continuity matters. The signing secret is returned **only** by this operation and by endpoint creation — it cannot be read back afterwards. Store it before discarding the response.",
+        "tags": ["Webhooks"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Resource UUID"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "url": {
+                      "type": "string"
+                    },
+                    "description": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "eventTypes": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "status": {
+                      "enum": ["ACTIVE", "DISABLED"],
+                      "type": "string"
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "x-native-type": "date"
+                    },
+                    "updatedAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "x-native-type": "date"
+                    },
+                    "secret": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "url",
+                    "description",
+                    "eventTypes",
+                    "status",
+                    "createdAt",
+                    "updatedAt",
+                    "secret"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/webhooks/{id}/test": {
+      "post": {
+        "operationId": "testWebhookEndpoint",
+        "summary": "Send a test delivery",
+        "description": "Queues a `webhook.test` delivery to the endpoint and returns its id. Delivery is asynchronous — poll `GET /webhook-deliveries` for the outcome. Rejected with 400 if the endpoint is disabled.",
+        "tags": ["Webhooks"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Resource UUID"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "deliveryId": {
+                      "type": "string",
+                      "format": "uuid",
+                      "description": "The queued test delivery — poll it via GET /webhook-deliveries"
+                    }
+                  },
+                  "required": ["deliveryId"]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/webhook-deliveries": {
+      "get": {
+        "operationId": "listWebhookDeliveries",
+        "summary": "List webhook deliveries",
+        "description": "Returns delivery attempts across the organization’s endpoints, newest first. Filter by endpoint, event type, or status to narrow it.",
+        "tags": ["Webhooks"],
+        "parameters": [
+          {
+            "name": "endpointId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "allowEmptyValue": true,
+            "allowReserved": true
+          },
+          {
+            "name": "eventType",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "allowEmptyValue": true,
+            "allowReserved": true
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "enum": [
+                "QUEUED",
+                "DELIVERING",
+                "DELIVERED",
+                "FAILED",
+                "CANCELLED"
+              ],
+              "type": "string"
+            },
+            "allowEmptyValue": true,
+            "allowReserved": true
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991,
+              "default": 1,
+              "description": "Page number (1-based)"
+            },
+            "allowEmptyValue": true,
+            "allowReserved": true
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "description": "Items per page (1-100, default 20)"
+            },
+            "allowEmptyValue": true,
+            "allowReserved": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "webhookEndpointId": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "eventType": {
+                            "type": "string"
+                          },
+                          "eventId": {
+                            "type": "string"
+                          },
+                          "payload": {},
+                          "status": {
+                            "enum": [
+                              "QUEUED",
+                              "DELIVERING",
+                              "DELIVERED",
+                              "FAILED",
+                              "CANCELLED"
+                            ],
+                            "type": "string"
+                          },
+                          "httpStatusCode": {
+                            "anyOf": [
+                              {
+                                "type": "number"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "responseBody": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "errorMessage": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "attempts": {
+                            "type": "number"
+                          },
+                          "nextRetryAt": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "format": "date-time",
+                                "x-native-type": "date"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "deliveredAt": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "format": "date-time",
+                                "x-native-type": "date"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "createdAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "x-native-type": "date"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "webhookEndpointId",
+                          "eventType",
+                          "eventId",
+                          "status",
+                          "httpStatusCode",
+                          "responseBody",
+                          "errorMessage",
+                          "attempts",
+                          "nextRetryAt",
+                          "deliveredAt",
+                          "createdAt"
+                        ]
+                      },
+                      "description": "Items on the current page"
+                    },
+                    "total": {
+                      "type": "number",
+                      "description": "Total number of items across all pages"
+                    },
+                    "page": {
+                      "type": "number",
+                      "description": "Current page number"
+                    },
+                    "limit": {
+                      "type": "number",
+                      "description": "Items per page"
+                    },
+                    "totalPages": {
+                      "type": "number",
+                      "description": "Total number of pages"
+                    }
+                  },
+                  "required": ["items", "total", "page", "limit", "totalPages"]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/webhook-deliveries/{deliveryId}/retry": {
+      "post": {
+        "operationId": "retryWebhookDelivery",
+        "summary": "Retry a webhook delivery",
+        "description": "Requeues a delivery, clearing the previous attempt’s status and error. Responds 404 if the delivery or its endpoint is not in this organization.",
+        "tags": ["Webhooks"],
+        "parameters": [
+          {
+            "name": "deliveryId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Webhook delivery UUID"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "webhookEndpointId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "eventType": {
+                      "type": "string"
+                    },
+                    "eventId": {
+                      "type": "string"
+                    },
+                    "payload": {},
+                    "status": {
+                      "enum": [
+                        "QUEUED",
+                        "DELIVERING",
+                        "DELIVERED",
+                        "FAILED",
+                        "CANCELLED"
+                      ],
+                      "type": "string"
+                    },
+                    "httpStatusCode": {
+                      "anyOf": [
+                        {
+                          "type": "number"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "responseBody": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "errorMessage": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "attempts": {
+                      "type": "number"
+                    },
+                    "nextRetryAt": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "date-time",
+                          "x-native-type": "date"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "deliveredAt": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "date-time",
+                          "x-native-type": "date"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "x-native-type": "date"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "webhookEndpointId",
+                    "eventType",
+                    "eventId",
+                    "status",
+                    "httpStatusCode",
+                    "responseBody",
+                    "errorMessage",
+                    "attempts",
+                    "nextRetryAt",
+                    "deliveredAt",
+                    "createdAt"
+                  ]
                 }
               }
             }

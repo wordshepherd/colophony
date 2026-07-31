@@ -1087,19 +1087,57 @@ Ordered as the design doc's Phase 0/D.
 blocked on a decision any more. Note that votes, reviewer assignment, and invitations were
 assumed missing and are in fact already exposed — see §0 of the design doc.
 
-- [ ] **[P1] Webhook endpoint management over REST** (9 tRPC procs, `webhooks:manage`
-      already exists). **Unblocked 2026-07-31 — D2 taken:** per-org endpoints keep
-      `webhook_endpoints` unchanged and instance subscriptions get their own table, so the
-      nine procedures port with no change to their inputs or responses. None of them accepts
-      an `organizationId` and `webhookEndpointResponseSchema` declares none, so there is no
-      ownership discriminator to publish and nothing here has to change if instance
-      principals never ship. Per D3 the six mutating routes are manifest entries for
-      `Idempotency-Key` — not a prerequisite, since an optional header is additive, but they
-      should be listed rather than forgotten. Two things to fix on the way: four of the nine
-      procedures throw bare `Error` rather than domain error classes, and
-      `WebhookUrlValidationError` is absent from `rest/error-mapper.ts`, so an SSRF rejection
-      would 500 on REST. The new router is appended to `restRouter`, never inserted — key
-      order sets operation order in the spec. — (design doc §1.9, P1.1)
+- [x] **[P1] Webhook endpoint management over REST** (9 tRPC procs, `webhooks:manage`
+      already existed). **Unblocked 2026-07-31 by D2**, and shipped the same day as
+      `/v1/webhooks` + `/v1/webhook-deliveries`. D2 held exactly as predicted: per-org
+      endpoints kept `webhook_endpoints` unchanged, no procedure accepts an
+      `organizationId`, and `webhookEndpointResponseSchema` declares none, so nothing
+      published here changes if instance principals never ship. Per D3 the six mutating
+      routes are future `Idempotency-Key` manifest entries — listed, not implemented, since
+      no request header reaches the oRPC context yet. 105 paths / 155 operations.
+      **Three things this entry got wrong, corrected on the way through:**
+      (1) "four of the nine procedures throw bare `Error`" — it was **five throw sites
+      across two procedures** (`test`, `retryDelivery`); the larger defect was the other
+      four returning `null`/`undefined`/`void` on a miss, so `getById` answered `200 null`
+      and `delete` reported success for an id that never existed.
+      (2) `WebhookUrlValidationError` was absent from **both** error-mappers, not just the
+      REST one, so an SSRF rejection was a 500 on either surface.
+      (3) **No tRPC webhook procedure declared `.output()`**, so all three response schemas
+      in `packages/types/src/webhook.ts` were defined but unreferenced — the REST port is
+      their first consumer, which is also what surfaced the untyped `eventTypes` jsonb.
+      Split into two PRs: the service hardening landed first (see the org-predicate item
+      below), because the port sat on a live cross-tenant write. — (design doc §1.9, P1.1;
+      done 2026-07-31)
+- [x] **[P2] `webhookService` delivery methods carried no org predicate.** The
+      2026-03-04 defense-in-depth pass (checked off further down this file) fixed
+      `getEndpoint`, `listEndpoints`, `updateEndpoint`, `deleteEndpoint` and `rotateSecret`
+      and missed **every method touching `webhook_deliveries`**, so the item read as closed
+      while four still queried by id alone. `retryDelivery` was the live one: it updated
+      the row by id with no org term, and checked ownership only _after_ the mutation.
+      Since tRPC turns a throw into a normal reply, `db-context` **committed** that write
+      rather than rolling it back — another org's delivery was left permanently QUEUED with
+      its failure fields nulled. `listDeliveries` took
+      `organizationId?` applied under an `if`, and `endpointId` is caller-supplied.
+      `updateDeliveryStatus`/`countRecentFailures` are defence-in-depth only — their caller
+      resolves the delivery through the org-scoped join first — but an unscoped
+      `countRecentFailures` also let one tenant's failures feed another's auto-disable
+      threshold. Pinned by `__tests__/rls/webhook-service.test.ts` (23 cases; measured
+      2/2/2/3/1/1/5 failures per revert, and the two `retryDelivery` halves need a
+      write-only case to be distinguishable at all). — (found 2026-07-31 while scoping
+      P1.1; done 2026-07-31)
+- [ ] **[P2] `getActiveEndpointsForEvent` is an unbounded tenant query.**
+      `webhook.service.ts` returns every ACTIVE endpoint matching an event with no `LIMIT`
+      or pagination. Raised during the P1.1 review and deliberately **not** fixed there: it
+      is the fan-out path, so a truncating limit would silently stop delivering to whichever
+      endpoints fell off the end — strictly worse than the unbounded read. Wants batching,
+      which is its own change. — (found 2026-07-31)
+- [ ] **[P3] `webhooks.test` is audited on neither surface.** It writes a
+      `webhook_deliveries` row and enqueues a job — a real state change — but emits no audit
+      event on tRPC or REST. There is no `WEBHOOK_ENDPOINT_TESTED` action, and the typed
+      detail union in `packages/types/src/audit.ts` closes `WEBHOOK_ENDPOINT` to five, so
+      adding one is a `@colophony/types` change that has to land on both surfaces at once to
+      preserve parity. The REST router spec pins the current absence so it cannot be
+      "fixed" on one surface only. — (found 2026-07-31 during P1.1)
 - [x] **[P1] Notifications over REST** (list, unread-count, mark-read, mark-all-read + 3
       preference procs). Only path today is SSE, unusable for consumers that cannot hold a
       connection. — (design doc §1.7, P1.2; done 2026-07-29, PR pending)

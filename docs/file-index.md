@@ -25,7 +25,7 @@ Quick-reference index of important files across the codebase.
 | **Fastify hooks**          | `apps/api/src/hooks/` (auth, rate-limit, org-context, db-context, audit)                                        |
 | **Service layer**          | `apps/api/src/services/`                                                                                        |
 | **tRPC**                   | `apps/api/src/trpc/` — intended internal, but API keys reach it too (see `docs/api-integration-design.md` §0.1) |
-| **REST (oRPC, public)**    | `apps/api/src/rest/` (`context.ts` = procedure builders + `requireScopes`, `routers/` = 146 operations)         |
+| **REST (oRPC, public)**    | `apps/api/src/rest/` (`context.ts` = procedure builders + `requireScopes`, `routers/` = 155 operations)         |
 | **Zitadel webhook**        | `apps/api/src/webhooks/zitadel.webhook.ts`                                                                      |
 | **Stripe webhook**         | `apps/api/src/webhooks/stripe.webhook.ts`                                                                       |
 | **Documenso webhook**      | `apps/api/src/webhooks/documenso.webhook.ts`                                                                    |
@@ -102,14 +102,14 @@ Quick-reference index of important files across the codebase.
 
 ## SDKs & Scripts
 
-| What                | Path                                                                                                                                                                                                                           |
-| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **OpenAPI spec**    | `sdks/openapi.json` — 99 paths / 146 operations, current as of 2026-07-31. Was five months stale until 2026-07-27; `sdk-check` now gates three directions (source → spec, spec → TS SDK, spec → Python SDK), so drift fails CI |
-| **TypeScript SDK**  | `sdks/typescript/` (`@colophony/sdk` — openapi-fetch + generated types)                                                                                                                                                        |
-| **Python SDK**      | `sdks/python/` (`colophony` — openapi-python-client generated)                                                                                                                                                                 |
-| **Spec export**     | `scripts/export-openapi.ts` (builds the document in-process via `OpenAPIGenerator` — no server, database or Redis, so it runs in CI; `--check` fails on drift)                                                                 |
-| **SDK generation**  | `scripts/generate-sdks.ts` (regenerate both SDKs from committed spec)                                                                                                                                                          |
-| **SDK drift check** | `.github/workflows/ci.yml` `sdk-check` job — gates three directions since 2026-07-27: source → spec, spec → TS SDK, spec → Python SDK. Needs a workspace build first; detects Python drift with `git status`, not `git diff`   |
+| What                | Path                                                                                                                                                                                                                            |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **OpenAPI spec**    | `sdks/openapi.json` — 105 paths / 155 operations, current as of 2026-07-31. Was five months stale until 2026-07-27; `sdk-check` now gates three directions (source → spec, spec → TS SDK, spec → Python SDK), so drift fails CI |
+| **TypeScript SDK**  | `sdks/typescript/` (`@colophony/sdk` — openapi-fetch + generated types)                                                                                                                                                         |
+| **Python SDK**      | `sdks/python/` (`colophony` — openapi-python-client generated)                                                                                                                                                                  |
+| **Spec export**     | `scripts/export-openapi.ts` (builds the document in-process via `OpenAPIGenerator` — no server, database or Redis, so it runs in CI; `--check` fails on drift)                                                                  |
+| **SDK generation**  | `scripts/generate-sdks.ts` (regenerate both SDKs from committed spec)                                                                                                                                                           |
+| **SDK drift check** | `.github/workflows/ci.yml` `sdk-check` job — gates three directions since 2026-07-27: source → spec, spec → TS SDK, spec → Python SDK. Needs a workspace build first; detects Python drift with `git status`, not `git diff`    |
 
 ## Infrastructure & Ops
 
