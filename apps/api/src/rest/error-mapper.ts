@@ -89,6 +89,12 @@ import {
   InvitationAlreadyAcceptedError,
   InvitationEmailMismatchError,
 } from '../services/invitation.service.js';
+import {
+  WebhookEndpointNotFoundError,
+  WebhookDeliveryNotFoundError,
+  WebhookEndpointDisabledError,
+  WebhookUrlValidationError,
+} from '../services/webhook.service.js';
 
 type ORPCErrorCode = ConstructorParameters<typeof ORPCError>[0];
 
@@ -174,6 +180,14 @@ const errorCodeMap: [new (...args: never[]) => Error, ORPCErrorCode][] = [
   [InvitationExpiredError, 'NOT_FOUND'],
   [InvitationAlreadyAcceptedError, 'CONFLICT'],
   [InvitationEmailMismatchError, 'FORBIDDEN'],
+  // Webhook errors
+  [WebhookEndpointNotFoundError, 'NOT_FOUND'],
+  [WebhookDeliveryNotFoundError, 'NOT_FOUND'],
+  [WebhookEndpointDisabledError, 'BAD_REQUEST'],
+  // The message is already sanitized at the throw site — it names no internal
+  // host or address — so surfacing it as a 400 leaks nothing. Unmapped, an SSRF
+  // rejection was a 500 on both surfaces.
+  [WebhookUrlValidationError, 'BAD_REQUEST'],
 ];
 
 /**

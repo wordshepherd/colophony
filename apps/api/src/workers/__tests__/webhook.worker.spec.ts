@@ -22,6 +22,7 @@ vi.mock('bullmq', () => ({
 const mockUpdateDeliveryStatus = vi.fn();
 const mockCountRecentFailures = vi.fn();
 const mockUpdateEndpoint = vi.fn();
+const mockDisableEndpoint = vi.fn();
 const mockGetEndpointForDelivery = vi.fn();
 vi.mock('../../services/webhook.service.js', () => ({
   webhookService: {
@@ -30,6 +31,7 @@ vi.mock('../../services/webhook.service.js', () => ({
     countRecentFailures: (...args: unknown[]) =>
       mockCountRecentFailures(...args),
     updateEndpoint: (...args: unknown[]) => mockUpdateEndpoint(...args),
+    disableEndpoint: (...args: unknown[]) => mockDisableEndpoint(...args),
     getEndpointForDelivery: (...args: unknown[]) =>
       mockGetEndpointForDelivery(...args),
   },
@@ -166,6 +168,7 @@ describe('webhook worker', () => {
       'mock-tx',
       'del-123',
       'DELIVERED',
+      'org-1',
       expect.objectContaining({
         httpStatusCode: 200,
         deliveredAt: expect.any(Date),
@@ -199,6 +202,7 @@ describe('webhook worker', () => {
       'mock-tx',
       'del-123',
       'DELIVERING',
+      'org-1',
       expect.objectContaining({
         httpStatusCode: 500,
         errorMessage: 'HTTP 500',
@@ -251,6 +255,7 @@ describe('webhook worker', () => {
       expect.anything(),
       'del-123',
       'FAILED',
+      'org-1',
       { errorMessage: 'HTTP 500' },
     );
   });
@@ -261,15 +266,43 @@ describe('webhook worker', () => {
 
     // The endpoint is resolved through the service join, not a raw select on tx.
     mockCountRecentFailures.mockResolvedValueOnce(5); // At threshold
+    mockDisableEndpoint.mockResolvedValueOnce({ id: 'ep-1' });
 
     await failedCallback(job, err);
 
-    // updateEndpoint should be called with orgId as 3rd arg
-    expect(mockUpdateEndpoint).toHaveBeenCalledWith(
+    // The failure count is org-scoped too — otherwise another tenant's failures
+    // against the same endpoint id would contribute to this org's threshold.
+    expect(mockCountRecentFailures).toHaveBeenCalledWith(
       expect.anything(),
       'ep-1',
       'org-1',
-      { status: 'DISABLED' },
+    );
+    // `disableEndpoint`, not `updateEndpoint`: the latter throws on zero rows,
+    // which would roll back the FAILED status and audit row written above.
+    expect(mockDisableEndpoint).toHaveBeenCalledWith(
+      expect.anything(),
+      'ep-1',
+      'org-1',
+    );
+    expect(mockUpdateEndpoint).not.toHaveBeenCalled();
+  });
+
+  it('does not audit an auto-disable that matched no row', async () => {
+    const job = makeJob({ attemptsMade: 8 });
+    const err = new Error('HTTP 500');
+
+    mockCountRecentFailures.mockResolvedValueOnce(5); // At threshold
+    // The endpoint was deleted between the join and this write.
+    mockDisableEndpoint.mockResolvedValueOnce(null);
+
+    await failedCallback(job, err);
+
+    expect(mockDisableEndpoint).toHaveBeenCalled();
+    // The row was written unconditionally before, so it could claim a disable
+    // that never happened.
+    expect(mockAuditLog).not.toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ action: 'WEBHOOK_ENDPOINT_AUTO_DISABLED' }),
     );
   });
 
@@ -289,6 +322,7 @@ describe('webhook worker', () => {
         'mock-tx',
         'del-123',
         'CANCELLED',
+        'org-1',
         { errorMessage: expect.stringContaining('disabled') },
       );
       // Never entered DELIVERING — the attempt was not burned
@@ -327,6 +361,7 @@ describe('webhook worker', () => {
         'mock-tx',
         'del-123',
         'CANCELLED',
+        'org-1',
         { errorMessage: expect.stringContaining('no longer subscribes') },
       );
     });
@@ -349,6 +384,7 @@ describe('webhook worker', () => {
         'mock-tx',
         'del-123',
         'DELIVERED',
+        'org-1',
         expect.anything(),
       );
     });
