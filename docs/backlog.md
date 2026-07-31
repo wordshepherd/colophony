@@ -133,7 +133,7 @@
       `getByText` whose string is a prefix of other visible copy has the same latent race; the
       ADMIN path is worse, since `pending-invitations.tsx:65` and `invite-member-dialog.tsx:99`
       add third and fourth matches. — (found 2026-07-30 while diagnosing a CI failure on #537)
-- [ ] [P2] `scope-enforcement.test.ts:142` races the audit COMMIT, so `Security Tests` flakes.
+- [x] [P2] `scope-enforcement.test.ts:142` races the audit COMMIT, so `Security Tests` flakes.
       The case asserts an `API_KEY_SCOPE_DENIED` row exists immediately after `app.inject()`
       resolves. It does not resolve after the row is durable: the guard writes the row and
       throws, and the row is committed by `db-context`'s `onResponse` hook — which fires
@@ -151,7 +151,20 @@
       audit-then-throw path immediately after `inject()` has the same race.
       This is the flip side of a mechanism `apps/api/CLAUDE.md` already flags as
       load-bearing-but-implicit: the row surviving at all depends on `onResponse` COMMITting
-      rather than `onError` rolling back. — (found 2026-07-31 during #538)
+      rather than `onError` rolling back. — (found 2026-07-31 during #538; done 2026-07-31)
+      **Fixed by `waitForAuditAction` in `security/helpers/auth-app.ts`** — polls for the row
+      and returns the actions either way, so a genuinely absent row still fails with a
+      readable diff instead of a bare timeout. Both call sites converted; `recentAuditActions`
+      stays for reads that are not racing a request.
+      **It failed twice before the fix, once per call site** — `:142`
+      (`API_KEY_SCOPE_DENIED`) and `:187` (`API_KEY_INTERNAL_ROUTE`) — which is what
+      established it as a property of the helper rather than of one test.
+      **The fix cannot be verified locally, and that is the interesting part.**
+      Instrumenting the poll showed **0 retries across 10 local calls**: the race never fires
+      on an unloaded machine, which is exactly why it reached CI in the first place. The
+      failing CI run took 82s for the suite against ~30s locally. So the loop is inert when
+      there is no contention (one query, as before) and only earns its keep under load — do
+      not remove it because it "never does anything".
 - [ ] [P3] Seed data ages out of a long-lived dev database, and `db:seed` will not repair it. Submission periods are seeded at fixed offsets from the seed date, so `quarterly-review` eventually has no open period — which fails 11 of 13 `embed` tests with `No open period found`. `pnpm db:seed` is idempotent-by-skip, so it is a no-op once data exists; only the destructive `db:reset` refreshes the dates. CI is unaffected (it seeds fresh each run), so this only ever bites locally, and it looks like a code regression rather than stale data. Either make the seed refresh period dates when they have closed, or have `global-setup.ts` fail with a "run `pnpm db:reset`" message when no open period exists for the seed org — (found 2026-07-27 while verifying the E2E auth rework)
 
 ---
