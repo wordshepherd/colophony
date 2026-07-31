@@ -166,6 +166,8 @@
       there is no contention (one query, as before) and only earns its keep under load — do
       not remove it because it "never does anything".
 - [ ] [P3] Seed data ages out of a long-lived dev database, and `db:seed` will not repair it. Submission periods are seeded at fixed offsets from the seed date, so `quarterly-review` eventually has no open period — which fails 11 of 13 `embed` tests with `No open period found`. `pnpm db:seed` is idempotent-by-skip, so it is a no-op once data exists; only the destructive `db:reset` refreshes the dates. CI is unaffected (it seeds fresh each run), so this only ever bites locally, and it looks like a code regression rather than stale data. Either make the seed refresh period dates when they have closed, or have `global-setup.ts` fail with a "run `pnpm db:reset`" message when no open period exists for the seed org — (found 2026-07-27 while verifying the E2E auth rework)
+- [ ] [P3] `docs/DEVLOG.md` is a tracked stub pointing at a path this repo forbids. It reads "Moved to monthly rotation: `docs/devlog/YYYY-MM.md`" and names 2026-03 as the current month, linking `devlog/2026-03.md`. That directory correctly does not exist here — the devlog lives only in the notes mirror — so the link is broken in the public repo and the "current month" is four months stale. Either rewrite the stub to say the log is kept outside this repo without naming a path, or delete it; do not "fix" it by creating `docs/devlog/`, which `sync.sh --delete` would then overwrite from — (found 2026-07-31 during backlog verification)
+- [ ] [P3] `docs/architecture.md:355` marks Track 2 "✅ Complete" while `docs/backlog.md` carries 29 open Track 2 items. Both are defensible — the architecture doc means its original five bullets, all of which shipped, and the open items are post-completion findings from the 2026-07-27 integration audit — but read side by side the two documents appear to disagree. One clarifying clause on the architecture row would settle it — (found 2026-07-31 during backlog verification)
 
 ---
 
@@ -437,36 +439,46 @@ Ordered as the design doc's Phase 0/D.
       tests pass unchanged.
 - [ ] **[P2] `submission.service` list/export methods carry no org predicate.** `listAll`
       (`:227`), `exportAll` (`:347`, up to 10 000 rows) and `listAgingByOrg` (`:1483`) build
-      their `where` from `status` / `period` / `search` / date only. `listAgingByOrg` is named
-      for a scoping it does not perform — its caller supplies the org through
+      their `where` from `status` / `submissionPeriodId` / `search` only. `listAgingByOrg` is
+      named for a scoping it does not perform — its caller supplies the org through
       `withRls({ orgId })` at `inngest/functions/submission-response-reminder.ts:64`, so it is
       correct in practice and misleading to read. — (found 2026-07-28 during the P2.0 audit)
-      Line numbers re-verified 2026-07-30; all three still exact.
+      Line numbers re-verified 2026-07-31; all three declarations still exact.
+      **Two corrections 2026-07-31.** This entry said "date" was among the filters; there is
+      **no date condition** on `listAll` or `exportAll` — `listSubmissionsSchema` and
+      `exportSubmissionsSchema` carry no date fields, and date appears only in
+      `listAgingByOrg`'s cutoff. And `docs/tenant-isolation-audit.md:90-92` cites `:290` /
+      `:392` / `:1526` for these three, which match neither the declarations nor the current
+      `.where` sites — fix there too when this is taken.
 - [ ] **[P2] `submissions` carries a second permissive policy that widens the first, and no
       test can currently see it.** Beside `org_isolation`, the submissions schema
       (`schema/submissions.ts:186-189`) declares `submissions_submitter_read`
       (`using: submitter_id = current_user_id()`). Postgres OR-combines permissive policies,
-      and `hooks/db-context.ts:41-44` sets `app.user_id` on **every** authenticated request —
+      and `hooks/db-context.ts:53-56` sets `app.user_id` on **every** authenticated request —
       so on an HTTP path the effective SELECT predicate becomes the org term ORed with the
       submitter term, rather than the org term alone. An editor who has also submitted
       to another org on the same instance therefore sees their own foreign-org rows through
       `submissionService.listAll`/`exportAll`. The Inngest path is unaffected
       (`withRls({ orgId })` sets no user id). The existing coverage cannot catch this:
-      `__tests__/security/tenant-isolation-transitive.test.ts:139-173` seeds one user per org,
-      so the OR branch never fires. **Decide the intent before fixing** — the policy's own
+      `__tests__/security/tenant-isolation-transitive.test.ts:139-173` exercises the three
+      methods, but `seedOrg` at `:75-105` creates a fresh user per org, so no user is a
+      submitter in one org and a member of another and the OR branch never fires. **Decide the intent before fixing** — the policy's own
       comment says "submitters can see their own submissions cross-org", which may be
       deliberate for the writer-facing surface and wrong for the editor-facing one; if so the
       fix is to narrow the _editor_ reads rather than drop the policy. — (found 2026-07-31
       while verifying the entry above)
 - [ ] **[P2] `rest/error-mapper.ts` does not walk the `cause` chain; `trpc/error-mapper.ts`
-      does.** `rest/error-mapper.ts:216-228` tests `error.code === '23505'` directly, while
-      `trpc/error-mapper.ts:293-310` recurses `.cause` via `extractPgError`. Drizzle wraps pg
+      does.** `rest/error-mapper.ts:218-231` tests `error.code === '23505'` directly, while
+      `trpc/error-mapper.ts:295-312` recurses `.cause` via `extractPgError`. Drizzle wraps pg
       errors, so **every Drizzle-originated unique violation is a 500 on REST and a 409 on
       tRPC** — the same operation, two statuses, across all REST operations rather than any
-      one router. Port `extractPgError` (or `services/pg-errors.ts`'s `isUniqueViolation`) to
-      the REST mapper. Found via `issueService.addItemWithAudit`, whose own broken catch is
-      fixed; the mapper asymmetry is what made that fix invisible on tRPC and a 500 on REST.
-      — (found 2026-07-31 while scoping `issueService`)
+      one router. **Port `services/pg-errors.ts`'s `isUniqueViolation`, not `extractPgError`:**
+      the shared helper bounds its walk at depth 5, while the tRPC copy recurses unbounded and
+      would spin on a self-referential `cause`. Found via `issueService.addItemWithAudit`,
+      whose own broken catch is fixed; the mapper asymmetry is what made that fix invisible on
+      tRPC and a 500 on REST. Note `rest/error-mapper.spec.ts:86-103` covers only the flat
+      shape, so a fix needs a wrapped-cause case to be non-vacuous.
+      — (found 2026-07-31 while scoping `issueService`; line numbers re-verified 2026-07-31)
 - [ ] **[P3] Nine more sites use the broken direct `.code === '23505'` check, and one of them
       shadows the shared helper's name.** `queue-preset.service.ts:33` defines a **private
       function also called `isUniqueViolation`** using the direct form — so the codebase now
@@ -564,6 +576,11 @@ Ordered as the design doc's Phase 0/D.
       and no RLS suite — both would be written from scratch. Note
       `webhooks/documenso.webhook.ts:285-291` already passes `contract.organizationId` to
       `updateStatus` with a comment calling it defense-in-depth, so the intent is on record.
+      **A file named `apps/api/src/__tests__/services/contract.service.test.ts` does exist**
+      and is not what its name suggests: it never imports `contractService`, drives raw
+      Drizzle through `withTestRls` on the **app** pool, and so exercises the RLS policy
+      rather than any service `where` clause. Do not mistake it for coverage of this item —
+      every line number above was re-verified exact on 2026-07-31 and remains open.
       — (split out of the item above 2026-07-31 after verifying all three files)
 - [ ] **[P2] `federation.service.ts` `resolveWebFinger` is laxer than its sibling.** It
       filters on `email` alone, while `getUserDidDocument` filters `email` **and**
@@ -572,14 +589,21 @@ Ordered as the design doc's Phase 0/D.
       the other. The asymmetry looks unintended. — (found 2026-07-28 during the P2.0 audit)
       **Line numbers corrected 2026-07-31** — the original `:437` / `:523` pointed at the
       query bodies, not the declarations, which is why they read as off. `resolveWebFinger`
-      is declared at `:407` with its query at `:436-441`; `getUserDidDocument` at `:510`
-      with its query at `:519-538`. Both routes confirmed unauthenticated and carrying no
+      is declared at `:407` with its query at `:437-441`; `getUserDidDocument` at `:510`
+      with its query at `:523-538`. Both routes confirmed unauthenticated and carrying no
       guard: `/.well-known/webfinger` matches the `'/.well-known/'` prefix in
       `PUBLIC_PREFIXES` (`hooks/auth.ts:36-46`), and `/users/:localPart/did.json` is
-      admitted by the separate `path.endsWith('/did.json')` rule at `auth.ts:69-70`.
-      **`resolveWebFinger` is the odd one of three, not of two** — `simsub.service.ts:325-334`
+      admitted by the separate `path.endsWith('/did.json')` rule at `auth.ts:69`.
+      **`resolveWebFinger` is the odd one of three, not of two** — `simsub.service.ts:324-334`
       is a third email-keyed user lookup and carries all three conditions, citing
       `getUserDidDocument` in its comments.
+      **There is a second divergence, found 2026-07-31.** `getUserDidDocument` strips the port
+      from the domain before building the email (`:521-522`); `resolveWebFinger` does not. So
+      the two disagree about which host they will match, independently of the deleted/guest
+      filters. Fix both together. Also note `organization.service.ts:220` is a **fourth**
+      email-keyed lookup with no deleted/guest check by either mechanism — it is
+      authenticated rather than federation-facing, so out of scope here, but it is the same
+      shape and belongs in the same sweep.
       **The existing tests will not catch the fix regressing.**
       `federation.service.spec.ts:927,941` ("deleted user", "guest user") stub `db.select`
       to return `[]` and assert the throw — they pin the empty-result handling, not the
@@ -778,7 +802,7 @@ Ordered as the design doc's Phase 0/D.
       the corrected field names too; and the type to import is **`AuditEventResponse`**, since
       `@colophony/types` exports no symbol named `AuditEvent`. — (found 2026-07-30 while mapping the audit read
       surface)
-- [ ] **[P2] Honour `X-Act-As-User` on ordinary org-scoped API keys.** `hooks/auth.ts:343`
+- [ ] **[P2] Honour `X-Act-As-User` on ordinary org-scoped API keys.** `hooks/auth.ts:344`
       unconditionally sets `userId: creator.id` for `authMethod: 'apikey'`, so every action a
       `col_live_` key takes is attributed to whoever minted it — including `submitterId` and
       user-scoped RLS, not just the audit row. An integrator filing on behalf of several of
@@ -1464,6 +1488,7 @@ assumed missing and are in fact already exposed — see §0 of the design doc.
 ### CI
 
 - [x] [P2] CI path filtering for Playwright suites — skip irrelevant E2E suites on PRs based on changed files; `.github/scripts/detect-changes.sh` with fail-open strategy — (DEVLOG 2026-02-24; done 2026-02-24)
+- [ ] [P2] **Run `format:check` on docs-only PRs.** `ci.yml`'s `changes` job sets `docs_only=true` when every changed file is `*.md` or under `docs/`, and 22 of the 23 jobs are gated on `docs_only != 'true'` — the ungated one is `changes` itself. Skipping the expensive suites is right; the problem is that `pnpm format:check` lives inside `Lint & Type Check`, so **prettier formatting of tracked docs is enforced by nothing but the local pre-commit hook**. Combined with the `git reset --soft` trap, where lint-staged formats the staged content and the working tree is not evidence of what landed, an unformatted docs blob can merge green and then surface as a red build on the next unrelated PR that touches a `.ts` file — where it reads as that PR's fault. Fix is small: a job gated on `docs_only == 'true'` running install plus `pnpm format:check`, which adds nothing to normal PRs because it only fires when `Lint & Type Check` is skipped. No workspace build needed — prettier does not resolve workspace deps. **Note the PR page is misleading meanwhile:** `Secret Scan` and both CodeQL analyses are separate workflows that do run, so a docs-only PR shows several green checks and reads as covered — verified on #539 — (found 2026-07-31 while landing the Phase D decision records)
 - [ ] [P1] Stop the Deploy workflow reporting `success` on no-op runs — when `prepare` sets `skip`, Build and both deploy jobs are skipped and the run still concludes `success`. On 2026-07-25/26 four such runs interleaved with real failures, so a total deployment outage read as intermittent flakiness and went unnoticed for about seven hours. Either fail the run when `skip` is set for a `workflow_run` trigger on `main`, or surface "deployed / not deployed" somewhere that does not depend on reading each run's job list. Clean example to work from: run 30205582585 concluded `success` with a `prepare` log reading verbatim `CI did not succeed (conclusion: failure), skipping deploy` — (DEVLOG 2026-07-26)
 - [ ] [P2] Make Coverage Report a required status check — #494 reached `mergeStateStatus: CLEAN` with Coverage Report unresolved, so the job can fail without blocking a merge. That is how an infrastructure flake (or a real coverage regression) becomes invisible — (DEVLOG 2026-07-26)
 - [ ] [P3] Consider a registry pull-through cache or retry for service containers — Coverage Report failed on 2026-07-26 when Docker Hub timed out three times pulling `postgres:16-alpine`, killing `Initialize containers` before any test ran. Passed on retry — (DEVLOG 2026-07-26)
