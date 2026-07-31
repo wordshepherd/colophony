@@ -387,6 +387,44 @@ Ordered as the design doc's Phase 0/D.
       for a scoping it does not perform — its caller supplies the org through
       `withRls({ orgId })` at `inngest/functions/submission-response-reminder.ts:64`, so it is
       correct in practice and misleading to read. — (found 2026-07-28 during the P2.0 audit)
+      Line numbers re-verified 2026-07-30; all three still exact.
+- [ ] **[P2] `submissions` carries a second permissive policy that widens the first, and no
+      test can currently see it.** Beside `org_isolation`, the submissions schema
+      (`schema/submissions.ts:186-189`) declares `submissions_submitter_read`
+      (`using: submitter_id = current_user_id()`). Postgres OR-combines permissive policies,
+      and `hooks/db-context.ts:41-44` sets `app.user_id` on **every** authenticated request —
+      so the effective SELECT predicate on an HTTP path is `organization_id =
+  current_org_id() OR submitter_id = current_user_id()`. An editor who has also submitted
+      to another org on the same instance therefore sees their own foreign-org rows through
+      `submissionService.listAll`/`exportAll`. The Inngest path is unaffected
+      (`withRls({ orgId })` sets no user id). The existing coverage cannot catch this:
+      `__tests__/security/tenant-isolation-transitive.test.ts:139-173` seeds one user per org,
+      so the OR branch never fires. **Decide the intent before fixing** — the policy's own
+      comment says "submitters can see their own submissions cross-org", which may be
+      deliberate for the writer-facing surface and wrong for the editor-facing one; if so the
+      fix is to narrow the _editor_ reads rather than drop the policy. — (found 2026-07-31
+      while verifying the entry above)
+- [ ] **[P2] `rest/error-mapper.ts` does not walk the `cause` chain; `trpc/error-mapper.ts`
+      does.** `rest/error-mapper.ts:216-228` tests `error.code === '23505'` directly, while
+      `trpc/error-mapper.ts:293-310` recurses `.cause` via `extractPgError`. Drizzle wraps pg
+      errors, so **every Drizzle-originated unique violation is a 500 on REST and a 409 on
+      tRPC** — the same operation, two statuses, across all REST operations rather than any
+      one router. Port `extractPgError` (or `services/pg-errors.ts`'s `isUniqueViolation`) to
+      the REST mapper. Found via `issueService.addItemWithAudit`, whose own broken catch is
+      fixed; the mapper asymmetry is what made that fix invisible on tRPC and a 500 on REST.
+      — (found 2026-07-31 while scoping `issueService`)
+- [ ] **[P3] Nine more sites use the broken direct `.code === '23505'` check, and one of them
+      shadows the shared helper's name.** `queue-preset.service.ts:33` defines a **private
+      function also called `isUniqueViolation`** using the direct form — so the codebase now
+      has two same-named predicates with different semantics, which is exactly how the
+      guard-tag primitive drifted. The rest: `collection.service.ts:379`,
+      `submission-reviewer.service.ts:77`, `form.service.ts:610`,
+      `writer-profile.service.ts:69`, `embed-submission.service.ts:119`,
+      `trust.service.ts:477,912`, `hooks/auth.ts:485`. **Triage per site rather than sweeping**
+      — a site catching an error from a raw `pool.query` is not Drizzle-wrapped and is correct
+      as written. Point the wrapped ones at `services/pg-errors.ts`. Note fixing these is a
+      behaviour change: the domain errors they guard have never fired.
+      — (found 2026-07-31 while fixing the `issueService` instance)
 - [x] **[P2] `pipeline.service.ts` writes drop the org predicate.** Filed as three methods; it
       was **five reachable defects**, and the two framed as "worse" were the only live ones.
       `assignCopyeditor` (`:396`) and `assignProofreader` (`:435`) took no `orgId` at all —
@@ -433,10 +471,46 @@ Ordered as the design doc's Phase 0/D.
       change. Decide the semantics first: guests, deactivated users, and staff who belong to
       both orgs are all reachable cases, and the same question applies to
       `submission-reviewer.service.ts`. — (found 2026-07-30 while scoping `pipelineService`)
-- [ ] **[P2] `issue.service.ts:65,122` take `orgId?` as optional and apply the predicate
+- [x] **[P2] `issue.service.ts:65,122` take `orgId?` as optional and apply the predicate
       conditionally.** An optional org id is a silent bypass: omit the argument and the query
       is unscoped, with nothing at the type level to flag it. Make it required, matching the
-      house `(tx, id|input, orgId)` convention. — (found 2026-07-28 during the P2.0 audit)
+      house `(tx, id|input, orgId)` convention. — (found 2026-07-28 during the P2.0 audit;
+      done 2026-07-31)
+      Filed as two methods; it was **12 in `issue.service.ts` and 7 in
+      `cms-connection.service.ts`**, and the entry also had the shape wrong. Seven of the
+      twelve were _guard-only_ — an `if (orgId)` block wrapping an org-scoped `getById`, with
+      no org term on the child-table statement at all, because `issue_items` and
+      `issue_sections` have no `organization_id` and scope transitively through an `EXISTS`
+      on `issues`. Duplicating that EXISTS per statement was rejected as a second copy of the
+      policy to keep true; `removeItem`/`removeSection` instead resolve the row through an
+      org-scoped join before deleting. **Either that join or the guard alone is sufficient**
+      (measured: 0 of 14 fail with the joins reverted), so the suite cannot tell you if a
+      later change removes them — the header says so.
+      **The type was not the whole defect.** `addItem` guarded the _issue_ and never the
+      `pipelineItemId` handed to it, so org A could attach org B's pipeline item to an
+      A-owned issue and read B's submission title back through `getItems`'s join to
+      `submissions` — the `pipelineService.create` shape from #537, and unaffected by making
+      `orgId` required. Reverting only that check fails exactly 1 of 14 cases, which is how
+      invisible it was.
+      Pinned by `__tests__/rls/issue-service.test.ts` (14 cases, 9 fail with the predicates
+      reverted) and `cms-connection-service.test.ts` (7 of 7). `contract.service.ts` is
+      deliberately **not** in this change — see the item below.
+- [ ] **[P2] `contract.service.ts` is a different shape from the other two optional-`orgId`
+      services, and the only one whose bug is reachable today.** Only 2 methods take
+      `orgId?` (`getById:69`, `updateStatus:170`); **four take no org parameter at all** while
+      querying `contracts` directly — `list:37` (no org filter, and `where` is `undefined`
+      when unfiltered), `getByPipelineItemId:83`, `getByDocumensoDocumentId:91` (cross-org by
+      design, webhook path), `updateDocumensoId:203` (bare `UPDATE … WHERE id`). Unlike
+      `issue`/`cms-connection`, it has **live caller omissions**: the tRPC router
+      (`trpc/routers/contracts.ts:39`) and the REST one (`:66`) call `getById` without the org id
+      though `authContext.orgId` is in hand; `sendWithAudit:219,226` and
+      `voidWithAudit:240,242` omit it internally; `inngest/functions/contract-workflow.ts:106`
+      omits it with `orgId` in scope from the enclosing `withRls`. So this needs real
+      call-site changes, not a signature sweep. There is also **no `contract.service.spec.ts`**
+      and no RLS suite — both would be written from scratch. Note
+      `webhooks/documenso.webhook.ts:285-291` already passes `contract.organizationId` to
+      `updateStatus` with a comment calling it defense-in-depth, so the intent is on record.
+      — (split out of the item above 2026-07-31 after verifying all three files)
 - [ ] **[P2] `federation.service.ts:437` `resolveWebFinger` is laxer than its sibling.** It
       filters on `email` alone, while `getUserDidDocument` (`:523`) filters `email` **and**
       `isNull(deletedAt)` **and** `eq(isGuest, false)`. Both are unauthenticated federation

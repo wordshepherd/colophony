@@ -164,8 +164,9 @@ export async function globalSetup(): Promise<void> {
 
   // The mirror of the check above, and it is load-bearing for a different set of
   // suites. `api-key-service.test.ts`, `notification-service.test.ts`,
-  // `audit-service.test.ts`, `pipeline-service.test.ts` and the admin-pool cases
-  // in `organization-service.test.ts` prove that an explicit WHERE clause
+  // `audit-service.test.ts`, `pipeline-service.test.ts`,
+  // `issue-service.test.ts`, `cms-connection-service.test.ts` and the admin-pool
+  // cases in `organization-service.test.ts` prove that an explicit WHERE clause
   // isolates tenants *without* RLS — which only means anything if this
   // connection really does bypass RLS. ADMIN_URL comes straight from
   // DATABASE_TEST_URL, so pointing it at a non-superuser would make those suites

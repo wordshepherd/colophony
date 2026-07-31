@@ -37,6 +37,7 @@ import {
 import type { ServiceContext } from './types.js';
 import { assertEditorOrProductionOrAdmin } from './errors.js';
 import { enqueueOutboxEvent } from './outbox.js';
+import { isUniqueViolation } from './pg-errors.js';
 import type { S3StorageAdapter } from '../adapters/storage/index.js';
 import { convertProseMirrorToDocx } from '../converters/prosemirror-to-docx.js';
 import { convertFile } from '../converters/index.js';
@@ -74,29 +75,6 @@ export class InvalidPipelineTransitionError extends Error {
     super(`Invalid pipeline transition from "${from}" to "${to}"`);
     this.name = 'InvalidPipelineTransitionError';
   }
-}
-
-/**
- * True for a Postgres unique-violation (SQLSTATE 23505).
- *
- * Walks the `cause` chain because Drizzle wraps driver errors in a
- * `DrizzleQueryError` and the pg error — the one carrying `code` — is the cause.
- * Checking `err.code` directly silently never matches, which is exactly what the
- * first version of this did.
- *
- * Matches on the SQLSTATE, not the message. `saveCopyedit` below string-matches
- * 'unique constraint' for its retry; do not copy that spelling.
- */
-function isUniqueViolation(err: unknown): boolean {
-  let current: unknown = err;
-  // Bounded so a self-referential cause cannot spin.
-  for (let depth = 0; depth < 5; depth++) {
-    if (current === null || typeof current !== 'object') return false;
-    if ('code' in current && current.code === '23505') return true;
-    if (!('cause' in current)) return false;
-    current = current.cause;
-  }
-  return false;
 }
 
 // ---------------------------------------------------------------------------

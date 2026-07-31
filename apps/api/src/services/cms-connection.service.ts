@@ -30,19 +30,20 @@ export const cmsConnectionService = {
   // List / Get
   // -------------------------------------------------------------------------
 
-  async list(tx: DrizzleDb, input: ListCmsConnectionsInput, orgId?: string) {
+  async list(tx: DrizzleDb, input: ListCmsConnectionsInput, orgId: string) {
     const { publicationId, page, limit } = input;
     const offset = (page - 1) * limit;
 
-    const conditions = [];
-    if (orgId) {
-      conditions.push(eq(cmsConnections.organizationId, orgId));
-    }
+    // Seeded unconditionally, and the single `where` below is reused by both the
+    // page and the count query — filtering only the page leaves `total`
+    // reporting every org's connection count.
+    const conditions = [eq(cmsConnections.organizationId, orgId)];
     if (publicationId) {
       conditions.push(eq(cmsConnections.publicationId, publicationId));
     }
 
-    const where = conditions.length > 0 ? and(...conditions) : undefined;
+    // Never empty — the org predicate is always present.
+    const where = and(...conditions);
 
     const [items, countResult] = await Promise.all([
       tx
@@ -65,17 +66,15 @@ export const cmsConnectionService = {
     };
   },
 
-  async getById(tx: DrizzleDb, id: string, orgId?: string) {
+  async getById(tx: DrizzleDb, id: string, orgId: string) {
     const [row] = await tx
       .select()
       .from(cmsConnections)
       .where(
-        orgId
-          ? and(
-              eq(cmsConnections.id, id),
-              eq(cmsConnections.organizationId, orgId),
-            )
-          : eq(cmsConnections.id, id),
+        and(
+          eq(cmsConnections.id, id),
+          eq(cmsConnections.organizationId, orgId),
+        ),
       )
       .limit(1);
 
@@ -121,7 +120,7 @@ export const cmsConnectionService = {
     tx: DrizzleDb,
     id: string,
     input: UpdateCmsConnectionInput,
-    orgId?: string,
+    orgId: string,
   ) {
     const values: Record<string, unknown> = { updatedAt: new Date() };
     if (input.name !== undefined) values.name = input.name;
@@ -132,12 +131,10 @@ export const cmsConnectionService = {
       .update(cmsConnections)
       .set(values)
       .where(
-        orgId
-          ? and(
-              eq(cmsConnections.id, id),
-              eq(cmsConnections.organizationId, orgId),
-            )
-          : eq(cmsConnections.id, id),
+        and(
+          eq(cmsConnections.id, id),
+          eq(cmsConnections.organizationId, orgId),
+        ),
       )
       .returning();
 
@@ -170,16 +167,14 @@ export const cmsConnectionService = {
     return updated;
   },
 
-  async delete(tx: DrizzleDb, id: string, orgId?: string) {
+  async delete(tx: DrizzleDb, id: string, orgId: string) {
     const [row] = await tx
       .delete(cmsConnections)
       .where(
-        orgId
-          ? and(
-              eq(cmsConnections.id, id),
-              eq(cmsConnections.organizationId, orgId),
-            )
-          : eq(cmsConnections.id, id),
+        and(
+          eq(cmsConnections.id, id),
+          eq(cmsConnections.organizationId, orgId),
+        ),
       )
       .returning();
 
@@ -207,7 +202,7 @@ export const cmsConnectionService = {
   // Test connection
   // -------------------------------------------------------------------------
 
-  async testConnection(tx: DrizzleDb, id: string, orgId?: string) {
+  async testConnection(tx: DrizzleDb, id: string, orgId: string) {
     const connection = await cmsConnectionService.getById(tx, id, orgId);
     if (!connection) throw new CmsConnectionNotFoundError(id);
 
@@ -245,18 +240,12 @@ export const cmsConnectionService = {
   // Helpers for Inngest workers
   // -------------------------------------------------------------------------
 
-  async listByPublication(
-    tx: DrizzleDb,
-    publicationId: string,
-    orgId?: string,
-  ) {
+  async listByPublication(tx: DrizzleDb, publicationId: string, orgId: string) {
     const conditions = [
+      eq(cmsConnections.organizationId, orgId),
       eq(cmsConnections.publicationId, publicationId),
       eq(cmsConnections.isActive, true),
     ];
-    if (orgId) {
-      conditions.push(eq(cmsConnections.organizationId, orgId));
-    }
     return tx
       .select()
       .from(cmsConnections)
@@ -264,17 +253,15 @@ export const cmsConnectionService = {
       .limit(10000);
   },
 
-  async updateLastSync(tx: DrizzleDb, id: string, orgId?: string) {
+  async updateLastSync(tx: DrizzleDb, id: string, orgId: string) {
     await tx
       .update(cmsConnections)
       .set({ lastSyncAt: new Date(), updatedAt: new Date() })
       .where(
-        orgId
-          ? and(
-              eq(cmsConnections.id, id),
-              eq(cmsConnections.organizationId, orgId),
-            )
-          : eq(cmsConnections.id, id),
+        and(
+          eq(cmsConnections.id, id),
+          eq(cmsConnections.organizationId, orgId),
+        ),
       );
   },
 };

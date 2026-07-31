@@ -89,6 +89,7 @@ describe('issueService.saveCmsPublishResult', () => {
         externalUrl: 'https://example.com/post/1',
         adapterType: 'GHOST',
       },
+      'org-1',
     );
 
     expect(mockSet).toHaveBeenCalledWith(
@@ -127,6 +128,7 @@ describe('issueService.saveCmsPublishResult', () => {
       'nonexistent',
       'conn-1',
       { externalId: 'ext-1', adapterType: 'GHOST' },
+      'org-1',
     );
 
     expect(result).toBeNull();
@@ -160,6 +162,7 @@ describe('issueService.saveCmsPublishResult', () => {
       'issue-2',
       'conn-2',
       { externalId: 'ext-2', adapterType: 'WORDPRESS' },
+      'org-1',
     );
 
     expect(mockSet).toHaveBeenCalledWith(
@@ -250,11 +253,12 @@ describe('issueService defense-in-depth org filtering', () => {
 // listActive
 // ---------------------------------------------------------------------------
 
+// No `Function.prototype.length` arity check here. It proved nothing: TypeScript
+// compiles `orgId?: string` to a parameter with no initializer, so `.length`
+// counted the optional org id too and the assertion passed identically before
+// and after this file's methods required it. `__tests__/rls/issue-service.test.ts`
+// is what pins the predicates now.
 describe('issueService.listActive', () => {
-  it('requires orgId parameter (2 args: tx, orgId)', () => {
-    expect(issueService.listActive.length).toBe(2);
-  });
-
   it('returns empty array when no active issues exist', async () => {
     const mockTx = {
       select: vi.fn().mockReturnValue({
