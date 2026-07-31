@@ -511,11 +511,26 @@ Ordered as the design doc's Phase 0/D.
       `webhooks/documenso.webhook.ts:285-291` already passes `contract.organizationId` to
       `updateStatus` with a comment calling it defense-in-depth, so the intent is on record.
       — (split out of the item above 2026-07-31 after verifying all three files)
-- [ ] **[P2] `federation.service.ts:437` `resolveWebFinger` is laxer than its sibling.** It
-      filters on `email` alone, while `getUserDidDocument` (`:523`) filters `email` **and**
+- [ ] **[P2] `federation.service.ts` `resolveWebFinger` is laxer than its sibling.** It
+      filters on `email` alone, while `getUserDidDocument` filters `email` **and**
       `isNull(deletedAt)` **and** `eq(isGuest, false)`. Both are unauthenticated federation
       discovery endpoints, so a deleted or guest account is discoverable through one and not
       the other. The asymmetry looks unintended. — (found 2026-07-28 during the P2.0 audit)
+      **Line numbers corrected 2026-07-31** — the original `:437` / `:523` pointed at the
+      query bodies, not the declarations, which is why they read as off. `resolveWebFinger`
+      is declared at `:407` with its query at `:436-441`; `getUserDidDocument` at `:510`
+      with its query at `:519-538`. Both routes confirmed unauthenticated and carrying no
+      guard: `/.well-known/webfinger` matches the `'/.well-known/'` prefix in
+      `PUBLIC_PREFIXES` (`hooks/auth.ts:36-46`), and `/users/:localPart/did.json` is
+      admitted by the separate `path.endsWith('/did.json')` rule at `auth.ts:69-70`.
+      **`resolveWebFinger` is the odd one of three, not of two** — `simsub.service.ts:325-334`
+      is a third email-keyed user lookup and carries all three conditions, citing
+      `getUserDidDocument` in its comments.
+      **The existing tests will not catch the fix regressing.**
+      `federation.service.spec.ts:927,941` ("deleted user", "guest user") stub `db.select`
+      to return `[]` and assert the throw — they pin the empty-result handling, not the
+      `where` clause, and would pass unchanged with the filter conditions deleted. Whoever
+      fixes this needs a test that actually exercises the predicate.
 - [x] **[P2] `demo_requests` has neither RLS nor a `REVOKE`.** It postdates migration 0052, so
       `ALTER DEFAULT PRIVILEGES` left `app_user` full DML and no later migration narrowed it.
       Fixed alongside the P0 above: it is written through the superuser pool
@@ -596,6 +611,17 @@ Ordered as the design doc's Phase 0/D.
       then reaches `dbContextPlugin`, which opens a pooled connection and begins a
       transaction per request, so the failure mode is not merely "unlimited requests" but
       connection-pool exhaustion under load.
+      **Three framing corrections, verified 2026-07-31.** (1) The limiter is **hand-rolled**
+      — `@fastify/rate-limit` appears nowhere in the repo — so `skipOnError` and `onExceeded`
+      do not exist here and cannot be part of any fix. (2) `FEDERATION_RATE_LIMIT_FAIL_MODE`
+      **defaults to `open`**, so porting the pattern alone changes no default behaviour; the
+      value of the port is that the mode becomes settable, not that it becomes safe. (3) The
+      second-pass limiter has a **third** silent bypass beyond the catch this entry mentions:
+      `hooks/rate-limit-auth.ts:55-56` is a bare `if (!redis) return;`, which is not an error
+      path at all and no fail-mode branch would cover. Also note the federation in-process
+      fallback is hard-coded `(10, 60_000)` — roughly 6× stricter than
+      `FEDERATION_RATE_LIMIT_MAX` — so a port should decide that number deliberately rather
+      than inherit it.
       **The asymmetry is the tell.** Federation rate limiting already has
       `FEDERATION_RATE_LIMIT_FAIL_MODE` (`open` / `closed` / `fallback`, with an in-process
       fallback), added in PR #225 for exactly this concern. The main limiter — which guards
@@ -838,8 +864,17 @@ Ordered as the design doc's Phase 0/D.
       behaviour and the upstream type (`OpenAPIGeneratorGenerateOptions` is
       `Partial<Omit<Document, 'openapi'>>`, so the field is un-settable) — nobody has observed
       the live endpoint. No test or fixture captures it, which is also why the divergence went
-      unnoticed. Confirm against a running server before writing the fix. —
-      (code review 2026-07-27)
+      unnoticed. — (code review 2026-07-27)
+      **Caveat tightened 2026-07-31, without a server.** The installed generator sets the
+      value **after** spreading caller options — `@orpc/openapi@1.14.10`,
+      `dist/shared/openapi.BwdtJjDu.mjs:516-524`, which builds
+      `{ ...clone(baseDoc), info: …, openapi: '3.1.1' }` — so even an untyped `openapi` smuggled
+      through `specGenerateOptions` would be clobbered, and `dist/plugins/index.mjs:115-131`
+      serves that document with no post-processing. `3.1.1` is the only `3.1.x` literal in the
+      package. The committed spec is confirmed `3.1.0` at `sdks/openapi.json:98`. So the
+      divergence is now read from the generator source rather than assumed; one `curl` against
+      a running server is still worth doing before the fix, but it is a confirmation rather
+      than the missing evidence.
 - [ ] **[P3] Three OpenAPI tags are used but never declared.** Operations carry
       `Collections` (10 operations), `Submission Analytics` (6), and `Submission Votes` (4),
       but `openApiDocumentConfig.tags` in `apps/api/src/rest/openapi-spec.ts` declares **18**
