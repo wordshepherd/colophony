@@ -76,6 +76,29 @@ export class InvalidPipelineTransitionError extends Error {
   }
 }
 
+/**
+ * True for a Postgres unique-violation (SQLSTATE 23505).
+ *
+ * Walks the `cause` chain because Drizzle wraps driver errors in a
+ * `DrizzleQueryError` and the pg error — the one carrying `code` — is the cause.
+ * Checking `err.code` directly silently never matches, which is exactly what the
+ * first version of this did.
+ *
+ * Matches on the SQLSTATE, not the message. `saveCopyedit` below string-matches
+ * 'unique constraint' for its retry; do not copy that spelling.
+ */
+function isUniqueViolation(err: unknown): boolean {
+  let current: unknown = err;
+  // Bounded so a self-referential cause cannot spin.
+  for (let depth = 0; depth < 5; depth++) {
+    if (current === null || typeof current !== 'object') return false;
+    if ('code' in current && current.code === '23505') return true;
+    if (!('cause' in current)) return false;
+    current = current.cause;
+  }
+  return false;
+}
+
 // ---------------------------------------------------------------------------
 // Service
 // ---------------------------------------------------------------------------
@@ -111,7 +134,10 @@ export const pipelineService = {
         eq(pipelineItems.assignedProofreaderId, assignedProofreaderId),
       );
 
-    // Search by submission title via subquery
+    // Search by submission title via subquery. The subquery carries the org
+    // predicate too — the outer `inArray` intersects it with an org-scoped set,
+    // so results were already correct, but an unscoped subquery scans every
+    // tenant's titles to get there.
     if (search) {
       conditions.push(
         inArray(
@@ -119,7 +145,12 @@ export const pipelineService = {
           tx
             .select({ id: submissions.id })
             .from(submissions)
-            .where(sql`${submissions.title} ILIKE ${'%' + search + '%'}`),
+            .where(
+              and(
+                eq(submissions.organizationId, orgId),
+                sql`${submissions.title} ILIKE ${'%' + search + '%'}`,
+              ),
+            ),
         ),
       );
     }
@@ -139,10 +170,25 @@ export const pipelineService = {
           assignedProofreader: { email: proofreaders.email },
         })
         .from(pipelineItems)
-        .leftJoin(submissions, eq(pipelineItems.submissionId, submissions.id))
+        // Org predicate on the join, not just the FK. Isolation would otherwise
+        // rest entirely on the pipeline_items row being org-scoped plus FK
+        // integrity — which `create` violated until this change.
+        // The two `users` aliases carry no such term because `users` has no org
+        // column; a non-member assignee is the separate concern noted on
+        // `assignCopyeditor`.
+        .leftJoin(
+          submissions,
+          and(
+            eq(pipelineItems.submissionId, submissions.id),
+            eq(submissions.organizationId, orgId),
+          ),
+        )
         .leftJoin(
           publications,
-          eq(pipelineItems.publicationId, publications.id),
+          and(
+            eq(pipelineItems.publicationId, publications.id),
+            eq(publications.organizationId, orgId),
+          ),
         )
         .leftJoin(
           copyeditors,
@@ -197,8 +243,21 @@ export const pipelineService = {
         assignedProofreader: { email: proofreaders.email },
       })
       .from(pipelineItems)
-      .leftJoin(submissions, eq(pipelineItems.submissionId, submissions.id))
-      .leftJoin(publications, eq(pipelineItems.publicationId, publications.id))
+      // Org predicate on the join — see the note in `list` above.
+      .leftJoin(
+        submissions,
+        and(
+          eq(pipelineItems.submissionId, submissions.id),
+          eq(submissions.organizationId, orgId),
+        ),
+      )
+      .leftJoin(
+        publications,
+        and(
+          eq(pipelineItems.publicationId, publications.id),
+          eq(publications.organizationId, orgId),
+        ),
+      )
       .leftJoin(
         copyeditors,
         eq(pipelineItems.assignedCopyeditorId, copyeditors.id),
@@ -229,11 +288,23 @@ export const pipelineService = {
     };
   },
 
-  async getBySubmissionId(tx: DrizzleDb, submissionId: string) {
+  /**
+   * Look up the pipeline item for a submission, scoped to the caller's org.
+   * Filters on organizationId explicitly, with RLS as the backstop rather than
+   * the only defence. This is a bare `select()` with no projection, so without
+   * the predicate it returns another org's whole row — both assignee ids, all
+   * three due dates and the Inngest run id included.
+   */
+  async getBySubmissionId(tx: DrizzleDb, submissionId: string, orgId: string) {
     const [row] = await tx
       .select()
       .from(pipelineItems)
-      .where(eq(pipelineItems.submissionId, submissionId))
+      .where(
+        and(
+          eq(pipelineItems.submissionId, submissionId),
+          eq(pipelineItems.organizationId, orgId),
+        ),
+      )
       .limit(1);
 
     return row ?? null;
@@ -244,11 +315,21 @@ export const pipelineService = {
   // -------------------------------------------------------------------------
 
   async create(tx: DrizzleDb, input: CreatePipelineItemInput, orgId: string) {
-    // Verify the submission exists and is ACCEPTED
+    // Verify the submission exists, belongs to this org, and is ACCEPTED.
+    // The org predicate is load-bearing on both counts: without it a caller can
+    // create an item in its own org pointing at another tenant's submission —
+    // which `list`/`getById` then join and hand back — and the
+    // SubmissionNotAcceptedError below turns into a status oracle for
+    // submissions the caller cannot otherwise see.
     const [submission] = await tx
       .select({ id: submissions.id, status: submissions.status })
       .from(submissions)
-      .where(eq(submissions.id, input.submissionId))
+      .where(
+        and(
+          eq(submissions.id, input.submissionId),
+          eq(submissions.organizationId, orgId),
+        ),
+      )
       .limit(1);
 
     if (!submission) {
@@ -261,21 +342,38 @@ export const pipelineService = {
       );
     }
 
-    // Check uniqueness: one pipeline item per submission
+    // Check uniqueness: one pipeline item per submission.
+    // This is an optimisation for the common case, not the guarantee — see the
+    // 23505 handler below.
     const existing = await pipelineService.getBySubmissionId(
       tx,
       input.submissionId,
+      orgId,
     );
     if (existing) throw new PipelineItemAlreadyExistsError(input.submissionId);
 
-    const [row] = await tx
-      .insert(pipelineItems)
-      .values({
-        organizationId: orgId,
-        submissionId: input.submissionId,
-        publicationId: input.publicationId ?? null,
-      })
-      .returning();
+    // `pipeline_items_submission_id_idx` is a GLOBAL unique index on
+    // submission_id, so the org-scoped pre-check above cannot pre-empt it: a row
+    // owned by another org — creatable before this predicate existed — passes the
+    // check and then collides here. Map it rather than letting a raw 23505 surface
+    // as a 500. Match on the SQLSTATE, not the message; `saveCopyedit` string-matches
+    // 'unique constraint' and should not be copied.
+    let row: typeof pipelineItems.$inferSelect;
+    try {
+      [row] = await tx
+        .insert(pipelineItems)
+        .values({
+          organizationId: orgId,
+          submissionId: input.submissionId,
+          publicationId: input.publicationId ?? null,
+        })
+        .returning();
+    } catch (err: unknown) {
+      if (isUniqueViolation(err)) {
+        throw new PipelineItemAlreadyExistsError(input.submissionId);
+      }
+      throw err;
+    }
 
     // Write initial history entry
     await tx.insert(pipelineHistory).values({
@@ -320,11 +418,26 @@ export const pipelineService = {
       throw new InvalidPipelineTransitionError(item.stage, input.stage);
     }
 
+    // Second, independent defence. The org-scoped `getById` above already proved
+    // this primary key belongs to `orgId`, and a PK matches exactly one row, so
+    // no input makes the two WHERE forms differ while that guard stands. This
+    // predicate is what keeps the method correct if the guard is ever refactored
+    // away — verified by reverting each in turn: either alone still rejects a
+    // cross-org call, and only reverting both lets one through.
+    //
+    // The `!updated` check is not tidying. The history insert below is
+    // unconditional, so a zero-row update would still write a row against the
+    // other org's item, which `getHistory` would then hand back to them — i.e.
+    // adding the predicate without this check would be worse than adding neither.
     const [updated] = await tx
       .update(pipelineItems)
       .set({ stage: input.stage, updatedAt: new Date() })
-      .where(eq(pipelineItems.id, id))
+      .where(
+        and(eq(pipelineItems.id, id), eq(pipelineItems.organizationId, orgId)),
+      )
       .returning();
+
+    if (!updated) throw new PipelineItemNotFoundError(id);
 
     // Write history entry
     await tx.insert(pipelineHistory).values({
@@ -393,15 +506,31 @@ export const pipelineService = {
   // Assign roles
   // -------------------------------------------------------------------------
 
+  /**
+   * Assign a copyeditor, scoped to the caller's org. Filters on organizationId
+   * explicitly, with RLS as the backstop rather than the only defence — an item
+   * belonging to another org matches nothing and reads as not found.
+   *
+   * The predicate goes on the UPDATE itself because there is no preceding read
+   * to carry it: this method is a bare write, unlike `updateStage`, which guards
+   * with an org-scoped `getById` first.
+   *
+   * Note this does *not* check that `input.userId` belongs to `orgId`. Assigning
+   * a non-member is a separate, open concern — `users` carries no org column, so
+   * it needs a membership lookup rather than a predicate.
+   */
   async assignCopyeditor(
     tx: DrizzleDb,
     id: string,
     input: AssignPipelineRoleInput,
+    orgId: string,
   ) {
     const [row] = await tx
       .update(pipelineItems)
       .set({ assignedCopyeditorId: input.userId, updatedAt: new Date() })
-      .where(eq(pipelineItems.id, id))
+      .where(
+        and(eq(pipelineItems.id, id), eq(pipelineItems.organizationId, orgId)),
+      )
       .returning();
 
     return row ?? null;
@@ -413,7 +542,12 @@ export const pipelineService = {
     input: AssignPipelineRoleInput,
   ) {
     assertEditorOrProductionOrAdmin(ctx.actor.roles);
-    const updated = await pipelineService.assignCopyeditor(ctx.tx, id, input);
+    const updated = await pipelineService.assignCopyeditor(
+      ctx.tx,
+      id,
+      input,
+      ctx.actor.orgId,
+    );
     if (!updated) throw new PipelineItemNotFoundError(id);
     await ctx.audit({
       action: AuditActions.PIPELINE_COPYEDITOR_ASSIGNED,
@@ -432,15 +566,22 @@ export const pipelineService = {
     return updated;
   },
 
+  /**
+   * Assign a proofreader, scoped to the caller's org. Same shape and same
+   * reasoning as `assignCopyeditor` above, including the membership caveat.
+   */
   async assignProofreader(
     tx: DrizzleDb,
     id: string,
     input: AssignPipelineRoleInput,
+    orgId: string,
   ) {
     const [row] = await tx
       .update(pipelineItems)
       .set({ assignedProofreaderId: input.userId, updatedAt: new Date() })
-      .where(eq(pipelineItems.id, id))
+      .where(
+        and(eq(pipelineItems.id, id), eq(pipelineItems.organizationId, orgId)),
+      )
       .returning();
 
     return row ?? null;
@@ -452,7 +593,12 @@ export const pipelineService = {
     input: AssignPipelineRoleInput,
   ) {
     assertEditorOrProductionOrAdmin(ctx.actor.roles);
-    const updated = await pipelineService.assignProofreader(ctx.tx, id, input);
+    const updated = await pipelineService.assignProofreader(
+      ctx.tx,
+      id,
+      input,
+      ctx.actor.orgId,
+    );
     if (!updated) throw new PipelineItemNotFoundError(id);
     await ctx.audit({
       action: AuditActions.PIPELINE_PROOFREADER_ASSIGNED,
@@ -467,13 +613,27 @@ export const pipelineService = {
   // Comments
   // -------------------------------------------------------------------------
 
+  /**
+   * Add a comment to a pipeline item, scoped to the caller's org.
+   *
+   * `pipeline_comments` has no organizationId column of its own — its RLS policy
+   * reaches org through a subquery on the parent — so the predicate cannot go on
+   * the INSERT. It goes on an org-scoped read of the parent instead, which makes
+   * the method safe called directly. Its wrapper performs the same read; the
+   * duplicate is deliberate, so that a future caller reaching for the raw method
+   * does not inherit the wrapper's guarantee by accident.
+   */
   async addComment(
     tx: DrizzleDb,
     pipelineItemId: string,
     input: AddPipelineCommentInput,
     authorId: string | null,
     stage: PipelineStage,
+    orgId: string,
   ) {
+    const parent = await pipelineService.getById(tx, pipelineItemId, orgId);
+    if (!parent) throw new PipelineItemNotFoundError(pipelineItemId);
+
     const [row] = await tx
       .insert(pipelineComments)
       .values({
@@ -506,6 +666,7 @@ export const pipelineService = {
       input,
       ctx.actor.userId,
       item.stage,
+      ctx.actor.orgId,
     );
     await ctx.audit({
       action: AuditActions.PIPELINE_COMMENT_ADDED,
@@ -594,6 +755,12 @@ export const pipelineService = {
         versions: [],
       };
     }
+
+    // The manuscript reads below carry no org predicate, and cannot: `manuscripts`
+    // is owner-scoped (ownerId -> users) and `manuscript_versions` has no org
+    // column at all. The manuscript library is user-owned and cross-org by design,
+    // so reachability is established by the org-scoped submission read above rather
+    // than by a predicate on these tables.
 
     // Get current version content
     const [version] = await tx
@@ -1019,7 +1186,13 @@ export const pipelineService = {
           eq(pipelineItems.organizationId, orgId),
         ),
       )
-      .leftJoin(submissions, eq(pipelineItems.submissionId, submissions.id))
+      .leftJoin(
+        submissions,
+        and(
+          eq(pipelineItems.submissionId, submissions.id),
+          eq(submissions.organizationId, orgId),
+        ),
+      )
       .leftJoin(issueSections, eq(issueItems.issueSectionId, issueSections.id))
       .leftJoin(
         copyeditors,
@@ -1064,7 +1237,12 @@ export const pipelineService = {
           createdAt: contracts.createdAt,
         })
         .from(contracts)
-        .where(inArray(contracts.pipelineItemId, pipelineItemIds))
+        .where(
+          and(
+            inArray(contracts.pipelineItemId, pipelineItemIds),
+            eq(contracts.organizationId, orgId),
+          ),
+        )
         .orderBy(desc(contracts.createdAt));
 
       // Keep only the most recent per pipeline item

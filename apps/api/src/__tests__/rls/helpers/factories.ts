@@ -22,6 +22,8 @@ import {
   submissionDiscussions,
   submissionVotes,
   submissionReviewers,
+  pipelineItems,
+  type PipelineItem,
   type Organization,
   type User,
   type OrganizationMember,
@@ -412,6 +414,37 @@ export async function createSubmissionReviewer(
     })
     .returning();
   return reviewer;
+}
+
+/**
+ * `organizationId` and `submissionId` are deliberately independent positional
+ * params rather than the org being derived from the submission. Scoping
+ * `pipelineService.create` is exactly a fix for mismatched pairs, so the suite
+ * that proves it has to be able to seed one.
+ *
+ * Note `pipeline_items_submission_id_idx` is a GLOBAL unique index on
+ * `submission_id` — one item per submission across every org, ever — so a suite
+ * seeding these wants one submission per intended item.
+ *
+ * No `createPipelineHistory` / `createPipelineComment` alongside it: both tables
+ * cascade from `pipeline_items` and no case reads them through a factory. Same
+ * rule as the `createPortfolioEntry` note below.
+ */
+export async function createPipelineItem(
+  organizationId: string,
+  submissionId: string,
+  overrides?: Partial<PipelineItem>,
+): Promise<PipelineItem> {
+  const db = adminDb();
+  const [item] = await db
+    .insert(pipelineItems)
+    .values({
+      organizationId,
+      submissionId,
+      ...overrides,
+    })
+    .returning();
+  return item;
 }
 
 // No `createPortfolioEntry` here on purpose: `portfolioService.list` reads
