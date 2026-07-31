@@ -121,3 +121,32 @@ export async function recentAuditActions(orgId: string): Promise<string[]> {
   );
   return result.rows.map((r) => r.action);
 }
+
+/**
+ * Wait for an audit action to appear, then return the recent actions.
+ *
+ * **Use this, not bare `recentAuditActions`, after an `app.inject()` that is
+ * expected to have audited something.** The guards write the row and throw; the
+ * row is committed by `db-context`'s `onResponse` hook, which fires *after* the
+ * response is sent — so `inject()`'s promise settles before the COMMIT lands and
+ * reading straight away races it. That race is not theoretical: it failed CI
+ * twice on 2026-07-31, once per call site, always as `expected [] to include
+ * '<ACTION>'`, and never locally — a loaded runner loses it far more often.
+ *
+ * Returns the actions either way rather than throwing its own timeout error, so
+ * the caller's `toContain` still produces a readable diff when the row genuinely
+ * never arrives.
+ */
+export async function waitForAuditAction(
+  orgId: string,
+  action: string,
+  timeoutMs = 5000,
+): Promise<string[]> {
+  const deadline = Date.now() + timeoutMs;
+  let actions = await recentAuditActions(orgId);
+  while (!actions.includes(action) && Date.now() < deadline) {
+    await new Promise((resolve) => setTimeout(resolve, 25));
+    actions = await recentAuditActions(orgId);
+  }
+  return actions;
+}

@@ -133,6 +133,38 @@
       `getByText` whose string is a prefix of other visible copy has the same latent race; the
       ADMIN path is worse, since `pending-invitations.tsx:65` and `invite-member-dialog.tsx:99`
       add third and fourth matches. — (found 2026-07-30 while diagnosing a CI failure on #537)
+- [x] [P2] `scope-enforcement.test.ts:142` races the audit COMMIT, so `Security Tests` flakes.
+      The case asserts an `API_KEY_SCOPE_DENIED` row exists immediately after `app.inject()`
+      resolves. It does not resolve after the row is durable: the guard writes the row and
+      throws, and the row is committed by `db-context`'s `onResponse` hook — which fires
+      **after** the response is sent, i.e. after `inject()`'s promise settles. So the read can
+      reach the database first and see `[]`. Failed on run 30634870874 with
+      `expected [] to include 'API_KEY_SCOPE_DENIED'`, then passed 22/22 on rerun with
+      byte-identical code; locally it passes 3/3 alone and 4/4 as a full suite.
+      **Not a row-window problem** — worth recording, since `recentAuditActions`
+      (`security/helpers/auth-app.ts:114-123`) reads `LIMIT 20` with
+      `OR organization_id IS NULL`, which looks like it could push the target row out. It
+      cannot: `afterEach` calls `truncateAllTables`, so only one test's rows ever exist.
+      Fix by waiting for the row rather than assuming it: poll `recentAuditActions` with a
+      short timeout, or hook the app's `onResponse` completion instead of the `inject`
+      promise. **Sweep for siblings** — any assertion reading a table written through the
+      audit-then-throw path immediately after `inject()` has the same race.
+      This is the flip side of a mechanism `apps/api/CLAUDE.md` already flags as
+      load-bearing-but-implicit: the row surviving at all depends on `onResponse` COMMITting
+      rather than `onError` rolling back. — (found 2026-07-31 during #538; done 2026-07-31)
+      **Fixed by `waitForAuditAction` in `security/helpers/auth-app.ts`** — polls for the row
+      and returns the actions either way, so a genuinely absent row still fails with a
+      readable diff instead of a bare timeout. Both call sites converted; `recentAuditActions`
+      stays for reads that are not racing a request.
+      **It failed twice before the fix, once per call site** — `:142`
+      (`API_KEY_SCOPE_DENIED`) and `:187` (`API_KEY_INTERNAL_ROUTE`) — which is what
+      established it as a property of the helper rather than of one test.
+      **The fix cannot be verified locally, and that is the interesting part.**
+      Instrumenting the poll showed **0 retries across 10 local calls**: the race never fires
+      on an unloaded machine, which is exactly why it reached CI in the first place. The
+      failing CI run took 82s for the suite against ~30s locally. So the loop is inert when
+      there is no contention (one query, as before) and only earns its keep under load — do
+      not remove it because it "never does anything".
 - [ ] [P3] Seed data ages out of a long-lived dev database, and `db:seed` will not repair it. Submission periods are seeded at fixed offsets from the seed date, so `quarterly-review` eventually has no open period — which fails 11 of 13 `embed` tests with `No open period found`. `pnpm db:seed` is idempotent-by-skip, so it is a no-op once data exists; only the destructive `db:reset` refreshes the dates. CI is unaffected (it seeds fresh each run), so this only ever bites locally, and it looks like a code regression rather than stale data. Either make the seed refresh period dates when they have closed, or have `global-setup.ts` fail with a "run `pnpm db:reset`" message when no open period exists for the seed org — (found 2026-07-27 while verifying the E2E auth rework)
 
 ---
@@ -387,6 +419,44 @@ Ordered as the design doc's Phase 0/D.
       for a scoping it does not perform — its caller supplies the org through
       `withRls({ orgId })` at `inngest/functions/submission-response-reminder.ts:64`, so it is
       correct in practice and misleading to read. — (found 2026-07-28 during the P2.0 audit)
+      Line numbers re-verified 2026-07-30; all three still exact.
+- [ ] **[P2] `submissions` carries a second permissive policy that widens the first, and no
+      test can currently see it.** Beside `org_isolation`, the submissions schema
+      (`schema/submissions.ts:186-189`) declares `submissions_submitter_read`
+      (`using: submitter_id = current_user_id()`). Postgres OR-combines permissive policies,
+      and `hooks/db-context.ts:41-44` sets `app.user_id` on **every** authenticated request —
+      so on an HTTP path the effective SELECT predicate becomes the org term ORed with the
+      submitter term, rather than the org term alone. An editor who has also submitted
+      to another org on the same instance therefore sees their own foreign-org rows through
+      `submissionService.listAll`/`exportAll`. The Inngest path is unaffected
+      (`withRls({ orgId })` sets no user id). The existing coverage cannot catch this:
+      `__tests__/security/tenant-isolation-transitive.test.ts:139-173` seeds one user per org,
+      so the OR branch never fires. **Decide the intent before fixing** — the policy's own
+      comment says "submitters can see their own submissions cross-org", which may be
+      deliberate for the writer-facing surface and wrong for the editor-facing one; if so the
+      fix is to narrow the _editor_ reads rather than drop the policy. — (found 2026-07-31
+      while verifying the entry above)
+- [ ] **[P2] `rest/error-mapper.ts` does not walk the `cause` chain; `trpc/error-mapper.ts`
+      does.** `rest/error-mapper.ts:216-228` tests `error.code === '23505'` directly, while
+      `trpc/error-mapper.ts:293-310` recurses `.cause` via `extractPgError`. Drizzle wraps pg
+      errors, so **every Drizzle-originated unique violation is a 500 on REST and a 409 on
+      tRPC** — the same operation, two statuses, across all REST operations rather than any
+      one router. Port `extractPgError` (or `services/pg-errors.ts`'s `isUniqueViolation`) to
+      the REST mapper. Found via `issueService.addItemWithAudit`, whose own broken catch is
+      fixed; the mapper asymmetry is what made that fix invisible on tRPC and a 500 on REST.
+      — (found 2026-07-31 while scoping `issueService`)
+- [ ] **[P3] Nine more sites use the broken direct `.code === '23505'` check, and one of them
+      shadows the shared helper's name.** `queue-preset.service.ts:33` defines a **private
+      function also called `isUniqueViolation`** using the direct form — so the codebase now
+      has two same-named predicates with different semantics, which is exactly how the
+      guard-tag primitive drifted. The rest: `collection.service.ts:379`,
+      `submission-reviewer.service.ts:77`, `form.service.ts:610`,
+      `writer-profile.service.ts:69`, `embed-submission.service.ts:119`,
+      `trust.service.ts:477,912`, `hooks/auth.ts:485`. **Triage per site rather than sweeping**
+      — a site catching an error from a raw `pool.query` is not Drizzle-wrapped and is correct
+      as written. Point the wrapped ones at `services/pg-errors.ts`. Note fixing these is a
+      behaviour change: the domain errors they guard have never fired.
+      — (found 2026-07-31 while fixing the `issueService` instance)
 - [x] **[P2] `pipeline.service.ts` writes drop the org predicate.** Filed as three methods; it
       was **five reachable defects**, and the two framed as "worse" were the only live ones.
       `assignCopyeditor` (`:396`) and `assignProofreader` (`:435`) took no `orgId` at all —
@@ -433,15 +503,66 @@ Ordered as the design doc's Phase 0/D.
       change. Decide the semantics first: guests, deactivated users, and staff who belong to
       both orgs are all reachable cases, and the same question applies to
       `submission-reviewer.service.ts`. — (found 2026-07-30 while scoping `pipelineService`)
-- [ ] **[P2] `issue.service.ts:65,122` take `orgId?` as optional and apply the predicate
+- [x] **[P2] `issue.service.ts:65,122` take `orgId?` as optional and apply the predicate
       conditionally.** An optional org id is a silent bypass: omit the argument and the query
       is unscoped, with nothing at the type level to flag it. Make it required, matching the
-      house `(tx, id|input, orgId)` convention. — (found 2026-07-28 during the P2.0 audit)
-- [ ] **[P2] `federation.service.ts:437` `resolveWebFinger` is laxer than its sibling.** It
-      filters on `email` alone, while `getUserDidDocument` (`:523`) filters `email` **and**
+      house `(tx, id|input, orgId)` convention. — (found 2026-07-28 during the P2.0 audit;
+      done 2026-07-31)
+      Filed as two methods; it was **12 in `issue.service.ts` and 7 in
+      `cms-connection.service.ts`**, and the entry also had the shape wrong. Seven of the
+      twelve were _guard-only_ — an `if (orgId)` block wrapping an org-scoped `getById`, with
+      no org term on the child-table statement at all, because `issue_items` and
+      `issue_sections` have no `organization_id` and scope transitively through an `EXISTS`
+      on `issues`. Duplicating that EXISTS per statement was rejected as a second copy of the
+      policy to keep true; `removeItem`/`removeSection` instead resolve the row through an
+      org-scoped join before deleting. **Either that join or the guard alone is sufficient**
+      (measured: 0 of 14 fail with the joins reverted), so the suite cannot tell you if a
+      later change removes them — the header says so.
+      **The type was not the whole defect.** `addItem` guarded the _issue_ and never the
+      `pipelineItemId` handed to it, so org A could attach org B's pipeline item to an
+      A-owned issue and read B's submission title back through `getItems`'s join to
+      `submissions` — the `pipelineService.create` shape from #537, and unaffected by making
+      `orgId` required. Reverting only that check fails exactly 1 of 14 cases, which is how
+      invisible it was.
+      Pinned by `__tests__/rls/issue-service.test.ts` (14 cases, 9 fail with the predicates
+      reverted) and `cms-connection-service.test.ts` (7 of 7). `contract.service.ts` is
+      deliberately **not** in this change — see the item below.
+- [ ] **[P2] `contract.service.ts` is a different shape from the other two optional-`orgId`
+      services, and the only one whose bug is reachable today.** Only 2 methods take
+      `orgId?` (`getById:69`, `updateStatus:170`); **four take no org parameter at all** while
+      querying `contracts` directly — `list:37` (no org filter, and `where` is `undefined`
+      when unfiltered), `getByPipelineItemId:83`, `getByDocumensoDocumentId:91` (cross-org by
+      design, webhook path), `updateDocumensoId:203` (bare `UPDATE … WHERE id`). Unlike
+      `issue`/`cms-connection`, it has **live caller omissions**: the tRPC router
+      (`trpc/routers/contracts.ts:39`) and the REST one (`:66`) call `getById` without the org id
+      though `authContext.orgId` is in hand; `sendWithAudit:219,226` and
+      `voidWithAudit:240,242` omit it internally; `inngest/functions/contract-workflow.ts:106`
+      omits it with `orgId` in scope from the enclosing `withRls`. So this needs real
+      call-site changes, not a signature sweep. There is also **no `contract.service.spec.ts`**
+      and no RLS suite — both would be written from scratch. Note
+      `webhooks/documenso.webhook.ts:285-291` already passes `contract.organizationId` to
+      `updateStatus` with a comment calling it defense-in-depth, so the intent is on record.
+      — (split out of the item above 2026-07-31 after verifying all three files)
+- [ ] **[P2] `federation.service.ts` `resolveWebFinger` is laxer than its sibling.** It
+      filters on `email` alone, while `getUserDidDocument` filters `email` **and**
       `isNull(deletedAt)` **and** `eq(isGuest, false)`. Both are unauthenticated federation
       discovery endpoints, so a deleted or guest account is discoverable through one and not
       the other. The asymmetry looks unintended. — (found 2026-07-28 during the P2.0 audit)
+      **Line numbers corrected 2026-07-31** — the original `:437` / `:523` pointed at the
+      query bodies, not the declarations, which is why they read as off. `resolveWebFinger`
+      is declared at `:407` with its query at `:436-441`; `getUserDidDocument` at `:510`
+      with its query at `:519-538`. Both routes confirmed unauthenticated and carrying no
+      guard: `/.well-known/webfinger` matches the `'/.well-known/'` prefix in
+      `PUBLIC_PREFIXES` (`hooks/auth.ts:36-46`), and `/users/:localPart/did.json` is
+      admitted by the separate `path.endsWith('/did.json')` rule at `auth.ts:69-70`.
+      **`resolveWebFinger` is the odd one of three, not of two** — `simsub.service.ts:325-334`
+      is a third email-keyed user lookup and carries all three conditions, citing
+      `getUserDidDocument` in its comments.
+      **The existing tests will not catch the fix regressing.**
+      `federation.service.spec.ts:927,941` ("deleted user", "guest user") stub `db.select`
+      to return `[]` and assert the throw — they pin the empty-result handling, not the
+      `where` clause, and would pass unchanged with the filter conditions deleted. Whoever
+      fixes this needs a test that actually exercises the predicate.
 - [x] **[P2] `demo_requests` has neither RLS nor a `REVOKE`.** It postdates migration 0052, so
       `ALTER DEFAULT PRIVILEGES` left `app_user` full DML and no later migration narrowed it.
       Fixed alongside the P0 above: it is written through the superuser pool
@@ -522,6 +643,17 @@ Ordered as the design doc's Phase 0/D.
       then reaches `dbContextPlugin`, which opens a pooled connection and begins a
       transaction per request, so the failure mode is not merely "unlimited requests" but
       connection-pool exhaustion under load.
+      **Three framing corrections, verified 2026-07-31.** (1) The limiter is **hand-rolled**
+      — `@fastify/rate-limit` appears nowhere in the repo — so `skipOnError` and `onExceeded`
+      do not exist here and cannot be part of any fix. (2) `FEDERATION_RATE_LIMIT_FAIL_MODE`
+      **defaults to `open`**, so porting the pattern alone changes no default behaviour; the
+      value of the port is that the mode becomes settable, not that it becomes safe. (3) The
+      second-pass limiter has a **third** silent bypass beyond the catch this entry mentions:
+      `hooks/rate-limit-auth.ts:55-56` is a bare `if (!redis) return;`, which is not an error
+      path at all and no fail-mode branch would cover. Also note the federation in-process
+      fallback is hard-coded `(10, 60_000)` — roughly 6× stricter than
+      `FEDERATION_RATE_LIMIT_MAX` — so a port should decide that number deliberately rather
+      than inherit it.
       **The asymmetry is the tell.** Federation rate limiting already has
       `FEDERATION_RATE_LIMIT_FAIL_MODE` (`open` / `closed` / `fallback`, with an in-process
       fallback), added in PR #225 for exactly this concern. The main limiter — which guards
@@ -764,8 +896,17 @@ Ordered as the design doc's Phase 0/D.
       behaviour and the upstream type (`OpenAPIGeneratorGenerateOptions` is
       `Partial<Omit<Document, 'openapi'>>`, so the field is un-settable) — nobody has observed
       the live endpoint. No test or fixture captures it, which is also why the divergence went
-      unnoticed. Confirm against a running server before writing the fix. —
-      (code review 2026-07-27)
+      unnoticed. — (code review 2026-07-27)
+      **Caveat tightened 2026-07-31, without a server.** The installed generator sets the
+      value **after** spreading caller options — `@orpc/openapi@1.14.10`,
+      `dist/shared/openapi.BwdtJjDu.mjs:516-524`, which builds
+      `{ ...clone(baseDoc), info: …, openapi: '3.1.1' }` — so even an untyped `openapi` smuggled
+      through `specGenerateOptions` would be clobbered, and `dist/plugins/index.mjs:115-131`
+      serves that document with no post-processing. `3.1.1` is the only `3.1.x` literal in the
+      package. The committed spec is confirmed `3.1.0` at `sdks/openapi.json:98`. So the
+      divergence is now read from the generator source rather than assumed; one `curl` against
+      a running server is still worth doing before the fix, but it is a confirmation rather
+      than the missing evidence.
 - [ ] **[P3] Three OpenAPI tags are used but never declared.** Operations carry
       `Collections` (10 operations), `Submission Analytics` (6), and `Submission Votes` (4),
       but `openApiDocumentConfig.tags` in `apps/api/src/rest/openapi-spec.ts` declares **18**

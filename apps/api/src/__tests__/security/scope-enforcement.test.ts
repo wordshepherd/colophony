@@ -25,7 +25,7 @@ import {
   buildApiKeyApp,
   buildInteractiveApp,
   insertApiKey,
-  recentAuditActions,
+  waitForAuditAction,
 } from './helpers/auth-app.js';
 
 /** A scope-guarded orgProcedure: requireScopes('notifications:read'). */
@@ -138,8 +138,11 @@ describe('requireScopes — real API key through the tRPC router', () => {
     });
 
     // The row survives only because the tRPC adapter turns a TRPCError into a
-    // normal reply, so db-context COMMITs rather than ROLLBACKs.
-    expect(await recentAuditActions(org.id)).toContain('API_KEY_SCOPE_DENIED');
+    // normal reply, so db-context COMMITs rather than ROLLBACKs. That COMMIT
+    // runs in `onResponse`, after `inject()` resolves — hence the wait.
+    expect(await waitForAuditAction(org.id, 'API_KEY_SCOPE_DENIED')).toContain(
+      'API_KEY_SCOPE_DENIED',
+    );
   });
 
   it('is a no-op for interactive auth — the same route needs no scopes', async () => {
@@ -183,10 +186,11 @@ describe('internalOnly — the boundary enforced since P0.5', () => {
     });
 
     expect(res.statusCode).toBe(200);
-    // Log-only mode still records the crossing.
-    expect(await recentAuditActions(org.id)).toContain(
-      'API_KEY_INTERNAL_ROUTE',
-    );
+    // Log-only mode still records the crossing. Same `onResponse` COMMIT race as
+    // the scope-denial case above.
+    expect(
+      await waitForAuditAction(org.id, 'API_KEY_INTERNAL_ROUTE'),
+    ).toContain('API_KEY_INTERNAL_ROUTE');
   });
 
   it('rejects an API key with 403 once enforcement is on', async () => {

@@ -27,6 +27,7 @@ import { AuditActions, AuditResources } from '@colophony/types';
 import type { ServiceContext } from './types.js';
 import { assertEditorOrProductionOrAdmin } from './errors.js';
 import { enqueueOutboxEvent } from './outbox.js';
+import { isUniqueViolation } from './pg-errors.js';
 
 // ---------------------------------------------------------------------------
 // Error classes
@@ -46,6 +47,19 @@ export class IssueSectionNotFoundError extends Error {
   }
 }
 
+/**
+ * A pipeline item that is not available to the caller's organization — whether
+ * it does not exist at all or belongs to another tenant. The two cases are
+ * deliberately indistinguishable: a caller must not be able to probe for the
+ * existence of another org's pipeline items by the error it gets back.
+ */
+export class IssuePipelineItemNotFoundError extends Error {
+  constructor(pipelineItemId: string) {
+    super(`Pipeline item "${pipelineItemId}" not found`);
+    this.name = 'IssuePipelineItemNotFoundError';
+  }
+}
+
 export class IssueItemAlreadyExistsError extends Error {
   constructor(pipelineItemId: string) {
     super(`Pipeline item "${pipelineItemId}" is already in this issue`);
@@ -62,19 +76,22 @@ export const issueService = {
   // List / Get
   // -------------------------------------------------------------------------
 
-  async list(tx: DrizzleDb, input: ListIssuesInput, orgId?: string) {
+  async list(tx: DrizzleDb, input: ListIssuesInput, orgId: string) {
     const { publicationId, status, search, from, to, page, limit } = input;
     const offset = (page - 1) * limit;
 
-    const conditions = [];
-    if (orgId) conditions.push(eq(issues.organizationId, orgId));
+    // Seeded unconditionally, and the single `where` below is reused by both the
+    // page and the count query — filtering only the page leaves `total` reporting
+    // every org's issue count.
+    const conditions = [eq(issues.organizationId, orgId)];
     if (publicationId) conditions.push(eq(issues.publicationId, publicationId));
     if (status) conditions.push(eq(issues.status, status));
     if (search) conditions.push(ilike(issues.title, `%${search}%`));
     if (from) conditions.push(gte(issues.publicationDate, from));
     if (to) conditions.push(lte(issues.publicationDate, to));
 
-    const where = conditions.length > 0 ? and(...conditions) : undefined;
+    // Never empty — the org predicate is always present.
+    const where = and(...conditions);
     const hasDateRange = from || to;
 
     const [items, countResult] = await Promise.all([
@@ -119,25 +136,19 @@ export const issueService = {
       .limit(50);
   },
 
-  async getById(tx: DrizzleDb, id: string, orgId?: string) {
+  async getById(tx: DrizzleDb, id: string, orgId: string) {
     const [row] = await tx
       .select()
       .from(issues)
-      .where(
-        orgId
-          ? and(eq(issues.id, id), eq(issues.organizationId, orgId))
-          : eq(issues.id, id),
-      )
+      .where(and(eq(issues.id, id), eq(issues.organizationId, orgId)))
       .limit(1);
 
     return row ?? null;
   },
 
-  async getItems(tx: DrizzleDb, issueId: string, orgId?: string) {
-    if (orgId) {
-      const issue = await issueService.getById(tx, issueId, orgId);
-      if (!issue) return [];
-    }
+  async getItems(tx: DrizzleDb, issueId: string, orgId: string) {
+    const issue = await issueService.getById(tx, issueId, orgId);
+    if (!issue) return [];
     return tx
       .select({
         ...getTableColumns(issueItems),
@@ -151,11 +162,9 @@ export const issueService = {
       .limit(10000);
   },
 
-  async getSections(tx: DrizzleDb, issueId: string, orgId?: string) {
-    if (orgId) {
-      const issue = await issueService.getById(tx, issueId, orgId);
-      if (!issue) return [];
-    }
+  async getSections(tx: DrizzleDb, issueId: string, orgId: string) {
+    const issue = await issueService.getById(tx, issueId, orgId);
+    if (!issue) return [];
     return tx
       .select()
       .from(issueSections)
@@ -202,7 +211,7 @@ export const issueService = {
     tx: DrizzleDb,
     id: string,
     input: UpdateIssueInput,
-    orgId?: string,
+    orgId: string,
   ) {
     const values: Record<string, unknown> = { updatedAt: new Date() };
     if (input.title !== undefined) values.title = input.title;
@@ -217,11 +226,7 @@ export const issueService = {
     const [row] = await tx
       .update(issues)
       .set(values)
-      .where(
-        orgId
-          ? and(eq(issues.id, id), eq(issues.organizationId, orgId))
-          : eq(issues.id, id),
-      )
+      .where(and(eq(issues.id, id), eq(issues.organizationId, orgId)))
       .returning();
 
     return row ?? null;
@@ -253,7 +258,7 @@ export const issueService = {
     tx: DrizzleDb,
     id: string,
     status: IssueStatus,
-    orgId?: string,
+    orgId: string,
   ) {
     const values: Record<string, unknown> = {
       status,
@@ -264,11 +269,7 @@ export const issueService = {
     const [row] = await tx
       .update(issues)
       .set(values)
-      .where(
-        orgId
-          ? and(eq(issues.id, id), eq(issues.organizationId, orgId))
-          : eq(issues.id, id),
-      )
+      .where(and(eq(issues.id, id), eq(issues.organizationId, orgId)))
       .returning();
 
     return row ?? null;
@@ -337,7 +338,7 @@ export const issueService = {
       externalUrl?: string;
       adapterType: string;
     },
-    orgId?: string,
+    orgId: string,
   ) {
     const issue = await issueService.getById(tx, issueId, orgId);
     if (!issue) return null;
@@ -354,11 +355,7 @@ export const issueService = {
     const [row] = await tx
       .update(issues)
       .set({ metadata: { ...metadata, cmsPublish }, updatedAt: new Date() })
-      .where(
-        orgId
-          ? and(eq(issues.id, issueId), eq(issues.organizationId, orgId))
-          : eq(issues.id, issueId),
-      )
+      .where(and(eq(issues.id, issueId), eq(issues.organizationId, orgId)))
       .returning();
 
     return row ?? null;
@@ -372,12 +369,39 @@ export const issueService = {
     tx: DrizzleDb,
     issueId: string,
     input: AddIssueItemInput,
-    orgId?: string,
+    orgId: string,
   ) {
-    if (orgId) {
-      const issue = await issueService.getById(tx, issueId, orgId);
-      if (!issue) throw new IssueNotFoundError(issueId);
+    const issue = await issueService.getById(tx, issueId, orgId);
+    if (!issue) throw new IssueNotFoundError(issueId);
+
+    // Validate the pipeline item belongs to the caller's org.
+    //
+    // Scoping the *issue* is not enough. `issue_items` has no `organization_id`
+    // of its own — its RLS policy scopes solely through its parent issue — so a
+    // row pairing this org's issue with another org's pipeline item is valid
+    // under RLS. `getItems` then joins that item through `pipeline_items` to
+    // `submissions` and returns `submissionTitle`, handing back a foreign
+    // submission's title. Same shape as `pipelineService.create`'s unscoped
+    // submission read (#537): a scoped parent and an unscoped foreign key.
+    //
+    // The error names only the id the caller already supplied, and an absent id
+    // and a foreign one raise the identical error — so this cannot be used to
+    // probe whether a given pipeline item exists in some other tenant.
+    const [pipelineItem] = await tx
+      .select({ id: pipelineItems.id })
+      .from(pipelineItems)
+      .where(
+        and(
+          eq(pipelineItems.id, input.pipelineItemId),
+          eq(pipelineItems.organizationId, orgId),
+        ),
+      )
+      .limit(1);
+
+    if (!pipelineItem) {
+      throw new IssuePipelineItemNotFoundError(input.pipelineItemId);
     }
+
     // Validate section belongs to this issue (if provided)
     if (input.issueSectionId) {
       const [section] = await tx
@@ -432,13 +456,12 @@ export const issueService = {
       });
       return item;
     } catch (e) {
-      // Unique constraint violation → already exists
-      if (
-        typeof e === 'object' &&
-        e !== null &&
-        'code' in e &&
-        (e as { code: string }).code === '23505'
-      ) {
+      // Unique constraint violation (`issue_items_issue_pipeline_unique`) →
+      // already exists. Must walk the `cause` chain: Drizzle wraps the pg error,
+      // so a direct `e.code` check silently never matches and every duplicate
+      // surfaces as a 500 on REST (tRPC's mapper recurses `cause`, so it 409s —
+      // which is why the two surfaces disagreed). See `services/pg-errors.ts`.
+      if (isUniqueViolation(e)) {
         throw new IssueItemAlreadyExistsError(input.pipelineItemId);
       }
       throw e;
@@ -449,15 +472,35 @@ export const issueService = {
     tx: DrizzleDb,
     issueId: string,
     itemId: string,
-    orgId?: string,
+    orgId: string,
   ) {
-    if (orgId) {
-      const issue = await issueService.getById(tx, issueId, orgId);
-      if (!issue) return null;
-    }
+    const issue = await issueService.getById(tx, issueId, orgId);
+    if (!issue) return null;
+
+    // Second defence: resolve the row through an org-scoped join before
+    // deleting, so the DELETE cannot fire on a row this org has not proven it
+    // owns. `issue_items` has no `organization_id` to filter on directly, and
+    // duplicating its EXISTS-on-parent RLS policy in the DELETE would be a
+    // second copy of the policy to keep true. Verifying in front of the delete
+    // is cheaper and survives a refactor that drops the guard above.
+    const [owned] = await tx
+      .select({ id: issueItems.id })
+      .from(issueItems)
+      .innerJoin(issues, eq(issueItems.issueId, issues.id))
+      .where(
+        and(
+          eq(issueItems.id, itemId),
+          eq(issueItems.issueId, issueId),
+          eq(issues.organizationId, orgId),
+        ),
+      )
+      .limit(1);
+
+    if (!owned) return null;
+
     const [row] = await tx
       .delete(issueItems)
-      .where(and(eq(issueItems.id, itemId), eq(issueItems.issueId, issueId)))
+      .where(eq(issueItems.id, owned.id))
       .returning();
 
     return row ?? null;
@@ -490,12 +533,10 @@ export const issueService = {
     tx: DrizzleDb,
     issueId: string,
     input: ReorderItemsInput,
-    orgId?: string,
+    orgId: string,
   ) {
-    if (orgId) {
-      const issue = await issueService.getById(tx, issueId, orgId);
-      if (!issue) return [];
-    }
+    const issue = await issueService.getById(tx, issueId, orgId);
+    if (!issue) return [];
     for (const { id, sortOrder } of input.items) {
       await tx
         .update(issueItems)
@@ -513,12 +554,10 @@ export const issueService = {
     tx: DrizzleDb,
     issueId: string,
     input: AddIssueSectionInput,
-    orgId?: string,
+    orgId: string,
   ) {
-    if (orgId) {
-      const issue = await issueService.getById(tx, issueId, orgId);
-      if (!issue) throw new IssueNotFoundError(issueId);
-    }
+    const issue = await issueService.getById(tx, issueId, orgId);
+    if (!issue) throw new IssueNotFoundError(issueId);
     const [row] = await tx
       .insert(issueSections)
       .values({
@@ -535,20 +574,31 @@ export const issueService = {
     tx: DrizzleDb,
     issueId: string,
     sectionId: string,
-    orgId?: string,
+    orgId: string,
   ) {
-    if (orgId) {
-      const issue = await issueService.getById(tx, issueId, orgId);
-      if (!issue) return null;
-    }
-    const [row] = await tx
-      .delete(issueSections)
+    const issue = await issueService.getById(tx, issueId, orgId);
+    if (!issue) return null;
+
+    // Same scoped-join verification as `removeItem` above, and for the same
+    // reason — `issue_sections` carries no `organization_id` either.
+    const [owned] = await tx
+      .select({ id: issueSections.id })
+      .from(issueSections)
+      .innerJoin(issues, eq(issueSections.issueId, issues.id))
       .where(
         and(
           eq(issueSections.id, sectionId),
           eq(issueSections.issueId, issueId),
+          eq(issues.organizationId, orgId),
         ),
       )
+      .limit(1);
+
+    if (!owned) return null;
+
+    const [row] = await tx
+      .delete(issueSections)
+      .where(eq(issueSections.id, owned.id))
       .returning();
 
     return row ?? null;

@@ -1,61 +1,16 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { faker } from '@faker-js/faker';
-import { drizzle } from 'drizzle-orm/node-postgres';
-import { globalSetup, globalTeardown, getAdminPool } from './helpers/db-setup';
+import { globalSetup, globalTeardown } from './helpers/db-setup';
 import { truncateAllTables } from './helpers/cleanup';
 import { withTestRls } from './helpers/rls-context';
 import {
   createOrganization,
   createUser,
   createOrgMember,
+  createPublication,
+  createIssue,
 } from './helpers/factories';
-import {
-  issues,
-  publications,
-  type Organization,
-  type User,
-} from '@colophony/db';
+import { type Organization, type User } from '@colophony/db';
 import { issueService } from '../../services/issue.service.js';
-
-function adminDb() {
-  return drizzle(getAdminPool());
-}
-
-async function createPublication(orgId: string) {
-  const db = adminDb();
-  const [pub] = await db
-    .insert(publications)
-    .values({
-      organizationId: orgId,
-      name: faker.company.name(),
-      slug: faker.string.alphanumeric(20).toLowerCase(),
-    })
-    .returning();
-  return pub;
-}
-
-async function createIssue(
-  orgId: string,
-  publicationId: string,
-  overrides?: Partial<{
-    title: string;
-    publicationDate: Date | null;
-    status: string;
-  }>,
-) {
-  const db = adminDb();
-  const [issue] = await db
-    .insert(issues)
-    .values({
-      organizationId: orgId,
-      publicationId,
-      title: overrides?.title ?? faker.lorem.words(3),
-      publicationDate: overrides?.publicationDate ?? null,
-      status: (overrides?.status as 'PLANNING') ?? 'PLANNING',
-    })
-    .returning();
-  return issue;
-}
 
 describe('issueService.list — date range filtering', () => {
   let org: Organization;
@@ -100,12 +55,16 @@ describe('issueService.list — date range filtering', () => {
     const result = await withTestRls(
       { orgId: org.id, userId: user.id },
       async (tx) =>
-        issueService.list(tx, {
-          from: new Date('2026-02-01T00:00:00.000Z'),
-          to: new Date('2026-02-28T23:59:59.999Z'),
-          page: 1,
-          limit: 100,
-        }),
+        issueService.list(
+          tx,
+          {
+            from: new Date('2026-02-01T00:00:00.000Z'),
+            to: new Date('2026-02-28T23:59:59.999Z'),
+            page: 1,
+            limit: 100,
+          },
+          org.id,
+        ),
     );
 
     expect(result.items).toHaveLength(1);
@@ -117,12 +76,16 @@ describe('issueService.list — date range filtering', () => {
     const result = await withTestRls(
       { orgId: org.id, userId: user.id },
       async (tx) =>
-        issueService.list(tx, {
-          from: new Date('2026-01-01T00:00:00.000Z'),
-          to: new Date('2026-12-31T23:59:59.999Z'),
-          page: 1,
-          limit: 100,
-        }),
+        issueService.list(
+          tx,
+          {
+            from: new Date('2026-01-01T00:00:00.000Z'),
+            to: new Date('2026-12-31T23:59:59.999Z'),
+            page: 1,
+            limit: 100,
+          },
+          org.id,
+        ),
     );
 
     const titles = result.items.map((i) => i.title);
@@ -134,11 +97,15 @@ describe('issueService.list — date range filtering', () => {
     const result = await withTestRls(
       { orgId: org.id, userId: user.id },
       async (tx) =>
-        issueService.list(tx, {
-          from: new Date('2026-02-01T00:00:00.000Z'),
-          page: 1,
-          limit: 100,
-        }),
+        issueService.list(
+          tx,
+          {
+            from: new Date('2026-02-01T00:00:00.000Z'),
+            page: 1,
+            limit: 100,
+          },
+          org.id,
+        ),
     );
 
     const titles = result.items.map((i) => i.title);
@@ -152,12 +119,16 @@ describe('issueService.list — date range filtering', () => {
     const result = await withTestRls(
       { orgId: org.id, userId: user.id },
       async (tx) =>
-        issueService.list(tx, {
-          from: new Date('2026-01-01T00:00:00.000Z'),
-          to: new Date('2026-12-31T23:59:59.999Z'),
-          page: 1,
-          limit: 100,
-        }),
+        issueService.list(
+          tx,
+          {
+            from: new Date('2026-01-01T00:00:00.000Z'),
+            to: new Date('2026-12-31T23:59:59.999Z'),
+            page: 1,
+            limit: 100,
+          },
+          org.id,
+        ),
     );
 
     expect(result.items[0].title).toBe('Jan Issue');
@@ -171,12 +142,16 @@ describe('issueService.list — date range filtering', () => {
     const result = await withTestRls(
       { orgId: org.id, userId: user.id },
       async (tx) =>
-        issueService.list(tx, {
-          from: new Date('2026-03-01T00:00:00.000Z'),
-          to: new Date('2026-03-31T23:59:59.999Z'),
-          page: 1,
-          limit: 100,
-        }),
+        issueService.list(
+          tx,
+          {
+            from: new Date('2026-03-01T00:00:00.000Z'),
+            to: new Date('2026-03-31T23:59:59.999Z'),
+            page: 1,
+            limit: 100,
+          },
+          org.id,
+        ),
     );
 
     expect(result.items).toHaveLength(1);

@@ -23,7 +23,16 @@ import {
   submissionVotes,
   submissionReviewers,
   pipelineItems,
+  publications,
+  issues,
+  issueSections,
+  issueItems,
+  cmsConnections,
   type PipelineItem,
+  type Publication,
+  type Issue,
+  type IssueSection,
+  type IssueItem,
   type Organization,
   type User,
   type OrganizationMember,
@@ -445,6 +454,125 @@ export async function createPipelineItem(
     })
     .returning();
   return item;
+}
+
+/**
+ * `publications_org_slug_idx` is unique on `(organization_id, lower(slug))`, so
+ * the slug is randomised rather than derived from the name — two publications in
+ * one org is an ordinary fixture, and a name-derived slug would collide.
+ */
+export async function createPublication(
+  organizationId: string,
+  overrides?: Partial<Publication>,
+): Promise<Publication> {
+  const db = adminDb();
+  const [publication] = await db
+    .insert(publications)
+    .values({
+      organizationId,
+      name: faker.company.name(),
+      slug: faker.string.alphanumeric(20).toLowerCase(),
+      ...overrides,
+    })
+    .returning();
+  return publication;
+}
+
+/**
+ * Like `createPipelineItem`, `organizationId` and `publicationId` are
+ * independent positional params rather than the org being derived from the
+ * publication — a suite proving `issueService` scopes its reads needs to be able
+ * to seed a mismatched pair.
+ */
+export async function createIssue(
+  organizationId: string,
+  publicationId: string,
+  overrides?: Partial<Issue>,
+): Promise<Issue> {
+  const db = adminDb();
+  const [issue] = await db
+    .insert(issues)
+    .values({
+      organizationId,
+      publicationId,
+      title: faker.lorem.words(3),
+      ...overrides,
+    })
+    .returning();
+  return issue;
+}
+
+/**
+ * `issue_sections` carries no `organization_id` — it is scoped transitively
+ * through its issue, and its RLS policy is an EXISTS on `issues`. So the org a
+ * section belongs to is whatever `createIssue` was given; there is no second
+ * parameter to get wrong.
+ */
+export async function createIssueSection(
+  issueId: string,
+  overrides?: Partial<IssueSection>,
+): Promise<IssueSection> {
+  const db = adminDb();
+  const [section] = await db
+    .insert(issueSections)
+    .values({
+      issueId,
+      title: faker.lorem.words(2),
+      ...overrides,
+    })
+    .returning();
+  return section;
+}
+
+/**
+ * Same transitive scoping as `createIssueSection`. Two unique constraints bound
+ * how many of these a suite can seed: `issue_items_issue_pipeline_unique` on
+ * `(issue_id, pipeline_item_id)`, and — reaching back up the chain — the GLOBAL
+ * unique on `pipeline_items.submission_id`. So N issue items needs N pipeline
+ * items needs N distinct submissions.
+ */
+export async function createIssueItem(
+  issueId: string,
+  pipelineItemId: string,
+  overrides?: Partial<IssueItem>,
+): Promise<IssueItem> {
+  const db = adminDb();
+  const [item] = await db
+    .insert(issueItems)
+    .values({
+      issueId,
+      pipelineItemId,
+      ...overrides,
+    })
+    .returning();
+  return item;
+}
+
+/**
+ * `@colophony/db` exports no `CmsConnection` type, so the row type is inferred
+ * here — the same workaround as `SubmissionDiscussionRow` above.
+ *
+ * `publication_id` is nullable and therefore an override rather than a
+ * positional param; only the `listByPublication` cases need it set.
+ */
+export type CmsConnectionRow = typeof cmsConnections.$inferSelect;
+
+export async function createCmsConnection(
+  organizationId: string,
+  overrides?: Partial<CmsConnectionRow>,
+): Promise<CmsConnectionRow> {
+  const db = adminDb();
+  const [connection] = await db
+    .insert(cmsConnections)
+    .values({
+      organizationId,
+      adapterType: 'GHOST',
+      name: faker.company.name(),
+      config: { apiUrl: faker.internet.url(), apiKey: faker.string.uuid() },
+      ...overrides,
+    })
+    .returning();
+  return connection;
 }
 
 // No `createPortfolioEntry` here on purpose: `portfolioService.list` reads
