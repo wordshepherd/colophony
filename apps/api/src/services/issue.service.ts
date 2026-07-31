@@ -47,6 +47,19 @@ export class IssueSectionNotFoundError extends Error {
   }
 }
 
+/**
+ * A pipeline item that is not available to the caller's organization — whether
+ * it does not exist at all or belongs to another tenant. The two cases are
+ * deliberately indistinguishable: a caller must not be able to probe for the
+ * existence of another org's pipeline items by the error it gets back.
+ */
+export class IssuePipelineItemNotFoundError extends Error {
+  constructor(pipelineItemId: string) {
+    super(`Pipeline item "${pipelineItemId}" not found`);
+    this.name = 'IssuePipelineItemNotFoundError';
+  }
+}
+
 export class IssueItemAlreadyExistsError extends Error {
   constructor(pipelineItemId: string) {
     super(`Pipeline item "${pipelineItemId}" is already in this issue`);
@@ -371,9 +384,9 @@ export const issueService = {
     // submission's title. Same shape as `pipelineService.create`'s unscoped
     // submission read (#537): a scoped parent and an unscoped foreign key.
     //
-    // `IssueNotFoundError` rather than a distinguishable "wrong org" error, and
-    // the message names the id the caller already supplied — a more specific
-    // error here would be an existence oracle for other tenants' pipeline items.
+    // The error names only the id the caller already supplied, and an absent id
+    // and a foreign one raise the identical error — so this cannot be used to
+    // probe whether a given pipeline item exists in some other tenant.
     const [pipelineItem] = await tx
       .select({ id: pipelineItems.id })
       .from(pipelineItems)
@@ -386,9 +399,7 @@ export const issueService = {
       .limit(1);
 
     if (!pipelineItem) {
-      throw new IssueNotFoundError(
-        `Pipeline item "${input.pipelineItemId}" not found`,
-      );
+      throw new IssuePipelineItemNotFoundError(input.pipelineItemId);
     }
 
     // Validate section belongs to this issue (if provided)

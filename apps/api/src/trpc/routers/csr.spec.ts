@@ -99,9 +99,14 @@ vi.mock('../../services/contract.service.js', () => ({
   ContractNotFoundError: class extends Error {},
 }));
 
+// Every error class `trpc/error-mapper.ts` imports from this module must appear
+// here. A missing one is not a test failure — the module throws while the mapper
+// builds its error table, so the whole file collects zero tests and the run can
+// still report green.
 vi.mock('../../services/issue.service.js', () => ({
   issueService: {},
   IssueNotFoundError: class extends Error {},
+  IssuePipelineItemNotFoundError: class extends Error {},
   IssueItemAlreadyExistsError: class extends Error {},
 }));
 

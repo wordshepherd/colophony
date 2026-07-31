@@ -50,6 +50,7 @@ import { ContractTemplateNotFoundError } from '../services/contract-template.ser
 import { ContractNotFoundError } from '../services/contract.service.js';
 import {
   IssueNotFoundError,
+  IssuePipelineItemNotFoundError,
   IssueItemAlreadyExistsError,
 } from '../services/issue.service.js';
 import { CmsConnectionNotFoundError } from '../services/cms-connection.service.js';
@@ -200,6 +201,7 @@ const errorCodeMap: [new (...args: never[]) => Error, TRPCErrorCode][] = [
   [ContractNotFoundError, 'NOT_FOUND'],
   // Issue errors
   [IssueNotFoundError, 'NOT_FOUND'],
+  [IssuePipelineItemNotFoundError, 'NOT_FOUND'],
   [IssueItemAlreadyExistsError, 'CONFLICT'],
   // CMS errors
   [CmsConnectionNotFoundError, 'NOT_FOUND'],

@@ -101,6 +101,7 @@ import {
 import {
   issueService,
   IssueNotFoundError,
+  IssuePipelineItemNotFoundError,
   IssueItemAlreadyExistsError,
 } from '../../services/issue.service.js';
 
@@ -335,7 +336,18 @@ describe('issueService defense-in-depth (RLS bypassed)', () => {
           { pipelineItemId: itemB.id },
           orgA.id,
         ),
-      ).rejects.toThrow(IssueNotFoundError);
+      ).rejects.toThrow(IssuePipelineItemNotFoundError);
+
+      // A pipeline item that does not exist at all raises the identical error,
+      // so the rejection cannot be used to probe for another org's items.
+      await expect(
+        issueService.addItem(
+          adminTx(),
+          issueA.id,
+          { pipelineItemId: '00000000-0000-4000-8000-000000000000' },
+          orgA.id,
+        ),
+      ).rejects.toThrow(IssuePipelineItemNotFoundError);
 
       expect(await countItemsFor(issueA.id)).toBe(0);
 
