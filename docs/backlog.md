@@ -364,15 +364,30 @@ Ordered as the design doc's Phase 0/D.
       per-surface copy is how the declarations drifted apart to begin with. The tRPC gate's seven
       tests pass unchanged.
 - [ ] **[P2] `submission.service` list/export methods carry no org predicate.** `listAll`
-      (`:290`), `exportAll` (`:392`, up to 10 000 rows) and `listAgingByOrg` (`:1526`) build
+      (`:227`), `exportAll` (`:347`, up to 10 000 rows) and `listAgingByOrg` (`:1483`) build
       their `where` from `status` / `period` / `search` / date only. `listAgingByOrg` is named
       for a scoping it does not perform — its caller supplies the org through
       `withRls({ orgId })` at `inngest/functions/submission-response-reminder.ts:64`, so it is
       correct in practice and misleading to read. — (found 2026-07-28 during the P2.0 audit)
-- [ ] **[P2] `pipeline.service.ts:309` `updateStage` filters the read but not the write.** The
-      guard is `getById(tx, id, orgId)`; the `UPDATE` that follows is
+- [ ] **[P2] `pipeline.service.ts` writes drop the org predicate — three methods, two shapes.**
+      `updateStage` (`:309`) filters the read but not the write: the guard is
+      `getById(tx, id, orgId)`, and the `UPDATE` that follows is
       `.where(eq(pipelineItems.id, id))` with no org predicate. Read-then-write with the
-      predicate on only one half. — (found 2026-07-28 during the P2.0 audit)
+      predicate on only one half.
+      **`assignCopyeditor` (`:396`) and `assignProofreader` (`:435`) are worse**: they take no
+      `orgId` parameter at all, so there is no read guard to drop — just
+      `.where(eq(pipelineItems.id, id))` on the `UPDATE`, with RLS as the only defence. Their
+      `*WithAudit` wrappers check `assertEditorOrProductionOrAdmin` but never read the item
+      org-scoped first. Both are reachable from `rest/routers/pipeline.ts` and
+      `trpc/routers/pipeline.ts`.
+      Fix all three together — one file, one signature convention `(tx, id, input, orgId)`.
+      **No test drives `pipelineService` at all**: `rls-infrastructure.test.ts` asserts the
+      `pipeline_items` policy exists in the catalog, which is not the same as proving the
+      service's own `WHERE` isolates. Needs an admin-pool suite like
+      `__tests__/rls/audit-service.test.ts`. `saveCopyedit` (`:662`) is the counter-example
+      already doing it right — it carries the org predicate on both halves.
+      — (`updateStage` found 2026-07-28 during the P2.0 audit; the two assign methods found
+      2026-07-30 while verifying the backlog against the code)
 - [ ] **[P2] `issue.service.ts:65,122` take `orgId?` as optional and apply the predicate
       conditionally.** An optional org id is a silent bypass: omit the argument and the query
       is unscoped, with nothing at the type level to flag it. Make it required, matching the
@@ -507,22 +522,24 @@ Ordered as the design doc's Phase 0/D.
       same allowlist rule as `internalOnly` and the per-credential rate limiter. Pinned twice
       (unit + end-to-end); verified an `authMethod`-based implementation fails only that one
       case out of six.
-- [ ] **[P1] `auditService.list` and `getById` carry no explicit `organizationId` predicate.**
-      `apps/api/src/services/audit.service.ts` builds `list`'s `where` from
-      action/resource/actor/resource-id/principal/date only, and `getById` filters on `id`
-      alone — RLS is the sole defense on both. The same shape as `apiKeyService` (#521),
-      `organizationService.listMembers` (#527) and `notificationService` (#531), and it is the
-      only remaining read of a tenant table in that state on this surface.
-      Fix is the house convention `(tx, input, orgId)` with **one hoisted condition reused by
-      the page and count queries** — filtering only the page leaves `total` reporting every
-      org's event count — plus an admin-pool test mirroring
-      `__tests__/rls/api-key-service.test.ts`, since the existing router specs mock the service
-      outright and would pass with or without a predicate. Callers to thread: the REST and tRPC
-      audit routers (both `adminProcedure`, so `orgId` is already resolved).
-      **Deliberately not bundled into the principal-attribution PR**, following the precedent
-      set when `apiKeyService`'s predicate fix was left out of P0.5b so a multi-tenancy change
-      would not ride inside an unrelated one. — (found 2026-07-30 by the plan review for the
-      principal-attribution work)
+- [x] **[P1] `auditService.list` and `getById` carried no explicit `organizationId` predicate.**
+      `apps/api/src/services/audit.service.ts` built `list`'s `where` from
+      action/resource/actor/resource-id/principal/date only, and `getById` filtered on `id`
+      alone — RLS was the sole defense on both. The same shape as `apiKeyService` (#521),
+      `organizationService.listMembers` (#527) and `notificationService` (#531), and the last
+      read of a tenant table in that state on this surface.
+      Fixed with the house convention `(tx, input, orgId)`, seeding the **existing** hoisted
+      `conditions` array so the count query carries the predicate too — filtering only the page
+      leaves `total` reporting every org's event count. Pinned by
+      `__tests__/rls/audit-service.test.ts` over the admin pool; verified non-vacuous (removing
+      the `list` predicate fails 4 cases, removing `getById`'s fails its 2 negative cases).
+      **Behaviour is unchanged despite `organization_id` being nullable**: the SELECT policy is
+      `organization_id = current_org_id()` and NULL never matches `=`, so org-less rows (auth
+      failures, `ON DELETE SET NULL` orphans) were already invisible — as
+      `rls-nullable-isolation.test.ts:46` already asserted. Two cases pin that equivalence.
+      No schema change: `listAuditEventsSchema` deliberately has no `organizationId`, so the
+      org cannot be spoofed from caller input. — (found 2026-07-30 by the plan review for the
+      principal-attribution work; done 2026-07-30, PR #536)
 - [ ] **[P3] The federation audit log viewer's date filters are silently dropped.**
       `apps/web/src/components/federation/audit-log-viewer.tsx` sends `dateFrom`/`dateTo` in
       its query input, but `listAuditEventsSchema` declares `from`/`to`, so both are discarded
@@ -531,7 +548,7 @@ Ordered as the design doc's Phase 0/D.
       than importing from `@colophony/types`, which is why the mismatch type-checks — fixing
       that import would have caught this. — (found 2026-07-30 while mapping the audit read
       surface)
-- [ ] **[P2] Honour `X-Act-As-User` on ordinary org-scoped API keys.** `hooks/auth.ts:314`
+- [ ] **[P2] Honour `X-Act-As-User` on ordinary org-scoped API keys.** `hooks/auth.ts:343`
       unconditionally sets `userId: creator.id` for `authMethod: 'apikey'`, so every action a
       `col_live_` key takes is attributed to whoever minted it — including `submitterId` and
       user-scoped RLS, not just the audit row. An integrator filing on behalf of several of
@@ -548,9 +565,10 @@ Ordered as the design doc's Phase 0/D.
       failure mode to avoid is falling back to the key creator, because the caller would then
       get a 2xx for a write attributed to the wrong person and never learn the header was
       ignored. Same reasoning as the `requireScopes` default-deny.
-      Depends on the `principal_id` / `principal_type` audit work above to record both
+      Depended on the `principal_id` / `principal_type` audit work above to record both
       identities; landing it before that would attribute the action to the target user with no
-      record of which key acted. — (raised 2026-07-28)
+      record of which key acted. **That dependency is satisfied** — the columns landed
+      2026-07-30 in #535, so this is now unblocked. — (raised 2026-07-28)
 - [x] **[P1] Webhook deliveries are not revalidated before send.** The worker now re-reads
       the endpoint through `webhookService.getEndpointForDelivery` as its first phase, before
       the `DELIVERING` write, and takes the URL and secret from that row rather than the job.
@@ -641,7 +659,10 @@ Ordered as the design doc's Phase 0/D.
       versus three fields. Type-only today: the contract is consumed by
       `packages/api-client` for inference, not used to validate the server response.
       — (found 2026-07-28 while removing `payments:read`)
-- [ ] **[P2] REST spec coverage.** Only 7 of 17 REST routers have a `.spec.ts`. —
+- [ ] **[P2] REST spec coverage.** Only 8 of 18 REST routers have a `.spec.ts` — the ten
+      without are `cms-connections`, `collections`, `contract-templates`, `contracts`, `csr`,
+      `issues`, `manuscripts`, `periods`, `pipeline`, `publications`. (Was "7 of 17" until the
+      notifications router landed 2026-07-29 with its spec; recounted 2026-07-30.) —
       (design doc §1.8)
 - [ ] **[P2] The served spec reports `3.1.1`; the committed one says `3.1.0`.**
       `generateOpenApiDocument()` pins the exported `sdks/openapi.json` to `3.1.0` for

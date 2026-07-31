@@ -175,10 +175,19 @@ export const auditService = {
   },
 
   /**
-   * List audit events with optional filters and pagination.
-   * RLS handles org scoping automatically.
+   * List audit events for an org, with optional filters and pagination.
+   * Filters on organizationId explicitly, with RLS as the backstop rather
+   * than the only defence.
+   *
+   * The count query carries the predicate too — without it, `total` reports
+   * every org's event count while `items` is correctly scoped.
+   *
+   * Rows with a NULL organizationId (auth failures logged before an org is
+   * known, and rows orphaned by ON DELETE SET NULL) are excluded, matching
+   * the SELECT policy `organization_id = current_org_id()` — they were never
+   * visible through this method.
    */
-  async list(tx: DrizzleDb, input: ListAuditEventsInput) {
+  async list(tx: DrizzleDb, input: ListAuditEventsInput, orgId: string) {
     const {
       page,
       limit,
@@ -192,7 +201,7 @@ export const auditService = {
     } = input;
     const offset = (page - 1) * limit;
 
-    const conditions = [];
+    const conditions = [eq(auditEvents.organizationId, orgId)];
     if (action) conditions.push(eq(auditEvents.action, action));
     if (resource) conditions.push(eq(auditEvents.resource, resource));
     if (actorId) conditions.push(eq(auditEvents.actorId, actorId));
@@ -201,7 +210,9 @@ export const auditService = {
     if (from) conditions.push(gte(auditEvents.createdAt, from));
     if (to) conditions.push(lte(auditEvents.createdAt, to));
 
-    const where = conditions.length > 0 ? and(...conditions) : undefined;
+    // One hoisted condition, reused by both queries. Filtering only the page
+    // query leaves `total` counting every org's rows.
+    const where = and(...conditions);
 
     const [items, countResult] = await Promise.all([
       tx
@@ -226,13 +237,15 @@ export const auditService = {
   },
 
   /**
-   * Get a single audit event by ID. RLS scoped.
+   * Get a single audit event by ID, scoped to the caller's org. Filters on
+   * organizationId explicitly, with RLS as the backstop rather than the only
+   * defence — an event belonging to another org reads as not found.
    */
-  async getById(tx: DrizzleDb, id: string) {
+  async getById(tx: DrizzleDb, id: string, orgId: string) {
     const [row] = await tx
       .select()
       .from(auditEvents)
-      .where(eq(auditEvents.id, id))
+      .where(and(eq(auditEvents.id, id), eq(auditEvents.organizationId, orgId)))
       .limit(1);
     return row ? parseAuditRow(row) : null;
   },
