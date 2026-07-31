@@ -13,7 +13,31 @@ const mockRetryDelivery = vi.fn();
 const mockGetActiveEndpointsForEvent = vi.fn();
 const mockGetEndpointForDelivery = vi.fn();
 
+// The error classes must be re-exported from the mock, not just the service
+// object: `error-mapper.ts` builds its `errorCodeMap` from these constructors at
+// module load, and an `undefined` entry throws before any test runs.
+//
+// They are declared *inside* the factory deliberately. `vi.mock` is hoisted
+// above every top-level declaration in this file, so a class declared out here
+// is still in its temporal dead zone when the factory runs — the same reason
+// the service stubs below use the deferred-closure trampoline.
 vi.mock('../../services/webhook.service.js', () => ({
+  WebhookUrlValidationError: class extends Error {},
+  WebhookEndpointNotFoundError: class extends Error {
+    constructor(id: string) {
+      super(`Webhook endpoint "${id}" not found`);
+    }
+  },
+  WebhookDeliveryNotFoundError: class extends Error {
+    constructor(id: string) {
+      super(`Webhook delivery "${id}" not found`);
+    }
+  },
+  WebhookEndpointDisabledError: class extends Error {
+    constructor(id: string) {
+      super(`Webhook endpoint "${id}" is disabled — re-enable it first`);
+    }
+  },
   webhookService: {
     createEndpoint: (...args: unknown[]) => mockCreateEndpoint(...args),
     updateEndpoint: (...args: unknown[]) => mockUpdateEndpoint(...args),
@@ -187,7 +211,56 @@ describe('webhooksRouter', () => {
   });
 
   describe('retryDelivery', () => {
-    it('refuses when the delivery and endpoint are not in the same org', async () => {
+    it('passes the org id to the service so the predicate is on the UPDATE', async () => {
+      mockRetryDelivery.mockResolvedValue({
+        id: 'del-1',
+        organizationId: ORG_ID,
+        webhookEndpointId: 'ep-1',
+        eventType: 'submission.created',
+        payload: {},
+      });
+      mockGetEndpointForDelivery.mockResolvedValue({
+        endpointId: 'ep-1',
+        url: 'https://example.com/hook',
+        secret: 's',
+        status: 'ACTIVE',
+        eventTypes: ['submission.created'],
+      });
+
+      await resolver('retryDelivery')({
+        ctx: baseCtx(),
+        input: { deliveryId: 'del-1' },
+      });
+
+      // The full argument list, not a prefix: a dropped org id here is exactly
+      // the cross-tenant write this change closes, and the router no longer
+      // carries a post-hoc comparison that would catch it.
+      expect(mockRetryDelivery).toHaveBeenCalledWith(
+        expect.anything(),
+        'del-1',
+        ORG_ID,
+      );
+    });
+
+    it('refuses a delivery outside the caller org without enqueueing', async () => {
+      // The org predicate is on the UPDATE, so a foreign delivery matches no
+      // row and the service throws rather than returning one to compare.
+      mockRetryDelivery.mockRejectedValue(
+        new Error('Webhook delivery "del-1" not found'),
+      );
+
+      await expect(
+        resolver('retryDelivery')({
+          ctx: baseCtx(),
+          input: { deliveryId: 'del-1' },
+        }),
+      ).rejects.toThrow(/delivery .*not found/i);
+
+      expect(mockGetEndpointForDelivery).not.toHaveBeenCalled();
+      expect(mockEnqueueWebhookRetry).not.toHaveBeenCalled();
+    });
+
+    it('refuses when the endpoint is not in the same org as the delivery', async () => {
       mockRetryDelivery.mockResolvedValue({
         id: 'del-1',
         organizationId: ORG_ID,
@@ -196,6 +269,8 @@ describe('webhooksRouter', () => {
         payload: {},
       });
       // The org-scoped join finds nothing — the endpoint belongs elsewhere.
+      // Still a distinct check: the UPDATE predicate scopes the delivery, this
+      // join scopes the endpoint it points at.
       mockGetEndpointForDelivery.mockResolvedValue(null);
 
       await expect(
@@ -203,7 +278,7 @@ describe('webhooksRouter', () => {
           ctx: baseCtx(),
           input: { deliveryId: 'del-1' },
         }),
-      ).rejects.toThrow(/endpoint not found/i);
+      ).rejects.toThrow(/endpoint .*not found/i);
 
       expect(mockEnqueueWebhookRetry).not.toHaveBeenCalled();
     });

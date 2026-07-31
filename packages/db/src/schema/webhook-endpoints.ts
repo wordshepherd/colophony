@@ -21,7 +21,7 @@ export const webhookEndpoints = pgTable(
     url: varchar("url", { length: 2048 }).notNull(),
     secret: varchar("secret", { length: 512 }).notNull(),
     description: varchar("description", { length: 512 }),
-    eventTypes: jsonb("event_types").notNull(),
+    eventTypes: jsonb("event_types").notNull().$type<string[]>(),
     status: webhookEndpointStatusEnum("status").default("ACTIVE").notNull(),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()

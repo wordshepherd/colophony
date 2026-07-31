@@ -114,11 +114,7 @@ describe('webhookService', () => {
       }),
     } as never;
 
-    await webhookService.listEndpoints(mockTx, {
-      organizationId: 'org-1',
-      page: 1,
-      limit: 10,
-    });
+    await webhookService.listEndpoints(mockTx, { page: 1, limit: 10 }, 'org-1');
 
     expect(eqFn).toHaveBeenCalledWith('organization_id', 'org-1');
   });
@@ -132,9 +128,12 @@ describe('webhookService', () => {
     const mockUpdate = vi.fn().mockReturnValue({ set: mockSet });
     const mockTx = { update: mockUpdate } as never;
 
-    await webhookService.updateEndpoint(mockTx, 'ep-1', 'org-1', {
-      status: 'DISABLED',
-    });
+    await webhookService.updateEndpoint(
+      mockTx,
+      'ep-1',
+      { status: 'DISABLED' },
+      'org-1',
+    );
 
     expect(andFn).toHaveBeenCalled();
     const andArgs = andFn.mock.calls[0];
@@ -146,7 +145,10 @@ describe('webhookService', () => {
   });
 
   it('filters by organizationId in deleteEndpoint', async () => {
-    const mockWhere = vi.fn().mockResolvedValue(undefined);
+    // `.returning({ id })` is what lets the method tell a real delete from a
+    // no-op; a mock without it makes the method throw not-found.
+    const mockReturning = vi.fn().mockResolvedValue([{ id: 'ep-1' }]);
+    const mockWhere = vi.fn().mockReturnValue({ returning: mockReturning });
     const mockDeleteFrom = vi.fn().mockReturnValue({ where: mockWhere });
     const mockTx = { delete: mockDeleteFrom } as never;
 
@@ -201,6 +203,110 @@ describe('webhookService', () => {
     expect(andArgs[0]).toEqual({
       type: 'eq',
       args: ['organization_id', orgId],
+    });
+  });
+
+  describe('delivery methods — org predicates', () => {
+    it('seeds listDeliveries conditions with the org filter, before any caller filter', async () => {
+      const mockOrderBy = vi.fn().mockReturnValue({
+        limit: vi
+          .fn()
+          .mockReturnValue({ offset: vi.fn().mockResolvedValue([]) }),
+      });
+      const mockItemsWhere = vi.fn().mockReturnValue({ orderBy: mockOrderBy });
+      const mockCountWhere = vi.fn().mockResolvedValue([{ count: 0 }]);
+      let call = 0;
+      const mockTx = {
+        select: vi.fn(() => ({
+          from: vi.fn(() => ({
+            where: ++call === 1 ? mockItemsWhere : mockCountWhere,
+          })),
+        })),
+      } as never;
+
+      // `endpointId` is caller-supplied and carries no tenancy of its own, so
+      // the org term must be present regardless of what the caller filtered on.
+      await webhookService.listDeliveries(
+        mockTx,
+        { page: 1, limit: 10, endpointId: 'ep-other' },
+        'org-1',
+      );
+
+      const andArgs = andFn.mock.calls[0];
+      expect(andArgs[0]).toEqual({
+        type: 'eq',
+        args: ['delivery_organization_id', 'org-1'],
+      });
+      // Page and count share one `where`, so the total cannot drift from the page.
+      expect(mockItemsWhere).toHaveBeenCalledWith(andFn.mock.results[0]?.value);
+      expect(mockCountWhere).toHaveBeenCalledWith(andFn.mock.results[0]?.value);
+    });
+
+    it('filters retryDelivery on both id and organizationId', async () => {
+      const mockReturning = vi.fn().mockResolvedValue([{ id: 'del-1' }]);
+      const mockWhere = vi.fn().mockReturnValue({ returning: mockReturning });
+      const mockSet = vi.fn().mockReturnValue({ where: mockWhere });
+      const mockTx = {
+        update: vi.fn().mockReturnValue({ set: mockSet }),
+      } as never;
+
+      await webhookService.retryDelivery(mockTx, 'del-1', 'org-1');
+
+      const andArgs = andFn.mock.calls[0];
+      expect(andArgs[0]).toEqual({ type: 'eq', args: ['id', 'del-1'] });
+      expect(andArgs[1]).toEqual({
+        type: 'eq',
+        args: ['delivery_organization_id', 'org-1'],
+      });
+    });
+
+    it('throws rather than returning undefined when retryDelivery matches nothing', async () => {
+      const mockReturning = vi.fn().mockResolvedValue([]);
+      const mockWhere = vi.fn().mockReturnValue({ returning: mockReturning });
+      const mockSet = vi.fn().mockReturnValue({ where: mockWhere });
+      const mockTx = {
+        update: vi.fn().mockReturnValue({ set: mockSet }),
+      } as never;
+
+      // The throw is load-bearing: without it the caller goes on to audit and
+      // enqueue a retry against a row it does not own.
+      await expect(
+        webhookService.retryDelivery(mockTx, 'del-1', 'org-1'),
+      ).rejects.toThrow(/delivery .*not found/i);
+    });
+
+    it('filters updateDeliveryStatus on both id and organizationId', async () => {
+      const mockWhere = vi.fn().mockResolvedValue(undefined);
+      const mockSet = vi.fn().mockReturnValue({ where: mockWhere });
+      const mockTx = {
+        update: vi.fn().mockReturnValue({ set: mockSet }),
+      } as never;
+
+      await webhookService.updateDeliveryStatus(
+        mockTx,
+        'del-1',
+        'DELIVERED',
+        'org-1',
+      );
+
+      const andArgs = andFn.mock.calls[0];
+      expect(andArgs[0]).toEqual({ type: 'eq', args: ['id', 'del-1'] });
+      expect(andArgs[1]).toEqual({
+        type: 'eq',
+        args: ['delivery_organization_id', 'org-1'],
+      });
+    });
+
+    it('scopes countRecentFailures to the org so another tenant cannot trip the threshold', async () => {
+      const mockWhere = vi.fn().mockResolvedValue([{ count: 0 }]);
+      const mockFrom = vi.fn().mockReturnValue({ where: mockWhere });
+      const mockTx = {
+        select: vi.fn().mockReturnValue({ from: mockFrom }),
+      } as never;
+
+      await webhookService.countRecentFailures(mockTx, 'ep-1', 'org-1');
+
+      expect(eqFn).toHaveBeenCalledWith('delivery_organization_id', 'org-1');
     });
   });
 

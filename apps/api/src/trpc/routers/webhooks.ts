@@ -12,7 +12,12 @@ import {
   requireScopes,
   createRouter,
 } from '../init.js';
-import { webhookService } from '../../services/webhook.service.js';
+import {
+  webhookService,
+  WebhookEndpointNotFoundError,
+  WebhookEndpointDisabledError,
+} from '../../services/webhook.service.js';
+import { mapServiceError } from '../error-mapper.js';
 import {
   enqueueWebhook,
   enqueueWebhookRetry,
@@ -24,12 +29,14 @@ export const webhooksRouter = createRouter({
     .use(requireScopes('webhooks:manage'))
     .input(createWebhookEndpointSchema)
     .mutation(async ({ ctx, input }) => {
-      const row = await webhookService.createEndpoint(ctx.dbTx, {
-        organizationId: ctx.authContext.orgId,
-        url: input.url,
-        description: input.description,
-        eventTypes: input.eventTypes,
-      });
+      const row = await webhookService
+        .createEndpoint(ctx.dbTx, {
+          organizationId: ctx.authContext.orgId,
+          url: input.url,
+          description: input.description,
+          eventTypes: input.eventTypes,
+        })
+        .catch(mapServiceError);
       await ctx.audit({
         action: AuditActions.WEBHOOK_ENDPOINT_CREATED,
         resource: AuditResources.WEBHOOK_ENDPOINT,
@@ -46,12 +53,10 @@ export const webhooksRouter = createRouter({
     )
     .mutation(async ({ ctx, input }) => {
       const { id, ...params } = input;
-      const row = await webhookService.updateEndpoint(
-        ctx.dbTx,
-        id,
-        ctx.authContext.orgId,
-        params,
-      );
+      const row = await webhookService
+        .updateEndpoint(ctx.dbTx, id, params, ctx.authContext.orgId)
+        .catch(mapServiceError);
+      // Reached only on a real update — `updateEndpoint` throws on zero rows.
       await ctx.audit({
         action: AuditActions.WEBHOOK_ENDPOINT_UPDATED,
         resource: AuditResources.WEBHOOK_ENDPOINT,
@@ -65,11 +70,10 @@ export const webhooksRouter = createRouter({
     .use(requireScopes('webhooks:manage'))
     .input(z.object({ id: z.string().uuid() }))
     .mutation(async ({ ctx, input }) => {
-      await webhookService.deleteEndpoint(
-        ctx.dbTx,
-        input.id,
-        ctx.authContext.orgId,
-      );
+      await webhookService
+        .deleteEndpoint(ctx.dbTx, input.id, ctx.authContext.orgId)
+        .catch(mapServiceError);
+      // Reached only on a real delete — `deleteEndpoint` throws on zero rows.
       await ctx.audit({
         action: AuditActions.WEBHOOK_ENDPOINT_DELETED,
         resource: AuditResources.WEBHOOK_ENDPOINT,
@@ -82,11 +86,9 @@ export const webhooksRouter = createRouter({
     .use(requireScopes('webhooks:read'))
     .input(z.object({ id: z.string().uuid() }))
     .query(async ({ ctx, input }) => {
-      return webhookService.getEndpoint(
-        ctx.dbTx,
-        input.id,
-        ctx.authContext.orgId,
-      );
+      return webhookService
+        .getEndpoint(ctx.dbTx, input.id, ctx.authContext.orgId)
+        .catch(mapServiceError);
     }),
 
   list: orgProcedure
@@ -98,21 +100,21 @@ export const webhooksRouter = createRouter({
       }),
     )
     .query(async ({ ctx, input }) => {
-      return webhookService.listEndpoints(ctx.dbTx, {
-        ...input,
-        organizationId: ctx.authContext.orgId,
-      });
+      return webhookService.listEndpoints(
+        ctx.dbTx,
+        input,
+        ctx.authContext.orgId,
+      );
     }),
 
   rotateSecret: adminProcedure
     .use(requireScopes('webhooks:manage'))
     .input(z.object({ id: z.string().uuid() }))
     .mutation(async ({ ctx, input }) => {
-      const row = await webhookService.rotateSecret(
-        ctx.dbTx,
-        input.id,
-        ctx.authContext.orgId,
-      );
+      const row = await webhookService
+        .rotateSecret(ctx.dbTx, input.id, ctx.authContext.orgId)
+        .catch(mapServiceError);
+      // Reached only on a real rotation — `rotateSecret` throws on zero rows.
       await ctx.audit({
         action: AuditActions.WEBHOOK_ENDPOINT_SECRET_ROTATED,
         resource: AuditResources.WEBHOOK_ENDPOINT,
@@ -129,23 +131,16 @@ export const webhooksRouter = createRouter({
       const orgId = ctx.authContext.orgId;
 
       // The worker re-reads url/secret at send time, so only existence and status
-      // are needed here — the redacted read is sufficient.
-      const endpoint = await webhookService.getEndpoint(
-        ctx.dbTx,
-        input.id,
-        orgId,
-      );
-
-      if (!endpoint) {
-        throw new Error('Webhook endpoint not found');
-      }
+      // are needed here — the redacted read is sufficient. `getEndpoint` throws
+      // `WebhookEndpointNotFoundError` rather than returning null.
+      const endpoint = await webhookService
+        .getEndpoint(ctx.dbTx, input.id, orgId)
+        .catch(mapServiceError);
 
       // The worker cancels sends to a disabled endpoint, so reject here rather than
       // enqueueing a delivery that is guaranteed to be cancelled without explanation.
       if (endpoint.status === 'DISABLED') {
-        throw new Error(
-          'Cannot test a disabled webhook endpoint — re-enable it first',
-        );
+        mapServiceError(new WebhookEndpointDisabledError(input.id));
       }
 
       const delivery = await webhookService.createDelivery(ctx.dbTx, {
@@ -183,10 +178,11 @@ export const webhooksRouter = createRouter({
     .use(requireScopes('webhooks:read'))
     .input(listWebhookDeliveriesSchema)
     .query(async ({ ctx, input }) => {
-      return webhookService.listDeliveries(ctx.dbTx, {
-        ...input,
-        organizationId: ctx.authContext.orgId,
-      });
+      return webhookService.listDeliveries(
+        ctx.dbTx,
+        input,
+        ctx.authContext.orgId,
+      );
     }),
 
   retryDelivery: adminProcedure
@@ -196,21 +192,18 @@ export const webhooksRouter = createRouter({
       const env = validateEnv();
       const orgId = ctx.authContext.orgId;
 
-      const delivery = await webhookService.retryDelivery(
-        ctx.dbTx,
-        input.deliveryId,
-      );
+      // The org predicate lives on the UPDATE itself and throws on zero rows,
+      // so ownership is settled before the row is touched. This used to mutate
+      // first and compare `delivery.organizationId` afterwards — and because
+      // tRPC turns a throw into a normal reply, `db-context` committed that
+      // mutation rather than rolling it back.
+      const delivery = await webhookService
+        .retryDelivery(ctx.dbTx, input.deliveryId, orgId)
+        .catch(mapServiceError);
 
-      if (!delivery) {
-        throw new Error('Delivery not found');
-      }
-
-      if (delivery.organizationId !== orgId) {
-        throw new Error('Delivery not found');
-      }
-
-      // Confirm the delivery's endpoint is still present and belongs to the same org.
-      // The FK guarantees existence, not org affinity — this join is the only check.
+      // Still required, and not subsumed by the predicate above: that one scopes
+      // the delivery, this join scopes the *endpoint* it points at. The FK
+      // guarantees existence, not org affinity.
       // The worker re-reads url/secret itself, so nothing is taken from here.
       const endpoint = await webhookService.getEndpointForDelivery(
         ctx.dbTx,
@@ -219,7 +212,9 @@ export const webhooksRouter = createRouter({
       );
 
       if (!endpoint) {
-        throw new Error('Webhook endpoint not found');
+        mapServiceError(
+          new WebhookEndpointNotFoundError(delivery.webhookEndpointId),
+        );
       }
 
       const payload = {

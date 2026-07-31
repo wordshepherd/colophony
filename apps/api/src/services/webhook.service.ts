@@ -21,6 +21,44 @@ export class WebhookUrlValidationError extends Error {
 }
 
 /**
+ * An endpoint not available to the caller's organization.
+ *
+ * Absent and belonging-to-another-tenant are deliberately indistinguishable —
+ * a distinct "forbidden" would let a caller probe for the existence of another
+ * org's endpoints by id. Same posture as `IssueNotFoundError`.
+ */
+export class WebhookEndpointNotFoundError extends Error {
+  constructor(id: string) {
+    super(`Webhook endpoint "${id}" not found`);
+    this.name = 'WebhookEndpointNotFoundError';
+  }
+}
+
+/** Same posture as `WebhookEndpointNotFoundError`, for deliveries. */
+export class WebhookDeliveryNotFoundError extends Error {
+  constructor(id: string) {
+    super(`Webhook delivery "${id}" not found`);
+    this.name = 'WebhookDeliveryNotFoundError';
+  }
+}
+
+/**
+ * A test send was requested against a disabled endpoint. A 400, not a 404 —
+ * the caller can see the endpoint, it just cannot receive.
+ *
+ * Keep the word "disabled" in the message: `trpc/routers/webhooks.spec.ts`
+ * asserts `/disabled/i` against it.
+ */
+export class WebhookEndpointDisabledError extends Error {
+  constructor(id: string) {
+    super(
+      `Webhook endpoint "${id}" is disabled — re-enable it before sending a test delivery`,
+    );
+    this.name = 'WebhookEndpointDisabledError';
+  }
+}
+
+/**
  * Derived from the schema enum rather than hand-written, so adding a value to
  * `webhookDeliveryStatusEnum` cannot leave this union silently behind.
  */
@@ -49,8 +87,15 @@ interface CreateDeliveryParams {
   payload: Record<string, unknown>;
 }
 
+/**
+ * Note the absence of `organizationId` — it is a separate, required argument.
+ *
+ * It used to live here as `organizationId?`, applied only under an `if`. A
+ * caller that forgot it got every tenant's deliveries with RLS as the only
+ * defence, and `endpointId` is caller-supplied, so the filter could be pointed
+ * at another org's endpoint. Keep tenancy out of the caller-shaped params bag.
+ */
 interface ListDeliveriesParams {
-  organizationId?: string;
   endpointId?: string;
   eventType?: string;
   status?: WebhookDeliveryStatus;
@@ -100,8 +145,8 @@ export const webhookService = {
   async updateEndpoint(
     tx: DrizzleDb,
     id: string,
-    organizationId: string,
     params: UpdateEndpointParams,
+    organizationId: string,
   ) {
     if (params.url !== undefined) {
       const devMode =
@@ -136,18 +181,52 @@ export const webhookService = {
         ),
       )
       .returning();
+    // Throwing rather than returning null is what makes the callers' audit
+    // writes structurally unable to fire on a zero-row update. Both routers
+    // audited WEBHOOK_ENDPOINT_UPDATED unconditionally before this.
+    if (!row) throw new WebhookEndpointNotFoundError(id);
+    return redactSecret(row);
+  },
+
+  /**
+   * Best-effort disable for the delivery worker's auto-disable path.
+   *
+   * Returns null where `updateEndpoint` throws, deliberately. Its only caller
+   * is `webhook.worker.ts`'s `onFailed` tail, which runs inside a `withRls`
+   * transaction that has *already* written the delivery's FAILED status and its
+   * audit row. A throw there rolls both back (`packages/db/src/context.ts`) —
+   * losing the record of the failure in order to report a race in which the
+   * endpoint is already gone. Do not unify this with `updateEndpoint`.
+   */
+  async disableEndpoint(tx: DrizzleDb, id: string, organizationId: string) {
+    const [row] = await tx
+      .update(webhookEndpoints)
+      .set({ status: 'DISABLED', updatedAt: new Date() })
+      .where(
+        and(
+          eq(webhookEndpoints.id, id),
+          eq(webhookEndpoints.organizationId, organizationId),
+        ),
+      )
+      .returning();
     return row ? redactSecret(row) : null;
   },
 
   async deleteEndpoint(tx: DrizzleDb, id: string, organizationId: string) {
-    await tx
+    // `.returning({ id })` rather than a bare `.returning()`: the DELETE never
+    // needs to read the secret back. Safe under RLS because the policy is
+    // `for: "all"` with one USING clause, so SELECT and DELETE share it.
+    const [row] = await tx
       .delete(webhookEndpoints)
       .where(
         and(
           eq(webhookEndpoints.id, id),
           eq(webhookEndpoints.organizationId, organizationId),
         ),
-      );
+      )
+      .returning({ id: webhookEndpoints.id });
+    if (!row) throw new WebhookEndpointNotFoundError(id);
+    return row;
   },
 
   async getEndpoint(tx: DrizzleDb, id: string, organizationId: string) {
@@ -161,14 +240,16 @@ export const webhookService = {
         ),
       )
       .limit(1);
-    return row ? redactSecret(row) : null;
+    if (!row) throw new WebhookEndpointNotFoundError(id);
+    return redactSecret(row);
   },
 
   async listEndpoints(
     tx: DrizzleDb,
-    params: { organizationId: string; page: number; limit: number },
+    params: { page: number; limit: number },
+    organizationId: string,
   ) {
-    const { organizationId, page, limit } = params;
+    const { page, limit } = params;
     const offset = (page - 1) * limit;
 
     const orgFilter = eq(webhookEndpoints.organizationId, organizationId);
@@ -194,6 +275,11 @@ export const webhookService = {
     };
   },
 
+  /**
+   * Returns the row **unredacted** — this and `createEndpoint` are the only two
+   * paths that hand the plaintext signing secret to a caller, which is the
+   * whole point of the operation. Do not add `redactSecret` here.
+   */
   async rotateSecret(tx: DrizzleDb, id: string, organizationId: string) {
     const secret = crypto.randomBytes(32).toString('hex');
     const [row] = await tx
@@ -206,6 +292,7 @@ export const webhookService = {
         ),
       )
       .returning();
+    if (!row) throw new WebhookEndpointNotFoundError(id);
     return row;
   },
 
@@ -284,10 +371,21 @@ export const webhookService = {
     return row;
   },
 
+  /**
+   * `organizationId` is defence-in-depth, not a live fix.
+   *
+   * Every caller is the delivery worker, which has already resolved this
+   * delivery through the org-scoped `getEndpointForDelivery` join and returned
+   * early when it found nothing — so the id reaching here is known to belong to
+   * `organizationId`. The predicate exists because that guard is a property of
+   * one call site rather than of this statement, and a second caller would not
+   * inherit it. Contrast `retryDelivery`, which had no guard at all.
+   */
   async updateDeliveryStatus(
     tx: DrizzleDb,
     id: string,
     status: WebhookDeliveryStatus,
+    organizationId: string,
     params?: {
       httpStatusCode?: number;
       responseBody?: string;
@@ -313,23 +411,34 @@ export const webhookService = {
     await tx
       .update(webhookDeliveries)
       .set(update)
-      .where(eq(webhookDeliveries.id, id));
+      .where(
+        and(
+          eq(webhookDeliveries.id, id),
+          eq(webhookDeliveries.organizationId, organizationId),
+        ),
+      );
   },
 
-  async listDeliveries(tx: DrizzleDb, params: ListDeliveriesParams) {
-    const { page, limit, organizationId, endpointId, eventType, status } =
-      params;
+  async listDeliveries(
+    tx: DrizzleDb,
+    params: ListDeliveriesParams,
+    organizationId: string,
+  ) {
+    const { page, limit, endpointId, eventType, status } = params;
     const offset = (page - 1) * limit;
 
-    const conditions = [];
-    if (organizationId)
-      conditions.push(eq(webhookDeliveries.organizationId, organizationId));
+    // Seeded, not appended under an `if`. `endpointId` below is caller-supplied
+    // and carries no tenancy of its own, so without this the filter could be
+    // pointed at another org's endpoint. `where` is shared with the count query
+    // further down, so page and total cannot drift apart.
+    const conditions = [eq(webhookDeliveries.organizationId, organizationId)];
     if (endpointId)
       conditions.push(eq(webhookDeliveries.webhookEndpointId, endpointId));
     if (eventType) conditions.push(eq(webhookDeliveries.eventType, eventType));
     if (status) conditions.push(eq(webhookDeliveries.status, status));
 
-    const where = conditions.length > 0 ? and(...conditions) : undefined;
+    // Never undefined — `conditions` is seeded with the org predicate above.
+    const where = and(...conditions);
 
     const [items, countResult] = await Promise.all([
       tx
@@ -346,7 +455,26 @@ export const webhookService = {
     return { items, total, page, limit, totalPages: Math.ceil(total / limit) };
   },
 
-  async retryDelivery(tx: DrizzleDb, deliveryId: string) {
+  /**
+   * The one genuinely live gap this change closes.
+   *
+   * This ran `UPDATE … WHERE id = $1` with no org term, and its caller compared
+   * `delivery.organizationId !== orgId` *afterwards* — so the row was already
+   * mutated by the time ownership was checked. Worse, tRPC turns a thrown error
+   * into a normal HTTP reply, so `db-context` commits on `onResponse` rather
+   * than rolling back: another org's delivery was left permanently QUEUED with
+   * its failure fields nulled, and no job enqueued. RLS was the only defence.
+   *
+   * Both halves below are load-bearing. The predicate stops the write; the
+   * throw stops the caller proceeding to audit and enqueue against a row it
+   * does not own. Unlike `updateStage` they are *not* independently sufficient
+   * — with the predicate alone nothing on the REST surface would catch it.
+   */
+  async retryDelivery(
+    tx: DrizzleDb,
+    deliveryId: string,
+    organizationId: string,
+  ) {
     const [row] = await tx
       .update(webhookDeliveries)
       .set({
@@ -356,12 +484,29 @@ export const webhookService = {
         errorMessage: null,
         nextRetryAt: null,
       })
-      .where(eq(webhookDeliveries.id, deliveryId))
+      .where(
+        and(
+          eq(webhookDeliveries.id, deliveryId),
+          eq(webhookDeliveries.organizationId, organizationId),
+        ),
+      )
       .returning();
+    if (!row) throw new WebhookDeliveryNotFoundError(deliveryId);
     return row;
   },
 
-  async countRecentFailures(tx: DrizzleDb, endpointId: string) {
+  /**
+   * `organizationId` is defence-in-depth for the same reason as
+   * `updateDeliveryStatus` — the endpoint id arrives from the org-scoped join.
+   * It matters more here than the isolation framing suggests: this count feeds
+   * the auto-disable threshold, so an unscoped one lets another tenant's
+   * failures contribute to disabling this org's endpoint.
+   */
+  async countRecentFailures(
+    tx: DrizzleDb,
+    endpointId: string,
+    organizationId: string,
+  ) {
     const since = new Date(Date.now() - 24 * 60 * 60 * 1000); // 24h window
     const [result] = await tx
       .select({ count: count() })
@@ -369,6 +514,7 @@ export const webhookService = {
       .where(
         and(
           eq(webhookDeliveries.webhookEndpointId, endpointId),
+          eq(webhookDeliveries.organizationId, organizationId),
           eq(webhookDeliveries.status, 'FAILED'),
           sql`${webhookDeliveries.createdAt} >= ${since.toISOString()}`,
         ),

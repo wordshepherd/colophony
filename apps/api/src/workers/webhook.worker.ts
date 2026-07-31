@@ -62,6 +62,7 @@ export function startWebhookWorker(env: Env): Worker<WebhookJobData> {
             tx,
             deliveryId,
             'CANCELLED',
+            orgId,
             { errorMessage: `Cancelled before send: ${cancelReason}` },
           );
         });
@@ -80,6 +81,7 @@ export function startWebhookWorker(env: Env): Worker<WebhookJobData> {
           tx,
           deliveryId,
           'DELIVERING',
+          orgId,
           {
             attempts: job.attemptsMade + 1,
           },
@@ -95,9 +97,13 @@ export function startWebhookWorker(env: Env): Worker<WebhookJobData> {
         const errorMsg =
           err instanceof Error ? err.message : 'URL validation failed';
         await withRls({ orgId }, async (tx: DrizzleDb) => {
-          await webhookService.updateDeliveryStatus(tx, deliveryId, 'FAILED', {
-            errorMessage: `URL validation failed: ${errorMsg}`,
-          });
+          await webhookService.updateDeliveryStatus(
+            tx,
+            deliveryId,
+            'FAILED',
+            orgId,
+            { errorMessage: `URL validation failed: ${errorMsg}` },
+          );
         });
         return; // Permanent failure — do not retry
       }
@@ -136,6 +142,7 @@ export function startWebhookWorker(env: Env): Worker<WebhookJobData> {
             tx,
             deliveryId,
             'DELIVERING',
+            orgId,
             { errorMessage: errorMsg },
           );
         });
@@ -155,6 +162,7 @@ export function startWebhookWorker(env: Env): Worker<WebhookJobData> {
             tx,
             deliveryId,
             'DELIVERED',
+            orgId,
             {
               httpStatusCode: response.status,
               responseBody: truncatedBody,
@@ -180,6 +188,7 @@ export function startWebhookWorker(env: Env): Worker<WebhookJobData> {
             tx,
             deliveryId,
             'DELIVERING',
+            orgId,
             {
               httpStatusCode: response.status,
               responseBody: truncatedBody,
@@ -217,9 +226,13 @@ export function startWebhookWorker(env: Env): Worker<WebhookJobData> {
             orgId,
           );
 
-          await webhookService.updateDeliveryStatus(tx, deliveryId, 'FAILED', {
-            errorMessage: err.message,
-          });
+          await webhookService.updateDeliveryStatus(
+            tx,
+            deliveryId,
+            'FAILED',
+            orgId,
+            { errorMessage: err.message },
+          );
           await auditService.log(tx, {
             resource: AuditResources.WEBHOOK_DELIVERY,
             action: AuditActions.WEBHOOK_DELIVERY_FAILED,
@@ -240,24 +253,32 @@ export function startWebhookWorker(env: Env): Worker<WebhookJobData> {
             const failCount = await webhookService.countRecentFailures(
               tx,
               endpoint.endpointId,
+              orgId,
             );
             if (failCount >= AUTO_DISABLE_THRESHOLD) {
-              await webhookService.updateEndpoint(
+              // `disableEndpoint`, not `updateEndpoint`: the latter throws when
+              // it matches nothing, and a throw here would roll back this whole
+              // transaction — including the FAILED status and audit row written
+              // above — to report an endpoint that has already been deleted.
+              const disabled = await webhookService.disableEndpoint(
                 tx,
                 endpoint.endpointId,
                 orgId,
-                { status: 'DISABLED' },
               );
-              await auditService.log(tx, {
-                resource: AuditResources.WEBHOOK_ENDPOINT,
-                action: AuditActions.WEBHOOK_ENDPOINT_AUTO_DISABLED,
-                resourceId: endpoint.endpointId,
-                organizationId: orgId,
-                newValue: {
-                  endpointUrl: endpoint.url,
-                  consecutiveFailures: failCount,
-                },
-              });
+              // Gated on the result: this audit row was written unconditionally
+              // before, so it could claim a disable that never happened.
+              if (disabled) {
+                await auditService.log(tx, {
+                  resource: AuditResources.WEBHOOK_ENDPOINT,
+                  action: AuditActions.WEBHOOK_ENDPOINT_AUTO_DISABLED,
+                  resourceId: endpoint.endpointId,
+                  organizationId: orgId,
+                  newValue: {
+                    endpointUrl: endpoint.url,
+                    consecutiveFailures: failCount,
+                  },
+                });
+              }
             }
           }
         });
