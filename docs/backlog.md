@@ -115,6 +115,24 @@
       were caught and reworded before landing on 2026-07-30, which is what surfaced the
       pre-existing ones. Rewrite to describe the mechanism and the rationale without listing
       the paths; the audit's conclusions survive that edit intact. — (found 2026-07-30)
+- [ ] [P2] `reader-role.spec.ts:64` asserts nothing and flakes in the counterintuitive direction.
+      `await expect(authedPage.getByText("Email")).toBeVisible()` is commented "Member list should
+      load", but `getByText` with a string is a **case-insensitive substring** match, and
+      `org-settings.tsx:244` renders `<TabsTrigger value="email-templates">Email Templates</TabsTrigger>`
+      unconditionally in the `TabsList` — present on every tab, for every role. So the assertion is
+      satisfied by the tab trigger and has never once proven the member list rendered.
+      **It then fails when the app is _faster_.** `member-list.tsx:127` adds a second match
+      (`<TableHead>Email</TableHead>`) as soon as `organizations.members.list` resolves; the match
+      count goes 1 → 2 and Playwright raises a strict-mode violation. Passing therefore requires the
+      assertion to win a race against the members query — which it usually does, hence green on the
+      eight preceding runs and red on run 30597058259, where it passed on rerun with byte-identical
+      code. Both attempts are on record if the artifacts are wanted.
+      Fix with the role-based idiom the web testing guidance already prescribes for this class —
+      assert on a control's value rather than page text: `getByRole("columnheader", { name: "Email" })`, or
+      `getByText("Email", { exact: true })` at minimum. **Sweep for siblings while there** — any
+      `getByText` whose string is a prefix of other visible copy has the same latent race; the
+      ADMIN path is worse, since `pending-invitations.tsx:65` and `invite-member-dialog.tsx:99`
+      add third and fourth matches. — (found 2026-07-30 while diagnosing a CI failure on #537)
 - [ ] [P3] Seed data ages out of a long-lived dev database, and `db:seed` will not repair it. Submission periods are seeded at fixed offsets from the seed date, so `quarterly-review` eventually has no open period — which fails 11 of 13 `embed` tests with `No open period found`. `pnpm db:seed` is idempotent-by-skip, so it is a no-op once data exists; only the destructive `db:reset` refreshes the dates. CI is unaffected (it seeds fresh each run), so this only ever bites locally, and it looks like a code regression rather than stale data. Either make the seed refresh period dates when they have closed, or have `global-setup.ts` fail with a "run `pnpm db:reset`" message when no open period exists for the seed org — (found 2026-07-27 while verifying the E2E auth rework)
 
 ---
@@ -431,24 +449,45 @@ Ordered as the design doc's Phase 0/D.
       `packages/db/privileges.sql` and migration 0069. — (found 2026-07-28 during the P2.0
       audit; done 2026-07-28)
 - [ ] **[P3] Delete `organizationService.addMemberWithAudit`.** Zero production callers
-      (`organization.service.ts:321`); the only three references are `vi.fn()` stubs in
+      (`organization.service.ts:335`); the only three references are `vi.fn()` stubs in
       `trpc/routers/organizations.spec.ts:17`, `trpc/routers/gdpr.spec.ts:35` and
       `rest/routers/organizations.spec.ts:16` — spec files mocking a method their subject never
-      invokes. `inviteOrAddMemberWithAudit` reaches `addMember` directly at `:349`. Same shape
-      as the `getById` #521 deleted rather than fixed. — (found 2026-07-28 during the P2.0 audit)
-- [ ] **[P3] Widen the schema gate to policy semantics and schema↔migration consistency.**
-      `rls-infrastructure.test.ts` now asserts, per table, that classification is exhaustive,
-      that RLS and `FORCE` are on where expected, and that `app_user`'s SELECT privilege matches
-      a recorded expectation. It does **not** check that a policy says the right thing — a table
-      could carry a policy scoped to the wrong column, or a `USING` clause with the raising
-      `current_setting(...)::uuid` idiom where `current_org_id()` was intended, and pass. Nor
-      does it check that the Drizzle schema and the migration SQL agree, which is the class of
-      drift `db:verify` catches for FK constraints only. Deliberately left out of the P2.0 audit
-      as a separate concern from F1 and too large to ride inside it. — (plan review 2026-07-28)
-- [ ] **[P3] Email is a cross-tenant lookup key in eight places, four unauthenticated.**
-      `organization.service.ts:203`, `embed-submission.service.ts:92`/`:121`/`:138`,
-      `federation.service.ts:437`/`:523`, `simsub.service.ts:324`, `migration.service.ts:494`,
-      `auth.ts:456`. Sharpest edge: `embed-submission.service.ts:92` returns an existing user id
+      invokes, with no `mockResolvedValue` or `toHaveBeenCalled` against any of them.
+      `inviteOrAddMemberWithAudit` reaches `addMember` directly at `:363`. Same shape
+      as the `getById` #521 deleted rather than fixed. (Line numbers re-verified 2026-07-30:
+      the definition moved `:321` → `:335` and the `addMember` call `:349` → `:363` when #527
+      landed; the three spec citations are still exact.) — (found 2026-07-28 during the P2.0 audit)
+- [ ] **[P3] Sharpen the schema gate's policy-semantics check, and add schema↔migration
+      consistency.** `rls-infrastructure.test.ts` asserts, per table, that classification is
+      exhaustive, that RLS and `FORCE` are on where expected, and that `app_user`'s privileges
+      match a recorded expectation.
+      **Rescoped 2026-07-30 after reading the file — two corrections.** (1) It asserts **all
+      four** DML privileges via `toEqual` (`:288-310`), not SELECT alone as this entry claimed.
+      (2) A policy-expression check **already exists** at `:642-673`: it selects `qual` from
+      `pg_policies` and requires the substring `current_org_id()` _or_
+      `current_setting('app.current_org`. So this is "sharpen an existing check", not "add one",
+      and the specific weaknesses are: the disjunction treats the two idioms as
+      interchangeable — so it can never be the gate for the two-idioms item above — no column
+      name is asserted (a policy scoped to the wrong uuid column passes), `with_check` is not
+      selected, and 17 tables are excluded outright by `orgPolicyExceptions` (`:618-636`).
+      Note `pipeline_history` and `pipeline_comments` pass only because their subquery text
+      happens to contain `current_org_id()`.
+      Still absent entirely: any check that the Drizzle schema and the migration SQL agree,
+      which is the class of drift `db:verify` catches for FK constraints only. Deliberately left
+      out of the P2.0 audit as a separate concern from F1 and too large to ride inside it. —
+      (plan review 2026-07-28)
+- [ ] **[P3] Email is a cross-tenant lookup key in nine places, four unauthenticated.**
+      `organization.service.ts:220` (in `addMember`), `embed-submission.service.ts:95`/`:124`/`:141`,
+      `federation.service.ts:440`/`:533`, `simsub.service.ts:329`, `migration.service.ts:503`,
+      `auth.ts:495`.
+      **Corrected 2026-07-30** — the entry said "eight" while listing nine, and nine predicates
+      do exist. Seven citations pointed at the opening `await db`/`await tx` line rather than the
+      `where` a few lines below; those are now the predicate lines. Two were wrong beyond drift:
+      `organization.service.ts:203` was in a _different_ method's return block, and
+      `hooks/auth.ts:456` is an `onConflictDoUpdate` keyed on `zitadelUserId`, not email — the
+      email-keyed statement there is at `:495` and is an `UPDATE`, not a `SELECT`, which matters
+      for anyone auditing read paths only.
+      Sharpest edge: `embed-submission.service.ts:95` returns an existing user id
       on an email match even when that account belongs to another tenant, attributing the embed
       submission to them. Deliberate — it is how a known writer submitting through an embed gets
       linked — but it wants a decision on identity semantics, not a patch. — (found 2026-07-28
@@ -471,9 +510,15 @@ Ordered as the design doc's Phase 0/D.
       enforces no per-org or per-creator key count. Either a creator-level umbrella bucket
       or a key-count cap would close it.
 - [ ] **[P2] The main API rate limiter fails open on Redis error, and unlike federation's
-      it is not configurable.** `hooks/rate-limit.ts:137-143` catches any Redis failure,
+      it is not configurable.** `hooks/rate-limit.ts:138-144` catches any Redis failure,
       logs `Rate limit Redis error — allowing request without rate limiting`, and returns —
-      so a Redis outage removes rate limiting from the entire API at once. Every request
+      so a Redis outage removes rate limiting from the entire API at once.
+      **There is a second fail-open path this entry missed** (found 2026-07-30): a failed
+      `redis.connect()` at `:92-102` logs a "requests will be allowed without rate limiting"
+      warning and lets plugin registration continue, so the limiter can be absent for the
+      **whole process lifetime** rather than only failing per-request. Any fail-mode setting
+      has to cover both, or `closed` will still start wide open.
+      Every request
       then reaches `dbContextPlugin`, which opens a pooled connection and begins a
       transaction per request, so the failure mode is not merely "unlimited requests" but
       connection-pool exhaustion under load.
@@ -571,9 +616,13 @@ Ordered as the design doc's Phase 0/D.
       `apps/web/src/components/federation/audit-log-viewer.tsx` sends `dateFrom`/`dateTo` in
       its query input, but `listAuditEventsSchema` declares `from`/`to`, so both are discarded
       server-side and the From/To inputs do nothing. The user gets a full unfiltered result set
-      and no error. The same component also re-declares its own `AuditEvent` interface rather
-      than importing from `@colophony/types`, which is why the mismatch type-checks — fixing
-      that import would have caught this. — (found 2026-07-30 while mapping the audit read
+      and no error. The same component also re-declares its own `AuditEvent` interface (`:65`)
+      rather than importing from `@colophony/types`, which is why the mismatch type-checks —
+      fixing that import would have caught this. **Two details for whoever fixes it:** the local
+      interface is not the only suppression — `:100` also casts the input object to
+      `Parameters<typeof trpc.audit.list.useQuery>[0]`, so both must go or the cast will swallow
+      the corrected field names too; and the type to import is **`AuditEventResponse`**, since
+      `@colophony/types` exports no symbol named `AuditEvent`. — (found 2026-07-30 while mapping the audit read
       surface)
 - [ ] **[P2] Honour `X-Act-As-User` on ordinary org-scoped API keys.** `hooks/auth.ts:343`
       unconditionally sets `userId: creator.id` for `authMethod: 'apikey'`, so every action a
@@ -650,9 +699,15 @@ Ordered as the design doc's Phase 0/D.
       So the work is ordered: **establish a stable, source-derived event id first**, then add
       the constraint. Without that, adding the constraint yields a schema change that looks
       like idempotency and provides none — worse than the current state, which at least does
-      not claim to dedup. Worth checking what identifier the Inngest event actually carries
-      before assuming one exists. — (design review 2026-07-27; premise corrected 2026-07-30
-      after verifying against the code)
+      not claim to dedup.
+      **The "what identifier does the event carry" question is now answered** (2026-07-30): a
+      stable id _does_ exist upstream — `outboxEvents.id`
+      (`packages/db/src/schema/messaging.ts:17`, `defaultRandom().primaryKey()`) — but
+      `outbox-poller.worker.ts:56-59` calls `inngest.send({ name, data })` **without an `id`**,
+      so it is dropped at that boundary and `event.id` can only ever be Inngest-assigned.
+      Propagating the outbox row id through that call is the prerequisite step, and it is a
+      one-line change; the constraint follows it. — (design review 2026-07-27; premise corrected
+      2026-07-30 after verifying against the code)
 - [x] **[P1] `apiKeyService` carries no explicit `organizationId` predicate.** `list`
       (`apps/api/src/services/api-key.service.ts:71`), `revoke` (`:129`) and `delete`
       (`:145`) relied on RLS alone, and no caller passed an org ID
@@ -685,6 +740,10 @@ Ordered as the design doc's Phase 0/D.
       while the procedure returns `revokeApiKeyResponseSchema` — a full key object
       versus three fields. Type-only today: the contract is consumed by
       `packages/api-client` for inference, not used to validate the server response.
+      **Nothing forces parity** (confirmed 2026-07-30): `grep 'implement('` over `apps/api/src`
+      returns zero, so the server never builds its routers from the contract — the two are
+      independent declarations that happen to sit in the same repo, and only a reader will ever
+      notice them diverging. That makes the drift class recurrent, not a one-off.
       — (found 2026-07-28 while removing `payments:read`)
 - [ ] **[P2] REST spec coverage.** Only 8 of 18 REST routers have a `.spec.ts` — the ten
       without are `cms-connections`, `collections`, `contract-templates`, `contracts`, `csr`,
@@ -700,20 +759,33 @@ Ordered as the design doc's Phase 0/D.
       `3.1.1` from the live endpoint. Pre-existing — the old fetch-based export normalized
       the response the same way — and not introduced by P0.2, but the guarantee is only
       half-true today. Fix by serving `generateOpenApiDocument()` from a dedicated route and
-      pointing the reference plugin's `specPath` at it, so one function feeds both. —
+      pointing the reference plugin's `specPath` at it, so one function feeds both.
+      **Caveat recorded 2026-07-30:** the served `3.1.1` is _inferred_ from the generator's
+      behaviour and the upstream type (`OpenAPIGeneratorGenerateOptions` is
+      `Partial<Omit<Document, 'openapi'>>`, so the field is un-settable) — nobody has observed
+      the live endpoint. No test or fixture captures it, which is also why the divergence went
+      unnoticed. Confirm against a running server before writing the fix. —
       (code review 2026-07-27)
 - [ ] **[P3] Three OpenAPI tags are used but never declared.** Operations carry
-      `Collections`, `Submission Analytics`, and `Submission Votes`, but
-      `openApiDocumentConfig.tags` in `apps/api/src/rest/openapi-spec.ts` declares only 17
+      `Collections` (10 operations), `Submission Analytics` (6), and `Submission Votes` (4),
+      but `openApiDocumentConfig.tags` in `apps/api/src/rest/openapi-spec.ts` declares **18**
       tags and omits all three — so they render in `/v1/docs` with no description while the
-      other 17 have one. Add the three descriptions and regenerate the spec. Cosmetic, but
-      it is the kind of gap the spec-vs-source gate cannot catch, since both sides agree. —
+      other 18 have one. Add the three descriptions and regenerate the spec. Cosmetic, but
+      it is the kind of gap the spec-vs-source gate cannot catch, since both sides agree.
+      (Said "17" until `Notifications` landed 2026-07-29; recounted 2026-07-30 against both
+      the source and the generated `sdks/openapi.json`, which agree at 18 declared / 21 used.) —
       (found 2026-07-27 during P0.2)
-- [ ] **[P3] Two RLS idioms in the schema.** `notifications`, `notifications-inbox`,
-      `webhook-endpoints`, `transfers` use raw `current_setting('app.current_org')::uuid`
-      (raises when unset); the other 24 use `current_org_id()` (returns NULL). Both
-      fail closed, so not a vulnerability — but a request with no org context gets a 500
-      rather than an empty result on those four. Normalise deliberately. —
+- [ ] **[P3] Two RLS idioms in the schema.** The raw
+      `current_setting('app.current_org')::uuid` form (raises when unset) appears in **4 files
+      but 6 policies**: `notifications.ts:45,81`, `notifications-inbox.ts:45`,
+      `webhook-endpoints.ts:38,82`, `transfers.ts:115`. Everything else uses `current_org_id()`
+      (returns NULL). Both fail closed, so not a vulnerability — but a request with no org
+      context gets a 500 rather than an empty result on those six. Normalise deliberately.
+      **Counts corrected 2026-07-30** — the entry said "four vs the other 24", and both figures
+      were wrong units. 24 was a _file_ count, not tables or policies; the directory holds 71
+      `pgTable` declarations and 66 `pgPolicy` calls. And `transfers.ts` is in **both** groups:
+      `pieceTransfers` (`:79`) uses `current_org_id()` while `inboundTransfers` (`:115`) uses the
+      raw form, so the two sets are not disjoint and a per-file sweep would miss it. —
       (design doc §2.3 F6)
 - [x] **[P1] `GET /api/notifications/stream` declares no scope guard, and neither
       coverage gate can see it.** It is a plain Fastify route
@@ -763,6 +835,15 @@ Ordered as the design doc's Phase 0/D.
       and `docs/manual-qa-plan.md` lists them as pages for the same reason. A search
       for an HTTP caller — `fetch`/`axios` in `apps/web`, `apps/api`, `scripts/`,
       `sdks/typescript/src` — found none.
+      **Correction (verified 2026-07-30): the "found none" above is wrong.**
+      `scripts/simsub-qa.ts:573` and `:591` call `POST /federation/sim-sub/override/:submissionId`
+      and `GET /federation/sim-sub/checks/:submissionId` with an `X-Api-Key` header, so it is
+      **21 of 23** without an in-repo HTTP caller, not 23. The P0.5 entry above already recorded
+      that script's usage — this entry contradicted a fact the same document held. The two
+      `simsub-admin` routes therefore need a decision (keep, or port the QA script to tRPC)
+      rather than being swept up with the other 21. Everything else checks out: 23 admin routes
+      across five modules, each with a tRPC twin, `key-admin` the sole pair without one, and no
+      tRPC procedure doing DID key rotation.
       **That is very likely why nobody noticed they were unguarded**: unused surface
       generates no traffic and no complaints, while remaining fully reachable. They
       are guarded now (2026-07-29), so the exposure is closed either way; the
@@ -785,7 +866,16 @@ Ordered as the design doc's Phase 0/D.
       current path is affected; `/federation/trust` and `/federation/trust/*` are
       genuinely public S2S endpoints. The fix is a trailing slash plus a separate
       exact entry, but it needs checking against every `/federation/trust*` route
-      first. — (found 2026-07-29 while adding the Fastify guard gate)
+      first.
+      **Three things found 2026-07-30 that widen this.** `/api/inngest` (`:42`), `/health` and
+      `/ready` are bare prefixes with the identical hazard, so fix the class rather than the one
+      entry. `isPublicRoute` is imported by `fastify-guard-coverage.spec.ts:38` to exempt routes
+      from the guard-declaration gate — so accidentally widening a prefix does not just make a
+      route public, it **also removes it from the gate that would have caught that**. And
+      `auth.spec.ts` contains **zero** references to `PUBLIC_PREFIXES` or `isPublicRoute`,
+      despite the comment above the array instructing that every public route gets a test there;
+      the allowlist is currently untested in either direction. — (found 2026-07-29 while adding
+      the Fastify guard gate)
 - [ ] **[P3] Two route modules have no per-route API-key rejection test.**
       `hub-admin.routes.spec.ts` drives handlers directly through a synthetic mock
       app with a `getHandler` helper, so it bypasses the Fastify hook chain entirely
@@ -854,12 +944,21 @@ invitations were assumed missing and are in fact already exposed — see §0 of 
       options before assuming not.
       (3) **Gate it**: a lint rule or a spec asserting no `z.coerce.boolean()` appears in
       `packages/api-contracts/` or `apps/api/src/rest/`. Cheap, and the failure it prevents is
-      silent in every other check.
+      silent in every other check. Note `packages/api-contracts/` has **no eslint config at
+      all** (verified 2026-07-30), so the lint route means creating one — a spec is the cheaper
+      of the two. The helper is also still unexported (`notifications.ts:26`), so part (1) is a
+      prerequisite for anyone to use it anyway.
       Same reasoning as the guard-coverage gates — a convention that only lives in a doc gets
       violated by the next person who does not read it. — (found 2026-07-29 during P1.2)
 - [ ] **[P2] Idempotency keys for integrator writes.** No `Idempotency-Key` on any `/v1`
       `POST`, including submission creation and the two batch operations. Contract surface,
-      so it cannot be added cheaply later. — (design doc §1.10, D3)
+      so it cannot be added cheaply later.
+      **A structural constraint worth knowing before estimating** (found 2026-07-30):
+      `rest/router.ts:35-43` passes only `{ authContext, dbTx, audit }` into the oRPC context —
+      the raw request never reaches it — so **no oRPC middleware can read a request header
+      today**. This needs a context change first, not just a middleware, which makes it larger
+      than the equivalent tRPC work would be. The only header-reading code on the whole surface
+      is in the Fastify hooks. — (design doc §1.10, D3)
 
 ### Design Decisions
 
