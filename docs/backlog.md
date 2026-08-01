@@ -490,6 +490,12 @@ Ordered as the design doc's Phase 0/D.
       — a site catching an error from a raw `pool.query` is not Drizzle-wrapped and is correct
       as written. Point the wrapped ones at `services/pg-errors.ts`. Note fixing these is a
       behaviour change: the domain errors they guard have never fired.
+      **Corrected 2026-07-31 — the list is not exhaustive.** `rest/error-mapper.ts:223` is a
+      **tenth** production direct-form site, and it matters more than the others because it
+      is the surface-wide fallback: it is why a duplicate-key error renders differently on
+      REST than on tRPC, whose mapper recurses `cause`. In `queue-preset.service.ts` the
+      declaration is `:33` as cited, but the comparison itself is `:38`. `pg-errors.ts` now
+      has two importers, `pipeline.service.ts:40` and `issue.service.ts:30`.
       — (found 2026-07-31 while fixing the `issueService` instance)
 - [x] **[P2] `pipeline.service.ts` writes drop the org predicate.** Filed as three methods; it
       was **five reachable defects**, and the two framed as "worse" were the only live ones.
@@ -535,8 +541,14 @@ Ordered as the design doc's Phase 0/D.
       `users` and returns that person's email. Needs a membership lookup against
       `organization_members`, not a predicate, which is why it was left out of the predicate
       change. Decide the semantics first: guests, deactivated users, and staff who belong to
-      both orgs are all reachable cases, and the same question applies to
-      `submission-reviewer.service.ts`. — (found 2026-07-30 while scoping `pipelineService`)
+      both orgs are all reachable cases.
+      **Corrected 2026-07-31 — `submission-reviewer.service.ts` is not a second instance.**
+      The entry claimed the same question applies there; it does not. That service already
+      validates, in `validateOrgMembership` (`:181-202`, called from `assignWithAudit:216`),
+      throwing `ReviewerNotOrgMemberError` — which is mapped on both surfaces. It is a
+      working in-repo precedent for the ~20 lines this needs, not a co-victim, and copying
+      it is most of the fix. Current lines: `assignCopyeditor` `:500`, `assignProofreader`
+      `:551`. — (found 2026-07-30 while scoping `pipelineService`)
 - [x] **[P2] `issue.service.ts:65,122` take `orgId?` as optional and apply the predicate
       conditionally.** An optional org id is a silent bypass: omit the argument and the query
       is unscoped, with nothing at the type level to flag it. Make it required, matching the
@@ -630,15 +642,26 @@ Ordered as the design doc's Phase 0/D.
       match a recorded expectation.
       **Rescoped 2026-07-30 after reading the file — two corrections.** (1) It asserts **all
       four** DML privileges via `toEqual` (`:288-310`), not SELECT alone as this entry claimed.
-      (2) A policy-expression check **already exists** at `:642-673`: it selects `qual` from
+      (2) A policy-expression check **already exists** — at `:608-674` (the entry said
+      `:642-673`, which lands mid-block; re-verified 2026-07-31). It selects `qual` from
       `pg_policies` and requires the substring `current_org_id()` _or_
       `current_setting('app.current_org`. So this is "sharpen an existing check", not "add one",
       and the specific weaknesses are: the disjunction treats the two idioms as
       interchangeable — so it can never be the gate for the two-idioms item above — no column
       name is asserted (a policy scoped to the wrong uuid column passes), `with_check` is not
-      selected, and 17 tables are excluded outright by `orgPolicyExceptions` (`:618-636`).
+      selected **by this check**, and 17 tables are excluded outright by
+      `orgPolicyExceptions` (`:618-636`, both exact).
       Note `pipeline_history` and `pipeline_comments` pass only because their subquery text
       happens to contain `current_org_id()`.
+      **Three further corrections, 2026-07-31.** (1) "`with_check` is not selected" is true
+      of this gate but **false of the file** — it is selected at `:710`, in the separate
+      nullable-policy test, so the fix is to widen an existing query rather than introduce
+      the column. (2) The second idiom is matched as an **unterminated substring**
+      (`current_setting('app.current_org` has no closing quote or paren), so a policy reading
+      `app.current_organization_anything` would satisfy it. (3) `qual` is typed non-nullable
+      while `pg_policies.qual` is NULL for WITH CHECK-only policies — such a row throws on
+      `.includes` rather than failing the assertion cleanly, so the gate would report a crash
+      instead of a violation.
       Still absent entirely: any check that the Drizzle schema and the migration SQL agree,
       which is the class of drift `db:verify` catches for FK constraints only. Deliberately left
       out of the P2.0 audit as a separate concern from F1 and too large to ride inside it. —
@@ -657,7 +680,17 @@ Ordered as the design doc's Phase 0/D.
       Sharpest edge: `embed-submission.service.ts:95` returns an existing user id
       on an email match even when that account belongs to another tenant, attributing the embed
       submission to them. Deliberate — it is how a known writer submitting through an embed gets
-      linked — but it wants a decision on identity semantics, not a patch. — (found 2026-07-28
+      linked — but it wants a decision on identity semantics, not a patch.
+      **Re-verified 2026-07-31: all nine line numbers exact, and the list is confirmed
+      exhaustive** — every other `users.email` reference in `apps/api/src` is a projection or
+      join column whose `WHERE` keys on an id. Two refinements. (1) "four unauthenticated" is
+      ambiguous and undercounts: **five** sites take no credential at all (the three embed
+      reads plus the two federation discovery routes), or four if the embed path counts once;
+      `simsub:329` and `migration:503` are S2S-authenticated by HTTP signature, which is not
+      the same as user-authenticated and should not be lumped in with the rest. (2)
+      `docs/tenant-isolation-audit.md` §4.4 is a **tracked** doc carrying the same
+      eight-vs-nine inconsistency this entry already fixed, plus stale line numbers
+      throughout — corrected 2026-07-31 in the same pass. — (found 2026-07-28
       during the P2.0 audit)
 - [x] **[P1] No per-key rate limits.** `hooks/rate-limit-auth.ts:57` keyed the authenticated
       window on `userId`, which for key auth is the key's _creator_ — so all of an admin's
@@ -800,7 +833,15 @@ Ordered as the design doc's Phase 0/D.
       interface is not the only suppression — `:100` also casts the input object to
       `Parameters<typeof trpc.audit.list.useQuery>[0]`, so both must go or the cast will swallow
       the corrected field names too; and the type to import is **`AuditEventResponse`**, since
-      `@colophony/types` exports no symbol named `AuditEvent`. — (found 2026-07-30 while mapping the audit read
+      `@colophony/types` exports no symbol named `AuditEvent`.
+      **Sharpened 2026-07-31:** a type literally named `AuditEvent` _does_ exist — exported
+      from **`@colophony/db`** at `packages/db/src/types.ts:56`, as
+      `InferSelectModel<typeof auditEvents>`. So whoever fixes this will find it by name and
+      must choose deliberately: `@colophony/db`'s is the raw row (dates as `Date`, every
+      column), while `@colophony/types`' `AuditEventResponse` is the wire shape the tRPC
+      procedure actually returns. Import the latter. Both packages are already dependencies
+      of `apps/web`, so neither choice fails at install time — which is exactly why this
+      wants stating rather than leaving to inference. — (found 2026-07-30 while mapping the audit read
       surface)
 - [ ] **[P2] Honour `X-Act-As-User` on ordinary org-scoped API keys.** `hooks/auth.ts:344`
       unconditionally sets `userId: creator.id` for `authMethod: 'apikey'`, so every action a
@@ -1201,6 +1242,15 @@ assumed missing and are in fact already exposed — see §0 of the design doc.
       today**. This needs a context change first, not just a middleware, which makes it larger
       than the equivalent tRPC work would be. The only header-reading code on the whole surface
       is in the Fastify hooks.
+      **Narrowed 2026-07-31 — the constraint is real but was overstated.** It holds for
+      _middleware_, which is what this item needs. It does not hold for oRPC as a whole:
+      1.14.10 exposes a per-route `inputStructure` option that lets an individual
+      **procedure** receive headers as part of its input. Nothing in this repo uses it, and
+      it is the wrong tool here — a per-route opt-in would put the burden on every author
+      rather than enforcing the rule centrally, which is precisely what D3 chose against.
+      Recorded because "no header can reach oRPC at all" would misinform whoever re-estimates
+      this, and the manifest test D3 specifies is only meaningful if the mechanism is
+      central.
       **D3 taken 2026-07-31: every `/v1` `POST`, not only the blocking set.** The selective
       rule was cheaper only under a cost model that assumed the header was already available,
       and the constraint above removes that. Three things from the record. The context field
