@@ -143,25 +143,38 @@ All six are deliberate. Recorded so the next audit does not re-open them.
 ### 4.4 BY-ID-ONLY — cross-tenant lookup keys
 
 34 sites resolve a row by primary or natural key. Most are unremarkable. The ones worth naming
-share a property: **an email address is a cross-tenant lookup key**, and eight sites use it.
+share a property: **an email address is a cross-tenant lookup key**, and nine sites use it.
 
-| Site                                                        | Reachable without auth         |
-| ----------------------------------------------------------- | ------------------------------ |
-| `services/organization.service.ts:203` (`addMember`)        | no — ADMIN only                |
-| `services/embed-submission.service.ts:92`, `:121`, `:138`   | **yes** — embed intake         |
-| `services/federation.service.ts:437` (`resolveWebFinger`)   | **yes** — federation discovery |
-| `services/federation.service.ts:523` (`getUserDidDocument`) | **yes** — federation discovery |
-| `services/simsub.service.ts:324`                            | **yes** — inbound S2S          |
-| `services/migration.service.ts:494`                         | **yes** — inbound S2S          |
-| `hooks/auth.ts:456`                                         | no — JIT link on 23505         |
+**Corrected 2026-07-31.** The prose said "eight" while the table listed nine, and every line
+number below was stale — they pointed at the opening `await db`/`await tx` rather than the
+`where` a few lines down. Both are now the predicate lines, re-verified against the tree.
+Two were wrong beyond drift: `organization.service.ts:203` was in a different method's return
+block, and `hooks/auth.ts:456` is an `onConflictDoUpdate` keyed on `zitadelUserId`, not email.
+The list is confirmed exhaustive — every other `users.email` reference in `apps/api/src` is a
+projection or join column whose `WHERE` keys on an id.
+
+| Site                                                        | Op     | Reachable without auth         |
+| ----------------------------------------------------------- | ------ | ------------------------------ |
+| `services/organization.service.ts:220` (`addMember`)        | SELECT | no — ADMIN only                |
+| `services/embed-submission.service.ts:95`, `:124`, `:141`   | SELECT | **yes** — embed intake         |
+| `services/federation.service.ts:440` (`resolveWebFinger`)   | SELECT | **yes** — federation discovery |
+| `services/federation.service.ts:533` (`getUserDidDocument`) | SELECT | **yes** — federation discovery |
+| `services/simsub.service.ts:329`                            | SELECT | S2S signature, not user auth   |
+| `services/migration.service.ts:503`                         | SELECT | S2S signature, not user auth   |
+| `hooks/auth.ts:495`                                         | UPDATE | no — JIT link on 23505         |
+
+Two things the earlier table obscured. `hooks/auth.ts:495` is an **UPDATE**, not a SELECT,
+which matters to anyone auditing read paths only. And the two S2S rows are authenticated —
+by HTTP signature against a known peer — so the no-credential count is **five** (the three
+embed reads plus the two federation discovery routes), not seven.
 
 Two observations:
 
-- `resolveWebFinger` (`:437`) filters on email alone. Its sibling `getUserDidDocument` (`:523`)
+- `resolveWebFinger` (`:440`) filters on email alone. Its sibling `getUserDidDocument` (`:533`)
   filters `email` **and** `isNull(deletedAt)` **and** `eq(isGuest, false)`. The asymmetry looks
   unintended: the laxer of the two is the unauthenticated discovery endpoint, so a deleted or
   guest account is discoverable through one path and not the other. Tracked as P2.
-- `embed-submission.service.ts:92` returns the existing user id when the email matches, including
+- `embed-submission.service.ts:95` returns the existing user id when the email matches, including
   when that account is a real user in another tenant — the embed submission is then attributed to
   them. Deliberate (it is how a known writer submitting through an embed is linked), but it is the
   sharpest edge of email-as-key and belongs in the P3 design question rather than a patch.

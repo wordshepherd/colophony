@@ -19,6 +19,7 @@ import { cmsConnectionsRouter } from './routers/cms-connections.js';
 import { csrRouter } from './routers/csr.js';
 import { collectionsRouter } from './routers/collections.js';
 import { notificationsRouter } from './routers/notifications.js';
+import { webhooksRouter } from './routers/webhooks.js';
 
 /**
  * The oRPC routers composing the `/v1` REST surface.
@@ -49,6 +50,7 @@ export const restRouter = {
   // document, so slotting a router mid-list reshuffles the whole spec and both
   // SDKs for no benefit.
   notifications: notificationsRouter,
+  webhooks: webhooksRouter,
 };
 
 /**
@@ -171,6 +173,11 @@ export const openApiDocumentConfig: OpenAPIGeneratorGenerateOptions = {
       name: 'Notifications',
       description:
         'Read in-app notifications and manage delivery preferences. The inbox belongs to the user a credential acts as, not to the organization — use webhooks for organization-level events.',
+    },
+    {
+      name: 'Webhooks',
+      description:
+        'Register HTTPS endpoints to receive organization-level events, and inspect or retry their delivery history. Signing secrets are returned only on registration and rotation, and cannot be read back.',
     },
   ],
   externalDocs: {
