@@ -24,7 +24,7 @@
   },
   "devDependencies": {
     "@colophony/typescript-config": "workspace:*",
-    "@types/node": "25.5.0",
+    "@types/node": "26.1.2",
     "typescript": "5.9.3",
     "@vitest/coverage-v8": "4.1.10",
     "vitest": "4.1.10"
