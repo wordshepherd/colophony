@@ -21,9 +21,9 @@
   },
   "dependencies": {
     "@colophony/api-contracts": "workspace:*",
-    "@orpc/client": "1.14.10",
-    "@orpc/contract": "1.14.10",
-    "@orpc/openapi-client": "1.14.10"
+    "@orpc/client": "1.14.13",
+    "@orpc/contract": "1.14.13",
+    "@orpc/openapi-client": "1.14.13"
   },
   "devDependencies": {
     "@colophony/typescript-config": "workspace:*",
