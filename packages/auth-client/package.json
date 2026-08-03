@@ -20,7 +20,7 @@
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
-    "jose": "6.2.4",
+    "jose": "6.2.5",
     "zod": "4.4.3"
   },
   "devDependencies": {
