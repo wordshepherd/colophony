@@ -55,7 +55,7 @@
     "lint-staged": "16.4.0",
     "prettier": "3.9.6",
     "sharp": "0.35.3",
-    "turbo": "2.10.7"
+    "turbo": "2.10.9"
   },
   "pnpm": {
     "onlyBuiltDependencies": [
