@@ -26,7 +26,7 @@
     "@colophony/typescript-config": "workspace:*",
     "@types/node": "25.5.0",
     "typescript": "5.9.3",
-    "@vitest/coverage-v8": "4.1.10",
-    "vitest": "4.1.10"
+    "@vitest/coverage-v8": "4.1.11",
+    "vitest": "4.1.11"
   }
 }
