@@ -54,8 +54,8 @@
     "husky": "9.1.7",
     "lint-staged": "16.4.0",
     "prettier": "3.9.6",
-    "sharp": "0.35.3",
-    "turbo": "2.10.7"
+    "sharp": "0.35.4",
+    "turbo": "2.10.12"
   },
   "pnpm": {
     "onlyBuiltDependencies": [

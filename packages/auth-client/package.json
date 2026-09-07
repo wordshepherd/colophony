@@ -20,8 +20,8 @@
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
-    "jose": "6.2.4",
-    "zod": "4.4.3"
+    "jose": "6.2.10",
+    "zod": "4.5.4"
   },
   "devDependencies": {
     "@colophony/typescript-config": "workspace:*",
